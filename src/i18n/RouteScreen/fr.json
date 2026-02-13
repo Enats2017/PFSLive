@@ -1,0 +1,11 @@
+{
+  "loading_route": "Chargement du parcours...",
+  "error_loading_route": "Échec du chargement du parcours",
+  "elevation_profile": "Profil d'Altitude",
+  "map": {
+    "follow_mode": "Suivi",
+    "overview_mode": "Vue d'ensemble"
+  },
+  "distance_km": "{{distance}} km",
+  "elevation_m": "{{elevation}} m"
+}

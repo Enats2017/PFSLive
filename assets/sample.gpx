@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="PFSLive">
+	<metadata>
+		<name>TMiler Mountain Trail</name>
+		<desc>100km mountain trail race</desc>
+	</metadata>
+	
+	<!-- Waypoints (Stations) -->
+	<wpt lat="45.8320" lon="6.8650">
+		<ele>1035</ele>
+		<name>Start - Chamonix</name>
+	</wpt>
+	<wpt lat="45.8580" lon="6.8920">
+		<ele>1450</ele>
+		<name>Station 1 - Argentière</name>
+	</wpt>
+	<wpt lat="45.8850" lon="6.9180">
+		<ele>1820</ele>
+		<name>Station 2 - Col des Montets</name>
+	</wpt>
+	<wpt lat="45.9120" lon="6.9450">
+		<ele>1450</ele>
+		<name>Station 3 - Vallorcine</name>
+	</wpt>
+	<wpt lat="45.9380" lon="6.9720">
+		<ele>1680</ele>
+		<name>Station 4 - Col de Balme</name>
+	</wpt>
+	<wpt lat="45.9640" lon="6.9990">
+		<ele>1250</ele>
+		<name>Finish - Trient</name>
+	</wpt>
+	
+	<!-- Track -->
+	<trk>
+		<name>TMiler Trail</name>
+		<trkseg>
+			<!-- Segment 1: Chamonix to Argentière -->
+			<trkpt lat="45.8320" lon="6.8650"><ele>1035</ele></trkpt>
+			<trkpt lat="45.8340" lon="6.8670"><ele>1045</ele></trkpt>
+			<trkpt lat="45.8360" lon="6.8690"><ele>1060</ele></trkpt>
+			<trkpt lat="45.8380" lon="6.8710"><ele>1080</ele></trkpt>
+			<trkpt lat="45.8400" lon="6.8730"><ele>1105</ele></trkpt>
+			<trkpt lat="45.8420" lon="6.8750"><ele>1135</ele></trkpt>
+			<trkpt lat="45.8440" lon="6.8770"><ele>1170</ele></trkpt>
+			<trkpt lat="45.8460" lon="6.8790"><ele>1210</ele></trkpt>
+			<trkpt lat="45.8480" lon="6.8810"><ele>1255</ele></trkpt>
+			<trkpt lat="45.8500" lon="6.8830"><ele>1305</ele></trkpt>
+			<trkpt lat="45.8520" lon="6.8850"><ele>1360</ele></trkpt>
+			<trkpt lat="45.8540" lon="6.8870"><ele>1395</ele></trkpt>
+			<trkpt lat="45.8560" lon="6.8890"><ele>1420</ele></trkpt>
+			<trkpt lat="45.8580" lon="6.8920"><ele>1450</ele></trkpt>
+			
+			<!-- Segment 2: Argentière to Col des Montets -->
+			<trkpt lat="45.8600" lon="6.8940"><ele>1480</ele></trkpt>
+			<trkpt lat="45.8620" lon="6.8960"><ele>1515</ele></trkpt>
+			<trkpt lat="45.8640" lon="6.8980"><ele>1555</ele></trkpt>
+			<trkpt lat="45.8660" lon="6.9000"><ele>1600</ele></trkpt>
+			<trkpt lat="45.8680" lon="6.9020"><ele>1650</ele></trkpt>
+			<trkpt lat="45.8700" lon="6.9040"><ele>1695</ele></trkpt>
+			<trkpt lat="45.8720" lon="6.9060"><ele>1735</ele></trkpt>
+			<trkpt lat="45.8740" lon="6.9080"><ele>1770</ele></trkpt>
+			<trkpt lat="45.8760" lon="6.9100"><ele>1795</ele></trkpt>
+			<trkpt lat="45.8780" lon="6.9120"><ele>1810</ele></trkpt>
+			<trkpt lat="45.8800" lon="6.9140"><ele>1818</ele></trkpt>
+			<trkpt lat="45.8820" lon="6.9160"><ele>1820</ele></trkpt>
+			<trkpt lat="45.8850" lon="6.9180"><ele>1820</ele></trkpt>
+			
+			<!-- Segment 3: Col des Montets to Vallorcine (descent) -->
+			<trkpt lat="45.8870" lon="6.9200"><ele>1805</ele></trkpt>
+			<trkpt lat="45.8890" lon="6.9220"><ele>1780</ele></trkpt>
+			<trkpt lat="45.8910" lon="6.9240"><ele>1745</ele></trkpt>
+			<trkpt lat="45.8930" lon="6.9260"><ele>1700</ele></trkpt>
+			<trkpt lat="45.8950" lon="6.9280"><ele>1650</ele></trkpt>
+			<trkpt lat="45.8970" lon="6.9300"><ele>1595</ele></trkpt>
+			<trkpt lat="45.8990" lon="6.9320"><ele>1540</ele></trkpt>
+			<trkpt lat="45.9010" lon="6.9340"><ele>1490</ele></trkpt>
+			<trkpt lat="45.9030" lon="6.9360"><ele>1470</ele></trkpt>
+			<trkpt lat="45.9050" lon="6.9380"><ele>1455</ele></trkpt>
+			<trkpt lat="45.9080" lon="6.9410"><ele>1452</ele></trkpt>
+			<trkpt lat="45.9100" lon="6.9430"><ele>1451</ele></trkpt>
+			<trkpt lat="45.9120" lon="6.9450"><ele>1450</ele></trkpt>
+			
+			<!-- Segment 4: Vallorcine to Col de Balme (climb) -->
+			<trkpt lat="45.9140" lon="6.9470"><ele>1465</ele></trkpt>
+			<trkpt lat="45.9160" lon="6.9490"><ele>1490</ele></trkpt>
+			<trkpt lat="45.9180" lon="6.9510"><ele>1525</ele></trkpt>
+			<trkpt lat="45.9200" lon="6.9530"><ele>1565</ele></trkpt>
+			<trkpt lat="45.9220" lon="6.9550"><ele>1595</ele></trkpt>
+			<trkpt lat="45.9240" lon="6.9570"><ele>1610</ele></trkpt>
+			<trkpt lat="45.9260" lon="6.9590"><ele>1625</ele></trkpt>
+			<trkpt lat="45.9280" lon="6.9610"><ele>1638</ele></trkpt>
+			<trkpt lat="45.9300" lon="6.9630"><ele>1648</ele></trkpt>
+			<trkpt lat="45.9320" lon="6.9650"><ele>1658</ele></trkpt>
+			<trkpt lat="45.9340" lon="6.9670"><ele>1666</ele></trkpt>
+			<trkpt lat="45.9360" lon="6.9690"><ele>1673</ele></trkpt>
+			<trkpt lat="45.9380" lon="6.9720"><ele>1680</ele></trkpt>
+			
+			<!-- Segment 5: Col de Balme to Trient (descent) -->
+			<trkpt lat="45.9400" lon="6.9740"><ele>1665</ele></trkpt>
+			<trkpt lat="45.9420" lon="6.9760"><ele>1640</ele></trkpt>
+			<trkpt lat="45.9440" lon="6.9780"><ele>1605</ele></trkpt>
+			<trkpt lat="45.9460" lon="6.9800"><ele>1560</ele></trkpt>
+			<trkpt lat="45.9480" lon="6.9820"><ele>1505</ele></trkpt>
+			<trkpt lat="45.9500" lon="6.9840"><ele>1445</ele></trkpt>
+			<trkpt lat="45.9520" lon="6.9860"><ele>1385</ele></trkpt>
+			<trkpt lat="45.9540" lon="6.9880"><ele>1330</ele></trkpt>
+			<trkpt lat="45.9560" lon="6.9900"><ele>1285</ele></trkpt>
+			<trkpt lat="45.9580" lon="6.9920"><ele>1270</ele></trkpt>
+			<trkpt lat="45.9600" lon="6.9940"><ele>1258</ele></trkpt>
+			<trkpt lat="45.9620" lon="6.9960"><ele>1253</ele></trkpt>
+			<trkpt lat="45.9640" lon="6.9990"><ele>1250</ele></trkpt>
+		</trkseg>
+	</trk>
+</gpx>

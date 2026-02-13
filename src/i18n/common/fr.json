@@ -1,0 +1,34 @@
+{
+  "app_name": "PFSLive",
+  "buttons": {
+    "continue": "Continuer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "next": "Suivant",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "retry": "Réessayer",
+    "refresh": "Actualiser"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite. Veuillez réessayer.",
+    "network": "Erreur réseau. Vérifiez votre connexion.",
+    "timeout": "Délai d'attente dépassé. Veuillez réessayer.",
+    "not_found": "Ressource introuvable.",
+    "unauthorized": "Vous n'êtes pas autorisé à effectuer cette action.",
+    "server_error": "Erreur serveur. Veuillez réessayer plus tard."
+  },
+  "loading": {
+    "please_wait": "Veuillez patienter...",
+    "loading": "Chargement...",
+    "processing": "Traitement..."
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire",
+    "invalid_email": "Adresse e-mail invalide",
+    "password_min": "Le mot de passe doit contenir au moins 6 caractères"
+  }
+}

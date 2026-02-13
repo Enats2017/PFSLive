@@ -1,0 +1,19 @@
+{
+  "title": "Welkom bij PFSLive",
+  "subtitle": "Live Trail Race Tracking",
+  "tagline": "Kies hoe u de app wilt gebruiken",
+  "participant": {
+    "title": "Ik ben Deelnemer",
+    "description": "Volg en deel uw race voortgang in realtime",
+    "button": "Doorgaan als Deelnemer"
+  },
+  "follower": {
+    "title": "Ik ben Volger",
+    "description": "Volg uw favoriete lopers en hun voortgang",
+    "button": "Doorgaan als Volger"
+  },
+  "footer": {
+    "version": "Versie {{version}}",
+    "language": "Taal"
+  }
+}

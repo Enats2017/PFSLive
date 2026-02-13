@@ -1,0 +1,11 @@
+{
+  "loading_route": "Route laden...",
+  "error_loading_route": "Kan route niet laden",
+  "elevation_profile": "Hoogteprofiel",
+  "map": {
+    "follow_mode": "Volgen",
+    "overview_mode": "Overzicht"
+  },
+  "distance_km": "{{distance}} km",
+  "elevation_m": "{{elevation}} m"
+}

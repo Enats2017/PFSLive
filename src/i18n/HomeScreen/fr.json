@@ -1,0 +1,19 @@
+{
+  "title": "Bienvenue sur PFSLive",
+  "subtitle": "Suivi en Direct de Courses Trail",
+  "tagline": "Choisissez comment vous souhaitez utiliser l'application",
+  "participant": {
+    "title": "Je suis Participant",
+    "description": "Suivez et partagez votre progression en temps réel",
+    "button": "Continuer en tant que Participant"
+  },
+  "follower": {
+    "title": "Je suis Suiveur",
+    "description": "Suivez vos coureurs préférés et leur progression",
+    "button": "Continuer en tant que Suiveur"
+  },
+  "footer": {
+    "version": "Version {{version}}",
+    "language": "Langue"
+  }
+}

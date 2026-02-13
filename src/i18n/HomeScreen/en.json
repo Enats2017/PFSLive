@@ -1,0 +1,19 @@
+{
+  "title": "Welcome to PFSLive",
+  "subtitle": "Live Trail Race Tracking",
+  "tagline": "Choose how you want to use the app",
+  "participant": {
+    "title": "I'm a Participant",
+    "description": "Track and share your race progress in real-time",
+    "button": "Continue as Participant"
+  },
+  "follower": {
+    "title": "I'm a Follower",
+    "description": "Follow your favorite runners and track their progress",
+    "button": "Continue as Follower"
+  },
+  "footer": {
+    "version": "Version {{version}}",
+    "language": "Language"
+  }
+}

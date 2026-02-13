@@ -1,0 +1,11 @@
+{
+  "loading_route": "Loading route...",
+  "error_loading_route": "Failed to load route",
+  "elevation_profile": "Elevation Profile",
+  "map": {
+    "follow_mode": "Following",
+    "overview_mode": "Overview"
+  },
+  "distance_km": "{{distance}} km",
+  "elevation_m": "{{elevation}} m"
+}

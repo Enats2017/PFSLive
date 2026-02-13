@@ -1,0 +1,34 @@
+{
+  "app_name": "PFSLive",
+  "buttons": {
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "retry": "Retry",
+    "refresh": "Refresh"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Network error. Please check your connection.",
+    "timeout": "Request timed out. Please try again.",
+    "not_found": "Resource not found.",
+    "unauthorized": "You are not authorized to perform this action.",
+    "server_error": "Server error. Please try again later."
+  },
+  "loading": {
+    "please_wait": "Please wait...",
+    "loading": "Loading...",
+    "processing": "Processing..."
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalid_email": "Invalid email address",
+    "password_min": "Password must be at least 6 characters"
+  }
+}
