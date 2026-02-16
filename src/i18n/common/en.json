@@ -13,6 +13,13 @@
     "retry": "Retry",
     "refresh": "Refresh"
   },
+  "nav": {
+    "home": "Home",
+    "favorites": "Favorites",
+    "results": "Results",
+    "map": "Map",
+    "more": "More"
+  },
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "network": "Network error. Please check your connection.",
@@ -25,10 +32,5 @@
     "please_wait": "Please wait...",
     "loading": "Loading...",
     "processing": "Processing..."
-  },
-  "validation": {
-    "required": "This field is required",
-    "invalid_email": "Invalid email address",
-    "password_min": "Password must be at least 6 characters"
   }
 }

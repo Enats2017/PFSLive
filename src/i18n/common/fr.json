@@ -13,6 +13,13 @@
     "retry": "Réessayer",
     "refresh": "Actualiser"
   },
+  "nav": {
+    "home": "Accueil",
+    "favorites": "Favoris",
+    "results": "Résultats",
+    "map": "Carte",
+    "more": "Plus"
+  },
   "errors": {
     "generic": "Une erreur s'est produite. Veuillez réessayer.",
     "network": "Erreur réseau. Vérifiez votre connexion.",
@@ -25,10 +32,5 @@
     "please_wait": "Veuillez patienter...",
     "loading": "Chargement...",
     "processing": "Traitement..."
-  },
-  "validation": {
-    "required": "Ce champ est obligatoire",
-    "invalid_email": "Adresse e-mail invalide",
-    "password_min": "Le mot de passe doit contenir au moins 6 caractères"
   }
 }

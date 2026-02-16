@@ -13,6 +13,13 @@
     "retry": "Opnieuw proberen",
     "refresh": "Vernieuwen"
   },
+  "nav": {
+    "home": "Home",
+    "favorites": "Favorieten",
+    "results": "Resultaten",
+    "map": "Kaart",
+    "more": "Meer"
+  },
   "errors": {
     "generic": "Er is iets misgegaan. Probeer het opnieuw.",
     "network": "Netwerkfout. Controleer uw verbinding.",
@@ -25,10 +32,5 @@
     "please_wait": "Een moment geduld...",
     "loading": "Laden...",
     "processing": "Verwerken..."
-  },
-  "validation": {
-    "required": "Dit veld is verplicht",
-    "invalid_email": "Ongeldig e-mailadres",
-    "password_min": "Wachtwoord moet minimaal 6 tekens bevatten"
   }
 }

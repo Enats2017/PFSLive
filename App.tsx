@@ -1,3 +1,6 @@
+// ✅ CRITICAL: Import gesture handler FIRST, before anything else
+import 'react-native-gesture-handler';
+
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -18,7 +21,6 @@ export default function App() {
       try {
         console.log('🚀 App initializing...');
 
-        // Initialize Mapbox
         if (MAPBOX_TOKEN) {
           Mapbox.setAccessToken(MAPBOX_TOKEN);
           console.log('✅ Mapbox initialized');
@@ -26,7 +28,6 @@ export default function App() {
           console.warn('⚠️ Mapbox token missing');
         }
 
-        // Load saved language preference
         const savedLang = await loadLanguage();
         if (savedLang !== 'en') {
           await changeLanguage(savedLang);
@@ -37,7 +38,7 @@ export default function App() {
         console.log('✅ App ready');
       } catch (error) {
         console.error('❌ App initialization error:', error);
-        setIsReady(true); // Continue anyway
+        setIsReady(true);
       }
     };
 
