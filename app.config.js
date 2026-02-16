@@ -7,8 +7,8 @@ export default ({ config }) => {
 
   return {
     ...config,
-    name: "PFSLive",
-    slug: "pfslive",
+    name: "My day out",
+    slug: "mydayout",
     version: "1.0.0",
     orientation: "portrait",
     // icon: "./assets/icon.png",
@@ -23,11 +23,11 @@ export default ({ config }) => {
     ],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.yourcompany.pfslive",
+      bundleIdentifier: "com.yourcompany.mydayout",
       infoPlist: {
-        NSLocationWhenInUseUsageDescription: "PFSLive needs your location to track your race progress and share it with followers.",
-        NSLocationAlwaysAndWhenInUseUsageDescription: "PFSLive needs your location to track your race progress even when the app is in the background.",
-        NSLocationAlwaysUsageDescription: "PFSLive needs background location access to continuously track your race progress."
+        NSLocationWhenInUseUsageDescription: "My day out - Live tracking & Results app",
+        NSLocationAlwaysAndWhenInUseUsageDescription: "My day out - Live tracking & Results app",
+        NSLocationAlwaysUsageDescription: "My day out - Live tracking & Results app"
       }
     },
     android: {
@@ -35,7 +35,7 @@ export default ({ config }) => {
       //   foregroundImage: "./assets/adaptive-icon.png",
       //   backgroundColor: "#ffffff"
       // },
-      package: "com.yourcompany.pfslive",
+      package: "com.yourcompany.mydayout",
       permissions: [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -56,9 +56,9 @@ export default ({ config }) => {
       [
         "expo-location",
         {
-          locationAlwaysAndWhenInUsePermission: "Allow PFSLive to use your location to track your race progress.",
-          locationAlwaysPermission: "Allow PFSLive to use your location even when the app is in the background.",
-          locationWhenInUsePermission: "Allow PFSLive to use your location to track your race progress."
+          locationAlwaysAndWhenInUsePermission: "Allow My day out to use your location to track your race progress.",
+          locationAlwaysPermission: "Allow My day out to use your location even when the app is in the background.",
+          locationWhenInUsePermission: "Allow My day out to use your location to track your race progress."
         }
       ]
     ],
