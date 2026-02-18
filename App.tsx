@@ -1,7 +1,7 @@
 // ✅ CRITICAL: Import gesture handler FIRST, before anything else
 import 'react-native-gesture-handler';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -9,12 +9,18 @@ import Mapbox from '@rnmapbox/maps';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import i18n, { loadLanguage } from './src/i18n';
 import { useLanguageStore } from './src/store/useLanguageStore';
+import Toast from "react-native-toast-message";
+import { toastConfig } from "./utils/toastConfig";
 
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   const { changeLanguage } = useLanguageStore();
+
+ 
+
+
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -57,6 +63,7 @@ export default function App() {
     <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AppNavigator />
+         <Toast config={toastConfig} />
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

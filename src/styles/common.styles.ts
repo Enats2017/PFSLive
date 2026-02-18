@@ -5,6 +5,8 @@ export const colors = {
   primary: '#DC143C',
   primaryDark: '#B71C1C',
   primaryLight: '#FF6B6B',
+  secondary: '#ff4d00',
+  
   
   // Accent Colors
   accent: '#4A9EFF',

@@ -6,6 +6,7 @@ import { RootStackParamList } from '../types/navigation';
 
 import HomeScreen from '../screens/HomeScreen';
 import RouteScreen from '../screens/RouteScreen';
+import ParticipantEvent from '../screens/ParticipantEvent';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -31,6 +32,13 @@ export const AppNavigator: React.FC = () => {
           component={HomeScreen}
           options={{
             gestureEnabled: false, // No swipe on home screen
+          }}
+        />
+        <Stack.Screen 
+          name="ParticipantEvent" 
+          component={ParticipantEvent}
+          options={{
+            gestureEnabled: false,
           }}
         />
         <Stack.Screen 

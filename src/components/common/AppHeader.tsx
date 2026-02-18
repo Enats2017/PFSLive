@@ -16,7 +16,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       {/* Left Side - Always Logo */}
       <View style={headerStyles.leftSection}>
         <View style={headerStyles.logo}>
-          <Text style={headerStyles.logoIcon}>P</Text>
+          <Text style={headerStyles.logoIcon}>M</Text>
         </View>
       </View>
 
