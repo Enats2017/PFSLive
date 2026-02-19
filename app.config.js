@@ -60,7 +60,8 @@ export default ({ config }) => {
           locationAlwaysPermission: "Allow My day out to use your location even when the app is in the background.",
           locationWhenInUsePermission: "Allow My day out to use your location to track your race progress."
         }
-      ]
+      ],
+      "expo-localization"
     ],
     extra: {
       eas: {
