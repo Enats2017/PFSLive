@@ -13,7 +13,7 @@ export interface GPSPosition {
 
 export const gpsService = {
   /**
-   * Request location permissions from user
+   * Request location permissions
    */
   async requestPermissions(): Promise<boolean> {
     try {
@@ -28,13 +28,12 @@ export const gpsService = {
 
       console.log('✅ Foreground location permission granted');
 
-      // Optional: Request background permission for continuous tracking
       const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
       
       if (backgroundStatus === 'granted') {
         console.log('✅ Background location permission granted');
       } else {
-        console.warn('⚠️ Background location permission denied (foreground only)');
+        console.warn('⚠️ Background location permission denied');
       }
 
       return true;
@@ -65,14 +64,10 @@ export const gpsService = {
       console.log('📍 Getting current GPS position...');
       
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: Location.Accuracy.Balanced, // Battery optimized
       });
 
-      console.log('✅ GPS position obtained:', {
-        lat: location.coords.latitude.toFixed(6),
-        lon: location.coords.longitude.toFixed(6),
-        accuracy: location.coords.accuracy,
-      });
+      console.log('✅ GPS position obtained');
 
       return {
         latitude: location.coords.latitude,
@@ -105,20 +100,21 @@ export const gpsService = {
   },
 
   /**
-   * Start watching position (continuous updates)
+   * Start watching position with battery optimization
    */
   async startWatchingPosition(
     callback: (position: GPSPosition) => void,
-    errorCallback?: (error: Error) => void
+    errorCallback?: (error: Error) => void,
+    intervalSeconds: number = 30 // Default 30 seconds for battery efficiency
   ): Promise<{ remove: () => void }> {
     try {
-      console.log('🔄 Starting GPS position watching...');
+      console.log(`🔄 Starting GPS watching (interval: ${intervalSeconds}s, battery optimized)...`);
 
       const subscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 5000, // Update every 5 seconds
-          distanceInterval: 10, // Or every 10 meters
+          accuracy: Location.Accuracy.Balanced, // Battery optimized (not Highest)
+          timeInterval: intervalSeconds * 1000, // Convert to milliseconds
+          distanceInterval: 50, // Update every 50 meters (battery optimized)
         },
         (location) => {
           const position: GPSPosition = {
@@ -130,11 +126,6 @@ export const gpsService = {
             heading: location.coords.heading,
             timestamp: location.timestamp,
           };
-
-          console.log('📍 GPS update:', {
-            lat: position.latitude.toFixed(6),
-            lon: position.longitude.toFixed(6),
-          });
 
           callback(position);
         }

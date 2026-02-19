@@ -1,5 +1,6 @@
 import { apiClient } from './api';
-import { API_CONFIG } from '../constants/config';
+import { API_CONFIG, buildApiUrl } from '../constants/config';
+import { locationQueueService, QueuedLocation } from './locationQueueService';
 
 export interface LocationData {
   latitude: number;
@@ -19,13 +20,37 @@ export interface SendLocationResponse {
 
 export const locationService = {
   /**
-   * Send participant location to API
+   * Send location to API (with network check and queuing)
    */
   async sendLocation(
     participantId: string,
     eventId: string,
-    location: LocationData
+    location: LocationData,
+    queueIfOffline: boolean = true
   ): Promise<SendLocationResponse> {
+    // Check network connection
+    const hasNetwork = await locationQueueService.hasNetwork();
+
+    if (!hasNetwork) {
+      console.log('📶 No network, queuing location...');
+      
+      if (queueIfOffline) {
+        const queuedLocation: QueuedLocation = {
+          ...location,
+          participantId,
+          eventId,
+          queuedAt: new Date().toISOString(),
+          retryCount: 0,
+        };
+        await locationQueueService.addToQueue(queuedLocation);
+      }
+
+      return {
+        success: false,
+        message: 'Location queued (offline)',
+      };
+    }
+
     if (API_CONFIG.USE_MOCK_DATA) {
       console.log('📡 [MOCK] Sending location to API:', {
         participantId,
@@ -33,17 +58,11 @@ export const locationService = {
         location: {
           lat: location.latitude.toFixed(6),
           lon: location.longitude.toFixed(6),
-          elevation: location.elevation,
-          accuracy: location.accuracy,
-          speed: location.speed,
-          timestamp: location.timestamp,
         },
       });
       
-      // Simulate network delay
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Mock successful response
       return {
         success: true,
         message: 'Location sent successfully (mock)',
@@ -52,13 +71,15 @@ export const locationService = {
     }
 
     try {
-      // Build the API endpoint URL
-      const url = API_CONFIG.ENDPOINTS.PARTICIPANT_LOCATION
-        .replace(':participantId', participantId);
+      const url = buildApiUrl(API_CONFIG.ENDPOINTS.PARTICIPANT_LOCATION, {
+        participantId: participantId
+      });
+
+      // Get headers with token from AsyncStorage
+      const headers = await API_CONFIG.getHeaders();
 
       console.log('📡 Sending location to API:', url);
 
-      // Send location data to API
       const response = await apiClient.post<SendLocationResponse>(url, {
         eventId,
         latitude: location.latitude,
@@ -68,18 +89,89 @@ export const locationService = {
         timestamp: location.timestamp,
         speed: location.speed,
         heading: location.heading,
-      });
+      }, { headers });
 
-      console.log('✅ Location sent successfully:', response);
+      console.log('✅ Location sent successfully');
       return response.data;
     } catch (error) {
       console.error('❌ Failed to send location:', error);
+
+      // Queue if failed and queuing is enabled
+      if (queueIfOffline) {
+        const queuedLocation: QueuedLocation = {
+          ...location,
+          participantId,
+          eventId,
+          queuedAt: new Date().toISOString(),
+          retryCount: 0,
+        };
+        await locationQueueService.addToQueue(queuedLocation);
+      }
+
       throw error;
     }
   },
 
   /**
-   * Send batch of locations (for offline sync)
+   * Process queued locations (send when network is back)
+   */
+  async processQueue(participantId: string, eventId: string): Promise<number> {
+    const hasNetwork = await locationQueueService.hasNetwork();
+
+    if (!hasNetwork) {
+      console.log('📶 Still offline, skipping queue processing');
+      return 0;
+    }
+
+    const queue = await locationQueueService.getQueue();
+
+    if (queue.length === 0) {
+      return 0;
+    }
+
+    console.log(`📤 Processing ${queue.length} queued locations...`);
+
+    let sentCount = 0;
+    const batchSize = 10; // Send 10 at a time to avoid overwhelming API
+
+    // Send locations in batches
+    for (let i = 0; i < Math.min(queue.length, batchSize); i++) {
+      const queuedLocation = queue[i];
+
+      try {
+        await this.sendLocation(
+          queuedLocation.participantId,
+          queuedLocation.eventId,
+          {
+            latitude: queuedLocation.latitude,
+            longitude: queuedLocation.longitude,
+            elevation: queuedLocation.elevation,
+            accuracy: queuedLocation.accuracy,
+            timestamp: queuedLocation.timestamp,
+            speed: queuedLocation.speed,
+            heading: queuedLocation.heading,
+          },
+          false // Don't re-queue if it fails again
+        );
+
+        sentCount++;
+      } catch (error) {
+        console.error('❌ Failed to send queued location:', error);
+        break; // Stop processing if one fails
+      }
+    }
+
+    // Remove sent locations from queue
+    if (sentCount > 0) {
+      await locationQueueService.removeFromQueue(sentCount);
+      console.log(`✅ Processed ${sentCount} queued locations`);
+    }
+
+    return sentCount;
+  },
+
+  /**
+   * Send batch of locations
    */
   async sendLocationBatch(
     participantId: string,
@@ -87,14 +179,8 @@ export const locationService = {
     locations: LocationData[]
   ): Promise<SendLocationResponse> {
     if (API_CONFIG.USE_MOCK_DATA) {
-      console.log('📡 [MOCK] Sending location batch to API:', {
-        participantId,
-        eventId,
-        count: locations.length,
-      });
-      
+      console.log('📡 [MOCK] Sending location batch:', locations.length);
       await new Promise(resolve => setTimeout(resolve, 500));
-      
       return {
         success: true,
         message: `Batch of ${locations.length} locations sent successfully (mock)`,
@@ -115,34 +201,5 @@ export const locationService = {
       console.error('❌ Failed to send location batch:', error);
       throw error;
     }
-  },
-
-  /**
-   * Start continuous location tracking (polling/interval based)
-   * This is a fallback method - prefer using GPS watch
-   */
-  startLocationTracking(
-    participantId: string,
-    eventId: string,
-    getLocation: () => LocationData,
-    interval: number = 5000 // 5 seconds default
-  ): () => void {
-    console.log('🔄 Starting interval-based location tracking for participant:', participantId);
-
-    const trackingInterval = setInterval(async () => {
-      try {
-        const location = getLocation();
-        await this.sendLocation(participantId, eventId, location);
-        console.log('📍 Location update sent via interval');
-      } catch (error) {
-        console.error('❌ Location tracking error:', error);
-      }
-    }, interval);
-
-    // Return cleanup function
-    return () => {
-      console.log('⏹️ Stopping interval-based location tracking');
-      clearInterval(trackingInterval);
-    };
   },
 };
