@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import { API_CONFIG } from '../constants/config';
+import { API_CONFIG, buildApiUrl } from '../constants/config';
 import { locationQueueService, QueuedLocation } from './locationQueueService';
 
 export interface LocationData {
@@ -58,10 +58,6 @@ export const locationService = {
         location: {
           lat: location.latitude.toFixed(6),
           lon: location.longitude.toFixed(6),
-          elevation: location.elevation,
-          accuracy: location.accuracy,
-          speed: location.speed,
-          timestamp: location.timestamp,
         },
       });
       
@@ -75,8 +71,12 @@ export const locationService = {
     }
 
     try {
-      const url = API_CONFIG.ENDPOINTS.PARTICIPANT_LOCATION
-        .replace(':participantId', participantId);
+      const url = buildApiUrl(API_CONFIG.ENDPOINTS.PARTICIPANT_LOCATION, {
+        participantId: participantId
+      });
+
+      // Get headers with token from AsyncStorage
+      const headers = await API_CONFIG.getHeaders();
 
       console.log('📡 Sending location to API:', url);
 
@@ -89,7 +89,7 @@ export const locationService = {
         timestamp: location.timestamp,
         speed: location.speed,
         heading: location.heading,
-      });
+      }, { headers });
 
       console.log('✅ Location sent successfully');
       return response.data;
