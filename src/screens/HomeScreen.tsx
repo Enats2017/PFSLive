@@ -13,6 +13,7 @@ import { HomeScreenProps } from '../types/navigation';
 import { AppHeader } from '../components/common/AppHeader';
 import { commonStyles } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
+import { useTranslation } from 'react-i18next';
 import axios from "axios";
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
@@ -21,6 +22,7 @@ import { APP_CONFIG } from '../constants/config';
 
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+    const { t } = useTranslation(['home', 'common']);
   const [homeData, setHomeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isTracking, setIsTracking] = useState(false);
@@ -216,49 +218,48 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           />
           <View style={homeStyles.textSection}>
             <Text style={homeStyles.title}>
-              My Day Out
+             {t('common:app_name')}
             </Text>
           </View>
         </View>
         <Text style={homeStyles.subtitle}>
-          LIVE TRACKING & RESULTS
+          {t('home:subtitle')}
         </Text>
         <View style={homeStyles.textContainer}>
           {
             homeData?.show_start_track === 1 ? (
               <>
-                <Text style={[commonStyles.title, { marginBottom: 5 }]}>Event Name:{homeData.next_race_name}</Text>
-                <Text style={homeStyles.smallText}>Date: {homeData.next_race_date}</Text>
+                <Text style={[commonStyles.title, { marginBottom: 5 }]}>{t('home:Event.title')}:{homeData.next_race_name}</Text>
+                <Text style={homeStyles.smallText}>{t('home:Event.Date')}: {homeData.next_race_date}</Text>
                 <Text style={[homeStyles.heading, { marginTop: 15 }]}>
-                  You can start your live tracking from 1 hour before your start.
-                  Be sure to keep this app open all the time and do not close it!
+                 {t('home:Event.description')}
                 </Text>
                 <TouchableOpacity
                   style={[homeStyles.button, { width: "90%", marginBottom: 30 }]}
                   onPress={isTracking ? stopTracking : startTracking}
                 >
                   <Text style={homeStyles.buttonText}>
-                    {isTracking ? "STOP TRACKING" : "START TRACKING"}
+                    {isTracking ? t('home:Event.button') : t('home:Event.buttonText')}
                   </Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
                 <Text style={homeStyles.heading}>
-                  SHARE YOUR RACE OR TRAINING WITH YOUR FRIENDS & FAMILY
+                  {t('home:tagline')}
                 </Text>
-                <Text style={homeStyles.smallText}>Live Tracking</Text>
-                <Text style={homeStyles.smallText}>Live Results</Text>
+                <Text style={homeStyles.smallText}>{t('home:participant.title')}</Text>
+                <Text style={homeStyles.smallText}>{t('home:subtext')}</Text>
               </>
             )
           }
         </View>
         <View style={homeStyles.buttonContainer}>
           <TouchableOpacity style={homeStyles.button} onPress={() => navigation.navigate('ParticipantEvent')}>
-            <Text style={homeStyles.buttonText}>I AM A PARTICIPANT</Text>
+            <Text style={homeStyles.buttonText}>{t('home:button.Participant')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={homeStyles.button}>
-            <Text style={homeStyles.buttonText}>I AM A FAN</Text>
+            <Text style={homeStyles.buttonText}>{t('home:button.Fan')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -1,16 +1,23 @@
 {
   "title": "Welcome to PFSLive",
-  "subtitle": "Live Trail Race Tracking",
-  "tagline": "Choose how you want to use the app",
+  "subtitle": "LIVE TRACKING & RESULTS",
+  "tagline": " SHARE YOUR RACE OR TRAINING WITH YOUR FRIENDS & FAMILY",
+  "subtext" :"Live Results",
   "participant": {
-    "title": "I'm a Participant",
+    "title": "Live Tracking",
     "description": "Track and share your race progress in real-time",
     "button": "Continue as Participant"
   },
-  "follower": {
-    "title": "I'm a Follower",
-    "description": "Follow your favorite runners and track their progress",
-    "button": "Continue as Follower"
+  "Event":{
+    "title":"Event Name",
+    "Date":"Date",
+    "description":"You can start your live tracking from 1 hour before your start Be sure to keep this app open all the time and do not close it!",
+    "button":"STOP TRACKING",
+    "buttonText":"START TRACKING"
+  },
+  "button": {
+    "Participant": "I AM A PARTICIPANT",
+    "Fan":"I AM A FAN"
   },
   "footer": {
     "version": "Version {{version}}",
