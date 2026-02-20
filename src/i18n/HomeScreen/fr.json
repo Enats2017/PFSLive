@@ -1,68 +1,60 @@
 {
-  "title": "Bienvenue sur PFSLive",
-  "subtitle": "SUIVI EN DIRECT ET RÉSULTATS",
-  "tagline": "PARTAGEZ VOTRE COURSE OU ENTRAÎNEMENT AVEC VOS AMIS ET VOTRE FAMILLE",
+  "subtitle": "SUIVI EN DIRECT & RÉSULTATS",
+  "tagline": "PARTAGEZ VOTRE COURSE OU ENTRAÎNEMENT AVEC VOS AMIS & FAMILLE",
   "subtext": "Résultats en Direct",
   "participant": {
-    "title": "Suivi en Direct",
-    "description": "Suivez et partagez votre progression en temps réel",
-    "button": "Continuer en tant que Participant"
-  },
-  "Event": {
-    "title": "Nom de l'Événement",
-    "Date": "Date",
-    "description": "Vous pouvez commencer votre suivi en direct 1 heure avant votre départ. Assurez-vous de garder cette application ouverte en permanence et ne la fermez pas !",
-    "button": "ARRÊTER LE SUIVI",
-    "buttonText": "COMMENCER LE SUIVI"
+    "title": "Suivi en Direct"
   },
   "button": {
     "Participant": "JE SUIS UN PARTICIPANT",
     "Fan": "JE SUIS UN FAN"
   },
-  "footer": {
-    "version": "Version {{version}}",
-    "language": "Langue"
+  "Event": {
+    "title": "Nom de l'événement",
+    "Date": "Date",
+    "description": "Vous pouvez démarrer votre suivi en direct 1 heure avant votre départ. Assurez-vous de garder cette application ouverte tout le temps et ne la fermez pas !",
+    "buttonText": "COMMENCER LE SUIVI",
+    "button": "ARRÊTER LE SUIVI"
+  },
+  "status": {
+    "gpsActive": "GPS Actif - En attente du départ de la course",
+    "sendingData": "Envoi des Données de Localisation",
+    "sent": "Envoyé",
+    "queued": "En Attente",
+    "interval": "Intervalle",
+    "waitingForData": "En attente des données de l'événement...",
+    "manualStartEnabled": "Démarrage Manuel Activé",
+    "manualStartDescription": "La transmission des données est contrôlée manuellement",
+    "manualStartReady": "Prêt à envoyer (mode manuel)"
   },
   "tracking": {
     "gpsActivated": "GPS Activé",
+    "manualStartEnabled": "Mode de démarrage manuel activé. Vous pouvez commencer à envoyer des données à tout moment.",
+    "raceStarted": "Course Commencée !",
+    "nowSending": "Envoi des données de localisation en cours.",
+    "waitingForRace": "GPS activé. Les données seront envoyées au démarrage de la course.",
+    "waitingForRaceNoTime": "GPS activé. En attente d'informations sur la course.",
+    "dataSendingStarted": "GPS activé. Transmission des données commencée.",
+    "manualStart": "Override Manuel",
+    "manualStartMessage": "Transmission des données démarrée manuellement",
     "gpsStopped": "GPS Arrêté",
     "trackingStopped": "Suivi arrêté. Envoyés : {{sent}}, En attente : {{queued}}",
-    "raceStarted": "Course Commencée !",
-    "nowSending": "Envoi de vos données de localisation en cours.",
-    "queueProcessed": "File Traitée",
-    "queuedSent": "{{count}} localisations en attente envoyées",
-    "manualStart": "Démarrage Manuel",
-    "manualStartMessage": "Envoi des données de localisation en cours.",
-    "waitingForRace": "GPS activé. Les données seront envoyées au démarrage de la course à {{time}}",
-    "waitingForRaceNoTime": "GPS activé. Les données seront envoyées au démarrage de la course.",
-    "manualStartEnabled": "GPS activé. Envoi immédiat des données (démarrage manuel activé)."
+    "queueProcessed": "File d'Attente Traitée",
+    "queuedSent": "{{count}} localisation(s) en attente envoyée(s) avec succès"
   },
-  "status": {
-    "sendingData": "Envoi de Données",
-    "gpsActive": "GPS Actif",
-    "raceStartsIn": "La course commence dans : {{time}}",
-    "manualStartReady": "Démarrage manuel activé - prêt à envoyer",
-    "waitingForRace": "En attente de la course...",
-    "sent": "Envoyés",
-    "queued": "En attente",
-    "interval": "Intervalle",
-    "manualStartEnabled": "Démarrage Manuel Activé",
-    "manualStartDescription": "Les données seront envoyées immédiatement au démarrage du suivi",
-    "waitingForData": "EN ATTENTE DES DONNÉES..."
+  "alerts": {
+    "overrideTitle": "Override Manuel",
+    "overrideMessage": "Commencer immédiatement l'envoi des données de localisation, en contournant l'heure de départ de la course ?",
+    "cancel": "Annuler",
+    "startNow": "Démarrer Maintenant"
   },
   "errors": {
     "missingInfo": "Informations Manquantes",
-    "missingInfoDescription": "ID du participant ou de l'événement introuvable. Veuillez actualiser et réessayer.",
+    "missingInfoDescription": "Les informations du participant ou de l'événement ne sont pas disponibles",
     "permissionRequired": "Permission Requise",
-    "permissionDescription": "L'autorisation de localisation est requise pour suivre votre position.",
+    "permissionDescription": "L'autorisation de localisation est requise pour suivre votre progression",
     "gpsError": "Erreur GPS",
-    "gpsErrorDescription": "Impossible d'obtenir la localisation GPS. Vérifiez que les services de localisation sont activés.",
-    "trackingFailed": "Échec du démarrage du suivi GPS."
-  },
-  "alerts": {
-    "overrideTitle": "Remplacer l'Heure de Course",
-    "overrideMessage": "Commencer l'envoi des données de localisation maintenant ? Cela remplacera l'heure de départ prévue.",
-    "cancel": "Annuler",
-    "startNow": "Démarrer Maintenant"
+    "gpsErrorDescription": "Impossible d'obtenir votre localisation. Veuillez vérifier vos paramètres GPS.",
+    "trackingFailed": "Échec du démarrage du suivi"
   }
 }

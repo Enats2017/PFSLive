@@ -7,8 +7,8 @@ export default ({ config }) => {
 
   return {
     ...config,
-    name: "My day out",
-    slug: "mydayout",
+    name: "Livio",
+    slug: "livio",
     version: "1.0.0",
     orientation: "portrait",
     // icon: "./assets/icon.png",
@@ -23,11 +23,11 @@ export default ({ config }) => {
     ],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.yourcompany.mydayout",
+      bundleIdentifier: "com.pfs.livio",
       infoPlist: {
-        NSLocationWhenInUseUsageDescription: "My day out - Live tracking & Results app",
-        NSLocationAlwaysAndWhenInUseUsageDescription: "My day out - Live tracking & Results app",
-        NSLocationAlwaysUsageDescription: "My day out - Live tracking & Results app"
+        NSLocationWhenInUseUsageDescription: "Livio - Live tracking & Results app",
+        NSLocationAlwaysAndWhenInUseUsageDescription: "Livio - Live tracking & Results app",
+        NSLocationAlwaysUsageDescription: "Livio - Live tracking & Results app"
       }
     },
     android: {
@@ -35,7 +35,7 @@ export default ({ config }) => {
       //   foregroundImage: "./assets/adaptive-icon.png",
       //   backgroundColor: "#ffffff"
       // },
-      package: "com.yourcompany.mydayout",
+      package: "com.pfs.Livio",
       permissions: [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -56,9 +56,9 @@ export default ({ config }) => {
       [
         "expo-location",
         {
-          locationAlwaysAndWhenInUsePermission: "Allow My day out to use your location to track your race progress.",
-          locationAlwaysPermission: "Allow My day out to use your location even when the app is in the background.",
-          locationWhenInUsePermission: "Allow My day out to use your location to track your race progress."
+          locationAlwaysAndWhenInUsePermission: "Allow Livio to use your location to track your race progress.",
+          locationAlwaysPermission: "Allow Livio to use your location even when the app is in the background.",
+          locationWhenInUsePermission: "Allow Livio to use your location to track your race progress."
         }
       ],
       "expo-localization"

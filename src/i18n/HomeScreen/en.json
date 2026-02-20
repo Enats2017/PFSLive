@@ -1,68 +1,60 @@
 {
-  "title": "Welcome to PFSLive",
   "subtitle": "LIVE TRACKING & RESULTS",
   "tagline": "SHARE YOUR RACE OR TRAINING WITH YOUR FRIENDS & FAMILY",
   "subtext": "Live Results",
   "participant": {
-    "title": "Live Tracking",
-    "description": "Track and share your race progress in real-time",
-    "button": "Continue as Participant"
-  },
-  "Event": {
-    "title": "Event Name",
-    "Date": "Date",
-    "description": "You can start your live tracking from 1 hour before your start. Be sure to keep this app open all the time and do not close it!",
-    "button": "STOP TRACKING",
-    "buttonText": "START TRACKING"
+    "title": "Live Tracking"
   },
   "button": {
     "Participant": "I AM A PARTICIPANT",
     "Fan": "I AM A FAN"
   },
-  "footer": {
-    "version": "Version {{version}}",
-    "language": "Language"
-  },
-  "tracking": {
-    "gpsActivated": "GPS Activated",
-    "gpsStopped": "GPS Stopped",
-    "trackingStopped": "Tracking stopped. Sent: {{sent}}, Queued: {{queued}}",
-    "raceStarted": "Race Started!",
-    "nowSending": "Now sending your location data.",
-    "queueProcessed": "Queue Processed",
-    "queuedSent": "Sent {{count}} queued locations",
-    "manualStart": "Manual Start",
-    "manualStartMessage": "Now sending location data.",
-    "waitingForRace": "GPS activated. Data will be sent when race starts at {{time}}",
-    "waitingForRaceNoTime": "GPS activated. Data will be sent when race starts.",
-    "manualStartEnabled": "GPS activated. Sending data immediately (manual start enabled)."
+  "Event": {
+    "title": "Event Name",
+    "Date": "Date",
+    "description": "You can start your live tracking from 1 hour before your start. Be sure to keep this app open all the time and do not close it!",
+    "buttonText": "START TRACKING",
+    "button": "STOP TRACKING"
   },
   "status": {
-    "sendingData": "Sending Data",
-    "gpsActive": "GPS Active",
-    "raceStartsIn": "Race starts in: {{time}}",
-    "manualStartReady": "Manual start enabled - ready to send",
-    "waitingForRace": "Waiting for race...",
+    "gpsActive": "GPS Active - Waiting for race to start",
+    "sendingData": "Sending Location Data",
     "sent": "Sent",
     "queued": "Queued",
     "interval": "Interval",
+    "waitingForData": "Waiting for event data...",
     "manualStartEnabled": "Manual Start Enabled",
-    "manualStartDescription": "Data will be sent immediately when tracking starts",
-    "waitingForData": "WAITING FOR DATA..."
+    "manualStartDescription": "Data transmission is controlled manually",
+    "manualStartReady": "Ready to send (manual mode)"
+  },
+  "tracking": {
+    "gpsActivated": "GPS Activated",
+    "manualStartEnabled": "Manual start mode enabled. You can start sending data anytime.",
+    "raceStarted": "Race Started!",
+    "nowSending": "Now sending location data.",
+    "waitingForRace": "GPS activated. Data will be sent when race starts.",
+    "waitingForRaceNoTime": "GPS activated. Waiting for race information.",
+    "dataSendingStarted": "GPS activated. Data transmission started.",
+    "manualStart": "Manual Override",
+    "manualStartMessage": "Data transmission started manually",
+    "gpsStopped": "GPS Stopped",
+    "trackingStopped": "Tracking stopped. Sent: {{sent}}, Queued: {{queued}}",
+    "queueProcessed": "Queue Processed",
+    "queuedSent": "{{count}} queued location(s) sent successfully"
+  },
+  "alerts": {
+    "overrideTitle": "Manual Override",
+    "overrideMessage": "Start sending location data immediately, bypassing the race start time?",
+    "cancel": "Cancel",
+    "startNow": "Start Now"
   },
   "errors": {
     "missingInfo": "Missing Information",
-    "missingInfoDescription": "Participant or Event ID not found. Please refresh and try again.",
+    "missingInfoDescription": "Participant or event information not available",
     "permissionRequired": "Permission Required",
-    "permissionDescription": "Location permission is required to track your position.",
+    "permissionDescription": "Location permission is required to track your progress",
     "gpsError": "GPS Error",
-    "gpsErrorDescription": "Failed to get GPS location. Please check if location services are enabled.",
-    "trackingFailed": "Failed to start GPS tracking."
-  },
-  "alerts": {
-    "overrideTitle": "Override Race Time",
-    "overrideMessage": "Start sending location data now? This will override the scheduled race start time.",
-    "cancel": "Cancel",
-    "startNow": "Start Now"
+    "gpsErrorDescription": "Unable to get your location. Please check your GPS settings.",
+    "trackingFailed": "Failed to start tracking"
   }
 }

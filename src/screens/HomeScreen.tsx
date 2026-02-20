@@ -28,6 +28,13 @@ import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { colors, spacing, typography, commonStyles } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
 
+// Standard API response type
+interface StandardApiResponse<T = any> {
+  success: boolean;
+  data: T;
+  error: string | null;
+}
+
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['home', 'common']);
   
@@ -52,6 +59,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const queueProcessorRef = useRef<NodeJS.Timeout | null>(null);
   const raceStartCheckRef = useRef<NodeJS.Timeout | null>(null);
   const appState = useRef(AppState.currentState);
+  const raceStartTimeRef = useRef<Date | null>(null);
+  const isGPSActiveRef = useRef<boolean>(false);
   
   // Get IDs dynamically from API response
   const participantId = homeData?.next_race_participant_app_id || null;
@@ -63,9 +72,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const formatDate = (dateString: string): string => {
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return dateString;
-      }
+      if (isNaN(date.getTime())) return dateString;
       
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -73,7 +80,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
       return `${day}-${month}-${year}`;
     } catch (error) {
-      console.error('Error formatting date:', error);
       return dateString;
     }
   };
@@ -94,13 +100,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setHasToken(isAuthenticated);
       
       if (isAuthenticated) {
-        console.log('✅ User is authenticated');
         await fetchHomeData();
       } else {
-        console.log('⚠️ No authentication token found');
         const fallbackToken = await tokenService.getToken();
         if (fallbackToken) {
-          console.log('✅ Using fallback token from .env');
           setHasToken(true);
           await fetchHomeData();
         }
@@ -110,34 +113,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       await loadQueueSize();
       
     } catch (error) {
-      console.error('❌ Error initializing screen:', error);
+      if (API_CONFIG.DEBUG) console.error('❌ Error initializing screen:', error);
     } finally {
       setIsCheckingToken(false);
       setLoading(false);
     }
   };
 
-  // Log API data when it loads
-  useEffect(() => {
-    if (homeData) {
-      console.log('📋 API Data Loaded:');
-      console.log('   Participant ID:', participantId);
-      console.log('   Event ID:', eventId);
-      console.log('   Race Name:', homeData.next_race_name);
-      console.log('   Race Date:', homeData.next_race_date);
-      console.log('   Race Time (UTC):', homeData.next_race_time);
-      console.log('   Interval:', homeData.next_race_interval_for_location, 'seconds');
-      console.log('   Manual Start:', homeData.manual_start === 1 ? 'ENABLED' : 'DISABLED');
-    }
-  }, [homeData]);
-
   const checkPermissions = async () => {
     const hasPerms = await gpsService.hasPermissions();
     setHasPermission(hasPerms);
-
-    if (hasPerms) {
-      console.log('✅ Location permissions already granted');
-    }
   };
 
   const loadQueueSize = async () => {
@@ -152,8 +137,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (homeData?.manual_start === 1) {
       return true;
     }
-    if (!raceStartTime) return false;
-    return new Date().getTime() >= raceStartTime.getTime();
+    
+    const effectiveRaceTime = raceStartTimeRef.current;
+    
+    if (!effectiveRaceTime) {
+      return false;
+    }
+
+    const now = new Date().getTime();
+    const raceTime = effectiveRaceTime.getTime();
+    
+    return now >= raceTime;
   };
 
   /**
@@ -165,21 +159,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       return;
     }
 
-    if (!raceStartTime) {
+    const effectiveRaceTime = raceStartTimeRef.current;
+
+    if (!effectiveRaceTime) {
       setTimeUntilRace('');
       return;
     }
 
     try {
       const now = new Date().getTime();
-      const raceTime = raceStartTime.getTime();
-      
-      if (isNaN(now) || isNaN(raceTime)) {
-        console.error('❌ Invalid timestamps:', { now, raceTime });
-        setTimeUntilRace('');
-        return;
-      }
-
+      const raceTime = effectiveRaceTime.getTime();
       const diff = raceTime - now;
 
       if (diff <= 0) {
@@ -191,22 +180,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-      if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
-        console.error('❌ Invalid calculated time:', { hours, minutes, seconds });
-        setTimeUntilRace('');
-        return;
-      }
-
       setTimeUntilRace(`${hours}h ${minutes}m ${seconds}s`);
     } catch (error) {
-      console.error('❌ Error calculating time until race:', error);
+      if (API_CONFIG.DEBUG) console.error('Error calculating time:', error);
       setTimeUntilRace('');
     }
   };
 
   // Update countdown every second
   useEffect(() => {
-    if (isGPSActive && raceStartTime) {
+    if (isGPSActive && (raceStartTimeRef.current)) {
       const interval = setInterval(calculateTimeUntilRace, 1000);
       return () => clearInterval(interval);
     }
@@ -220,16 +203,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const token = await tokenService.getToken();
       
       if (!token) {
-        console.log('⚠️ No token available, skipping API call');
         setLoading(false);
         return;
       }
 
-      console.log('📡 Fetching home data...');
-
       const headers = await API_CONFIG.getHeaders();
       
-      const response = await axios.get(
+      const response = await axios.get<StandardApiResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.HOME),
         { 
           headers,
@@ -237,39 +217,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
       );
       
-      console.log("📡 API Response:", response.data);
-      
-      if (response.data.success) {
+      if (response.data.success && response.data.data) {
         setHomeData(response.data.data);
-      } else {
-        console.log("⚠️ API returned success: false");
       }
     } catch (error: any) {
-      console.log("❌ API Error:", error);
-      
-      if (error.response) {
-        if (error.response.status === 401) {
-          console.log('❌ Unauthorized - Invalid or expired token');
-          toastError(
-            t('common:errors.generic'),
-            'Your session has expired. Please login again.'
-          );
-          await tokenService.removeToken();
-          setHasToken(false);
-        } else {
-          toastError(
-            t('common:errors.generic'),
-            `API Error: ${error.response.status}`
-          );
-        }
+      if (error.response?.status === 401) {
+        toastError(
+          t('common:errors.generic'),
+          'Your session has expired. Please login again.'
+        );
+        await tokenService.removeToken();
+        setHasToken(false);
       } else if (error.request) {
-        console.log('❌ No response from server');
         toastError(
           t('common:errors.generic'),
           'Cannot reach server. Please check your internet connection.'
         );
-      } else {
-        console.log('❌ Error:', error.message);
       }
     } finally {
       setLoading(false);
@@ -288,7 +251,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
    * Handle login navigation
    */
   const navigateToLogin = () => {
-    console.log('Navigate to Login screen');
     Alert.alert(
       'Login Required',
       'Please login to access this feature. Login screen will be implemented soon.',
@@ -301,19 +263,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
    */
   const startGPSTracking = async () => {
     try {
-      console.log('🚀 Starting GPS tracking...');
-
       if (!participantId || !eventId) {
         toastError(
           t('home:errors.missingInfo'),
           t('home:errors.missingInfoDescription'),
         );
-        console.error('❌ Missing IDs - Participant:', participantId, 'Event:', eventId);
         return;
       }
-
-      console.log('✅ Using Participant ID:', participantId);
-      console.log('✅ Using Event ID:', eventId);
 
       if (!hasPermission) {
         const granted = await gpsService.requestPermissions();
@@ -327,73 +283,54 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setHasPermission(true);
       }
 
+      // Fetch fresh home data before starting
+      await fetchHomeData();
+      
+      // Wait for state to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Parse race start time from API (UTC format)
       if (homeData?.next_race_time) {
         try {
           const timeString = String(homeData.next_race_time).trim();
-          console.log('=== RACE TIME PARSING DEBUG ===');
-          console.log('1. Raw API time:', timeString);
           
           let raceTime: Date;
           
           if (timeString.endsWith('Z') || timeString.includes('+') || timeString.includes('T')) {
-            // ISO format with timezone
             raceTime = new Date(timeString);
-            console.log('2. Parsed as ISO/UTC format');
           } else if (timeString.includes(' ')) {
-            // Legacy format
             const isoFormat = timeString.replace(' ', 'T') + 'Z';
             raceTime = new Date(isoFormat);
-            console.log('2. Converted to UTC format:', isoFormat);
           } else {
             raceTime = new Date(`${timeString}T12:00:00Z`);
-            console.log('2. Parsed as date only');
           }
           
-          // Validate
-          if (isNaN(raceTime.getTime())) {
-            throw new Error('Invalid date after parsing');
+          if (!isNaN(raceTime.getTime())) {
+            setRaceStartTime(raceTime);
+            raceStartTimeRef.current = raceTime;
+            
+            if (API_CONFIG.DEBUG) {
+              console.log('✅ Race time set:', raceTime.toISOString());
+              console.log('✅ Race time (local):', raceTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+            }
           }
-          
-          console.log('3. Race time object:', raceTime);
-          console.log('4. Race timestamp (ms):', raceTime.getTime());
-          console.log('5. Race time (UTC):', raceTime.toISOString());
-          console.log('6. Race time (India):', raceTime.toLocaleString('en-IN', { 
-            timeZone: 'Asia/Kolkata',
-            hour12: false
-          }));
-          
-          const now = new Date();
-          console.log('7. Current timestamp (ms):', now.getTime());
-          console.log('8. Current time (UTC):', now.toISOString());
-          console.log('9. Current time (India):', now.toLocaleString('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            hour12: false
-          }));
-          
-          const diffMs = raceTime.getTime() - now.getTime();
-          const diffMinutes = Math.floor(diffMs / 1000 / 60);
-          console.log('10. Difference (ms):', diffMs);
-          console.log('11. Difference (minutes):', diffMinutes);
-          console.log('12. Race has started?', diffMs <= 0);
-          console.log('=== END DEBUG ===');
-          
-          setRaceStartTime(raceTime);
-          
         } catch (error) {
-          console.error('❌ Error parsing race time:', error);
+          if (API_CONFIG.DEBUG) console.error('Error parsing race time:', error);
         }
+      } else {
+        setRaceStartTime(null);
+        raceStartTimeRef.current = null;
       }
 
-      // Get sending interval from API (with robust fallback)
-      let intervalValue = 30; // Default
+      // Get sending interval from API
+      let intervalValue = 30;
 
       if (homeData?.next_race_interval_for_location) {
         const rawInterval = homeData.next_race_interval_for_location;
         
         if (typeof rawInterval === 'number') {
           intervalValue = rawInterval;
-        } else if (typeof rawInterval === 'string' && rawInterval.length > 0) {
+        } else if (typeof rawInterval === 'string') {
           const parsed = parseInt(rawInterval);
           if (!isNaN(parsed) && parsed > 0) {
             intervalValue = parsed;
@@ -401,17 +338,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
         
         setSendingInterval(intervalValue);
-        console.log('⏱️ Sending interval set to:', intervalValue, 'seconds');
       } else {
         setSendingInterval(30);
-        console.log('⚠️ No next_race_interval_for_location from API, using default: 30s');
-      }
-
-      if (homeData?.manual_start === 1) {
-        console.log('🔓 Manual start is ENABLED');
       }
 
       setIsGPSActive(true);
+      isGPSActiveRef.current = true;
 
       const initialGPS = await gpsService.getCurrentPosition();
       setCurrentLocation({
@@ -419,15 +351,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         lon: initialGPS.longitude,
       });
 
-      console.log('✅ GPS activated at:', initialGPS.latitude.toFixed(6), initialGPS.longitude.toFixed(6));
-
-      if (hasRaceStarted()) {
+      // Check if race has already started
+      const raceAlreadyStarted = hasRaceStarted();
+      
+      if (raceAlreadyStarted) {
         setIsSendingData(true);
-        console.log('🏁 Race already started - sending data immediately');
       }
 
       const gpsWatch = await gpsService.startWatchingPosition(
         async (gpsPosition) => {
+          // Check if GPS is still active using ref
+          if (!isGPSActiveRef.current) {
+            if (API_CONFIG.DEBUG) console.log('GPS inactive, skipping location send');
+            return;
+          }
+
           setCurrentLocation({
             lat: gpsPosition.latitude,
             lon: gpsPosition.longitude,
@@ -438,15 +376,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           if (shouldSend) {
             if (!isSendingData) {
               setIsSendingData(true);
-              console.log('🏁 Beginning data transmission');
+              
+              if (API_CONFIG.DEBUG) {
+                toastSuccess(
+                  t('home:tracking.raceStarted'),
+                  t('home:tracking.nowSending')
+                );
+              }
             }
             
             const locationData = gpsService.convertToLocationData(gpsPosition);
 
-            if (!participantId || !eventId) {
-              console.error('❌ Missing IDs, cannot send location');
-              return;
-            }
+            if (!participantId || !eventId) return;
 
             try {
               const response = await locationService.sendLocation(
@@ -458,22 +399,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
               if (response.success) {
                 setLocationUpdateCount(prev => prev + 1);
-                console.log('✅ Location sent successfully');
-              } else {
-                console.log('📦 Location queued (offline)');
               }
 
               await loadQueueSize();
             } catch (error) {
-              console.error('❌ Failed to send location:', error);
               await loadQueueSize();
             }
-          } else {
-            console.log('⏳ Waiting for race to start...');
           }
         },
         (error) => {
-          console.error('❌ GPS tracking error:', error);
           toastError(
             t('home:errors.gpsError'),
             t('home:errors.gpsErrorDescription')
@@ -490,52 +424,53 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         startRaceStartChecker();
       }
 
+      // Determine message based on race status
       let message = '';
+      
       if (homeData?.manual_start === 1) {
         message = t('home:tracking.manualStartEnabled');
-      } else if (raceStartTime) {
-        message = `GPS activated. Data will be sent when race starts.`;
+      } else if (raceAlreadyStarted) {
+        message = t('home:tracking.dataSendingStarted');
+      } else if (raceStartTimeRef.current) {
+        message = t('home:tracking.waitingForRace');
       } else {
         message = t('home:tracking.waitingForRaceNoTime');
       }
 
       toastSuccess(t('home:tracking.gpsActivated'), message);
     } catch (error) {
-      console.error('❌ Failed to start GPS:', error);
       Alert.alert(
         t('common:errors.generic'),
         error instanceof Error ? error.message : t('home:errors.trackingFailed'),
       );
       setIsGPSActive(false);
+      isGPSActiveRef.current = false;
     }
   };
 
   const startQueueProcessor = () => {
     if (queueProcessorRef.current) return;
 
-    if (!participantId || !eventId) {
-      console.error('❌ Cannot start queue processor: Missing IDs');
-      return;
-    }
+    if (!participantId || !eventId) return;
 
     queueProcessorRef.current = setInterval(async () => {
       try {
         const sentCount = await locationService.processQueue(participantId, eventId);
         if (sentCount > 0) {
-          console.log(`✅ Processed ${sentCount} queued locations`);
           setLocationUpdateCount(prev => prev + sentCount);
           await loadQueueSize();
-          toastSuccess(
-            t('home:tracking.queueProcessed'),
-            t('home:tracking.queuedSent', { count: sentCount })
-          );
+          
+          if (API_CONFIG.DEBUG) {
+            toastSuccess(
+              t('home:tracking.queueProcessed'),
+              t('home:tracking.queuedSent', { count: sentCount })
+            );
+          }
         }
       } catch (error) {
-        console.error('❌ Queue processor error:', error);
+        // Silent fail
       }
     }, 60000);
-
-    console.log('🔄 Queue processor started');
   };
 
   const startRaceStartChecker = () => {
@@ -543,37 +478,44 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     raceStartCheckRef.current = setInterval(() => {
       if (hasRaceStarted() && !isSendingData) {
-        console.log('🏁 Race has started!');
         setIsSendingData(true);
-        toastSuccess(
-          t('home:tracking.raceStarted'),
-          t('home:tracking.nowSending')
-        );
+        
+        if (API_CONFIG.DEBUG) {
+          toastSuccess(
+            t('home:tracking.raceStarted'),
+            t('home:tracking.nowSending')
+          );
+        }
       }
     }, 30000);
-
-    console.log('⏰ Race start checker started');
   };
 
   const stopGPSTracking = () => {
+    // Stop GPS watch
     if (gpsWatchRef.current) {
       gpsWatchRef.current.remove();
       gpsWatchRef.current = null;
     }
 
+    // Clear queue processor
     if (queueProcessorRef.current) {
       clearInterval(queueProcessorRef.current);
       queueProcessorRef.current = null;
     }
 
+    // Clear race start checker
     if (raceStartCheckRef.current) {
       clearInterval(raceStartCheckRef.current);
       raceStartCheckRef.current = null;
     }
 
+    // Reset all tracking states
     setIsGPSActive(false);
+    isGPSActiveRef.current = false;
     setIsSendingData(false);
+    setCurrentLocation(null);
 
+    // Show toast before resetting counter
     toastSuccess(
       t('home:tracking.gpsStopped'),
       t('home:tracking.trackingStopped', { 
@@ -581,6 +523,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         queued: queuedCount 
       }),
     );
+
+    // Reset counter
+    setLocationUpdateCount(0);
   };
 
   const manualStartSending = () => {
@@ -593,7 +538,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           text: t('home:alerts.startNow'),
           onPress: () => {
             setIsSendingData(true);
-            console.log('🔓 User manual override activated');
             toastSuccess(
               t('home:tracking.manualStart'),
               t('home:tracking.manualStartMessage')
@@ -626,12 +570,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         appState.current.match(/inactive|background/) &&
         nextAppState === 'active'
       ) {
-        console.log('📱 App came to foreground');
-        
         if (isGPSActive && participantId && eventId) {
           locationService.processQueue(participantId, eventId).then(sentCount => {
             if (sentCount > 0) {
-              console.log(`✅ Processed ${sentCount} locations on foreground`);
               setLocationUpdateCount(prev => prev + sentCount);
             }
           });
@@ -646,14 +587,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     };
   }, [isGPSActive, participantId, eventId]);
 
-  // Polling for home data updates
+  // Polling for home data updates (every 5 minutes)
   useEffect(() => {
     if (!hasToken) return;
 
     const interval = setInterval(() => {
       fetchHomeData();
-      console.log('🔄 Polling backend for updates...');
-    }, 30000);
+    }, API_CONFIG.HOME_DATA_POLL_INTERVAL); // 5 minutes
     
     return () => clearInterval(interval);
   }, [hasToken]);
@@ -777,7 +717,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </Text>
               </View>
 
-              {/* Date - Format: d-m-Y */}
+              {/* Date */}
               <Text style={homeStyles.smallText}>
                 <Text style={{ fontWeight: typography.weights.bold }}>
                   {t('home:Event.Date')}:
@@ -809,8 +749,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </View>
               )}
               
-              {/* GPS Status Display */}
-              {isGPSActive && (
+              {/* GPS Status Display - Only in DEBUG mode */}
+              {isGPSActive && API_CONFIG.DEBUG && (
                 <View style={homeStyles.trackingStatus}>
                   <Text style={homeStyles.trackingStatusIcon}>
                     {isSendingData ? '🟢' : '🟡'}
@@ -872,8 +812,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
 
-              {/* Manual Override Button */}
-              {isGPSActive && !isSendingData && homeData?.manual_start !== 1 && (
+              {/* Manual Override Button - Only in DEBUG mode */}
+              {API_CONFIG.DEBUG && isGPSActive && !isSendingData && homeData?.manual_start !== 1 && (
                 <TouchableOpacity
                   style={[
                     homeStyles.button,
