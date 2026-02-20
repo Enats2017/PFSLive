@@ -1,7 +1,6 @@
-import axios from "axios";
-import { API_CONFIG, getApiEndpoint } from "../constants/config";
-import i18n, { LANGUAGES } from '../i18n'; 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiClient } from './api';
+import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { getCurrentLanguageId } from '../i18n';
 
 export interface EventItem {
   product_app_id: string;
@@ -26,6 +25,7 @@ export interface Pagination {
   total: number;
   total_pages: number;
 }
+
 export interface PaginationParams {
   page_past?: number;
   page_live?: number;
@@ -41,14 +41,24 @@ export interface EventResponse {
   };
 }
 
-const getLanguageId = (): number => {
-  const lang = i18n.language?.split('-')[0] as keyof typeof LANGUAGES;
-  return LANGUAGES[lang]?.id ?? 1;
-};
-console.log(getLanguageId);
-
+// ✅ Define what's inside apiResponse.data
+interface EventsData {
+  tabs?: EventTabs;
+  pagination?: {
+    past: Pagination;
+    live: Pagination;
+    upcoming: Pagination;
+  };
+  // Legacy format
+  past?: EventItem[];
+  live?: EventItem[];
+  upcoming?: EventItem[];
+}
 
 export const eventService = {
+  /**
+   * Fetch events with pagination
+   */
   async getEvents(
     pagination: PaginationParams = {
       page_past: 1,
@@ -56,45 +66,65 @@ export const eventService = {
       page_upcoming: 1,
     },
   ): Promise<EventResponse> {
-    const language_id = await getLanguageId();
-    console.log("languge_id",language_id);
-    
-    const formData = new FormData();
-    formData.append("language_id", String(language_id));
-    if (pagination.page_past !== undefined)
-      formData.append("page_past", String(pagination.page_past));
-    if (pagination.page_live !== undefined)
-      formData.append("page_live", String(pagination.page_live));
-    if (pagination.page_upcoming !== undefined)
-      formData.append("page_upcoming", String(pagination.page_upcoming));
-    const headers = await API_CONFIG.getMutiForm();
-    const response = await axios.post(
-      getApiEndpoint(API_CONFIG.ENDPOINTS.EVENTS_LIST),
-      formData,
-      {
-        headers,
-        timeout: API_CONFIG.TIMEOUT,
-      },
-    );
-
-    if (response.data.success) {
-      const data = response.data.data;
-      if (data.tabs) {
-        return {
-          tabs: data.tabs,
-          pagination: data.pagination,
-        };
+    try {
+      const language_id = getCurrentLanguageId();
+      
+      if (API_CONFIG.DEBUG) {
+        console.log('📡 Fetching events with language ID:', language_id);
+        console.log('📄 Pagination:', pagination);
       }
 
-      return {
-        tabs: {
-          past: data.past || [],
-          live: data.live || [],
-          upcoming: data.upcoming || [],
-        },
-        pagination: data.pagination,
+      const url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENTS_LIST);
+      const headers = await API_CONFIG.getHeaders();
+
+      const requestBody = {
+        language_id: language_id,
+        page_past: pagination.page_past,
+        page_live: pagination.page_live,
+        page_upcoming: pagination.page_upcoming,
       };
+
+      // ✅ apiClient.post<EventsData> means:
+      // The type parameter T in ApiResponse<T> is EventsData
+      // So it returns: { success: boolean, data: EventsData, error: string | null }
+      const response = await apiClient.post<EventsData>(
+        url,
+        requestBody,
+        { headers }
+      );
+
+      if (response.success && response.data) {
+        const eventsData = response.data; // eventsData is EventsData type
+
+        // Modern format
+        if (eventsData.tabs && eventsData.pagination) {
+          return {
+            tabs: eventsData.tabs,
+            pagination: eventsData.pagination,
+          };
+        }
+
+        // Legacy format
+        if (eventsData.pagination) {
+          return {
+            tabs: {
+              past: eventsData.past || [],
+              live: eventsData.live || [],
+              upcoming: eventsData.upcoming || [],
+            },
+            pagination: eventsData.pagination,
+          };
+        }
+
+        throw new Error('Invalid response format');
+      }
+
+      throw new Error(response.error || 'Failed to fetch events');
+    } catch (error: any) {
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Error fetching events:', error.message);
+      }
+      throw error;
     }
-    throw new Error(response.data.error || "Failed to fetch events");
   },
 };

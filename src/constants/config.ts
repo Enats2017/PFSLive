@@ -68,7 +68,7 @@ export const API_CONFIG = {
     };
   },
 
-    async getMutiForm(): Promise<Record<string, string>> {
+  async getMutiForm(): Promise<Record<string, string>> {
     return {
         "Content-Type": "multipart/form-data",    
     };

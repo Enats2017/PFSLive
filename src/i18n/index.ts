@@ -111,6 +111,56 @@ export const loadLanguage = async (): Promise<LanguageCode> => {
   }
 };
 
+// ✅ ========================================
+// ✅ NEW HELPER FUNCTIONS - ADD HERE
+// ✅ ========================================
+
+/**
+ * Get language ID from language code
+ * @param languageCode - The language code (en, fr, nl)
+ * @returns The language ID (1, 2, 3) or null if not found
+ */
+export const getLanguageId = (languageCode: string): number | null => {
+  const code = languageCode as LanguageCode;
+  return LANGUAGES[code]?.id ?? null;
+};
+
+/**
+ * Get current language ID from i18n
+ * @returns The current language ID (1, 2, or 3)
+ */
+export const getCurrentLanguageId = (): number => {
+  const currentLanguage = i18n.language as LanguageCode;
+  return LANGUAGES[currentLanguage]?.id ?? LANGUAGES.en.id; // Default to English (1)
+};
+
+/**
+ * Get language code from language ID
+ * @param id - The language ID (1, 2, 3)
+ * @returns The language code (en, fr, nl) or null if not found
+ */
+export const getLanguageCodeFromId = (id: number): LanguageCode | null => {
+  const entry = Object.entries(LANGUAGES).find(([_, lang]) => lang.id === id);
+  return entry ? (entry[0] as LanguageCode) : null;
+};
+
+/**
+ * Get current language code from i18n
+ * @returns The current language code (en, fr, nl)
+ */
+export const getCurrentLanguageCode = (): LanguageCode => {
+  const currentLanguage = i18n.language as LanguageCode;
+  // Validate it's a supported language
+  if (currentLanguage === 'en' || currentLanguage === 'fr' || currentLanguage === 'nl') {
+    return currentLanguage;
+  }
+  return 'en'; // Fallback
+};
+
+// ✅ ========================================
+// ✅ END OF NEW HELPER FUNCTIONS
+// ✅ ========================================
+
 /**
  * Get initial language for i18n initialization
  * This runs synchronously at module load time
