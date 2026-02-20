@@ -20,19 +20,18 @@ class ApiClient {
       },
     });
 
-    // Request interceptor (add auth tokens here if needed)
+    // Request interceptor
     this.client.interceptors.request.use(
       (config) => {
-        // Add auth token if you have one
-        // const token = getAuthToken();
-        // if (token) {
-        //   config.headers.Authorization = `Bearer ${token}`;
-        // }
-        console.log(`📡 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+        if (API_CONFIG.DEBUG) {
+          console.log(`📡 ${config.method?.toUpperCase()} ${config.url}`);
+        }
         return config;
       },
       (error) => {
-        console.error('❌ Request error:', error);
+        if (API_CONFIG.DEBUG) {
+          console.error('❌ Request error:', error);
+        }
         return Promise.reject(error);
       }
     );
@@ -40,11 +39,15 @@ class ApiClient {
     // Response interceptor
     this.client.interceptors.response.use(
       (response) => {
-        console.log(`✅ API Response: ${response.config.url}`, response.status);
+        if (API_CONFIG.DEBUG) {
+          console.log(`✅ ${response.config.url} ${response.status}`);
+        }
         return response;
       },
       (error) => {
-        console.error('❌ Response error:', error.response?.status, error.message);
+        if (API_CONFIG.DEBUG) {
+          console.error('❌ Response error:', error.response?.status, error.message);
+        }
         return Promise.reject(error);
       }
     );

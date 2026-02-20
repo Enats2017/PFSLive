@@ -24,7 +24,6 @@ export const tokenService = {
       const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
       
       if (token) {
-        console.log('✅ Token loaded from storage');
         return token;
       }
 
@@ -32,7 +31,6 @@ export const tokenService = {
       const fallbackToken = process.env.EXPO_PUBLIC_API_TOKEN || 
         'b0d174e4a67eb4384d6508bb62a9c816d1baab582767a1338deb686c9db939aa';
       
-      console.log('⚠️ No token in storage, using fallback token');
       return fallbackToken;
     } catch (error) {
       console.error('❌ Error loading token:', error);

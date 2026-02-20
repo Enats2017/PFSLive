@@ -1,68 +1,60 @@
 {
-  "title": "Welkom bij PFSLive",
   "subtitle": "LIVE TRACKING & RESULTATEN",
-  "tagline": "DEEL UW RACE OF TRAINING MET UW VRIENDEN EN FAMILIE",
+  "tagline": "DEEL JE RACE OF TRAINING MET JE VRIENDEN & FAMILIE",
   "subtext": "Live Resultaten",
   "participant": {
-    "title": "Live Tracking",
-    "description": "Volg en deel uw race voortgang in real-time",
-    "button": "Doorgaan als Deelnemer"
-  },
-  "Event": {
-    "title": "Evenement Naam",
-    "Date": "Datum",
-    "description": "U kunt uw live tracking 1 uur voor uw start beginnen. Zorg ervoor dat u deze app de hele tijd open houdt en sluit deze niet!",
-    "button": "STOP TRACKING",
-    "buttonText": "START TRACKING"
+    "title": "Live Tracking"
   },
   "button": {
     "Participant": "IK BEN EEN DEELNEMER",
     "Fan": "IK BEN EEN FAN"
   },
-  "footer": {
-    "version": "Versie {{version}}",
-    "language": "Taal"
+  "Event": {
+    "title": "Evenementnaam",
+    "Date": "Datum",
+    "description": "Je kunt je live tracking starten vanaf 1 uur voor je start. Zorg ervoor dat je deze app de hele tijd open houdt en niet sluit!",
+    "buttonText": "START TRACKING",
+    "button": "STOP TRACKING"
+  },
+  "status": {
+    "gpsActive": "GPS Actief - Wachten tot race begint",
+    "sendingData": "Locatiegegevens Verzenden",
+    "sent": "Verzonden",
+    "queued": "In Wachtrij",
+    "interval": "Interval",
+    "waitingForData": "Wachten op evenementgegevens...",
+    "manualStartEnabled": "Handmatige Start Ingeschakeld",
+    "manualStartDescription": "Gegevensoverdracht wordt handmatig beheerd",
+    "manualStartReady": "Klaar om te verzenden (handmatige modus)"
   },
   "tracking": {
     "gpsActivated": "GPS Geactiveerd",
+    "manualStartEnabled": "Handmatige startmodus ingeschakeld. Je kunt op elk moment gegevens verzenden.",
+    "raceStarted": "Race Gestart!",
+    "nowSending": "Nu locatiegegevens verzenden.",
+    "waitingForRace": "GPS geactiveerd. Gegevens worden verzonden wanneer de race begint.",
+    "waitingForRaceNoTime": "GPS geactiveerd. Wachten op race-informatie.",
+    "dataSendingStarted": "GPS geactiveerd. Gegevensoverdracht gestart.",
+    "manualStart": "Handmatige Override",
+    "manualStartMessage": "Gegevensoverdracht handmatig gestart",
     "gpsStopped": "GPS Gestopt",
     "trackingStopped": "Tracking gestopt. Verzonden: {{sent}}, In wachtrij: {{queued}}",
-    "raceStarted": "Race Gestart!",
-    "nowSending": "Nu uw locatiegegevens verzenden.",
     "queueProcessed": "Wachtrij Verwerkt",
-    "queuedSent": "{{count}} locaties in wachtrij verzonden",
-    "manualStart": "Handmatige Start",
-    "manualStartMessage": "Nu locatiegegevens verzenden.",
-    "waitingForRace": "GPS geactiveerd. Gegevens worden verzonden wanneer de race start om {{time}}",
-    "waitingForRaceNoTime": "GPS geactiveerd. Gegevens worden verzonden wanneer de race start.",
-    "manualStartEnabled": "GPS geactiveerd. Onmiddellijk gegevens verzenden (handmatige start ingeschakeld)."
+    "queuedSent": "{{count}} locatie(s) in wachtrij succesvol verzonden"
   },
-  "status": {
-    "sendingData": "Gegevens Verzenden",
-    "gpsActive": "GPS Actief",
-    "raceStartsIn": "Race start over: {{time}}",
-    "manualStartReady": "Handmatige start ingeschakeld - klaar om te verzenden",
-    "waitingForRace": "Wachten op race...",
-    "sent": "Verzonden",
-    "queued": "In wachtrij",
-    "interval": "Interval",
-    "manualStartEnabled": "Handmatige Start Ingeschakeld",
-    "manualStartDescription": "Gegevens worden onmiddellijk verzonden wanneer tracking start",
-    "waitingForData": "WACHTEN OP GEGEVENS..."
+  "alerts": {
+    "overrideTitle": "Handmatige Override",
+    "overrideMessage": "Direct beginnen met het verzenden van locatiegegevens, zonder de starttijd van de race af te wachten?",
+    "cancel": "Annuleren",
+    "startNow": "Nu Starten"
   },
   "errors": {
     "missingInfo": "Ontbrekende Informatie",
-    "missingInfoDescription": "Deelnemer of Evenement ID niet gevonden. Vernieuw en probeer opnieuw.",
+    "missingInfoDescription": "Deelnemer- of evenementinformatie niet beschikbaar",
     "permissionRequired": "Toestemming Vereist",
-    "permissionDescription": "Locatietoestemming is vereist om uw positie te volgen.",
+    "permissionDescription": "Locatietoestemming is vereist om je voortgang te volgen",
     "gpsError": "GPS Fout",
-    "gpsErrorDescription": "Kan GPS-locatie niet verkrijgen. Controleer of locatieservices zijn ingeschakeld.",
-    "trackingFailed": "Kan GPS-tracking niet starten."
-  },
-  "alerts": {
-    "overrideTitle": "Racetijd Overschrijven",
-    "overrideMessage": "Nu locatiegegevens verzenden? Dit overschrijft de geplande starttijd van de race.",
-    "cancel": "Annuleren",
-    "startNow": "Nu Starten"
+    "gpsErrorDescription": "Kan je locatie niet ophalen. Controleer je GPS-instellingen.",
+    "trackingFailed": "Kan tracking niet starten"
   }
 }

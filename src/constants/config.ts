@@ -14,7 +14,6 @@ const getApiUrl = (): string => {
     return envUrl;
   }
 
-  // Fallback for development
   console.warn('⚠️ EXPO_PUBLIC_API_URL not found in .env, using fallback');
   return 'http://192.168.0.199/larssie/api';
 };
@@ -26,15 +25,14 @@ const FALLBACK_TOKEN = '658db6a46bfbfc0aaa97a5241a3ed78a84df8f49c44d1f5f90ed2d52
 export const API_CONFIG = {
   BASE_URL: getApiUrl(),
   
-  // Hardcoded token for now (will be replaced by AsyncStorage after login)
   get TOKEN() {
     return process.env.EXPO_PUBLIC_API_TOKEN || FALLBACK_TOKEN;
   },
   
   ENDPOINTS: {
     // Auth
-    LOGIN: '/login_api.php',
-    REGISTER: '/register_api.php',
+    LOGIN: '/auth/login.php',
+    REGISTER: '/auth/register.php',
     
     // Home
     HOME: '/home_api.php',
@@ -45,19 +43,22 @@ export const API_CONFIG = {
     EVENT_GPX: '/events/:eventId/gpx.php',
     
     // Participants
-    PARTICIPANT_LOCATION: '/insert_participant_location_api',
+    PARTICIPANT_LOCATION: '/insert_participant_location_api.php',
     PARTICIPANT_STATS: '/participants/:participantId/stats.php',
   },
   
   TIMEOUT: 15000,
-  LOCATION_UPDATE_INTERVAL: 5000, // milliseconds
-  FOLLOWER_POLL_INTERVAL: 3000, // milliseconds
+  HOME_DATA_POLL_INTERVAL: 30000, // ✅ 5 minutes
+  LOCATION_UPDATE_INTERVAL: 5000,
+  FOLLOWER_POLL_INTERVAL: 3000,
   
-  USE_MOCK_DATA: true, // Set to false when backend is ready
+  USE_MOCK_DATA: false,
+  
+  // ✅ Debug flag for development
+  DEBUG: false, // true in development, false in production
   
   /**
    * Get request headers with current auth token
-   * This is async because it may need to fetch from AsyncStorage
    */
   async getHeaders(): Promise<Record<string, string>> {
     const token = await tokenService.getToken();
@@ -68,8 +69,7 @@ export const API_CONFIG = {
   },
   
   /**
-   * Get request headers synchronously (uses hardcoded token)
-   * Use this only when you can't use async (e.g., in Axios defaults)
+   * Get request headers synchronously
    */
   getHeadersSync(): Record<string, string> {
     const token = process.env.EXPO_PUBLIC_API_TOKEN || FALLBACK_TOKEN;
@@ -119,16 +119,13 @@ export const buildApiUrl = (endpoint: string, params: Record<string, string>): s
 export const getLocalApiUrl = (): string => {
   const Platform = require('react-native').Platform;
   
-  // Android Emulator uses 10.0.2.2 to access host machine's localhost
   if (Platform.OS === 'android' && __DEV__) {
     return 'http://10.0.2.2/larssie/api';
   }
   
-  // iOS Simulator can use localhost directly
   if (Platform.OS === 'ios' && __DEV__) {
     return 'http://localhost/larssie/api';
   }
   
-  // Physical devices need the actual IP address
   return getApiUrl();
 };

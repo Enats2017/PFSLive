@@ -1,14 +1,17 @@
 import * as Location from 'expo-location';
 import { LocationData } from './locationService';
+import { API_CONFIG } from '../constants/config';
 
 export interface GPSPosition {
   latitude: number;
   longitude: number;
   altitude: number | null;
   accuracy: number | null;
+  altitudeAccuracy: number | null;
   speed: number | null;
   heading: number | null;
   timestamp: number;
+  mocked?: boolean;
 }
 
 export const gpsService = {
@@ -17,28 +20,30 @@ export const gpsService = {
    */
   async requestPermissions(): Promise<boolean> {
     try {
-      console.log('📍 Requesting location permissions...');
-      
       const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
       
       if (foregroundStatus !== 'granted') {
-        console.error('❌ Foreground location permission denied');
+        if (API_CONFIG.DEBUG) {
+          console.error('❌ Foreground location permission denied');
+        }
         return false;
       }
 
-      console.log('✅ Foreground location permission granted');
-
       const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
       
-      if (backgroundStatus === 'granted') {
-        console.log('✅ Background location permission granted');
-      } else {
-        console.warn('⚠️ Background location permission denied');
+      if (API_CONFIG.DEBUG) {
+        if (backgroundStatus === 'granted') {
+          console.log('✅ Background location permission granted');
+        } else {
+          console.warn('⚠️ Background location permission denied');
+        }
       }
 
       return true;
     } catch (error) {
-      console.error('❌ Error requesting location permissions:', error);
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Error requesting location permissions:', error);
+      }
       return false;
     }
   },
@@ -51,7 +56,9 @@ export const gpsService = {
       const { status } = await Location.getForegroundPermissionsAsync();
       return status === 'granted';
     } catch (error) {
-      console.error('❌ Error checking location permissions:', error);
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Error checking location permissions:', error);
+      }
       return false;
     }
   },
@@ -61,25 +68,25 @@ export const gpsService = {
    */
   async getCurrentPosition(): Promise<GPSPosition> {
     try {
-      console.log('📍 Getting current GPS position...');
-      
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced, // Battery optimized
+        accuracy: Location.Accuracy.Balanced,
       });
-
-      console.log('✅ GPS position obtained');
 
       return {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         altitude: location.coords.altitude,
         accuracy: location.coords.accuracy,
+        altitudeAccuracy: location.coords.altitudeAccuracy,
         speed: location.coords.speed,
         heading: location.coords.heading,
         timestamp: location.timestamp,
+        mocked: location.mocked,
       };
     } catch (error) {
-      console.error('❌ Error getting GPS position:', error);
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Error getting GPS position:', error);
+      }
       throw error;
     }
   },
@@ -91,30 +98,31 @@ export const gpsService = {
     return {
       latitude: gpsPosition.latitude,
       longitude: gpsPosition.longitude,
-      elevation: gpsPosition.altitude || undefined,
+      altitude: gpsPosition.altitude || undefined,
       accuracy: gpsPosition.accuracy || undefined,
+      altitudeAccuracy: gpsPosition.altitudeAccuracy || undefined,
       timestamp: new Date(gpsPosition.timestamp).toISOString(),
       speed: gpsPosition.speed || undefined,
       heading: gpsPosition.heading || undefined,
+      speedAccuracy: undefined,
+      isMock: gpsPosition.mocked || false,
     };
   },
 
   /**
-   * Start watching position with battery optimization
+   * Start watching position
    */
   async startWatchingPosition(
     callback: (position: GPSPosition) => void,
     errorCallback?: (error: Error) => void,
-    intervalSeconds: number = 30 // Default 30 seconds for battery efficiency
+    intervalSeconds: number = 30
   ): Promise<{ remove: () => void }> {
     try {
-      console.log(`🔄 Starting GPS watching (interval: ${intervalSeconds}s, battery optimized)...`);
-
       const subscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.Balanced, // Battery optimized (not Highest)
-          timeInterval: intervalSeconds * 1000, // Convert to milliseconds
-          distanceInterval: 50, // Update every 50 meters (battery optimized)
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: intervalSeconds * 1000,
+          distanceInterval: 0,
         },
         (location) => {
           const position: GPSPosition = {
@@ -122,9 +130,11 @@ export const gpsService = {
             longitude: location.coords.longitude,
             altitude: location.coords.altitude,
             accuracy: location.coords.accuracy,
+            altitudeAccuracy: location.coords.altitudeAccuracy,
             speed: location.coords.speed,
             heading: location.coords.heading,
             timestamp: location.timestamp,
+            mocked: location.mocked,
           };
 
           callback(position);
@@ -133,7 +143,9 @@ export const gpsService = {
 
       return subscription;
     } catch (error) {
-      console.error('❌ Error watching GPS position:', error);
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Error watching GPS position:', error);
+      }
       if (errorCallback) {
         errorCallback(error as Error);
       }
