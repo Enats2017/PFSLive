@@ -1,0 +1,213 @@
+import React, { useState, useRef, useEffect } from 'react'
+import { View, Text, TouchableOpacity, ScrollView, FlatList, StyleSheet, StatusBar, Dimensions, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { AppHeader } from '../../components/common/AppHeader';
+import { commonStyles } from '../../styles/common.styles';
+import { eventStyles } from '../../styles/event';
+import { homeStyles } from '../../styles/home.styles';
+import PastTab from './PastTab'
+import LiveTab from './LiveTab'
+import UpcomingTab from './UpcomingTab'
+import { eventService, EventItem } from '../../services/eventService';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n'; 
+
+type Tab = 'Past' | 'Live' | 'Upcoming';
+const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
+const { width } = Dimensions.get('window');
+
+const ParticipantEvent = () => {
+    const { t } = useTranslation(['event', 'common']);
+    const [activeTab, setActiveTab] = useState<Tab>('Live');
+    const [loading, setLoading] = useState(true);
+    const [pastEvents, setPastEvents] = useState<EventItem[]>([]);
+    const [liveEvents, setLiveEvents] = useState<EventItem[]>([]);
+    const [upcomingEvents, setUpcomingEvents] = useState<EventItem[]>([]);
+    const flatListRef = useRef<FlatList>(null);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const isLoadingMoreRef = useRef(false);
+
+    const [paginationInfo, setPaginationInfo] = useState({
+        past: { page: 1, total_pages: 1 },
+        live: { page: 1, total_pages: 1 },
+        upcoming: { page: 1, total_pages: 1 },
+    });
+
+    useEffect(() => {
+        fetchEvents();
+    }, [i18n.language]);
+
+    const fetchEvents = async () => {
+        try {
+            setLoading(true);
+            const result = await eventService.getEvents({ page_past: 1, page_live: 1, page_upcoming: 1 });
+            setPastEvents(result.tabs.past);
+            setLiveEvents(result.tabs.live);
+            setUpcomingEvents(result.tabs.upcoming);
+            if (result.pagination) {
+                setPaginationInfo({
+                    past: { page: result.pagination.past.page, total_pages: result.pagination.past.total_pages },
+                    live: { page: result.pagination.live.page, total_pages: result.pagination.live.total_pages },
+                    upcoming: { page: result.pagination.upcoming.page, total_pages: result.pagination.upcoming.total_pages },
+                });
+            }
+        } catch (error) {
+            console.error('Failed to fetch events:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+
+    const loadMore = async (tab: Tab) => {
+        if (isLoadingMoreRef.current) return;
+        if (loadingMore) return; 
+
+        const key = tab.toLowerCase() as 'past' | 'live' | 'upcoming';
+        if (paginationInfo[key].page >= paginationInfo[key].total_pages) return;
+        try {
+            isLoadingMoreRef.current = true;
+            setLoadingMore(true);
+            const nextPage = paginationInfo[key].page + 1;
+            const newPages = {
+                page_past: paginationInfo.past.page,
+                page_live: paginationInfo.live.page,
+                page_upcoming: paginationInfo.upcoming.page,
+                [tab === 'Past' ? 'page_past' : tab === 'Live' ? 'page_live' : 'page_upcoming']: nextPage,
+            };
+            const result = await eventService.getEvents(newPages);
+            if (tab === 'Past') setPastEvents(prev => {
+                const newItems = result.tabs.past.filter(
+                    item => !prev.some(p => p.product_app_id === item.product_app_id)
+                );
+                return [...prev, ...newItems];
+            });
+
+            if (tab === 'Live') setLiveEvents(prev => {
+                const newItems = result.tabs.live.filter(
+                    item => !prev.some(p => p.product_app_id === item.product_app_id)
+                );
+                return [...prev, ...newItems];
+            });
+
+            if (tab === 'Upcoming') setUpcomingEvents(prev => {
+                const newItems = result.tabs.upcoming.filter(
+                    item => !prev.some(p => p.product_app_id === item.product_app_id)
+                );
+                return [...prev, ...newItems];
+            });
+            const paginationData = result.pagination?.[key] ?? result.pagination;
+            setPaginationInfo(prev => ({
+                ...prev,
+                [key]: {
+                    page: nextPage,
+                    total_pages: paginationData?.total_pages || prev[key].total_pages
+                }
+            }));
+            console.log(paginationData);
+            
+
+        } catch (error) {
+            console.error('Failed to load more:', error);
+        } finally {
+            isLoadingMoreRef.current = false;
+            setLoadingMore(false);
+        }
+    };
+
+    const renderContent = (tab: Tab) => {
+        if (loading) return <ActivityIndicator size="large" color="#f4a100" style={{ marginTop: 40 }} />;
+        switch (tab) {
+            case 'Past': return <PastTab events={pastEvents} onLoadMore={() => loadMore('Past')} loadingMore={loadingMore} />;
+            case 'Live': return <LiveTab events={liveEvents} onLoadMore={() => loadMore('Live')} loadingMore={loadingMore} />;
+            case 'Upcoming': return <UpcomingTab events={upcomingEvents} onLoadMore={() => loadMore('Upcoming')} loadingMore={loadingMore} />;
+        }
+    };
+
+    const handleTabPress = (tab: Tab) => {
+        const index = TABS.indexOf(tab);
+        setActiveTab(tab);
+        flatListRef.current?.scrollToIndex({ index, animated: true });
+    };
+
+    const handleSwipe = (e: any) => {
+        const index = Math.round(e.nativeEvent.contentOffset.x / width);
+        setActiveTab(TABS[index]);
+    };
+
+    return (
+        <SafeAreaView style={commonStyles.container} edges={['top']}>
+            <StatusBar barStyle="dark-content" />
+            <AppHeader showLogo={true} />
+
+            <ScrollView
+                style={eventStyles.scrollView}
+                contentContainerStyle={eventStyles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={eventStyles.section}>
+                    <Text style={commonStyles.title}>{t('official.title')}</Text>
+                </View>
+                <View style={eventStyles.tabBar}>
+                    {TABS.map((tab) => (
+                        <TouchableOpacity
+                            key={tab}
+                            style={eventStyles.tabItem}
+                            onPress={() => handleTabPress(tab)}
+                        >
+                            <Text style={[commonStyles.subtitle, activeTab === tab && eventStyles.activeTabText]}>
+                              {t(`live.${tab}`)}
+                            </Text>
+                            {activeTab === tab && (
+                                <LinearGradient
+                                    colors={['#e8341a', '#f4a100', '#1a73e8']} // your gradient colors
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={eventStyles.underline}
+                                />
+                            )}
+                        </TouchableOpacity>
+                    ))}
+                </View>
+                <View style={{ height: 400 }}>
+                    <FlatList
+                        ref={flatListRef}
+                        data={TABS}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={(item) => item}
+                        onMomentumScrollEnd={handleSwipe}
+                        initialScrollIndex={TABS.indexOf('Live')}
+                        getItemLayout={(_, index) => ({
+                            length: width,
+                            offset: width * index,
+                            index,
+                        })}
+                        renderItem={({ item }) => (
+                            <View style={{ width, padding: 16 }}>
+                                {renderContent(item)}
+                            </View>
+                        )}
+                        scrollEnabled={true}
+                    />
+                </View>
+                <View style={eventStyles.section}>
+                    <Text style={commonStyles.title}>{t('personal.title')}</Text>
+                </View>
+                <View style={[commonStyles.card, { marginHorizontal: 11, padding: 0, overflow: 'hidden', marginBottom: 20 }]}>
+                    <View style={eventStyles.header}>
+                        <Text style={[homeStyles.heading, { marginBottom: 0 }]} >{t('personal.description')}</Text>
+                    </View>
+                    <TouchableOpacity style={commonStyles.primaryButton}>
+                        <Text style={commonStyles.primaryButtonText}>{t('personal.button')}</Text>
+                    </TouchableOpacity>
+                </View>
+            </ScrollView>
+        </SafeAreaView>
+    )
+}
+
+export default ParticipantEvent

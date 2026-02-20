@@ -7,7 +7,13 @@ export type RootStackParamList = {
     eventName: string;
     participantId?: string;
   };
+   ParticipantEvent: undefined;                              // ✅ add
+  EventDetails: { product_app_id: string | number
+     event_name: string;
+   };
 };
 
 export type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 export type RouteScreenProps = NativeStackScreenProps<RootStackParamList, 'Route'>;
+export type ParticipantEventProps = NativeStackScreenProps<RootStackParamList, 'ParticipantEvent'>; // ✅ add
+export type EventDetailsProps = NativeStackScreenProps<RootStackParamList, 'EventDetails'>;  

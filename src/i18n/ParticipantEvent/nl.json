@@ -1,0 +1,19 @@
+{
+  "live": {
+    "Past": "Verleden",
+    "Live": "Live",
+    "Upcoming": "Aankomend"
+  },
+  "official": {
+    "title": "OFFICIËLE PARTNER EVENEMENTEN",
+    "button": "AANMELDEN LIVE TRACKING"
+  },
+  "past": {
+    "button": "RESULTAAT"
+  },
+  "personal": {
+    "title": "PERSOONLIJKE EVENEMENTEN",
+    "description": "Neem je deel aan een race of evenement, of plan je een trainingsessie die geen officieel partnerevenement is? Maak het hier aan!",
+    "button": "PERSOONLIJK EVENEMENT AANMAKEN"
+  }
+}

@@ -8,6 +8,8 @@ import commonEN from './common/en.json';
 import commonFR from './common/fr.json';
 import commonNL from './common/nl.json';
 import homeEN from './HomeScreen/en.json';
+import eventEn from "./ParticipantEvent/en.json";
+import eventNL from "./ParticipantEvent/nl.json";
 import homeFR from './HomeScreen/fr.json';
 import homeNL from './HomeScreen/nl.json';
 import routeEN from './RouteScreen/en.json';
@@ -17,9 +19,9 @@ import routeNL from './RouteScreen/nl.json';
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
 export const LANGUAGES = {
-  en: { name: 'English', flag: '🇬🇧' },
-  fr: { name: 'Français', flag: '🇫🇷' },
-  nl: { name: 'Nederlands', flag: '🇳🇱' },
+  en: { name: 'English', flag: '🇬🇧', id: 1 },
+  fr: { name: 'Français', flag: '🇫🇷', id: 3 },
+  nl: { name: 'Nederlands', flag: '🇳🇱', id: 2 },
 } as const;
 
 export type LanguageCode = keyof typeof LANGUAGES;
@@ -132,6 +134,7 @@ i18n.use(initReactI18next).init({
       common: commonEN,
       home: homeEN,
       route: routeEN,
+      event: eventEn,
     },
     fr: {
       common: commonFR,
@@ -141,6 +144,8 @@ i18n.use(initReactI18next).init({
     nl: {
       common: commonNL,
       home: homeNL,
+      event: eventNL,
+
       route: routeNL,
     },
   },

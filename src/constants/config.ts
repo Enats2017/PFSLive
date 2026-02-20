@@ -20,7 +20,7 @@ const getApiUrl = (): string => {
 };
 
 // Hardcoded fallback token (used until login is integrated)
-const FALLBACK_TOKEN = '658db6a46bfbfc0aaa97a5241a3ed78a84df8f49c44d1f5f90ed2d520f75402f';
+const FALLBACK_TOKEN = '6582fc2b8b28d077860ebbf00edadbbf99364e930d908e14ccc63e39e3bfb0d2';
 
 // API Configuration
 export const API_CONFIG = {
@@ -40,8 +40,8 @@ export const API_CONFIG = {
     HOME: '/home_api.php',
     
     // Events
-    EVENTS_LIST: '/events/list.php',
-    EVENT_DETAIL: '/events/:eventId/detail.php',
+    EVENTS_LIST: '/event_list_api.php',
+    EVENT_DETAIL: '/event_detail_api.php',
     EVENT_GPX: '/events/:eventId/gpx.php',
     
     // Participants
@@ -66,7 +66,14 @@ export const API_CONFIG = {
       'Authorization': `Bearer ${token}`,
     };
   },
-  
+
+    async getMutiForm(): Promise<Record<string, string>> {
+    return {
+        "Content-Type": "multipart/form-data",    
+    };
+  },
+   
+   
   /**
    * Get request headers synchronously (uses hardcoded token)
    * Use this only when you can't use async (e.g., in Axios defaults)

@@ -30,7 +30,7 @@ export const tokenService = {
 
       // Fallback to hardcoded token (until login is integrated)
       const fallbackToken = process.env.EXPO_PUBLIC_API_TOKEN || 
-        'b0d174e4a67eb4384d6508bb62a9c816d1baab582767a1338deb686c9db939aa';
+        '6582fc2b8b28d077860ebbf00edadbbf99364e930d908e14ccc63e39e3bfb0d2';
       
       console.log('⚠️ No token in storage, using fallback token');
       return fallbackToken;
@@ -39,7 +39,7 @@ export const tokenService = {
       
       // Return fallback token on error
       return process.env.EXPO_PUBLIC_API_TOKEN || 
-        'b0d174e4a67eb4384d6508bb62a9c816d1baab582767a1338deb686c9db939aa';
+        'e17b571d5e4859ec7584756e8d2d23a85c050b075bc798c73183b772833984ad';
     }
   },
 
