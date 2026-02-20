@@ -122,7 +122,7 @@ export const gpsService = {
         {
           accuracy: Location.Accuracy.Balanced,
           timeInterval: intervalSeconds * 1000,
-          distanceInterval: 0,
+          distanceInterval: 50,
         },
         (location) => {
           const position: GPSPosition = {
