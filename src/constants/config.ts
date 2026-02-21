@@ -40,6 +40,7 @@ export const API_CONFIG = {
     // Events
     EVENTS_LIST: '/event_list_api.php',
     EVENT_DETAIL: '/event_detail_api.php',
+    PARTICIPANTS: '/participant_by_event_api.php',
     EVENT_GPX: '/events/:eventId/gpx.php',
     
     // Participants
