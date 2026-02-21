@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/common/AppHeader';
 import { commonStyles } from '../../styles/common.styles';
@@ -175,63 +175,68 @@ const ParticipantEvent = () => {
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
 
-            <View style={{ flex: 1 }}>
-                {/* Official Events Header */}
-                <View style={eventStyles.section}>
-                    <Text style={commonStyles.title}>{t('official.title')}</Text>
-                </View>
-
-                {/* Tab Bar */}
-                <View style={eventStyles.tabBar}>
-                    {TABS.map((tab) => (
-                        <TouchableOpacity
-                            key={tab}
-                            style={eventStyles.tabItem}
-                            onPress={() => handleTabPress(tab)}
-                        >
-                            <Text style={[commonStyles.subtitle, activeTab === tab && eventStyles.activeTabText]}>
-                                {t(`live.${tab}`)}
-                            </Text>
-                            {activeTab === tab && (
-                                <LinearGradient
-                                    colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={eventStyles.underline}
-                                />
-                            )}
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* Tab Content - Scrollable Area */}
+            {/* ✅ Wrap everything in ScrollView */}
+            <ScrollView 
+                style={{ flex: 1 }}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ flexGrow: 1 }}
+            >
                 <View style={{ flex: 1 }}>
-                    <FlatList
-                        ref={flatListRef}
-                        data={TABS}
-                        horizontal
-                        pagingEnabled
-                        showsHorizontalScrollIndicator={false}
-                        keyExtractor={(item) => item}
-                        onMomentumScrollEnd={handleSwipe}
-                        initialScrollIndex={TABS.indexOf('Live')}
-                        getItemLayout={(_, index) => ({
-                            length: width,
-                            offset: width * index,
-                            index,
-                        })}
-                        renderItem={({ item }) => (
-                            <View style={{ width }}>
-                                {renderContent(item)}
-                            </View>
-                        )}
-                        scrollEnabled={true}
-                    />
-                </View>
-
-                {/* Personal Events Section - Always Visible at Bottom */}
-                <View style={{ paddingBottom: 10 }}>
+                    {/* Official Events Header */}
                     <View style={eventStyles.section}>
+                        <Text style={commonStyles.title}>{t('official.title')}</Text>
+                    </View>
+
+                    {/* Tab Bar */}
+                    <View style={eventStyles.tabBar}>
+                        {TABS.map((tab) => (
+                            <TouchableOpacity
+                                key={tab}
+                                style={eventStyles.tabItem}
+                                onPress={() => handleTabPress(tab)}
+                            >
+                                <Text style={[commonStyles.subtitle, activeTab === tab && eventStyles.activeTabText]}>
+                                    {t(`live.${tab}`)}
+                                </Text>
+                                {activeTab === tab && (
+                                    <LinearGradient
+                                        colors={['#e8341a', '#f4a100', '#1a73e8']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                        style={eventStyles.underline}
+                                    />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+                    {/* Tab Content - Fixed Height for Horizontal Scroll */}
+                    <View style={{ height: 380 }}>
+                        <FlatList
+                            ref={flatListRef}
+                            data={TABS}
+                            horizontal
+                            pagingEnabled
+                            showsHorizontalScrollIndicator={false}
+                            keyExtractor={(item) => item}
+                            onMomentumScrollEnd={handleSwipe}
+                            initialScrollIndex={TABS.indexOf('Live')}
+                            scrollEnabled={true}
+                            getItemLayout={(_, index) => ({
+                                length: width,
+                                offset: width * index,
+                                index,
+                            })}
+                            renderItem={({ item }) => (
+                                <View style={{ width }}>
+                                    {renderContent(item)}
+                                </View>
+                            )}
+                        />
+                    </View>
+
+                    {/* Personal Events Section - Scrollable with Page */}
+                    <View style={[eventStyles.section, { marginBottom: 0, marginTop: 10 }]}>
                         <Text style={commonStyles.title}>{t('personal.title')}</Text>
                     </View>
                     <View style={[commonStyles.card, { marginHorizontal: 11, padding: 0, overflow: 'hidden', marginBottom: 20 }]}>
@@ -243,7 +248,7 @@ const ParticipantEvent = () => {
                         </TouchableOpacity>
                     </View>
                 </View>
-            </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };
