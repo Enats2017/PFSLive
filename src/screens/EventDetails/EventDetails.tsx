@@ -6,19 +6,21 @@ import { commonStyles } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import DistanceTab from './DistanceTab';        
-import ParticipantTab from './ParticipantTab';  
+import DistanceTab from './DistanceTab';
+import ParticipantTab from './ParticipantTab';
 
 const { width } = Dimensions.get('window');
 type Tab = 'Participant' | 'Distance';
 const TABS: Tab[] = ['Participant', 'Distance'];
 
 interface EventDetailsProps {
-    route?: { params?: { 
-        product_app_id?: string | number;
-        event_name?: string; 
-    }};
-    
+    route?: {
+        params?: {
+            product_app_id?: string | number;
+            event_name?: string;
+        }
+    };
+
     navigation?: any;
 }
 
@@ -33,7 +35,7 @@ const EventDetails = ({ route, navigation }: EventDetailsProps) => {
     const renderContent = (tab: Tab) => {
         if (!product_app_id) return null;
         switch (tab) {
-            case 'Distance':    return <DistanceTab product_app_id={product_app_id} />;
+            case 'Distance': return <DistanceTab product_app_id={product_app_id} />;
             case 'Participant': return <ParticipantTab product_app_id={product_app_id} />;
         }
     };

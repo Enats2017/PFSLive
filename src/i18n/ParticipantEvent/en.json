@@ -33,6 +33,7 @@
     "empty": "No distances available"
 },
 "participant": {
-    "empty": "No participants yet"
+    "empty": "No participants yet",
+    "search":"Search"
 }
 }

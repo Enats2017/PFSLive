@@ -53,17 +53,49 @@ export const eventStyles = StyleSheet.create({
   },
   count: {
     backgroundColor: colors.success,
-    paddingHorizontal: 20,
+      width:"35%",
     paddingVertical: 12,
-    borderBottomLeftRadius: 0,
-    borderTopLeftRadius: 0,
     borderTopRightRadius: 20,
     borderBottomStartRadius: 20,
-    borderBottomEndRadius: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation:4
+  },
+  distance: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+  },
+  topRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+  },
+  avatar: {
     alignItems: "center",
     justifyContent: "center",
   },
-  distance:{
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 
-  }
+  logo: {
+    textAlign: "center",
+    width: 100,
+    height: 60,
+  },
+
+  divider: {
+    width: 3,
+    height: 100,
+
+    marginHorizontal: 15,
+  },
+  info: {
+    flex: 1,
+  },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
 });
