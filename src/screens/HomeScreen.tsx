@@ -40,8 +40,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   
   const [homeData, setHomeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [hasToken, setHasToken] = useState(false);
-  const [isCheckingToken, setIsCheckingToken] = useState(true);
   
   // Tracking states
   const [isGPSActive, setIsGPSActive] = useState(false);
@@ -53,6 +51,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [raceStartTime, setRaceStartTime] = useState<Date | null>(null);
   const [sendingInterval, setSendingInterval] = useState(30);
   const [timeUntilRace, setTimeUntilRace] = useState<string>('');
+  const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
   
   const stopTrackingRef = useRef<(() => void) | null>(null);
   const gpsWatchRef = useRef<{ remove: () => void } | null>(null);
@@ -61,10 +60,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const appState = useRef(AppState.currentState);
   const raceStartTimeRef = useRef<Date | null>(null);
   const isGPSActiveRef = useRef<boolean>(false);
+  const serverTimeOffsetRef = useRef<number>(0);
   
   // Get IDs dynamically from API response
   const participantId = homeData?.next_race_participant_app_id || null;
   const eventId = homeData?.next_race_id || null;
+
+  /**
+   * Get current server time (device time + offset)
+   */
+  const getServerTime = (): Date => {
+    const deviceTime = new Date();
+    const serverTime = new Date(deviceTime.getTime() + serverTimeOffsetRef.current);
+    return serverTime;
+  };
 
   /**
    * Format date to d-m-Y format (e.g., 19-02-2026)
@@ -84,38 +93,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   };
 
-  // Check token and permissions on mount
+  // Check permissions and load data on mount
   useEffect(() => {
     initializeScreen();
   }, []);
 
   /**
-   * Initialize screen - check token first, then load data
+   * Initialize screen
    */
   const initializeScreen = async () => {
     try {
-      setIsCheckingToken(true);
-      
-      const isAuthenticated = await tokenService.isAuthenticated();
-      setHasToken(isAuthenticated);
-      
-      if (isAuthenticated) {
-        await fetchHomeData();
-      } else {
-        const fallbackToken = await tokenService.getToken();
-        if (fallbackToken) {
-          setHasToken(true);
-          await fetchHomeData();
-        }
-      }
-      
+      setLoading(true);
+      await fetchHomeData();
       await checkPermissions();
       await loadQueueSize();
-      
     } catch (error) {
       if (API_CONFIG.DEBUG) console.error('❌ Error initializing screen:', error);
     } finally {
-      setIsCheckingToken(false);
       setLoading(false);
     }
   };
@@ -131,27 +125,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   /**
-   * Calculate if race has started
+   * Calculate if race has started using server time
    */
   const hasRaceStarted = (): boolean => {
     if (homeData?.manual_start === 1) {
       return true;
     }
     
-    const effectiveRaceTime = raceStartTimeRef.current;
-    
-    if (!effectiveRaceTime) {
+    if (!raceStartTimeRef.current) {
       return false;
     }
 
-    const now = new Date().getTime();
-    const raceTime = effectiveRaceTime.getTime();
+    const now = getServerTime();
+    const raceTime = raceStartTimeRef.current;
+    
+    if (API_CONFIG.DEBUG) {
+      console.log('🕐 Server time (now):', now.toLocaleString());
+      console.log('🏁 Race time:', raceTime.toLocaleString());
+      console.log('⏱️ Comparison:', now.getTime(), '>=', raceTime.getTime());
+      console.log('✅ Race started?', now >= raceTime);
+    }
     
     return now >= raceTime;
   };
 
   /**
-   * Calculate time remaining until race
+   * Calculate time remaining until race using server time
    */
   const calculateTimeUntilRace = () => {
     if (homeData?.manual_start === 1) {
@@ -159,17 +158,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       return;
     }
 
-    const effectiveRaceTime = raceStartTimeRef.current;
-
-    if (!effectiveRaceTime) {
+    if (!raceStartTimeRef.current) {
       setTimeUntilRace('');
       return;
     }
 
     try {
-      const now = new Date().getTime();
-      const raceTime = effectiveRaceTime.getTime();
-      const diff = raceTime - now;
+      const now = getServerTime();
+      const raceTime = raceStartTimeRef.current;
+      const diff = raceTime.getTime() - now.getTime();
 
       if (diff <= 0) {
         setTimeUntilRace('Race started!');
@@ -189,11 +186,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // Update countdown every second
   useEffect(() => {
-    if (isGPSActive && (raceStartTimeRef.current)) {
+    if (isGPSActive && raceStartTimeRef.current) {
       const interval = setInterval(calculateTimeUntilRace, 1000);
       return () => clearInterval(interval);
     }
-  }, [isGPSActive, raceStartTime, homeData?.manual_start]);
+  }, [isGPSActive, homeData?.manual_start]);
 
   /**
    * Fetch home data from API
@@ -203,6 +200,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const token = await tokenService.getToken();
       
       if (!token) {
+        if (API_CONFIG.DEBUG) console.log('⚠️ No token found, skipping home data fetch');
         setLoading(false);
         return;
       }
@@ -219,20 +217,34 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
       if (response.data.success && response.data.data) {
         setHomeData(response.data.data);
+        
+        // Calculate server time offset
+        if (response.data.data.server_datetime) {
+          try {
+            // Parse server datetime: "2026-02-21 11:17:25"
+            const serverTimeString = response.data.data.server_datetime.replace(' ', 'T');
+            const serverTime = new Date(serverTimeString);
+            
+            // Calculate offset (server time - device time)
+            const deviceTime = new Date();
+            const offset = serverTime.getTime() - deviceTime.getTime();
+            
+            setServerTimeOffset(offset);
+            serverTimeOffsetRef.current = offset;
+            
+            if (API_CONFIG.DEBUG) {
+              console.log('🖥️ Server time:', serverTime.toLocaleString());
+              console.log('📱 Device time:', deviceTime.toLocaleString());
+              console.log('⏱️ Time offset:', (offset / 1000).toFixed(2), 'seconds');
+            }
+          } catch (error) {
+            if (API_CONFIG.DEBUG) console.error('Error calculating server offset:', error);
+          }
+        }
       }
     } catch (error: any) {
-      if (error.response?.status === 401) {
-        toastError(
-          t('common:errors.generic'),
-          'Your session has expired. Please login again.'
-        );
-        await tokenService.removeToken();
-        setHasToken(false);
-      } else if (error.request) {
-        toastError(
-          t('common:errors.generic'),
-          'Cannot reach server. Please check your internet connection.'
-        );
+      if (API_CONFIG.DEBUG) {
+        console.error('Error fetching home data:', error);
       }
     } finally {
       setLoading(false);
@@ -245,17 +257,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const retryFetchData = async () => {
     setLoading(true);
     await initializeScreen();
-  };
-
-  /**
-   * Handle login navigation
-   */
-  const navigateToLogin = () => {
-    Alert.alert(
-      'Login Required',
-      'Please login to access this feature. Login screen will be implemented soon.',
-      [{ text: 'OK' }]
-    );
   };
 
   /**
@@ -289,33 +290,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // Wait for state to update
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Parse race start time from API (UTC format)
-      if (homeData?.next_race_time) {
+      // Parse race start time from API (timezone-aware)
+      if (homeData?.next_race_date && homeData?.next_race_time) {
         try {
-          const timeString = String(homeData.next_race_time).trim();
+          // Combine date and time: "2026-02-21T12:30:00"
+          const dateTimeString = `${homeData.next_race_date}T${homeData.next_race_time}`;
           
-          let raceTime: Date;
-          
-          if (timeString.endsWith('Z') || timeString.includes('+') || timeString.includes('T')) {
-            raceTime = new Date(timeString);
-          } else if (timeString.includes(' ')) {
-            const isoFormat = timeString.replace(' ', 'T') + 'Z';
-            raceTime = new Date(isoFormat);
-          } else {
-            raceTime = new Date(`${timeString}T12:00:00Z`);
-          }
+          // Parse as Date object
+          const raceTime = new Date(dateTimeString);
           
           if (!isNaN(raceTime.getTime())) {
             setRaceStartTime(raceTime);
             raceStartTimeRef.current = raceTime;
             
             if (API_CONFIG.DEBUG) {
-              console.log('✅ Race time set:', raceTime.toISOString());
-              console.log('✅ Race time (local):', raceTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+              console.log('📅 Race Date:', homeData.next_race_date);
+              console.log('🕐 Race Time:', homeData.next_race_time);
+              console.log('🌍 Timezone:', homeData.timezone);
+              console.log('🔗 Combined:', dateTimeString);
+              console.log('✅ Parsed Race Time:', raceTime.toLocaleString());
+              console.log('🖥️ Server Time:', homeData.server_datetime);
+              
+              // Show time until race using server time
+              const now = getServerTime();
+              const diff = raceTime.getTime() - now.getTime();
+              const hoursUntil = (diff / (1000 * 60 * 60)).toFixed(2);
+              console.log('⏰ Hours until race (server time):', hoursUntil);
             }
           }
         } catch (error) {
-          if (API_CONFIG.DEBUG) console.error('Error parsing race time:', error);
+          if (API_CONFIG.DEBUG) console.error('❌ Error parsing race time:', error);
         }
       } else {
         setRaceStartTime(null);
@@ -589,54 +593,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // Polling for home data updates (every 5 minutes)
   useEffect(() => {
-    if (!hasToken) return;
-
     const interval = setInterval(() => {
       fetchHomeData();
-    }, API_CONFIG.HOME_DATA_POLL_INTERVAL); // 5 minutes
+    }, API_CONFIG.HOME_DATA_POLL_INTERVAL);
     
     return () => clearInterval(interval);
-  }, [hasToken]);
-
-  // Loading state
-  if (isCheckingToken) {
-    return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <AppHeader showLogo={true} />
-        <View style={commonStyles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[commonStyles.loadingText, { marginTop: 16 }]}>
-            Initializing...
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // No token state
-  if (!hasToken) {
-    return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <AppHeader showLogo={true} />
-        <View style={commonStyles.centerContainer}>
-          <Text style={[commonStyles.errorText, { marginBottom: 24 }]}>
-            Authentication Required
-          </Text>
-          <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 32 }]}>
-            Please login to access this feature
-          </Text>
-          <TouchableOpacity
-            style={commonStyles.primaryButton}
-            onPress={navigateToLogin}
-          >
-            <Text style={commonStyles.primaryButtonText}>Login</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  }, []);
 
   // Error state
   if (!loading && !homeData) {
