@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
-import { commonStyles } from '../../styles/common.styles';
+import { commonStyles, } from '../../styles/common.styles';
+import { eventStyles } from '../../styles/event';
 import { useTranslation } from 'react-i18next';
-import i18n, { LANGUAGES } from '../../i18n';
+import { getCurrentLanguageId } from '../../i18n';
 import { API_CONFIG, getApiEndpoint } from '../../constants/config';
 import axios from 'axios';
 
@@ -26,36 +27,21 @@ const DistanceTab = ({ product_app_id }: { product_app_id: string | number }) =>
         fetchDistances();
     }, [product_app_id]);
 
-    useEffect(() => {
-        fetchDistances();
-    }, [i18n.language]);
-
-    const getLanguageId = (): number => {
-        const lang = i18n.language?.split('-')[0] as keyof typeof LANGUAGES;
-        return LANGUAGES[lang]?.id ?? 1;
-    };
-    console.log("11111",getLanguageId);
-
     const fetchDistances = async () => {
         try {
             setLoading(true);
-            const url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENT_DETAIL);
-            console.log('URL:', url);
-            console.log('product_app_id:', product_app_id);
-            const language_id = await getLanguageId();
-            console.log("languge_id", language_id);
-            const formData = new FormData();
-            formData.append('product_app_id', String(product_app_id));
-            formData.append('language_id', String(language_id));
-            console.log('Calling URL:', getApiEndpoint);
-            const headers = await API_CONFIG.getMutiForm();
+            const language_id = getCurrentLanguageId();
+            const requestBody = {
+                language_id: language_id,
+                product_app_id: product_app_id
 
+            };
+            const headers = await API_CONFIG.getHeaders();
             const response = await axios.post(
                 getApiEndpoint(API_CONFIG.ENDPOINTS.EVENT_DETAIL),
-                formData,
+                requestBody,
                 {
                     headers,
-                    timeout: API_CONFIG.TIMEOUT,
                 },
             );
 
@@ -110,14 +96,14 @@ const DistanceTab = ({ product_app_id }: { product_app_id: string | number }) =>
                 const badge = getCountdownBadge(item);
                 return (
                     <View style={[commonStyles.card, { padding: 0, overflow: 'hidden', marginBottom: 16 }]}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }}>
+                        <View style={eventStyles.distance}>
                             <View style={{ flex: 1 }}>
                                 <Text style={[commonStyles.title, { marginBottom: 4 }]}>{item.distance_name}</Text>
                                 <Text style={commonStyles.subtitle}>{formatDate(item.race_date)}</Text>
-                                <Text style={commonStyles.subtitle}>Start {formatTime(item.race_time)}</Text>
+                                <Text style={commonStyles.subtitle}>{t('countdown.days')} {formatTime(item.race_time)}</Text>
                             </View>
-                            <View style={{ backgroundColor: badge.color, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, minWidth: 90, alignItems: 'center' }}>
-                                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13, textAlign: 'center' }}>
+                            <View style={eventStyles.count}>
+                                <Text style={commonStyles.text}>
                                     {badge.label}
                                 </Text>
                             </View>

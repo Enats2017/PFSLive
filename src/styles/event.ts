@@ -18,7 +18,7 @@ export const eventStyles = StyleSheet.create({
     alignItems: "center",
     padding: 6,
     backgroundColor: colors.gray300,
-    marginVertical: spacing.lg,
+    marginVertical: spacing.sm,
   },
   header: {
     alignItems: "center",
@@ -51,4 +51,19 @@ export const eventStyles = StyleSheet.create({
     width: "60%",
     borderRadius: 2,
   },
+  count: {
+    backgroundColor: colors.success,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomLeftRadius: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 20,
+    borderBottomStartRadius: 20,
+    borderBottomEndRadius: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  distance:{
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 
+  }
 });
