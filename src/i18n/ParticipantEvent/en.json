@@ -8,32 +8,40 @@
     "title": "OFFICIAL PARTNER EVENTS",
     "button": "SIGN UP LIVE TRACKING"
   },
-  "past":{
+  "past": {
     "button": "RESULT"
-
+  },
+  "empty": {
+    "past": "No past events found.",
+    "live": "No live events at the moment.",
+    "upcoming": "No upcoming events found."
   },
   "personal": {
     "title": "PERSONAL EVENTS",
     "description": "Racing and event or planning a training session that is not an official partner event? Create it here!",
     "button": "CREATE PERSONAL EVENT"
   },
-
-
   "details": {
     "Distance": "Distance",
     "Participant": "Participant"
-},
-"countdown": {
+  },
+  "countdown": {
     "in_progress": "Live",
     "finished": "Finished",
-    "hours":"START",
-    "days":"START"
-},
-"distance": {
+    "hours": "START",
+    "days": "START"
+  },
+  "distance": {
     "empty": "No distances available"
+
 },
 "participant": {
     "empty": "No participants yet",
     "search":"Search"
 }
 }
+
+  
+  
+
+

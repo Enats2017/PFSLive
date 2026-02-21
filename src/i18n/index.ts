@@ -10,6 +10,7 @@ import commonNL from './common/nl.json';
 import homeEN from './HomeScreen/en.json';
 import eventEn from "./ParticipantEvent/en.json";
 import eventNL from "./ParticipantEvent/nl.json";
+import eventFR from "./ParticipantEvent/fr.json";
 import homeFR from './HomeScreen/fr.json';
 import homeNL from './HomeScreen/nl.json';
 import routeEN from './RouteScreen/en.json';
@@ -183,19 +184,19 @@ i18n.use(initReactI18next).init({
     en: {
       common: commonEN,
       home: homeEN,
-      route: routeEN,
       event: eventEn,
+      route: routeEN,
     },
     fr: {
       common: commonFR,
       home: homeFR,
+      event: eventNL,
       route: routeFR,
     },
     nl: {
       common: commonNL,
       home: homeNL,
       event: eventNL,
-
       route: routeNL,
     },
   },
