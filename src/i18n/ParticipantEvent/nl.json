@@ -2,7 +2,7 @@
   "live": {
     "Past": "Verleden",
     "Live": "Live",
-    "Upcoming": "Aankomend"
+    "Upcoming": "Binnenkort"
   },
   "official": {
     "title": "OFFICIËLE PARTNER EVENEMENTEN",
@@ -11,9 +11,30 @@
   "past": {
     "button": "RESULTAAT"
   },
+  "empty": {
+    "past": "Geen evenementen uit het verleden gevonden.",
+    "live": "Momenteel geen live evenementen.",
+    "upcoming": "Geen aankomende evenementen gevonden."
+  },
   "personal": {
     "title": "PERSOONLIJKE EVENEMENTEN",
-    "description": "Neem je deel aan een race of evenement, of plan je een trainingsessie die geen officieel partnerevenement is? Maak het hier aan!",
+    "description": "Een race of training sessie plannen die geen officieel partner evenement is? Maak het hier aan!",
     "button": "PERSOONLIJK EVENEMENT AANMAKEN"
+  },
+  "details": {
+    "Distance": "Afstand",
+    "Participant": "Deelnemer"
+  },
+  "countdown": {
+    "in_progress": "Live",
+    "finished": "Afgelopen",
+    "hours": "START",
+    "days": "START"
+  },
+  "distance": {
+    "empty": "Geen afstanden beschikbaar"
+  },
+  "participant": {
+    "empty": "Nog geen deelnemers"
   }
 }

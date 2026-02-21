@@ -1,9 +1,10 @@
-import React, { useRef } from 'react'
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native'
-import { EventItem } from '../../services/eventService'
+import React from 'react';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { EventItem } from '../../services/eventService';
 import { commonStyles } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import { useTranslation } from 'react-i18next';
+import { formatEventDate } from '../../utils/dateFormatter';
 
 const PastTab = ({ events, onLoadMore, loadingMore }: {
     events: EventItem[],
@@ -11,38 +12,38 @@ const PastTab = ({ events, onLoadMore, loadingMore }: {
     loadingMore: boolean
 }) => {
     const { t } = useTranslation(['event', 'common']);
+    
     if (events.length === 0) {
-        return <Text style={commonStyles.errorText}>No live events at the moment.</Text>;
+        return (
+            <View style={{ marginTop: 40 }}>
+                <Text style={commonStyles.errorText}>{t('empty.past', 'No past events found.')}</Text>
+            </View>
+        );
     }
-    const hasTriggered = useRef(false);
-
-    const handleLoadMore = () => {
-        if (hasTriggered.current || loadingMore) return;
-        hasTriggered.current = true;
-        onLoadMore();
-        // reset after delay
-        setTimeout(() => { hasTriggered.current = false; }, 100);
-    };
 
     return (
         <FlatList
             data={events}
             keyExtractor={(item) => item.product_app_id}
-           onEndReached={handleLoadMore} 
-            onEndReachedThreshold={0.2} 
-          // ✅ lower = less eager
-           
+            onEndReached={() => {
+                console.log('Past: End reached, loadingMore:', loadingMore);
+                if (!loadingMore) {
+                    onLoadMore();
+                }
+            }}
+            onEndReachedThreshold={0.1}
             showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 10 }}
             ListFooterComponent={
-                loadingMore
-                    ? <ActivityIndicator size="small" color="#f4a100" style={{ marginVertical: 16 }} />
-                    : null
+                loadingMore ? (
+                    <ActivityIndicator size="small" color="#f4a100" style={{ marginVertical: 10 }} />
+                ) : null
             }
             renderItem={({ item }) => (
-                <View style={[commonStyles.card, { paddingTop: 18, padding: 0, overflow: 'hidden', marginBottom: 20 }]}>
+                <View style={[commonStyles.card, { paddingTop: 1, padding: 0, overflow: 'hidden', marginBottom: 5 }]}>
                     <View style={eventStyles.header}>
                         <Text style={[commonStyles.title, { marginBottom: 5 }]}>{item.name}</Text>
-                        <Text style={commonStyles.subtitle}>{item.race_date} at {item.race_time}</Text>
+                        <Text style={commonStyles.subtitle}>{formatEventDate(item.race_date, t)}</Text>
                     </View>
                     <TouchableOpacity style={commonStyles.primaryButton}>
                         <Text style={commonStyles.primaryButtonText}>{t('past.button')}</Text>

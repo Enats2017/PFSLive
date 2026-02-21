@@ -41,7 +41,6 @@ export interface EventResponse {
   };
 }
 
-// ✅ Define what's inside apiResponse.data
 interface EventsData {
   tabs?: EventTabs;
   pagination?: {
@@ -56,9 +55,6 @@ interface EventsData {
 }
 
 export const eventService = {
-  /**
-   * Fetch events with pagination
-   */
   async getEvents(
     pagination: PaginationParams = {
       page_past: 1,
@@ -84,9 +80,8 @@ export const eventService = {
         page_upcoming: pagination.page_upcoming,
       };
 
-      // ✅ apiClient.post<EventsData> means:
-      // The type parameter T in ApiResponse<T> is EventsData
-      // So it returns: { success: boolean, data: EventsData, error: string | null }
+      // apiClient.post<EventsData> returns ApiResponse<EventsData>
+      // which is { success: boolean, data: EventsData, message?, error? }
       const response = await apiClient.post<EventsData>(
         url,
         requestBody,
@@ -94,7 +89,7 @@ export const eventService = {
       );
 
       if (response.success && response.data) {
-        const eventsData = response.data; // eventsData is EventsData type
+        const eventsData = response.data;
 
         // Modern format
         if (eventsData.tabs && eventsData.pagination) {

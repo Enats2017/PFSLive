@@ -1,17 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, FlatList, StyleSheet, StatusBar, Dimensions, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/common/AppHeader';
 import { commonStyles } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import { homeStyles } from '../../styles/home.styles';
-import PastTab from './PastTab'
-import LiveTab from './LiveTab'
-import UpcomingTab from './UpcomingTab'
+import PastTab from './PastTab';
+import LiveTab from './LiveTab';
+import UpcomingTab from './UpcomingTab';
 import { eventService, EventItem } from '../../services/eventService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import i18n from '../../i18n'; 
+import i18n from '../../i18n';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
@@ -59,58 +59,91 @@ const ParticipantEvent = () => {
         }
     };
 
-
-
     const loadMore = async (tab: Tab) => {
-        if (isLoadingMoreRef.current) return;
-        if (loadingMore) return; 
+        if (isLoadingMoreRef.current) {
+            console.log(`${tab}: Already loading, skip`);
+            return;
+        }
+        if (loadingMore) {
+            console.log(`${tab}: loadingMore=true, skip`);
+            return;
+        }
 
         const key = tab.toLowerCase() as 'past' | 'live' | 'upcoming';
-        if (paginationInfo[key].page >= paginationInfo[key].total_pages) return;
+        
+        if (paginationInfo[key].page >= paginationInfo[key].total_pages) {
+            console.log(`${tab}: No more pages (${paginationInfo[key].page}/${paginationInfo[key].total_pages})`);
+            return;
+        }
+
         try {
             isLoadingMoreRef.current = true;
             setLoadingMore(true);
-            const nextPage = paginationInfo[key].page + 1;
-            const newPages = {
-                page_past: paginationInfo.past.page,
-                page_live: paginationInfo.live.page,
-                page_upcoming: paginationInfo.upcoming.page,
-                [tab === 'Past' ? 'page_past' : tab === 'Live' ? 'page_live' : 'page_upcoming']: nextPage,
-            };
-            const result = await eventService.getEvents(newPages);
-            if (tab === 'Past') setPastEvents(prev => {
-                const newItems = result.tabs.past.filter(
-                    item => !prev.some(p => p.product_app_id === item.product_app_id)
-                );
-                return [...prev, ...newItems];
-            });
-
-            if (tab === 'Live') setLiveEvents(prev => {
-                const newItems = result.tabs.live.filter(
-                    item => !prev.some(p => p.product_app_id === item.product_app_id)
-                );
-                return [...prev, ...newItems];
-            });
-
-            if (tab === 'Upcoming') setUpcomingEvents(prev => {
-                const newItems = result.tabs.upcoming.filter(
-                    item => !prev.some(p => p.product_app_id === item.product_app_id)
-                );
-                return [...prev, ...newItems];
-            });
-            const paginationData = result.pagination?.[key] ?? result.pagination;
-            setPaginationInfo(prev => ({
-                ...prev,
-                [key]: {
-                    page: nextPage,
-                    total_pages: paginationData?.total_pages || prev[key].total_pages
-                }
-            }));
-            console.log(paginationData);
             
+            const nextPage = paginationInfo[key].page + 1;
+            
+            const paginationParams: any = {};
+            
+            if (tab === 'Past') {
+                paginationParams.page_past = nextPage;
+            } else if (tab === 'Live') {
+                paginationParams.page_live = nextPage;
+            } else if (tab === 'Upcoming') {
+                paginationParams.page_upcoming = nextPage;
+            }
+
+            console.log(`${tab}: Loading page ${nextPage}`, paginationParams);
+            
+            const result = await eventService.getEvents(paginationParams);
+            
+            if (tab === 'Past') {
+                setPastEvents(prev => {
+                    const newItems = result.tabs.past.filter(
+                        item => !prev.some(p => p.product_app_id === item.product_app_id)
+                    );
+                    console.log(`Past: Added ${newItems.length} new items`);
+                    return [...prev, ...newItems];
+                });
+            } else if (tab === 'Live') {
+                setLiveEvents(prev => {
+                    const newItems = result.tabs.live.filter(
+                        item => !prev.some(p => p.product_app_id === item.product_app_id)
+                    );
+                    console.log(`Live: Added ${newItems.length} new items`);
+                    return [...prev, ...newItems];
+                });
+            } else if (tab === 'Upcoming') {
+                setUpcomingEvents(prev => {
+                    const newItems = result.tabs.upcoming.filter(
+                        item => !prev.some(p => p.product_app_id === item.product_app_id)
+                    );
+                    console.log(`Upcoming: Added ${newItems.length} new items`);
+                    return [...prev, ...newItems];
+                });
+            }
+            
+            if (result.pagination && result.pagination[key]) {
+                setPaginationInfo(prev => ({
+                    ...prev,
+                    [key]: {
+                        page: nextPage,
+                        total_pages: result.pagination[key].total_pages
+                    }
+                }));
+                console.log(`${tab}: Updated pagination - page ${nextPage}/${result.pagination[key].total_pages}`);
+            } else {
+                setPaginationInfo(prev => ({
+                    ...prev,
+                    [key]: {
+                        page: nextPage,
+                        total_pages: prev[key].total_pages
+                    }
+                }));
+                console.log(`${tab}: Updated page to ${nextPage}, kept total_pages`);
+            }
 
         } catch (error) {
-            console.error('Failed to load more:', error);
+            console.error(`${tab}: Load more failed:`, error);
         } finally {
             isLoadingMoreRef.current = false;
             setLoadingMore(false);
@@ -142,14 +175,13 @@ const ParticipantEvent = () => {
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
 
-            <ScrollView
-                style={eventStyles.scrollView}
-                contentContainerStyle={eventStyles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
+            <View style={{ flex: 1 }}>
+                {/* Official Events Header */}
                 <View style={eventStyles.section}>
                     <Text style={commonStyles.title}>{t('official.title')}</Text>
                 </View>
+
+                {/* Tab Bar */}
                 <View style={eventStyles.tabBar}>
                     {TABS.map((tab) => (
                         <TouchableOpacity
@@ -158,11 +190,11 @@ const ParticipantEvent = () => {
                             onPress={() => handleTabPress(tab)}
                         >
                             <Text style={[commonStyles.subtitle, activeTab === tab && eventStyles.activeTabText]}>
-                              {t(`live.${tab}`)}
+                                {t(`live.${tab}`)}
                             </Text>
                             {activeTab === tab && (
                                 <LinearGradient
-                                    colors={['#e8341a', '#f4a100', '#1a73e8']} // your gradient colors
+                                    colors={['#e8341a', '#f4a100', '#1a73e8']}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 0 }}
                                     style={eventStyles.underline}
@@ -171,7 +203,9 @@ const ParticipantEvent = () => {
                         </TouchableOpacity>
                     ))}
                 </View>
-                <View style={{ height: 400 }}>
+
+                {/* Tab Content - Scrollable Area */}
+                <View style={{ flex: 1 }}>
                     <FlatList
                         ref={flatListRef}
                         data={TABS}
@@ -187,27 +221,31 @@ const ParticipantEvent = () => {
                             index,
                         })}
                         renderItem={({ item }) => (
-                            <View style={{ width, padding: 16 }}>
+                            <View style={{ width }}>
                                 {renderContent(item)}
                             </View>
                         )}
                         scrollEnabled={true}
                     />
                 </View>
-                <View style={eventStyles.section}>
-                    <Text style={commonStyles.title}>{t('personal.title')}</Text>
-                </View>
-                <View style={[commonStyles.card, { marginHorizontal: 11, padding: 0, overflow: 'hidden', marginBottom: 20 }]}>
-                    <View style={eventStyles.header}>
-                        <Text style={[homeStyles.heading, { marginBottom: 0 }]} >{t('personal.description')}</Text>
-                    </View>
-                    <TouchableOpacity style={commonStyles.primaryButton}>
-                        <Text style={commonStyles.primaryButtonText}>{t('personal.button')}</Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
-    )
-}
 
-export default ParticipantEvent
+                {/* Personal Events Section - Always Visible at Bottom */}
+                <View style={{ paddingBottom: 10 }}>
+                    <View style={eventStyles.section}>
+                        <Text style={commonStyles.title}>{t('personal.title')}</Text>
+                    </View>
+                    <View style={[commonStyles.card, { marginHorizontal: 11, padding: 0, overflow: 'hidden', marginBottom: 20 }]}>
+                        <View style={eventStyles.header}>
+                            <Text style={[homeStyles.heading, { marginBottom: 0 }]}>{t('personal.description')}</Text>
+                        </View>
+                        <TouchableOpacity style={commonStyles.primaryButton}>
+                            <Text style={commonStyles.primaryButtonText}>{t('personal.button')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </SafeAreaView>
+    );
+};
+
+export default ParticipantEvent;
