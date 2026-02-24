@@ -15,7 +15,7 @@ const getApiUrl = (): string => {
   }
 
   console.warn('⚠️ EXPO_PUBLIC_API_URL not found in .env, using fallback');
-  return 'http://192.168.0.199/larssie/api';
+  return 'http://192.168.1.199/larssie/api';
 };
 
 // Hardcoded fallback token (used until login is integrated)
@@ -31,8 +31,8 @@ export const API_CONFIG = {
   
   ENDPOINTS: {
     // Auth
-    LOGIN: '/auth/login.php',
-    REGISTER: '/auth/register.php',
+    LOGIN: '/login_api.php',
+    REGISTER: '/register_api.php',
     
     // Home
     HOME: '/home_api.php',
@@ -42,6 +42,7 @@ export const API_CONFIG = {
     EVENT_DETAIL: '/event_detail_api.php',
     PARTICIPANTS: '/participant_by_event_api.php',
     EVENT_GPX: '/events/:eventId/gpx.php',
+    COUNTRIES: '/country_api.php',
     
     // Participants
     PARTICIPANT_LOCATION: '/insert_participant_location_api.php',

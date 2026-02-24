@@ -1,0 +1,43 @@
+{
+  "firstName": "First Name",
+  "lastName": "Last Name",
+  "email": "Email",
+  "password": "Password",
+  "country": "Country",
+  "city": "City",
+  "dateOfBirth": "Date of Birth",
+  "Gender": {
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "other": "Other"
+  },
+  "termsAndConditions": "I agree to the Terms and Conditions",
+  "uploadPhoto": "Upload Profile Photo",
+  "success": "Registration Successful",
+  "welcome": "Welcome, {{name}}!",
+  "errors": {
+    "firstnameRequired": "First name must be at least 2 characters",
+    "lastnameRequired": "Last name must be at least 2 characters",
+    "emailInvalid": "Please enter a valid email address",
+    "emailExists": "This email is already registered",
+    "passwordShort": "Password must be at least 4 characters",
+    "passwordLong": "Password must be less than 20 characters",
+    "countryRequired": "Please select a country",
+    "cityRequired": "City must be at least 2 characters",
+    "dobRequired": "Please select your date of birth",
+    "genderRequired": "Please select your gender",
+    "termsRequired": "You must accept the terms and conditions"
+  },
+  "alerts": {
+    "email_exists":"This email is already registered",
+    "permissionRequired": "Permission required",
+    "galleryPermission": "Please allow access to your gallery.",
+    "deviceNotAllowed": "Device Not Allowed",
+    "deviceNotAllowedMessage": "This account is linked to another device.",
+    "noConnection": "No Connection",
+    "noConnectionMessage": "Please check your internet connection.",
+    "genericError": "Error",
+    "genericErrorMessage": "Something went wrong. Please try again."
+  }
+}

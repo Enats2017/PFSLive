@@ -1,0 +1,17 @@
+{
+  "firstName": "Prénom",
+  "lastName": "Nom de famille",
+  "email": "E-mail",
+  "password": "Mot de passe",
+  "country": "Pays",
+  "city": "Ville",
+  "dateOfBirth": "Date de naissance",
+
+  "Gender": {
+  "gender": "Genre",
+  "male": "Homme",
+  "female": "Femme",
+  "other": "Autre"
+},
+  "termsAndConditions": "Conditions générales"
+}

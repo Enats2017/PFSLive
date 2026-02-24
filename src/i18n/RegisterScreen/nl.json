@@ -1,0 +1,18 @@
+{
+  "firstName": "Voornaam",
+  "lastName": "Achternaam",
+  "email": "E-mail",
+  "password": "Wachtwoord",
+  "country": "Land",
+  "city": "Stad",
+  "dateOfBirth": "Geboortedatum",
+
+  "Gender": {
+  "gender": "Geslacht",
+  "male": "Man",
+  "female": "Vrouw",
+  "other": "Anders"
+},
+  "termsAndConditions": "Algemene voorwaarden"
+
+}

@@ -51,51 +51,5 @@ export const eventStyles = StyleSheet.create({
     width: "60%",
     borderRadius: 2,
   },
-  count: {
-    backgroundColor: colors.success,
-      width:"35%",
-    paddingVertical: 12,
-    borderTopRightRadius: 20,
-    borderBottomStartRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation:4
-  },
-  distance: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-  },
-  topRow: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-  },
-  avatar: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logo: {
-    textAlign: "center",
-    width: 100,
-    height: 60,
-  },
-
-  divider: {
-    width: 3,
-    height: 100,
-
-    marginHorizontal: 15,
-  },
-  info: {
-    flex: 1,
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
+ 
 });

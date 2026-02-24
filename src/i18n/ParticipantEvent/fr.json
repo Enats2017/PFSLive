@@ -20,21 +20,6 @@
     "title": "ÉVÉNEMENTS PERSONNELS",
     "description": "Vous participez à une course ou planifiez une session d'entraînement qui n'est pas un événement partenaire officiel ? Créez-le ici !",
     "button": "CRÉER UN ÉVÉNEMENT PERSONNEL"
-  },
-  "details": {
-    "Distance": "Distance",
-    "Participant": "Participant"
-  },
-  "countdown": {
-    "in_progress": "En Direct",
-    "finished": "Terminé",
-    "hours": "DÉPART",
-    "days": "DÉPART"
-  },
-  "distance": {
-    "empty": "Aucune distance disponible"
-  },
-  "participant": {
-    "empty": "Pas encore de participants"
   }
+ 
 }

@@ -1,0 +1,21 @@
+{
+    "details": {
+    "Distance": "Afstand",
+    "Participant": "Deelnemer"
+  },
+
+  "countdown": {
+    "in_progress": "Live",
+    "finished": "Afgelopen",
+    "hours": "UUR",
+    "days": "DAGEN"
+  },
+
+  "distance": {
+    "empty": "Geen afstanden beschikbaar"
+  },
+  "participant": {
+    "empty": "Nog geen deelnemers",
+    "search":"Zoeken"
+  }
+}

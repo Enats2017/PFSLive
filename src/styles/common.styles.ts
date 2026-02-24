@@ -5,7 +5,7 @@ export const colors = {
   // Primary colors
   primary: '#FF5722', // Orange color
   primaryDark: '#E64A19',
-  primaryLight: '#FF8A65',
+  primaryLight: '#FF5722',
   
   // Accent colors
   accent: '#4A9EFF',

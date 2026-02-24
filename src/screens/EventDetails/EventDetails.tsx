@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/common/AppHeader';
 import { commonStyles } from '../../styles/common.styles';
-import { eventStyles } from '../../styles/event';
+import { detailsStyles } from '../../styles/details.styles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import DistanceTab from './DistanceTab';
@@ -25,7 +25,7 @@ interface EventDetailsProps {
 }
 
 const EventDetails = ({ route, navigation }: EventDetailsProps) => {
-    const { t } = useTranslation(['event']);
+    const { t } = useTranslation(['details']);
     const [activeTab, setActiveTab] = useState<Tab>('Distance');
     const flatListRef = useRef<FlatList>(null);
 
@@ -55,22 +55,22 @@ const EventDetails = ({ route, navigation }: EventDetailsProps) => {
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
 
-            <View style={eventStyles.section}>
+            <View style={detailsStyles.section}>
                 <Text style={commonStyles.title}>{event_name}</Text>
             </View>
 
-            <View style={eventStyles.tabBar}>
+            <View style={detailsStyles.tabBar}>
                 {TABS.map((tab) => (
-                    <TouchableOpacity key={tab} style={eventStyles.tabItem} onPress={() => handleTabPress(tab)}>
-                        <Text style={[commonStyles.subtitle, activeTab === tab && eventStyles.activeTabText]}>
-                            {t(`event:details.${tab}`)}
+                    <TouchableOpacity key={tab} style={detailsStyles.tabItem} onPress={() => handleTabPress(tab)}>
+                        <Text style={[commonStyles.subtitle, activeTab === tab && detailsStyles.activeTabText]}>
+                            {t(`details:details.${tab}`)}
                         </Text>
                         {activeTab === tab && (
                             <LinearGradient
                                 colors={['#e8341a', '#f4a100', '#1a73e8']}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
-                                style={eventStyles.underline}
+                                style={detailsStyles.underline}
                             />
                         )}
                     </TouchableOpacity>

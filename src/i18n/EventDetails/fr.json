@@ -1,0 +1,19 @@
+{
+    "details": {
+    "Distance": "Distance",
+    "Participant": "Participant"
+  },
+  "countdown": {
+    "in_progress": "En Direct",
+    "finished": "Terminé",
+    "hours": "DÉPART",
+    "days": "DÉPART"
+  },
+  "distance": {
+    "empty": "Aucune distance disponible"
+  },
+  "participant": {
+    "empty": "Pas encore de participants",
+    "search":"Rechercher"
+  }
+}

@@ -1,0 +1,25 @@
+
+{
+    "details": {
+    "Distance": "Distance",
+    "Participant": "Participant"
+  },
+    "button": "SIGN UP LIVE TRACKING",
+    "live":"Live",
+  "countdown": {
+    "in_progress": "Live",
+    "finished": "Finished",
+    "hours": "Hours",
+    "days": "Days",
+    "minutes":"Minutes"
+  },
+  "distance": {
+    "empty": "No distances available"
+},
+
+"participant": {
+    "empty": "No participants yet",
+    "search":"Search"
+}
+
+}

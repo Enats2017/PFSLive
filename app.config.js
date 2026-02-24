@@ -61,7 +61,8 @@ export default ({ config }) => {
           locationWhenInUsePermission: "Allow Livio to use your location to track your race progress."
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "@react-native-community/datetimepicker"  
     ],
     extra: {
       eas: {

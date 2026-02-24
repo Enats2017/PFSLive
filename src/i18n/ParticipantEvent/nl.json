@@ -20,21 +20,6 @@
     "title": "PERSOONLIJKE EVENEMENTEN",
     "description": "Een race of training sessie plannen die geen officieel partner evenement is? Maak het hier aan!",
     "button": "PERSOONLIJK EVENEMENT AANMAKEN"
-  },
-  "details": {
-    "Distance": "Afstand",
-    "Participant": "Deelnemer"
-  },
-  "countdown": {
-    "in_progress": "Live",
-    "finished": "Afgelopen",
-    "hours": "START",
-    "days": "START"
-  },
-  "distance": {
-    "empty": "Geen afstanden beschikbaar"
-  },
-  "participant": {
-    "empty": "Nog geen deelnemers"
   }
+
 }

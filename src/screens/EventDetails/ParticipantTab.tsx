@@ -2,12 +2,16 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
-import { eventStyles } from '../../styles/event';
+import { detailsStyles } from '../../styles/details.styles';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { API_CONFIG, getApiEndpoint } from '../../constants/config';
 import SearchInput from '../../components/SearchInput';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../types/navigation';
+
 
 interface Participant {
     participant_app_id: string;
@@ -20,7 +24,7 @@ interface Participant {
 }
 
 const ParticipantTab = ({ product_app_id }: { product_app_id: string | number }) => {
-    const { t } = useTranslation(['event']);
+    const { t } = useTranslation(['details']);
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -29,6 +33,7 @@ const ParticipantTab = ({ product_app_id }: { product_app_id: string | number })
     const [totalPages, setTotalPages] = useState(1);
     const debounceTimer = useRef<any>(null);
     const isLoadingMoreRef = useRef(false);
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
     useEffect(() => {
         fetchParticipants(1, '');
@@ -88,17 +93,17 @@ const ParticipantTab = ({ product_app_id }: { product_app_id: string | number })
 
     const renderParticipant = ({ item }: { item: Participant }) => (
         <View style={[commonStyles.card, { padding: 0, overflow: 'hidden', marginBottom: 16 }]}>
-            <View style={eventStyles.topRow}>
-                <View style={eventStyles.avatar}>
-                    <Ionicons name="person-circle-outline" size={55} color="#9ca3af" style={eventStyles.logo} />
+            <View style={detailsStyles.topRow}>
+                <View style={detailsStyles.avatar}>
+                    <Ionicons name="person-circle-outline" size={55} color="#9ca3af" style={detailsStyles.logo} />
                 </View>
                 <LinearGradient
                     colors={['#e8341a', '#f4a100', '#1a73e8']}
                     start={{ x: 0, y: 1 }}
                     end={{ x: 1, y: 0 }}
-                    style={eventStyles.divider}
+                    style={detailsStyles.divider}
                 />
-                <View style={eventStyles.info}>
+                <View style={detailsStyles.info}>
                     <Text style={commonStyles.title}>
                         {`${item.firstname ?? ''} ${item.lastname ?? ''}`.trim().toUpperCase() || 'UNKNOWN PARTICIPANT'}
                     </Text>
@@ -106,7 +111,7 @@ const ParticipantTab = ({ product_app_id }: { product_app_id: string | number })
                     <Text style={commonStyles.subtitle}>{item.race_distance}</Text>
                 </View>
             </View>
-            <TouchableOpacity style={commonStyles.favoriteButton}>
+            <TouchableOpacity style={commonStyles.favoriteButton} onPress={() => navigation.navigate('LoginScreen')}>
                 <Text style={commonStyles.favoriteButtonText}>ADD TO FAVORITE</Text>
             </TouchableOpacity>
         </View>
@@ -115,7 +120,7 @@ const ParticipantTab = ({ product_app_id }: { product_app_id: string | number })
     return (
         <View style={commonStyles.container}>
             <SearchInput
-                placeholder={t('event:participant.search')}
+                placeholder={t('details:participant.search')}
                 value={searchText}
                 onChangeText={setSearchText}
                 icon="search"
@@ -123,7 +128,7 @@ const ParticipantTab = ({ product_app_id }: { product_app_id: string | number })
             {loading ? (
                 <ActivityIndicator size="large" color="#f4a100" style={{ marginTop: 40 }} />
             ) : participants.length === 0 ? (
-                <Text style={commonStyles.errorText}>{t('event:participant.empty')}</Text>
+                <Text style={commonStyles.errorText}>{t('details:participant.empty')}</Text>
             ) : (
                 <FlatList
                     data={participants}

@@ -17,11 +17,6 @@ const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   const { changeLanguage } = useLanguageStore();
-
- 
-
-
-
   useEffect(() => {
     const initializeApp = async () => {
       try {

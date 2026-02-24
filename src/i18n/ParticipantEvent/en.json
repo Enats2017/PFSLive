@@ -20,25 +20,8 @@
     "title": "PERSONAL EVENTS",
     "description": "Racing and event or planning a training session that is not an official partner event? Create it here!",
     "button": "CREATE PERSONAL EVENT"
-  },
-  "details": {
-    "Distance": "Distance",
-    "Participant": "Participant"
-  },
-  "countdown": {
-    "in_progress": "Live",
-    "finished": "Finished",
-    "hours": "START",
-    "days": "START"
-  },
-  "distance": {
-    "empty": "No distances available"
-
-},
-"participant": {
-    "empty": "No participants yet",
-    "search":"Search"
-}
+  }
+ 
 }
 
   

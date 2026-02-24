@@ -16,6 +16,13 @@ import homeNL from './HomeScreen/nl.json';
 import routeEN from './RouteScreen/en.json';
 import routeFR from './RouteScreen/fr.json';
 import routeNL from './RouteScreen/nl.json';
+import  detailsEN from "./EventDetails/en.json";
+import  detailsFR from "./EventDetails/fr.json";
+import  detailsNL from "./EventDetails/nl.json";
+import  RegisterEN from "./RegisterScreen/en.json"; 
+import  RegisterFR from "./RegisterScreen/fr.json";
+import  RegisterNL from "./RegisterScreen/nl.json";
+import LoginEN from "./LoginScreen/en.json";
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
@@ -186,18 +193,25 @@ i18n.use(initReactI18next).init({
       home: homeEN,
       event: eventEn,
       route: routeEN,
+      details: detailsEN,
+      register:RegisterEN,
+      login:LoginEN,
     },
     fr: {
       common: commonFR,
       home: homeFR,
       event: eventNL,
       route: routeFR,
+      details: detailsFR,
+      register:RegisterFR,
     },
     nl: {
       common: commonNL,
       home: homeNL,
       event: eventNL,
       route: routeNL,
+      details: detailsNL,
+      register:RegisterNL,
     },
   },
   lng: initialLanguage,
