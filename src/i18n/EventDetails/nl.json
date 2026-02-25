@@ -1,21 +1,35 @@
 {
-    "details": {
+  "details": {
     "Distance": "Afstand",
     "Participant": "Deelnemer"
   },
-
+  "button": "MELD JE AAN VOOR LIVE TRACKING",
+  "live": "LIVE",
   "countdown": {
     "in_progress": "Live",
-    "finished": "Afgelopen",
-    "hours": "UUR",
-    "days": "DAGEN"
+    "finished": "Voltooid",
+    "hours": "Uren",
+    "days": "Dagen",
+    "minutes": "Minuten"
   },
-
   "distance": {
     "empty": "Geen afstanden beschikbaar"
   },
   "participant": {
     "empty": "Nog geen deelnemers",
-    "search":"Zoeken"
+    "search": "Zoek deelnemers",
+    "searching": "Zoeken...",
+    "noResults": "Geen deelnemers gevonden voor",
+    "favorite": "TOEVOEGEN AAN FAVORIETEN",
+    "unknownName": "ONBEKENDE DEELNEMER"
+  },
+  "tracking": {
+    "live": "Live Tracking Actief",
+    "bib": "Rugnummer"
+  },
+  "error": {
+    "title": "Kan gegevens niet laden",
+    "retry": "Opnieuw proberen",
+    "missingId": "Evenement ID ontbreekt"
   }
 }

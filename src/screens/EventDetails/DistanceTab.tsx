@@ -17,7 +17,6 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
   const [serverTime, setServerTime] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch distances only when screen is focused
   useFocusEffect(
     useCallback(() => {
       fetchDistances();
@@ -30,11 +29,11 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
       setError(null);
 
       const result = await eventDetailService.getEventDetails(product_app_id);
-      
+
       setDistances(result.distances);
       setServerTime(result.server_datetime);
     } catch (error: any) {
-      setError(error.message || 'Failed to load distances. Please try again.');
+      setError(error.message || t('details:error.title'));
     } finally {
       setLoading(false);
     }
@@ -96,7 +95,9 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
           style={[commonStyles.primaryButton, { marginTop: 16 }]}
           onPress={fetchDistances}
         >
-          <Text style={commonStyles.primaryButtonText}>Retry</Text>
+          <Text style={commonStyles.primaryButtonText}>
+            {t('details:error.retry')}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -105,7 +106,9 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
   if (distances.length === 0) {
     return (
       <View style={{ marginTop: 40 }}>
-        <Text style={commonStyles.errorText}>{t('details:distance.empty')}</Text>
+        <Text style={commonStyles.errorText}>
+          {t('details:distance.empty')}
+        </Text>
       </View>
     );
   }

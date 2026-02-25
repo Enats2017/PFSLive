@@ -11,17 +11,27 @@ import ParticipantTab from './ParticipantTab';
 import type { EventDetailsScreenProps } from '../../types/navigation';
 
 const { width } = Dimensions.get('window');
-type Tab = 'Participant' | 'Distance'; // ✅ SWITCHED ORDER
-const TABS: Tab[] = ['Participant', 'Distance']; // ✅ PARTICIPANT FIRST
+type Tab = 'Participant' | 'Distance';
+const TABS: Tab[] = ['Participant', 'Distance'];
 
 const EventDetails = ({ route }: EventDetailsScreenProps) => {
   const { t } = useTranslation(['details']);
-  const [activeTab, setActiveTab] = useState<Tab>('Distance'); // ✅ DEFAULT TO PARTICIPANT
+  const [activeTab, setActiveTab] = useState<Tab>('Participant');
   const flatListRef = useRef<FlatList>(null);
 
   const { product_app_id, event_name } = route.params;
 
   const renderContent = (tab: Tab) => {
+    if (!product_app_id) {
+      return (
+        <View style={commonStyles.centerContainer}>
+          <Text style={commonStyles.errorText}>
+            {t('details:error.missingId')}
+          </Text>
+        </View>
+      );
+    }
+
     switch (tab) {
       case 'Distance':
         return <DistanceTab product_app_id={product_app_id} />;
@@ -83,7 +93,7 @@ const EventDetails = ({ route }: EventDetailsScreenProps) => {
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item}
           onMomentumScrollEnd={handleSwipe}
-          initialScrollIndex={TABS.indexOf('Distance')} // ✅ START WITH PARTICIPANT
+          initialScrollIndex={TABS.indexOf('Participant')}
           getItemLayout={(_, index) => ({
             length: width,
             offset: width * index,

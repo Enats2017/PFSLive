@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, Keyboard } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, colors } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
@@ -25,16 +25,14 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const isLoadingMoreRef = useRef(false);
-  const searchInputRef = useRef<any>(null); // ✅ ADD REF FOR SEARCH INPUT
+  const searchInputRef = useRef<any>(null);
 
-  // Fetch participants when screen is focused
   useFocusEffect(
     useCallback(() => {
       fetchParticipants(1, '');
     }, [product_app_id])
   );
 
-  // Debounced search
   React.useEffect(() => {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
@@ -53,7 +51,6 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
 
   const fetchParticipants = async (pageNum: number, search: string) => {
     try {
-      // ✅ DON'T show loading indicator for page 1 if we're searching (keeps keyboard open)
       if (pageNum === 1 && search.length === 0) {
         setLoading(true);
         setError(null);
@@ -67,7 +64,6 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
         search
       );
 
-      // Filter out duplicates
       setParticipants(prev => {
         if (pageNum === 1) {
           return result.participants;
@@ -84,7 +80,7 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
       setTotalPages(result.pagination.total_pages);
     } catch (error: any) {
       if (pageNum === 1) {
-        setError(error.message || 'Failed to load participants. Please try again.');
+        setError(error.message || t('details:error.title'));
       }
     } finally {
       setLoading(false);
@@ -102,7 +98,9 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
   }, [page, totalPages, loadingMore, searchText]);
 
   const renderParticipant = useCallback(({ item, index }: { item: Participant; index: number }) => {
-    const fullName = `${item.firstname ?? ''} ${item.lastname ?? ''}`.trim().toUpperCase() || 'UNKNOWN PARTICIPANT';
+    const fullName = `${item.firstname ?? ''} ${item.lastname ?? ''}`.trim().toUpperCase() || t('details:participant.unknownName');
+    const hasBibNumber = item.bib_number && item.bib_number.trim() !== '';
+    const isLiveTracking = item.live_tracking_activated === 1;
 
     return (
       <View style={[commonStyles.card, { padding: 0, overflow: 'hidden', marginBottom: 16 }]}>
@@ -125,16 +123,32 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
             <Text style={commonStyles.title}>{fullName}</Text>
             <Text style={commonStyles.text}>{item.city} | {item.country}</Text>
             <Text style={commonStyles.subtitle}>{item.race_distance}</Text>
+            {hasBibNumber && (
+              <Text style={[commonStyles.subtitle, { color: colors.primary, fontWeight: '600' }]}>
+                {t('details:tracking.bib')}: {item.bib_number}
+              </Text>
+            )}
           </View>
         </View>
+
+        {isLiveTracking && (
+          <View style={detailsStyles.liveTrackingBadge}>
+            <Ionicons name="radio" size={14} color={colors.success} />
+            <Text style={detailsStyles.liveTrackingText}>
+              {t('details:tracking.live')}
+            </Text>
+          </View>
+        )}
+
         <TouchableOpacity style={commonStyles.favoriteButton}>
-          <Text style={commonStyles.favoriteButtonText}>ADD TO FAVORITE</Text>
+          <Text style={commonStyles.favoriteButtonText}>
+            {t('details:participant.favorite')}
+          </Text>
         </TouchableOpacity>
       </View>
     );
-  }, []);
+  }, [t]);
 
-  // ✅ SHOW LOADING ONLY ON INITIAL LOAD (not during search)
   if (loading && searchText.length === 0) {
     return (
       <ActivityIndicator
@@ -153,7 +167,9 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
           style={[commonStyles.primaryButton, { marginTop: 16 }]}
           onPress={() => fetchParticipants(1, searchText)}
         >
-          <Text style={commonStyles.primaryButtonText}>Retry</Text>
+          <Text style={commonStyles.primaryButtonText}>
+            {t('details:error.retry')}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -162,18 +178,19 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
   return (
     <View style={commonStyles.container}>
       <SearchInput
-        ref={searchInputRef} // ✅ ADD REF
+        ref={searchInputRef}
         placeholder={t('details:participant.search')}
         value={searchText}
         onChangeText={setSearchText}
         icon="search"
       />
 
-      {/* ✅ SHOW INLINE LOADING WHILE SEARCHING */}
       {loading && searchText.length > 0 && (
         <View style={{ marginTop: 16, alignItems: 'center' }}>
           <ActivityIndicator size="small" color="#f4a100" />
-          <Text style={{ marginTop: 8, color: '#666' }}>Searching...</Text>
+          <Text style={{ marginTop: 8, color: '#666' }}>
+            {t('details:participant.searching')}
+          </Text>
         </View>
       )}
 
@@ -181,7 +198,7 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
         <View style={{ marginTop: 40 }}>
           <Text style={commonStyles.errorText}>
             {searchText
-              ? `No participants found for "${searchText}"`
+              ? `${t('details:participant.noResults')} "${searchText}"`
               : t('details:participant.empty')
             }
           </Text>
@@ -195,7 +212,7 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
           onEndReached={handleLoadMore}
           contentContainerStyle={{ paddingBottom: spacing.xxxl }}
           onEndReachedThreshold={0.2}
-          keyboardShouldPersistTaps="handled" // ✅ CRITICAL: Keeps keyboard open
+          keyboardShouldPersistTaps="handled"
           ListFooterComponent={
             loadingMore ? (
               <ActivityIndicator

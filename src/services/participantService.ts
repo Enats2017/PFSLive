@@ -9,6 +9,7 @@ export interface Participant {
   city: string;
   country: string;
   race_distance: string;
+  live_tracking_activated: number;
 }
 
 export interface ParticipantPagination {
