@@ -13,6 +13,7 @@ export interface LocationData {
   heading?: number;
   speedAccuracy?: number;
   isMock?: boolean;
+  elevation?: number;
 }
 
 export interface SendLocationResponse {
@@ -169,7 +170,7 @@ export const locationService = {
           {
             latitude: queuedLocation.latitude,
             longitude: queuedLocation.longitude,
-            altitude: queuedLocation.elevation,
+            altitude: queuedLocation.altitude || queuedLocation.elevation, // ✅ FIX
             accuracy: queuedLocation.accuracy,
             timestamp: queuedLocation.timestamp,
             speed: queuedLocation.speed,

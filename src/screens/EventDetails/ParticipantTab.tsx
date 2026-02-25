@@ -8,12 +8,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import SearchInput from '../../components/SearchInput';
 import { LinearGradient } from 'expo-linear-gradient';
 import { participantService, Participant } from '../../services/participantService';
+import { API_CONFIG } from '../../constants/config';
 
 interface ParticipantTabProps {
   product_app_id: string | number;
 }
 
-const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
+const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
   const { t } = useTranslation(['details']);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,8 +25,8 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
   const [error, setError] = useState<string | null>(null);
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-  const isLoadingMoreRef = useRef(false);
   const searchInputRef = useRef<any>(null);
+  const onEndReachedCalledDuringMomentum = useRef(true);
 
   useFocusEffect(
     useCallback(() => {
@@ -58,6 +59,10 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
         setLoadingMore(true);
       }
 
+      if (API_CONFIG.DEBUG) {
+        console.log(`📡 Fetching participants page ${pageNum}`);
+      }
+
       const result = await participantService.getParticipants(
         product_app_id,
         pageNum,
@@ -68,32 +73,81 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
         if (pageNum === 1) {
           return result.participants;
         } else {
-          const existingIds = new Set(prev.map(p => p.participant_app_id));
-          const newItems = result.participants.filter(
-            p => !existingIds.has(p.participant_app_id)
+          // ✅ SMART DEDUPLICATION: Use source-aware logic
+          const existingIds = new Set(
+            prev.map(p => participantService.getParticipantId(p))
           );
+          
+          const newItems = result.participants.filter(p => {
+            const participantId = participantService.getParticipantId(p);
+            return !existingIds.has(participantId);
+          });
+          
+          if (API_CONFIG.DEBUG) {
+            console.log(`✅ Added ${newItems.length} new participants (Total: ${prev.length + newItems.length})`);
+            console.log(`📊 Deduplication: checked ${result.participants.length}, added ${newItems.length}`);
+          }
+          
           return [...prev, ...newItems];
         }
       });
 
       setPage(pageNum);
       setTotalPages(result.pagination.total_pages);
+
+      if (API_CONFIG.DEBUG) {
+        console.log(`📄 Page ${pageNum}/${result.pagination.total_pages} | Total: ${result.pagination.total}`);
+      }
     } catch (error: any) {
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Error fetching participants:', error.message);
+      }
+      
       if (pageNum === 1) {
         setError(error.message || t('details:error.title'));
       }
     } finally {
       setLoading(false);
       setLoadingMore(false);
-      isLoadingMoreRef.current = false;
     }
   };
 
-  const handleLoadMore = useCallback(() => {
-    if (isLoadingMoreRef.current || loadingMore) return;
-    if (page >= totalPages) return;
+  const hasMorePages = (): boolean => {
+    return page < totalPages;
+  };
 
-    isLoadingMoreRef.current = true;
+  const handleLoadMore = useCallback(() => {
+    if (API_CONFIG.DEBUG) {
+      console.log('🔄 onEndReached fired', {
+        momentumFlag: onEndReachedCalledDuringMomentum.current,
+        hasMore: hasMorePages(),
+        loading: loadingMore,
+        currentPage: page,
+        totalPages: totalPages
+      });
+    }
+
+    if (onEndReachedCalledDuringMomentum.current) {
+      if (API_CONFIG.DEBUG) console.log('⏭️ Skipped: momentum flag set');
+      return;
+    }
+
+    if (!hasMorePages()) {
+      if (API_CONFIG.DEBUG) console.log('⏭️ Skipped: no more pages');
+      return;
+    }
+
+    if (loadingMore) {
+      if (API_CONFIG.DEBUG) console.log('⏭️ Skipped: already loading');
+      return;
+    }
+
+    onEndReachedCalledDuringMomentum.current = true;
+
+    if (API_CONFIG.DEBUG) {
+      console.log(`📥 Loading more: page ${page + 1}/${totalPages}`);
+    }
+
     fetchParticipants(page + 1, searchText);
   }, [page, totalPages, loadingMore, searchText]);
 
@@ -103,7 +157,7 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
     const isLiveTracking = item.live_tracking_activated === 1;
 
     return (
-      <View style={[commonStyles.card, { padding: 0, overflow: 'hidden', marginBottom: 16 }]}>
+      <View style={[commonStyles.card, { padding: 0, overflow: 'hidden', marginBottom: spacing.lg }]}>
         <View style={detailsStyles.topRow}>
           <View style={detailsStyles.avatar}>
             <Ionicons
@@ -153,7 +207,7 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
     return (
       <ActivityIndicator
         size="large"
-        color="#f4a100"
+        color="#FF5722"
         style={{ marginTop: 40 }}
       />
     );
@@ -164,7 +218,7 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
       <View style={commonStyles.centerContainer}>
         <Text style={commonStyles.errorText}>{error}</Text>
         <TouchableOpacity
-          style={[commonStyles.primaryButton, { marginTop: 16 }]}
+          style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
           onPress={() => fetchParticipants(1, searchText)}
         >
           <Text style={commonStyles.primaryButtonText}>
@@ -176,26 +230,28 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
   }
 
   return (
-    <View style={commonStyles.container}>
-      <SearchInput
-        ref={searchInputRef}
-        placeholder={t('details:participant.search')}
-        value={searchText}
-        onChangeText={setSearchText}
-        icon="search"
-      />
+    <>
+      <View style={{ paddingHorizontal: spacing.lg }}>
+        <SearchInput
+          ref={searchInputRef}
+          placeholder={t('details:participant.search')}
+          value={searchText}
+          onChangeText={setSearchText}
+          icon="search"
+        />
+      </View>
 
       {loading && searchText.length > 0 && (
-        <View style={{ marginTop: 16, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color="#f4a100" />
-          <Text style={{ marginTop: 8, color: '#666' }}>
+        <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
+          <ActivityIndicator size="small" color="#FF5722" />
+          <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
             {t('details:participant.searching')}
           </Text>
         </View>
       )}
 
       {!loading && participants.length === 0 ? (
-        <View style={{ marginTop: 40 }}>
+        <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
           <Text style={commonStyles.errorText}>
             {searchText
               ? `${t('details:participant.noResults')} "${searchText}"`
@@ -206,25 +262,39 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
       ) : (
         <FlatList
           data={participants}
-          keyExtractor={(item, index) => `${item.participant_app_id}-${index}`}
+          keyExtractor={(item, index) => `${participantService.getParticipantId(item)}-${index}`}
           renderItem={renderParticipant}
           showsVerticalScrollIndicator={false}
           onEndReached={handleLoadMore}
-          contentContainerStyle={{ paddingBottom: spacing.xxxl }}
-          onEndReachedThreshold={0.2}
+          onEndReachedThreshold={0.3}
+          onMomentumScrollBegin={() => {
+            onEndReachedCalledDuringMomentum.current = false;
+            if (API_CONFIG.DEBUG) console.log('🔄 Scroll momentum began - flag reset');
+          }}
+          contentContainerStyle={{ 
+            paddingHorizontal: spacing.lg,
+            paddingBottom: spacing.xxxl 
+          }}
           keyboardShouldPersistTaps="handled"
           ListFooterComponent={
             loadingMore ? (
-              <ActivityIndicator
-                size="small"
-                color="#f4a100"
-                style={{ marginVertical: 16 }}
-              />
+              <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#FF5722" />
+                <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
+                  Loading more... ({page}/{totalPages})
+                </Text>
+              </View>
+            ) : hasMorePages() && participants.length > 0 ? (
+              <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
+                <Text style={{ color: colors.gray500 }}>
+                  Scroll for more ({participants.length} loaded)
+                </Text>
+              </View>
             ) : null
           }
         />
       )}
-    </View>
+    </>
   );
 };
 

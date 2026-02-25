@@ -12,11 +12,11 @@ import type { EventDetailsScreenProps } from '../../types/navigation';
 
 const { width } = Dimensions.get('window');
 type Tab = 'Participant' | 'Distance';
-const TABS: Tab[] = ['Participant', 'Distance'];
+const TABS: Tab[] = ['Participant', 'Distance']; // ✅ Order stays the same
 
 const EventDetails = ({ route }: EventDetailsScreenProps) => {
   const { t } = useTranslation(['details']);
-  const [activeTab, setActiveTab] = useState<Tab>('Participant');
+  const [activeTab, setActiveTab] = useState<Tab>('Distance'); // ✅ DEFAULT TO DISTANCE
   const flatListRef = useRef<FlatList>(null);
 
   const { product_app_id, event_name } = route.params;
@@ -93,14 +93,14 @@ const EventDetails = ({ route }: EventDetailsScreenProps) => {
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item}
           onMomentumScrollEnd={handleSwipe}
-          initialScrollIndex={TABS.indexOf('Participant')}
+          initialScrollIndex={TABS.indexOf('Distance')} // ✅ START AT DISTANCE (index 1)
           getItemLayout={(_, index) => ({
             length: width,
             offset: width * index,
             index
           })}
           renderItem={({ item }) => (
-            <View style={{ width, paddingHorizontal: 16 }}>
+            <View style={{ width, flex: 1 }}>
               {renderContent(item)}
             </View>
           )}

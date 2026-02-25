@@ -10,14 +10,14 @@
     "Fan": "IK BEN EEN FAN"
   },
   "Event": {
-    "title": "Evenementnaam",
+    "title": "Evenement Naam",
     "Date": "Datum",
-    "description": "Je kunt je live tracking starten vanaf 1 uur voor je start. Zorg ervoor dat je deze app de hele tijd open houdt en niet sluit!",
+    "description": "Je kunt je live tracking 1 uur voor de start beginnen. Zorg ervoor dat je deze app de hele tijd open houdt en sluit hem niet!",
     "buttonText": "START TRACKING",
     "button": "STOP TRACKING"
   },
   "status": {
-    "gpsActive": "GPS Actief - Wachten tot race begint",
+    "gpsActive": "GPS Actief - Wachten op race start",
     "sendingData": "Locatiegegevens Verzenden",
     "sent": "Verzonden",
     "queued": "In Wachtrij",
@@ -25,11 +25,12 @@
     "waitingForData": "Wachten op evenementgegevens...",
     "manualStartEnabled": "Handmatige Start Ingeschakeld",
     "manualStartDescription": "Gegevensoverdracht wordt handmatig beheerd",
-    "manualStartReady": "Klaar om te verzenden (handmatige modus)"
+    "manualStartReady": "Klaar om te verzenden (handmatige modus)",
+    "loading": "Laden..."
   },
   "tracking": {
     "gpsActivated": "GPS Geactiveerd",
-    "manualStartEnabled": "Handmatige startmodus ingeschakeld. Je kunt op elk moment gegevens verzenden.",
+    "manualStartEnabled": "Handmatige startmodus ingeschakeld. Je kunt op elk moment gegevens beginnen te verzenden.",
     "raceStarted": "Race Gestart!",
     "nowSending": "Nu locatiegegevens verzenden.",
     "waitingForRace": "GPS geactiveerd. Gegevens worden verzonden wanneer de race begint.",
@@ -44,7 +45,7 @@
   },
   "alerts": {
     "overrideTitle": "Handmatige Override",
-    "overrideMessage": "Direct beginnen met het verzenden van locatiegegevens, zonder de starttijd van de race af te wachten?",
+    "overrideMessage": "Locatiegegevens onmiddellijk verzenden, zonder race starttijd?",
     "cancel": "Annuleren",
     "startNow": "Nu Starten"
   },

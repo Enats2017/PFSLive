@@ -10,6 +10,7 @@ export interface Participant {
   country: string;
   race_distance: string;
   live_tracking_activated: number;
+  source?: string; // ✅ ADD THIS (e.g., "local" or "external")
 }
 
 export interface ParticipantPagination {
@@ -82,5 +83,17 @@ export const participantService = {
       }
       throw error;
     }
+  },
+
+  /**
+   * Get unique identifier for participant based on source
+   */
+  getParticipantId(participant: Participant): string {
+    // ✅ If source is "local", use participant_app_id
+    // ✅ Otherwise, use bib_number
+    if (participant.source === 'local') {
+      return participant.participant_app_id;
+    }
+    return participant.bib_number || participant.participant_app_id;
   }
 };

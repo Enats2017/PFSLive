@@ -41,6 +41,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const [homeData, setHomeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [hasToken, setHasToken] = useState(false); // ✅ ADD TOKEN STATE
 
   // Tracking states
   const [isGPSActive, setIsGPSActive] = useState(false);
@@ -105,9 +106,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const initializeScreen = async () => {
     try {
       setLoading(true);
-      await fetchHomeData();
-      await checkPermissions();
-      await loadQueueSize();
+      
+      // ✅ Check token first
+      const token = await tokenService.getToken();
+      setHasToken(!!token);
+      
+      if (token) {
+        await fetchHomeData();
+        await checkPermissions();
+        await loadQueueSize();
+      } else {
+        if (API_CONFIG.DEBUG) {
+          console.log('⚠️ No token found - skipping data fetch');
+        }
+      }
     } catch (error) {
       if (API_CONFIG.DEBUG) console.error('❌ Error initializing screen:', error);
     } finally {
@@ -201,13 +213,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const token = await tokenService.getToken();
 
       if (!token) {
-        if (API_CONFIG.DEBUG) console.log('⚠️ No token found, skipping home data fetch');
+        if (API_CONFIG.DEBUG) {
+          console.log('⚠️ No token found, skipping home data fetch');
+        }
+        setHasToken(false);
         setLoading(false);
         return;
       }
 
+      setHasToken(true);
+
       const headers = await API_CONFIG.getHeaders();
-      console.log("📤 HOME HEADERS:", headers);
+
+      if (API_CONFIG.DEBUG) {
+        console.log("📤 Fetching home data");
+      }
 
       const response = await axios.get<StandardApiResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.HOME),
@@ -223,11 +243,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // Calculate server time offset
         if (response.data.data.server_datetime) {
           try {
-            // Parse server datetime: "2026-02-21 11:17:25"
             const serverTimeString = response.data.data.server_datetime.replace(' ', 'T');
             const serverTime = new Date(serverTimeString);
-
-            // Calculate offset (server time - device time)
             const deviceTime = new Date();
             const offset = serverTime.getTime() - deviceTime.getTime();
 
@@ -246,10 +263,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       }
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        console.error('Error fetching home data:', JSON.stringify(error));
+        console.error('❌ Error fetching home data:', error.message);
       }
+      
       if (error?.response?.status === 401) {
-        console.log("🚨 Session expired. Redirecting to login...");
+        if (API_CONFIG.DEBUG) {
+          console.log("🚨 Session expired. Redirecting to login...");
+        }
+        setHasToken(false);
         navigation.navigate("LoginScreen");
       }
     } finally {
@@ -296,10 +317,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // Parse race start time from API (timezone-aware)
       if (homeData?.next_race_date && homeData?.next_race_time) {
         try {
-          // Combine date and time: "2026-02-21T12:30:00"
           const dateTimeString = `${homeData.next_race_date}T${homeData.next_race_time}`;
-
-          // Parse as Date object
           const raceTime = new Date(dateTimeString);
 
           if (!isNaN(raceTime.getTime())) {
@@ -314,7 +332,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               console.log('✅ Parsed Race Time:', raceTime.toLocaleString());
               console.log('🖥️ Server Time:', homeData.server_datetime);
 
-              // Show time until race using server time
               const now = getServerTime();
               const diff = raceTime.getTime() - now.getTime();
               const hoursUntil = (diff / (1000 * 60 * 60)).toFixed(2);
@@ -328,6 +345,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setRaceStartTime(null);
         raceStartTimeRef.current = null;
       }
+
       // Get sending interval from API
       let intervalValue = 30;
       if (homeData?.next_race_interval_for_location) {
@@ -355,7 +373,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         lon: initialGPS.longitude,
       });
 
-      // Check if race has already started
       const raceAlreadyStarted = hasRaceStarted();
 
       if (raceAlreadyStarted) {
@@ -364,7 +381,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       const gpsWatch = await gpsService.startWatchingPosition(
         async (gpsPosition) => {
-          // Check if GPS is still active using ref
           if (!isGPSActiveRef.current) {
             if (API_CONFIG.DEBUG) console.log('GPS inactive, skipping location send');
             return;
@@ -428,7 +444,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         startRaceStartChecker();
       }
 
-      // Determine message based on race status
       let message = '';
 
       if (homeData?.manual_start === 1) {
@@ -495,31 +510,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   const stopGPSTracking = () => {
-    // Stop GPS watch
     if (gpsWatchRef.current) {
       gpsWatchRef.current.remove();
       gpsWatchRef.current = null;
     }
 
-    // Clear queue processor
     if (queueProcessorRef.current) {
       clearInterval(queueProcessorRef.current);
       queueProcessorRef.current = null;
     }
 
-    // Clear race start checker
     if (raceStartCheckRef.current) {
       clearInterval(raceStartCheckRef.current);
       raceStartCheckRef.current = null;
     }
 
-    // Reset all tracking states
     setIsGPSActive(false);
     isGPSActiveRef.current = false;
     setIsSendingData(false);
     setCurrentLocation(null);
 
-    // Show toast before resetting counter
     toastSuccess(
       t('home:tracking.gpsStopped'),
       t('home:tracking.trackingStopped', {
@@ -528,7 +538,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       }),
     );
 
-    // Reset counter
     setLocationUpdateCount(0);
   };
 
@@ -591,32 +600,58 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     };
   }, [isGPSActive, participantId, eventId]);
 
+  // ✅ OPTIMIZED: Smart polling - only when token exists
   useFocusEffect(
     React.useCallback(() => {
-      // Fetch immediately when screen becomes focused
-      if (API_CONFIG.DEBUG) {
-        console.log('📡 Home screen focused - Fetching fresh data');
-      }
-      fetchHomeData();
-      
-      // Then start polling
-      const interval = setInterval(() => {
+      // Check if we have a token before starting to poll
+      const checkTokenAndPoll = async () => {
+        const token = await tokenService.getToken();
+        
+        if (!token) {
+          if (API_CONFIG.DEBUG) {
+            console.log('📴 No token - skipping polling');
+          }
+          setHasToken(false);
+          return null; // Return null to indicate no interval should be set
+        }
+
+        setHasToken(true);
+
+        // Fetch immediately when screen becomes focused
         if (API_CONFIG.DEBUG) {
-          console.log('🔄 Polling home data');
+          console.log('📡 Home screen focused - Fetching fresh data');
         }
         fetchHomeData();
-      }, API_CONFIG.HOME_DATA_POLL_INTERVAL);
+        
+        // Start polling
+        const interval = setInterval(() => {
+          if (API_CONFIG.DEBUG) {
+            console.log('🔄 Polling home data');
+          }
+          fetchHomeData();
+        }, API_CONFIG.HOME_DATA_POLL_INTERVAL);
+        
+        return interval;
+      };
+
+      let intervalId: NodeJS.Timeout | null = null;
+
+      // Start polling if token exists
+      checkTokenAndPoll().then(interval => {
+        intervalId = interval;
+      });
       
       // Cleanup when screen loses focus
       return () => {
-        clearInterval(interval);
-        if (API_CONFIG.DEBUG) {
-          console.log('📴 Home screen unfocused - Stopping API polling');
+        if (intervalId) {
+          clearInterval(intervalId);
+          if (API_CONFIG.DEBUG) {
+            console.log('📴 Home screen unfocused - Stopping API polling');
+          }
         }
       };
     }, [])
   );
-
 
   // Loading state
   if (loading) {
@@ -627,7 +662,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={commonStyles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[commonStyles.loadingText, { marginTop: 16 }]}>
-            Loading...
+            {t('home:status.loading')}
           </Text>
         </View>
       </SafeAreaView>
