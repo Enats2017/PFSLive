@@ -13,23 +13,21 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useTranslation } from 'react-i18next';
 
-
-// ─── Icon name type ─────────────────────────────────────────────
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 
-// ─── Props ───────────────────────────────────────────────────────
 interface FloatingLabelInputProps extends TextInputProps {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   iconName?: IoniconsName;
   isPassword?: boolean;
-  isDatePicker?: boolean;       // ← NEW: turns input into date picker
+  isDatePicker?: boolean;     
   error?: string;
   required?: boolean;
    showClearButton?: boolean;
    isDropdown?: boolean;
 options?: string[];
+isTimePicker?: boolean;
    
 }
 
@@ -42,27 +40,28 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   isDatePicker = false,
   error,
   required = false,
-   showClearButton = true, 
-     isDropdown = false,      // 👈 ADD THIS
-  options = [],    
+  showClearButton = true, 
+  isDropdown = false,      
+  options = [], 
+  isTimePicker =false,   
   ...props
 }) => {
   const { t } = useTranslation('register');
   const [isFocused, setIsFocused]           = useState(false);
   const [showPassword, setShowPassword]     = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {
     Animated.timing(animatedValue, {
-      toValue: isFocused || value || showDatePicker ? 1 : 0,
+      toValue: isFocused || value || showDatePicker || showTimePicker ? 1 : 0,
       duration: 200,
       useNativeDriver: false,
     }).start();
-  }, [isFocused, value, showDatePicker]);
+  }, [isFocused, value, showDatePicker, showTimePicker]);
 
-  // ── Derived colours ──────────────────────────────────────────
   const borderColor = error
     ? "#ef4444"
     : isFocused || showDatePicker
@@ -75,7 +74,6 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     ? "#FF5722 "
     : "#9ca3af";
 
-  // ── Animated label ───────────────────────────────────────────
   const labelLeft = iconName ? 44 : 15;
 
   const labelStyle = {
@@ -100,7 +98,6 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     letterSpacing: 0.3,
   };
 
-  // ── Date picker handler ──────────────────────────────────────
   const handleDateChange = (_: any, date?: Date) => {
     if (Platform.OS === "android") setShowDatePicker(false);
     if (date) {
@@ -111,6 +108,17 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     }
   };
 
+  const handleTimeChange = (_: any, time?: Date) => {
+  if (Platform.OS === "android") setShowTimePicker(false);
+
+  if (time) {
+    const hours = String(time.getHours()).padStart(2, "0");
+    const minutes = String(time.getMinutes()).padStart(2, "0");
+
+    onChangeText(`${hours}:${minutes}`); // HH:MM
+  }
+};
+
   // Display as DD-MM-YYYY for user
   const displayValue = isDatePicker && value
     ? value.split("-").reverse().join("-")
@@ -119,7 +127,6 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   const selectedDate = isDatePicker && value
     ? new Date(value)
     : new Date(2000, 0, 1);
-
     const showClear = showClearButton && !!value  && !isPassword && !isDatePicker;
 
    
@@ -186,11 +193,78 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     </View>
   );
 }
-  // ════════════════════════════════════════════════════════════
+
+// TIME PICKER MODE
+if (isTimePicker) {
+  return (
+    <View style={styles.wrapper}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => setShowTimePicker(true)}
+        style={[
+          styles.container,
+          { borderColor },
+          showTimePicker && styles.containerFocused,
+        ]}
+      >
+        {iconName && (
+          <View style={styles.iconLeft}>
+            <Ionicons name={iconName} size={18} color={iconColor} />
+          </View>
+        )}
+
+        <Animated.Text style={labelStyle}>
+          {label}
+          {required && (
+            <Animated.Text style={{ color: "#ef4444" }}> *</Animated.Text>
+          )}
+        </Animated.Text>
+
+        <Text
+          style={[
+            styles.input,
+            {
+              paddingLeft: iconName ? 44 : 15,
+              lineHeight: 56,
+              color: value ? "#111827" : "#9ca3af",
+            },
+          ]}
+        >
+          {value || "HH:MM"}
+        </Text>
+
+        <View style={styles.iconRight}>
+          {value ? (
+            <TouchableOpacity
+              onPress={() => onChangeText("")}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close-circle" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          ) : (
+            <Ionicons name="time-outline" size={18} color={iconColor} />
+          )}
+        </View>
+      </TouchableOpacity>
+
+      {!!error && (
+        <Text style={styles.errorText}>{error}</Text>
+      )}
+
+      {showTimePicker && (
+        <DateTimePicker
+          value={value ? new Date(`1970-01-01T${value}:00`) : new Date()}
+          mode="time"
+          display="spinner"
+          is24Hour={true}
+          onChange={handleTimeChange}
+        />
+      )}
+    </View>
+  );
+}
+  
   //  DATE PICKER MODE
-
-  // ════════════════════════════════════════════════════════════
-
   if (isDatePicker) {
     return (
       <View style={styles.wrapper}>
@@ -201,7 +275,6 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
             styles.container,
             { borderColor },
             showDatePicker && styles.containerFocused,
-            !!error && styles.containerError,
           ]}
         >
           {/* Left Icon */}
@@ -261,7 +334,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
           <DateTimePicker
             value={selectedDate}
             mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
+             display="spinner"
             onChange={handleDateChange}
             maximumDate={new Date()}
             minimumDate={new Date(1900, 0, 1)}
@@ -270,10 +343,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
       </View>
     );
   }
-
-  // ════════════════════════════════════════════════════════════
   //  DEFAULT TEXT INPUT MODE
-  // ════════════════════════════════════════════════════════════
   return (
     <View style={styles.wrapper}>
       <View
@@ -281,7 +351,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
           styles.container,
           { borderColor },
           isFocused && styles.containerFocused,
-          !!error && styles.containerError,
+          
         ]}
       >
         {/* Left Icon */}
@@ -290,8 +360,6 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
             <Ionicons name={iconName} size={18} color={iconColor} />
           </View>
         )}
-
-        {/* Floating Label */}
         <Animated.Text style={labelStyle}>
           {label}
           {required && (
@@ -375,9 +443,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     elevation: 3,
   },
-  containerError: {
-    backgroundColor: "#fff5f5",
-  },
+
   iconLeft: {
     position: "absolute",
     left: 14,

@@ -2,6 +2,7 @@ import axios from "axios";
 import { API_CONFIG, getApiEndpoint } from "../constants/config";
 import { tokenService } from "./tokenService";
 import { getCurrentLanguageId } from "../i18n";
+import { getDeviceId } from "../constants/config";
 
 export interface LoginRequest {
   email: string;
@@ -38,6 +39,9 @@ export interface AuthResponse {
       gender: string;
       profile_picture: string;
     };
+    email?: string;
+    message?: string;
+    verification_token?: string;
   };
 }
 
@@ -50,40 +54,44 @@ export const authService = {
     console.log(password);
 
     try {
-      const formData = new FormData();
-      formData.append("email", email.trim().toLowerCase());
-      formData.append("password", password);
-      console.log("📤 Login payload:", { email, password });
+      const deviceId = await getDeviceId();
+      const requestBody = {
+        email: email,
+        password: password,
+        device_id: deviceId,
+      };
+      console.log(requestBody);
+
+      const headers = await API_CONFIG.getHeaders();
       const response = await axios.post<AuthResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.LOGIN),
-        formData,
+        requestBody,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers,
           timeout: API_CONFIG.TIMEOUT,
         },
       );
-      console.log("📥 Login response:", response.data);
-
+      console.log("📥 Login response:", response.data.data?.token);
       if (response.data.success && response.data.data?.token) {
         await tokenService.saveToken(response.data.data.token);
-        console.log("✅ Token saved:", response.data.data.token);
+        console.log(" OTP verified, token saved");
       }
 
       return response.data;
     } catch (error) {
-      console.error("❌ Login error:", error);
+      console.error("❌ Login error:", JSON.stringify(error, null, 2));
       throw error;
     }
   },
 
   /**
    * Register new user
+   *
    */
   async register(data: RegisterRequest): Promise<AuthResponse> {
     try {
-      // 1. Get device ID
+      const deviceId = await getDeviceId();
+      console.log(deviceId);
 
       // 2. Build FormData (multipart for profile picture support)
       const language_id = getCurrentLanguageId();
@@ -94,12 +102,11 @@ export const authService = {
       formData.append("password", data.password);
       formData.append("country_id", data.country_id);
       formData.append("city", data.city.trim());
-      formData.append("city", data.city.trim());
       formData.append("dob", data.dob); // YYYY-MM-DD
       formData.append("language_id", String(language_id));
       formData.append("gender", data.gender.toLowerCase());
       formData.append("i_agree", "1");
-      //formData.append("device_id", deviceId);
+      formData.append("device_id", deviceId);
       //formData.append("device_info", `${Platform.OS} ${Platform.Version}`);
 
       // 3. Attach profile picture if provided
@@ -127,9 +134,7 @@ export const authService = {
         profileImage: data.profileImage ?? "none",
       });
 
-      const baseHeaders = await API_CONFIG.getHeaders();
       const headers = {
-        ...baseHeaders,
         "Content-Type": "multipart/form-data",
       };
 
@@ -139,15 +144,15 @@ export const authService = {
         { headers, timeout: API_CONFIG.TIMEOUT },
       );
 
-      if (response.data.success && response.data.data?.token) {
-        await tokenService.saveToken(response.data.data.token);
-        console.log("✅ Registration successful, token saved");
+      if (response.data.success && response.data.data?.verification_token) {
+        console.log(response.data.data);
       }
       console.log("📥 Register Response:", response.data);
 
       return response.data;
-    } catch (error) {
-      console.error("❌ Registration error:", error);
+    } catch (error: any) {
+      console.log("❌ Status:", error.response?.status);
+      console.log("❌ Data:", JSON.stringify(error.response?.data));
       throw error;
     }
   },

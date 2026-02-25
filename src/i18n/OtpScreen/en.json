@@ -1,0 +1,21 @@
+{
+  "title": "Verify Your Email",
+  "subtitle": "We sent a 6-digit verification code to",
+  "verifyButton": "Verify",
+  "didntReceive": "Didn't receive the code?",
+  "resend": "Resend",
+  "resendIn": "Resend in",
+  "resendSuccess": "Code Sent",
+  "resendSuccessMessage": "A new verification code has been sent to your email.",
+  "errors": {
+    "incomplete": "Please enter the complete 6-digit code",
+    "invalid": "Invalid OTP code. Please try again.",
+    "expired": "OTP has expired. Please request a new one.",
+    "tooManyAttempts": "Too many attempts. Please try again later."
+  },
+  "alerts": {
+    "noConnection": "No Connection",
+    "noConnectionMessage": "Please check your internet connection.",
+    "genericErrorMessage": "Something went wrong. Please try again."
+  }
+}

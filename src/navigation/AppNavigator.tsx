@@ -7,9 +7,11 @@ import { RootStackParamList } from '../types/navigation';
 import HomeScreen from '../screens/HomeScreen';
 import RouteScreen from '../screens/RouteScreen';
 import ParticipantEvent from '../screens/ParticipantEvent/ParticipantEvent';
+import PersonalEvent from '../screens/ParticipantEvent/CreatePersonalEvent';
 import EventDetails from '../screens/EventDetails/EventDetails';
 import Register from '../screens/Register';
 import LoginScreen from '../screens/LoginScreen';
+import OTPVerificationScreen from '../screens/OTPVerificationScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -45,6 +47,13 @@ export const AppNavigator: React.FC = () => {
           }}
         />
          <Stack.Screen 
+          name="PersonalEvent" 
+          component={PersonalEvent}
+          options={{
+            gestureEnabled: false,
+          }}
+        />       
+         <Stack.Screen 
           name="EventDetails" 
           component={EventDetails}
           options={{
@@ -54,6 +63,13 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen 
           name="Register" 
           component={Register}
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+         <Stack.Screen 
+          name="OTPVerificationScreen" 
+          component={OTPVerificationScreen}
           options={{
             gestureEnabled: false,
           }}

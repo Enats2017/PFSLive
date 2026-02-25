@@ -23,6 +23,7 @@
     "axios": "^1.13.5",
     "crypto-js": "^4.2.0",
     "expo": "~54.0.0",
+    "expo-application": "~7.0.8",
     "expo-asset": "~12.0.12",
     "expo-dev-client": "~6.0.0",
     "expo-document-picker": "~14.0.8",

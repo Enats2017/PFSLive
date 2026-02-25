@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
 
+
 // Import translations
 import commonEN from './common/en.json';
 import commonFR from './common/fr.json';
@@ -23,6 +24,7 @@ import  RegisterEN from "./RegisterScreen/en.json";
 import  RegisterFR from "./RegisterScreen/fr.json";
 import  RegisterNL from "./RegisterScreen/nl.json";
 import LoginEN from "./LoginScreen/en.json";
+import OtpEN from "./OtpScreen/en.json";
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
@@ -196,6 +198,7 @@ i18n.use(initReactI18next).init({
       details: detailsEN,
       register:RegisterEN,
       login:LoginEN,
+      otp:OtpEN,
     },
     fr: {
       common: commonFR,

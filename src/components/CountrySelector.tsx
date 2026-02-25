@@ -144,8 +144,8 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
     onSelect({ country_id: '', name: '', iso_code_2: '', iso_code_3: '' });
   };
 
-  const borderColor = error ? '#ef4444' : showModal ? '#6366f1' : '#d1d5db';
-  const iconColor   = error ? '#ef4444' : showModal ? '#6366f1' : '#9ca3af';
+  const borderColor = error ? '#ef4444' : showModal ? '#ef4444' : '#d1d5db';
+  const iconColor   = error ? '#ef4444' : showModal ? '#ef4444' : '#9ca3af';
 
   return (
     <View style={styles.wrapper}>
@@ -158,7 +158,6 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
           styles.container,
           { borderColor },
           showModal && styles.containerFocused,
-          !!error && styles.containerError,
         ]}
       >
         {/* Left: globe icon OR flag when selected */}
@@ -244,7 +243,6 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
               </View>
             )} */}
 
-            {/* Search Bar */}
             <View style={styles.searchContainer}>
               <Ionicons name="search-outline" size={18} color="#9ca3af" style={styles.searchIcon} />
               <TextInput
@@ -269,7 +267,6 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
               </Text>
             )}
 
-            {/* Content */}
             {loading ? (
               <ActivityIndicator size="large" color="#6366f1" style={{ marginTop: 40 }} />
             ) : fetchError ? (
@@ -302,10 +299,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                       onPress={() => handleSelect(item)}
                       activeOpacity={0.7}
                     >
-                      {/* Flag */}
                       <Text style={styles.flag}>{getFlagEmoji(item.iso_code_2)}</Text>
-
-                      {/* Name + ISO code */}
                       <View style={{ flex: 1 }}>
                         <Text
                           style={[
@@ -318,7 +312,6 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                         <Text style={styles.isoCode}>{item.iso_code_2} · {item.iso_code_3}</Text>
                       </View>
 
-                      {/* Selected badge */}
                        {value === item.name && (
                       <Ionicons name="checkmark-circle" size={20} color="#6366f1" />
                     )}
@@ -337,11 +330,8 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   );
 };
 
-// ─── Styles ──────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   wrapper: { marginVertical: 10 },
-
-  // ── Field ────────────────────────────────────────────────────
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -357,7 +347,7 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   containerFocused: { shadowOpacity: 0.12, elevation: 3 },
-  containerError: { backgroundColor: '#fff5f5' },
+ 
   iconLeft: { position: 'absolute', left: 14, zIndex: 2 },
   iconRight: { position: 'absolute', right: 14, zIndex: 2 },
   flagInField: { fontSize: 20 },
@@ -377,8 +367,6 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     fontWeight: '500',
   },
-
-  // ── Modal ────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -401,8 +389,6 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f3f4f6',
   },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-
-  // ── Selected banner ──────────────────────────────────────────
   selectedBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -450,7 +436,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
 
-  // ── Country list ─────────────────────────────────────────────
   countryItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -463,8 +448,6 @@ const styles = StyleSheet.create({
   countryNameSelected: { color: '#6366f1', fontWeight: '600' },
   isoCode: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
   separator: { height: 1, backgroundColor: '#f3f4f6', marginLeft: 70 },
-
-  // ── Selected / Unselected badges ─────────────────────────────
   selectedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -483,8 +466,6 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   unselectedBadgeText: { fontSize: 12, color: '#9ca3af', fontWeight: '400' },
-
-  // ── Empty / Error ────────────────────────────────────────────
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 },
   emptyText: { fontSize: 14, color: '#9ca3af', marginTop: 12, textAlign: 'center', paddingHorizontal: 30 },
   retryButton: { marginTop: 16, paddingHorizontal: 24, paddingVertical: 10, backgroundColor: '#6366f1', borderRadius: 10 },

@@ -37,10 +37,10 @@ interface StandardApiResponse<T = any> {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['home', 'common']);
-  
+
   const [homeData, setHomeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Tracking states
   const [isGPSActive, setIsGPSActive] = useState(false);
   const [isSendingData, setIsSendingData] = useState(false);
@@ -52,7 +52,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [sendingInterval, setSendingInterval] = useState(30);
   const [timeUntilRace, setTimeUntilRace] = useState<string>('');
   const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
-  
+
   const stopTrackingRef = useRef<(() => void) | null>(null);
   const gpsWatchRef = useRef<{ remove: () => void } | null>(null);
   const queueProcessorRef = useRef<NodeJS.Timeout | null>(null);
@@ -61,7 +61,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const raceStartTimeRef = useRef<Date | null>(null);
   const isGPSActiveRef = useRef<boolean>(false);
   const serverTimeOffsetRef = useRef<number>(0);
-  
+
   // Get IDs dynamically from API response
   const participantId = homeData?.next_race_participant_app_id || null;
   const eventId = homeData?.next_race_id || null;
@@ -82,11 +82,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return dateString;
-      
+
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear();
-      
+
       return `${day}-${month}-${year}`;
     } catch (error) {
       return dateString;
@@ -131,21 +131,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (homeData?.manual_start === 1) {
       return true;
     }
-    
+
     if (!raceStartTimeRef.current) {
       return false;
     }
 
     const now = getServerTime();
     const raceTime = raceStartTimeRef.current;
-    
+
     if (API_CONFIG.DEBUG) {
       console.log('🕐 Server time (now):', now.toLocaleString());
       console.log('🏁 Race time:', raceTime.toLocaleString());
       console.log('⏱️ Comparison:', now.getTime(), '>=', raceTime.getTime());
       console.log('✅ Race started?', now >= raceTime);
     }
-    
+
     return now >= raceTime;
   };
 
@@ -198,7 +198,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const fetchHomeData = async () => {
     try {
       const token = await tokenService.getToken();
-      
+      console.log("11111", token);
+
+
       if (!token) {
         if (API_CONFIG.DEBUG) console.log('⚠️ No token found, skipping home data fetch');
         setLoading(false);
@@ -206,32 +208,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       }
 
       const headers = await API_CONFIG.getHeaders();
-      
+      console.log("📤 HOME HEADERS:", headers);
+
       const response = await axios.get<StandardApiResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.HOME),
-        { 
+        {
           headers,
           timeout: API_CONFIG.TIMEOUT,
         }
       );
-      
+
       if (response.data.success && response.data.data) {
         setHomeData(response.data.data);
-        
+
         // Calculate server time offset
         if (response.data.data.server_datetime) {
           try {
             // Parse server datetime: "2026-02-21 11:17:25"
             const serverTimeString = response.data.data.server_datetime.replace(' ', 'T');
             const serverTime = new Date(serverTimeString);
-            
+
             // Calculate offset (server time - device time)
             const deviceTime = new Date();
             const offset = serverTime.getTime() - deviceTime.getTime();
-            
+
             setServerTimeOffset(offset);
             serverTimeOffsetRef.current = offset;
-            
+
             if (API_CONFIG.DEBUG) {
               console.log('🖥️ Server time:', serverTime.toLocaleString());
               console.log('📱 Device time:', deviceTime.toLocaleString());
@@ -244,7 +247,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       }
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        console.error('Error fetching home data:', error);
+        console.error('Error fetching home data:', JSON.stringify(error));
+      }
+      if (error?.response?.status === 401) {
+        console.log("🚨 Session expired. Redirecting to login...");
+        navigation.navigate("LoginScreen");
       }
     } finally {
       setLoading(false);
@@ -283,11 +290,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
         setHasPermission(true);
       }
-
-      // Fetch fresh home data before starting
       await fetchHomeData();
-      
-      // Wait for state to update
+
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Parse race start time from API (timezone-aware)
@@ -295,14 +299,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         try {
           // Combine date and time: "2026-02-21T12:30:00"
           const dateTimeString = `${homeData.next_race_date}T${homeData.next_race_time}`;
-          
+
           // Parse as Date object
           const raceTime = new Date(dateTimeString);
-          
+
           if (!isNaN(raceTime.getTime())) {
             setRaceStartTime(raceTime);
             raceStartTimeRef.current = raceTime;
-            
+
             if (API_CONFIG.DEBUG) {
               console.log('📅 Race Date:', homeData.next_race_date);
               console.log('🕐 Race Time:', homeData.next_race_time);
@@ -310,7 +314,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               console.log('🔗 Combined:', dateTimeString);
               console.log('✅ Parsed Race Time:', raceTime.toLocaleString());
               console.log('🖥️ Server Time:', homeData.server_datetime);
-              
+
               // Show time until race using server time
               const now = getServerTime();
               const diff = raceTime.getTime() - now.getTime();
@@ -325,13 +329,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setRaceStartTime(null);
         raceStartTimeRef.current = null;
       }
-
       // Get sending interval from API
       let intervalValue = 30;
-
       if (homeData?.next_race_interval_for_location) {
         const rawInterval = homeData.next_race_interval_for_location;
-        
         if (typeof rawInterval === 'number') {
           intervalValue = rawInterval;
         } else if (typeof rawInterval === 'string') {
@@ -340,7 +341,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             intervalValue = parsed;
           }
         }
-        
+
         setSendingInterval(intervalValue);
       } else {
         setSendingInterval(30);
@@ -357,7 +358,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       // Check if race has already started
       const raceAlreadyStarted = hasRaceStarted();
-      
+
       if (raceAlreadyStarted) {
         setIsSendingData(true);
       }
@@ -380,7 +381,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           if (shouldSend) {
             if (!isSendingData) {
               setIsSendingData(true);
-              
+
               if (API_CONFIG.DEBUG) {
                 toastSuccess(
                   t('home:tracking.raceStarted'),
@@ -388,7 +389,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 );
               }
             }
-            
+
             const locationData = gpsService.convertToLocationData(gpsPosition);
 
             if (!participantId || !eventId) return;
@@ -430,7 +431,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       // Determine message based on race status
       let message = '';
-      
+
       if (homeData?.manual_start === 1) {
         message = t('home:tracking.manualStartEnabled');
       } else if (raceAlreadyStarted) {
@@ -463,7 +464,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         if (sentCount > 0) {
           setLocationUpdateCount(prev => prev + sentCount);
           await loadQueueSize();
-          
+
           if (API_CONFIG.DEBUG) {
             toastSuccess(
               t('home:tracking.queueProcessed'),
@@ -483,7 +484,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     raceStartCheckRef.current = setInterval(() => {
       if (hasRaceStarted() && !isSendingData) {
         setIsSendingData(true);
-        
+
         if (API_CONFIG.DEBUG) {
           toastSuccess(
             t('home:tracking.raceStarted'),
@@ -522,9 +523,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // Show toast before resetting counter
     toastSuccess(
       t('home:tracking.gpsStopped'),
-      t('home:tracking.trackingStopped', { 
-        sent: locationUpdateCount, 
-        queued: queuedCount 
+      t('home:tracking.trackingStopped', {
+        sent: locationUpdateCount,
+        queued: queuedCount
       }),
     );
 
@@ -596,33 +597,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const interval = setInterval(() => {
       fetchHomeData();
     }, API_CONFIG.HOME_DATA_POLL_INTERVAL);
-    
+
     return () => clearInterval(interval);
   }, []);
 
-  // Error state
-  if (!loading && !homeData) {
-    return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <AppHeader showLogo={true} />
-        <View style={commonStyles.centerContainer}>
-          <Text style={[commonStyles.errorText, { marginBottom: 16 }]}>
-            Failed to load data
-          </Text>
-          <Text style={[commonStyles.text, { textAlign: 'center', marginBottom: 32 }]}>
-            Could not connect to server
-          </Text>
-          <TouchableOpacity
-            style={commonStyles.primaryButton}
-            onPress={retryFetchData}
-          >
-            <Text style={commonStyles.primaryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   // Loading state
   if (loading) {
@@ -645,7 +623,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <AppHeader showLogo={true} />
-      
+
       <ScrollView
         style={homeStyles.scrollView}
         contentContainerStyle={homeStyles.scrollContent}
@@ -663,11 +641,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </Text>
           </View>
         </View>
-        
+
         <Text style={homeStyles.subtitle}>
           {t('home:subtitle')}
         </Text>
-        
+
         <View style={homeStyles.textContainer}>
           {homeData?.show_start_track === 1 ? (
             <>
@@ -686,23 +664,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </Text>
                 {' '}{formatDate(homeData.next_race_date)}
               </Text>
-              
+
               {/* Manual Start Indicator */}
               {homeData?.manual_start === 1 && (
                 <View style={[
-                  homeStyles.trackingStatus, 
+                  homeStyles.trackingStatus,
                   { backgroundColor: colors.warning + '20' }
                 ]}>
                   <Text style={homeStyles.trackingStatusIcon}>🔓</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={[
-                      homeStyles.trackingStatusText, 
+                      homeStyles.trackingStatusText,
                       { color: colors.warning }
                     ]}>
                       {t('home:status.manualStartEnabled')}
                     </Text>
                     <Text style={[
-                      homeStyles.trackingCountText, 
+                      homeStyles.trackingCountText,
                       { color: colors.warning }
                     ]}>
                       {t('home:status.manualStartDescription')}
@@ -710,7 +688,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </View>
                 </View>
               )}
-              
+
               {/* GPS Status Display - Only in DEBUG mode */}
               {isGPSActive && API_CONFIG.DEBUG && (
                 <View style={homeStyles.trackingStatus}>
@@ -721,16 +699,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     <Text style={homeStyles.trackingStatusText}>
                       {isSendingData ? t('home:status.sendingData') : t('home:status.gpsActive')}
                     </Text>
-                    
+
                     {!isSendingData && timeUntilRace && (
                       <Text style={homeStyles.trackingCountText}>
-                        {homeData?.manual_start === 1 
+                        {homeData?.manual_start === 1
                           ? t('home:status.manualStartReady')
                           : `Race starts in: ${timeUntilRace}`
                         }
                       </Text>
                     )}
-                    
+
                     {currentLocation && (
                       <Text style={homeStyles.trackingLocationText}>
                         {currentLocation.lat.toFixed(6)}, {currentLocation.lon.toFixed(6)}
@@ -756,18 +734,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 style={[
                   homeStyles.button,
                   { width: "100%", marginBottom: spacing.md },
-                  (!participantId || !eventId) && { 
+                  (!participantId || !eventId) && {
                     backgroundColor: colors.gray400,
-                    opacity: 0.6 
+                    opacity: 0.6
                   }
                 ]}
                 onPress={isGPSActive ? stopGPSTracking : startGPSTracking}
                 disabled={!isGPSActive && (!participantId || !eventId)}
               >
                 <Text style={homeStyles.buttonText}>
-                  {isGPSActive 
-                    ? t('home:Event.button') 
-                    : (!participantId || !eventId) 
+                  {isGPSActive
+                    ? t('home:Event.button')
+                    : (!participantId || !eventId)
                       ? t('home:status.waitingForData')
                       : t('home:Event.buttonText')
                   }
@@ -779,10 +757,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 <TouchableOpacity
                   style={[
                     homeStyles.button,
-                    { 
-                      width: "100%", 
+                    {
+                      width: "100%",
                       backgroundColor: colors.warning,
-                      marginBottom: spacing.xl 
+                      marginBottom: spacing.xl
                     }
                   ]}
                   onPress={manualStartSending}

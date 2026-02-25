@@ -81,17 +81,23 @@ const Register: React.FC<RegisterProps> = ({ navigation }) => {
                 profileImage,
             });
 
-            if (response.success) {
-              toastSuccess('🎉 Success', `Welcome, ${response.data?.customer?.firstname}!`)
+            if (response.success && response.data?.verification_token) {
+                navigation.navigate('OTPVerificationScreen', {
+                    email: response.data?.email ?? email,
+                    verification_token: response.data?.verification_token,
+                });
             }
 
         } catch (error: any) {
             const data = error.response?.data;
-
             if (data?.error === 'email_exists') {
                 setErrors({ email: 'This email is  registered' });
-
-            } else if (data?.error === 'device_not_allowed') {
+            } else if (data?.error === 'device_already_registered') {
+                setErrors({
+                    device: 'This device is already linked to an account. Please login instead.'
+                });
+            }
+            else if (data?.error === 'device_not_allowed') {
                 toastError(t('register:alerts.deviceNotAllowed'), t('register:alerts.deviceNotAllowedMessage'));
             } else if (error.request) {
                 toastError(t('register:alerts.noConnection'),

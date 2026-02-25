@@ -47,6 +47,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             const response = await authService.login(email.trim().toLowerCase(), password);
             if (response.success) {
                 toastSuccess("Login SuccesFull")
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Home' }],
+                });
             }
         } catch (error: any) {
             const data = error.response?.data;
@@ -100,16 +104,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                     <View style={loginStyles.inner}>
                         <View style={loginStyles.headerSection}>
                             <View style={loginStyles.cardscetion}>
-                            <Image
-                                source={require("../../assets/Logo-img.png")}
-                                style={loginStyles.logo}
-                                resizeMode="contain"
-                            />
-                            <View style={loginStyles.textSection}>
-                                <Text style={commonStyles.title}>
-                                    {t('common:app_name')}
-                                </Text>
-                            </View>
+                                <Image
+                                    source={require("../../assets/Logo-img.png")}
+                                    style={loginStyles.logo}
+                                    resizeMode="contain"
+                                />
+                                <View style={loginStyles.textSection}>
+                                    <Text style={commonStyles.title}>
+                                        {t('common:app_name')}
+                                    </Text>
+                                </View>
                             </View>
                             <Text style={loginStyles.title}>{t('login:title')}</Text>
                             <Text style={loginStyles.subtitle}>{t('login:subtitle')}</Text>

@@ -31,6 +31,8 @@ const DistanceTab = ({ product_app_id }: { product_app_id: string | number }) =>
     useEffect(() => {
         fetchDistances();
     }, [product_app_id]);
+    console.log(product_app_id);
+    
 
     const fetchDistances = async () => {
         try {
@@ -49,9 +51,15 @@ const DistanceTab = ({ product_app_id }: { product_app_id: string | number }) =>
                     headers,
                 },
             );
+            console.log(response);
+            
 
             if (response.data.success) {
+                console.log(response.data.success);
+                
                 setDistances(response.data.data.distances || []);
+                console.log("1111",distances);
+                (distances)
                  setServerTime(response.data.data.server_datetime);
             }
         } catch (error) {
