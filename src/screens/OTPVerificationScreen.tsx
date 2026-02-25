@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -14,21 +14,20 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import axios from 'axios';
 import { AppHeader } from '../components/common/AppHeader';
 import { commonStyles } from '../styles/common.styles';
 import { OTPVerificationScreenProps } from '../types/navigation';
-import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { tokenService } from '../services/tokenService';
 import { optStyles } from '../styles/OtpScreen.styles';
 import { toastError } from '../../utils/toast';
+import { verifyOtp, resendOtp } from '../services/otpService';
 
 const OTP_LENGTH = 6;
 
 const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({ navigation, route }) => {
     const { t } = useTranslation(['otp', 'common']);
-    // Get params from Register screen
     const { email, verification_token } = route.params;
+
     const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
     const [loading, setLoading] = useState(false);
     const [resending, setResending] = useState(false);
@@ -49,7 +48,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({ navigatio
     }, [countdown]);
 
     // ── Handle OTP input
-    const handleOtpChange = (text: string, index: number) => {
+    const handleOtpChange = useCallback((text: string, index: number) => {
         const cleaned = text.replace(/[^0-9]/g, '').slice(-1);
         const newOtp = [...otp];
         newOtp[index] = cleaned;
@@ -68,15 +67,30 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({ navigatio
                 handleVerify(fullOtp);
             }
         }
-    };
+    }, [otp]);
 
-    const handleKeyPress = (key: string, index: number) => {
+    const handleKeyPress = useCallback((key: string, index: number) => {
         if (key === 'Backspace' && !otp[index] && index > 0) {
             inputRefs.current[index - 1]?.focus();
         }
-    };
+    }, [otp]);
 
-    const handleVerify = async (otpCode?: string) => {
+    const handleErrorResponse = useCallback((error: any) => {
+        const data = error.response?.data;
+        if (data?.error === 'otp_invalid') {
+            setError(t('otp:errors.invalid'));
+        } else if (data?.error === 'otp_expired') {
+            setError(t('otp:errors.expired'));
+        } else if (data?.error === 'otp_too_many_attempts') {
+            setError(t('otp:errors.tooManyAttempts'));
+        } else if (error.request) {
+            toastError(t('otp:alerts.noConnection'), t('otp:alerts.noConnectionMessage'));
+        } else {
+            toastError(t('common:errors.generic'), t('otp:alerts.genericErrorMessage'));
+        }
+    }, [t]);
+
+    const handleVerify = useCallback(async (otpCode?: string) => {
         const code = otpCode ?? otp.join('');
 
         if (code.length < OTP_LENGTH) {
@@ -88,77 +102,38 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({ navigatio
         setError('');
 
         try {
-            const requestBody = {
-                verification_token: verification_token,
-                otp: code,
-            };
+            const data = await verifyOtp({ verification_token, otp: code });
 
-            console.log(requestBody);
-            const headers = await API_CONFIG.getHeaders();
-            const response = await axios.post(
-                getApiEndpoint(API_CONFIG.ENDPOINTS.VERIFY_OTP),
-                requestBody,
-                {
-                    headers,
-
-                }
-            );
-            console.log('OTP Response:', response.data);
-            if (response.data.success && response.data.data?.token) {
-                await tokenService.saveToken(response.data.data.token);
-                console.log(' OTP verified, token saved');
+            if (data.success && data.data?.token) {
+                await tokenService.saveToken(data.data.token);
                 navigation.reset({
                     index: 0,
                     routes: [{ name: 'Home' }],
                 });
             }
-
         } catch (error: any) {
-            console.log('OTP Error:', JSON.stringify(error.response?.data));
-            const data = error.response?.data;
-            if (data?.error === 'otp_invalid') {
-                setError(t('otp:errors.invalid'));
-            } else if (data?.error === 'otp_expired') {
-                setError(t('otp:errors.expired'));
-            } else if (data?.error === 'otp_too_many_attempts') {
-                setError(t('otp:errors.tooManyAttempts'));
-            } else if (error.request) {
-                toastError(t('otp:alerts.noConnection'), t('otp:alerts.noConnectionMessage'));
-            } else {
-                 toastError(t('common:errors.generic'), t('otp:alerts.genericErrorMessage'));
-            }
-
+            handleErrorResponse(error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [otp, verification_token, handleErrorResponse]);
 
-    const handleResend = async () => {
+    const handleResend = useCallback(async () => {
         if (!canResend) return;
+
         setResending(true);
         setError('');
-        try {
-            const requestBody = {
-                verification_token: verification_token
-            }
-            const headers = await API_CONFIG.getHeaders();
-            const response = await axios.post(
-                getApiEndpoint(API_CONFIG.ENDPOINTS.RESEND_OTP),
-                requestBody,
-                {
-                    headers,
-                    timeout: API_CONFIG.TIMEOUT,
-                }
-            );
 
-            if (response.data.success) {
+        try {
+            const data = await resendOtp({ verification_token });
+
+            if (data.success) {
                 setCountdown(60);
                 setCanResend(false);
                 setOtp(Array(OTP_LENGTH).fill(''));
                 inputRefs.current[0]?.focus();
                 Alert.alert(t('otp:resendSuccess'), t('otp:resendSuccessMessage'));
             }
-
         } catch (error: any) {
             const data = error.response?.data;
             if (data?.error === 'otp_too_many_attempts') {
@@ -169,7 +144,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({ navigatio
         } finally {
             setResending(false);
         }
-    };
+    }, [canResend, verification_token, t]);
 
     return (
         <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -189,10 +164,8 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({ navigatio
                             <Ionicons name="mail-outline" size={40} color="#FF5722" />
                         </View>
                         <Text style={optStyles.title}>{t('otp:title')}</Text>
-                        <Text style={optStyles.subtitle}>
-                            {t('otp:subtitle')}
-                        </Text>
-                        <Text style={optStyles.email}>{email}</Text>
+                        <Text style={optStyles.subtitle}>{t('otp:subtitle')}</Text>
+                        <Text style={optStyles.email}>{email ?? ''}</Text>
                     </View>
 
                     <View style={optStyles.otpContainer}>
@@ -217,6 +190,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({ navigatio
                             />
                         ))}
                     </View>
+
                     {!!error && (
                         <Text style={optStyles.errorText}>
                             <Ionicons name="alert-circle-outline" size={13} color="#ef4444" /> {error}
@@ -259,7 +233,5 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({ navigatio
         </SafeAreaView>
     );
 };
-
-
 
 export default OTPVerificationScreen;

@@ -69,7 +69,7 @@ export const API_CONFIG = {
 
     // Home
     HOME: "/home_api.php",
-
+    Personal_Event: "/create_custom_event_api.php",
     // Events
     EVENTS_LIST: "/event_list_api.php",
     EVENT_DETAIL: "/event_detail_api.php",
@@ -104,8 +104,10 @@ export const API_CONFIG = {
   },
 
   async getMutiForm(): Promise<Record<string, string>> {
+    const token = await tokenService.getToken();
     return {
       "Content-Type": "multipart/form-data",
+       Authorization: `Bearer ${token}`,
     };
   },
 

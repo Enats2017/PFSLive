@@ -1,0 +1,22 @@
+{
+  
+    "title": "Create New Event",
+    "name": "Name Event",
+    "type": "Type of Event",
+    "date": "Date of Event",
+    "startTime": "Start Time",
+    "EndTime": "End Time",
+    "fileInfo": "Uploading a GPX is not mandatory but highly recommended",
+    "button":{
+        "gpx":"Choose GPX File",
+        "save":"SUBMIT RACE / TRAINING"
+
+    },
+    "success":{
+        "title":"Success 🎉 Your event has been created successfully."
+    }
+    
+
+    
+  
+}

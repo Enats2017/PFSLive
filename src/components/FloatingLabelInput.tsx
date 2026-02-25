@@ -21,14 +21,15 @@ interface FloatingLabelInputProps extends TextInputProps {
   onChangeText: (text: string) => void;
   iconName?: IoniconsName;
   isPassword?: boolean;
-  isDatePicker?: boolean;     
+  isDatePicker?: boolean;
   error?: string;
   required?: boolean;
-   showClearButton?: boolean;
-   isDropdown?: boolean;
-options?: string[];
-isTimePicker?: boolean;
-   
+  showClearButton?: boolean;
+  isDropdown?: boolean;
+  options?: (string | { label: string; value: number })[];
+  onSelect?: (item: { label: string; value: number }) => void;
+  isTimePicker?: boolean;
+
 }
 
 const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
@@ -40,15 +41,16 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   isDatePicker = false,
   error,
   required = false,
-  showClearButton = true, 
-  isDropdown = false,      
-  options = [], 
-  isTimePicker =false,   
+  showClearButton = true,
+  isDropdown = false,
+  options = [],
+  onSelect,
+  isTimePicker = false,
   ...props
 }) => {
   const { t } = useTranslation('register');
-  const [isFocused, setIsFocused]           = useState(false);
-  const [showPassword, setShowPassword]     = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -65,14 +67,14 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   const borderColor = error
     ? "#ef4444"
     : isFocused || showDatePicker
-    ? "#FF5722"
-    : "#d1d5db";
+      ? "#FF5722"
+      : "#d1d5db";
 
   const iconColor = error
     ? "#ef4444"
     : isFocused || showDatePicker
-    ? "#FF5722 "
-    : "#9ca3af";
+      ? "#FF5722 "
+      : "#9ca3af";
 
   const labelLeft = iconName ? 44 : 15;
 
@@ -102,22 +104,22 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     if (Platform.OS === "android") setShowDatePicker(false);
     if (date) {
       const yyyy = date.getFullYear();
-      const mm   = String(date.getMonth() + 1).padStart(2, "0");
-      const dd   = String(date.getDate()).padStart(2, "0");
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
       onChangeText(`${yyyy}-${mm}-${dd}`); // YYYY-MM-DD → PHP backend
     }
   };
 
   const handleTimeChange = (_: any, time?: Date) => {
-  if (Platform.OS === "android") setShowTimePicker(false);
+    if (Platform.OS === "android") setShowTimePicker(false);
 
-  if (time) {
-    const hours = String(time.getHours()).padStart(2, "0");
-    const minutes = String(time.getMinutes()).padStart(2, "0");
+    if (time) {
+      const hours = String(time.getHours()).padStart(2, "0");
+      const minutes = String(time.getMinutes()).padStart(2, "0");
 
-    onChangeText(`${hours}:${minutes}`); // HH:MM
-  }
-};
+      onChangeText(`${hours}:${minutes}`); // HH:MM
+    }
+  };
 
   // Display as DD-MM-YYYY for user
   const displayValue = isDatePicker && value
@@ -127,143 +129,164 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   const selectedDate = isDatePicker && value
     ? new Date(value)
     : new Date(2000, 0, 1);
-    const showClear = showClearButton && !!value  && !isPassword && !isDatePicker;
+  const showClear = showClearButton && !!value && !isPassword && !isDatePicker;
 
-   
-    if (isDropdown) {
-  return (
-    <View style={styles.wrapper}>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setShowDropdown(!showDropdown)}
-        style={[
-          styles.container,
-          { borderColor },
-          showDropdown && styles.containerFocused,
-        ]}
-      >
-        {iconName && (
-          <View style={styles.iconLeft}>
-            <Ionicons name={iconName} size={18} color={iconColor} />
-          </View>
-        )}
 
-        <Animated.Text style={labelStyle}>
-          {label}
-        </Animated.Text>
-
-        <Text
+  if (isDropdown) {
+    return (
+      <View style={styles.wrapper}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setShowDropdown(!showDropdown)}
           style={[
-            styles.input,
-            {
-              paddingLeft: iconName ? 44 : 15,
-              lineHeight: 56,
-              color: value ? "#111827" : "#9ca3af",
-            },
+            styles.container,
+            { borderColor },
+            showDropdown && styles.containerFocused,
           ]}
         >
-          {value}
-        </Text>
+          {iconName && (
+            <View style={styles.iconLeft}>
+              <Ionicons name={iconName} size={18} color={iconColor} />
+            </View>
+          )}
 
-        <View style={styles.iconRight}>
-          <Ionicons
-            name={showDropdown ? "chevron-up-outline" : "chevron-down-outline"}
-            size={18}
-            color={iconColor}
+          <Animated.Text style={labelStyle}>
+            {label}
+          </Animated.Text>
+
+          <Text
+            style={[
+              styles.input,
+              {
+                paddingLeft: iconName ? 44 : 15,
+                lineHeight: 56,
+                color: value ? "#111827" : "#9ca3af",
+              },
+            ]}
+          >
+            {value}
+          </Text>
+
+          <View style={styles.iconRight}>
+            <Ionicons
+              name={showDropdown ? "chevron-up-outline" : "chevron-down-outline"}
+              size={18}
+              color={iconColor}
+            />
+          </View>
+        </TouchableOpacity>
+
+        {showDropdown && (
+          <View style={styles.dropdown}>
+            {options?.map((item, index) => {
+              const labelText =
+                typeof item === "string" ? item : item.label;
+
+              const isSelected = value === labelText;
+
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.dropdownItem,
+                    isSelected && styles.selectedItem,
+                  ]}
+                  onPress={() => {
+                    if (typeof item === "object" && onSelect) {
+                      onSelect(item); // 🔥 send ID only if needed
+                    } else {
+                      onChangeText(labelText); // normal string mode
+                    }
+                    setShowDropdown(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.dropdownText,
+                      isSelected && styles.selectedText,
+                    ]}
+                  >
+                    {labelText}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  // TIME PICKER MODE
+  if (isTimePicker) {
+    return (
+      <View style={styles.wrapper}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setShowTimePicker(true)}
+          style={[
+            styles.container,
+            { borderColor },
+            showTimePicker && styles.containerFocused,
+          ]}
+        >
+          {iconName && (
+            <View style={styles.iconLeft}>
+              <Ionicons name={iconName} size={18} color={iconColor} />
+            </View>
+          )}
+
+          <Animated.Text style={labelStyle}>
+            {label}
+            {required && (
+              <Animated.Text style={{ color: "#ef4444" }}> *</Animated.Text>
+            )}
+          </Animated.Text>
+
+          <Text
+            style={[
+              styles.input,
+              {
+                paddingLeft: iconName ? 44 : 15,
+                lineHeight: 56,
+                color: value ? "#111827" : "#9ca3af",
+              },
+            ]}
+          >
+            {value || "HH:MM"}
+          </Text>
+
+          <View style={styles.iconRight}>
+            {value ? (
+              <TouchableOpacity
+                onPress={() => onChangeText("")}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close-circle" size={20} color="#9ca3af" />
+              </TouchableOpacity>
+            ) : (
+              <Ionicons name="time-outline" size={18} color={iconColor} />
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {!!error && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
+
+        {showTimePicker && (
+          <DateTimePicker
+            value={value ? new Date(`1970-01-01T${value}:00`) : new Date()}
+            mode="time"
+            display="spinner"
+            is24Hour={true}
+            onChange={handleTimeChange}
           />
-        </View>
-      </TouchableOpacity>
-
-      {showDropdown && (
-        <View style={styles.dropdown}>
-          {options?.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.dropdownItem}
-              onPress={() => {
-                onChangeText(item);
-                setShowDropdown(false);
-              }}
-            >
-              <Text style={styles.dropdownText}>{t(`register:${item}`)}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </View>
-  );
-}
-
-// TIME PICKER MODE
-if (isTimePicker) {
-  return (
-    <View style={styles.wrapper}>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => setShowTimePicker(true)}
-        style={[
-          styles.container,
-          { borderColor },
-          showTimePicker && styles.containerFocused,
-        ]}
-      >
-        {iconName && (
-          <View style={styles.iconLeft}>
-            <Ionicons name={iconName} size={18} color={iconColor} />
-          </View>
         )}
+      </View>
+    );
+  }
 
-        <Animated.Text style={labelStyle}>
-          {label}
-          {required && (
-            <Animated.Text style={{ color: "#ef4444" }}> *</Animated.Text>
-          )}
-        </Animated.Text>
-
-        <Text
-          style={[
-            styles.input,
-            {
-              paddingLeft: iconName ? 44 : 15,
-              lineHeight: 56,
-              color: value ? "#111827" : "#9ca3af",
-            },
-          ]}
-        >
-          {value || "HH:MM"}
-        </Text>
-
-        <View style={styles.iconRight}>
-          {value ? (
-            <TouchableOpacity
-              onPress={() => onChangeText("")}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="close-circle" size={20} color="#9ca3af" />
-            </TouchableOpacity>
-          ) : (
-            <Ionicons name="time-outline" size={18} color={iconColor} />
-          )}
-        </View>
-      </TouchableOpacity>
-
-      {!!error && (
-        <Text style={styles.errorText}>{error}</Text>
-      )}
-
-      {showTimePicker && (
-        <DateTimePicker
-          value={value ? new Date(`1970-01-01T${value}:00`) : new Date()}
-          mode="time"
-          display="spinner"
-          is24Hour={true}
-          onChange={handleTimeChange}
-        />
-      )}
-    </View>
-  );
-}
-  
   //  DATE PICKER MODE
   if (isDatePicker) {
     return (
@@ -307,7 +330,7 @@ if (isTimePicker) {
           </Text>
 
           {/* Right chevron */}
-         <View style={styles.iconRight}>
+          <View style={styles.iconRight}>
             {value ? (
               <TouchableOpacity
                 onPress={() => onChangeText('')}
@@ -334,10 +357,9 @@ if (isTimePicker) {
           <DateTimePicker
             value={selectedDate}
             mode="date"
-             display="spinner"
+            display="spinner"
+
             onChange={handleDateChange}
-            maximumDate={new Date()}
-            minimumDate={new Date(1900, 0, 1)}
           />
         )}
       </View>
@@ -351,7 +373,7 @@ if (isTimePicker) {
           styles.container,
           { borderColor },
           isFocused && styles.containerFocused,
-          
+
         ]}
       >
         {/* Left Icon */}
@@ -372,7 +394,7 @@ if (isTimePicker) {
           style={[
             styles.input,
             { paddingLeft: iconName ? 44 : 15 },
-             (isPassword || showClear) && { paddingRight: 46 },
+            (isPassword || showClear) && { paddingRight: 46 },
           ]}
           value={value}
           onChangeText={onChangeText}
@@ -470,24 +492,34 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   dropdown: {
-  borderWidth: 1,
-  borderColor: "#e5e7eb",
-  borderRadius: 12,
-  marginTop: 6,
-  backgroundColor: "#fff",
-  overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    marginTop: 6,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+  },
+
+  dropdownItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6",
+  },
+
+  dropdownText: {
+    fontSize: 14,
+    color: "#111827",
+  },
+  selectedItem: {
+  borderLeftWidth: 4,
+  borderLeftColor: "#ef4444",
+  backgroundColor: "#fff5f5",
 },
 
-dropdownItem: {
-  paddingVertical: 14,
-  paddingHorizontal: 16,
-  borderBottomWidth: 1,
-  borderBottomColor: "#f3f4f6",
-},
-
-dropdownText: {
-  fontSize: 14,
-  color: "#111827",
+selectedText: {
+  color: "#ef4444",
+  fontWeight: "600",
 },
 });
 
