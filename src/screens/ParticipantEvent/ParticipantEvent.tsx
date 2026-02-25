@@ -12,12 +12,13 @@ import { eventService, EventItem } from '../../services/eventService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
+import { ParticipantEventProps } from '../../types/navigation';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
 const { width } = Dimensions.get('window');
 
-const ParticipantEvent = () => {
+const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
     const { t } = useTranslation(['event', 'common']);
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [loading, setLoading] = useState(true);
@@ -174,20 +175,15 @@ const ParticipantEvent = () => {
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
-
-            {/* ✅ Wrap everything in ScrollView */}
             <ScrollView 
                 style={{ flex: 1 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ flexGrow: 1 }}
             >
                 <View style={{ flex: 1 }}>
-                    {/* Official Events Header */}
                     <View style={eventStyles.section}>
                         <Text style={commonStyles.title}>{t('official.title')}</Text>
                     </View>
-
-                    {/* Tab Bar */}
                     <View style={eventStyles.tabBar}>
                         {TABS.map((tab) => (
                             <TouchableOpacity
@@ -209,8 +205,6 @@ const ParticipantEvent = () => {
                             </TouchableOpacity>
                         ))}
                     </View>
-
-                    {/* Tab Content - Fixed Height for Horizontal Scroll */}
                     <View style={{ height: 380 }}>
                         <FlatList
                             ref={flatListRef}
@@ -243,7 +237,7 @@ const ParticipantEvent = () => {
                         <View style={eventStyles.header}>
                             <Text style={[homeStyles.heading, { marginBottom: 0 }]}>{t('personal.description')}</Text>
                         </View>
-                        <TouchableOpacity style={commonStyles.primaryButton}>
+                        <TouchableOpacity style={commonStyles.primaryButton} onPress={()=>navigation.navigate('PersonalEvent')}>
                             <Text style={commonStyles.primaryButtonText}>{t('personal.button')}</Text>
                         </TouchableOpacity>
                     </View>

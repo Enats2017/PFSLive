@@ -25,6 +25,7 @@ import  RegisterFR from "./RegisterScreen/fr.json";
 import  RegisterNL from "./RegisterScreen/nl.json";
 import LoginEN from "./LoginScreen/en.json";
 import OtpEN from "./OtpScreen/en.json";
+import PersonalEventEN from "./PersonalEvent/en.json";
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
@@ -199,6 +200,7 @@ i18n.use(initReactI18next).init({
       register:RegisterEN,
       login:LoginEN,
       otp:OtpEN,
+      personal:PersonalEventEN
     },
     fr: {
       common: commonFR,
