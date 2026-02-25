@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { EventItem } from '../../services/eventService';
-import { commonStyles } from '../../styles/common.styles';
+import { commonStyles, spacing } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -9,45 +9,72 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { formatEventDate } from '../../utils/dateFormatter';
 
-const LiveTab = ({ events, onLoadMore, loadingMore }: {
-    events: EventItem[],
-    onLoadMore: () => void,
-    loadingMore: boolean
-}) => {
+interface LiveTabProps {
+    events: EventItem[];
+    onLoadMore: () => void;
+    loadingMore: boolean;
+    hasMore: boolean;
+}
+
+const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { t } = useTranslation(['event', 'common']);
+    const onEndReachedCalledDuringMomentum = useRef(false);
     
     if (events.length === 0) {
         return (
             <View style={{ marginTop: 40 }}>
-                <Text style={commonStyles.errorText}>{t('empty.live', 'No live events at the moment.')}</Text>
+                <Text style={commonStyles.errorText}>
+                    {t('event:empty.live')}
+                </Text>
             </View>
         );
     }
 
+    const handleLoadMore = () => {
+        if (!onEndReachedCalledDuringMomentum.current && hasMore && !loadingMore) {
+            onLoadMore();
+            onEndReachedCalledDuringMomentum.current = true;
+        }
+    };
+
     return (
         <FlatList
             data={events}
-            keyExtractor={(item) => item.product_app_id}
-            onEndReached={() => {
-                console.log('Live: End reached, loadingMore:', loadingMore);
-                if (!loadingMore) {
-                    onLoadMore();
-                }
+            keyExtractor={(item, index) => `${item.product_app_id}-${index}`}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            onMomentumScrollBegin={() => {
+                onEndReachedCalledDuringMomentum.current = false;
             }}
-            onEndReachedThreshold={0.1}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 10 }}
+            contentContainerStyle={{ paddingBottom: spacing.sm }}
             ListFooterComponent={
                 loadingMore ? (
-                    <ActivityIndicator size="small" color="#f4a100" style={{ marginVertical: 10 }} />
+                    <ActivityIndicator 
+                        size="small" 
+                        color="#FF5722"
+                        style={{ marginVertical: spacing.sm }} 
+                    />
                 ) : null
             }
             renderItem={({ item }) => (
-                <View style={[commonStyles.card, { paddingTop: 1, padding: 0, overflow: 'hidden', marginBottom: 5 }]}>
+                <View style={[
+                    commonStyles.card, 
+                    { 
+                        paddingTop: spacing.xs, 
+                        padding: 0, 
+                        overflow: 'hidden', 
+                        marginBottom: spacing.xs 
+                    }
+                ]}>
                     <View style={eventStyles.header}>
-                        <Text style={[commonStyles.title, { marginBottom: 5 }]}>{item.name}</Text>
-                        <Text style={commonStyles.subtitle}>{formatEventDate(item.race_date, t)}</Text>
+                        <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
+                            {item.name}
+                        </Text>
+                        <Text style={commonStyles.subtitle}>
+                            {formatEventDate(item.race_date, t)}
+                        </Text>
                     </View>
                     <TouchableOpacity 
                         style={commonStyles.primaryButton} 
@@ -56,7 +83,9 @@ const LiveTab = ({ events, onLoadMore, loadingMore }: {
                             event_name: item.name 
                         })}
                     >
-                        <Text style={commonStyles.primaryButtonText}>{t('official.button')}</Text>
+                        <Text style={commonStyles.primaryButtonText}>
+                            {t('event:official.button')}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             )}

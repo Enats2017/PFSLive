@@ -48,13 +48,22 @@ interface EventsData {
     live: Pagination;
     upcoming: Pagination;
   };
-  // Legacy format
+  // Legacy format fallback
   past?: EventItem[];
   live?: EventItem[];
   upcoming?: EventItem[];
 }
 
+interface EventApiResponse {
+  success: boolean;
+  data: EventsData;
+  error: string | null;
+}
+
 export const eventService = {
+  /**
+   * Fetch events with pagination support for Past, Live, and Upcoming tabs
+   */
   async getEvents(
     pagination: PaginationParams = {
       page_past: 1,
@@ -66,8 +75,7 @@ export const eventService = {
       const language_id = getCurrentLanguageId();
       
       if (API_CONFIG.DEBUG) {
-        console.log('📡 Fetching events with language ID:', language_id);
-        console.log('📄 Pagination:', pagination);
+        console.log('📡 Fetching events:', { language_id, pagination });
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENTS_LIST);
@@ -75,13 +83,11 @@ export const eventService = {
 
       const requestBody = {
         language_id: language_id,
-        page_past: pagination.page_past,
-        page_live: pagination.page_live,
-        page_upcoming: pagination.page_upcoming,
+        page_past: pagination.page_past || 1,
+        page_live: pagination.page_live || 1,
+        page_upcoming: pagination.page_upcoming || 1,
       };
 
-      // apiClient.post<EventsData> returns ApiResponse<EventsData>
-      // which is { success: boolean, data: EventsData, message?, error? }
       const response = await apiClient.post<EventsData>(
         url,
         requestBody,
@@ -91,16 +97,28 @@ export const eventService = {
       if (response.success && response.data) {
         const eventsData = response.data;
 
-        // Modern format
+        // Modern format (preferred)
         if (eventsData.tabs && eventsData.pagination) {
+          if (API_CONFIG.DEBUG) {
+            console.log('✅ Events loaded (modern format):', {
+              past: eventsData.tabs.past.length,
+              live: eventsData.tabs.live.length,
+              upcoming: eventsData.tabs.upcoming.length
+            });
+          }
+
           return {
             tabs: eventsData.tabs,
             pagination: eventsData.pagination,
           };
         }
 
-        // Legacy format
+        // Legacy format fallback
         if (eventsData.pagination) {
+          if (API_CONFIG.DEBUG) {
+            console.log('✅ Events loaded (legacy format)');
+          }
+
           return {
             tabs: {
               past: eventsData.past || [],
@@ -111,7 +129,7 @@ export const eventService = {
           };
         }
 
-        throw new Error('Invalid response format');
+        throw new Error('Invalid response format: missing pagination data');
       }
 
       throw new Error(response.error || 'Failed to fetch events');
