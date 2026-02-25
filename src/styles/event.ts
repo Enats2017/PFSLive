@@ -12,37 +12,39 @@ export const eventStyles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: spacing.md,
   },
   section: {
     alignItems: "center",
-    padding: 6,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
     backgroundColor: colors.gray300,
     marginVertical: spacing.sm,
   },
   header: {
     alignItems: "center",
-    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
   tabBar: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: colors.gray300,
   },
   tabItem: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
   },
   tabText: {
-    fontSize: 14,
-    color: "#999",
-    fontWeight: "500",
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
+    fontWeight: typography.weights.medium,
   },
   activeTabText: {
-    color: "#000",
-    fontWeight: "700",
+    color: colors.black,
+    fontWeight: typography.weights.bold,
   },
   underline: {
     position: "absolute",
@@ -51,5 +53,4 @@ export const eventStyles = StyleSheet.create({
     width: "60%",
     borderRadius: 2,
   },
- 
 });

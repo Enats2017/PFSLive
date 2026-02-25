@@ -18,13 +18,11 @@
   },
   "personal": {
     "title": "PERSONAL EVENTS",
-    "description": "Racing and event or planning a training session that is not an official partner event? Create it here!",
+    "description": "Racing an event or planning a training session that is not an official partner event? Create it here!",
     "button": "CREATE PERSONAL EVENT"
+  },
+  "error": {
+    "failed": "Failed to load events",
+    "retry": "Retry"
   }
- 
 }
-
-  
-  
-
-

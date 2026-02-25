@@ -1,25 +1,35 @@
-
 {
-    "details": {
+  "details": {
     "Distance": "Distance",
     "Participant": "Participant"
   },
-    "button": "SIGN UP LIVE TRACKING",
-    "live":"Live",
+  "button": "SIGN UP LIVE TRACKING",
+  "live": "LIVE",
   "countdown": {
     "in_progress": "Live",
     "finished": "Finished",
     "hours": "Hours",
     "days": "Days",
-    "minutes":"Minutes"
+    "minutes": "Minutes"
   },
   "distance": {
     "empty": "No distances available"
-},
-
-"participant": {
+  },
+  "participant": {
     "empty": "No participants yet",
-    "search":"Search"
-}
-
+    "search": "Search participants",
+    "searching": "Searching...",
+    "noResults": "No participants found for",
+    "favorite": "ADD TO FAVORITE",
+    "unknownName": "UNKNOWN PARTICIPANT"
+  },
+  "tracking": {
+    "live": "Live Tracking Active",
+    "bib": "Bib"
+  },
+  "error": {
+    "title": "Failed to load data",
+    "retry": "Retry",
+    "missingId": "Event ID missing"
+  }
 }

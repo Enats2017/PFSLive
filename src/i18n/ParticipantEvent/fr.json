@@ -6,7 +6,7 @@
   },
   "official": {
     "title": "ÉVÉNEMENTS PARTENAIRES OFFICIELS",
-    "button": "S'INSCRIRE AU SUIVI EN DIRECT"
+    "button": "INSCRIVEZ-VOUS AU SUIVI EN DIRECT"
   },
   "past": {
     "button": "RÉSULTAT"
@@ -18,8 +18,11 @@
   },
   "personal": {
     "title": "ÉVÉNEMENTS PERSONNELS",
-    "description": "Vous participez à une course ou planifiez une session d'entraînement qui n'est pas un événement partenaire officiel ? Créez-le ici !",
+    "description": "Vous participez à un événement ou planifiez une session d'entraînement qui n'est pas un événement partenaire officiel ? Créez-le ici !",
     "button": "CRÉER UN ÉVÉNEMENT PERSONNEL"
+  },
+  "error": {
+    "failed": "Échec du chargement des événements",
+    "retry": "Réessayer"
   }
- 
 }

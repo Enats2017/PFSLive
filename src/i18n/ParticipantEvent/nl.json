@@ -6,20 +6,23 @@
   },
   "official": {
     "title": "OFFICIËLE PARTNER EVENEMENTEN",
-    "button": "AANMELDEN LIVE TRACKING"
+    "button": "MELD JE AAN VOOR LIVE TRACKING"
   },
   "past": {
     "button": "RESULTAAT"
   },
   "empty": {
-    "past": "Geen evenementen uit het verleden gevonden.",
+    "past": "Geen eerdere evenementen gevonden.",
     "live": "Momenteel geen live evenementen.",
     "upcoming": "Geen aankomende evenementen gevonden."
   },
   "personal": {
     "title": "PERSOONLIJKE EVENEMENTEN",
-    "description": "Een race of training sessie plannen die geen officieel partner evenement is? Maak het hier aan!",
+    "description": "Een evenement aan het racen of een trainingssessie plannen die geen officieel partnerevenement is? Maak het hier aan!",
     "button": "PERSOONLIJK EVENEMENT AANMAKEN"
+  },
+  "error": {
+    "failed": "Kan evenementen niet laden",
+    "retry": "Opnieuw proberen"
   }
-
 }

@@ -1,19 +1,35 @@
 {
-    "details": {
+  "details": {
     "Distance": "Distance",
     "Participant": "Participant"
   },
+  "button": "INSCRIVEZ-VOUS AU SUIVI EN DIRECT",
+  "live": "EN DIRECT",
   "countdown": {
     "in_progress": "En Direct",
     "finished": "Terminé",
-    "hours": "DÉPART",
-    "days": "DÉPART"
+    "hours": "Heures",
+    "days": "Jours",
+    "minutes": "Minutes"
   },
   "distance": {
     "empty": "Aucune distance disponible"
   },
   "participant": {
     "empty": "Pas encore de participants",
-    "search":"Rechercher"
+    "search": "Rechercher des participants",
+    "searching": "Recherche...",
+    "noResults": "Aucun participant trouvé pour",
+    "favorite": "AJOUTER AUX FAVORIS",
+    "unknownName": "PARTICIPANT INCONNU"
+  },
+  "tracking": {
+    "live": "Suivi en Direct Actif",
+    "bib": "Dossard"
+  },
+  "error": {
+    "title": "Échec du chargement des données",
+    "retry": "Réessayer",
+    "missingId": "ID d'événement manquant"
   }
 }
