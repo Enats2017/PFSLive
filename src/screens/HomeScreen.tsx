@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -198,8 +199,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const fetchHomeData = async () => {
     try {
       const token = await tokenService.getToken();
-      console.log("11111", token);
-
 
       if (!token) {
         if (API_CONFIG.DEBUG) console.log('⚠️ No token found, skipping home data fetch');
@@ -592,14 +591,31 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     };
   }, [isGPSActive, participantId, eventId]);
 
-  // Polling for home data updates (every 5 minutes)
-  useEffect(() => {
-    const interval = setInterval(() => {
+  useFocusEffect(
+    React.useCallback(() => {
+      // Fetch immediately when screen becomes focused
+      if (API_CONFIG.DEBUG) {
+        console.log('📡 Home screen focused - Fetching fresh data');
+      }
       fetchHomeData();
-    }, API_CONFIG.HOME_DATA_POLL_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, []);
+      
+      // Then start polling
+      const interval = setInterval(() => {
+        if (API_CONFIG.DEBUG) {
+          console.log('🔄 Polling home data');
+        }
+        fetchHomeData();
+      }, API_CONFIG.HOME_DATA_POLL_INTERVAL);
+      
+      // Cleanup when screen loses focus
+      return () => {
+        clearInterval(interval);
+        if (API_CONFIG.DEBUG) {
+          console.log('📴 Home screen unfocused - Stopping API polling');
+        }
+      };
+    }, [])
+  );
 
 
   // Loading state

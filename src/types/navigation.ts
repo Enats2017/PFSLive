@@ -3,26 +3,23 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 export type RootStackParamList = {
   Home: undefined;
   Route: {
-    eventId: string;
-    eventName: string;
-    participantId?: string;
+      eventId: string;
+      eventName: string;
+      participantId?: string;
   };
 
   ParticipantEvent:undefined
-
   PersonalEvent : undefined
-                             
-  EventDetails: { product_app_id: string | number
-     event_name: string;
-   };
-   Register:undefined;
-   LoginScreen:undefined;
-   OTPVerificationScreen: {           // ← add this
+  EventDetails: {
+      product_app_id: string | number;
+      event_name: string;
+  };
+  Register:undefined;
+  LoginScreen:undefined;
+  OTPVerificationScreen: {           // ← add this
     email: string;
     verification_token: string;
   };
-
-
 };
 
 export type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
