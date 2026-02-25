@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
@@ -25,6 +25,7 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const isLoadingMoreRef = useRef(false);
+  const searchInputRef = useRef<any>(null); // ✅ ADD REF FOR SEARCH INPUT
 
   // Fetch participants when screen is focused
   useFocusEffect(
@@ -52,10 +53,11 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
 
   const fetchParticipants = async (pageNum: number, search: string) => {
     try {
-      if (pageNum === 1) {
+      // ✅ DON'T show loading indicator for page 1 if we're searching (keeps keyboard open)
+      if (pageNum === 1 && search.length === 0) {
         setLoading(true);
         setError(null);
-      } else {
+      } else if (pageNum > 1) {
         setLoadingMore(true);
       }
 
@@ -132,7 +134,8 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
     );
   }, []);
 
-  if (loading) {
+  // ✅ SHOW LOADING ONLY ON INITIAL LOAD (not during search)
+  if (loading && searchText.length === 0) {
     return (
       <ActivityIndicator
         size="large"
@@ -142,7 +145,7 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
     );
   }
 
-  if (error) {
+  if (error && searchText.length === 0) {
     return (
       <View style={commonStyles.centerContainer}>
         <Text style={commonStyles.errorText}>{error}</Text>
@@ -159,13 +162,22 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
   return (
     <View style={commonStyles.container}>
       <SearchInput
+        ref={searchInputRef} // ✅ ADD REF
         placeholder={t('details:participant.search')}
         value={searchText}
         onChangeText={setSearchText}
         icon="search"
       />
 
-      {participants.length === 0 ? (
+      {/* ✅ SHOW INLINE LOADING WHILE SEARCHING */}
+      {loading && searchText.length > 0 && (
+        <View style={{ marginTop: 16, alignItems: 'center' }}>
+          <ActivityIndicator size="small" color="#f4a100" />
+          <Text style={{ marginTop: 8, color: '#666' }}>Searching...</Text>
+        </View>
+      )}
+
+      {!loading && participants.length === 0 ? (
         <View style={{ marginTop: 40 }}>
           <Text style={commonStyles.errorText}>
             {searchText
@@ -183,6 +195,7 @@ const ParticipantTab = ({ product_app_id }: ParticipantTabProps) => {
           onEndReached={handleLoadMore}
           contentContainerStyle={{ paddingBottom: spacing.xxxl }}
           onEndReachedThreshold={0.2}
+          keyboardShouldPersistTaps="handled" // ✅ CRITICAL: Keeps keyboard open
           ListFooterComponent={
             loadingMore ? (
               <ActivityIndicator
