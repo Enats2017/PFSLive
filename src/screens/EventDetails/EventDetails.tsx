@@ -8,13 +8,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import DistanceTab from './DistanceTab';
 import ParticipantTab from './ParticipantTab';
-import type { EventDetailsScreenProps } from '../../types/navigation';
+import type { EventDetailsProps } from '../../types/navigation';
 
 const { width } = Dimensions.get('window');
 type Tab = 'Participant' | 'Distance';
 const TABS: Tab[] = ['Participant', 'Distance']; // ✅ Order stays the same
 
-const EventDetails = ({ route }: EventDetailsScreenProps) => {
+const EventDetails = ({ route }: EventDetailsProps) => {
   const { t } = useTranslation(['details']);
   const [activeTab, setActiveTab] = useState<Tab>('Distance'); // ✅ DEFAULT TO DISTANCE
   const flatListRef = useRef<FlatList>(null);

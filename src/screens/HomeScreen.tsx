@@ -41,7 +41,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const [homeData, setHomeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [hasToken, setHasToken] = useState(false); // ✅ ADD TOKEN STATE
+  const [hasToken, setHasToken] = useState(false);
 
   // Tracking states
   const [isGPSActive, setIsGPSActive] = useState(false);
@@ -107,7 +107,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     try {
       setLoading(true);
       
-      // ✅ Check token first
       const token = await tokenService.getToken();
       setHasToken(!!token);
       
@@ -117,8 +116,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         await loadQueueSize();
       } else {
         if (API_CONFIG.DEBUG) {
-          console.log('⚠️ No token found - skipping data fetch');
+          console.log('⚠️ No token found - clearing home data');
         }
+        setHomeData(null);
       }
     } catch (error) {
       if (API_CONFIG.DEBUG) console.error('❌ Error initializing screen:', error);
@@ -214,9 +214,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       if (!token) {
         if (API_CONFIG.DEBUG) {
-          console.log('⚠️ No token found, skipping home data fetch');
+          console.log('⚠️ No token found, clearing home data');
         }
         setHasToken(false);
+        setHomeData(null);
         setLoading(false);
         return;
       }
@@ -268,9 +269,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
       if (error?.response?.status === 401) {
         if (API_CONFIG.DEBUG) {
-          console.log("🚨 Session expired. Redirecting to login...");
+          console.log("🚨 Session expired. Clearing data and redirecting to login...");
         }
         setHasToken(false);
+        setHomeData(null);
         navigation.navigate("LoginScreen");
       }
     } finally {
@@ -600,30 +602,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     };
   }, [isGPSActive, participantId, eventId]);
 
-  // ✅ OPTIMIZED: Smart polling - only when token exists
+  // Smart polling - only when token exists
   useFocusEffect(
     React.useCallback(() => {
-      // Check if we have a token before starting to poll
       const checkTokenAndPoll = async () => {
         const token = await tokenService.getToken();
         
         if (!token) {
           if (API_CONFIG.DEBUG) {
-            console.log('📴 No token - skipping polling');
+            console.log('📴 No token - clearing data and skipping polling');
           }
           setHasToken(false);
-          return null; // Return null to indicate no interval should be set
+          setHomeData(null);
+          return null;
         }
 
         setHasToken(true);
 
-        // Fetch immediately when screen becomes focused
         if (API_CONFIG.DEBUG) {
           console.log('📡 Home screen focused - Fetching fresh data');
         }
         fetchHomeData();
         
-        // Start polling
         const interval = setInterval(() => {
           if (API_CONFIG.DEBUG) {
             console.log('🔄 Polling home data');
@@ -636,12 +636,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       let intervalId: NodeJS.Timeout | null = null;
 
-      // Start polling if token exists
       checkTokenAndPoll().then(interval => {
         intervalId = interval;
       });
       
-      // Cleanup when screen loses focus
       return () => {
         if (intervalId) {
           clearInterval(intervalId);
@@ -661,7 +659,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <AppHeader showLogo={true} />
         <View style={commonStyles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[commonStyles.loadingText, { marginTop: 16 }]}>
+          <Text style={[commonStyles.loadingText, { marginTop: spacing.lg }]}>
             {t('home:status.loading')}
           </Text>
         </View>
@@ -682,7 +680,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       >
         <View style={homeStyles.cardscetion}>
           <Image
-            source={require("../../assets/Logo-img.png")}
+            source={require("../../assets/livio_logo.png")}
             style={homeStyles.logo}
             resizeMode="contain"
           />
@@ -700,7 +698,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={homeStyles.textContainer}>
           {homeData?.show_start_track === 1 ? (
             <>
-              {/* Event Name */}
               <View style={homeStyles.eventInfo}>
                 <Text style={homeStyles.eventNameText}>
                   <Text style={homeStyles.eventLabel}>{t('home:Event.title')}: </Text>
@@ -708,7 +705,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </Text>
               </View>
 
-              {/* Date */}
               <Text style={homeStyles.smallText}>
                 <Text style={{ fontWeight: typography.weights.bold }}>
                   {t('home:Event.Date')}:
@@ -716,7 +712,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 {' '}{formatDate(homeData.next_race_date)}
               </Text>
 
-              {/* Manual Start Indicator */}
               {homeData?.manual_start === 1 && (
                 <View style={[
                   homeStyles.trackingStatus,
@@ -740,7 +735,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </View>
               )}
 
-              {/* GPS Status Display - Only in DEBUG mode */}
               {isGPSActive && API_CONFIG.DEBUG && (
                 <View style={homeStyles.trackingStatus}>
                   <Text style={homeStyles.trackingStatusIcon}>
@@ -775,12 +769,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </View>
               )}
 
-              {/* Description */}
               <Text style={homeStyles.heading}>
                 {t('home:Event.description')}
               </Text>
 
-              {/* START TRACKING Button */}
               <TouchableOpacity
                 style={[
                   homeStyles.button,
@@ -803,7 +795,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
 
-              {/* Manual Override Button - Only in DEBUG mode */}
               {API_CONFIG.DEBUG && isGPSActive && !isSendingData && homeData?.manual_start !== 1 && (
                 <TouchableOpacity
                   style={[

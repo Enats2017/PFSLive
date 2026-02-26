@@ -20,20 +20,20 @@ export const homeStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.lg,
-    marginBottom: 0, // ✅ Reduced from spacing.md to spacing.xs (12px → 4px)
+    marginBottom: 0,
     paddingHorizontal: spacing.md,
   },
   logo: {
-    width: 80, // Smaller logo for side-by-side
+    width: 80,
     height: 80,
-    marginRight: spacing.sm, // Space between logo and text (8px)
+    marginRight: spacing.sm,
   },
   textSection: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: typography.sizes.xxl, // Slightly smaller for side layout
+    fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
     color: colors.black,
     textAlign: 'center',
@@ -46,14 +46,14 @@ export const homeStyles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     textAlign: 'center',
     letterSpacing: 1,
-    marginTop: spacing.xs, // ✅ Add small top margin (4px)
-    marginBottom: spacing.xl,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xxxl, // ✅ Space between subtitle and textContainer
   },
   
   // Event info section
   textContainer: {
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.xxxl, // ✅ Space between textContainer and buttons
   },
   
   // Event Name
@@ -196,7 +196,7 @@ export const homeStyles = StyleSheet.create({
   
   buttonContainer: {
     paddingHorizontal: spacing.md,
-    marginTop: spacing.xl,
+    marginTop: 0, // ✅ No extra margin - textContainer handles spacing
     gap: spacing.md,
   },
   

@@ -1,22 +1,26 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { headerStyles } from '../../styles/header.styles';
 
 interface AppHeaderProps {
   title?: string;
-  showLogo?: boolean; // Always show logo instead of back button
+  showLogo?: boolean;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
   title,
-  showLogo = true, // Default to showing logo
+  showLogo = true,
 }) => {
   return (
     <View style={headerStyles.container}>
-      {/* Left Side - Always Logo */}
+      {/* Left Side - Logo Image */}
       <View style={headerStyles.leftSection}>
         <View style={headerStyles.logo}>
-          <Text style={headerStyles.logoIcon}>L</Text>
+          <Image
+            source={require('../../../assets/livio_logo.png')}
+            style={headerStyles.logoImage}
+            resizeMode="contain"
+          />
         </View>
       </View>
 

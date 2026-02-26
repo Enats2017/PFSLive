@@ -6,60 +6,68 @@ export const headerStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.white,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
-    elevation: 2,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderBottomColor: colors.gray200,
+    height: 60,
   },
   
-  // Left Section - Logo only
   leftSection: {
-    width: 40,
+    flex: 1,
     alignItems: 'flex-start',
   },
-  logo: {
-    width: 32,
-    height: 32,
-    backgroundColor: colors.black,
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoIcon: {
-    color: colors.white,
-    fontSize: 20,
-    fontWeight: typography.weights.bold,
-  },
   
-  // Center Section - Title
   centerSection: {
-    flex: 1,
+    flex: 2,
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  title: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
+    justifyContent: 'center',
   },
   
-  // Right Section - Icons
   rightSection: {
+    flex: 1,
     flexDirection: 'row',
-    gap: spacing.lg,
     alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
   },
-  iconButton: {
-    padding: spacing.xs,
+  
+  logo: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  icon: {
-    fontSize: 24,
+  
+  // ✅ ADD THIS: Logo Image Style
+  logoImage: {
+    width: 40,
+    height: 40,
+  },
+  
+  logoIcon: {
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
+  },
+  
+  title: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold,
     color: colors.black,
+    textAlign: 'center',
+  },
+  
+  iconButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+  },
+  
+  icon: {
+    fontSize: 20,
   },
 });
