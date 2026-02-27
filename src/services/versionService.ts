@@ -39,12 +39,22 @@ export interface VersionCheckResult {
   message: string;
 }
 
+// ✅ OPTIMIZATION: Cache version to avoid repeated reads
+let cachedVersion: string | null = null;
+
 export const versionService = {
   /**
-   * Get current app version from expo config
+   * Get current app version from expo config (cached)
    */
   getCurrentVersion(): string {
-    return Constants.expoConfig?.version || '1.0.0';
+    // ✅ Return cached version if available
+    if (cachedVersion) {
+      return cachedVersion;
+    }
+
+    // ✅ Read and cache version
+    cachedVersion = Constants.expoConfig?.version || Constants.manifest?.version || '1.0.0';
+    return cachedVersion;
   },
 
   /**
@@ -54,13 +64,15 @@ export const versionService = {
   compareVersions(v1: string, v2: string): number {
     const parts1 = v1.split('.').map(Number);
     const parts2 = v2.split('.').map(Number);
+    const maxLength = Math.max(parts1.length, parts2.length);
 
-    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    for (let i = 0; i < maxLength; i++) {
       const num1 = parts1[i] || 0;
       const num2 = parts2[i] || 0;
 
-      if (num1 > num2) return 1;
-      if (num1 < num2) return -1;
+      if (num1 !== num2) {
+        return num1 > num2 ? 1 : -1;
+      }
     }
 
     return 0;
@@ -93,25 +105,34 @@ export const versionService = {
         platform,
       };
 
-      // ✅ FIX: Type the response correctly
-      // apiClient.post returns the FULL response object
+      // ✅ IMPROVED: Better type handling
       const apiResponse = await apiClient.post<VersionData>(
         url,
         requestBody,
         { headers }
       );
 
-      // ✅ The response IS the VersionApiResponse
-      // Cast it properly
+      // ✅ Type assertion with validation
       const response = apiResponse as unknown as VersionApiResponse;
 
-      // Check if response is successful and has data
+      // ✅ IMPROVED: Explicit validation
+      if (!response || typeof response !== 'object') {
+        throw new Error('Invalid response format');
+      }
+
       if (response.success && response.data) {
         const versionData = response.data;
 
-        // Use API's flags directly
-        const needsUpdate = versionData.update_available;
-        const isForced = versionData.force_update;
+        // ✅ IMPROVED: Validate required fields
+        if (!versionData.latest_version || !versionData.update_url) {
+          if (API_CONFIG.DEBUG) {
+            console.warn('⚠️ Missing required version data');
+          }
+          return this.getNoUpdateResult(currentVersion);
+        }
+
+        const needsUpdate = Boolean(versionData.update_available);
+        const isForced = Boolean(versionData.force_update);
 
         if (API_CONFIG.DEBUG) {
           console.log('✅ Version check result:', {
@@ -130,12 +151,11 @@ export const versionService = {
           currentVersion,
           latestVersion: versionData.latest_version,
           updateUrl: versionData.update_url,
-          title: versionData.title,
-          message: versionData.message,
+          title: versionData.title || '',
+          message: versionData.message || '',
         };
       }
 
-      // No update needed if API doesn't return success
       if (API_CONFIG.DEBUG) {
         console.log('⚠️ Version check: No update needed');
       }
@@ -143,10 +163,10 @@ export const versionService = {
       return this.getNoUpdateResult(currentVersion);
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        console.error('❌ Version check error:', error.message);
+        console.error('❌ Version check error:', error?.message || error);
       }
 
-      // Don't block app on version check failure
+      // ✅ Don't block app on version check failure
       return this.getNoUpdateResult(currentVersion);
     }
   },
@@ -169,13 +189,14 @@ export const versionService = {
   /**
    * Open app store for update
    */
-  async openStore(updateUrl: string): Promise<void> {
+  async openStore(updateUrl: string): Promise<boolean> {
     try {
-      if (!updateUrl || updateUrl.trim() === '') {
+      // ✅ IMPROVED: Better validation
+      if (!updateUrl?.trim()) {
         if (API_CONFIG.DEBUG) {
           console.error('❌ No update URL provided');
         }
-        return;
+        return false;
       }
 
       const canOpen = await Linking.canOpenURL(updateUrl);
@@ -186,15 +207,25 @@ export const versionService = {
         if (API_CONFIG.DEBUG) {
           console.log('✅ Opened store:', updateUrl);
         }
+        return true;
       } else {
         if (API_CONFIG.DEBUG) {
           console.error('❌ Cannot open URL:', updateUrl);
         }
+        return false;
       }
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        console.error('❌ Error opening store:', error.message);
+        console.error('❌ Error opening store:', error?.message || error);
       }
+      return false;
     }
+  },
+
+  /**
+   * Clear cached version (useful for testing)
+   */
+  clearVersionCache(): void {
+    cachedVersion = null;
   },
 };

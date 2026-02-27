@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform } from 'react-native';
 import { colors, spacing, typography } from '../styles/common.styles';
 import { useTranslation } from 'react-i18next';
 
@@ -8,12 +8,13 @@ interface UpdateRequiredModalProps {
   isForced: boolean;
   currentVersion: string;
   latestVersion: string;
-  title: string; // FROM API
-  message: string; // FROM API
+  title: string;
+  message: string;
   onUpdate: () => void;
   onLater?: () => void;
 }
 
+// ✅ FIX: Regular function component (not memo for now)
 export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
   visible,
   isForced,
@@ -24,7 +25,12 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
   onUpdate,
   onLater,
 }) => {
-  const { t } = useTranslation(['common']); // ✅ ADD TRANSLATION HOOK
+  const { t } = useTranslation(['common']);
+
+  // Early return if not visible
+  if (!visible) {
+    return null;
+  }
 
   return (
     <Modal
@@ -32,6 +38,7 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
       transparent={true}
       animationType="fade"
       statusBarTranslucent
+      hardwareAccelerated={true}
     >
       <View style={styles.overlay}>
         <View style={styles.container}>
@@ -40,13 +47,17 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
             <Text style={styles.icon}>🔄</Text>
           </View>
 
-          {/* ✅ Title from API (backend controls language) */}
-          <Text style={styles.title}>{title}</Text>
+          {/* Title from API */}
+          {title ? (
+            <Text style={styles.title}>{title}</Text>
+          ) : null}
 
-          {/* ✅ Message from API (backend controls language) */}
-          <Text style={styles.message}>{message}</Text>
+          {/* Message from API */}
+          {message ? (
+            <Text style={styles.message}>{message}</Text>
+          ) : null}
 
-          {/* ✅ Version Info - NOW TRANSLATED */}
+          {/* Version Info */}
           <View style={styles.versionInfo}>
             <View style={styles.versionRow}>
               <Text style={styles.versionLabel}>
@@ -64,21 +75,23 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
-            {/* ✅ UPDATE NOW - NOW TRANSLATED */}
+            {/* Update Button */}
             <TouchableOpacity
               style={[styles.button, styles.updateButton]}
               onPress={onUpdate}
+              activeOpacity={0.8}
             >
               <Text style={styles.updateButtonText}>
                 {t('common:update.updateNow')}
               </Text>
             </TouchableOpacity>
 
-            {/* ✅ LATER - NOW TRANSLATED */}
+            {/* Later Button */}
             {!isForced && onLater && (
               <TouchableOpacity
                 style={[styles.button, styles.laterButton]}
                 onPress={onLater}
+                activeOpacity={0.8}
               >
                 <Text style={styles.laterButtonText}>
                   {t('common:update.later')}
@@ -87,7 +100,7 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
             )}
           </View>
 
-          {/* ✅ Forced Message - NOW TRANSLATED */}
+          {/* Forced update warning */}
           {isForced && (
             <Text style={styles.forcedText}>
               {t('common:update.forcedMessage')}
@@ -114,6 +127,17 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   iconContainer: {
     width: 80,
@@ -175,11 +199,23 @@ const styles = StyleSheet.create({
   },
   updateButton: {
     backgroundColor: colors.primary,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   updateButtonText: {
     color: colors.white,
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
+    letterSpacing: 0.5,
   },
   laterButton: {
     backgroundColor: colors.white,
