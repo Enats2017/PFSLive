@@ -18,7 +18,7 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 interface FloatingLabelInputProps extends TextInputProps {
   label: string;
   value: string;
-  onChangeText: (text: string) => void;
+   onChangeText?: (text: string) => void;
   iconName?: IoniconsName;
   isPassword?: boolean;
   isDatePicker?: boolean;
@@ -35,7 +35,7 @@ interface FloatingLabelInputProps extends TextInputProps {
 const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   label = "Label",
   value,
-  onChangeText,
+   onChangeText = () => {},
   iconName,
   isPassword = false,
   isDatePicker = false,

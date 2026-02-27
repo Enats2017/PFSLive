@@ -81,4 +81,38 @@ export const registerStyles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
   },
+
+   forgotText: {
+    fontSize: 13,
+    color: "#FF5722",
+    fontWeight: "500",
+  },
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 15,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#e5e7eb",
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 13,
+    color: "#9ca3af",
+    fontWeight: "500",
+  },
+  registerButton: {
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  registerText: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  registerLink: {
+    color: "#FF5722",
+    fontWeight: "700",
+  },
 });

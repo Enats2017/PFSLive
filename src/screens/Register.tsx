@@ -279,6 +279,25 @@ const Register: React.FC<RegisterProps> = ({ navigation }) => {
                                 )}
                             </TouchableOpacity>
                         </View>
+
+                        <View style={registerStyles.divider}>
+                            <View style={registerStyles.dividerLine} />
+                            <Text style={registerStyles.dividerText}>{t('login:or')}</Text>
+                            <View style={registerStyles.dividerLine} />
+                        </View>
+
+                        <TouchableOpacity
+                            style={registerStyles.registerButton}
+                            onPress={() => navigation.navigate('LoginScreen')}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={registerStyles.registerText}>
+                                {t('register:account')}{' '}
+                                <Text style={registerStyles.registerLink}>
+                                    {t('register:loginNow')}
+                                </Text>
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>

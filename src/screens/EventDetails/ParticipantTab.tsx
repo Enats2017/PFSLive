@@ -194,8 +194,8 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
           </View>
         )}
 
-        <TouchableOpacity style={commonStyles.favoriteButton}>
-          <Text style={commonStyles.favoriteButtonText}>
+        <TouchableOpacity style={commonStyles.primaryButton}>
+          <Text style={commonStyles.primaryButtonText}>
             {t('details:participant.favorite')}
           </Text>
         </TouchableOpacity>

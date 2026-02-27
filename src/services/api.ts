@@ -90,12 +90,29 @@ class ApiClient {
   }
 
   private handleError(error: any): Error {
-    if (axios.isAxiosError(error)) {
-      const message = error.response?.data?.message || error.message;
-      return new Error(message);
+  if (axios.isAxiosError(error)) {
+    if (API_CONFIG.DEBUG) {
+      // ✅ now you can see exact backend response
+      console.log('❌ Full backend response:', JSON.stringify(error.response?.data, null, 2));
+      console.log('❌ Status code:', error.response?.status);
     }
-    return error;
+
+    // ✅ FIX: read exact backend error code your PHP sends
+    // your PHP sends: { "success": false, "error": "not_found_in_race_result" }
+    const backendError =
+      error.response?.data?.error ||    // ← exact PHP error code
+      error.response?.data?.message ||  // ← alternate field
+      error.message ||                   // ← fallback
+      'unknown_error';
+
+    // ✅ FIX: throw new Error with exact backend code
+    // so switch case in useRegistrationHandler works correctly
+    const err = new Error(backendError);
+    (err as any).response = error.response; // ← preserve response just in case
+    return err;
   }
+  return error;
+}
 }
 
 export const apiClient = new ApiClient();

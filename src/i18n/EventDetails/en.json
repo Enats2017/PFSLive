@@ -4,6 +4,7 @@
     "Participant": "Participant"
   },
   "button": "SIGN UP LIVE TRACKING",
+  "undo":"UNDO FOR SIGNUP",
   "live": "LIVE",
   "countdown": {
     "in_progress": "Live",

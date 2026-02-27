@@ -6,6 +6,8 @@
   "country": "Country",
   "city": "City",
   "dateOfBirth": "Date of Birth",
+  "account":"Already have an account ?",
+  "loginNow":"Login Now",
   "Gender": {
     "gender": "Gender",
     "male": "Male",

@@ -15,13 +15,14 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import { ParticipantEventProps } from '../../types/navigation';
 import { API_CONFIG } from '../../constants/config';
+import { tokenService } from '../../services/tokenService';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
 const { width, height } = Dimensions.get('window');
 const TAB_CONTENT_HEIGHT = height * 0.5;
 
-const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
+const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     const { t } = useTranslation(['event', 'common']);
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [loading, setLoading] = useState(true);
@@ -63,10 +64,10 @@ const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
                 console.log('📡 Fetching events for all tabs');
             }
 
-            const result = await eventService.getEvents({ 
-                page_past: 1, 
-                page_live: 1, 
-                page_upcoming: 1 
+            const result = await eventService.getEvents({
+                page_past: 1,
+                page_live: 1,
+                page_upcoming: 1
             });
 
             setPastEvents(result.tabs.past);
@@ -75,17 +76,17 @@ const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
 
             if (result.pagination) {
                 setPaginationInfo({
-                    past: { 
-                        page: result.pagination.past.page, 
-                        total_pages: result.pagination.past.total_pages 
+                    past: {
+                        page: result.pagination.past.page,
+                        total_pages: result.pagination.past.total_pages
                     },
-                    live: { 
-                        page: result.pagination.live.page, 
-                        total_pages: result.pagination.live.total_pages 
+                    live: {
+                        page: result.pagination.live.page,
+                        total_pages: result.pagination.live.total_pages
                     },
-                    upcoming: { 
-                        page: result.pagination.upcoming.page, 
-                        total_pages: result.pagination.upcoming.total_pages 
+                    upcoming: {
+                        page: result.pagination.upcoming.page,
+                        total_pages: result.pagination.upcoming.total_pages
                     },
                 });
             }
@@ -107,7 +108,7 @@ const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
 
     const loadMorePast = useCallback(async () => {
         const key = 'past';
-        
+
         // ✅ Guard: Check all conditions
         if (loadingMorePast) {
             if (API_CONFIG.DEBUG) console.log('Past: Already loading');
@@ -154,7 +155,7 @@ const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
 
     const loadMoreLive = useCallback(async () => {
         const key = 'live';
-        
+
         if (loadingMoreLive) {
             if (API_CONFIG.DEBUG) console.log('Live: Already loading');
             return;
@@ -200,7 +201,7 @@ const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
 
     const loadMoreUpcoming = useCallback(async () => {
         const key = 'upcoming';
-        
+
         if (loadingMoreUpcoming) {
             if (API_CONFIG.DEBUG) console.log('Upcoming: Already loading');
             return;
@@ -247,10 +248,10 @@ const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
     const renderContent = (tab: Tab) => {
         if (loading) {
             return (
-                <ActivityIndicator 
-                    size="large" 
+                <ActivityIndicator
+                    size="large"
                     color="#FF5722"
-                    style={{ marginTop: 40 }} 
+                    style={{ marginTop: 40 }}
                 />
             );
         }
@@ -272,23 +273,23 @@ const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
         }
 
         switch (tab) {
-            case 'Past': 
-                return <PastTab 
-                    events={pastEvents} 
+            case 'Past':
+                return <PastTab
+                    events={pastEvents}
                     onLoadMore={loadMorePast}
                     loadingMore={loadingMorePast}
                     hasMore={hasMorePages('Past')}
                 />;
-            case 'Live': 
-                return <LiveTab 
-                    events={liveEvents} 
+            case 'Live':
+                return <LiveTab
+                    events={liveEvents}
                     onLoadMore={loadMoreLive}
                     loadingMore={loadingMoreLive}
                     hasMore={hasMorePages('Live')}
                 />;
-            case 'Upcoming': 
-                return <UpcomingTab 
-                    events={upcomingEvents} 
+            case 'Upcoming':
+                return <UpcomingTab
+                    events={upcomingEvents}
                     onLoadMore={loadMoreUpcoming}
                     loadingMore={loadingMoreUpcoming}
                     hasMore={hasMorePages('Upcoming')}
@@ -307,11 +308,25 @@ const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
         setActiveTab(TABS[index]);
     };
 
+    const handlePersonalEventPress = async () => {
+        try {
+            const token = await tokenService.getToken();
+            if (token !== null && token !== '') {
+                navigation.navigate('PersonalEvent');
+                return;
+            }
+            navigation.navigate('Register');
+        } catch (error) {
+            console.error('Token check failed:', error);
+            navigation.navigate('Register');
+        }
+    };
+
     return (
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
-            <ScrollView 
+            <ScrollView
                 style={{ flex: 1 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ flexGrow: 1 }}
@@ -328,7 +343,7 @@ const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
                                 onPress={() => handleTabPress(tab)}
                             >
                                 <Text style={[
-                                    commonStyles.subtitle, 
+                                    commonStyles.subtitle,
                                     activeTab === tab && eventStyles.activeTabText
                                 ]}>
                                     {t(`event:live.${tab}`)}
@@ -372,12 +387,12 @@ const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
                         <Text style={commonStyles.title}>{t('event:personal.title')}</Text>
                     </View>
                     <View style={[
-                        commonStyles.card, 
-                        { 
-                            marginHorizontal: spacing.md, 
-                            padding: 0, 
-                            overflow: 'hidden', 
-                            marginBottom: spacing.xl 
+                        commonStyles.card,
+                        {
+                            marginHorizontal: spacing.md,
+                            padding: 0,
+                            overflow: 'hidden',
+                            marginBottom: spacing.xl
                         }
                     ]}>
                         <View style={eventStyles.header}>
@@ -385,7 +400,7 @@ const ParticipantEvent:React.FC<ParticipantEventProps> = ({navigation}) => {
                                 {t('event:personal.description')}
                             </Text>
                         </View>
-                        <TouchableOpacity style={commonStyles.primaryButton} onPress={()=>navigation.navigate('PersonalEvent')}>
+                        <TouchableOpacity style={commonStyles.primaryButton} onPress={handlePersonalEventPress}>
                             <Text style={commonStyles.primaryButtonText}>{t('personal.button')}</Text>
                         </TouchableOpacity>
                     </View>
