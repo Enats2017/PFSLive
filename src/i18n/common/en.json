@@ -46,5 +46,12 @@
     "october": "October",
     "november": "November",
     "december": "December"
+  },
+  "update": {
+    "currentVersion": "Current Version",
+    "latestVersion": "Latest Version",
+    "updateNow": "UPDATE NOW",
+    "later": "Later",
+    "forcedMessage": "You must update to continue using the app"
   }
 }

@@ -81,6 +81,7 @@ export const API_CONFIG = {
     // Participants
     PARTICIPANT_LOCATION: "/insert_participant_location_api.php",
     PARTICIPANT_STATS: "/participants/:participantId/stats.php",
+    VERSION_CHECK: '/check_update_api.php',
   },
 
   TIMEOUT: 15000,
