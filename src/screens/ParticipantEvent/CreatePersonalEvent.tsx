@@ -1,196 +1,306 @@
-import React, { useState } from 'react'
-import { KeyboardAvoidingView, ScrollView, StatusBar, Platform, View, Alert, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { AppHeader } from '../../components/common/AppHeader'
-import { commonStyles, spacing } from '../../styles/common.styles'
-import { PersonalEventProps } from '../../types/navigation'
-import FloatingLabelInput from '../../components/FloatingLabelInput'
-import * as DocumentPicker from 'expo-document-picker';
+import React, { useState, useCallback, useMemo } from 'react';
+import {
+  KeyboardAvoidingView,
+  ScrollView,
+  StatusBar,
+  Platform,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppHeader } from '../../components/common/AppHeader';
+import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { PersonalEventProps } from '../../types/navigation';
+import FloatingLabelInput from '../../components/FloatingLabelInput';
 import { Ionicons } from '@expo/vector-icons';
-import { personalStyles } from '../../styles/personalEvent.styles'
+import { personalStyles } from '../../styles/personalEvent.styles';
 import { useTranslation } from 'react-i18next';
-import { API_CONFIG, getApiEndpoint } from '../../constants/config'
-import axios from 'axios';
-import { toastError, toastSuccess } from '../../../utils/toast'
-import { createPersonalEvent } from '../../services/personalEventService';
+import { toastError, toastSuccess } from '../../../utils/toast';
+import { createPersonalEvent, formatFileSize } from '../../services/personalEventService';
+import { API_CONFIG } from '../../constants/config';
+import { usePersonalEventForm } from '../../hooks/usePersonalEventForm';
+import { useFileUpload } from '../../hooks/useFileUpload';
+
+// ✅ CONSTANTS
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
-    const { t } = useTranslation(['personal', 'common']);
-    const [name, setName] = useState('');
-    const [selectedEventType, setSelectedEventType] = useState<{ label: string; value: number } | null>(null);
-    const [startTime, setStartTime] = useState('');
-    const [endTime, setEndTime] = useState('');
-    const [date, setDate] = useState('');
-    const [selectedFile, setSelectedFile] = useState<any>(null);
+  const { t } = useTranslation(['personal', 'common']);
 
-    const EVENT_TYPE_OPTIONS = [
-        { label: "Organized Event with ranking / results", value: 1 },
-        { label: "Organized Event without ranking / results", value: 2 },
-        { label: "Training session", value: 3 },
-    ];
+  // ✅ MEMOIZED EVENT TYPE OPTIONS
+  const EVENT_TYPE_OPTIONS = useMemo(
+    () => [
+      { label: t('personal:eventTypes.organizedWithResults'), value: 1 },
+      { label: t('personal:eventTypes.organizedWithoutResults'), value: 2 },
+      { label: t('personal:eventTypes.training'), value: 3 },
+    ],
+    [t]
+  );
 
-    const pickFile = async () => {
-        try {
-            const result = await DocumentPicker.getDocumentAsync({
-                type: ['application/gpx+xml', '.gpx'],
-                copyToCacheDirectory: true,
-                multiple: false,
-            });
-            if (!result.canceled && result.assets?.[0]) {
-                setSelectedFile(result.assets[0]);
-            }
-        } catch (error) {
-            console.error('File pick error:', error);
-            toastError('File Error', 'Failed to pick file. Please try again.');
-        }
-    };
+  // ✅ FORM STATE & HANDLERS (CUSTOM HOOK - WITH DEFAULTS)
+  const {
+    formData,
+    errors,
+    handlers,
+    setFieldError,
+    clearAllErrors,
+    validateForm,
+    resetForm,
+  } = usePersonalEventForm();
 
-    const handleViewFile = () => {
-        if (!selectedFile) return;
-        Alert.alert("File Info", `Name: ${selectedFile.name}\nSize: ${(selectedFile.size / 1024).toFixed(2)} KB`);
-    };
+  // ✅ FILE UPLOAD (CUSTOM HOOK)
+  const { selectedFile, pickFile, viewFile, removeFile, clearFile } = useFileUpload(
+    MAX_FILE_SIZE,
+    (message) => setFieldError('file', message)
+  );
 
-    const handleSubmit = async () => {
-        if (!name.trim()) {
-            toastError('Validation', 'Please enter a name.');
-            return;
-        }
-        if (!date.trim()) {
-            toastError('Validation', 'Please select a date.');
-            return;
-        }
+  // ✅ SUBMISSION STATE
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-        try {
-            const data = await createPersonalEvent({
-                name,
-                eventTypeId: selectedEventType?.value ?? null,  // ✅ sending selected value
-                date,
-                startTime,
-                endTime,
-                selectedFile,
-            });
+  // ✅ FORM SUBMISSION
+  const handleSubmit = useCallback(async () => {
+    clearAllErrors();
 
-            if (data.success) {
-                toastSuccess(t('personal:success.title'));
-                navigation.goBack();
-            }
-        } catch (error: any) {
-            const message = error.response?.data?.message || error.message || 'Something went wrong';
-            toastError('Error', message);
-        }
-    };
+    if (!validateForm()) return;
+    if (isSubmitting) return;
 
-    return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} />
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-            >
-                <ScrollView
-                    style={{ flex: 1 }}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ flexGrow: 1 }}
+    try {
+      setIsSubmitting(true);
+
+      const response = await createPersonalEvent({
+        name: formData.name.trim(),
+        eventTypeId: formData.selectedEventType?.value ?? null,
+        date: formData.date,
+        startTime: formData.startTime,
+        selectedFile: selectedFile || undefined,
+      });
+
+      if (response.success) {
+        toastSuccess(
+          t('personal:success.title'),
+          response.message || t('personal:success.message')
+        );
+
+        // Reset all form state
+        resetForm();
+        clearFile();
+
+        navigation.goBack();
+      } else {
+        throw new Error(response.message || 'API_ERROR');
+      }
+    } catch (error: any) {
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Submit error:', error);
+      }
+
+      const message =
+        error.message === 'API_ERROR'
+          ? t('personal:errors.createFailed')
+          : error.message;
+
+      toastError(t('common:errors.generic'), message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    clearAllErrors,
+    validateForm,
+    isSubmitting,
+    formData,
+    selectedFile,
+    resetForm,
+    clearFile,
+    navigation,
+    t,
+  ]);
+
+  return (
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" />
+      <AppHeader showLogo={true} />
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
+          <View style={personalStyles.section}>
+            <Text style={commonStyles.title}>{t('personal:title')}</Text>
+          </View>
+
+          <View style={personalStyles.formContainer}>
+            {/* Event Name */}
+            <View style={personalStyles.fieldWrapper}>
+              <FloatingLabelInput
+                label={t('personal:name')}
+                value={formData.name}
+                onChangeText={handlers.handleNameChange}
+                iconName="person-circle-outline"
+                required
+                editable={!isSubmitting}
+                error={!!errors.name}
+              />
+              {errors.name && (
+                <Text style={personalStyles.errorText}>{errors.name}</Text>
+              )}
+            </View>
+
+            {/* Event Type */}
+            <View style={personalStyles.fieldWrapper}>
+              <FloatingLabelInput
+                label={t('personal:type')}
+                value={formData.selectedEventType?.label ?? ''}
+                onChangeText={() => {}}
+                isDropdown
+                options={EVENT_TYPE_OPTIONS}
+                onSelect={handlers.handleEventTypeChange}
+                required
+                editable={!isSubmitting}
+                error={!!errors.eventType}
+              />
+              {errors.eventType && (
+                <Text style={personalStyles.errorText}>{errors.eventType}</Text>
+              )}
+            </View>
+
+            {/* Date - Defaults to Today, Past Dates Prevented */}
+            <View style={personalStyles.fieldWrapper}>
+              <FloatingLabelInput
+                label={t('personal:date')}
+                value={formData.date}
+                onChangeText={handlers.handleDateChange}
+                iconName="calendar-outline"
+                isDatePicker
+                required
+                editable={!isSubmitting}
+                error={!!errors.date}
+              />
+              {errors.date && (
+                <Text style={personalStyles.errorText}>{errors.date}</Text>
+              )}
+            </View>
+
+            {/* Start Time - Defaults to Current Time */}
+            <View style={personalStyles.fieldWrapper}>
+              <FloatingLabelInput
+                label={t('personal:startTime')}
+                value={formData.startTime}
+                onChangeText={handlers.handleStartTimeChange}
+                iconName="time-outline"
+                isTimePicker
+                required
+                editable={!isSubmitting}
+                error={!!errors.startTime}
+              />
+              {errors.startTime && (
+                <Text style={personalStyles.errorText}>{errors.startTime}</Text>
+              )}
+            </View>
+
+            {/* GPX File Upload */}
+            <View style={{ marginTop: spacing.md }}>
+              {!selectedFile ? (
+                <TouchableOpacity
+                  style={[
+                    personalStyles.uploadBox,
+                    errors.file && personalStyles.uploadBoxError,
+                  ]}
+                  onPress={pickFile}
+                  activeOpacity={0.8}
+                  disabled={isSubmitting}
                 >
-                    <View style={personalStyles.section}>
-                        <Text style={commonStyles.title}>{t('personal:title')}</Text>
+                  <Ionicons
+                    name="cloud-upload-outline"
+                    size={40}
+                    color={colors.primary}
+                  />
+                  <Text style={personalStyles.uploadTitle}>
+                    {t('personal:file.uploadTitle')}
+                  </Text>
+                  <Text style={personalStyles.uploadSubtitle}>
+                    {t('personal:file.uploadSubtitle', {
+                      size: MAX_FILE_SIZE / (1024 * 1024),
+                    })}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={personalStyles.fileCard}>
+                  <View style={personalStyles.fileLeft}>
+                    <View style={personalStyles.fileIconContainer}>
+                      <Ionicons
+                        name="document-outline"
+                        size={28}
+                        color={colors.primary}
+                      />
                     </View>
-
-                    <View style={personalStyles.formContainer}>
-                        <FloatingLabelInput
-                            label={t('personal:name')}
-                            value={name}
-                            onChangeText={setName}
-                            iconName="person-circle-outline"
-                        />
-
-                        <FloatingLabelInput
-                            label="Event Type"
-                            value={selectedEventType?.label ?? ''}
-                            onChangeText={() => { }}
-                            isDropdown
-                            options={EVENT_TYPE_OPTIONS}
-                            onSelect={(item) => setSelectedEventType(item)}
-                        />
-
-                        <FloatingLabelInput
-                            label={t('personal:date')}
-                            value={date}
-                            onChangeText={setDate}
-                            iconName="calendar-outline"
-                            isDatePicker
-                            required
-                        />
-
-                        <FloatingLabelInput
-                            label={t('personal:startTime')}
-                            value={startTime}
-                            onChangeText={setStartTime}
-                            iconName="time-outline"
-                            isTimePicker
-                        />
-
-                        <FloatingLabelInput
-                            label={t('personal:EndTime')}
-                            value={endTime}
-                            onChangeText={setEndTime}
-                            iconName="time-outline"
-                            isTimePicker
-                        />
-
-
-                        <View>
-                            {!selectedFile ? (
-                                <TouchableOpacity
-                                    style={personalStyles.uploadBox}
-                                    onPress={pickFile}
-                                    activeOpacity={0.8}
-                                >
-                                    <Ionicons name="cloud-upload-outline" size={40} color="#ff5722" />
-                                    <Text style={personalStyles.uploadTitle}>Tap to Upload GPX File</Text>
-                                    <Text style={personalStyles.uploadSubtitle}>Supported format: .gpx</Text>
-                                </TouchableOpacity>
-                            ) : (
-                                <View style={personalStyles.fileCard}>
-                                    <View style={personalStyles.fileLeft}>
-                                        <Ionicons name="document-outline" size={28} color="#FF5722" />
-                                        <View style={{ marginLeft: 10, flex: 1 }}>
-                                            <Text numberOfLines={1} style={personalStyles.fileName}>
-                                                {selectedFile.name}
-                                            </Text>
-                                            <Text style={personalStyles.fileSize}>
-                                                {(selectedFile.size / 1024).toFixed(2)} KB
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    <View style={personalStyles.actions}>
-                                        <TouchableOpacity onPress={handleViewFile}>
-                                            <Ionicons name="eye-outline" size={22} color="#444" />
-                                        </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => setSelectedFile(null)}>
-                                            <Ionicons name="close-circle" size={24} color="red" />
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            )}
-                        </View>
-
-                        <Text style={personalStyles.subtitle}>{t('personal:fileInfo')}</Text>
-
-                        <TouchableOpacity
-                            style={[commonStyles.primaryButton, { marginTop: spacing.xxxl }]}
-                            onPress={handleSubmit}
-                        >
-                            <Text style={commonStyles.primaryButtonText}>{t('personal:button.save')}</Text>
-                        </TouchableOpacity>
+                    <View style={personalStyles.fileDetails}>
+                      <Text numberOfLines={1} style={personalStyles.fileName}>
+                        {selectedFile.name}
+                      </Text>
+                      <Text style={personalStyles.fileSize}>
+                        {formatFileSize(selectedFile.size)}
+                      </Text>
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
-    );
+                  </View>
+                  <View style={personalStyles.actions}>
+                    <TouchableOpacity
+                      style={personalStyles.actionButton}
+                      onPress={viewFile}
+                      disabled={isSubmitting}
+                    >
+                      <Ionicons name="eye-outline" size={20} color={colors.gray600} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={personalStyles.actionButton}
+                      onPress={removeFile}
+                      disabled={isSubmitting}
+                    >
+                      <Ionicons name="close-circle" size={20} color={colors.error} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+              {errors.file && (
+                <Text style={personalStyles.errorText}>{errors.file}</Text>
+              )}
+            </View>
+
+            <Text style={personalStyles.subtitle}>{t('personal:fileInfo')}</Text>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[
+                commonStyles.primaryButton,
+                { marginTop: spacing.xxxl, marginBottom: spacing.xl },
+                isSubmitting && { opacity: 0.6 },
+              ]}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              activeOpacity={0.8}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Text style={commonStyles.primaryButtonText}>
+                  {t('personal:button.save')}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
 };
 
-
-export default CreatePersonalEvent
+export default CreatePersonalEvent;

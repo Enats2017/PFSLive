@@ -1,22 +1,44 @@
 {
-  
-    "title": "Create New Event",
-    "name": "Name Event",
-    "type": "Type of Event",
-    "date": "Date of Event",
-    "startTime": "Start Time",
-    "EndTime": "End Time",
-    "fileInfo": "Uploading a GPX is not mandatory but highly recommended",
-    "button":{
-        "gpx":"Choose GPX File",
-        "save":"SUBMIT RACE / TRAINING"
-
-    },
-    "success":{
-        "title":"Success 🎉 Your event has been created successfully."
-    }
-    
-
-    
-  
+  "title": "Create New Event",
+  "name": "Event Name",
+  "type": "Event Type",
+  "date": "Event Date",
+  "startTime": "Start Time",
+  "fileInfo": "Uploading a GPX file is optional but highly recommended for accurate tracking",
+  "button": {
+    "gpx": "Upload GPX File",
+    "save": "SUBMIT EVENT"
+  },
+  "success": {
+    "title": "Success!",
+    "message": "Your event has been created successfully"
+  },
+  "errors": {
+    "nameRequired": "Please enter an event name",
+    "eventTypeRequired": "Please select an event type",
+    "dateRequired": "Please select a date",
+    "invalidDate": "Invalid date format. Please use a valid date",
+    "pastDateNotAllowed": "Cannot select past dates. Please choose today or a future date",
+    "startTimeRequired": "Please select a start time",
+    "invalidStartTime": "Invalid start time format. Please use HH:MM",
+    "fileTooLarge": "File size must be less than {{size}}MB",
+    "invalidFileType": "Please select a valid GPX file (.gpx or .xml)",
+    "filePickFailed": "Failed to pick file. Please try again",
+    "createFailed": "Failed to create event. Please try again"
+  },
+  "file": {
+    "uploadTitle": "Tap to Upload GPX File",
+    "uploadSubtitle": "Supported format: .gpx (Max {{size}}MB)",
+    "infoTitle": "File Info",
+    "infoMessage": "Name: {{name}}\nSize: {{size}} KB",
+    "removeTitle": "Remove File",
+    "removeMessage": "Are you sure you want to remove this file?",
+    "removeButton": "Remove",
+    "removed": "File removed"
+  },
+  "eventTypes": {
+    "organizedWithResults": "Organized Event with ranking / results",
+    "organizedWithoutResults": "Organized Event without ranking / results",
+    "training": "Training session"
+  }
 }
