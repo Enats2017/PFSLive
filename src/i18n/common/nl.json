@@ -46,5 +46,15 @@
     "october": "oktober",
     "november": "november",
     "december": "december"
-  }
+  },
+  "update": {
+    "currentVersion": "Huidige Versie",
+    "latestVersion": "Nieuwste Versie",
+    "updateNow": "NU UPDATEN",
+    "later": "Later",
+    "forcedMessage": "U moet updaten om de app te blijven gebruiken"
+  },
+  "retry": "Retry",
+  "ok": "OK",
+  "cancel": "Cancel",
 }
