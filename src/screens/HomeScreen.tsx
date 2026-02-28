@@ -272,7 +272,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         if (API_CONFIG.DEBUG) console.log('🚨 Session expired - redirecting to login');
         setHasToken(false);
         setHomeData(null);
-        navigation.navigate('LoginScreen');
+        tokenService.removeToken();
+        //navigation.navigate('LoginScreen');
       }
     } finally {
       setLoading(false);

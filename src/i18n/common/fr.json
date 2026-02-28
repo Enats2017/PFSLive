@@ -53,5 +53,8 @@
     "updateNow": "METTRE À JOUR",
     "later": "Plus Tard",
     "forcedMessage": "Vous devez mettre à jour pour continuer à utiliser l'application"
-  }
+  },
+  "retry": "Retry",
+  "ok": "OK",
+  "cancel": "Cancel",
 }

@@ -53,5 +53,8 @@
     "updateNow": "UPDATE NOW",
     "later": "Later",
     "forcedMessage": "You must update to continue using the app"
-  }
+  },
+  "retry": "Retry",
+  "ok": "OK",
+  "cancel": "Cancel",
 }

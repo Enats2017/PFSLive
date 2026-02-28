@@ -53,5 +53,8 @@
     "updateNow": "NU UPDATEN",
     "later": "Later",
     "forcedMessage": "U moet updaten om de app te blijven gebruiken"
-  }
+  },
+  "retry": "Retry",
+  "ok": "OK",
+  "cancel": "Cancel",
 }
