@@ -22,6 +22,7 @@ import { LoginScreenProps } from '../types/navigation';
 import { toastSuccess } from '../../utils/toast';
 import { loginStyles } from '../styles/login.styles';
 import { homeStyles } from '../styles/home.styles';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     const { t } = useTranslation(['login', 'common']);
@@ -40,6 +41,35 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         return Object.keys(newErrors).length === 0;
     };
 
+    const handleAfterLogin = async () => {
+        try {
+            const product_app_id = await AsyncStorage.getItem('pending_product_app_id');
+            const product_option_value_app_id = await AsyncStorage.getItem('pending_option_value_app_id');
+            console.log("1111", product_app_id);
+            console.log("1111", product_option_value_app_id);
+            if (product_app_id && product_option_value_app_id) {
+                // ✅ pending registration exists → go to EventDetails
+                // auto_register_id will trigger auto register in DistanceTab
+                navigation.replace('EventDetails', {
+                    product_app_id: Number(product_app_id),
+                    event_name: '',
+                    auto_register_id: Number(product_option_value_app_id),
+                });
+            } else {
+                // ✅ no pending → go to Home
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Home' }],
+                });
+            }
+        } catch {
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'Home' }],
+            });
+        }
+    };
+
     const handleLogin = async () => {
         if (!validate()) return;
         setLoading(true);
@@ -47,10 +77,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             const response = await authService.login(email.trim().toLowerCase(), password);
             if (response.success) {
                 toastSuccess("Login SuccesFull")
-                navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'Home' }],
-                });
+                await handleAfterLogin();
             }
         } catch (error: any) {
             const data = error.response?.data;

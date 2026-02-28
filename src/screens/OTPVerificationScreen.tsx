@@ -21,6 +21,7 @@ import { tokenService } from '../services/tokenService';
 import { optStyles } from '../styles/OtpScreen.styles';
 import { toastError } from '../../utils/toast';
 import { verifyOtp, resendOtp } from '../services/otpService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const OTP_LENGTH = 6;
 
@@ -46,6 +47,35 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({ navigatio
         const timer = setTimeout(() => setCountdown((prev) => prev - 1), 1000);
         return () => clearTimeout(timer);
     }, [countdown]);
+
+     const handleAfterRegister = async () => {
+        try {
+            const product_app_id = await AsyncStorage.getItem('pending_product_app_id');
+            const product_option_value_app_id = await AsyncStorage.getItem('pending_option_value_app_id');
+            console.log("1111", product_app_id);
+            console.log("1111", product_option_value_app_id);
+            if (product_app_id && product_option_value_app_id) {
+                // ✅ pending registration exists → go to EventDetails
+                // auto_register_id will trigger auto register in DistanceTab
+                navigation.replace('EventDetails', {
+                    product_app_id: Number(product_app_id),
+                    event_name: '',
+                    auto_register_id: Number(product_option_value_app_id),
+                });
+            } else {
+                // ✅ no pending → go to Home
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Home' }],
+                });
+            }
+        } catch {
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'Home' }],
+            });
+        }
+    };
 
     // ── Handle OTP input
     const handleOtpChange = useCallback((text: string, index: number) => {
@@ -106,10 +136,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({ navigatio
 
             if (data.success && data.data?.token) {
                 await tokenService.saveToken(data.data.token);
-                navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'Home' }],
-                });
+                  await handleAfterRegister();
             }
         } catch (error: any) {
             handleErrorResponse(error);

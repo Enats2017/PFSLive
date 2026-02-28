@@ -1,30 +1,35 @@
-import { useState, useCallback } from 'react';
-import { useNavigation } from '@react-navigation/native';
-import { tokenService } from '../services/tokenService';
-import { eventDetailService, Distance, RaceResultData } from '../services/eventDetailService';
+import { useState, useCallback } from "react";
+import { useNavigation } from "@react-navigation/native";
+import { tokenService } from "../services/tokenService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  eventDetailService,
+  Distance,
+  RaceResultData,
+} from "../services/eventDetailService";
+import { getCurrentLanguageId } from "../i18n";
+
 
 interface UseRegistrationHandlerReturn {
-  // status modal (registered, membership_required, limit_reached, unavailable)
   modalVisible: boolean;
   selectedItem: Distance | null;
   handleModalClose: () => void;
-
-  // confirm race result modal (confirm_race_result)
   confirmModalVisible: boolean;
   confirmData: RaceResultData | null;
   confirmItem: Distance | null;
   isFirstTracking: number;
   handleConfirmModalClose: () => void;
-  handleConfirmRegister: () => Promise<void>;  // user taps confirm button
-
-  // register loading/error
+  handleConfirmRegister: () => Promise<void>;
   registerLoading: boolean;
   registerError: string | null;
-
   handleRegister: (item: Distance) => Promise<void>;
 }
 
-const useRegistrationHandler = (): UseRegistrationHandlerReturn => {
+const useRegistrationHandler = (
+  product_app_id: string | number,
+  onRefresh?: () => void , 
+  onSuccess?: () => void
+): UseRegistrationHandlerReturn => {
   const navigation = useNavigation<any>();
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Distance | null>(null);
@@ -35,120 +40,187 @@ const useRegistrationHandler = (): UseRegistrationHandlerReturn => {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
 
-  //  Check token
+  //Check token
   const isTokenValid = async (): Promise<boolean> => {
     try {
       const token = await tokenService.getToken();
-      return token !== null && token !== '';
+      return token !== null && token !== "";
     } catch {
       return false;
     }
   };
 
-  // Step 1: Call register API (no bib_number) 
-  const callRegisterAPI = async (item: Distance) => {
+   const savePending = async (item: Distance): Promise<void> => {
+    try {
+      await AsyncStorage.setItem("pending_product_app_id", String(product_app_id));
+      await AsyncStorage.setItem("pending_option_value_app_id", String(item.product_option_value_app_id));
+    } catch (error) {
+      console.error("❌ Failed to save pending registration:", error);
+    }
+  };
+
+  // ─── Clear pending registration ────────────────────────────────────────────
+  const clearPending = async (): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem("pending_product_app_id");
+      await AsyncStorage.removeItem("pending_option_value_app_id");
+    } catch (error) {
+      console.error("❌ Failed to clear pending registration:", error);
+    }
+  };
+
+  const callRegisterAPI = useCallback(async (item: Distance) => {
+    console.log("hiiii");
+     if (registerLoading) return; // prevent double tap
     try {
       setRegisterLoading(true);
       setRegisterError(null);
 
       const result = await eventDetailService.registerParticipant(
         item.product_option_value_app_id
-        // no bib_number in step 1
       );
 
       switch (result.action) {
-        case 'confirm_race_result':
+        case "confirm_race_result":
           setConfirmData(result.race_result_data ?? null);
           setConfirmItem(item);
           setIsFirstTracking(result.is_first_tracking);
-          setConfirmModalVisible(true);  // ← open confirm modal
+          setConfirmModalVisible(true);
+          await clearPending();
           break;
-
-        case 'registered':
-          // directly registered → go to success screen
-        //   navigation.navigate('RegistrationSuccess', {
-        //     participant: result.participant,
-        //     is_first_tracking: result.is_first_tracking,
-        //   });
+        case "registered":
+            setSelectedItem({ ...item, registration_status: "registered" });
+          setModalVisible(true);
           break;
-
         default:
-          setRegisterError('Unexpected response from server');
+          setRegisterError("Unexpected response from server");
           break;
       }
     } catch (error: any) {
       switch (error?.message) {
-        case 'already_registered':
-          setRegisterError('You are already registered for this distance.');
+        case "already_registered":
+          setSelectedItem({ ...item, registration_status: "registered" });
+          setModalVisible(true);
           break;
-        case 'membership_required':
-          setRegisterError('A membership is required to register.');
+
+        case "membership_required":
+          setSelectedItem({ ...item, registration_status: "membership_required" });
+          setModalVisible(true);
           break;
-        case 'not_found_in_race_result':
-          setRegisterError('Your email was not found in the race result. Please contact support.');
+
+        case "not_found_in_race_result":
+           await clearPending();
+          navigation.navigate("ParticipantResult", {
+            product_app_id: product_app_id,
+            item: item,
+          });
           break;
-        case 'bib_number_invalid':
-          setRegisterError('Invalid bib number. Please try again.');
+
+        case "bib_number_invalid":
+          setRegisterError("Invalid bib number. Please try again.");
           break;
-        case 'distance_not_found':
-          setRegisterError('This distance is no longer available.');
+
+        case "distance_not_found":
+          setSelectedItem({ ...item, registration_status: "unavailable" });
+          setModalVisible(true);
           break;
+
         default:
-          setRegisterError(error?.message ?? 'Registration failed. Please try again.');
+          setRegisterError(
+            error?.message ?? "Registration failed. Please try again."
+          );
           break;
       }
     } finally {
       setRegisterLoading(false);
     }
-  };
+  }, [navigation, product_app_id, onRefresh]);
+ 
+  const callDeleteAPI = useCallback(async (item: Distance) => {
+     if (registerLoading) return;  
+    if (!item.participant_app_id) {
+      setRegisterError("Cannot unregister. Participant ID is missing.");
+      return;
+    }
+    console.log("3hiii");
+    
+    try {
+      setRegisterLoading(true);
+      setRegisterError(null);
 
-  //User taps Confirm in confirm modal
+      await eventDetailService.deleteParticipant(item.participant_app_id);
+
+      onRefresh?.();
+
+    } catch (error: any) {
+      setRegisterError(
+        error?.message ?? "Failed to unregister. Please try again."
+      );
+    } finally {
+      setRegisterLoading(false);
+    }
+  }, [registerLoading,onRefresh]);
+
+  //Confirm register
   const handleConfirmRegister = useCallback(async () => {
+    console.log("2hiiii");
+    
     if (!confirmItem || !confirmData?.bib_number) return;
 
     try {
       setRegisterLoading(true);
       setRegisterError(null);
-
-      // send bib_number this time (step 2)
       const result = await eventDetailService.registerParticipant(
         confirmItem.product_option_value_app_id,
-        confirmData.bib_number  // ← bib_number from step 1 response
+        confirmData.bib_number,
+        getCurrentLanguageId()
       );
 
-      console.log("11111",result);
-      
+      onRefresh?.();
 
-      if (result.action === 'registered') {
+      if (result.action === "registered") {
+
         setConfirmModalVisible(false);
         setConfirmData(null);
         setConfirmItem(null);
+        setIsFirstTracking(0);
+         await clearPending();
+  onRefresh?.();
+  onSuccess?.(); 
+
       }
     } catch (error: any) {
-      setRegisterError(error?.message ?? 'Confirmation failed. Please try again.');
+      setRegisterError(
+        error?.message ?? "Confirmation failed. Please try again."
+      );
     } finally {
       setRegisterLoading(false);
     }
-  }, [confirmItem, confirmData, navigation]);
+  }, [confirmItem, confirmData,  onRefresh]);
 
-  //Handle register button press 
+  // ─── Handle register button press ─────────────────────────────────────────
   const handleRegister = useCallback(async (item: Distance) => {
     const hasToken = await isTokenValid();
 
-    if (!hasToken) {
-      navigation.navigate('Register');
+    if (!hasToken) {// ✅ FIX: was navigating to 'Register' — fixed to 'Login'
+      await savePending(item);
+      navigation.navigate("LoginScreen");
       return;
     }
 
     switch (item.registration_status) {
-      case 'available':
+      case "available":
         await callRegisterAPI(item);
+     
         return;
 
-      case 'registered':
-      case 'membership_required':
-      case 'limit_reached':
-      case 'unavailable':
+      case "registered":
+        await callDeleteAPI(item);
+        return;
+
+      case "membership_required":
+      case "limit_reached":
+      case "unavailable":
         setSelectedItem(item);
         setModalVisible(true);
         return;
@@ -156,19 +228,20 @@ const useRegistrationHandler = (): UseRegistrationHandlerReturn => {
       default:
         return;
     }
-  }, [navigation]);
+  }, [navigation, callRegisterAPI, callDeleteAPI,registerLoading]);
 
-  //Close status modal 
+  
   const handleModalClose = useCallback(() => {
     setModalVisible(false);
     setSelectedItem(null);
   }, []);
 
-  //Close confirm modal 
+ 
   const handleConfirmModalClose = useCallback(() => {
     setConfirmModalVisible(false);
     setConfirmData(null);
     setConfirmItem(null);
+    setIsFirstTracking(0);
   }, []);
 
   return {

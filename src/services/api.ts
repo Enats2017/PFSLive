@@ -45,9 +45,7 @@ class ApiClient {
         return response;
       },
       (error) => {
-        if (API_CONFIG.DEBUG) {
-          console.error('❌ Response error:', error.response?.status, error.message);
-        }
+       
         return Promise.reject(error);
       }
     );

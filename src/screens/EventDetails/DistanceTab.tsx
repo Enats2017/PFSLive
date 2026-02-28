@@ -15,39 +15,23 @@ import { eventDetailService, Distance } from '../../services/eventDetailService'
 import RegistrationModal from '../../components/RegistrationModal';
 import ConfirmRaceResultModal from './ConfirmRaceResultModal';
 import useRegistrationHandler from '../../services/useRegistrationHandler';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import SuccessCelebrationModal from '../../components/SuccessCelebrationModal';
 
 interface DistanceTabProps {
   product_app_id: string | number;
+  auto_register_id?: number | null;
+
 }
 
-const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
+const DistanceTab = ({ product_app_id, auto_register_id}: DistanceTabProps) => {
   const { t } = useTranslation(['details']);
-
+  const navigation = useNavigation<any>();
   const [distances, setDistances] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
   const [serverTime, setServerTime] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-
-  const {
-    modalVisible,
-    selectedItem,
-    handleModalClose,
-    confirmModalVisible,
-    confirmData,
-    confirmItem,
-    handleConfirmModalClose,
-    handleConfirmRegister,
-    registerLoading,
-    registerError,
-    handleRegister,
-  } = useRegistrationHandler();
-
-  useEffect(() => {
-    if (registerError) {
-      Alert.alert('Registration Failed', registerError);
-    }
-  }, [registerError]);
-
+  const [successVisible, setSuccessVisible] = useState(false);
 
   const fetchDistances = useCallback(async () => {
     try {
@@ -63,11 +47,51 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
     }
   }, [product_app_id, t]);
 
+  const {
+    modalVisible,
+    selectedItem,
+    handleModalClose,
+    confirmModalVisible,
+    confirmData,
+    confirmItem,
+    handleConfirmModalClose,
+    handleConfirmRegister,
+    registerLoading,
+    registerError,
+    handleRegister,
+  } = useRegistrationHandler(
+    product_app_id,
+    fetchDistances,
+    () => setSuccessVisible(true) // 👈 success callback
+  );
+
+  useEffect(() => {
+    if (registerError) {
+      Alert.alert('Registration Failed', registerError);
+    }
+  }, [registerError]);
+
+
   useFocusEffect(
     useCallback(() => {
       fetchDistances();
     }, [fetchDistances])
   );
+
+  console.log("111111", auto_register_id);
+
+  useEffect(() => {
+    if (!auto_register_id || distances.length === 0 || loading) return;
+    const distanceItem = distances.find(
+      d => d.product_option_value_app_id === auto_register_id
+    );
+    if (!distanceItem) return;
+    navigation.setParams({ auto_register_id: null });
+    handleRegister(distanceItem);
+
+  }, [auto_register_id, distances, loading, handleRegister]);
+
+
 
   const getCountdownBadge = useMemo(() => {
     return (item: Distance) => {
@@ -123,14 +147,14 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
           ) : (
             <Text style={commonStyles.primaryButtonText}>
               {/* ✅ FIX: was 'undo for Sign Up' — fixed to correct text */}
-              {item.registration_status === 'available' ? t('details:undo') :t('details:button')}
+              {item.registration_status === 'registered' ? t('details:undo') : t('details:button')}
             </Text>
           )}
         </TouchableOpacity>
       </View>
     );
-  // ✅ FIX: added all missing dependencies
-  }, [getCountdownBadge,  handleRegister, registerLoading, confirmItem, selectedItem]);
+    // ✅ FIX: added all missing dependencies
+  }, [getCountdownBadge, handleRegister, registerLoading, confirmItem, selectedItem]);
 
   if (loading) {
     return (
@@ -188,6 +212,12 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
         registerLoading={registerLoading}
         onConfirm={handleConfirmRegister}
         onClose={handleConfirmModalClose}
+      />
+
+      <SuccessCelebrationModal
+        visible={successVisible}
+        message="Thank you for signing up for the live tracking of this event. Tell your family and friends to follow you here and don't forget to activate your live tracking from 1 hour before the start of your race in this app!"
+        onClose={() => setSuccessVisible(false)}
       />
     </>
   );

@@ -15,6 +15,8 @@ interface ParticipantTabProps {
 }
 
 const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
+
+
   const { t } = useTranslation(['details']);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);

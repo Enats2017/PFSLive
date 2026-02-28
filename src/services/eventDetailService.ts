@@ -20,6 +20,7 @@ export interface Distance {
   countdown_value: number;
   countdown_label: string;
   registration_status: RegistrationStatus;
+  participant_app_id?: number;
 }
 
 export interface EventDetailResponse {
@@ -27,7 +28,7 @@ export interface EventDetailResponse {
   server_datetime: string;
 }
 
-// ✅ FIX: made internal — never needed outside this file
+// FIX: made internal — never needed outside this file
 interface EventDetailApiResponse {
   success: boolean;
   data: EventDetailResponse;
@@ -70,39 +71,39 @@ export interface RegisterParticipantResponse {
   participant?: ParticipantData;
 }
 
-// ✅ FIX: made internal — never needed outside this file
+//FIX: made internal — never needed outside this file
 interface RegisterApiResponse {
   success: boolean;
   data: RegisterParticipantResponse;
   error: string | null;
 }
 
+interface DeleteApiResponse {
+  success: boolean;
+  error: string | null;
+}
+
 const extractBackendError = (error: any): string => {
   return (
-    error?.response?.data?.error || // ← exact backend error code e.g. 'not_found_in_race_result'
-    error?.response?.data?.message || // ← alternate field
-    error?.message || // ← fallback
+    error?.response?.data?.error ||
+    error?.response?.data?.message ||
+    error?.message ||
     "unknown_error"
   );
 };
 
-// ─── Services ─────────────────────────────────────────────────────────────────
-
 export const eventDetailService = {
-  // ─── Get event distances ───────────────────────────────────────────────────
+  //Get event distances
   async getEventDetails(
     product_app_id: string | number,
   ): Promise<EventDetailResponse> {
     try {
       const language_id = getCurrentLanguageId();
-
       if (API_CONFIG.DEBUG) {
         console.log("Fetching event details for:", product_app_id);
       }
-
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENT_DETAIL);
       const headers = await API_CONFIG.getHeaders();
-
       const response = await apiClient.post<EventDetailApiResponse>(
         url,
         { language_id, product_app_id },
@@ -122,9 +123,6 @@ export const eventDetailService = {
           server_datetime: response.data.server_datetime ?? "",
         };
       }
-
-      // ✅ FIX: was only throwing response.error
-      // now throws exact backend error so UI can show correct message
       throw new Error(response.error ?? "Failed to fetch event details");
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
@@ -133,16 +131,15 @@ export const eventDetailService = {
           extractBackendError(error),
         );
       }
-      // ✅ FIX: re-throw with exact backend error code not HTTP message
       throw new Error(extractBackendError(error));
     }
   },
 
-  // ─── Register participant ──────────────────────────────────────────────────
+  // Register participant
   async registerParticipant(
     product_option_value_app_id: number,
     bib_number?: string, // pass only on confirm step
-    language_id?: number, 
+    language_id?: number,
   ): Promise<RegisterParticipantResponse> {
     try {
       const lang_id = language_id ?? getCurrentLanguageId();
@@ -172,21 +169,54 @@ export const eventDetailService = {
       });
 
       if (response.success && response.data) {
-         toastSuccess("Thank you for signing up for the live tracking of this event. Tell your your family and friends to follow you here and don't forget to activate your live tracking from 1h before the start of your race in this app !")
-        if (API_CONFIG.DEBUG) {
-          console.log("✅ Register response action:", response.data.action);
+        // ✅ HANDLE BACKEND ERROR INSIDE SUCCESS RESPONSE
+        if ((response.data as any).error) {
+          throw new Error((response.data as any).error);
         }
         return response.data;
       }
-      throw new Error(response.error ?? "Registration failed");
+       throw new Error(response.error ?? "Registration failed");
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        // add this in your catch block temporarily
         console.log(
           "Full backend response:",
           JSON.stringify(error?.response?.data, null, 2),
         );
-        console.log("Status code:", error?.response?.status);
+      }
+      throw new Error(extractBackendError(error));
+    }
+  },
+
+  // ─── Delete participant ────────────────────────────────────────────────────
+  async deleteParticipant(participant_app_id: number): Promise<void> {
+    try {
+      if (API_CONFIG.DEBUG) {
+        console.log("📡 Deleting participant:", participant_app_id);
+      }
+
+      const url = getApiEndpoint(API_CONFIG.ENDPOINTS.DELETE_PARTICIPANT);
+      const headers = await API_CONFIG.getHeaders();
+
+      const response = await apiClient.post<DeleteApiResponse>(
+        url,
+        { participant_app_id },
+        { headers },
+      );
+
+      if (response.success) {
+        if (API_CONFIG.DEBUG) {
+          console.log("✅ Participant deleted successfully");
+        }
+        return;
+      }
+
+      throw new Error(response.error ?? "Failed to delete participant");
+    } catch (error: any) {
+      if (API_CONFIG.DEBUG) {
+        console.error(
+          "❌ Error deleting participant:",
+          extractBackendError(error),
+        );
       }
       throw new Error(extractBackendError(error));
     }

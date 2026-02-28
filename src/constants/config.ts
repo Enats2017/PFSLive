@@ -79,6 +79,7 @@ export const API_CONFIG = {
     COUNTRIES: "/country_api.php",
 
     // Participants
+    DELETE_PARTICIPANT: "/delete_participant_app_api.php",
     PARTICIPANT_LOCATION: "/insert_participant_location_api.php",
     PARTICIPANT_STATS: "/participants/:participantId/stats.php",
   },

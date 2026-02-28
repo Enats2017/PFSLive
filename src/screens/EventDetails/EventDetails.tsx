@@ -19,7 +19,14 @@ const EventDetails = ({ route }: EventDetailsProps) => {
   const [activeTab, setActiveTab] = useState<Tab>('Distance'); // ✅ DEFAULT TO DISTANCE
   const flatListRef = useRef<FlatList>(null);
 
-  const { product_app_id, event_name } = route.params;
+  const { product_app_id, event_name, auto_register_id } = route.params;
+console.log("product_app)id",product_app_id);
+console.log("event_name ",event_name);
+console.log("autogaiser_id",auto_register_id);
+
+
+
+
 
   const renderContent = (tab: Tab) => {
     if (!product_app_id) {
@@ -34,7 +41,12 @@ const EventDetails = ({ route }: EventDetailsProps) => {
 
     switch (tab) {
       case 'Distance':
-        return <DistanceTab product_app_id={product_app_id} />;
+        return (
+          <DistanceTab
+            product_app_id={product_app_id}
+            auto_register_id={auto_register_id ?? null} // ✅ pass auto_register_id
+          />
+        );
       case 'Participant':
         return <ParticipantTab product_app_id={product_app_id} />;
       default:

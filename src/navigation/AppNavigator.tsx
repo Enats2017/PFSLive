@@ -12,6 +12,7 @@ import EventDetails from '../screens/EventDetails/EventDetails';
 import Register from '../screens/Register';
 import LoginScreen from '../screens/LoginScreen';
 import OTPVerificationScreen from '../screens/OTPVerificationScreen';
+import ParticipantResult from '../screens/EventDetails/ParticipantResult';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -56,6 +57,13 @@ export const AppNavigator: React.FC = () => {
          <Stack.Screen 
           name="EventDetails" 
           component={EventDetails}
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen 
+          name="ParticipantResult" 
+          component={ParticipantResult}
           options={{
             gestureEnabled: false,
           }}
