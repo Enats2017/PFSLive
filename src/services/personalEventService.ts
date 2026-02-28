@@ -14,6 +14,7 @@ export interface PersonalEventPayload {
   eventTypeId: number | null;
   date: string;
   startTime: string;
+  timezone?: string; // ✅ ADD TIMEZONE
   selectedFile?: PersonalEventFile;
 }
 
@@ -29,7 +30,7 @@ const TIME_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_MIME_TYPE = 'application/gpx+xml';
 const API_TIMEOUT = 60000;
-const VALID_EVENT_TYPES = [1, 2, 3] as const; // ✅ ADDED CONSTANT
+const VALID_EVENT_TYPES = [1, 2, 3] as const;
 
 // ✅ VALIDATION FUNCTIONS
 export const isValidDate = (date: string): boolean => {
@@ -77,8 +78,44 @@ export const formatFileSize = (bytes: number): string => {
   return `${(bytes / 1024).toFixed(2)} KB`;
 };
 
+/**
+ * Get device timezone
+ * @returns Timezone string (e.g., "Asia/Kolkata", "America/New_York")
+ */
+export const getDeviceTimezone = (): string => {
+  try {
+    // Use Intl API to get timezone
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return timezone || 'UTC';
+  } catch (error) {
+    // Fallback to UTC if timezone detection fails
+    return 'UTC';
+  }
+};
+
+/**
+ * Get timezone offset in minutes
+ * @returns Offset in minutes (e.g., -330 for IST, 330 for PST)
+ */
+export const getTimezoneOffset = (): number => {
+  return new Date().getTimezoneOffset();
+};
+
+/**
+ * Get timezone offset as string
+ * @returns Offset string (e.g., "+05:30", "-08:00")
+ */
+export const getTimezoneOffsetString = (): string => {
+  const offset = -getTimezoneOffset(); // Invert because getTimezoneOffset returns negative for ahead
+  const hours = Math.floor(Math.abs(offset) / 60);
+  const minutes = Math.abs(offset) % 60;
+  const sign = offset >= 0 ? '+' : '-';
+  
+  return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
 const buildFormData = (payload: PersonalEventPayload): FormData => {
-  const { name, eventTypeId, date, startTime, selectedFile } = payload;
+  const { name, eventTypeId, date, startTime, timezone, selectedFile } = payload;
   
   const formData = new FormData();
   
@@ -92,9 +129,15 @@ const buildFormData = (payload: PersonalEventPayload): FormData => {
   if (startTime?.trim()) {
     const formattedTime = formatTimeHHMM(startTime);
     formData.append('start_hour', formattedTime);
+  }
+  
+  // ✅ APPEND TIMEZONE
+  if (timezone) {
+    formData.append('timezone', timezone);
     
     if (API_CONFIG.DEBUG) {
-      console.log('⏰ Start time (HH:MM):', formattedTime);
+      console.log('🌍 Timezone:', timezone);
+      console.log('🕐 Offset:', getTimezoneOffsetString());
     }
   }
   
@@ -166,6 +209,7 @@ export const createPersonalEvent = async (
         eventTypeId: payload.eventTypeId,
         date: payload.date,
         startTime: payload.startTime,
+        timezone: payload.timezone,
         hasFile: !!payload.selectedFile,
       });
     }
@@ -216,4 +260,7 @@ export const personalEventUtils = {
   isValidFileSize,
   formatFileSize,
   formatTimeHHMM,
+  getDeviceTimezone,
+  getTimezoneOffset,
+  getTimezoneOffsetString,
 };

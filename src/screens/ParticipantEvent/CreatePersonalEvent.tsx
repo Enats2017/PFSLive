@@ -18,18 +18,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { personalStyles } from '../../styles/personalEvent.styles';
 import { useTranslation } from 'react-i18next';
 import { toastError, toastSuccess } from '../../../utils/toast';
-import { createPersonalEvent, formatFileSize } from '../../services/personalEventService';
+import { 
+  createPersonalEvent, 
+  formatFileSize,
+  getDeviceTimezone // ✅ IMPORT TIMEZONE HELPER
+} from '../../services/personalEventService';
 import { API_CONFIG } from '../../constants/config';
 import { usePersonalEventForm } from '../../hooks/usePersonalEventForm';
 import { useFileUpload } from '../../hooks/useFileUpload';
 
-// ✅ CONSTANTS
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
   const { t } = useTranslation(['personal', 'common']);
 
-  // ✅ MEMOIZED EVENT TYPE OPTIONS
   const EVENT_TYPE_OPTIONS = useMemo(
     () => [
       { label: t('personal:eventTypes.organizedWithResults'), value: 1 },
@@ -39,7 +41,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     [t]
   );
 
-  // ✅ FORM STATE & HANDLERS (CUSTOM HOOK - WITH DEFAULTS)
   const {
     formData,
     errors,
@@ -50,16 +51,14 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     resetForm,
   } = usePersonalEventForm();
 
-  // ✅ FILE UPLOAD (CUSTOM HOOK)
   const { selectedFile, pickFile, viewFile, removeFile, clearFile } = useFileUpload(
     MAX_FILE_SIZE,
     (message) => setFieldError('file', message)
   );
 
-  // ✅ SUBMISSION STATE
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ✅ FORM SUBMISSION
+  // ✅ FORM SUBMISSION WITH TIMEZONE
   const handleSubmit = useCallback(async () => {
     clearAllErrors();
 
@@ -69,11 +68,15 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     try {
       setIsSubmitting(true);
 
+      // ✅ GET DEVICE TIMEZONE
+      const deviceTimezone = getDeviceTimezone();
+
       const response = await createPersonalEvent({
         name: formData.name.trim(),
         eventTypeId: formData.selectedEventType?.value ?? null,
         date: formData.date,
         startTime: formData.startTime,
+        timezone: deviceTimezone, // ✅ SEND TIMEZONE
         selectedFile: selectedFile || undefined,
       });
 
@@ -83,7 +86,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
           response.message || t('personal:success.message')
         );
 
-        // Reset all form state
         resetForm();
         clearFile();
 
@@ -133,7 +135,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
           <View style={personalStyles.section}>
             <Text style={commonStyles.title}>{t('personal:title')}</Text>
           </View>
@@ -173,7 +174,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
               )}
             </View>
 
-            {/* Date - Defaults to Today, Past Dates Prevented */}
+            {/* Date */}
             <View style={personalStyles.fieldWrapper}>
               <FloatingLabelInput
                 label={t('personal:date')}
@@ -190,7 +191,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
               )}
             </View>
 
-            {/* Start Time - Defaults to Current Time */}
+            {/* Start Time */}
             <View style={personalStyles.fieldWrapper}>
               <FloatingLabelInput
                 label={t('personal:startTime')}
