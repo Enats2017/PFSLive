@@ -1,0 +1,21 @@
+{
+  "title": "Verifieer Uw Email",
+  "subtitle": "We hebben een 6-cijferige verificatiecode gestuurd naar",
+  "verifyButton": "Verifiëren",
+  "didntReceive": "Code niet ontvangen?",
+  "resend": "Opnieuw Verzenden",
+  "resendIn": "Opnieuw verzenden over",
+  "resendSuccess": "Code Verzonden",
+  "resendSuccessMessage": "Een nieuwe verificatiecode is naar uw e-mail verzonden.",
+  "errors": {
+    "incomplete": "Voer de volledige 6-cijferige code in",
+    "invalid": "Ongeldige OTP-code. Probeer het opnieuw.",
+    "expired": "OTP is verlopen. Vraag een nieuwe aan.",
+    "tooManyAttempts": "Te veel pogingen. Probeer het later opnieuw."
+  },
+  "alerts": {
+    "noConnection": "Geen Internetverbinding",
+    "noConnectionMessage": "Controleer uw internetverbinding en probeer het opnieuw.",
+    "genericErrorMessage": "Er is iets misgegaan. Probeer het later opnieuw."
+  }
+}

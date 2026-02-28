@@ -1,13 +1,13 @@
 {
   "firstName": "First Name",
   "lastName": "Last Name",
-  "email": "Email",
+  "email": "Email Address",
   "password": "Password",
   "country": "Country",
   "city": "City",
   "dateOfBirth": "Date of Birth",
-  "account":"Already have an account ?",
-  "loginNow":"Login Now",
+  "account": "Already have an account?",
+  "loginNow": "Login Now",
   "Gender": {
     "gender": "Gender",
     "male": "Male",
@@ -29,17 +29,18 @@
     "cityRequired": "City must be at least 2 characters",
     "dobRequired": "Please select your date of birth",
     "genderRequired": "Please select your gender",
-    "termsRequired": "You must accept the terms and conditions"
+    "termsRequired": "You must accept the terms and conditions",
+    "deviceAlreadyRegistered": "This device is already linked to an account. Please login instead."
   },
   "alerts": {
-    "email_exists":"This email is already registered",
-    "permissionRequired": "Permission required",
-    "galleryPermission": "Please allow access to your gallery.",
+    "email_exists": "This email is already registered",
+    "permissionRequired": "Permission Required",
+    "galleryPermission": "Please allow access to your gallery to upload a photo.",
     "deviceNotAllowed": "Device Not Allowed",
-    "deviceNotAllowedMessage": "This account is linked to another device.",
-    "noConnection": "No Connection",
-    "noConnectionMessage": "Please check your internet connection.",
+    "deviceNotAllowedMessage": "This account is linked to another device. Please contact support.",
+    "noConnection": "No Internet Connection",
+    "noConnectionMessage": "Please check your internet connection and try again.",
     "genericError": "Error",
-    "genericErrorMessage": "Something went wrong. Please try again."
+    "genericErrorMessage": "Something went wrong. Please try again later."
   }
 }

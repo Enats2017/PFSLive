@@ -14,8 +14,8 @@
     "tooManyAttempts": "Too many attempts. Please try again later."
   },
   "alerts": {
-    "noConnection": "No Connection",
-    "noConnectionMessage": "Please check your internet connection.",
-    "genericErrorMessage": "Something went wrong. Please try again."
+    "noConnection": "No Internet Connection",
+    "noConnectionMessage": "Please check your internet connection and try again.",
+    "genericErrorMessage": "Something went wrong. Please try again later."
   }
 }

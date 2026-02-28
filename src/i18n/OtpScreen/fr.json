@@ -1,0 +1,21 @@
+{
+  "title": "Vérifiez Votre Email",
+  "subtitle": "Nous avons envoyé un code de vérification à 6 chiffres à",
+  "verifyButton": "Vérifier",
+  "didntReceive": "Vous n'avez pas reçu le code?",
+  "resend": "Renvoyer",
+  "resendIn": "Renvoyer dans",
+  "resendSuccess": "Code Envoyé",
+  "resendSuccessMessage": "Un nouveau code de vérification a été envoyé à votre email.",
+  "errors": {
+    "incomplete": "Veuillez entrer le code complet à 6 chiffres",
+    "invalid": "Code OTP invalide. Veuillez réessayer.",
+    "expired": "Le code OTP a expiré. Veuillez en demander un nouveau.",
+    "tooManyAttempts": "Trop de tentatives. Veuillez réessayer plus tard."
+  },
+  "alerts": {
+    "noConnection": "Pas de Connexion Internet",
+    "noConnectionMessage": "Veuillez vérifier votre connexion Internet et réessayer.",
+    "genericErrorMessage": "Une erreur s'est produite. Veuillez réessayer plus tard."
+  }
+}

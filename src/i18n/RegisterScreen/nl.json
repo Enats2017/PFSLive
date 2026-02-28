@@ -1,18 +1,46 @@
 {
   "firstName": "Voornaam",
   "lastName": "Achternaam",
-  "email": "E-mail",
+  "email": "E-mailadres",
   "password": "Wachtwoord",
   "country": "Land",
   "city": "Stad",
   "dateOfBirth": "Geboortedatum",
-
+  "account": "Heeft u al een account?",
+  "loginNow": "Nu Inloggen",
   "Gender": {
-  "gender": "Geslacht",
-  "male": "Man",
-  "female": "Vrouw",
-  "other": "Anders"
-},
-  "termsAndConditions": "Algemene voorwaarden"
-
+    "gender": "Geslacht",
+    "male": "Man",
+    "female": "Vrouw",
+    "other": "Anders"
+  },
+  "termsAndConditions": "Ik ga akkoord met de Algemene Voorwaarden",
+  "uploadPhoto": "Profielfoto Uploaden",
+  "success": "Registratie Geslaagd",
+  "welcome": "Welkom, {{name}}!",
+  "errors": {
+    "firstnameRequired": "Voornaam moet minimaal 2 tekens bevatten",
+    "lastnameRequired": "Achternaam moet minimaal 2 tekens bevatten",
+    "emailInvalid": "Voer een geldig e-mailadres in",
+    "emailExists": "Dit e-mailadres is al geregistreerd",
+    "passwordShort": "Wachtwoord moet minimaal 4 tekens bevatten",
+    "passwordLong": "Wachtwoord moet korter zijn dan 20 tekens",
+    "countryRequired": "Selecteer een land",
+    "cityRequired": "Stad moet minimaal 2 tekens bevatten",
+    "dobRequired": "Selecteer uw geboortedatum",
+    "genderRequired": "Selecteer uw geslacht",
+    "termsRequired": "U moet akkoord gaan met de algemene voorwaarden",
+    "deviceAlreadyRegistered": "Dit apparaat is al gekoppeld aan een account. Log in."
+  },
+  "alerts": {
+    "email_exists": "Dit e-mailadres is al geregistreerd",
+    "permissionRequired": "Toestemming Vereist",
+    "galleryPermission": "Geef toegang tot uw galerij om een foto te uploaden.",
+    "deviceNotAllowed": "Apparaat Niet Toegestaan",
+    "deviceNotAllowedMessage": "Dit account is gekoppeld aan een ander apparaat. Neem contact op met support.",
+    "noConnection": "Geen Internetverbinding",
+    "noConnectionMessage": "Controleer uw internetverbinding en probeer het opnieuw.",
+    "genericError": "Fout",
+    "genericErrorMessage": "Er is iets misgegaan. Probeer het later opnieuw."
+  }
 }

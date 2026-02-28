@@ -1,0 +1,26 @@
+{
+  "title": "Bon Retour",
+  "subtitle": "Connectez-vous à votre compte pour continuer",
+  "email": "Adresse Email",
+  "password": "Mot de Passe",
+  "forgotPassword": "Mot de Passe Oublié?",
+  "loginButton": "Se Connecter",
+  "or": "OU",
+  "noAccount": "Vous n'avez pas de compte?",
+  "registerNow": "S'inscrire Maintenant",
+  "success": "Connexion Réussie",
+  "welcomeBack": "Bon retour!",
+  "errors": {
+    "emailInvalid": "Veuillez entrer une adresse email valide",
+    "passwordShort": "Le mot de passe doit contenir au moins 4 caractères",
+    "invalidCredentials": "Email ou mot de passe incorrect",
+    "accountNotFound": "Aucun compte trouvé avec cet email"
+  },
+  "alerts": {
+    "deviceNotAllowed": "Appareil Non Autorisé",
+    "deviceNotAllowedMessage": "Ce compte est lié à un autre appareil. Veuillez contacter le support.",
+    "noConnection": "Pas de Connexion Internet",
+    "noConnectionMessage": "Veuillez vérifier votre connexion Internet et réessayer.",
+    "genericErrorMessage": "Une erreur s'est produite. Veuillez réessayer plus tard."
+  }
+}

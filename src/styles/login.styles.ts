@@ -1,98 +1,118 @@
-import { colors, spacing, typography } from "./common.styles";
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from 'react-native';
+import { colors, spacing, typography } from './common.styles';
 
 export const loginStyles = StyleSheet.create({
+  // ✅ CONTAINER
   inner: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
   },
+
+  // ✅ HEADER
   headerSection: {
-    alignItems: "center",
-    marginBottom: 32,
+    alignItems: 'center',
+    marginBottom: spacing.xxxl,
   },
 
   cardscetion: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: spacing.lg,
-    marginBottom: 0, // ✅ Reduced from spacing.md to spacing.xs (12px → 4px)
+    marginBottom: spacing.sm,
     paddingHorizontal: spacing.md,
   },
-   logo: {
-    width: 80, // Smaller logo for side-by-side
+
+  logo: {
+    width: 80,
     height: 80,
-    marginRight: spacing.sm, // Space between logo and text (8px)
+    marginRight: spacing.sm,
   },
 
-   textSection: {
+  textSection: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-
 
   iconCircle: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "#fff5f0",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
     borderWidth: 2,
-    borderColor: "#ffe0d6",
+    borderColor: colors.primary + '30',
   },
+
   title: {
     fontSize: typography.sizes.xxxl,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 6,
+    fontWeight: typography.weights.bold,
+    color: colors.black,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
   },
+
   subtitle: {
-    fontSize: 14,
-    color: "#6b7280",
-    textAlign: "center",
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
+    textAlign: 'center',
   },
+
+  // ✅ FORM
   formSection: {
     flex: 1,
   },
+
   forgotButton: {
-    alignSelf: "flex-end",
-    marginTop: -4,
-    marginBottom: 20,
+    alignSelf: 'flex-end',
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.xs,
   },
+
   forgotText: {
-    fontSize: 13,
-    color: "#FF5722",
-    fontWeight: "500",
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    fontWeight: typography.weights.medium,
   },
+
+  // ✅ DIVIDER
   divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.xl,
   },
+
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: colors.gray200,
   },
+
   dividerText: {
-    marginHorizontal: 12,
-    fontSize: 13,
-    color: "#9ca3af",
-    fontWeight: "500",
+    marginHorizontal: spacing.md,
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
+    fontWeight: typography.weights.medium,
   },
+
+  // ✅ REGISTER LINK
   registerButton: {
-    alignItems: "center",
-    paddingVertical: 4,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.md,
   },
+
   registerText: {
-    fontSize: 14,
-    color: "#6b7280",
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
   },
+
   registerLink: {
-    color: "#FF5722",
-    fontWeight: "700",
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
   },
 });

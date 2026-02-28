@@ -1,99 +1,137 @@
-import { StyleSheet } from "react-native";
-import { colors, spacing, typography } from "./common.styles";
+import { StyleSheet, Platform } from 'react-native';
+import { colors, spacing, typography } from './common.styles';
 
 export const optStyles = StyleSheet.create({
+  // ✅ CONTAINER
   inner: {
     flexGrow: 1,
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.xl,
     paddingBottom: spacing.xxxl,
   },
+
+  // ✅ HEADER
   headerSection: {
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: spacing.xxxl,
   },
+
   iconCircle: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "#fff5f0",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: spacing.lg,
     borderWidth: 2,
-    borderColor: "#ffe0d6",
+    borderColor: colors.primary + '30',
   },
+
   title: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
-    color: "#111827",
+    color: colors.black,
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
+
   subtitle: {
-    fontSize: typography.sizes.lg,
-    color: "#6b7280",
-    textAlign: "center",
-    lineHeight: 20,
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: spacing.xs,
   },
+
   email: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: "#FF5722",
+    color: colors.primary,
     marginTop: spacing.sm,
+    textAlign: 'center',
   },
+
+  // ✅ OTP INPUT
   otpContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
+
   otpInput: {
-    width: 48,
+    flex: 1,
+    maxWidth: 52,
     height: 56,
     borderWidth: 1.5,
     borderRadius: 12,
-    borderColor: "#d1d5db",
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#111827",
-    backgroundColor: "#fff",
-    textAlign: "center",
+    borderColor: colors.gray300,
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold,
+    color: colors.black,
+    backgroundColor: colors.white,
+    textAlign: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
   },
+
   otpInputFilled: {
-    borderColor: "#FF5722",
-    backgroundColor: "#fff5f0",
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '10',
   },
+
   otpInputError: {
-    borderColor: "#ef4444",
-    backgroundColor: "#fff5f5",
+    borderColor: colors.error,
+    backgroundColor: colors.error + '10',
   },
+
+  // ✅ ERROR MESSAGE
   errorText: {
-    fontSize: 13,
-    color: "#ef4444",
-    textAlign: "center",
-    marginBottom: 16,
-    fontWeight: "500",
+    fontSize: typography.sizes.sm,
+    color: colors.error,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    fontWeight: typography.weights.medium,
   },
+
+  // ✅ VERIFY BUTTON
   verifyButton: {
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
   },
+
+  // ✅ RESEND SECTION
   resendContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexWrap: 'wrap',
   },
+
   resendLabel: {
     fontSize: typography.sizes.sm,
-    color: "#6b7280",
+    color: colors.gray600,
   },
+
   resendLink: {
     fontSize: typography.sizes.sm,
-    color:  colors.stationColor,
+    color: colors.primary,
     fontWeight: typography.weights.bold,
   },
+
   countdown: {
     fontSize: typography.sizes.sm,
-    color: "#9ca3af",
+    color: colors.gray500,
     fontWeight: typography.weights.semibold,
   },
 });
