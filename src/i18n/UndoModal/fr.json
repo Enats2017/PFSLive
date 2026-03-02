@@ -1,0 +1,8 @@
+{
+  "title": "Annuler l'Inscription?",
+  "message": "Êtes-vous sûr de vouloir annuler votre inscription à cet événement? Cette action vous retirera du suivi en direct.",
+  "buttons": {
+    "confirm": "Oui, Annuler l'Inscription",
+    "cancel": "Annuler"
+  }
+}

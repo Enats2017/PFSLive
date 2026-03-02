@@ -1,12 +1,18 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import { LinearGradient } from 'expo-linear-gradient';
 import { commonStyles, spacing, colors } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
-import { useTranslation } from 'react-i18next';
-import { useFocusEffect } from '@react-navigation/native';
 import SearchInput from '../../components/SearchInput';
-import { LinearGradient } from 'expo-linear-gradient';
 import { participantService, Participant } from '../../services/participantService';
 import { API_CONFIG } from '../../constants/config';
 
@@ -15,9 +21,9 @@ interface ParticipantTabProps {
 }
 
 const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
-
-
   const { t } = useTranslation(['details']);
+
+  // ✅ STATE
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -26,16 +32,98 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ REFS
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<any>(null);
   const onEndReachedCalledDuringMomentum = useRef(true);
 
+  // ✅ FETCH PARTICIPANTS
+  const fetchParticipants = useCallback(
+    async (pageNum: number, search: string) => {
+      try {
+        // Set loading states
+        if (pageNum === 1 && search.length === 0) {
+          setLoading(true);
+          setError(null);
+        } else if (pageNum > 1) {
+          setLoadingMore(true);
+        }
+
+        if (API_CONFIG.DEBUG) {
+          console.log(`📡 Fetching participants page ${pageNum}`, {
+            search: search || '(none)',
+            product_app_id,
+          });
+        }
+
+        const result = await participantService.getParticipants(
+          product_app_id,
+          pageNum,
+          search
+        );
+
+        setParticipants((prev) => {
+          if (pageNum === 1) {
+            // First page - replace all
+            return result.participants;
+          } else {
+            // Subsequent pages - deduplicate and append
+            const existingIds = new Set(
+              prev.map((p) => participantService.getParticipantId(p))
+            );
+
+            const newItems = result.participants.filter((p) => {
+              const participantId = participantService.getParticipantId(p);
+              return !existingIds.has(participantId);
+            });
+
+            if (API_CONFIG.DEBUG) {
+              console.log(
+                `✅ Added ${newItems.length} new participants (Total: ${
+                  prev.length + newItems.length
+                })`
+              );
+              console.log(
+                `📊 Deduplication: checked ${result.participants.length}, added ${newItems.length}`
+              );
+            }
+
+            return [...prev, ...newItems];
+          }
+        });
+
+        setPage(pageNum);
+        setTotalPages(result.pagination.total_pages);
+
+        if (API_CONFIG.DEBUG) {
+          console.log(
+            `📄 Page ${pageNum}/${result.pagination.total_pages} | Total: ${result.pagination.total}`
+          );
+        }
+      } catch (error: any) {
+        if (API_CONFIG.DEBUG) {
+          console.error('❌ Error fetching participants:', error.message);
+        }
+
+        if (pageNum === 1) {
+          setError(error.message || t('details:error.title'));
+        }
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [product_app_id, t]
+  );
+
+  // ✅ INITIAL LOAD ON FOCUS
   useFocusEffect(
     useCallback(() => {
       fetchParticipants(1, '');
-    }, [product_app_id])
+    }, [fetchParticipants])
   );
 
+  // ✅ DEBOUNCED SEARCH
   React.useEffect(() => {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
@@ -50,74 +138,14 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         clearTimeout(debounceTimer.current);
       }
     };
-  }, [searchText]);
+  }, [searchText, fetchParticipants]);
 
-  const fetchParticipants = async (pageNum: number, search: string) => {
-    try {
-      if (pageNum === 1 && search.length === 0) {
-        setLoading(true);
-        setError(null);
-      } else if (pageNum > 1) {
-        setLoadingMore(true);
-      }
-
-      if (API_CONFIG.DEBUG) {
-        console.log(`📡 Fetching participants page ${pageNum}`);
-      }
-
-      const result = await participantService.getParticipants(
-        product_app_id,
-        pageNum,
-        search
-      );
-
-      setParticipants(prev => {
-        if (pageNum === 1) {
-          return result.participants;
-        } else {
-          // ✅ SMART DEDUPLICATION: Use source-aware logic
-          const existingIds = new Set(
-            prev.map(p => participantService.getParticipantId(p))
-          );
-          
-          const newItems = result.participants.filter(p => {
-            const participantId = participantService.getParticipantId(p);
-            return !existingIds.has(participantId);
-          });
-          
-          if (API_CONFIG.DEBUG) {
-            console.log(`✅ Added ${newItems.length} new participants (Total: ${prev.length + newItems.length})`);
-            console.log(`📊 Deduplication: checked ${result.participants.length}, added ${newItems.length}`);
-          }
-          
-          return [...prev, ...newItems];
-        }
-      });
-
-      setPage(pageNum);
-      setTotalPages(result.pagination.total_pages);
-
-      if (API_CONFIG.DEBUG) {
-        console.log(`📄 Page ${pageNum}/${result.pagination.total_pages} | Total: ${result.pagination.total}`);
-      }
-    } catch (error: any) {
-      if (API_CONFIG.DEBUG) {
-        console.error('❌ Error fetching participants:', error.message);
-      }
-      
-      if (pageNum === 1) {
-        setError(error.message || t('details:error.title'));
-      }
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  };
-
-  const hasMorePages = (): boolean => {
+  // ✅ CHECK IF MORE PAGES AVAILABLE
+  const hasMorePages = useCallback((): boolean => {
     return page < totalPages;
-  };
+  }, [page, totalPages]);
 
+  // ✅ LOAD MORE HANDLER
   const handleLoadMore = useCallback(() => {
     if (API_CONFIG.DEBUG) {
       console.log('🔄 onEndReached fired', {
@@ -125,7 +153,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         hasMore: hasMorePages(),
         loading: loadingMore,
         currentPage: page,
-        totalPages: totalPages
+        totalPages: totalPages,
       });
     }
 
@@ -151,70 +179,119 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     }
 
     fetchParticipants(page + 1, searchText);
-  }, [page, totalPages, loadingMore, searchText]);
+  }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
-  const renderParticipant = useCallback(({ item, index }: { item: Participant; index: number }) => {
-    const fullName = `${item.firstname ?? ''} ${item.lastname ?? ''}`.trim().toUpperCase() || t('details:participant.unknownName');
-    const hasBibNumber = item.bib_number && item.bib_number.trim() !== '';
-    const isLiveTracking = item.live_tracking_activated === 1;
+  // ✅ RENDER PARTICIPANT ITEM
+  const renderParticipant = useCallback(
+    ({ item }: { item: Participant }) => {
+      const fullName =
+        `${item.firstname ?? ''} ${item.lastname ?? ''}`.trim().toUpperCase() ||
+        t('details:participant.unknownName');
+      const hasBibNumber = item.bib_number && item.bib_number.trim() !== '';
+      const isLiveTracking = item.live_tracking_activated === 1;
 
-    return (
-      <View style={[commonStyles.card, { padding: 0, overflow: 'hidden', marginBottom: spacing.lg }]}>
-        <View style={detailsStyles.topRow}>
-          <View style={detailsStyles.avatar}>
-            <Ionicons
-              name="person-circle-outline"
-              size={55}
-              color="#9ca3af"
-              style={detailsStyles.logo}
+      return (
+        <View
+          style={[
+            commonStyles.card,
+            { padding: 0, overflow: 'hidden', marginBottom: spacing.lg },
+          ]}
+        >
+          <View style={detailsStyles.topRow}>
+            <View style={detailsStyles.avatar}>
+              <Ionicons
+                name="person-circle-outline"
+                size={55}
+                color="#9ca3af"
+                style={detailsStyles.logo}
+              />
+            </View>
+            <LinearGradient
+              colors={['#e8341a', '#f4a100', '#1a73e8']}
+              start={{ x: 0, y: 1 }}
+              end={{ x: 1, y: 0 }}
+              style={detailsStyles.divider}
             />
-          </View>
-          <LinearGradient
-            colors={['#e8341a', '#f4a100', '#1a73e8']}
-            start={{ x: 0, y: 1 }}
-            end={{ x: 1, y: 0 }}
-            style={detailsStyles.divider}
-          />
-          <View style={detailsStyles.info}>
-            <Text style={commonStyles.title}>{fullName}</Text>
-            <Text style={commonStyles.text}>{item.city} | {item.country}</Text>
-            <Text style={commonStyles.subtitle}>{item.race_distance}</Text>
-            {hasBibNumber && (
-              <Text style={[commonStyles.subtitle, { color: colors.primary, fontWeight: '600' }]}>
-                {t('details:tracking.bib')}: {item.bib_number}
+            <View style={detailsStyles.info}>
+              <Text style={commonStyles.title}>{fullName}</Text>
+              <Text style={commonStyles.text}>
+                {item.city} | {item.country}
               </Text>
-            )}
+              <Text style={commonStyles.subtitle}>{item.race_distance}</Text>
+              {hasBibNumber && (
+                <Text
+                  style={[
+                    commonStyles.subtitle,
+                    { color: colors.primary, fontWeight: '600' },
+                  ]}
+                >
+                  {t('details:tracking.bib')}: {item.bib_number}
+                </Text>
+              )}
+            </View>
           </View>
-        </View>
 
-        {isLiveTracking && (
-          <View style={detailsStyles.liveTrackingBadge}>
-            <Ionicons name="radio" size={14} color={colors.success} />
-            <Text style={detailsStyles.liveTrackingText}>
-              {t('details:tracking.live')}
+          {isLiveTracking && (
+            <View style={detailsStyles.liveTrackingBadge}>
+              <Ionicons name="radio" size={14} color={colors.success} />
+              <Text style={detailsStyles.liveTrackingText}>
+                {t('details:tracking.live')}
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[commonStyles.primaryButton, { borderRadius: 0 }]}
+            activeOpacity={0.8}
+          >
+            <Text style={commonStyles.primaryButtonText}>
+              {t('details:participant.favorite')}
             </Text>
-          </View>
-        )}
+          </TouchableOpacity>
+        </View>
+      );
+    },
+    [t]
+  );
 
-        <TouchableOpacity style={commonStyles.primaryButton}>
-          <Text style={commonStyles.primaryButtonText}>
-            {t('details:participant.favorite')}
+  // ✅ RENDER FOOTER
+  const renderFooter = useCallback(() => {
+    if (loadingMore) {
+      return (
+        <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
+            Loading more... ({page}/{totalPages})
           </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }, [t]);
+        </View>
+      );
+    }
 
+    if (hasMorePages() && participants.length > 0) {
+      return (
+        <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
+          <Text style={{ color: colors.gray500 }}>
+            Scroll for more ({participants.length} loaded)
+          </Text>
+        </View>
+      );
+    }
+
+    return null;
+  }, [loadingMore, page, totalPages, hasMorePages, participants.length]);
+
+  // ✅ LOADING STATE (INITIAL)
   if (loading && searchText.length === 0) {
     return (
       <ActivityIndicator
         size="large"
-        color="#FF5722"
+        color={colors.primary}
         style={{ marginTop: 40 }}
       />
     );
   }
 
+  // ✅ ERROR STATE (INITIAL)
   if (error && searchText.length === 0) {
     return (
       <View style={commonStyles.centerContainer}>
@@ -222,6 +299,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         <TouchableOpacity
           style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
           onPress={() => fetchParticipants(1, searchText)}
+          activeOpacity={0.8}
         >
           <Text style={commonStyles.primaryButtonText}>
             {t('details:error.retry')}
@@ -231,8 +309,10 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     );
   }
 
+  // ✅ MAIN RENDER
   return (
     <>
+      {/* Search Input */}
       <View style={{ paddingHorizontal: spacing.lg }}>
         <SearchInput
           ref={searchInputRef}
@@ -243,57 +323,47 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         />
       </View>
 
+      {/* Search Loading */}
       {loading && searchText.length > 0 && (
         <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color="#FF5722" />
+          <ActivityIndicator size="small" color={colors.primary} />
           <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
             {t('details:participant.searching')}
           </Text>
         </View>
       )}
 
+      {/* Empty State */}
       {!loading && participants.length === 0 ? (
         <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
           <Text style={commonStyles.errorText}>
             {searchText
               ? `${t('details:participant.noResults')} "${searchText}"`
-              : t('details:participant.empty')
-            }
+              : t('details:participant.empty')}
           </Text>
         </View>
       ) : (
+        /* Participant List */
         <FlatList
           data={participants}
-          keyExtractor={(item, index) => `${participantService.getParticipantId(item)}-${index}`}
+          keyExtractor={(item, index) =>
+            `${participantService.getParticipantId(item)}-${index}`
+          }
           renderItem={renderParticipant}
           showsVerticalScrollIndicator={false}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.3}
           onMomentumScrollBegin={() => {
             onEndReachedCalledDuringMomentum.current = false;
-            if (API_CONFIG.DEBUG) console.log('🔄 Scroll momentum began - flag reset');
+            if (API_CONFIG.DEBUG)
+              console.log('🔄 Scroll momentum began - flag reset');
           }}
-          contentContainerStyle={{ 
+          contentContainerStyle={{
             paddingHorizontal: spacing.lg,
-            paddingBottom: spacing.xxxl 
+            paddingBottom: spacing.xxxl,
           }}
           keyboardShouldPersistTaps="handled"
-          ListFooterComponent={
-            loadingMore ? (
-              <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-                <ActivityIndicator size="small" color="#FF5722" />
-                <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
-                  Loading more... ({page}/{totalPages})
-                </Text>
-              </View>
-            ) : hasMorePages() && participants.length > 0 ? (
-              <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-                <Text style={{ color: colors.gray500 }}>
-                  Scroll for more ({participants.length} loaded)
-                </Text>
-              </View>
-            ) : null
-          }
+          ListFooterComponent={renderFooter}
         />
       )}
     </>

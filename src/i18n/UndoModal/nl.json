@@ -1,0 +1,8 @@
+{
+  "title": "Registratie Ongedaan Maken?",
+  "message": "Weet u zeker dat u uw registratie voor dit evenement ongedaan wilt maken? Deze actie verwijdert u van live tracking.",
+  "buttons": {
+    "confirm": "Ja, Registratie Ongedaan Maken",
+    "cancel": "Annuleren"
+  }
+}

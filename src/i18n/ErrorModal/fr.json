@@ -1,0 +1,7 @@
+{
+  "defaultTitle": "Erreur",
+  "buttons": {
+    "retry": "Réessayer",
+    "close": "Fermer"
+  }
+}

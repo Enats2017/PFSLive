@@ -1,0 +1,21 @@
+{
+  "defaultEventName": "Evenement",
+  "subtitle": "Selecteer uw profiel uit de onderstaande deelnemers om u te registreren",
+  "button": "DIT BEN IK",
+  "loadingMore": "Meer laden... ({{page}}/{{totalPages}})",
+  "scrollForMore": "Scroll voor meer ({{count}} geladen)",
+  "error": {
+    "missingParamsTitle": "Ontbrekende Informatie",
+    "missingParamsMessage": "Kan deelnemers niet laden. Vereiste informatie ontbreekt. Probeer het opnieuw vanaf de evenementdetailpagina.",
+    "missingDataTitle": "Ontbrekende Gegevens",
+    "missingDataMessage": "Registratiegegevens zijn onvolledig. Probeer het opnieuw.",
+    "noBibNumberTitle": "Geen Startnummer",
+    "noBibNumberMessage": "Deze deelnemer heeft geen startnummer en kan niet worden geregistreerd.",
+    "registrationFailedTitle": "Registratie Mislukt",
+    "registrationFailedMessage": "Kan niet registreren. Probeer het opnieuw of neem contact op met support.",
+    "invalidDataTitle": "Ongeldige Gegevens",
+    "invalidDataMessage": "Bevestigingsgegevens ontbreken. Probeer het opnieuw.",
+    "confirmationFailedTitle": "Bevestiging Mislukt",
+    "confirmationFailedMessage": "Kan registratie niet bevestigen. Probeer het opnieuw."
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "defaultEventName": "Événement",
+  "subtitle": "Sélectionnez votre profil parmi les participants ci-dessous pour vous inscrire",
+  "button": "C'EST MOI",
+  "loadingMore": "Chargement... ({{page}}/{{totalPages}})",
+  "scrollForMore": "Faites défiler pour plus ({{count}} chargés)",
+  "error": {
+    "missingParamsTitle": "Informations Manquantes",
+    "missingParamsMessage": "Impossible de charger les participants. Des informations requises sont manquantes. Veuillez réessayer depuis la page des détails de l'événement.",
+    "missingDataTitle": "Données Manquantes",
+    "missingDataMessage": "Les données d'inscription sont incomplètes. Veuillez réessayer.",
+    "noBibNumberTitle": "Pas de Numéro de Dossard",
+    "noBibNumberMessage": "Ce participant n'a pas de numéro de dossard et ne peut pas être inscrit.",
+    "registrationFailedTitle": "Échec de l'Inscription",
+    "registrationFailedMessage": "Impossible de s'inscrire. Veuillez réessayer ou contacter le support.",
+    "invalidDataTitle": "Données Invalides",
+    "invalidDataMessage": "Données de confirmation manquantes. Veuillez réessayer.",
+    "confirmationFailedTitle": "Échec de la Confirmation",
+    "confirmationFailedMessage": "Impossible de confirmer l'inscription. Veuillez réessayer."
+  }
+}

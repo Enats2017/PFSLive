@@ -3,29 +3,70 @@ import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
 
-
-// Import translations
+// ✅ COMMON TRANSLATIONS
 import commonEN from './common/en.json';
 import commonFR from './common/fr.json';
 import commonNL from './common/nl.json';
+
+// ✅ HOME SCREEN
 import homeEN from './HomeScreen/en.json';
-import eventEn from "./ParticipantEvent/en.json";
-import eventNL from "./ParticipantEvent/nl.json";
-import eventFR from "./ParticipantEvent/fr.json";
 import homeFR from './HomeScreen/fr.json';
 import homeNL from './HomeScreen/nl.json';
+
+// ✅ ROUTE SCREEN
 import routeEN from './RouteScreen/en.json';
 import routeFR from './RouteScreen/fr.json';
 import routeNL from './RouteScreen/nl.json';
-import  detailsEN from "./EventDetails/en.json";
-import  detailsFR from "./EventDetails/fr.json";
-import  detailsNL from "./EventDetails/nl.json";
-import  RegisterEN from "./RegisterScreen/en.json"; 
-import  RegisterFR from "./RegisterScreen/fr.json";
-import  RegisterNL from "./RegisterScreen/nl.json";
-import LoginEN from "./LoginScreen/en.json";
-import OtpEN from "./OtpScreen/en.json";
-import PersonalEventEN from "./PersonalEvent/en.json";
+
+// ✅ PARTICIPANT EVENT
+import eventEN from './ParticipantEvent/en.json';
+import eventFR from './ParticipantEvent/fr.json';
+import eventNL from './ParticipantEvent/nl.json';
+
+// ✅ PERSONAL EVENT
+import personalEventEN from './PersonalEvent/en.json';
+import personalEventFR from './PersonalEvent/fr.json';
+import personalEventNL from './PersonalEvent/nl.json';
+
+// ✅ EVENT DETAILS
+import detailsEN from './EventDetails/en.json';
+import detailsFR from './EventDetails/fr.json';
+import detailsNL from './EventDetails/nl.json';
+
+// ✅ PARTICIPANT RESULT
+import participantResultEN from './ParticipantResult/en.json';
+import participantResultFR from './ParticipantResult/fr.json';
+import participantResultNL from './ParticipantResult/nl.json';
+
+// ✅ REGISTER SCREEN
+import registerEN from './RegisterScreen/en.json';
+import registerFR from './RegisterScreen/fr.json';
+import registerNL from './RegisterScreen/nl.json';
+
+// ✅ LOGIN SCREEN
+import loginEN from './LoginScreen/en.json';
+import loginFR from './LoginScreen/fr.json';
+import loginNL from './LoginScreen/nl.json';
+
+// ✅ OTP SCREEN
+import otpEN from './OtpScreen/en.json';
+import otpFR from './OtpScreen/fr.json';
+import otpNL from './OtpScreen/nl.json';
+
+// ✅ CONFIRM RACE RESULT MODAL
+import confirmModalEN from './ConfirmModal/en.json';
+import confirmModalFR from './ConfirmModal/fr.json';
+import confirmModalNL from './ConfirmModal/nl.json';
+
+// ✅ UNDO CONFIRM MODAL
+import undoModalEN from './UndoModal/en.json';
+import undoModalFR from './UndoModal/fr.json';
+import undoModalNL from './UndoModal/nl.json';
+
+// ✅ ERROR MODAL
+import errorModalEN from './ErrorModal/en.json';
+import errorModalFR from './ErrorModal/fr.json';
+import errorModalNL from './ErrorModal/nl.json';
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
@@ -42,39 +83,31 @@ export type LanguageCode = keyof typeof LANGUAGES;
  */
 const getDeviceLanguage = (): LanguageCode => {
   try {
-    // Try to get device locale using multiple methods
     let deviceLocale = Localization.locale;
-    
-    // Fallback methods if locale is undefined
+
     if (!deviceLocale) {
-      // Try getLocales array (newer API)
       const locales = Localization.getLocales();
       if (locales && locales.length > 0) {
         deviceLocale = locales[0].languageCode || 'en';
       }
     }
-    
-    // If still undefined, use default
+
     if (!deviceLocale) {
       console.warn('⚠️ Could not detect device locale, using English');
       return 'en';
     }
-    
+
     console.log('📱 Device locale:', deviceLocale);
-    
-    // Extract language code (first 2 letters)
-    // Handle both "en-US" format and "en" format
+
     const languageCode = String(deviceLocale).split('-')[0].toLowerCase();
-    
+
     console.log('📱 Device language code:', languageCode);
-    
-    // Check if device language is supported
+
     if (languageCode === 'en' || languageCode === 'fr' || languageCode === 'nl') {
       console.log('✅ Device language is supported:', languageCode);
       return languageCode as LanguageCode;
     }
-    
-    // Fallback to English if not supported
+
     console.log('⚠️ Device language not supported, using English');
     return 'en';
   } catch (error) {
@@ -100,21 +133,18 @@ export const saveLanguage = async (language: LanguageCode) => {
  */
 export const loadLanguage = async (): Promise<LanguageCode> => {
   try {
-    // Check if language is stored
     const saved = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-    
+
     if (saved && (saved === 'en' || saved === 'fr' || saved === 'nl')) {
       console.log('✅ Loaded language from storage:', saved);
       return saved as LanguageCode;
     }
-    
-    // No stored language, use device language
+
     console.log('ℹ️ No stored language, detecting device language...');
     const deviceLanguage = getDeviceLanguage();
-    
-    // Save device language for next time
+
     await saveLanguage(deviceLanguage);
-    
+
     return deviceLanguage;
   } catch (error) {
     console.error('❌ Error loading language:', error);
@@ -122,14 +152,8 @@ export const loadLanguage = async (): Promise<LanguageCode> => {
   }
 };
 
-// ✅ ========================================
-// ✅ NEW HELPER FUNCTIONS - ADD HERE
-// ✅ ========================================
-
 /**
  * Get language ID from language code
- * @param languageCode - The language code (en, fr, nl)
- * @returns The language ID (1, 2, 3) or null if not found
  */
 export const getLanguageId = (languageCode: string): number | null => {
   const code = languageCode as LanguageCode;
@@ -138,17 +162,14 @@ export const getLanguageId = (languageCode: string): number | null => {
 
 /**
  * Get current language ID from i18n
- * @returns The current language ID (1, 2, or 3)
  */
 export const getCurrentLanguageId = (): number => {
   const currentLanguage = i18n.language as LanguageCode;
-  return LANGUAGES[currentLanguage]?.id ?? LANGUAGES.en.id; // Default to English (1)
+  return LANGUAGES[currentLanguage]?.id ?? LANGUAGES.en.id;
 };
 
 /**
  * Get language code from language ID
- * @param id - The language ID (1, 2, 3)
- * @returns The language code (en, fr, nl) or null if not found
  */
 export const getLanguageCodeFromId = (id: number): LanguageCode | null => {
   const entry = Object.entries(LANGUAGES).find(([_, lang]) => lang.id === id);
@@ -157,24 +178,17 @@ export const getLanguageCodeFromId = (id: number): LanguageCode | null => {
 
 /**
  * Get current language code from i18n
- * @returns The current language code (en, fr, nl)
  */
 export const getCurrentLanguageCode = (): LanguageCode => {
   const currentLanguage = i18n.language as LanguageCode;
-  // Validate it's a supported language
   if (currentLanguage === 'en' || currentLanguage === 'fr' || currentLanguage === 'nl') {
     return currentLanguage;
   }
-  return 'en'; // Fallback
+  return 'en';
 };
-
-// ✅ ========================================
-// ✅ END OF NEW HELPER FUNCTIONS
-// ✅ ========================================
 
 /**
  * Get initial language for i18n initialization
- * This runs synchronously at module load time
  */
 const getInitialLanguage = (): LanguageCode => {
   try {
@@ -185,7 +199,6 @@ const getInitialLanguage = (): LanguageCode => {
   }
 };
 
-// Initialize i18n synchronously with device language as default
 const initialLanguage = getInitialLanguage();
 
 i18n.use(initReactI18next).init({
@@ -194,35 +207,67 @@ i18n.use(initReactI18next).init({
     en: {
       common: commonEN,
       home: homeEN,
-      event: eventEn,
       route: routeEN,
+      event: eventEN,
+      personal: personalEventEN,
       details: detailsEN,
-      register:RegisterEN,
-      login:LoginEN,
-      otp:OtpEN,
-      personal:PersonalEventEN
+      participantResult: participantResultEN,
+      register: registerEN,
+      login: loginEN,
+      otp: otpEN,
+      confirmModal: confirmModalEN,
+      undoModal: undoModalEN,
+      errorModal: errorModalEN,
     },
     fr: {
       common: commonFR,
       home: homeFR,
-      event: eventNL,
       route: routeFR,
+      event: eventFR,
+      personal: personalEventFR,
       details: detailsFR,
-      register:RegisterFR,
+      participantResult: participantResultFR,
+      register: registerFR,
+      login: loginFR,
+      otp: otpFR,
+      confirmModal: confirmModalFR,
+      undoModal: undoModalFR,
+      errorModal: errorModalFR,
     },
     nl: {
       common: commonNL,
       home: homeNL,
-      event: eventNL,
       route: routeNL,
+      event: eventNL,
+      personal: personalEventNL,
       details: detailsNL,
-      register:RegisterNL,
+      participantResult: participantResultNL,
+      register: registerNL,
+      login: loginNL,
+      otp: otpNL,
+      confirmModal: confirmModalNL,
+      undoModal: undoModalNL,
+      errorModal: errorModalNL,
     },
   },
   lng: initialLanguage,
   fallbackLng: 'en',
   defaultNS: 'common',
-  ns: ['common', 'home', 'route'],
+  ns: [
+    'common',
+    'home',
+    'route',
+    'event',
+    'personal',
+    'details',
+    'participantResult',
+    'register',
+    'login',
+    'otp',
+    'confirmModal',
+    'undoModal',
+    'errorModal',
+  ],
   interpolation: {
     escapeValue: false,
   },

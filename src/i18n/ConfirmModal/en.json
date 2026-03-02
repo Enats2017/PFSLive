@@ -1,0 +1,28 @@
+{
+  "title": "Confirm Registration",
+  "subtitle": "We found your details in the race result. Please confirm your information below.",
+  "fields": {
+    "bibNumber": "Bib Number",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "dob": "Date of Birth",
+    "gender": "Gender",
+    "city": "City",
+    "country": "Country",
+    "nation": "Nation",
+    "distance": "Distance",
+    "email": "Email"
+  },
+  "buttons": {
+    "confirm": "Confirm & Register",
+    "cancel": "Cancel"
+  },
+  "error": {
+    "invalidDataTitle": "Invalid Data",
+    "invalidDataMessage": "Missing confirmation data. Please close and try registering again.",
+    "registrationFailedTitle": "Registration Failed",
+    "registrationFailedMessage": "Unable to complete registration. Please try again.",
+    "confirmationFailedTitle": "Confirmation Failed",
+    "confirmationFailedMessage": "Unable to confirm registration. Please try again."
+  }
+}
