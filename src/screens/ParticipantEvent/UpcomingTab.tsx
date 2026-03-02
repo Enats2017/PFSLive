@@ -5,6 +5,9 @@ import { commonStyles, spacing } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import { useTranslation } from 'react-i18next';
 import { formatEventDate } from '../../utils/dateFormatter';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import { RootStackParamList } from '../../types/navigation';
 
 interface UpcomingTabProps {
     events: EventItem[];
@@ -14,6 +17,7 @@ interface UpcomingTabProps {
 }
 
 const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { t } = useTranslation(['event', 'common']);
     const onEndReachedCalledDuringMomentum = useRef(false);
     
@@ -72,7 +76,11 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                             {formatEventDate(item.race_date, t)}
                         </Text>
                     </View>
-                    <TouchableOpacity style={commonStyles.primaryButton}>
+                    <TouchableOpacity style={commonStyles.primaryButton}  onPress={() => navigation.navigate('EventDetails', {
+                            product_app_id: item.product_app_id,
+                            event_name: item.name,
+                            auto_register_id: null  
+                        })}>
                         <Text style={commonStyles.primaryButtonText}>
                             {t('event:official.button')}
                         </Text>

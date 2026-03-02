@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -31,6 +31,8 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     const [liveEvents, setLiveEvents] = useState<EventItem[]>([]);
     const [upcomingEvents, setUpcomingEvents] = useState<EventItem[]>([]);
     const flatListRef = useRef<FlatList>(null);
+    const [pastSearch, setPastSearch] = useState('');
+    const [searchLoading, setSearchLoading] = useState(false);
 
     // ✅ Separate loading state for each tab
     const [loadingMorePast, setLoadingMorePast] = useState(false);
@@ -49,15 +51,27 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         return paginationInfo[key].page < paginationInfo[key].total_pages;
     };
 
+    const isInitialMount = useRef(true);
     useFocusEffect(
         useCallback(() => {
             fetchEvents();
         }, [])
     );
 
-    const fetchEvents = async () => {
+
+
+    const fetchEvents = async (search = '', isSearch = false) => {
         try {
-            setLoading(true);
+            if (isSearch) {
+                setSearchLoading(true);
+                // ✅ Don't setLoading(true) - keeps existing data visible
+            } else {
+                setLoading(true);
+                // ✅ Only clear events on initial load, not search
+                setPastEvents([]);
+                setLiveEvents([]);
+                setUpcomingEvents([]);
+            }
             setError(null);
 
             if (API_CONFIG.DEBUG) {
@@ -67,8 +81,10 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             const result = await eventService.getEvents({
                 page_past: 1,
                 page_live: 1,
-                page_upcoming: 1
+                page_upcoming: 1,
+                filter_name_past: search,
             });
+
 
             setPastEvents(result.tabs.past);
             setLiveEvents(result.tabs.live);
@@ -106,6 +122,19 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         }
     };
 
+    useEffect(() => {
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
+        const delay = setTimeout(() => {
+            fetchEvents(pastSearch, true); // 👈 pass isSearch = true
+        }, 500);
+
+        return () => clearTimeout(delay);
+    }, [pastSearch]);
+
     const loadMorePast = useCallback(async () => {
         const key = 'past';
 
@@ -128,7 +157,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 console.log(`Past: Loading page ${nextPage}/${paginationInfo[key].total_pages}`);
             }
 
-            const result = await eventService.getEvents({ page_past: nextPage });
+            const result = await eventService.getEvents({ page_past: nextPage, filter_name_past: pastSearch, });
 
             setPastEvents(prev => {
                 const existingIds = new Set(prev.map(e => e.product_app_id));
@@ -151,7 +180,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         } finally {
             setLoadingMorePast(false);
         }
-    }, [loadingMorePast, paginationInfo]);
+    }, [loadingMorePast, paginationInfo, pastSearch]);
 
     const loadMoreLive = useCallback(async () => {
         const key = 'live';
@@ -262,7 +291,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                     <Text style={commonStyles.errorText}>{error}</Text>
                     <TouchableOpacity
                         style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-                        onPress={fetchEvents}
+                        onPress={() => fetchEvents(pastSearch)}
                     >
                         <Text style={commonStyles.primaryButtonText}>
                             {t('event:error.retry')}
@@ -279,6 +308,9 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                     onLoadMore={loadMorePast}
                     loadingMore={loadingMorePast}
                     hasMore={hasMorePages('Past')}
+                    searchText={pastSearch}           // 👈 add this
+                    onSearchChange={setPastSearch}
+                    searchLoading={searchLoading}
                 />;
             case 'Live':
                 return <LiveTab
