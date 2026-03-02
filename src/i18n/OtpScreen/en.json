@@ -7,15 +7,27 @@
   "resendIn": "Resend in",
   "resendSuccess": "Code Sent",
   "resendSuccessMessage": "A new verification code has been sent to your email.",
+  "success": {
+    "title": "Verification Successful",
+    "message": "Your email has been verified successfully!"
+  },
   "errors": {
     "incomplete": "Please enter the complete 6-digit code",
-    "invalid": "Invalid OTP code. Please try again.",
-    "expired": "OTP has expired. Please request a new one.",
-    "tooManyAttempts": "Too many attempts. Please try again later."
-  },
-  "alerts": {
-    "noConnection": "No Internet Connection",
-    "noConnectionMessage": "Please check your internet connection and try again.",
-    "genericErrorMessage": "Something went wrong. Please try again later."
+    "invalidTitle": "Invalid Code",
+    "invalid": "The code you entered is incorrect. Please try again.",
+    "expiredTitle": "Code Expired",
+    "expired": "This verification code has expired. Please request a new one.",
+    "tooManyAttemptsTitle": "Too Many Attempts",
+    "tooManyAttempts": "You've exceeded the maximum number of attempts. Please try again later or request a new code.",
+    "tokenInvalidTitle": "Invalid Verification Link",
+    "tokenInvalid": "This verification link is invalid or has expired. Please register again.",
+    "alreadyVerifiedTitle": "Already Verified",
+    "alreadyVerified": "This email has already been verified. Redirecting to login...",
+    "tokenFailedTitle": "Verification Failed",
+    "tokenFailed": "Unable to complete verification. Please try again or contact support.",
+    "noConnectionTitle": "No Internet Connection",
+    "noConnection": "Please check your internet connection and try again.",
+    "genericErrorTitle": "Error",
+    "genericError": "Something went wrong. Please try again later."
   }
 }

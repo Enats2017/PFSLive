@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StatusBar,
-  Alert,
   ActivityIndicator,
   TextInput,
   KeyboardAvoidingView,
@@ -14,19 +13,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { AppHeader } from '../components/common/AppHeader'; // ✅ FIXED
-import { commonStyles } from '../styles/common.styles'; // ✅ FIXED
-import { optStyles } from '../styles/OtpScreen.styles'; // ✅ FIXED
-import { OTPVerificationScreenProps } from '../types/navigation'; // ✅ FIXED
-import { tokenService } from '../services/tokenService'; // ✅ FIXED
-import { otpService } from '../services/otpService'; // ✅ FIXED
-import { toastError } from '../../utils/toast'; // ✅ CORRECT (one level up)
-import { usePendingRegistration } from '../hooks/usePendingRegistration'; // ✅ FIXED
-import { API_CONFIG } from '../constants/config'; // ✅ FIXED
+import Toast from 'react-native-toast-message';
+import { AppHeader } from '../components/common/AppHeader';
+import { commonStyles } from '../styles/common.styles';
+import { optStyles } from '../styles/OtpScreen.styles';
+import { OTPVerificationScreenProps } from '../types/navigation';
+import { tokenService } from '../services/tokenService';
+import { otpService } from '../services/otpService';
+import { toastSuccess } from '../../utils/toast';
+import { usePendingRegistration } from '../hooks/usePendingRegistration';
+import { API_CONFIG } from '../constants/config';
 
-// ... rest of the component code remains the same
-
-// ✅ CONSTANTS
 const OTP_LENGTH = 6;
 const INITIAL_COUNTDOWN = 60;
 
@@ -37,10 +34,8 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
   const { t } = useTranslation(['otp', 'common']);
   const { email, verification_token } = route.params;
 
-  // ✅ HOOKS
   const { handleAfterAuth } = usePendingRegistration(navigation);
 
-  // ✅ STATE
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -49,6 +44,17 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
   const [error, setError] = useState('');
 
   const inputRefs = useRef<TextInput[]>([]);
+
+  // ✅ CUSTOM TOAST ERROR (LOCAL TO THIS SCREEN)
+  const showErrorToast = useCallback((title: string, message: string) => {
+    Toast.show({
+      type: "error",
+      text1: title,
+      text2: message,
+      position: "top",
+      visibilityTime: 4000,
+    });
+  }, []);
 
   // ✅ COUNTDOWN TIMER
   useEffect(() => {
@@ -96,32 +102,6 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
     [otp]
   );
 
-  // ✅ HANDLE ERROR RESPONSE
-  const handleErrorResponse = useCallback(
-    (error: any) => {
-      const data = error.response?.data;
-
-      if (data?.error === 'otp_invalid') {
-        setError(t('otp:errors.invalid'));
-      } else if (data?.error === 'otp_expired') {
-        setError(t('otp:errors.expired'));
-      } else if (data?.error === 'otp_too_many_attempts') {
-        setError(t('otp:errors.tooManyAttempts'));
-      } else if (error.request) {
-        toastError(
-          t('otp:alerts.noConnection'),
-          t('otp:alerts.noConnectionMessage')
-        );
-      } else {
-        toastError(
-          t('common:errors.generic'),
-          t('otp:alerts.genericErrorMessage')
-        );
-      }
-    },
-    [t]
-  );
-
   // ✅ VERIFY OTP
   const handleVerify = useCallback(
     async (otpCode?: string) => {
@@ -141,6 +121,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
           otp: code,
         });
 
+        // ✅ HANDLE SUCCESS
         if (data.success && data.data?.token) {
           await tokenService.saveToken(data.data.token);
 
@@ -148,15 +129,87 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
             console.log('✅ OTP verified, token saved');
           }
 
+          toastSuccess(t('otp:success.title'), t('otp:success.message'));
           await handleAfterAuth();
         }
       } catch (error: any) {
-        handleErrorResponse(error);
+        const errorData = error.response?.data;
+        const errorCode = errorData?.error || 'unknown_error';
+
+        // ✅ HANDLE ALL ERROR CASES WITH TOAST
+        switch (errorCode) {
+          case 'verification_token_invalid':
+            setError(t('otp:errors.tokenInvalid'));
+            showErrorToast(
+              t('otp:errors.tokenInvalidTitle'),
+              t('otp:errors.tokenInvalid')
+            );
+            break;
+
+          case 'otp_invalid':
+          case 'otp_incorrect':
+            setError(t('otp:errors.invalid'));
+            showErrorToast(
+              t('otp:errors.invalidTitle'),
+              t('otp:errors.invalid')
+            );
+            break;
+
+          case 'otp_expired':
+            setError(t('otp:errors.expired'));
+            showErrorToast(
+              t('otp:errors.expiredTitle'),
+              t('otp:errors.expired')
+            );
+            break;
+
+          case 'already_verified':
+            showErrorToast(
+              t('otp:errors.alreadyVerifiedTitle'),
+              t('otp:errors.alreadyVerified')
+            );
+            // Navigate away since already verified
+            setTimeout(() => {
+              navigation.replace('LoginScreen');
+            }, 2000);
+            break;
+
+          case 'otp_max_attempts':
+          case 'otp_too_many_attempts':
+            setError(t('otp:errors.tooManyAttempts'));
+            showErrorToast(
+              t('otp:errors.tooManyAttemptsTitle'),
+              t('otp:errors.tooManyAttempts')
+            );
+            break;
+
+          case 'token_failed':
+            showErrorToast(
+              t('otp:errors.tokenFailedTitle'),
+              t('otp:errors.tokenFailed')
+            );
+            break;
+
+          default:
+            // ✅ NETWORK ERROR OR UNKNOWN ERROR
+            if (error.request && !error.response) {
+              showErrorToast(
+                t('otp:errors.noConnectionTitle'),
+                t('otp:errors.noConnection')
+              );
+            } else {
+              showErrorToast(
+                t('otp:errors.genericErrorTitle'),
+                t('otp:errors.genericError')
+              );
+            }
+            break;
+        }
       } finally {
         setLoading(false);
       }
     },
-    [otp, verification_token, handleAfterAuth, handleErrorResponse, t]
+    [otp, verification_token, handleAfterAuth, showErrorToast, t, navigation]
   );
 
   // ✅ RESEND OTP
@@ -175,26 +228,50 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
         setOtp(Array(OTP_LENGTH).fill(''));
         inputRefs.current[0]?.focus();
 
-        Alert.alert(
+        toastSuccess(
           t('otp:resendSuccess'),
           t('otp:resendSuccessMessage')
         );
       }
     } catch (error: any) {
-      const data = error.response?.data;
+      const errorData = error.response?.data;
+      const errorCode = errorData?.error || 'unknown_error';
 
-      if (data?.error === 'otp_too_many_attempts') {
-        setError(t('otp:errors.tooManyAttempts'));
-      } else {
-        Alert.alert(
-          t('common:errors.generic'),
-          t('otp:alerts.genericErrorMessage')
-        );
+      switch (errorCode) {
+        case 'otp_too_many_attempts':
+        case 'otp_max_attempts':
+          setError(t('otp:errors.tooManyAttempts'));
+          showErrorToast(
+            t('otp:errors.tooManyAttemptsTitle'),
+            t('otp:errors.tooManyAttempts')
+          );
+          break;
+
+        case 'verification_token_invalid':
+          showErrorToast(
+            t('otp:errors.tokenInvalidTitle'),
+            t('otp:errors.tokenInvalid')
+          );
+          break;
+
+        default:
+          if (error.request && !error.response) {
+            showErrorToast(
+              t('otp:errors.noConnectionTitle'),
+              t('otp:errors.noConnection')
+            );
+          } else {
+            showErrorToast(
+              t('otp:errors.genericErrorTitle'),
+              t('otp:errors.genericError')
+            );
+          }
+          break;
       }
     } finally {
       setResending(false);
     }
-  }, [canResend, resending, verification_token, t]);
+  }, [canResend, resending, verification_token, showErrorToast, t]);
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
