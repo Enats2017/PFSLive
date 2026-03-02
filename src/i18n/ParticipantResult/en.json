@@ -2,20 +2,32 @@
   "defaultEventName": "Event",
   "subtitle": "Select your profile from the participants below to register",
   "button": "THIS IS ME",
+  "info": {
+    "title": "Manual Selection Required",
+    "message": "We couldn't automatically match your account email with the race registration data. Please find and select your profile from the list below to complete registration."
+  },
   "loadingMore": "Loading more... ({{page}}/{{totalPages}})",
   "scrollForMore": "Scroll for more ({{count}} loaded)",
   "error": {
     "missingParamsTitle": "Missing Information",
-    "missingParamsMessage": "Unable to load participants. Required information is missing. Please try again from the event details page.",
+    "missingParamsMessage": "Unable to load participants. Required information is missing.",
     "missingDataTitle": "Missing Data",
     "missingDataMessage": "Registration data is incomplete. Please try again.",
     "noBibNumberTitle": "No Bib Number",
     "noBibNumberMessage": "This participant has no bib number and cannot be registered.",
     "registrationFailedTitle": "Registration Failed",
-    "registrationFailedMessage": "Unable to register. Please try again or contact support.",
+    "registrationFailedMessage": "Unable to register. Please try again.",
     "invalidDataTitle": "Invalid Data",
     "invalidDataMessage": "Missing confirmation data. Please try again.",
     "confirmationFailedTitle": "Confirmation Failed",
-    "confirmationFailedMessage": "Unable to confirm registration. Please try again."
+    "confirmationFailedMessage": "Unable to confirm registration. Please try again.",
+    "alreadyRegisteredTitle": "Already Registered",
+    "alreadyRegisteredMessage": "You are already registered for this event.",
+    "invalidBibTitle": "Invalid Bib Number",
+    "invalidBibMessage": "The bib number is invalid. Please try again.",
+    "validationErrorTitle": "Invalid Data",
+    "validationErrorMessage": "Some information is missing or invalid.",
+    "networkErrorTitle": "Connection Error",
+    "networkErrorMessage": "Unable to connect. Please check your internet and try again."
   }
 }

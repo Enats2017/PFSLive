@@ -2,20 +2,32 @@
   "defaultEventName": "Evenement",
   "subtitle": "Selecteer uw profiel uit de onderstaande deelnemers om u te registreren",
   "button": "DIT BEN IK",
+  "info": {
+    "title": "Handmatige selectie vereist",
+    "message": "We konden uw account-e-mail niet automatisch koppelen aan de race-registratiegegevens. Zoek en selecteer uw profiel uit de onderstaande lijst om de registratie te voltooien."
+  },
   "loadingMore": "Meer laden... ({{page}}/{{totalPages}})",
   "scrollForMore": "Scroll voor meer ({{count}} geladen)",
   "error": {
-    "missingParamsTitle": "Ontbrekende Informatie",
-    "missingParamsMessage": "Kan deelnemers niet laden. Vereiste informatie ontbreekt. Probeer het opnieuw vanaf de evenementdetailpagina.",
-    "missingDataTitle": "Ontbrekende Gegevens",
+    "missingParamsTitle": "Ontbrekende informatie",
+    "missingParamsMessage": "Kan deelnemers niet laden. Vereiste informatie ontbreekt.",
+    "missingDataTitle": "Ontbrekende gegevens",
     "missingDataMessage": "Registratiegegevens zijn onvolledig. Probeer het opnieuw.",
-    "noBibNumberTitle": "Geen Startnummer",
+    "noBibNumberTitle": "Geen startnummer",
     "noBibNumberMessage": "Deze deelnemer heeft geen startnummer en kan niet worden geregistreerd.",
-    "registrationFailedTitle": "Registratie Mislukt",
-    "registrationFailedMessage": "Kan niet registreren. Probeer het opnieuw of neem contact op met support.",
-    "invalidDataTitle": "Ongeldige Gegevens",
+    "registrationFailedTitle": "Registratie mislukt",
+    "registrationFailedMessage": "Kan niet registreren. Probeer het opnieuw.",
+    "invalidDataTitle": "Ongeldige gegevens",
     "invalidDataMessage": "Bevestigingsgegevens ontbreken. Probeer het opnieuw.",
-    "confirmationFailedTitle": "Bevestiging Mislukt",
-    "confirmationFailedMessage": "Kan registratie niet bevestigen. Probeer het opnieuw."
+    "confirmationFailedTitle": "Bevestiging mislukt",
+    "confirmationFailedMessage": "Kan registratie niet bevestigen. Probeer het opnieuw.",
+    "alreadyRegisteredTitle": "Al geregistreerd",
+    "alreadyRegisteredMessage": "U bent al geregistreerd voor dit evenement.",
+    "invalidBibTitle": "Ongeldig startnummer",
+    "invalidBibMessage": "Het startnummer is ongeldig. Probeer het opnieuw.",
+    "validationErrorTitle": "Ongeldige gegevens",
+    "validationErrorMessage": "Sommige informatie ontbreekt of is ongeldig.",
+    "networkErrorTitle": "Verbindingsfout",
+    "networkErrorMessage": "Kan geen verbinding maken. Controleer uw internet en probeer het opnieuw."
   }
 }

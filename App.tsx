@@ -2,7 +2,7 @@
 import 'react-native-gesture-handler';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Mapbox from '@rnmapbox/maps';
@@ -14,9 +14,37 @@ import { toastConfig } from "./utils/toastConfig";
 
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 
+// ✅ SUPPRESS ERROR OVERLAY IN DEVELOPMENT (EXPO)
+if (__DEV__) {
+  // Disable all LogBox warnings/errors (no yellow/red boxes)
+  LogBox.ignoreAllLogs(true);
+  
+  // Suppress global error handler (no black bottom overlay)
+  const originalHandler = ErrorUtils.getGlobalHandler();
+  
+  ErrorUtils.setGlobalHandler((error, isFatal) => {
+    // Log to console for debugging (you can still see in terminal/Expo logs)
+    console.log('🚫 Error overlay suppressed:', error.message);
+    
+    // Don't call original handler - this prevents the black overlay
+    // originalHandler(error, isFatal);
+  });
+  
+  // Suppress console.error to prevent triggering overlays
+  const originalConsoleError = console.error;
+  console.error = (...args: any[]) => {
+    // Still log as console.log so you can debug
+    console.log('[ERROR]', ...args);
+    
+    // Don't call originalConsoleError - prevents overlay
+    // originalConsoleError(...args);
+  };
+}
+
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   const { changeLanguage } = useLanguageStore();
+
   useEffect(() => {
     const initializeApp = async () => {
       try {
@@ -38,7 +66,7 @@ export default function App() {
         setIsReady(true);
         console.log('✅ App ready');
       } catch (error) {
-        console.error('❌ App initialization error:', error);
+        console.log('❌ App initialization error:', error); // ✅ Changed from console.error
         setIsReady(true);
       }
     };
@@ -58,7 +86,12 @@ export default function App() {
     <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AppNavigator />
-         <Toast config={toastConfig} />
+        {/* ✅ Toast positioned at top with offset */}
+        <Toast 
+          config={toastConfig}
+          position="top"
+          topOffset={60}
+        />
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );

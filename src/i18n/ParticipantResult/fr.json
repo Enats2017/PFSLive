@@ -2,20 +2,32 @@
   "defaultEventName": "Événement",
   "subtitle": "Sélectionnez votre profil parmi les participants ci-dessous pour vous inscrire",
   "button": "C'EST MOI",
+  "info": {
+    "title": "Sélection manuelle requise",
+    "message": "Nous n'avons pas pu faire correspondre automatiquement l'e-mail de votre compte avec les données d'inscription à la course. Veuillez trouver et sélectionner votre profil dans la liste ci-dessous pour finaliser l'inscription."
+  },
   "loadingMore": "Chargement... ({{page}}/{{totalPages}})",
   "scrollForMore": "Faites défiler pour plus ({{count}} chargés)",
   "error": {
-    "missingParamsTitle": "Informations Manquantes",
-    "missingParamsMessage": "Impossible de charger les participants. Des informations requises sont manquantes. Veuillez réessayer depuis la page des détails de l'événement.",
-    "missingDataTitle": "Données Manquantes",
+    "missingParamsTitle": "Informations manquantes",
+    "missingParamsMessage": "Impossible de charger les participants. Informations requises manquantes.",
+    "missingDataTitle": "Données manquantes",
     "missingDataMessage": "Les données d'inscription sont incomplètes. Veuillez réessayer.",
-    "noBibNumberTitle": "Pas de Numéro de Dossard",
+    "noBibNumberTitle": "Pas de dossard",
     "noBibNumberMessage": "Ce participant n'a pas de numéro de dossard et ne peut pas être inscrit.",
-    "registrationFailedTitle": "Échec de l'Inscription",
-    "registrationFailedMessage": "Impossible de s'inscrire. Veuillez réessayer ou contacter le support.",
-    "invalidDataTitle": "Données Invalides",
+    "registrationFailedTitle": "Inscription échouée",
+    "registrationFailedMessage": "Impossible de s'inscrire. Veuillez réessayer.",
+    "invalidDataTitle": "Données invalides",
     "invalidDataMessage": "Données de confirmation manquantes. Veuillez réessayer.",
-    "confirmationFailedTitle": "Échec de la Confirmation",
-    "confirmationFailedMessage": "Impossible de confirmer l'inscription. Veuillez réessayer."
+    "confirmationFailedTitle": "Confirmation échouée",
+    "confirmationFailedMessage": "Impossible de confirmer l'inscription. Veuillez réessayer.",
+    "alreadyRegisteredTitle": "Déjà inscrit",
+    "alreadyRegisteredMessage": "Vous êtes déjà inscrit à cet événement.",
+    "invalidBibTitle": "Dossard invalide",
+    "invalidBibMessage": "Le numéro de dossard est invalide. Veuillez réessayer.",
+    "validationErrorTitle": "Données invalides",
+    "validationErrorMessage": "Certaines informations sont manquantes ou invalides.",
+    "networkErrorTitle": "Erreur de connexion",
+    "networkErrorMessage": "Impossible de se connecter. Vérifiez votre connexion Internet et réessayez."
   }
 }

@@ -31,10 +31,8 @@ interface ParticipantResultRouteParams {
   event_name?: string;
 }
 
-// ✅ DEFINE SUCCESS ACTIONS
 const SUCCESS_ACTIONS = ['registered', 'confirm_race_result'];
 
-// ✅ CHECK IF ACTION IS SUCCESS
 const isSuccessAction = (action: string): boolean => {
   return SUCCESS_ACTIONS.includes(action);
 };
@@ -44,13 +42,11 @@ const ParticipantResult = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
-  // ✅ SAFE PARAMS EXTRACTION
   const params = route.params as ParticipantResultRouteParams | undefined;
   const product_app_id = params?.product_app_id;
   const product_option_value_app_id = params?.product_option_value_app_id;
   const event_name = params?.event_name || t('participantResult:defaultEventName');
 
-  // ✅ STATE
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -69,12 +65,10 @@ const ParticipantResult = () => {
   const [errorTitleKey, setErrorTitleKey] = useState('');
   const [errorMessageKey, setErrorMessageKey] = useState('');
 
-  // ✅ REFS
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<any>(null);
   const onEndReachedCalledDuringMomentum = useRef(true);
 
-  // ✅ VALIDATE PARAMS ON MOUNT
   React.useEffect(() => {
     if (!product_app_id || !product_option_value_app_id) {
       if (API_CONFIG.DEBUG) {
@@ -90,14 +84,12 @@ const ParticipantResult = () => {
     }
   }, [product_app_id, product_option_value_app_id]);
 
-  // ✅ SHOW ERROR MODAL
   const showErrorModal = useCallback((titleKey: string, messageKey: string) => {
     setErrorTitleKey(titleKey);
     setErrorMessageKey(messageKey);
     setErrorModalVisible(true);
   }, []);
 
-  // ✅ INVALIDATE EVENT DETAIL CACHE
   const invalidateEventCache = useCallback(async () => {
     if (!product_app_id) return;
 
@@ -118,7 +110,6 @@ const ParticipantResult = () => {
     }
   }, [product_app_id]);
 
-  // ✅ FETCH PARTICIPANTS
   const fetchParticipants = useCallback(
     async (pageNum: number, search: string) => {
       if (!product_app_id) return;
@@ -188,14 +179,12 @@ const ParticipantResult = () => {
     [product_app_id, t]
   );
 
-  // ✅ FETCH ON FOCUS
   useFocusEffect(
     useCallback(() => {
       fetchParticipants(1, '');
     }, [fetchParticipants])
   );
 
-  // ✅ DEBOUNCED SEARCH
   React.useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
@@ -208,12 +197,10 @@ const ParticipantResult = () => {
     };
   }, [searchText, fetchParticipants]);
 
-  // ✅ HAS MORE PAGES
   const hasMorePages = useCallback((): boolean => {
     return page < totalPages;
   }, [page, totalPages]);
 
-  // ✅ LOAD MORE
   const handleLoadMore = useCallback(() => {
     if (API_CONFIG.DEBUG) {
       console.log('🔄 onEndReached fired', {
@@ -233,7 +220,6 @@ const ParticipantResult = () => {
     fetchParticipants(page + 1, searchText);
   }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
-  // ✅ HANDLE "THIS IS ME" CLICK (CHECK ACTION FIELD)
   const handleThisIsMe = useCallback(
     async (participant: Participant) => {
       if (!product_option_value_app_id) {
@@ -264,7 +250,6 @@ const ParticipantResult = () => {
           });
         }
 
-        // ✅ CALL WITHOUT BIB NUMBER FIRST
         const result = await eventDetailService.registerParticipant(
           product_option_value_app_id
         );
@@ -278,13 +263,11 @@ const ParticipantResult = () => {
 
         const action = result.action || 'unknown_error';
 
-        // ✅ CHECK IF NOT A SUCCESS ACTION
         if (!isSuccessAction(action)) {
           if (API_CONFIG.DEBUG) {
             console.log('⚠️ Non-success action received:', action);
           }
 
-          // ✅ HANDLE ERRORS
           switch (action) {
             case 'already_registered':
             case 'membership_required':
@@ -327,7 +310,6 @@ const ParticipantResult = () => {
           return;
         }
 
-        // ✅ HANDLE SUCCESS ACTIONS
         if (action === 'confirm_race_result') {
           if (API_CONFIG.DEBUG) {
             console.log('📋 Showing confirmation modal');
@@ -348,7 +330,6 @@ const ParticipantResult = () => {
           setSuccessVisible(true);
         }
       } catch (error: any) {
-        // ✅ NETWORK/CRITICAL ERRORS
         if (API_CONFIG.DEBUG) {
           console.error('❌ Network error:', error);
         }
@@ -364,7 +345,6 @@ const ParticipantResult = () => {
     [product_option_value_app_id, navigation, showErrorModal, invalidateEventCache]
   );
 
-  // ✅ HANDLE CONFIRM REGISTER (CHECK ACTION FIELD)
   const handleConfirmRegister = useCallback(async () => {
     if (!confirmData?.bib_number || !product_option_value_app_id) {
       showErrorModal(
@@ -381,7 +361,6 @@ const ParticipantResult = () => {
         console.log('✅ Confirming registration with bib:', confirmData.bib_number);
       }
 
-      // ✅ CALL WITH BIB NUMBER
       const result = await eventDetailService.registerParticipant(
         product_option_value_app_id,
         confirmData.bib_number,
@@ -397,7 +376,6 @@ const ParticipantResult = () => {
 
       const action = result.action || 'unknown_error';
 
-      // ✅ CHECK IF NOT A SUCCESS ACTION
       if (!isSuccessAction(action)) {
         if (API_CONFIG.DEBUG) {
           console.error('❌ Confirmation failed with action:', action);
@@ -427,7 +405,6 @@ const ParticipantResult = () => {
         return;
       }
 
-      // ✅ SUCCESS
       if (action === 'registered') {
         if (API_CONFIG.DEBUG) {
           console.log('✅ Registration confirmed successfully');
@@ -449,7 +426,6 @@ const ParticipantResult = () => {
         );
       }
     } catch (error: any) {
-      // ✅ NETWORK ERRORS
       if (API_CONFIG.DEBUG) {
         console.error('❌ Network error:', error);
       }
@@ -462,7 +438,6 @@ const ParticipantResult = () => {
     }
   }, [confirmData, product_option_value_app_id, navigation, showErrorModal, invalidateEventCache]);
 
-  // ✅ RENDER PARTICIPANT ITEM
   const renderParticipant = useCallback(
     ({ item: participant }: { item: Participant }) => {
       const fullName =
@@ -548,7 +523,6 @@ const ParticipantResult = () => {
     [t, handleThisIsMe, registerLoading, registeringId]
   );
 
-  // ✅ RENDER FOOTER
   const renderFooter = useCallback(() => {
     if (loadingMore) {
       return (
@@ -574,7 +548,6 @@ const ParticipantResult = () => {
     return null;
   }, [loadingMore, page, totalPages, hasMorePages, participants.length, t]);
 
-  // ✅ LOADING STATE
   if (loading && searchText.length === 0) {
     return (
       <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -588,7 +561,6 @@ const ParticipantResult = () => {
     );
   }
 
-  // ✅ ERROR STATE
   if (error && searchText.length === 0) {
     return (
       <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -609,19 +581,59 @@ const ParticipantResult = () => {
     );
   }
 
-  // ✅ MAIN RENDER
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <AppHeader showLogo={true} />
 
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+        {/* ✅ EVENT TITLE */}
         <Text style={[commonStyles.title, { marginBottom: spacing.sm }]}>
           {event_name}
         </Text>
-        <Text style={[commonStyles.subtitle, { marginBottom: spacing.md }]}>
-          {t('participantResult:subtitle')}
-        </Text>
 
+        {/* ✅ INFO MESSAGE - PROMINENT & CLEAR */}
+        <View
+          style={{
+            backgroundColor: '#FEF3C7',
+            borderLeftWidth: 4,
+            borderLeftColor: '#F59E0B',
+            borderRadius: 8,
+            padding: spacing.md,
+            marginBottom: spacing.lg,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <Ionicons
+              name="information-circle"
+              size={24}
+              color="#F59E0B"
+              style={{ marginRight: spacing.sm, marginTop: 2 }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: '#92400E',
+                  marginBottom: 4,
+                }}
+              >
+                {t('participantResult:info.title')}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: '#92400E',
+                  lineHeight: 20,
+                }}
+              >
+                {t('participantResult:info.message')}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ✅ SEARCH INPUT */}
         <SearchInput
           ref={searchInputRef}
           placeholder={t('details:participant.search')}

@@ -7,26 +7,22 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { AppHeader } from '../components/common/AppHeader'; // ✅ FIXED
-import FloatingLabelInput from '../components/FloatingLabelInput'; // ✅ FIXED
-import { authService } from '../services/authService'; // ✅ FIXED
-import { validateLoginForm } from '../services/validation/authValidation'; // ✅ FIXED
-import { commonStyles } from '../styles/common.styles'; // ✅ FIXED
-import { loginStyles } from '../styles/login.styles'; // ✅ FIXED
-import { LoginScreenProps } from '../types/navigation'; // ✅ FIXED
-import { toastSuccess } from '../../utils/toast'; // ✅ CORRECT (one level up)
-import { useAuthForm } from '../hooks/useAuthForm'; // ✅ FIXED
-import { usePendingRegistration } from '../hooks/usePendingRegistration'; // ✅ FIXED
+import { AppHeader } from '../components/common/AppHeader';
+import FloatingLabelInput from '../components/FloatingLabelInput';
+import { authService } from '../services/authService';
+import { validateLoginForm } from '../services/validation/authValidation';
+import { commonStyles } from '../styles/common.styles';
+import { loginStyles } from '../styles/login.styles';
+import { LoginScreenProps } from '../types/navigation';
+import { toastSuccess, toastError } from '../../utils/toast';
+import { useAuthForm } from '../hooks/useAuthForm';
+import { usePendingRegistration } from '../hooks/usePendingRegistration';
 
-// ... rest of the component code remains the same
-
-// ✅ CONSTANTS
 const INITIAL_FORM_DATA = {
   email: '',
   password: '',
@@ -35,14 +31,13 @@ const INITIAL_FORM_DATA = {
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['login', 'common']);
 
-  // ✅ HOOKS
   const { formData, errors, setField, setErrors, clearAllErrors } =
     useAuthForm(INITIAL_FORM_DATA);
   const { handleAfterAuth } = usePendingRegistration(navigation);
 
   const [loading, setLoading] = useState(false);
 
-  // ✅ HANDLE LOGIN
+  // ✅ HANDLE LOGIN WITH TOAST ERRORS
   const handleLogin = useCallback(async () => {
     clearAllErrors();
 
@@ -57,6 +52,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      
+      // ✅ SHOW FIRST VALIDATION ERROR AS TOAST
+      const firstError = Object.values(validationErrors)[0];
+      if (firstError) {
+        toastError(t('login:errors.validationFailed'), firstError);
+      }
       return;
     }
 
@@ -74,26 +75,84 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       }
     } catch (error: any) {
       const data = error.response?.data;
+      const errorCode = data?.error || 'unknown_error';
 
-      if (data?.error === 'invalid_credentials') {
-        setErrors({ password: t('login:errors.invalidCredentials') });
-      } else if (data?.error === 'account_not_found') {
-        setErrors({ email: t('login:errors.accountNotFound') });
-      } else if (data?.error === 'device_not_allowed') {
-        Alert.alert(
-          t('login:alerts.deviceNotAllowed'),
-          t('login:alerts.deviceNotAllowedMessage')
-        );
-      } else if (error.request) {
-        Alert.alert(
-          t('login:alerts.noConnection'),
-          t('login:alerts.noConnectionMessage')
-        );
-      } else {
-        Alert.alert(
-          t('common:errors.generic'),
-          t('login:alerts.genericErrorMessage')
-        );
+      // ✅ HANDLE ALL ERROR CASES WITH TOAST
+      switch (errorCode) {
+        case 'email_invalid':
+          setErrors({ email: t('login:errors.emailInvalid') });
+          toastError(
+            t('login:errors.emailInvalidTitle'),
+            t('login:errors.emailInvalid')
+          );
+          break;
+
+        case 'password_required':
+          setErrors({ password: t('login:errors.passwordRequired') });
+          toastError(
+            t('login:errors.passwordRequiredTitle'),
+            t('login:errors.passwordRequired')
+          );
+          break;
+
+        case 'invalid_credentials':
+          setErrors({ password: t('login:errors.invalidCredentials') });
+          toastError(
+            t('login:errors.invalidCredentialsTitle'),
+            t('login:errors.invalidCredentials')
+          );
+          break;
+
+        case 'email_not_verified':
+          toastError(
+            t('login:errors.emailNotVerifiedTitle'),
+            t('login:errors.emailNotVerified')
+          );
+          break;
+
+        case 'account_disabled':
+          toastError(
+            t('login:errors.accountDisabledTitle'),
+            t('login:errors.accountDisabled')
+          );
+          break;
+
+        case 'device_not_allowed':
+          toastError(
+            t('login:errors.deviceNotAllowedTitle'),
+            t('login:errors.deviceNotAllowed')
+          );
+          break;
+
+        case 'token_failed':
+          toastError(
+            t('login:errors.tokenFailedTitle'),
+            t('login:errors.tokenFailed')
+          );
+          break;
+
+        case 'account_not_found':
+          setErrors({ email: t('login:errors.accountNotFound') });
+          toastError(
+            t('login:errors.accountNotFoundTitle'),
+            t('login:errors.accountNotFound')
+          );
+          break;
+
+        default:
+          // ✅ NETWORK ERROR OR UNKNOWN ERROR
+          if (error.request && !error.response) {
+            toastError(
+              t('login:errors.noConnectionTitle'),
+              t('login:errors.noConnection')
+            );
+          } else {
+            toastError(
+              t('login:errors.genericErrorTitle'),
+              t('login:errors.genericError')
+            );
+          }
+          break;
       }
     } finally {
       setLoading(false);
@@ -167,9 +226,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 style={loginStyles.forgotButton}
                 activeOpacity={0.7}
                 onPress={() =>
-                  Alert.alert(
+                  toastError(
                     t('login:forgotPassword'),
-                    'Forgot password feature coming soon.'
+                    t('login:errors.forgotPasswordComingSoon')
                   )
                 }
                 disabled={loading}
