@@ -1,0 +1,26 @@
+{
+  "title": "Welkom Terug",
+  "subtitle": "Log in op uw account om door te gaan",
+  "email": "E-mailadres",
+  "password": "Wachtwoord",
+  "forgotPassword": "Wachtwoord Vergeten?",
+  "loginButton": "Inloggen",
+  "or": "OF",
+  "noAccount": "Heeft u geen account?",
+  "registerNow": "Nu Registreren",
+  "success": "Inloggen Geslaagd",
+  "welcomeBack": "Welkom terug!",
+  "errors": {
+    "emailInvalid": "Voer een geldig e-mailadres in",
+    "passwordShort": "Wachtwoord moet minimaal 4 tekens bevatten",
+    "invalidCredentials": "Onjuist e-mailadres of wachtwoord",
+    "accountNotFound": "Geen account gevonden met dit e-mailadres"
+  },
+  "alerts": {
+    "deviceNotAllowed": "Apparaat Niet Toegestaan",
+    "deviceNotAllowedMessage": "Dit account is gekoppeld aan een ander apparaat. Neem contact op met support.",
+    "noConnection": "Geen Internetverbinding",
+    "noConnectionMessage": "Controleer uw internetverbinding en probeer het opnieuw.",
+    "genericErrorMessage": "Er is iets misgegaan. Probeer het later opnieuw."
+  }
+}

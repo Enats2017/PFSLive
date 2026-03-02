@@ -1,46 +1,95 @@
-import { StyleSheet } from "react-native";
-import { colors, spacing, typography } from "./common.styles";
+import { StyleSheet, Platform } from 'react-native';
+import { colors, spacing, typography } from './common.styles';
 
 export const registerStyles = StyleSheet.create({
+  // ✅ IMAGE SECTION
   imagesection: {
-    alignItems: "center",
-    marginVertical: 20,
+    alignItems: 'center',
+    marginVertical: spacing.xl,
   },
 
   imageWrapper: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f3f4f6",
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.gray100,
+    borderWidth: 2,
+    borderColor: colors.gray200,
   },
 
   profileImage: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
 
   placeholder: {
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   cameraIcon: {
-    position: "absolute",
-    bottom: 15,
-    right: 15,
-    backgroundColor: "#FF5722",
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: colors.primary,
     borderRadius: 20,
-    padding: 6,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
+
+  removeIcon: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+
+  uploadPhotoText: {
+    marginTop: spacing.sm,
+    color: colors.gray600,
+    fontSize: typography.sizes.sm,
+    textAlign: 'center',
+  },
+
+  // ✅ TERMS & CONDITIONS
   termsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 5,
-    paddingHorizontal: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
 
   checkbox: {
@@ -48,71 +97,71 @@ export const registerStyles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: "#d1d5db",
-    justifyContent: "center",
-    alignItems: "center",
+    borderColor: colors.gray300,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.white,
   },
 
   checkboxActive: {
-    backgroundColor: "#FF5722",
-    borderColor: "#FF5722",
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
 
   termsText: {
-    fontSize: spacing.lg,
-    color: "#374151",
-  },
-  buttonSection: {
-    marginTop: 18,
-  },
-  removeIcon: {
-    position: "absolute",
-    top: 10,
-    right: 20,
-    width: 20,
-    height: 20,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 4, 
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    fontSize: typography.sizes.md,
+    color: colors.gray700,
+    flex: 1,
   },
 
-   forgotText: {
-    fontSize: 13,
-    color: "#FF5722",
-    fontWeight: "500",
+  // ✅ BUTTONS
+  buttonSection: {
+    marginTop: spacing.lg,
   },
+
+  // ✅ DIVIDER
   divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.lg,
   },
+
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#e5e7eb",
+    backgroundColor: colors.gray200,
   },
+
   dividerText: {
-    marginHorizontal: 12,
-    fontSize: 13,
-    color: "#9ca3af",
-    fontWeight: "500",
+    marginHorizontal: spacing.md,
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
+    fontWeight: typography.weights.medium,
   },
+
+  // ✅ REGISTER LINK
   registerButton: {
-    alignItems: "center",
-    paddingVertical: 4,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.md,
   },
+
   registerText: {
-    fontSize: 14,
-    color: "#6b7280",
+    fontSize: typography.sizes.md,
+    color: colors.gray600,
   },
+
   registerLink: {
-    color: "#FF5722",
-    fontWeight: "700",
+    color: colors.primary,
+    fontWeight: typography.weights.bold,
+  },
+
+  // ✅ ERROR TEXT
+  errorText: {
+    fontSize: typography.sizes.sm,
+    color: colors.error,
+    marginTop: spacing.xs,
+    marginLeft: spacing.xs,
+    fontWeight: typography.weights.medium,
   },
 });

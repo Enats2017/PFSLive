@@ -1,0 +1,44 @@
+{
+  "title": "Nieuw Evenement Aanmaken",
+  "name": "Evenement Naam",
+  "type": "Type Evenement",
+  "date": "Evenement Datum",
+  "startTime": "Starttijd",
+  "fileInfo": "Het uploaden van een GPX-bestand is optioneel maar sterk aanbevolen voor nauwkeurige tracking",
+  "button": {
+    "gpx": "Upload GPX Bestand",
+    "save": "EVENEMENT INDIENEN"
+  },
+  "success": {
+    "title": "Succes!",
+    "message": "Uw evenement is succesvol aangemaakt"
+  },
+  "errors": {
+    "nameRequired": "Voer een evenementnaam in",
+    "eventTypeRequired": "Selecteer een evenementtype",
+    "dateRequired": "Selecteer een datum",
+    "invalidDate": "Ongeldig datumformaat. Gebruik een geldige datum",
+    "pastDateNotAllowed": "Kan geen datums uit het verleden selecteren. Kies vandaag of een toekomstige datum",
+    "startTimeRequired": "Selecteer een starttijd",
+    "invalidStartTime": "Ongeldig starttijd formaat. Gebruik UU:MM",
+    "fileTooLarge": "Bestandsgrootte moet kleiner zijn dan {{size}}MB",
+    "invalidFileType": "Selecteer een geldig GPX-bestand (.gpx of .xml)",
+    "filePickFailed": "Bestand selecteren mislukt. Probeer het opnieuw",
+    "createFailed": "Evenement aanmaken mislukt. Probeer het opnieuw"
+  },
+  "file": {
+    "uploadTitle": "Tik om GPX-bestand te uploaden",
+    "uploadSubtitle": "Ondersteund formaat: .gpx (Max {{size}}MB)",
+    "infoTitle": "Bestandsinfo",
+    "infoMessage": "Naam: {{name}}\nGrootte: {{size}} KB",
+    "removeTitle": "Bestand Verwijderen",
+    "removeMessage": "Weet u zeker dat u dit bestand wilt verwijderen?",
+    "removeButton": "Verwijderen",
+    "removed": "Bestand verwijderd"
+  },
+  "eventTypes": {
+    "organizedWithResults": "Georganiseerd evenement met ranking / resultaten",
+    "organizedWithoutResults": "Georganiseerd evenement zonder ranking / resultaten",
+    "training": "Trainingssessie"
+  }
+}

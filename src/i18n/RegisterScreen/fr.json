@@ -1,17 +1,46 @@
 {
   "firstName": "Prénom",
-  "lastName": "Nom de famille",
-  "email": "E-mail",
-  "password": "Mot de passe",
+  "lastName": "Nom",
+  "email": "Adresse Email",
+  "password": "Mot de Passe",
   "country": "Pays",
   "city": "Ville",
-  "dateOfBirth": "Date de naissance",
-
+  "dateOfBirth": "Date de Naissance",
+  "account": "Vous avez déjà un compte?",
+  "loginNow": "Se Connecter",
   "Gender": {
-  "gender": "Genre",
-  "male": "Homme",
-  "female": "Femme",
-  "other": "Autre"
-},
-  "termsAndConditions": "Conditions générales"
+    "gender": "Genre",
+    "male": "Homme",
+    "female": "Femme",
+    "other": "Autre"
+  },
+  "termsAndConditions": "J'accepte les Conditions Générales",
+  "uploadPhoto": "Télécharger Photo de Profil",
+  "success": "Inscription Réussie",
+  "welcome": "Bienvenue, {{name}}!",
+  "errors": {
+    "firstnameRequired": "Le prénom doit contenir au moins 2 caractères",
+    "lastnameRequired": "Le nom doit contenir au moins 2 caractères",
+    "emailInvalid": "Veuillez entrer une adresse email valide",
+    "emailExists": "Cet email est déjà enregistré",
+    "passwordShort": "Le mot de passe doit contenir au moins 4 caractères",
+    "passwordLong": "Le mot de passe doit contenir moins de 20 caractères",
+    "countryRequired": "Veuillez sélectionner un pays",
+    "cityRequired": "La ville doit contenir au moins 2 caractères",
+    "dobRequired": "Veuillez sélectionner votre date de naissance",
+    "genderRequired": "Veuillez sélectionner votre genre",
+    "termsRequired": "Vous devez accepter les conditions générales",
+    "deviceAlreadyRegistered": "Cet appareil est déjà lié à un compte. Veuillez vous connecter."
+  },
+  "alerts": {
+    "email_exists": "Cet email est déjà enregistré",
+    "permissionRequired": "Autorisation Requise",
+    "galleryPermission": "Veuillez autoriser l'accès à votre galerie pour télécharger une photo.",
+    "deviceNotAllowed": "Appareil Non Autorisé",
+    "deviceNotAllowedMessage": "Ce compte est lié à un autre appareil. Veuillez contacter le support.",
+    "noConnection": "Pas de Connexion Internet",
+    "noConnectionMessage": "Veuillez vérifier votre connexion Internet et réessayer.",
+    "genericError": "Erreur",
+    "genericErrorMessage": "Une erreur s'est produite. Veuillez réessayer plus tard."
+  }
 }

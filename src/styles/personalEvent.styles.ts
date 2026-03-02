@@ -1,77 +1,160 @@
-import { colors, spacing, typography } from "./common.styles";
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from 'react-native';
+import { colors, spacing, typography } from './common.styles';
+
+// ✅ CONSTANTS
+const BORDER_RADIUS = 12;
+const BORDER_WIDTH_NORMAL = 2;
+const UPLOAD_ICON_SIZE = 40;
+const FILE_ICON_SIZE = 28;
+
 export const personalStyles = StyleSheet.create({
+  // ✅ SECTION HEADER
   section: {
-    alignItems: "center",
-    padding: 6,
-    backgroundColor: colors.gray300,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    backgroundColor: colors.gray100,
     marginVertical: spacing.sm,
   },
+
+  // ✅ TEXT STYLES
   subtitle: {
-    textAlign: "center",
-    marginTop: spacing.sm,
-    fontSize: typography.sizes.md,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    fontSize: typography.sizes.sm,
     color: colors.gray600,
     fontWeight: typography.weights.medium,
+    lineHeight: 20,
   },
 
+  errorText: {
+    fontSize: typography.sizes.sm,
+    color: colors.error,
+    marginTop: spacing.xs,
+    marginLeft: spacing.xs,
+    fontWeight: typography.weights.medium,
+    lineHeight: 18,
+  },
+
+  // ✅ FORM CONTAINER
   formContainer: {
-    paddingHorizontal: 15,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
 
+  // ✅ FILE UPLOAD BOX
   uploadBox: {
-    borderWidth: 1,
+    borderWidth: BORDER_WIDTH_NORMAL,
     borderColor: colors.primary,
-    borderStyle: "dashed",
-    borderRadius: 14,
-    paddingVertical: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#f5ebe8cc",
+    borderStyle: 'dashed',
+    borderRadius: BORDER_RADIUS,
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary + '10',
+    minHeight: 140,
+  },
+
+  uploadBoxError: {
+    borderColor: colors.error,
+    backgroundColor: colors.error + '10',
   },
 
   uploadTitle: {
-    marginTop: spacing.sm,
-    fontSize: 16,
-    fontWeight: "600",
-    color: colors.primaryDark,
+    marginTop: spacing.md,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.primary,
+    textAlign: 'center',
   },
+
   uploadSubtitle: {
-    marginTop: 4,
-    fontSize: 13,
-    color: colors.black,
+    marginTop: spacing.xs,
+    fontSize: typography.sizes.sm,
+    color: colors.gray600,
+    textAlign: 'center',
+    lineHeight: 18,
   },
+
+  // ✅ FILE CARD (SELECTED FILE)
   fileCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: "#ffffff",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    borderRadius: BORDER_RADIUS,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    minHeight: 80,
+    // Platform-specific shadows
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
+
   fileLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: spacing.md,
+  },
+
+  fileIconContainer: {
+    width: FILE_ICON_SIZE + 8,
+    height: FILE_ICON_SIZE + 8,
+    borderRadius: (FILE_ICON_SIZE + 8) / 2,
+    backgroundColor: colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+
+  fileDetails: {
     flex: 1,
   },
+
   fileName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.black,
+    marginBottom: spacing.xs / 2,
   },
+
   fileSize: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 2,
+    fontSize: typography.sizes.xs,
+    color: colors.gray500,
+    fontWeight: typography.weights.regular,
   },
+
+  // ✅ FILE ACTIONS
   actions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+
+  actionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.gray100,
+  },
+
+  // ✅ FIELD WRAPPER (for error display)
+  fieldWrapper: {
+    marginBottom: spacing.md,
   },
 });

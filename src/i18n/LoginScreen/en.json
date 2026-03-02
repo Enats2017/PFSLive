@@ -1,13 +1,15 @@
 {
   "title": "Welcome Back",
   "subtitle": "Login to your account to continue",
-  "email": "Email",
+  "email": "Email Address",
   "password": "Password",
   "forgotPassword": "Forgot Password?",
   "loginButton": "Login",
   "or": "OR",
   "noAccount": "Don't have an account?",
   "registerNow": "Register Now",
+  "success": "Login Successful",
+  "welcomeBack": "Welcome back!",
   "errors": {
     "emailInvalid": "Please enter a valid email address",
     "passwordShort": "Password must be at least 4 characters",
@@ -16,9 +18,9 @@
   },
   "alerts": {
     "deviceNotAllowed": "Device Not Allowed",
-    "deviceNotAllowedMessage": "This account is linked to another device.",
-    "noConnection": "No Connection",
-    "noConnectionMessage": "Please check your internet connection.",
-    "genericErrorMessage": "Something went wrong. Please try again."
+    "deviceNotAllowedMessage": "This account is linked to another device. Please contact support.",
+    "noConnection": "No Internet Connection",
+    "noConnectionMessage": "Please check your internet connection and try again.",
+    "genericErrorMessage": "Something went wrong. Please try again later."
   }
 }

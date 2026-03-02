@@ -1,0 +1,44 @@
+{
+  "title": "Créer un Nouvel Événement",
+  "name": "Nom de l'Événement",
+  "type": "Type d'Événement",
+  "date": "Date de l'Événement",
+  "startTime": "Heure de Début",
+  "fileInfo": "Le téléchargement d'un fichier GPX est facultatif mais fortement recommandé pour un suivi précis",
+  "button": {
+    "gpx": "Télécharger Fichier GPX",
+    "save": "SOUMETTRE L'ÉVÉNEMENT"
+  },
+  "success": {
+    "title": "Succès!",
+    "message": "Votre événement a été créé avec succès"
+  },
+  "errors": {
+    "nameRequired": "Veuillez entrer un nom d'événement",
+    "eventTypeRequired": "Veuillez sélectionner un type d'événement",
+    "dateRequired": "Veuillez sélectionner une date",
+    "invalidDate": "Format de date invalide. Veuillez utiliser une date valide",
+    "pastDateNotAllowed": "Impossible de sélectionner des dates passées. Veuillez choisir aujourd'hui ou une date future",
+    "startTimeRequired": "Veuillez sélectionner une heure de début",
+    "invalidStartTime": "Format d'heure de début invalide. Veuillez utiliser HH:MM",
+    "fileTooLarge": "La taille du fichier doit être inférieure à {{size}}MB",
+    "invalidFileType": "Veuillez sélectionner un fichier GPX valide (.gpx ou .xml)",
+    "filePickFailed": "Échec de la sélection du fichier. Veuillez réessayer",
+    "createFailed": "Échec de la création de l'événement. Veuillez réessayer"
+  }
+  "file": {
+    "uploadTitle": "Appuyez pour télécharger un fichier GPX",
+    "uploadSubtitle": "Format pris en charge: .gpx (Max {{size}}MB)",
+    "infoTitle": "Informations sur le Fichier",
+    "infoMessage": "Nom: {{name}}\nTaille: {{size}} KB",
+    "removeTitle": "Supprimer le Fichier",
+    "removeMessage": "Êtes-vous sûr de vouloir supprimer ce fichier?",
+    "removeButton": "Supprimer",
+    "removed": "Fichier supprimé"
+  },
+  "eventTypes": {
+    "organizedWithResults": "Événement organisé avec classement / résultats",
+    "organizedWithoutResults": "Événement organisé sans classement / résultats",
+    "training": "Session d'entraînement"
+  }
+}
