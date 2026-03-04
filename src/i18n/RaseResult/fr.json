@@ -1,0 +1,12 @@
+{
+  "button": {
+    "result": "RÉSULTAT",
+    "route": "PARCOURS"
+  },
+  "finished": "Terminé",
+  "error": {
+    "title": "Échec du chargement des données",
+    "retry": "Réessayer",
+    "missingId": "ID de l’événement manquant"
+  }
+}

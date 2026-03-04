@@ -1,0 +1,13 @@
+{
+    "button":{
+        "result":"RESULT",
+         "route":"ROUTE"
+    },
+
+    "finished": "Finished",
+    "error": {
+    "title": "Failed to load data",
+    "retry": "Retry",
+    "missingId": "Event ID missing"
+  }
+}

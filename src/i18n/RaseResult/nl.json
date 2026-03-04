@@ -1,0 +1,12 @@
+{
+  "button": {
+    "result": "RESULTAAT",
+    "route": "ROUTE"
+  },
+  "finished": "Voltooid",
+  "error": {
+    "title": "Gegevens laden mislukt",
+    "retry": "Opnieuw proberen",
+    "missingId": "Evenement-ID ontbreekt"
+  }
+}

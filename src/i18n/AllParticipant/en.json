@@ -1,0 +1,21 @@
+{
+  "race": {
+    "loading": "Loading results…",
+    "noResults": "No results for these filters.",
+    "live": "LIVE",
+    "bibNumber": "Bib number",
+    "time": "TIME",
+    "diffFirst": "DIFF 1ST",
+    "ranking": "RANKING",
+    "retry": "Retry",
+    "errorLoad": "Failed to load results. Tap to retry."
+  },
+  
+  "filter": {
+      "results": "Results",
+      "live": "Live",
+      "favourite": "Favourite"
+    }
+
+  
+}
