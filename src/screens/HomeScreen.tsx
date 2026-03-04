@@ -241,6 +241,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         { headers, timeout: API_CONFIG.TIMEOUT }
       );
 
+      if (API_CONFIG.DEBUG) {
+        console.log('📡 Home API response:', response.data);
+      }
+
+      // ✅ CHECK FOR UNAUTHORIZED ACTION (NO ERROR THROWN)
+      if (response.data.success && response.data.data?.action === 'unauthorized') {
+        if (API_CONFIG.DEBUG) {
+          console.log('🔐 Token invalid/expired - clearing session silently');
+        }
+        
+        await tokenService.removeToken();
+        setHasToken(false);
+        setHomeData(null);
+        setLoading(false);
+        return;
+      }
+
+      // ✅ NORMAL SUCCESS FLOW
       if (response.data.success && response.data.data) {
         setHomeData(response.data.data);
 
@@ -266,19 +284,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
       }
     } catch (error: any) {
-      if (API_CONFIG.DEBUG) console.error('❌ Error fetching home data:', error.message);
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Error fetching home data:', error.message);
+      }
 
+      // ✅ HANDLE 401 STATUS (IF API STILL RETURNS IT)
       if (error?.response?.status === 401) {
-        if (API_CONFIG.DEBUG) console.log('🚨 Session expired - redirecting to login');
+        if (API_CONFIG.DEBUG) {
+          console.log('🚨 401 Unauthorized - clearing session silently');
+        }
+        
+        await tokenService.removeToken();
         setHasToken(false);
         setHomeData(null);
-        tokenService.removeToken();
-        //navigation.navigate('LoginScreen');
+        
+        // ✅ DON'T SHOW ERROR OR NAVIGATE
+        return;
+      }
+
+      // ✅ FOR OTHER ERRORS, ALSO HANDLE SILENTLY (OPTIONAL)
+      // You can show errors for network issues if needed, but for auth just clear
+      if (API_CONFIG.DEBUG) {
+        console.log('⚠️ Network error - keeping current state');
       }
     } finally {
       setLoading(false);
     }
-  }, [navigation]);
+  }, []);
 
   // ==================== GPS TRACKING ====================
 

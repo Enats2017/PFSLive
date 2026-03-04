@@ -11,16 +11,28 @@
   "success": "Login Successful",
   "welcomeBack": "Welcome back!",
   "errors": {
+    "validationFailed": "Validation Error",
+    "emailInvalidTitle": "Invalid Email",
     "emailInvalid": "Please enter a valid email address",
+    "passwordRequiredTitle": "Password Required",
+    "passwordRequired": "Please enter your password",
     "passwordShort": "Password must be at least 4 characters",
-    "invalidCredentials": "Incorrect email or password",
-    "accountNotFound": "No account found with this email"
-  },
-  "alerts": {
-    "deviceNotAllowed": "Device Not Allowed",
-    "deviceNotAllowedMessage": "This account is linked to another device. Please contact support.",
-    "noConnection": "No Internet Connection",
-    "noConnectionMessage": "Please check your internet connection and try again.",
-    "genericErrorMessage": "Something went wrong. Please try again later."
+    "invalidCredentialsTitle": "Login Failed",
+    "invalidCredentials": "Incorrect email or password. Please try again.",
+    "accountNotFoundTitle": "Account Not Found",
+    "accountNotFound": "No account found with this email address",
+    "emailNotVerifiedTitle": "Email Not Verified",
+    "emailNotVerified": "Please verify your email address before logging in. Check your inbox for the verification link.",
+    "accountDisabledTitle": "Account Disabled",
+    "accountDisabled": "Your account has been disabled. Please contact support for assistance.",
+    "deviceNotAllowedTitle": "Device Not Allowed",
+    "deviceNotAllowed": "This account is linked to another device. Please contact support to transfer your account.",
+    "tokenFailedTitle": "Login Error",
+    "tokenFailed": "Unable to complete login. Please try again.",
+    "noConnectionTitle": "No Internet Connection",
+    "noConnection": "Please check your internet connection and try again.",
+    "genericErrorTitle": "Error",
+    "genericError": "Something went wrong. Please try again later.",
+    "forgotPasswordComingSoon": "Forgot password feature coming soon. Please contact support."
   }
 }

@@ -25,7 +25,7 @@
     "invalidFileType": "Veuillez sélectionner un fichier GPX valide (.gpx ou .xml)",
     "filePickFailed": "Échec de la sélection du fichier. Veuillez réessayer",
     "createFailed": "Échec de la création de l'événement. Veuillez réessayer"
-  }
+  },
   "file": {
     "uploadTitle": "Appuyez pour télécharger un fichier GPX",
     "uploadSubtitle": "Format pris en charge: .gpx (Max {{size}}MB)",

@@ -1,21 +1,33 @@
 {
-  "title": "Verifieer Uw Email",
-  "subtitle": "We hebben een 6-cijferige verificatiecode gestuurd naar",
+  "title": "Verifieer Uw E-mail",
+  "subtitle": "We hebben een 6-cijferige verificatiecode verzonden naar",
   "verifyButton": "Verifiëren",
   "didntReceive": "Code niet ontvangen?",
-  "resend": "Opnieuw Verzenden",
+  "resend": "Opnieuw verzenden",
   "resendIn": "Opnieuw verzenden over",
   "resendSuccess": "Code Verzonden",
   "resendSuccessMessage": "Een nieuwe verificatiecode is naar uw e-mail verzonden.",
+  "success": {
+    "title": "Verificatie Gelukt",
+    "message": "Uw e-mail is succesvol geverifieerd!"
+  },
   "errors": {
     "incomplete": "Voer de volledige 6-cijferige code in",
-    "invalid": "Ongeldige OTP-code. Probeer het opnieuw.",
-    "expired": "OTP is verlopen. Vraag een nieuwe aan.",
-    "tooManyAttempts": "Te veel pogingen. Probeer het later opnieuw."
-  },
-  "alerts": {
-    "noConnection": "Geen Internetverbinding",
-    "noConnectionMessage": "Controleer uw internetverbinding en probeer het opnieuw.",
-    "genericErrorMessage": "Er is iets misgegaan. Probeer het later opnieuw."
+    "invalidTitle": "Ongeldige Code",
+    "invalid": "De ingevoerde code is onjuist. Probeer het opnieuw.",
+    "expiredTitle": "Code Verlopen",
+    "expired": "Deze verificatiecode is verlopen. Vraag een nieuwe aan.",
+    "tooManyAttemptsTitle": "Te Veel Pogingen",
+    "tooManyAttempts": "U heeft het maximale aantal pogingen overschreden. Probeer het later opnieuw of vraag een nieuwe code aan.",
+    "tokenInvalidTitle": "Ongeldige Verificatielink",
+    "tokenInvalid": "Deze verificatielink is ongeldig of verlopen. Registreer opnieuw.",
+    "alreadyVerifiedTitle": "Al Geverifieerd",
+    "alreadyVerified": "Dit e-mailadres is al geverifieerd. Doorsturen naar login...",
+    "tokenFailedTitle": "Verificatie Mislukt",
+    "tokenFailed": "Kan verificatie niet voltooien. Probeer het opnieuw of neem contact op met support.",
+    "noConnectionTitle": "Geen Internetverbinding",
+    "noConnection": "Controleer uw internetverbinding en probeer het opnieuw.",
+    "genericErrorTitle": "Fout",
+    "genericError": "Er is iets misgegaan. Probeer het later opnieuw."
   }
 }

@@ -1,0 +1,28 @@
+{
+  "title": "Confirmer l'Inscription",
+  "subtitle": "Nous avons trouvé vos informations dans le résultat de la course. Veuillez confirmer vos informations ci-dessous.",
+  "fields": {
+    "bibNumber": "Numéro de Dossard",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "dob": "Date de Naissance",
+    "gender": "Genre",
+    "city": "Ville",
+    "country": "Pays",
+    "nation": "Nationalité",
+    "distance": "Distance",
+    "email": "Email"
+  },
+  "buttons": {
+    "confirm": "Confirmer & S'inscrire",
+    "cancel": "Annuler"
+  },
+  "error": {
+    "invalidDataTitle": "Données Invalides",
+    "invalidDataMessage": "Données de confirmation manquantes. Veuillez fermer et réessayer de vous inscrire.",
+    "registrationFailedTitle": "Échec de l'Inscription",
+    "registrationFailedMessage": "Impossible de compléter l'inscription. Veuillez réessayer.",
+    "confirmationFailedTitle": "Échec de la Confirmation",
+    "confirmationFailedMessage": "Impossible de confirmer l'inscription. Veuillez réessayer."
+  }
+}

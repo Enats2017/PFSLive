@@ -3,11 +3,12 @@
     "Distance": "Afstand",
     "Participant": "Deelnemer"
   },
-  "button": "MELD JE AAN VOOR LIVE TRACKING",
+  "button": "AANMELDEN VOOR LIVE TRACKING",
+  "undo": "UITSCHRIJVEN",
   "live": "LIVE",
   "countdown": {
     "in_progress": "Live",
-    "finished": "Voltooid",
+    "finished": "Afgelopen",
     "hours": "Uren",
     "days": "Dagen",
     "minutes": "Minuten"
@@ -25,11 +26,24 @@
   },
   "tracking": {
     "live": "Live Tracking Actief",
-    "bib": "Rugnummer"
+    "bib": "Startnummer"
+  },
+  "success": {
+    "message": "Bedankt voor het aanmelden voor de live tracking van dit evenement. Vertel je familie en vrienden om je hier te volgen en vergeet niet je live tracking 1 uur voor de start van je wedstrijd in deze app te activeren!"
   },
   "error": {
-    "title": "Kan gegevens niet laden",
-    "retry": "Opnieuw proberen",
-    "missingId": "Evenement ID ontbreekt"
+    "title": "Gegevens laden mislukt",
+    "retry": "Opnieuw Proberen",
+    "missingId": "Evenement-ID ontbreekt",
+    "unexpectedTitle": "Onverwachte Reactie",
+    "unexpectedMessage": "De server heeft een onverwachte reactie gegeven. Probeer het opnieuw.",
+    "invalidBibTitle": "Ongeldig Startnummer",
+    "invalidBibMessage": "Het opgegeven startnummer is ongeldig. Controleer en probeer opnieuw.",
+    "registrationFailedTitle": "Registratie Mislukt",
+    "registrationFailedMessage": "Kan registratie niet voltooien. Controleer uw verbinding en probeer opnieuw.",
+    "cannotUnregisterTitle": "Kan Niet Uitschrijven",
+    "cannotUnregisterMessage": "Deelnemersinformatie ontbreekt. Vernieuw en probeer opnieuw.",
+    "unregisterFailedTitle": "Uitschrijven Mislukt",
+    "unregisterFailedMessage": "Kan niet uitschrijven. Probeer het opnieuw."
   }
 }

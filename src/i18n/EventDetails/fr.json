@@ -3,7 +3,8 @@
     "Distance": "Distance",
     "Participant": "Participant"
   },
-  "button": "INSCRIVEZ-VOUS AU SUIVI EN DIRECT",
+  "button": "S'INSCRIRE AU SUIVI EN DIRECT",
+  "undo": "ANNULER L'INSCRIPTION",
   "live": "EN DIRECT",
   "countdown": {
     "in_progress": "En Direct",
@@ -27,9 +28,22 @@
     "live": "Suivi en Direct Actif",
     "bib": "Dossard"
   },
+  "success": {
+    "message": "Merci de vous être inscrit au suivi en direct de cet événement. Dites à votre famille et à vos amis de vous suivre ici et n'oubliez pas d'activer votre suivi en direct 1 heure avant le début de votre course dans cette application!"
+  },
   "error": {
     "title": "Échec du chargement des données",
     "retry": "Réessayer",
-    "missingId": "ID d'événement manquant"
+    "missingId": "ID de l'événement manquant",
+    "unexpectedTitle": "Réponse Inattendue",
+    "unexpectedMessage": "Le serveur a renvoyé une réponse inattendue. Veuillez réessayer.",
+    "invalidBibTitle": "Numéro de Dossard Invalide",
+    "invalidBibMessage": "Le numéro de dossard fourni est invalide. Veuillez vérifier et réessayer.",
+    "registrationFailedTitle": "Échec de l'Inscription",
+    "registrationFailedMessage": "Impossible de compléter l'inscription. Vérifiez votre connexion et réessayez.",
+    "cannotUnregisterTitle": "Impossible de Se Désinscrire",
+    "cannotUnregisterMessage": "Informations sur le participant manquantes. Veuillez actualiser et réessayer.",
+    "unregisterFailedTitle": "Échec de la Désinscription",
+    "unregisterFailedMessage": "Impossible de se désinscrire. Veuillez réessayer."
   }
 }

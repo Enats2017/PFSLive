@@ -4,7 +4,7 @@
     "Participant": "Participant"
   },
   "button": "SIGN UP LIVE TRACKING",
-  "undo":"UNDO FOR SIGNUP",
+  "undo": "UNDO FOR SIGNUP",
   "live": "LIVE",
   "countdown": {
     "in_progress": "Live",
@@ -28,9 +28,22 @@
     "live": "Live Tracking Active",
     "bib": "Bib"
   },
+  "success": {
+    "message": "Thank you for signing up for the live tracking of this event. Tell your family and friends to follow you here and don't forget to activate your live tracking from 1 hour before the start of your race in this app!"
+  },
   "error": {
     "title": "Failed to load data",
     "retry": "Retry",
-    "missingId": "Event ID missing"
+    "missingId": "Event ID missing",
+    "unexpectedTitle": "Unexpected Response",
+    "unexpectedMessage": "The server returned an unexpected response. Please try again.",
+    "invalidBibTitle": "Invalid Bib Number",
+    "invalidBibMessage": "The bib number provided is invalid. Please check and try again.",
+    "registrationFailedTitle": "Registration Failed",
+    "registrationFailedMessage": "Unable to complete registration. Please check your connection and try again.",
+    "cannotUnregisterTitle": "Cannot Unregister",
+    "cannotUnregisterMessage": "Missing participant information. Please refresh and try again.",
+    "unregisterFailedTitle": "Unregister Failed",
+    "unregisterFailedMessage": "Unable to unregister. Please try again."
   }
 }

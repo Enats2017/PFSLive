@@ -1,69 +1,102 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  StatusBar,
+  Dimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
 import { commonStyles } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useTranslation } from 'react-i18next';
 import DistanceTab from './DistanceTab';
 import ParticipantTab from './ParticipantTab';
 import type { EventDetailsProps } from '../../types/navigation';
+import { API_CONFIG } from '../../constants/config';
 
 const { width } = Dimensions.get('window');
+
 type Tab = 'Participant' | 'Distance';
-const TABS: Tab[] = ['Participant', 'Distance']; // ✅ Order stays the same
+const TABS: Tab[] = ['Participant', 'Distance'];
 
 const EventDetails = ({ route }: EventDetailsProps) => {
   const { t } = useTranslation(['details']);
-  const [activeTab, setActiveTab] = useState<Tab>('Distance'); // ✅ DEFAULT TO DISTANCE
+  const [activeTab, setActiveTab] = useState<Tab>('Distance');
+  const [refreshKey, setRefreshKey] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
   const { product_app_id, event_name, auto_register_id } = route.params;
-console.log("product_app)id",product_app_id);
-console.log("event_name ",event_name);
-console.log("autogaiser_id",auto_register_id);
 
+  if (API_CONFIG.DEBUG) {
+    console.log('📋 EventDetails params:', {
+      product_app_id,
+      event_name,
+      auto_register_id,
+    });
+  }
 
-
-
-
-  const renderContent = (tab: Tab) => {
-    if (!product_app_id) {
-      return (
-        <View style={commonStyles.centerContainer}>
-          <Text style={commonStyles.errorText}>
-            {t('details:error.missingId')}
-          </Text>
-        </View>
-      );
+  // ✅ REFRESH CALLBACK (called after successful registration)
+  const handleRefresh = useCallback(() => {
+    if (API_CONFIG.DEBUG) {
+      console.log('🔄 Refreshing both tabs');
     }
+    setRefreshKey((prev) => prev + 1);
+  }, []);
 
-    switch (tab) {
-      case 'Distance':
+  const renderContent = useCallback(
+    (tab: Tab) => {
+      if (!product_app_id) {
         return (
-          <DistanceTab
-            product_app_id={product_app_id}
-            auto_register_id={auto_register_id ?? null} // ✅ pass auto_register_id
-          />
+          <View style={commonStyles.centerContainer}>
+            <Text style={commonStyles.errorText}>
+              {t('details:error.missingId')}
+            </Text>
+          </View>
         );
-      case 'Participant':
-        return <ParticipantTab product_app_id={product_app_id} />;
-      default:
-        return null;
-    }
-  };
+      }
 
-  const handleTabPress = (tab: Tab) => {
-    const index = TABS.indexOf(tab);
-    setActiveTab(tab);
-    flatListRef.current?.scrollToIndex({ index, animated: true });
-  };
+      switch (tab) {
+        case 'Distance':
+          return (
+            <DistanceTab
+              key={`distance-${refreshKey}`}
+              product_app_id={product_app_id}
+              event_name={event_name}
+              auto_register_id={auto_register_id ?? null}
+              onRefresh={handleRefresh}
+            />
+          );
+        case 'Participant':
+          return (
+            <ParticipantTab
+              key={`participant-${refreshKey}`}
+              product_app_id={product_app_id}
+            />
+          );
+        default:
+          return null;
+      }
+    },
+    [product_app_id, event_name, auto_register_id, refreshKey, handleRefresh, t]
+  );
 
-  const handleSwipe = (e: any) => {
+  const handleTabPress = useCallback(
+    (tab: Tab) => {
+      const index = TABS.indexOf(tab);
+      setActiveTab(tab);
+      flatListRef.current?.scrollToIndex({ index, animated: true });
+    },
+    []
+  );
+
+  const handleSwipe = useCallback((e: any) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / width);
     setActiveTab(TABS[index]);
-  };
+  }, []);
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -81,7 +114,12 @@ console.log("autogaiser_id",auto_register_id);
             style={detailsStyles.tabItem}
             onPress={() => handleTabPress(tab)}
           >
-            <Text style={[commonStyles.subtitle, activeTab === tab && detailsStyles.activeTabText]}>
+            <Text
+              style={[
+                commonStyles.subtitle,
+                activeTab === tab && detailsStyles.activeTabText,
+              ]}
+            >
               {t(`details:details.${tab}`)}
             </Text>
             {activeTab === tab && (
@@ -105,16 +143,14 @@ console.log("autogaiser_id",auto_register_id);
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item}
           onMomentumScrollEnd={handleSwipe}
-          initialScrollIndex={TABS.indexOf('Distance')} // ✅ START AT DISTANCE (index 1)
+          initialScrollIndex={TABS.indexOf('Distance')}
           getItemLayout={(_, index) => ({
             length: width,
             offset: width * index,
-            index
+            index,
           })}
           renderItem={({ item }) => (
-            <View style={{ width, flex: 1 }}>
-              {renderContent(item)}
-            </View>
+            <View style={{ width, flex: 1 }}>{renderContent(item)}</View>
           )}
           scrollEnabled={true}
         />

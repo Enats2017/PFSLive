@@ -1,7 +1,6 @@
 import { apiClient } from "./api";
 import { API_CONFIG, getApiEndpoint } from "../constants/config";
 import { getCurrentLanguageId } from "../i18n";
-import { toastSuccess } from "../../utils/toast";
 
 export type RegistrationStatus =
   | "registered"
@@ -28,7 +27,6 @@ export interface EventDetailResponse {
   server_datetime: string;
 }
 
-// FIX: made internal — never needed outside this file
 interface EventDetailApiResponse {
   success: boolean;
   data: EventDetailResponse;
@@ -65,22 +63,60 @@ export interface ParticipantData {
 }
 
 export interface RegisterParticipantResponse {
-  action: "confirm_race_result" | "registered";
+  success: boolean;
+  action: 
+    // Success actions
+    | 'registered'
+    | 'confirm_race_result'
+    // Error actions
+    | 'already_registered'
+    | 'membership_required'
+    | 'limit_reached'
+    | 'not_found_in_race_result'
+    | 'bib_number_invalid'
+    | 'distance_not_found'
+    | 'validation_error'
+    | 'product_app_id_invalid'
+    | 'language_id_invalid'
+    | 'missing_parameters'
+    | 'unauthorized'
+    | 'token_invalid'
+    | 'token_expired'
+    | 'unknown_error';
   is_first_tracking: 0 | 1;
   race_result_data?: RaceResultData;
   participant?: ParticipantData;
 }
 
-//FIX: made internal — never needed outside this file
 interface RegisterApiResponse {
   success: boolean;
   data: RegisterParticipantResponse;
   error: string | null;
 }
 
+// ✅ DELETE PARTICIPANT RESPONSE TYPE (EXPORTED)
+export interface DeleteParticipantResponse {
+  success: boolean;
+  action:
+    // Success actions
+    | 'deleted'
+    | 'success'
+    | 'participant_deleted'
+    // Error actions
+    | 'participant_not_found'
+    | 'already_deleted'
+    | 'unauthorized'
+    | 'token_invalid'
+    | 'token_expired'
+    | 'unknown_error';
+  error?: string;
+}
+
+// ✅ DELETE API RESPONSE (WRAPPER - FIXED)
 interface DeleteApiResponse {
   success: boolean;
-  error: string | null;
+  data?: DeleteParticipantResponse; // ✅ Contains the actual response with action
+  error?: string;
 }
 
 const extractBackendError = (error: any): string => {
@@ -93,42 +129,55 @@ const extractBackendError = (error: any): string => {
 };
 
 export const eventDetailService = {
-  //Get event distances
+  // Get event distances
   async getEventDetails(
     product_app_id: string | number,
+    bustCache: boolean = false
   ): Promise<EventDetailResponse> {
     try {
       const language_id = getCurrentLanguageId();
+      
       if (API_CONFIG.DEBUG) {
-        console.log("Fetching event details for:", product_app_id);
+        console.log('Fetching event details for:', product_app_id, { bustCache });
       }
-      const url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENT_DETAIL);
+      
+      let url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENT_DETAIL);
       const headers = await API_CONFIG.getHeaders();
+      
+      const body: any = { 
+        language_id, 
+        product_app_id 
+      };
+      
+      if (bustCache) {
+        body._t = Date.now();
+      }
+      
       const response = await apiClient.post<EventDetailApiResponse>(
         url,
-        { language_id, product_app_id },
-        { headers },
+        body,
+        { headers }
       );
 
       if (response.success && response.data) {
         if (API_CONFIG.DEBUG) {
           console.log(
-            "Event details loaded:",
+            'Event details loaded:',
             response.data.distances?.length ?? 0,
-            "distances",
+            'distances'
           );
         }
         return {
           distances: response.data.distances ?? [],
-          server_datetime: response.data.server_datetime ?? "",
+          server_datetime: response.data.server_datetime ?? '',
         };
       }
-      throw new Error(response.error ?? "Failed to fetch event details");
+      throw new Error(response.error ?? 'Failed to fetch event details');
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
         console.error(
-          "Error fetching event details:",
-          extractBackendError(error),
+          'Error fetching event details:',
+          extractBackendError(error)
         );
       }
       throw new Error(extractBackendError(error));
@@ -138,7 +187,7 @@ export const eventDetailService = {
   // Register participant
   async registerParticipant(
     product_option_value_app_id: number,
-    bib_number?: string, // pass only on confirm step
+    bib_number?: string,
     language_id?: number,
   ): Promise<RegisterParticipantResponse> {
     try {
@@ -155,7 +204,7 @@ export const eventDetailService = {
         product_option_value_app_id,
         language_id: lang_id,
       };
-      // only add bib_number if provided (confirm step)
+
       if (bib_number && bib_number.trim() !== "") {
         body.bib_number = bib_number.trim();
       }
@@ -169,13 +218,12 @@ export const eventDetailService = {
       });
 
       if (response.success && response.data) {
-        // ✅ HANDLE BACKEND ERROR INSIDE SUCCESS RESPONSE
         if ((response.data as any).error) {
           throw new Error((response.data as any).error);
         }
         return response.data;
       }
-       throw new Error(response.error ?? "Registration failed");
+      throw new Error(response.error ?? "Registration failed");
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
         console.log(
@@ -187,8 +235,10 @@ export const eventDetailService = {
     }
   },
 
-  // ─── Delete participant ────────────────────────────────────────────────────
-  async deleteParticipant(participant_app_id: number): Promise<void> {
+  // ✅ DELETE PARTICIPANT (FIXED - RETURNS PROPER RESPONSE)
+  async deleteParticipant(
+    participant_app_id: number
+  ): Promise<DeleteParticipantResponse> {
     try {
       if (API_CONFIG.DEBUG) {
         console.log("📡 Deleting participant:", participant_app_id);
@@ -203,22 +253,50 @@ export const eventDetailService = {
         { headers },
       );
 
-      if (response.success) {
-        if (API_CONFIG.DEBUG) {
-          console.log("✅ Participant deleted successfully");
-        }
-        return;
+      if (API_CONFIG.DEBUG) {
+        console.log("📡 Delete API response:", response);
       }
 
-      throw new Error(response.error ?? "Failed to delete participant");
+      // ✅ IF SUCCESS AND HAS DATA WITH ACTION
+      if (response.success && response.data) {
+        if (API_CONFIG.DEBUG) {
+          console.log("✅ Delete response data:", response.data);
+        }
+        return response.data;
+      }
+
+      // ✅ IF SUCCESS BUT NO DATA (OLD API FORMAT)
+      if (response.success) {
+        if (API_CONFIG.DEBUG) {
+          console.log("✅ Delete success (no data, returning default)");
+        }
+        return {
+          success: true,
+          action: 'deleted',
+        };
+      }
+
+      // ✅ IF NOT SUCCESS, CREATE ERROR RESPONSE
+      if (API_CONFIG.DEBUG) {
+        console.error("❌ Delete failed:", response.error);
+      }
+      
+      return {
+        success: false,
+        action: 'unknown_error',
+        error: response.error ?? 'Failed to delete participant',
+      };
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        console.error(
-          "❌ Error deleting participant:",
-          extractBackendError(error),
-        );
+        console.error("❌ Delete network error:", error);
       }
-      throw new Error(extractBackendError(error));
+      
+      // ✅ RETURN ERROR RESPONSE INSTEAD OF THROWING
+      return {
+        success: false,
+        action: 'unknown_error',
+        error: extractBackendError(error),
+      };
     }
   },
 };

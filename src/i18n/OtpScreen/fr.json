@@ -1,21 +1,33 @@
 {
-  "title": "Vérifiez Votre Email",
+  "title": "Vérifiez Votre E-mail",
   "subtitle": "Nous avons envoyé un code de vérification à 6 chiffres à",
   "verifyButton": "Vérifier",
-  "didntReceive": "Vous n'avez pas reçu le code?",
+  "didntReceive": "Code non reçu?",
   "resend": "Renvoyer",
   "resendIn": "Renvoyer dans",
   "resendSuccess": "Code Envoyé",
-  "resendSuccessMessage": "Un nouveau code de vérification a été envoyé à votre email.",
+  "resendSuccessMessage": "Un nouveau code de vérification a été envoyé à votre e-mail.",
+  "success": {
+    "title": "Vérification Réussie",
+    "message": "Votre e-mail a été vérifié avec succès!"
+  },
   "errors": {
     "incomplete": "Veuillez entrer le code complet à 6 chiffres",
-    "invalid": "Code OTP invalide. Veuillez réessayer.",
-    "expired": "Le code OTP a expiré. Veuillez en demander un nouveau.",
-    "tooManyAttempts": "Trop de tentatives. Veuillez réessayer plus tard."
-  },
-  "alerts": {
-    "noConnection": "Pas de Connexion Internet",
-    "noConnectionMessage": "Veuillez vérifier votre connexion Internet et réessayer.",
-    "genericErrorMessage": "Une erreur s'est produite. Veuillez réessayer plus tard."
+    "invalidTitle": "Code Invalide",
+    "invalid": "Le code que vous avez entré est incorrect. Veuillez réessayer.",
+    "expiredTitle": "Code Expiré",
+    "expired": "Ce code de vérification a expiré. Veuillez en demander un nouveau.",
+    "tooManyAttemptsTitle": "Trop de Tentatives",
+    "tooManyAttempts": "Vous avez dépassé le nombre maximum de tentatives. Veuillez réessayer plus tard ou demander un nouveau code.",
+    "tokenInvalidTitle": "Lien de Vérification Invalide",
+    "tokenInvalid": "Ce lien de vérification est invalide ou a expiré. Veuillez vous réinscrire.",
+    "alreadyVerifiedTitle": "Déjà Vérifié",
+    "alreadyVerified": "Cet e-mail a déjà été vérifié. Redirection vers la connexion...",
+    "tokenFailedTitle": "Échec de la Vérification",
+    "tokenFailed": "Impossible de terminer la vérification. Veuillez réessayer ou contacter le support.",
+    "noConnectionTitle": "Pas de Connexion Internet",
+    "noConnection": "Veuillez vérifier votre connexion Internet et réessayer.",
+    "genericErrorTitle": "Erreur",
+    "genericError": "Quelque chose s'est mal passé. Veuillez réessayer plus tard."
   }
 }

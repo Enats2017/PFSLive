@@ -1,0 +1,7 @@
+{
+  "defaultTitle": "Error",
+  "buttons": {
+    "retry": "Try Again",
+    "close": "Close"
+  }
+}

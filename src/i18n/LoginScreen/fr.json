@@ -1,9 +1,9 @@
 {
   "title": "Bon Retour",
   "subtitle": "Connectez-vous à votre compte pour continuer",
-  "email": "Adresse Email",
+  "email": "Adresse E-mail",
   "password": "Mot de Passe",
-  "forgotPassword": "Mot de Passe Oublié?",
+  "forgotPassword": "Mot de passe oublié?",
   "loginButton": "Se Connecter",
   "or": "OU",
   "noAccount": "Vous n'avez pas de compte?",
@@ -11,16 +11,28 @@
   "success": "Connexion Réussie",
   "welcomeBack": "Bon retour!",
   "errors": {
-    "emailInvalid": "Veuillez entrer une adresse email valide",
+    "validationFailed": "Erreur de Validation",
+    "emailInvalidTitle": "E-mail Invalide",
+    "emailInvalid": "Veuillez entrer une adresse e-mail valide",
+    "passwordRequiredTitle": "Mot de Passe Requis",
+    "passwordRequired": "Veuillez entrer votre mot de passe",
     "passwordShort": "Le mot de passe doit contenir au moins 4 caractères",
-    "invalidCredentials": "Email ou mot de passe incorrect",
-    "accountNotFound": "Aucun compte trouvé avec cet email"
-  },
-  "alerts": {
-    "deviceNotAllowed": "Appareil Non Autorisé",
-    "deviceNotAllowedMessage": "Ce compte est lié à un autre appareil. Veuillez contacter le support.",
-    "noConnection": "Pas de Connexion Internet",
-    "noConnectionMessage": "Veuillez vérifier votre connexion Internet et réessayer.",
-    "genericErrorMessage": "Une erreur s'est produite. Veuillez réessayer plus tard."
+    "invalidCredentialsTitle": "Échec de Connexion",
+    "invalidCredentials": "E-mail ou mot de passe incorrect. Veuillez réessayer.",
+    "accountNotFoundTitle": "Compte Non Trouvé",
+    "accountNotFound": "Aucun compte trouvé avec cette adresse e-mail",
+    "emailNotVerifiedTitle": "E-mail Non Vérifié",
+    "emailNotVerified": "Veuillez vérifier votre adresse e-mail avant de vous connecter. Consultez votre boîte de réception pour le lien de vérification.",
+    "accountDisabledTitle": "Compte Désactivé",
+    "accountDisabled": "Votre compte a été désactivé. Veuillez contacter le support pour obtenir de l'aide.",
+    "deviceNotAllowedTitle": "Appareil Non Autorisé",
+    "deviceNotAllowed": "Ce compte est lié à un autre appareil. Veuillez contacter le support pour transférer votre compte.",
+    "tokenFailedTitle": "Erreur de Connexion",
+    "tokenFailed": "Impossible de terminer la connexion. Veuillez réessayer.",
+    "noConnectionTitle": "Pas de Connexion Internet",
+    "noConnection": "Veuillez vérifier votre connexion Internet et réessayer.",
+    "genericErrorTitle": "Erreur",
+    "genericError": "Quelque chose s'est mal passé. Veuillez réessayer plus tard.",
+    "forgotPasswordComingSoon": "La fonction mot de passe oublié arrive bientôt. Veuillez contacter le support."
   }
 }

@@ -1,0 +1,28 @@
+{
+  "title": "Registratie Bevestigen",
+  "subtitle": "We hebben uw gegevens gevonden in het wedstrijdresultaat. Bevestig hieronder uw informatie.",
+  "fields": {
+    "bibNumber": "Startnummer",
+    "firstName": "Voornaam",
+    "lastName": "Achternaam",
+    "dob": "Geboortedatum",
+    "gender": "Geslacht",
+    "city": "Stad",
+    "country": "Land",
+    "nation": "Nationaliteit",
+    "distance": "Afstand",
+    "email": "E-mail"
+  },
+  "buttons": {
+    "confirm": "Bevestigen & Registreren",
+    "cancel": "Annuleren"
+  },
+  "error": {
+    "invalidDataTitle": "Ongeldige Gegevens",
+    "invalidDataMessage": "Bevestigingsgegevens ontbreken. Sluit en probeer opnieuw te registreren.",
+    "registrationFailedTitle": "Registratie Mislukt",
+    "registrationFailedMessage": "Kan registratie niet voltooien. Probeer het opnieuw.",
+    "confirmationFailedTitle": "Bevestiging Mislukt",
+    "confirmationFailedMessage": "Kan registratie niet bevestigen. Probeer het opnieuw."
+  }
+}
