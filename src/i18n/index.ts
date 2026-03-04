@@ -26,6 +26,11 @@ import  RegisterNL from "./RegisterScreen/nl.json";
 import LoginEN from "./LoginScreen/en.json";
 import OtpEN from "./OtpScreen/en.json";
 import PersonalEventEN from "./PersonalEvent/en.json";
+import RaseResultEN from "./RaseResult/en.json";
+import RaseResultFR from "./RaseResult/fr.json";
+import RaseResultNL from "./RaseResult/nl.json";
+import AllParticipantEN from "./AllParticipant/en.json";
+import ProfileEditEN from "./ProfileEdit/en.json";
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
@@ -200,15 +205,19 @@ i18n.use(initReactI18next).init({
       register:RegisterEN,
       login:LoginEN,
       otp:OtpEN,
-      personal:PersonalEventEN
+      personal:PersonalEventEN,
+      reuslt:RaseResultEN,
+      allrace:AllParticipantEN,
+      profile:ProfileEditEN
     },
     fr: {
       common: commonFR,
       home: homeFR,
-      event: eventNL,
+      event: eventFR,
       route: routeFR,
       details: detailsFR,
       register:RegisterFR,
+      result:RaseResultFR
     },
     nl: {
       common: commonNL,
@@ -217,6 +226,7 @@ i18n.use(initReactI18next).init({
       route: routeNL,
       details: detailsNL,
       register:RegisterNL,
+      result:RaseResultNL
     },
   },
   lng: initialLanguage,
