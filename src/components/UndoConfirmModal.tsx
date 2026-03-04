@@ -168,6 +168,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   confirmButton: {
-    backgroundColor: colors.warning,
+    backgroundColor: colors.primary,
   },
 });

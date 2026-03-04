@@ -124,7 +124,7 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
 
           {/* Success Icon */}
           <View style={styles.iconWrapper}>
-            <Ionicons name="checkmark-circle" size={80} color={colors.success} />
+            <Ionicons name="checkmark-circle" size={80} color={colors.primary} />
           </View>
 
           {/* Title */}
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    backgroundColor: colors.success,
+    backgroundColor: colors.primary,
   },
   confetti: {
     position: 'absolute',
