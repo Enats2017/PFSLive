@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { Platform } from 'react-native';
-import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
+import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config'
 import { tokenService } from './tokenService';
 import { getCurrentLanguageId } from '../i18n';
 
@@ -123,6 +123,8 @@ export const authService = {
 
       if (response.data.success && response.data.data?.token) {
         await tokenService.saveToken(response.data.data.token);
+        await tokenService.saveCustomerId(response.data.data?.customer?.customer_app_id ?? 0);
+        
         if (API_CONFIG.DEBUG) {
           console.log('✅ Login successful, token saved');
         }

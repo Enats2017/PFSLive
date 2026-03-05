@@ -13,6 +13,10 @@ import Register from '../screens/Register';
 import LoginScreen from '../screens/LoginScreen';
 import OTPVerificationScreen from '../screens/OTPVerificationScreen';
 import ParticipantResult from '../screens/EventDetails/ParticipantResult';
+import RaseResultScreen from '../screens/RaseResultScreen';
+import AllParticipant from '../screens/AllParticipantResult';
+import ProfileScreen from '../screens/EditProfileScreen/ProfileScreen';
+import EditProfileScreen from '../screens/EditProfileScreen/EditProfileScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -85,6 +89,34 @@ export const AppNavigator: React.FC = () => {
          <Stack.Screen 
           name="LoginScreen" 
           component={LoginScreen}
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+          <Stack.Screen 
+          name="RaseResultScreen" 
+          component={RaseResultScreen}
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen 
+          name="AllParticipant" 
+          component={AllParticipant}
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+         <Stack.Screen 
+          name="ProfileScreen" 
+          component={ProfileScreen}
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen 
+          name="EditProfileScreen" 
+          component={EditProfileScreen}
           options={{
             gestureEnabled: false,
           }}

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TOKEN_STORAGE_KEY = '@PFSLive:authToken';
+const CUSTOMER_KEY = '@PFSLive:customer_app_id';
 
 export const tokenService = {
   /**
@@ -25,6 +26,25 @@ export const tokenService = {
       return null;
     }
   },
+
+  async saveCustomerId(id: number | string): Promise<void> {
+        try {
+            await AsyncStorage.setItem(CUSTOMER_KEY, String(id));
+        } catch (error) {
+            console.error('❌ Error saving customer id:', error);
+        }
+    },
+
+    async getCustomerId(): Promise<number | null> {
+        try {
+            const id = await AsyncStorage.getItem(CUSTOMER_KEY);
+              console.log('🔑 customer_app_id from storage:', id);
+            return id ? Number(id) : null;            
+        } catch (error) {
+            console.error('❌ Error loading customer id:', error);
+            return null;
+        }
+    },
 
 
   async removeToken(): Promise<void> {

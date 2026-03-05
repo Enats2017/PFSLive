@@ -22,7 +22,7 @@ import RaseResultEN from "./RaseResult/en.json";
 import RaseResultFR from "./RaseResult/fr.json";
 import RaseResultNL from "./RaseResult/nl.json";
 import AllParticipantEN from "./AllParticipant/en.json";
-import ProfileEditEN from "./ProfileEdit/en.json";
+
 
 // ✅ PARTICIPANT EVENT
 import eventEN from './ParticipantEvent/en.json';
@@ -73,6 +73,11 @@ import undoModalNL from './UndoModal/nl.json';
 import errorModalEN from './ErrorModal/en.json';
 import errorModalFR from './ErrorModal/fr.json';
 import errorModalNL from './ErrorModal/nl.json';
+
+import ProfileEN from "./ProfileScreen/en.json";
+import ProfileFR from "./ProfileScreen/fr.json";
+import ProfileNL from "./ProfileScreen/nl.json";
+
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
@@ -219,7 +224,6 @@ i18n.use(initReactI18next).init({
       personal:PersonalEventEN,
       reuslt:RaseResultEN,
       allrace:AllParticipantEN,
-      profile:ProfileEditEN,
       participantResult: participantResultEN,
       register: registerEN,
       login: loginEN,
@@ -227,6 +231,7 @@ i18n.use(initReactI18next).init({
       confirmModal: confirmModalEN,
       undoModal: undoModalEN,
       errorModal: errorModalEN,
+      profile:ProfileEN,
     },
     fr: {
       common: commonFR,
@@ -243,6 +248,7 @@ i18n.use(initReactI18next).init({
       confirmModal: confirmModalFR,
       undoModal: undoModalFR,
       errorModal: errorModalFR,
+      profile:ProfileFR,
     },
     nl: {
       common: commonNL,
@@ -259,6 +265,7 @@ i18n.use(initReactI18next).init({
       confirmModal: confirmModalNL,
       undoModal: undoModalNL,
       errorModal: errorModalNL,
+      profile:ProfileNL,
     },
   },
   lng: initialLanguage,
@@ -278,6 +285,7 @@ i18n.use(initReactI18next).init({
     'confirmModal',
     'undoModal',
     'errorModal',
+    'profile',
   ],
   interpolation: {
     escapeValue: false,

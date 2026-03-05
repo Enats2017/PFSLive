@@ -81,6 +81,12 @@ export const commonStyles = StyleSheet.create({
     padding: spacing.xl,
     backgroundColor: colors.white,
   },
+   section: {
+    alignItems: "center",
+    padding: 6,
+    backgroundColor: colors.gray300,
+    marginVertical: spacing.sm,
+  },
   
   // Text
   text: {
@@ -168,10 +174,13 @@ export const commonStyles = StyleSheet.create({
   },
 
      favoriteButton: {
-    backgroundColor: colors.info,
+    backgroundColor: colors.primaryLight,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     flex:1,
+    borderBottomRightRadius:7,
+    borderTopRightRadius:6,
+  
     borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -183,8 +192,10 @@ export const commonStyles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
   },
     livetracking: {
-    backgroundColor: colors.success,
+    backgroundColor: colors.primary,
     paddingVertical: spacing.md,
+    borderBottomLeftRadius:7,
+    borderTopLeftRadius:6,
     paddingHorizontal: spacing.xl,
     flex:1,
     alignItems: 'center',

@@ -1,0 +1,75 @@
+{
+  "tab": {
+    "Live": "Live",
+    "Past": "Past"
+  },
+
+  "errors": {
+    "user_not_found": "User not found. Please log in again.",
+    "load_profile_failed": "Failed to load profile.",
+    "load_profile_api_failed": "Failed to load athlete profile.",
+    "load_more_past_failed": "Failed to load more past events.",
+    "load_more_live_failed": "Failed to load more live events.",
+     "permission_needed_title": "Permission needed",
+    "permission_needed_message": "Please allow photo access to change your avatar."
+
+  },
+  "status": {
+    "live": "LIVE",
+    "soon": "SOON",
+    "finished": "FINISHED"
+  },
+  "buttons": {
+    "edit_personal_event": "EDIT PERSONAL EVENT",
+    "live_tracking_progress": "LIVE TRACKING IN PROGRESS",
+    "live_tracking_soon": "LIVE TRACKING STARTS SOON",
+    "enable_gps": "ENABLE GPS TO START TRACKING",
+    "load_more": "Load more",
+    "save_changes":"SAVE CHANGES"
+  },
+  "empty": {
+    "no_live_events": "No live events right now"
+  },
+
+  "past": {
+    "view_results": "VIEW RESULTS",
+    "no_events": "No past events found"
+  },
+
+   "labels": {
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "email": "Email",
+    "city": "City",
+    "dob": "Date of Birth",
+    "gender": "Gender",
+    "country": "Country",
+    "new_password": "New Password",
+    "confirm_password": "Confirm Password"
+  },
+
+  "gender": {
+    "male": "Male",
+    "female": "Female",
+    "other": "Other",
+    "prefer_not_to_say": "Prefer not to say"
+  },
+
+   "messages": {
+    "email_readonly": "Email cannot be changed here.",
+    "verify_email_title": "Verify your email",
+    "verify_email_message": "A verification code was sent to your new email address.",
+    "saved_title": "Saved",
+    "saved_message": "Your profile has been updated.",
+    "success_profile_updated": "Profile updated successfully!"
+  },
+    "avatar": {
+    "remove_photo": "Remove photo"
+  },
+  "sections": {
+    "personal_info": "PERSONAL INFO",
+    "change_password": "CHANGE PASSWORD",
+    "password_hint": "Leave blank to keep current"
+  }
+ 
+}

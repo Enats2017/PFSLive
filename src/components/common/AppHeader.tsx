@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { headerStyles } from '../../styles/header.styles';
+import { useNavigation } from '@react-navigation/native';
 
 interface AppHeaderProps {
   title?: string;
@@ -11,6 +12,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   title,
   showLogo = true,
 }) => {
+  const navigation = useNavigation<any>();
   return (
     <View style={headerStyles.container}>
       {/* Left Side - Logo Image */}
@@ -44,7 +46,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         
         <TouchableOpacity
           style={headerStyles.iconButton}
-          onPress={() => console.log('Profile pressed')}
+          onPress={() => navigation.navigate('ProfileScreen')}
         >
           <Text style={headerStyles.icon}>👤</Text>
         </TouchableOpacity>

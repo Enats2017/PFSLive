@@ -1,0 +1,68 @@
+{
+  "tab": {
+    "Live": "En direct",
+    "Past": "Passé"
+  },
+  "errors": {
+    "user_not_found": "Utilisateur introuvable. Veuillez vous reconnecter.",
+    "load_profile_failed": "Impossible de charger le profil.",
+    "load_profile_api_failed": "Impossible de charger le profil de l’athlète.",
+    "load_more_past_failed": "Impossible de charger plus d’événements passés.",
+    "load_more_live_failed": "Impossible de charger plus d’événements en direct.",
+    "permission_needed_title": "Autorisation requise",
+    "permission_needed_message": "Veuillez autoriser l’accès aux photos pour modifier votre avatar."
+  },
+  "status": {
+    "live": "EN DIRECT",
+    "soon": "BIENTÔT",
+    "finished": "TERMINÉ"
+  },
+  "buttons": {
+    "edit_personal_event": "MODIFIER L'ÉVÉNEMENT PERSONNEL",
+    "live_tracking_progress": "SUIVI EN DIRECT EN COURS",
+    "live_tracking_soon": "LE SUIVI EN DIRECT COMMENCE BIENTÔT",
+    "enable_gps": "ACTIVER LE GPS POUR COMMENCER LE SUIVI",
+    "load_more": "Charger plus",
+    "save_changes": "ENREGISTRER LES MODIFICATIONS"
+  },
+  "empty": {
+    "no_live_events": "Aucun événement en direct pour le moment"
+  },
+  "past": {
+    "view_results": "VOIR LES RÉSULTATS",
+    "no_events": "Aucun événement passé trouvé"
+  },
+  "labels": {
+    "first_name": "Prénom",
+    "last_name": "Nom de famille",
+    "email": "E-mail",
+    "city": "Ville",
+    "dob": "Date de naissance",
+    "gender": "Genre",
+    "country": "Pays",
+    "new_password": "Nouveau mot de passe",
+    "confirm_password": "Confirmer le mot de passe"
+  },
+  "gender": {
+    "male": "Homme",
+    "female": "Femme",
+    "other": "Autre",
+    "prefer_not_to_say": "Préfère ne pas dire"
+  },
+  "messages": {
+    "email_readonly": "L’e-mail ne peut pas être modifié ici.",
+    "verify_email_title": "Vérifiez votre e-mail",
+    "verify_email_message": "Un code de vérification a été envoyé à votre nouvelle adresse e-mail.",
+    "saved_title": "Enregistré",
+    "saved_message": "Votre profil a été mis à jour.",
+    "success_profile_updated": "Profil mis à jour avec succès !"
+  },
+  "avatar": {
+    "remove_photo": "Supprimer la photo"
+  },
+  "sections": {
+    "personal_info": "INFORMATIONS PERSONNELLES",
+    "change_password": "CHANGER LE MOT DE PASSE",
+    "password_hint": "Laissez vide pour conserver l’actuel"
+  }
+}

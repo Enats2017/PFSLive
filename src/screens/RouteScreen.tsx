@@ -32,7 +32,7 @@ import { routeStyles } from '../styles/route.styles';
 
 const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
   const { t } = useTranslation(['route', 'common']);
-  const { eventName } = route.params;
+  const { product_app_id, product_option_value_app_id, event_name } = route.params;
 
   const [routeData, setRouteData] = useState<RouteData | null>(null);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
@@ -197,7 +197,7 @@ const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
         <StatusBar barStyle="dark-content" />
         
         {/* App Header */}
-        <AppHeader title={eventName || routeData.name} showLogo={true} />
+        <AppHeader title={event_name || routeData.name} showLogo={true} />
 
         {/* Distance Dropdown */}
         <DistanceDropdown 

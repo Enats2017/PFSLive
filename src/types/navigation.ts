@@ -1,11 +1,12 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Distance } from '../services/eventDetailService';
 
 export type RootStackParamList = {
   Home: undefined;
   Route: {
-      eventId: string;
-      eventName: string;
-      participantId?: string;
+      product_app_id: string | number;
+  product_option_value_app_id: string | number;
+  event_name: string;
   };
 
   ParticipantEvent:undefined
@@ -15,12 +16,26 @@ export type RootStackParamList = {
       event_name: string;
       auto_register_id: number | null;
   };
+   ParticipantResult: { 
+    product_app_id: string | number;
+    item: Distance;
+  };
   Register:undefined;
   LoginScreen:undefined;
-  OTPVerificationScreen: {           // ← add this
+  OTPVerificationScreen: {           
     email: string;
     verification_token: string;
   };
+
+  RaseResultScreen:{
+     product_app_id: string | number;
+  };
+  AllParticipant:undefined;
+
+  ProfileScreen:undefined;
+
+  EditProfileScreen:undefined;
+ 
 };
 
 export type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -31,3 +46,9 @@ export type PersonalEventProps = NativeStackScreenProps<RootStackParamList, 'Per
 export type RegisterProps = NativeStackScreenProps<RootStackParamList, 'Register'>; 
 export type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'LoginScreen'>; 
 export type OTPVerificationScreenProps = NativeStackScreenProps<RootStackParamList, 'OTPVerificationScreen'>; 
+export type ParticipantResultPopes = NativeStackScreenProps<RootStackParamList, 'ParticipantResult'>;
+export type RaseResultScreenprops = NativeStackScreenProps<RootStackParamList, 'RaseResultScreen'>;
+export type AllParticipantprops = NativeStackScreenProps<RootStackParamList, 'AllParticipant'>;
+export type ProfileScreenprops = NativeStackScreenProps<RootStackParamList, 'ProfileScreen'>;
+export type EditProfileScreenprops = NativeStackScreenProps<RootStackParamList, 'EditProfileScreen'>;
+

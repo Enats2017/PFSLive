@@ -1,0 +1,68 @@
+{
+  "tab": {
+    "Live": "Live",
+    "Past": "Verleden"
+  },
+  "errors": {
+    "user_not_found": "Gebruiker niet gevonden. Log opnieuw in.",
+    "load_profile_failed": "Profiel laden mislukt.",
+    "load_profile_api_failed": "Atletenprofiel laden mislukt.",
+    "load_more_past_failed": "Meer eerdere evenementen laden mislukt.",
+    "load_more_live_failed": "Meer live evenementen laden mislukt.",
+    "permission_needed_title": "Toestemming vereist",
+    "permission_needed_message": "Sta toegang tot foto's toe om je avatar te wijzigen."
+  },
+  "status": {
+    "live": "LIVE",
+    "soon": "BINNENKORT",
+    "finished": "VOLTOOID"
+  },
+  "buttons": {
+    "edit_personal_event": "PERSOONLIJK EVENEMENT BEWERKEN",
+    "live_tracking_progress": "LIVE TRACKING BEZIG",
+    "live_tracking_soon": "LIVE TRACKING START BINNENKORT",
+    "enable_gps": "GPS INSCHAKELEN OM TRACKING TE STARTEN",
+    "load_more": "Meer laden",
+    "save_changes": "WIJZIGINGEN OPSLAAN"
+  },
+  "empty": {
+    "no_live_events": "Geen live evenementen op dit moment"
+  },
+  "past": {
+    "view_results": "RESULTATEN BEKIJKEN",
+    "no_events": "Geen eerdere evenementen gevonden"
+  },
+  "labels": {
+    "first_name": "Voornaam",
+    "last_name": "Achternaam",
+    "email": "E-mail",
+    "city": "Stad",
+    "dob": "Geboortedatum",
+    "gender": "Geslacht",
+    "country": "Land",
+    "new_password": "Nieuw wachtwoord",
+    "confirm_password": "Bevestig wachtwoord"
+  },
+  "gender": {
+    "male": "Man",
+    "female": "Vrouw",
+    "other": "Anders",
+    "prefer_not_to_say": "Zeg ik liever niet"
+  },
+  "messages": {
+    "email_readonly": "E-mail kan hier niet worden gewijzigd.",
+    "verify_email_title": "Controleer je e-mail",
+    "verify_email_message": "Een verificatiecode is naar je nieuwe e-mailadres gestuurd.",
+    "saved_title": "Opgeslagen",
+    "saved_message": "Je profiel is bijgewerkt.",
+    "success_profile_updated": "Profiel succesvol bijgewerkt!"
+  },
+  "avatar": {
+    "remove_photo": "Foto verwijderen"
+  },
+  "sections": {
+    "personal_info": "PERSOONLIJKE GEGEVENS",
+    "change_password": "WACHTWOORD WIJZIGEN",
+    "password_hint": "Laat leeg om het huidige wachtwoord te behouden"
+  }
+}

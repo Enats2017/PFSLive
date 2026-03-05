@@ -70,6 +70,9 @@ export const API_CONFIG = {
     // Home
     HOME: "/home_api.php",
     Personal_Event: "/create_custom_event_api.php",
+    Edit_profile: "/get_profile_api.php",
+    upadte_profile: "/edit_profile_api.php",
+    ATHLETE_PROFILE:"/participant_profile_api.php",
     // Events
     EVENTS_LIST: "/event_list_api.php",
     EVENT_DETAIL: "/event_detail_api.php",

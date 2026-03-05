@@ -20,7 +20,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { t } = useTranslation(['event', 'common']);
     const onEndReachedCalledDuringMomentum = useRef(false);
-    
+
     if (events.length === 0) {
         return (
             <View style={{ marginTop: 40 }}>
@@ -51,21 +51,21 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
             contentContainerStyle={{ paddingBottom: spacing.sm }}
             ListFooterComponent={
                 loadingMore ? (
-                    <ActivityIndicator 
-                        size="small" 
+                    <ActivityIndicator
+                        size="small"
                         color="#FF5722"
-                        style={{ marginVertical: spacing.sm }} 
+                        style={{ marginVertical: spacing.sm }}
                     />
                 ) : null
             }
             renderItem={({ item }) => (
                 <View style={[
-                    commonStyles.card, 
-                    { 
-                        paddingTop: spacing.xs, 
-                        padding: 0, 
-                        overflow: 'hidden', 
-                        marginBottom: spacing.xs 
+                    commonStyles.card,
+                    {
+                        paddingTop: spacing.xs,
+                        padding: 0,
+                        overflow: 'hidden',
+                        marginBottom: spacing.xs
                     }
                 ]}>
                     <View style={eventStyles.header}>
@@ -76,11 +76,12 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                             {formatEventDate(item.race_date, t)}
                         </Text>
                     </View>
-                    <TouchableOpacity 
-                        style={commonStyles.primaryButton} 
-                        onPress={() => navigation.navigate('EventDetails', { 
-                            product_app_id: item.product_app_id, 
-                            event_name: item.name 
+                    <TouchableOpacity
+                        style={commonStyles.primaryButton}
+                        onPress={() => navigation.navigate('EventDetails', {
+                            product_app_id: item.product_app_id,
+                            event_name: item.name,
+                            auto_register_id: null  
                         })}
                     >
                         <Text style={commonStyles.primaryButtonText}>
