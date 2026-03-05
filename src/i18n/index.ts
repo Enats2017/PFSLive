@@ -17,10 +17,11 @@ import homeNL from './HomeScreen/nl.json';
 import routeEN from './RouteScreen/en.json';
 import routeFR from './RouteScreen/fr.json';
 import routeNL from './RouteScreen/nl.json';
-import PersonalEventEN from "./PersonalEvent/en.json";
-import RaseResultEN from "./RaseResult/en.json";
-import RaseResultFR from "./RaseResult/fr.json";
-import RaseResultNL from "./RaseResult/nl.json";
+
+import raseResultEN from "./RaseResult/en.json";
+import raseResultFR from "./RaseResult/fr.json";
+import raseResultNL from "./RaseResult/nl.json";
+
 import AllParticipantEN from "./AllParticipant/en.json";
 
 
@@ -221,8 +222,8 @@ i18n.use(initReactI18next).init({
       route: routeEN,
       event: eventEN,
       details: detailsEN,
-      personal:PersonalEventEN,
-      reuslt:RaseResultEN,
+      personal:personalEventEN,
+      reuslt:raseResultEN,
       allrace:AllParticipantEN,
       participantResult: participantResultEN,
       register: registerEN,
@@ -240,7 +241,7 @@ i18n.use(initReactI18next).init({
       event: eventFR,
       personal: personalEventFR,
       details: detailsFR,
-      result:RaseResultFR,
+      result:raseResultFR,
       participantResult: participantResultFR,
       register: registerFR,
       login: loginFR,
@@ -257,7 +258,7 @@ i18n.use(initReactI18next).init({
       event: eventNL,
       personal: personalEventNL,
       details: detailsNL,
-      result:RaseResultNL,
+      result:raseResultNL,
       participantResult: participantResultNL,
       register: registerNL,
       login: loginNL,
