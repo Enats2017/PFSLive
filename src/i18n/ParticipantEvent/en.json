@@ -11,10 +11,12 @@
   "past": {
     "button": "RESULT"
   },
+  "searching": "Searching...",
   "empty": {
     "past": "No past events found.",
     "live": "No live events at the moment.",
-    "upcoming": "No upcoming events found."
+    "upcoming": "No upcoming events found.",
+    "searchNoResults": "No events match your search"
   },
   "personal": {
     "title": "PERSONAL EVENTS",

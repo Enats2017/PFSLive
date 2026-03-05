@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { EventItem } from '../../services/eventService';
 import { commonStyles, spacing } from '../../styles/common.styles';
@@ -21,77 +21,93 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
     const { t } = useTranslation(['event', 'common']);
     const onEndReachedCalledDuringMomentum = useRef(false);
 
-    if (events.length === 0) {
-        return (
-            <View style={{ marginTop: 40 }}>
-                <Text style={commonStyles.errorText}>
-                    {t('event:empty.live')}
-                </Text>
-            </View>
-        );
-    }
-
-    const handleLoadMore = () => {
+    const handleLoadMore = useCallback(() => {
         if (!onEndReachedCalledDuringMomentum.current && hasMore && !loadingMore) {
             onLoadMore();
             onEndReachedCalledDuringMomentum.current = true;
         }
-    };
+    }, [hasMore, loadingMore, onLoadMore]);
+
+    const renderItem = useCallback(({ item }: { item: EventItem }) => (
+        <View style={[
+            commonStyles.card,
+            {
+                paddingTop: spacing.xs,
+                padding: 0,
+                overflow: 'hidden',
+                marginBottom: spacing.md // ✅ Consistent spacing
+            }
+        ]}>
+            <View style={eventStyles.header}>
+                <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
+                    {item.name}
+                </Text>
+                <Text style={commonStyles.subtitle}>
+                    {formatEventDate(item.race_date, t)}
+                </Text>
+            </View>
+            <TouchableOpacity
+                style={[commonStyles.primaryButton, { borderRadius: 0 }]}
+                onPress={() => navigation.navigate('EventDetails', {
+                    product_app_id: item.product_app_id,
+                    event_name: item.name,
+                    auto_register_id: null
+                })}
+                activeOpacity={0.8}
+            >
+                <Text style={commonStyles.primaryButtonText}>
+                    {t('event:official.button')}
+                </Text>
+            </TouchableOpacity>
+        </View>
+    ), [navigation, t]);
+
+    const keyExtractor = useCallback(
+        (item: EventItem, index: number) => `${item.product_app_id}-${index}`,
+        []
+    );
+
+    const ListFooterComponent = useCallback(() => {
+        if (!loadingMore) return null;
+        return (
+            <ActivityIndicator
+                size="small"
+                color="#FF5722"
+                style={{ marginVertical: spacing.md }}
+            />
+        );
+    }, [loadingMore]);
+
+    const ListEmptyComponent = useCallback(() => (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing.xxl }}>
+            <Text style={commonStyles.errorText}>
+                {t('event:empty.live')}
+            </Text>
+        </View>
+    ), [t]);
 
     return (
         <FlatList
             data={events}
-            keyExtractor={(item, index) => `${item.product_app_id}-${index}`}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
             onMomentumScrollBegin={() => {
                 onEndReachedCalledDuringMomentum.current = false;
             }}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: spacing.sm }}
-            ListFooterComponent={
-                loadingMore ? (
-                    <ActivityIndicator
-                        size="small"
-                        color="#FF5722"
-                        style={{ marginVertical: spacing.sm }}
-                    />
-                ) : null
-            }
-            renderItem={({ item }) => (
-                <View style={[
-                    commonStyles.card,
-                    {
-                        paddingTop: spacing.xs,
-                        padding: 0,
-                        overflow: 'hidden',
-                        marginBottom: spacing.xs
-                    }
-                ]}>
-                    <View style={eventStyles.header}>
-                        <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
-                            {item.name}
-                        </Text>
-                        <Text style={commonStyles.subtitle}>
-                            {formatEventDate(item.race_date, t)}
-                        </Text>
-                    </View>
-                    <TouchableOpacity
-                        style={commonStyles.primaryButton}
-                        onPress={() => navigation.navigate('EventDetails', {
-                            product_app_id: item.product_app_id,
-                            event_name: item.name,
-                            auto_register_id: null  
-                        })}
-                    >
-                        <Text style={commonStyles.primaryButtonText}>
-                            {t('event:official.button')}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            )}
+            contentContainerStyle={{
+                paddingHorizontal: spacing.md,
+                paddingBottom: spacing.xl,
+                flexGrow: 1
+            }}
+            ListFooterComponent={ListFooterComponent}
+            ListEmptyComponent={ListEmptyComponent}
+            keyboardShouldPersistTaps="handled"
+            removeClippedSubviews={false}
         />
     );
 };
 
-export default LiveTab;
+export default React.memo(LiveTab);

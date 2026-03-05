@@ -11,10 +11,12 @@
   "past": {
     "button": "RESULTAAT"
   },
+  "searching": "Searching...",
   "empty": {
     "past": "Geen eerdere evenementen gevonden.",
     "live": "Momenteel geen live evenementen.",
-    "upcoming": "Geen aankomende evenementen gevonden."
+    "upcoming": "Geen aankomende evenementen gevonden.",
+    "searchNoResults": "No events match your search"
   },
   "personal": {
     "title": "PERSOONLIJKE EVENEMENTEN",
