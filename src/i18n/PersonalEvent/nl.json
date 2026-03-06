@@ -1,5 +1,6 @@
 {
   "title": "Nieuw Evenement Aanmaken",
+  "editTitle": "Uw evenement bijwerken",
   "name": "Evenement Naam",
   "type": "Type Evenement",
   "date": "Evenement Datum",
@@ -34,7 +35,10 @@
     "removeTitle": "Bestand Verwijderen",
     "removeMessage": "Weet u zeker dat u dit bestand wilt verwijderen?",
     "removeButton": "Verwijderen",
-    "removed": "Bestand verwijderd"
+    "removed": "Bestand verwijderd",
+     "existingFile": "Huidig bestand",
+  "undoRemove": "Verwijderen ongedaan maken",
+  "editTitle": "Uw evenement bijwerken"
   },
   "eventTypes": {
     "organizedWithResults": "Georganiseerd evenement met ranking / resultaten",

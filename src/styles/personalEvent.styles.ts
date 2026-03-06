@@ -1,5 +1,5 @@
-import { StyleSheet, Platform } from 'react-native';
-import { colors, spacing, typography } from './common.styles';
+import { StyleSheet, Platform } from "react-native";
+import { colors, spacing, typography } from "./common.styles";
 
 // ✅ CONSTANTS
 const BORDER_RADIUS = 12;
@@ -10,7 +10,7 @@ const FILE_ICON_SIZE = 28;
 export const personalStyles = StyleSheet.create({
   // ✅ SECTION HEADER
   section: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: spacing.md,
     backgroundColor: colors.gray100,
     marginVertical: spacing.sm,
@@ -18,7 +18,7 @@ export const personalStyles = StyleSheet.create({
 
   // ✅ TEXT STYLES
   subtitle: {
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: spacing.md,
     paddingHorizontal: spacing.lg,
     fontSize: typography.sizes.sm,
@@ -47,19 +47,19 @@ export const personalStyles = StyleSheet.create({
   uploadBox: {
     borderWidth: BORDER_WIDTH_NORMAL,
     borderColor: colors.primary,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderRadius: BORDER_RADIUS,
     paddingVertical: spacing.xxl,
     paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary + '10',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary + "10",
     minHeight: 140,
   },
 
   uploadBoxError: {
     borderColor: colors.error,
-    backgroundColor: colors.error + '10',
+    backgroundColor: colors.error + "10",
   },
 
   uploadTitle: {
@@ -67,22 +67,22 @@ export const personalStyles = StyleSheet.create({
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
     color: colors.primary,
-    textAlign: 'center',
+    textAlign: "center",
   },
 
   uploadSubtitle: {
     marginTop: spacing.xs,
     fontSize: typography.sizes.sm,
     color: colors.gray600,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 18,
   },
 
   // ✅ FILE CARD (SELECTED FILE)
   fileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: spacing.lg,
     borderRadius: BORDER_RADIUS,
     backgroundColor: colors.white,
@@ -104,8 +104,8 @@ export const personalStyles = StyleSheet.create({
   },
 
   fileLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     marginRight: spacing.md,
   },
@@ -114,9 +114,9 @@ export const personalStyles = StyleSheet.create({
     width: FILE_ICON_SIZE + 8,
     height: FILE_ICON_SIZE + 8,
     borderRadius: (FILE_ICON_SIZE + 8) / 2,
-    backgroundColor: colors.primary + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: colors.primary + "15",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: spacing.sm,
   },
 
@@ -139,8 +139,8 @@ export const personalStyles = StyleSheet.create({
 
   // ✅ FILE ACTIONS
   actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
   },
 
@@ -148,8 +148,8 @@ export const personalStyles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.gray100,
   },
 
@@ -157,4 +157,13 @@ export const personalStyles = StyleSheet.create({
   fieldWrapper: {
     marginBottom: spacing.md,
   },
+
+  flex: { flex: 1 },
+  grow: { flexGrow: 1 },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  fileSection: { marginTop: spacing.md },
+  undoBtn: { alignSelf: "flex-end", marginBottom: spacing.xs },
+  undoText: { color: colors.primary, fontSize: 13 },
+  submitBtn: { marginTop: spacing.xxxl, marginBottom: spacing.xl },
+  disabled: { opacity: 0.6 },
 });

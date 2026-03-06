@@ -17,6 +17,7 @@ import RaseResultScreen from '../screens/RaseResultScreen';
 import ResultList from '../screens/ResultList/ResultList';
 import ProfileScreen from '../screens/EditProfileScreen/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen/EditProfileScreen';
+import EditPersonalEvent from '../screens/EditProfileScreen/EditPersonalEvent';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -117,6 +118,13 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen 
           name="EditProfileScreen" 
           component={EditProfileScreen}
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+         <Stack.Screen 
+          name="EditPersonalEvent" 
+          component={EditPersonalEvent}
           options={{
             gestureEnabled: false,
           }}

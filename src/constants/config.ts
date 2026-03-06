@@ -85,6 +85,8 @@ export const API_CONFIG = {
     upadte_profile: "/edit_profile_api.php",
     ATHLETE_PROFILE:"/participant_profile_api.php",
     GET_EVENT_RANKING:"/get_event_ranking_api.php",
+    GET_CUSTOM_EVENT:"/get_custom_event_api.php",
+    UPDATE_CUSTOM_EVENT:"/edit_custom_event_api.php",
     // Events
     EVENTS_LIST: "/event_list_api.php",
     EVENT_DETAIL: "/event_detail_api.php",

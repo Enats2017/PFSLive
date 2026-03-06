@@ -1,5 +1,6 @@
 {
   "title": "Create New Event",
+  "editTitle":"Update Your Event",
   "name": "Event Name",
   "type": "Event Type",
   "date": "Event Date",
@@ -34,11 +35,16 @@
     "removeTitle": "Remove File",
     "removeMessage": "Are you sure you want to remove this file?",
     "removeButton": "Remove",
-    "removed": "File removed"
+    "removed": "File removed",
+     "existingFile": "Current file",
+      "undoRemove": "Undo remove"
   },
   "eventTypes": {
     "organizedWithResults": "Organized Event with ranking / results",
     "organizedWithoutResults": "Organized Event without ranking / results",
     "training": "Training session"
   }
+
+ 
+
 }

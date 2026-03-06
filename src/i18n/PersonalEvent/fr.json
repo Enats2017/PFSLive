@@ -1,5 +1,6 @@
 {
   "title": "Créer un Nouvel Événement",
+  "editTitle": "Mettre à jour votre événement",
   "name": "Nom de l'Événement",
   "type": "Type d'Événement",
   "date": "Date de l'Événement",
@@ -34,7 +35,10 @@
     "removeTitle": "Supprimer le Fichier",
     "removeMessage": "Êtes-vous sûr de vouloir supprimer ce fichier?",
     "removeButton": "Supprimer",
-    "removed": "Fichier supprimé"
+    "removed": "Fichier supprimé",
+    "existingFile": "Fichier actuel",
+  "undoRemove": "Annuler la suppression",
+  "editTitle": "Mettre à jour votre événement"
   },
   "eventTypes": {
     "organizedWithResults": "Événement organisé avec classement / résultats",

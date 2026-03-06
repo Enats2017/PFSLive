@@ -9,6 +9,13 @@ import { fetchMoreLiveEvents, AthleteEvent, Pagination } from '../../services/at
 import { profileStyles } from '../../styles/Profile.styles'
 import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import { RootStackParamList } from '../../types/navigation'
+type NavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'EditPersonalEvent'
+>
+
 
 /* ── Props ── */
 interface Props {
@@ -19,11 +26,11 @@ interface Props {
 
 /* ── Status badge ── */
 const StatusBadge = ({ status }: { status?: string }) => {
-      const { t } = useTranslation(['profile'])
+    const { t } = useTranslation(['profile'])
     const config: Record<string, { bg: string; dot: string; label: string }> = {
-        in_progress: { bg: '#fff0ee', dot: '#e8341a',  label: t('profile:status.live') },
+        in_progress: { bg: '#fff0ee', dot: '#e8341a', label: t('profile:status.live') },
         not_started: { bg: '#f0f4ff', dot: '#1a73e8', label: t('profile:status.soon') },
-        finished: { bg: '#f4f4f4', dot: '#888',  label: t('profile:status.finished') },
+        finished: { bg: '#f4f4f4', dot: '#888', label: t('profile:status.finished') },
     }
     const c = status ? config[status] : null
     if (!c) return null
@@ -37,13 +44,14 @@ const StatusBadge = ({ status }: { status?: string }) => {
 
 
 const EventCard = ({ item }: { item: AthleteEvent }) => {
-     const { t } = useTranslation(['profile'])
-    const navigation = useNavigation()
+    const { t } = useTranslation(['profile'])
+     const navigation = useNavigation<NavigationProp>()
+    console.log(item?.id);
     const handlePress = () => {
         if (item.event_source === 'custom') {
-            // navigation.navigate('EditPersonalEventScreen', {
-            //     eventId: item.id
-            // })
+            navigation.navigate('EditPersonalEvent', {
+                eventId: item.id
+            })
             return
         }
 
@@ -57,15 +65,15 @@ const EventCard = ({ item }: { item: AthleteEvent }) => {
         if (item.event_source === 'custom') {
             return t('profile:buttons.edit_personal_event')
         }
-       
+
         if (item.race_status === 'in_progress') {
             return t('profile:buttons.live_tracking_progress')
         }
-         if (item.race_status == 'not_started') {
-             return t('profile:buttons.live_tracking_soon')
+        if (item.race_status == 'not_started') {
+            return t('profile:buttons.live_tracking_soon')
         }
-            return t('profile:buttons.enable_gps')    
-        }
+        return t('profile:buttons.enable_gps')
+    }
 
     return (
         <View style={[commonStyles.card, profileStyles.eventCard]}>
@@ -92,7 +100,7 @@ const EventCard = ({ item }: { item: AthleteEvent }) => {
 }
 
 const LiveTab = ({ customerId, initialEvents, initialPaging }: Props) => {
-     const { t } = useTranslation(['profile'])
+    const { t } = useTranslation(['profile'])
     const [events, setEvents] = useState<AthleteEvent[]>(initialEvents)
     const [paging, setPaging] = useState<Pagination>(initialPaging)
     const [refreshing, setRefreshing] = useState(false)
