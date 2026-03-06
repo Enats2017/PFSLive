@@ -5,7 +5,6 @@ import {
   Platform,
   ScrollView,
   StatusBar,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -93,7 +92,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
   }, [eventId, initFormFromEvent, initExistingFile, navigation, t]);
 
 
-  // ─── Submit ──────────────────────────────────────────────────────────────
+  // ─── Submit 
   const handleSubmit = useCallback(async () => {
     clearAllErrors();
     if (!validateForm() || isSubmitting) return;
@@ -301,11 +300,5 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     </SafeAreaView>
   );
 };
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-
-});
 
 export default EditPersonalEvent;
