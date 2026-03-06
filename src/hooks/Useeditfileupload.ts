@@ -47,6 +47,8 @@ export const useEditFileUpload = ({
         copyToCacheDirectory: true,
       });
 
+      console.log("📂 DocumentPicker raw result:", result);
+
       if (result.canceled || !result.assets?.length) return;
 
       const { uri, name, size, mimeType } = result.assets[0];

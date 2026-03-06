@@ -63,10 +63,7 @@ export const getPersonalEvent = async (
 export const updatePersonalEvent = async (
   params: UpdatePersonalEventParams,
 ): Promise<{ success: boolean; message: string }> => {
-  const headers = {
-    "Content-Type": "multipart/form-data",
-  };
-
+  const headers = await API_CONFIG.getMutiForm();
   const body = new FormData();
   body.append("product_custom_app_id", String(params.eventId));
   body.append("name", params.name);
