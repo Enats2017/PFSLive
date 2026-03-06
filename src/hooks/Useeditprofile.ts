@@ -85,7 +85,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             gender: initialProfile.gender ?? '',
             countryName: initialProfile.country ?? '',
             country_id: String(initialProfile.country_id ?? ''),
-            country_iso: '',
+            country_iso:  initialProfile.iso_code_2   ?? '', 
             password: '',
             confirmPassword: '',
         })

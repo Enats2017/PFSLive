@@ -49,6 +49,16 @@ const getApiUrl = (): string => {
   return "http://192.168.1.199/larssie/api";
 };
 
+const getImageBaseUrl = (): string => {
+  const envUrl = process.env.EXPO_PUBLIC_IMAGE_URL;
+
+  if (envUrl) {
+    return envUrl;
+  }
+
+  return "http://192.168.0.199/larssie";
+};
+
 // Hardcoded fallback token (used until login is integrated)
 const FALLBACK_TOKEN = "";
 
@@ -67,12 +77,14 @@ export const API_CONFIG = {
     VERIFY_OTP: "/verify_otp_api.php", // ← add
     RESEND_OTP: "/resent_otp_api.php",
 
+
     // Home
     HOME: "/home_api.php",
     Personal_Event: "/create_custom_event_api.php",
     Edit_profile: "/get_profile_api.php",
     upadte_profile: "/edit_profile_api.php",
     ATHLETE_PROFILE:"/participant_profile_api.php",
+    GET_EVENT_RANKING:"/get_event_ranking_api.php",
     // Events
     EVENTS_LIST: "/event_list_api.php",
     EVENT_DETAIL: "/event_detail_api.php",
@@ -167,6 +179,7 @@ export const buildApiUrl = (
 
 /**
  * Detect environment and provide appropriate localhost URL
+ * 
  */
 export const getLocalApiUrl = (): string => {
   const Platform = require("react-native").Platform;
@@ -180,4 +193,10 @@ export const getLocalApiUrl = (): string => {
   }
 
   return getApiUrl();
+};
+
+export const getImageUrl = (url?: string | null): string | null => {
+  if (!url) return null;
+
+  return url.replace("http://localhost/larssie", getImageBaseUrl());
 };

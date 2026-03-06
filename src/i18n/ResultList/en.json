@@ -11,11 +11,12 @@
     "errorLoad": "Failed to load results. Tap to retry."
   },
   
-  "filter": {
-      "results": "Results",
-      "live": "Live",
-      "favourite": "Favourite"
-    }
+ "filter": {
+  "results":      "Results",
+  "live":         "Live",
+  "favourite":    "Favourite",
+  "noFavourites": "No favourites yet. Tap ☆ on any result to save it."
+}
 
   
 }

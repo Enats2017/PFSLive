@@ -21,7 +21,9 @@ import PersonalEventEN from "./PersonalEvent/en.json";
 import RaseResultEN from "./RaseResult/en.json";
 import RaseResultFR from "./RaseResult/fr.json";
 import RaseResultNL from "./RaseResult/nl.json";
-import AllParticipantEN from "./AllParticipant/en.json";
+import ResultListEN from "./ResultList/en.json";
+import ResultListFr from   "./ResultList/fr.json";
+import ResultListNL from "./ResultList/nl.json";
 
 
 // ✅ PARTICIPANT EVENT
@@ -223,7 +225,7 @@ i18n.use(initReactI18next).init({
       details: detailsEN,
       personal:PersonalEventEN,
       reuslt:RaseResultEN,
-      allrace:AllParticipantEN,
+      allrace:ResultListEN,
       participantResult: participantResultEN,
       register: registerEN,
       login: loginEN,
@@ -249,6 +251,7 @@ i18n.use(initReactI18next).init({
       undoModal: undoModalFR,
       errorModal: errorModalFR,
       profile:ProfileFR,
+      allrace:ResultListFr,
     },
     nl: {
       common: commonNL,
@@ -266,6 +269,7 @@ i18n.use(initReactI18next).init({
       undoModal: undoModalNL,
       errorModal: errorModalNL,
       profile:ProfileNL,
+      allrace:ResultListNL,
     },
   },
   lng: initialLanguage,

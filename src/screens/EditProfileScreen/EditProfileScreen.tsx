@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import {
-    View, Text, TouchableOpacity, ScrollView,
-    StyleSheet, StatusBar, ActivityIndicator, Alert, Image,
+    View, Text, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, Alert, Image,
+    KeyboardAvoidingView, Platform
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
@@ -12,10 +12,11 @@ import CountrySelector from '../../components/CountrySelector'
 import { commonStyles } from '../../styles/common.styles'
 import { useEditProfile } from '../../hooks/Useeditprofile'
 import { fetchProfileApi } from '../../services/profileServices'
-import { API_CONFIG } from '../../constants/config'
 import { AppHeader } from '../../components/common/AppHeader'
 import { profileStyles } from '../../styles/Profile.styles'
-
+import { toastSuccess } from '../../../utils/toast'
+import { useNavigation } from '@react-navigation/native'
+import { getImageUrl } from '../../constants/config'
 
 const GENDER_VALUES = [
     'male',
@@ -23,7 +24,6 @@ const GENDER_VALUES = [
     'other',
     'prefer_not_to_say'
 ] as const
-
 
 const EditProfileScreen = () => {
     const { t } = useTranslation(['profile', 'common'])
@@ -34,7 +34,7 @@ const EditProfileScreen = () => {
         label: t(`profile:gender.${value}`),
         value
     }))
-
+    const navigation = useNavigation()
     useEffect(() => {
         fetchProfileApi()
             .then(setProfile)
@@ -55,7 +55,6 @@ const EditProfileScreen = () => {
     const genderDisplayValue =
         genderOptions.find(g => g.value === form.gender)?.label || ''
 
-    /* ── avatar picker ── */
     const pickAvatar = useCallback(async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (status !== 'granted') {
@@ -87,24 +86,15 @@ const EditProfileScreen = () => {
     const handleSave = useCallback(async () => {
         const ok = await submit()
         if (ok) {
-            if (emailChanged) {
-                Alert.alert(
-                    t('profile:messages.verify_email_title'),
-                    t('profile:messages.verify_email_message')
-                )
-            } else {
-                Alert.alert(
-                    t('profile:messages.saved_title'),
-                    t('profile:messages.saved_message')
-                )
-            }
+            toastSuccess(t('profile:messages.success_profile_updated'))
+            navigation.goBack()
         }
     }, [submit, emailChanged])
 
     const avatarUri: string | null = picture
         ? picture.uri
         : (profile?.profile_picture && !removePicture)
-            ? profile.profile_picture
+            ? getImageUrl(profile.profile_picture)
             : null
 
     const avatarInitials = [form.firstname[0], form.lastname[0]]
@@ -139,153 +129,159 @@ const EditProfileScreen = () => {
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
-
-            <ScrollView
-                style={profileStyles.scroll}
-                contentContainerStyle={profileStyles.content}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={10}
             >
-                <View style={profileStyles.profileCard}>
-                    <TouchableOpacity style={profileStyles.avatarWrapper} onPress={pickAvatar} activeOpacity={0.8}>
-                        {avatarUri ? (
-                            <Image
-                                source={{ uri: avatarUri }}
-                                style={profileStyles.avatar}
-                                resizeMode="cover"
-                            />
-                        ) : (
-                            <View style={[profileStyles.avatar, profileStyles.avatarFallback]}>
-                                <Text style={profileStyles.initials}>{avatarInitials}</Text>
+                <ScrollView
+                    contentContainerStyle={profileStyles.content}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={profileStyles.profileCard}>
+                        <TouchableOpacity style={profileStyles.avatarWrapper} onPress={pickAvatar} activeOpacity={0.8}>
+                            {avatarUri ? (
+                                <Image
+                                    source={{ uri: avatarUri }}
+                                    style={profileStyles.avatar}
+                                    resizeMode="cover"
+                                />
+                            ) : (
+                                <View style={[profileStyles.avatar, profileStyles.avatarFallback]}>
+                                    <Text style={profileStyles.initials}>{avatarInitials}</Text>
+                                </View>
+                            )}
+                            <View style={profileStyles.cameraBtn}>
+                                <Ionicons name="camera" size={16} color="#fff" />
                             </View>
+                        </TouchableOpacity>
+
+                        {avatarUri && (
+                            <TouchableOpacity
+                                style={profileStyles.removeBtn}
+                                onPress={() => { setPicture(null); setRemovePicture(true) }}
+                            >
+                                <Text style={profileStyles.removeBtnText}> {t('profile:avatar.remove_photo')}</Text>
+                            </TouchableOpacity>
                         )}
-                        <View style={profileStyles.cameraBtn}>
-                            <Ionicons name="camera" size={16} color="#fff" />
-                        </View>
+                    </View>
+
+                    <FloatingLabelInput
+                        label={t('profile:labels.first_name')}
+                        value={form.firstname}
+                        onChangeText={(v) => setField('firstname', v)}
+                        iconName="person-outline"
+                        required
+                        editable={!loading}
+                        error={!!errors.firstname}
+                        errorMessage={errors.firstname}
+                    />
+
+                    <FloatingLabelInput
+                        label={t('profile:labels.last_name')}
+                        value={form.lastname}
+                        onChangeText={(v) => setField('lastname', v)}
+                        iconName="people-outline"
+                        required
+                        editable={!loading}
+                        error={!!errors.lastname}
+                        errorMessage={errors.lastname}
+                    />
+                    <FloatingLabelInput
+                        label={t('profile:labels.email')}
+                        value={form.email}
+                        onChangeText={() => { }}
+                        iconName="mail-outline"
+                        editable={false}
+                        error={false}
+                    />
+                    <Text style={profileStyles.readOnlyHint}>  {t('profile:messages.email_readonly')}</Text>
+                    <CountrySelector
+                        label={t('profile:labels.country')}
+                        value={form.countryName}
+                        onSelect={handleCountrySelect}
+                        isoCode={form.country_iso}
+                        error={errors.countryName}
+                    />
+                    <FloatingLabelInput
+                        label={t('profile:labels.city')}
+                        value={form.city}
+                        onChangeText={(v) => setField('city', v)}
+                        iconName="location-outline"
+                        editable={!loading}
+                        error={!!errors.city}
+                        errorMessage={errors.city}
+                    />
+                    <FloatingLabelInput
+                        label={t('profile:labels.dob')}
+                        value={form.dob}
+                        onChangeText={(v) => setField('dob', v)}
+                        iconName="calendar-outline"
+                        isDatePicker
+                        editable={!loading}
+                        error={!!errors.dob}
+                        errorMessage={errors.dob}
+                    />
+
+                    <FloatingLabelInput
+                        label={t('profile:labels.gender')}
+                        value={genderDisplayValue}
+                        onChangeText={(label) => {
+                            const selected = genderOptions.find(g => g.label === label)
+                            if (selected) setField('gender', selected.value)
+                        }}
+                        iconName="people-outline"
+                        isDropdown
+                        options={genderOptions.map(g => g.label)}
+                        editable={!loading}
+                        error={!!errors.gender}
+                        errorMessage={errors.gender}
+                    />
+
+
+                    <SectionHeader title={t('profile:sections.change_password')} subtitle={t('profile:sections.password_hint')} />
+                    <FloatingLabelInput
+                        label={t('profile:labels.new_password')}
+                        value={form.password}
+                        onChangeText={(v) => setField('password', v)}
+                        iconName="lock-closed-outline"
+                        isPassword
+                        editable={!loading}
+                        error={!!errors.password}
+                        errorMessage={errors.password}
+                    />
+                    <FloatingLabelInput
+                        label={t('profile:labels.confirm_password')}
+                        value={form.confirmPassword}
+                        onChangeText={(v) => setField('confirmPassword', v)}
+                        iconName="lock-open-outline"
+                        isPassword
+                        editable={!loading}
+                        error={!!errors.confirmPassword}
+                        errorMessage={errors.confirmPassword}
+                    />
+
+                    <TouchableOpacity
+                        style={[commonStyles.primaryButton, loading && profileStyles.saveBtnDisabled]}
+                        onPress={handleSave}
+                        disabled={loading}
+                        activeOpacity={0.85}
+                    >
+                        {loading
+                            ? <ActivityIndicator color="#fff" size="small" />
+                            : <Text style={commonStyles.primaryButtonText}>  {t('profile:buttons.save_changes')}</Text>
+                        }
                     </TouchableOpacity>
 
-                    {avatarUri && (
-                        <TouchableOpacity
-                            style={profileStyles.removeBtn}
-                            onPress={() => { setPicture(null); setRemovePicture(true) }}
-                        >
-                            <Text style={profileStyles.removeBtnText}> {t('profile:avatar.remove_photo')}</Text>
-                        </TouchableOpacity>
+                    {success && !emailChanged && (
+                        <View style={profileStyles.successBanner}>
+                            <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
+                            <Text style={profileStyles.successText}> {t('profile:messages.success_profile_updated')}</Text>
+                        </View>
                     )}
-                </View>
-
-                <FloatingLabelInput
-                    label={t('profile:labels.first_name')}
-                    value={form.firstname}
-                    onChangeText={(v) => setField('firstname', v)}
-                    iconName="person-outline"
-                    required
-                    editable={!loading}
-                    error={!!errors.firstname}
-                    errorMessage={errors.firstname}
-                />
-
-                <FloatingLabelInput
-                    label={t('profile:labels.last_name')}
-                    value={form.lastname}
-                    onChangeText={(v) => setField('lastname', v)}
-                    iconName="people-outline"
-                    required
-                    editable={!loading}
-                    error={!!errors.lastname}
-                    errorMessage={errors.lastname}
-                />
-                <FloatingLabelInput
-                    label={t('profile:labels.email')}
-                    value={form.email}
-                    onChangeText={() => { }}
-                    iconName="mail-outline"
-                    editable={false}
-                    error={false}
-                />
-                <Text style={profileStyles.readOnlyHint}>  {t('profile:messages.email_readonly')}</Text>
-                <FloatingLabelInput
-                    label={t('profile:labels.city')}
-                    value={form.city}
-                    onChangeText={(v) => setField('city', v)}
-                    iconName="location-outline"
-                    editable={!loading}
-                    error={!!errors.city}
-                    errorMessage={errors.city}
-                />
-                <FloatingLabelInput
-                    label={t('profile:labels.dob')}
-                    value={form.dob}
-                    onChangeText={(v) => setField('dob', v)}
-                    iconName="calendar-outline"
-                    isDatePicker
-                    editable={!loading}
-                    error={!!errors.dob}
-                    errorMessage={errors.dob}
-                />
-
-                <FloatingLabelInput
-                    label={t('profile:labels.gender')}
-                    value={genderDisplayValue}
-                    onChangeText={(label) => {
-                        const selected = genderOptions.find(g => g.label === label)
-                        if (selected) setField('gender', selected.value)
-                    }}
-                    iconName="people-outline"
-                    isDropdown
-                    options={genderOptions.map(g => g.label)}
-                    editable={!loading}
-                    error={!!errors.gender}
-                    errorMessage={errors.gender}
-                />
-
-                <CountrySelector
-                    label={t('profile:labels.country')}
-                    value={form.countryName}
-                    onSelect={handleCountrySelect}
-                    error={errors.countryName}
-                />
-                <SectionHeader title= {t('profile:sections.change_password')} subtitle={t('profile:sections.password_hint')} />
-                <FloatingLabelInput
-                    label={t('profile:labels.new_password')}
-                    value={form.password}
-                    onChangeText={(v) => setField('password', v)}
-                    iconName="lock-closed-outline"
-                    isPassword
-                    editable={!loading}
-                    error={!!errors.password}
-                    errorMessage={errors.password}
-                />
-                <FloatingLabelInput
-                    label={t('profile:labels.confirm_password')}
-                    value={form.confirmPassword}
-                    onChangeText={(v) => setField('confirmPassword', v)}
-                    iconName="lock-open-outline"
-                    isPassword
-                    editable={!loading}
-                    error={!!errors.confirmPassword}
-                    errorMessage={errors.confirmPassword}
-                />
-
-                <TouchableOpacity
-                    style={[commonStyles.primaryButton, profileStyles.saveBtn, loading && profileStyles.saveBtnDisabled]}
-                    onPress={handleSave}
-                    disabled={loading}
-                    activeOpacity={0.85}
-                >
-                    {loading
-                        ? <ActivityIndicator color="#fff" size="small" />
-                        : <Text style={commonStyles.primaryButtonText}>  {t('profile:buttons.save_changes')}</Text>
-                    }
-                </TouchableOpacity>
-
-                {success && !emailChanged && (
-                    <View style={profileStyles.successBanner}>
-                        <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
-                        <Text style={profileStyles.successText}> {t('profile:messages.success_profile_updated')}</Text>
-                    </View>
-                )}
-            </ScrollView>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     )
 }

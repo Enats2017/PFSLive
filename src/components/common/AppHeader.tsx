@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { headerStyles } from '../../styles/header.styles';
 import { useNavigation } from '@react-navigation/native';
+import { tokenService } from '../../services/tokenService';
 
 interface AppHeaderProps {
   title?: string;
@@ -13,6 +14,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   showLogo = true,
 }) => {
   const navigation = useNavigation<any>();
+
+   const handleProfilePress = async () => {
+    const isValid = await tokenService.isTokenValid();
+    if (isValid) {
+      navigation.navigate('ProfileScreen');
+    } else {
+      navigation.navigate('LoginScreen');
+    }
+  };
   return (
     <View style={headerStyles.container}>
       {/* Left Side - Logo Image */}
@@ -46,7 +56,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         
         <TouchableOpacity
           style={headerStyles.iconButton}
-          onPress={() => navigation.navigate('ProfileScreen')}
+         onPress={handleProfilePress}
         >
           <Text style={headerStyles.icon}>👤</Text>
         </TouchableOpacity>

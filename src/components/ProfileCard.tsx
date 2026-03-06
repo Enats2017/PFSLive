@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native'
 import { commonStyles } from '../styles/common.styles'
 import { AthleteProfile } from '../services/athleteProfileService'
 import { profileStyles } from '../styles/Profile.styles'
+import { getImageUrl } from "../constants/config";
 
 interface Props {
     profile: AthleteProfile | null
@@ -20,6 +21,11 @@ const ProfileCard = ({ profile, fetchError }: Props) => {
         : ''
 
     const isOwn = profile?.is_own_profile === 1
+    
+     console.log("RAW PROFILE IMAGE:", profile?.profile_picture)
+    console.log("FIXED PROFILE IMAGE:", getImageUrl(profile?.profile_picture))
+
+
 
     return (
         <View style={[profileStyles.profileCard]}>
@@ -35,9 +41,8 @@ const ProfileCard = ({ profile, fetchError }: Props) => {
                 <View style={profileStyles.avatar}>
                     {profile?.profile_picture ? (
                         <Image
-                            source={{ uri: profile.profile_picture }}
-                            style={profileStyles.avatarImage}
-                            resizeMode="cover"
+                            source={{ uri: getImageUrl(profile.profile_picture) || undefined }}
+                            style={profileStyles.avatar}
                         />
                     ) : (
                         <Ionicons name="person" size={50} color="#555" />

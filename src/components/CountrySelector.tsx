@@ -28,6 +28,7 @@ interface CountrySelectorProps {
   onSelect: (country: Country) => void;
   error?: string;
   required?: boolean;
+  isoCode?: string;
 }
 
 // ─── Flag emoji from iso_code_2 ──────────────────────────────────
@@ -52,13 +53,14 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   onSelect,
   error,
   required = false,
+  isoCode,
 }) => {
-  const [showModal, setShowModal]         = useState(false);
-  const [countries, setCountries]         = useState<Country[]>([]);
-  const [filtered, setFiltered]           = useState<Country[]>([]);
-  const [search, setSearch]               = useState('');
-  const [loading, setLoading]             = useState(false);
-  const [fetchError, setFetchError]       = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [filtered, setFiltered] = useState<Country[]>([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
 
   const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
@@ -78,7 +80,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
     fontSize: animatedValue.interpolate({ inputRange: [0, 1], outputRange: [15, 11] }),
     color: animatedValue.interpolate({
       inputRange: [0, 1],
-      outputRange: ['#9ca3af', error ? '#ef4444' : '#6366f1'],
+      outputRange: ['#9ca3af', error ? '#ef4444' : '#ef4444'],
     }),
     backgroundColor: '#ffffff',
     paddingHorizontal: 4,
@@ -125,8 +127,8 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
         text.trim() === ''
           ? countries
           : countries.filter((c) =>
-              c.name.toLowerCase().includes(text.toLowerCase())
-            )
+            c.name.toLowerCase().includes(text.toLowerCase())
+          )
       );
     },
     [countries]
@@ -145,7 +147,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   };
 
   const borderColor = error ? '#ef4444' : showModal ? '#ef4444' : '#d1d5db';
-  const iconColor   = error ? '#ef4444' : showModal ? '#ef4444' : '#9ca3af';
+  const iconColor = error ? '#ef4444' : showModal ? '#ef4444' : '#9ca3af';
 
   return (
     <View style={styles.wrapper}>
@@ -161,10 +163,11 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
         ]}
       >
         {/* Left: globe icon OR flag when selected */}
+        {/* Left: globe icon OR flag when selected */}
         <View style={styles.iconLeft}>
-          {selectedCountry ? (
+          {(selectedCountry || isoCode) ? (
             <Text style={styles.flagInField}>
-              {getFlagEmoji(selectedCountry.iso_code_2)}
+              {getFlagEmoji(selectedCountry?.iso_code_2 ?? isoCode ?? '')}
             </Text>
           ) : (
             <Ionicons name="globe-outline" size={18} color={iconColor} />
@@ -312,9 +315,9 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                         <Text style={styles.isoCode}>{item.iso_code_2} · {item.iso_code_3}</Text>
                       </View>
 
-                       {value === item.name && (
-                      <Ionicons name="checkmark-circle" size={20} color="#6366f1" />
-                    )}
+                      {value === item.name && (
+                        <Ionicons name="checkmark-circle" size={20} color="#6366f1" />
+                      )}
                     </TouchableOpacity>
                   );
                 }}
@@ -347,7 +350,7 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   containerFocused: { shadowOpacity: 0.12, elevation: 3 },
- 
+
   iconLeft: { position: 'absolute', left: 14, zIndex: 2 },
   iconRight: { position: 'absolute', right: 14, zIndex: 2 },
   flagInField: { fontSize: 20 },

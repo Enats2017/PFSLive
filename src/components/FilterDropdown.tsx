@@ -7,9 +7,10 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  ScrollView
 } from 'react-native';
 import Entypo from '@expo/vector-icons/Entypo';
-import { participantStyles } from '../styles/AllParticipant.styles';
+import { resultListStyle } from '../styles/ResultList.styles';
 import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -97,13 +98,13 @@ const Dropdown: React.FC<DropdownProps> = ({
     <>
       <TouchableOpacity
         ref={btnRef}
-        style={participantStyles.filterTab}
+        style={resultListStyle.filterTab}
         activeOpacity={0.75}
         onPress={open ? closeMenu : openMenu}
       >
-        <View style={participantStyles.tabrow}>
+        <View style={resultListStyle.tabrow}>
           <Text
-            style={participantStyles.filterTabText}
+            style={resultListStyle.filterTabText}
             numberOfLines={1}
           >
             {label}
@@ -112,7 +113,7 @@ const Dropdown: React.FC<DropdownProps> = ({
             name="chevron-down"
             size={26}
             color="black"
-            style={participantStyles.filterArrow}
+            style={resultListStyle.filterArrow}
           />
         </View>
       </TouchableOpacity>
@@ -127,7 +128,7 @@ const Dropdown: React.FC<DropdownProps> = ({
 
           <Animated.View
             style={[
-              participantStyles.popup,
+              resultListStyle.popup,
               {
                 top: pos.top,
                 left: pos.left,
@@ -137,33 +138,40 @@ const Dropdown: React.FC<DropdownProps> = ({
               },
             ]}
           >
-            {options.map((opt, i) => {
-              const active = opt.value === selected.value;
+            <ScrollView
+              contentContainerStyle={{flexGrow:1,paddingBottom:20}}
+              bounces={false}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {options.map((opt, i) => {
+                const active = opt.value === selected.value;
 
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[
-                    participantStyles.popupRow,
-                    i === options.length - 1 &&
-                      participantStyles.popupRowLast,
-                    active && participantStyles.popupRowActive,
-                  ]}
-                  activeOpacity={0.6}
-                  onPress={() => choose(opt)}
-                >
-                  <Text
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
                     style={[
-                      participantStyles.popupRowText,
-                      active &&
-                        participantStyles.popupRowTextActive,
+                      resultListStyle.popupRow,
+                      i === options.length - 1 &&
+                      resultListStyle.popupRowLast,
+                      active && resultListStyle.popupRowActive,
                     ]}
+                    activeOpacity={0.6}
+                    onPress={() => choose(opt)}
                   >
-                     {t(opt.label)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                    <Text
+                      style={[
+                        resultListStyle.popupRowText,
+                        active &&
+                        resultListStyle.popupRowTextActive,
+                      ]}
+                    >
+                      {t(opt.label)} 
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </Animated.View>
         </Modal>
       )}

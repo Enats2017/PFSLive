@@ -1,0 +1,20 @@
+{
+  "race": {
+    "loading": "Chargement des résultats…",
+    "noResults": "Aucun résultat pour ces filtres.",
+    "live": "EN DIRECT",
+    "bibNumber": "Numéro de dossard",
+    "time": "TEMPS",
+    "diffFirst": "ÉCART 1ER",
+    "ranking": "CLASSEMENT",
+    "retry": "Réessayer",
+    "errorLoad": "Échec du chargement des résultats. Appuyez pour réessayer."
+  },
+
+  "filter": {
+    "results": "Résultats",
+    "live": "Direct",
+    "favourite": "Favori",
+    "noFavourites": "Aucun favori pour le moment. Appuyez sur ☆ sur un résultat pour l'enregistrer."
+  }
+}

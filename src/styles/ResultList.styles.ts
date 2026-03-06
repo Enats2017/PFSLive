@@ -1,10 +1,10 @@
 import { StyleSheet, Dimensions } from "react-native";
 import { colors, spacing, typography } from "./common.styles";
 
-export const participantStyles = StyleSheet.create({
+export const resultListStyle = StyleSheet.create({
   filterRow1: {
     flexDirection: "row",
-    paddingHorizontal: 15,  
+    paddingHorizontal: 15,
   },
   filterRow2: {
     flexDirection: "row",
@@ -64,13 +64,15 @@ export const participantStyles = StyleSheet.create({
     backgroundColor: colors.gray200,
     marginTop: 12,
   },
-  popupRowText:{ 
+  popupRowText: {
     fontSize: 14,
-    color: colors.black, 
-    fontWeight: typography.weights.semibold 
-},
-  popupRowTextActive: { color: colors.black, fontWeight: typography.weights.bold },
-  
+    color: colors.black,
+    fontWeight: typography.weights.semibold,
+  },
+  popupRowTextActive: {
+    color: colors.black,
+    fontWeight: typography.weights.bold,
+  },
 
   // ── Result card ────────────────────────────────────────────────────────
   card: {
@@ -136,9 +138,10 @@ export const participantStyles = StyleSheet.create({
     gap: 8,
   },
   cardName: {
-     fontSize: typography.sizes.xl, 
-     fontWeight: typography.weights.bold, 
-     color: colors.gray900 },
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.gray900,
+  },
 
   livePill: {
     backgroundColor: "#e53935",
@@ -158,21 +161,34 @@ export const participantStyles = StyleSheet.create({
 
   statsRow: {
     flexDirection: "row",
-    padding:12.
-  
+    padding: 12,
   },
-  statCol: { flex: 1, alignItems: "center" },
-  statColMid: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.gray400 },
+  statCol: { flex: 1, alignItems: "center", justifyContent:"center" },
+  statColMid: {
+    borderLeftWidth: 1,
+     borderRightWidth: 1,
+    borderColor: colors.gray400,
+  },
+
+  statFlagMid:{
+    borderLeftWidth: 1,
+      borderColor: colors.gray400,
+
+  },
   statLabel: {
     fontSize: 10,
     fontWeight: "600",
-   color: colors.gray500,
+    color: colors.gray500,
     textAlign: "center",
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 4,
   },
-  statVal: { fontSize: typography.sizes.md, fontWeight: typography.weights.bold, color: colors.gray900 },
+  statVal: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.gray900,
+  },
 
   list: { paddingTop: 10, paddingBottom: 24 },
 
@@ -194,4 +210,27 @@ export const participantStyles = StyleSheet.create({
     borderRadius: 8,
   },
   retryText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+
+  filterOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255,255,255,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 99,
+  },
+  flagRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
+  flagImg: {
+    width: 22,
+    height: 15,
+    borderRadius: 2,
+  },
 });

@@ -46,6 +46,25 @@ export const tokenService = {
         }
     },
 
+     async isTokenValid(): Promise<boolean> {
+        try {
+            const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+            return token !== null && token !== '';
+        } catch {
+            return false;
+        }
+    },
+
+    async clearAll(): Promise<void> {
+        try {
+            await AsyncStorage.multiRemove([TOKEN_STORAGE_KEY, CUSTOMER_KEY]);
+            console.log('✅ Token and customer ID cleared');
+        } catch (error) {
+            console.error('❌ Error clearing storage:', error);
+        }
+    },
+
+
 
   async removeToken(): Promise<void> {
     try {

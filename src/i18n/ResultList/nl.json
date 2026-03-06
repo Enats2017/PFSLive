@@ -1,0 +1,20 @@
+{
+  "race": {
+    "loading": "Resultaten laden…",
+    "noResults": "Geen resultaten voor deze filters.",
+    "live": "LIVE",
+    "bibNumber": "Startnummer",
+    "time": "TIJD",
+    "diffFirst": "VERSCHIL 1E",
+    "ranking": "RANGSCHIKKING",
+    "retry": "Opnieuw proberen",
+    "errorLoad": "Resultaten laden mislukt. Tik om opnieuw te proberen."
+  },
+
+  "filter": {
+    "results": "Resultaten",
+    "live": "Live",
+    "favourite": "Favoriet",
+    "noFavourites": "Nog geen favorieten. Tik op ☆ bij een resultaat om het op te slaan."
+  }
+}

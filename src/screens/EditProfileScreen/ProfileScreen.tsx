@@ -19,6 +19,7 @@ import {
     Pagination,
 } from '../../services/athleteProfileService'
 import { tokenService } from '../../services/tokenService'
+import { useFocusEffect } from '@react-navigation/native'
 
 const { width } = Dimensions.get('window')
 type Tab = 'Live' | 'Past'
@@ -38,32 +39,36 @@ const ProfileEditScreen = () => {
     const [loading, setLoading] = useState(true)
     const [fetchError, setFetchError] = useState('')
 
-    useEffect(() => {
-        const init = async () => {
-            try {
-                setLoading(true)
-                setFetchError('')
-                const id = await tokenService.getCustomerId() ?? 0
-                if (!id) {
-                    setFetchError(t('profile:errors.user_not_found'))
-                    return
-                }
-                console.log('🔵 Fetching profile for customerId:', id)
-                const data = await fetchAthleteProfileApi()
-                setProfile(data.profile)
-                setLiveEvents(data.tabs.live)
-                setPastEvents(data.tabs.past)
-                setLivePaging(data.pagination.live)
-                setPastPaging(data.pagination.past)
-            } catch (e: any) {
-                setFetchError(e.message || t('profile:errors.load_profile_failed'))
-            } finally {
-                setLoading(false)
-            }
-        }
-        init()
-    }, [])
+    useFocusEffect(
+        useCallback(() => {
+            const init = async () => {
+                try {
+                    setLoading(true)
+                    setFetchError('')
+                    const id = await tokenService.getCustomerId() ?? 0
+                    if (!id) {
+                        setFetchError(t('profile:errors.user_not_found'))
+                        return
+                    }
+                    console.log('Fetching profile for customerId:', id)
+                    const data = await fetchAthleteProfileApi()
+                    setProfile(data.profile)
+                    setLiveEvents(data.tabs.live)
+                    setPastEvents(data.tabs.past)
+                    setLivePaging(data.pagination.live)
+                    setPastPaging(data.pagination.past)
 
+                } catch (e: any) {
+                    setFetchError(e.message || t('profile:errors.load_profile_failed'))
+                } finally {
+                    setLoading(false)
+                }
+            }
+
+            init()
+
+        }, [])
+    )
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab)
         setActiveTab(tab)

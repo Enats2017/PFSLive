@@ -12,6 +12,8 @@ export interface Profile {
     city: string;
     country_id: number;
     country: string;
+     iso_code_2:      string;   // ← add this
+    iso_code_3:      string; 
     dob: string;
     gender: string;
     profile_picture: string;

@@ -14,7 +14,7 @@ import LoginScreen from '../screens/LoginScreen';
 import OTPVerificationScreen from '../screens/OTPVerificationScreen';
 import ParticipantResult from '../screens/EventDetails/ParticipantResult';
 import RaseResultScreen from '../screens/RaseResultScreen';
-import AllParticipant from '../screens/AllParticipantResult';
+import ResultList from '../screens/ResultList/ResultList';
 import ProfileScreen from '../screens/EditProfileScreen/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen/EditProfileScreen';
 
@@ -101,8 +101,8 @@ export const AppNavigator: React.FC = () => {
           }}
         />
         <Stack.Screen 
-          name="AllParticipant" 
-          component={AllParticipant}
+          name="ResultList" 
+          component={ResultList}
           options={{
             gestureEnabled: false,
           }}
