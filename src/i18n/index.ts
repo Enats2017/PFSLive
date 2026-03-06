@@ -19,12 +19,9 @@ import routeFR from './RouteScreen/fr.json';
 import routeNL from './RouteScreen/nl.json';
 import PersonalEventEN from "./PersonalEvent/en.json";
 import RaseResultEN from "./RaseResult/en.json";
-import RaseResultFR from "./RaseResult/fr.json";
-import RaseResultNL from "./RaseResult/nl.json";
 import ResultListEN from "./ResultList/en.json";
 import ResultListFr from   "./ResultList/fr.json";
 import ResultListNL from "./ResultList/nl.json";
-import raseResultEN from "./RaseResult/en.json";
 import raseResultFR from "./RaseResult/fr.json";
 import raseResultNL from "./RaseResult/nl.json";
 
@@ -33,7 +30,6 @@ import eventFR from './ParticipantEvent/fr.json';
 import eventNL from './ParticipantEvent/nl.json';
 
 // ✅ PERSONAL EVENT
-import personalEventEN from './PersonalEvent/en.json';
 import personalEventFR from './PersonalEvent/fr.json';
 import personalEventNL from './PersonalEvent/nl.json';
 
