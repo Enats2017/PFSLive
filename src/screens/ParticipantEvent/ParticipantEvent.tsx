@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -12,7 +12,6 @@ import UpcomingTab from './UpcomingTab';
 import { eventService, EventItem } from '../../services/eventService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import i18n from '../../i18n';
 import { ParticipantEventProps } from '../../types/navigation';
 import { API_CONFIG } from '../../constants/config';
 import { tokenService } from '../../services/tokenService';
@@ -31,10 +30,9 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     const [liveEvents, setLiveEvents] = useState<EventItem[]>([]);
     const [upcomingEvents, setUpcomingEvents] = useState<EventItem[]>([]);
     const flatListRef = useRef<FlatList>(null);
-    const [pastSearch, setPastSearch] = useState('');
-    const [searchLoading, setSearchLoading] = useState(false);
+    
+    const pastSearchQueryRef = useRef('');
 
-    // ✅ Separate loading state for each tab
     const [loadingMorePast, setLoadingMorePast] = useState(false);
     const [loadingMoreLive, setLoadingMoreLive] = useState(false);
     const [loadingMoreUpcoming, setLoadingMoreUpcoming] = useState(false);
@@ -45,37 +43,19 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         upcoming: { page: 1, total_pages: 1 },
     });
 
-    // ✅ Helper function to check if more pages exist
-    const hasMorePages = (tab: Tab): boolean => {
-        const key = tab.toLowerCase() as 'past' | 'live' | 'upcoming';
-        return paginationInfo[key].page < paginationInfo[key].total_pages;
-    };
-
-    const isInitialMount = useRef(true);
     useFocusEffect(
         useCallback(() => {
-            fetchEvents();
+            fetchEvents('');
         }, [])
     );
 
-
-
-    const fetchEvents = async (search = '', isSearch = false) => {
+    const fetchEvents = useCallback(async (search: string) => {
         try {
-            if (isSearch) {
-                setSearchLoading(true);
-                // ✅ Don't setLoading(true) - keeps existing data visible
-            } else {
-                setLoading(true);
-                // ✅ Only clear events on initial load, not search
-                setPastEvents([]);
-                setLiveEvents([]);
-                setUpcomingEvents([]);
-            }
+            setLoading(true);
             setError(null);
 
             if (API_CONFIG.DEBUG) {
-                console.log('📡 Fetching events for all tabs');
+                console.log('📡 Fetching events');
             }
 
             const result = await eventService.getEvents({
@@ -84,7 +64,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 page_upcoming: 1,
                 filter_name_past: search,
             });
-
 
             setPastEvents(result.tabs.past);
             setLiveEvents(result.tabs.live);
@@ -106,63 +85,40 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                     },
                 });
             }
-
-            if (API_CONFIG.DEBUG) {
-                console.log('✅ Events loaded:', {
-                    past: `${result.tabs.past.length} (page ${result.pagination.past.page}/${result.pagination.past.total_pages})`,
-                    live: `${result.tabs.live.length} (page ${result.pagination.live.page}/${result.pagination.live.total_pages})`,
-                    upcoming: `${result.tabs.upcoming.length} (page ${result.pagination.upcoming.page}/${result.pagination.upcoming.total_pages})`
-                });
-            }
         } catch (error: any) {
-            console.error('❌ Failed to fetch events:', error);
+            console.log('❌ Failed to fetch events:', error);
             setError(error.message || t('event:error.failed'));
         } finally {
             setLoading(false);
         }
-    };
+    }, [t]);
 
-    useEffect(() => {
-        if (isInitialMount.current) {
-            isInitialMount.current = false;
-            return;
-        }
-
-        const delay = setTimeout(() => {
-            fetchEvents(pastSearch, true); // 👈 pass isSearch = true
-        }, 500);
-
-        return () => clearTimeout(delay);
-    }, [pastSearch]);
+    const handlePastSearch = useCallback((query: string) => {
+        pastSearchQueryRef.current = query;
+        fetchEvents(query);
+    }, [fetchEvents]);
 
     const loadMorePast = useCallback(async () => {
-        const key = 'past';
-
-        // ✅ Guard: Check all conditions
-        if (loadingMorePast) {
-            if (API_CONFIG.DEBUG) console.log('Past: Already loading');
-            return;
-        }
-
-        if (paginationInfo[key].page >= paginationInfo[key].total_pages) {
-            if (API_CONFIG.DEBUG) console.log('Past: No more pages');
+        if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) {
             return;
         }
 
         try {
             setLoadingMorePast(true);
-            const nextPage = paginationInfo[key].page + 1;
+            const nextPage = paginationInfo.past.page + 1;
 
             if (API_CONFIG.DEBUG) {
-                console.log(`Past: Loading page ${nextPage}/${paginationInfo[key].total_pages}`);
+                console.log(`Past: Loading page ${nextPage}`);
             }
 
-            const result = await eventService.getEvents({ page_past: nextPage, filter_name_past: pastSearch, });
+            const result = await eventService.getEvents({
+                page_past: nextPage,
+                filter_name_past: pastSearchQueryRef.current,
+            });
 
             setPastEvents(prev => {
                 const existingIds = new Set(prev.map(e => e.product_app_id));
                 const newItems = result.tabs.past.filter(item => !existingIds.has(item.product_app_id));
-                if (API_CONFIG.DEBUG) console.log(`Past: Added ${newItems.length} new items`);
                 return [...prev, ...newItems];
             });
 
@@ -176,31 +132,23 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 }));
             }
         } catch (error) {
-            console.error('Past: Load more failed:', error);
+            console.log('Past: Load more failed:', error);
         } finally {
             setLoadingMorePast(false);
         }
-    }, [loadingMorePast, paginationInfo, pastSearch]);
+    }, [loadingMorePast, paginationInfo.past.page, paginationInfo.past.total_pages]);
 
     const loadMoreLive = useCallback(async () => {
-        const key = 'live';
-
-        if (loadingMoreLive) {
-            if (API_CONFIG.DEBUG) console.log('Live: Already loading');
-            return;
-        }
-
-        if (paginationInfo[key].page >= paginationInfo[key].total_pages) {
-            if (API_CONFIG.DEBUG) console.log('Live: No more pages');
+        if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) {
             return;
         }
 
         try {
             setLoadingMoreLive(true);
-            const nextPage = paginationInfo[key].page + 1;
+            const nextPage = paginationInfo.live.page + 1;
 
             if (API_CONFIG.DEBUG) {
-                console.log(`Live: Loading page ${nextPage}/${paginationInfo[key].total_pages}`);
+                console.log(`Live: Loading page ${nextPage}`);
             }
 
             const result = await eventService.getEvents({ page_live: nextPage });
@@ -208,7 +156,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             setLiveEvents(prev => {
                 const existingIds = new Set(prev.map(e => e.product_app_id));
                 const newItems = result.tabs.live.filter(item => !existingIds.has(item.product_app_id));
-                if (API_CONFIG.DEBUG) console.log(`Live: Added ${newItems.length} new items`);
                 return [...prev, ...newItems];
             });
 
@@ -222,31 +169,23 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 }));
             }
         } catch (error) {
-            console.error('Live: Load more failed:', error);
+            console.log('Live: Load more failed:', error);
         } finally {
             setLoadingMoreLive(false);
         }
-    }, [loadingMoreLive, paginationInfo]);
+    }, [loadingMoreLive, paginationInfo.live.page, paginationInfo.live.total_pages]);
 
     const loadMoreUpcoming = useCallback(async () => {
-        const key = 'upcoming';
-
-        if (loadingMoreUpcoming) {
-            if (API_CONFIG.DEBUG) console.log('Upcoming: Already loading');
-            return;
-        }
-
-        if (paginationInfo[key].page >= paginationInfo[key].total_pages) {
-            if (API_CONFIG.DEBUG) console.log('Upcoming: No more pages');
+        if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
             return;
         }
 
         try {
             setLoadingMoreUpcoming(true);
-            const nextPage = paginationInfo[key].page + 1;
+            const nextPage = paginationInfo.upcoming.page + 1;
 
             if (API_CONFIG.DEBUG) {
-                console.log(`Upcoming: Loading page ${nextPage}/${paginationInfo[key].total_pages}`);
+                console.log(`Upcoming: Loading page ${nextPage}`);
             }
 
             const result = await eventService.getEvents({ page_upcoming: nextPage });
@@ -254,7 +193,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             setUpcomingEvents(prev => {
                 const existingIds = new Set(prev.map(e => e.product_app_id));
                 const newItems = result.tabs.upcoming.filter(item => !existingIds.has(item.product_app_id));
-                if (API_CONFIG.DEBUG) console.log(`Upcoming: Added ${newItems.length} new items`);
                 return [...prev, ...newItems];
             });
 
@@ -268,79 +206,24 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 }));
             }
         } catch (error) {
-            console.error('Upcoming: Load more failed:', error);
+            console.log('Upcoming: Load more failed:', error);
         } finally {
             setLoadingMoreUpcoming(false);
         }
-    }, [loadingMoreUpcoming, paginationInfo]);
+    }, [loadingMoreUpcoming, paginationInfo.upcoming.page, paginationInfo.upcoming.total_pages]);
 
-    const renderContent = (tab: Tab) => {
-        if (loading) {
-            return (
-                <ActivityIndicator
-                    size="large"
-                    color="#FF5722"
-                    style={{ marginTop: 40 }}
-                />
-            );
-        }
-
-        if (error) {
-            return (
-                <View style={commonStyles.centerContainer}>
-                    <Text style={commonStyles.errorText}>{error}</Text>
-                    <TouchableOpacity
-                        style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-                        onPress={() => fetchEvents(pastSearch)}
-                    >
-                        <Text style={commonStyles.primaryButtonText}>
-                            {t('event:error.retry')}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            );
-        }
-
-        switch (tab) {
-            case 'Past':
-                return <PastTab
-                    events={pastEvents}
-                    onLoadMore={loadMorePast}
-                    loadingMore={loadingMorePast}
-                    hasMore={hasMorePages('Past')}
-                    searchText={pastSearch}           // 👈 add this
-                    onSearchChange={setPastSearch}
-                    searchLoading={searchLoading}
-                />;
-            case 'Live':
-                return <LiveTab
-                    events={liveEvents}
-                    onLoadMore={loadMoreLive}
-                    loadingMore={loadingMoreLive}
-                    hasMore={hasMorePages('Live')}
-                />;
-            case 'Upcoming':
-                return <UpcomingTab
-                    events={upcomingEvents}
-                    onLoadMore={loadMoreUpcoming}
-                    loadingMore={loadingMoreUpcoming}
-                    hasMore={hasMorePages('Upcoming')}
-                />;
-        }
-    };
-
-    const handleTabPress = (tab: Tab) => {
+    const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
         setActiveTab(tab);
         flatListRef.current?.scrollToIndex({ index, animated: true });
-    };
+    }, []);
 
-    const handleSwipe = (e: any) => {
+    const handleSwipe = useCallback((e: any) => {
         const index = Math.round(e.nativeEvent.contentOffset.x / width);
         setActiveTab(TABS[index]);
-    };
+    }, []);
 
-    const handlePersonalEventPress = async () => {
+    const handlePersonalEventPress = useCallback(async () => {
         try {
             const token = await tokenService.getToken();
             if (token !== null && token !== '') {
@@ -349,10 +232,42 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             }
             navigation.navigate('Register');
         } catch (error) {
-            console.error('Token check failed:', error);
+            console.log('Token check failed:', error);
             navigation.navigate('Register');
         }
-    };
+    }, [navigation]);
+
+    if (loading) {
+        return (
+            <SafeAreaView style={commonStyles.container} edges={['top']}>
+                <StatusBar barStyle="dark-content" />
+                <AppHeader showLogo={true} />
+                <View style={commonStyles.centerContainer}>
+                    <ActivityIndicator size="large" color="#FF5722" />
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (error) {
+        return (
+            <SafeAreaView style={commonStyles.container} edges={['top']}>
+                <StatusBar barStyle="dark-content" />
+                <AppHeader showLogo={true} />
+                <View style={commonStyles.centerContainer}>
+                    <Text style={commonStyles.errorText}>{error}</Text>
+                    <TouchableOpacity
+                        style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
+                        onPress={() => fetchEvents('')}
+                    >
+                        <Text style={commonStyles.primaryButtonText}>
+                            {t('event:error.retry')}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -362,6 +277,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 style={{ flex: 1 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ flexGrow: 1 }}
+                keyboardShouldPersistTaps="handled"
             >
                 <View style={{ flex: 1 }}>
                     <View style={eventStyles.section}>
@@ -409,7 +325,31 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                             })}
                             renderItem={({ item }) => (
                                 <View style={{ width }}>
-                                    {renderContent(item)}
+                                    {item === 'Past' && (
+                                        <PastTab
+                                            events={pastEvents}
+                                            onLoadMore={loadMorePast}
+                                            loadingMore={loadingMorePast}
+                                            hasMore={paginationInfo.past.page < paginationInfo.past.total_pages}
+                                            onSearch={handlePastSearch}
+                                        />
+                                    )}
+                                    {item === 'Live' && (
+                                        <LiveTab
+                                            events={liveEvents}
+                                            onLoadMore={loadMoreLive}
+                                            loadingMore={loadingMoreLive}
+                                            hasMore={paginationInfo.live.page < paginationInfo.live.total_pages}
+                                        />
+                                    )}
+                                    {item === 'Upcoming' && (
+                                        <UpcomingTab
+                                            events={upcomingEvents}
+                                            onLoadMore={loadMoreUpcoming}
+                                            loadingMore={loadingMoreUpcoming}
+                                            hasMore={paginationInfo.upcoming.page < paginationInfo.upcoming.total_pages}
+                                        />
+                                    )}
                                 </View>
                             )}
                         />
@@ -432,7 +372,10 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                                 {t('event:personal.description')}
                             </Text>
                         </View>
-                        <TouchableOpacity style={commonStyles.primaryButton} onPress={handlePersonalEventPress}>
+                        <TouchableOpacity
+                            style={[commonStyles.primaryButton, { borderRadius: 0 }]}
+                            onPress={handlePersonalEventPress}
+                        >
                             <Text style={commonStyles.primaryButtonText}>{t('personal.button')}</Text>
                         </TouchableOpacity>
                     </View>

@@ -24,9 +24,10 @@ import RaseResultNL from "./RaseResult/nl.json";
 import ResultListEN from "./ResultList/en.json";
 import ResultListFr from   "./ResultList/fr.json";
 import ResultListNL from "./ResultList/nl.json";
+import raseResultEN from "./RaseResult/en.json";
+import raseResultFR from "./RaseResult/fr.json";
+import raseResultNL from "./RaseResult/nl.json";
 
-
-// ✅ PARTICIPANT EVENT
 import eventEN from './ParticipantEvent/en.json';
 import eventFR from './ParticipantEvent/fr.json';
 import eventNL from './ParticipantEvent/nl.json';
@@ -242,7 +243,7 @@ i18n.use(initReactI18next).init({
       event: eventFR,
       personal: personalEventFR,
       details: detailsFR,
-      result:RaseResultFR,
+      result:raseResultFR,
       participantResult: participantResultFR,
       register: registerFR,
       login: loginFR,
@@ -260,7 +261,7 @@ i18n.use(initReactI18next).init({
       event: eventNL,
       personal: personalEventNL,
       details: detailsNL,
-      result:RaseResultNL,
+      result:raseResultNL,
       participantResult: participantResultNL,
       register: registerNL,
       login: loginNL,
