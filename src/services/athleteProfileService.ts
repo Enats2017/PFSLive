@@ -15,7 +15,7 @@ export interface AthleteProfile {
 export interface AthleteEvent {
     id:           number;
     name:         string;
-    race_date:    string;
+    race_date_formatted:    string;
     race_time:    string;
     event_source: string;
     race_status?: 'not_started' | 'in_progress' | 'finished';
