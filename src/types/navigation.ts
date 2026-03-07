@@ -4,11 +4,10 @@ import { Distance } from '../services/eventDetailService';
 export type RootStackParamList = {
   Home: undefined;
   Route: {
-      product_app_id: string | number;
-  product_option_value_app_id: string | number;
-  event_name: string;
+    product_app_id: string | number;
+    product_option_value_app_id: string | number;
+    event_name: string;
   };
-
   ParticipantEvent:undefined
   PersonalEvent : undefined
   EventDetails: {
@@ -20,7 +19,7 @@ export type RootStackParamList = {
     product_app_id: string | number;
     item: Distance;
   };
-  Register:undefined;
+  RegisterScreen:undefined;
   LoginScreen:undefined;
   OTPVerificationScreen: {           
     email: string;
@@ -28,8 +27,8 @@ export type RootStackParamList = {
   };
 
   RaseResultScreen:{
-      product_app_id: number;
-  product_option_value_app_id: number;
+    product_app_id: number;
+    product_option_value_app_id: number;
   };
   ResultList: {
   product_app_id: number;

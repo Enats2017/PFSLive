@@ -14,17 +14,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
-import { AppHeader } from '../components/common/AppHeader'; // ✅ FIXED
-import FloatingLabelInput from '../components/FloatingLabelInput'; // ✅ FIXED
-import CountrySelector from '../components/CountrySelector'; // ✅ FIXED
-import { commonStyles } from '../styles/common.styles'; // ✅ FIXED
-import { registerStyles } from '../styles/Register.styles'; // ✅ FIXED
-import { RegisterProps } from '../types/navigation'; // ✅ FIXED
-import { authService } from '../services/authService'; // ✅ FIXED
-import { validateRegisterForm } from '../services/validation/authValidation'; // ✅ FIXED
-import { toastError, toastSuccess } from '../../utils/toast'; // ✅ CORRECT (one level up)
-import { useAuthForm } from '../hooks/useAuthForm'; // ✅ FIXED
-import { API_CONFIG } from '../constants/config'; // ✅ FIXED
+import { AppHeader } from '../../components/common/AppHeader'; // ✅ FIXED
+import FloatingLabelInput from '../../components/FloatingLabelInput'; // ✅ FIXED
+import CountrySelector from '../../components/CountrySelector'; // ✅ FIXED
+import { commonStyles } from '../../styles/common.styles'; // ✅ FIXED
+import { registerStyles } from '../../styles/Register.styles'; // ✅ FIXED
+import { RegisterProps } from '../../types/navigation'; // ✅ FIXED
+import { authService } from '../../services/authService'; // ✅ FIXED
+import { validateRegisterForm } from '../../services/validation/authValidation'; // ✅ FIXED
+import { toastError, toastSuccess } from '../../../utils/toast'; // ✅ CORRECT (one level up)
+import { useAuthForm } from '../../hooks/useAuthForm'; // ✅ FIXED
+import { API_CONFIG } from '../../constants/config'; // ✅ FIXED
 
 // ✅ CONSTANTS
 const INITIAL_FORM_DATA = {
@@ -41,7 +41,7 @@ const INITIAL_FORM_DATA = {
   acceptedTerms: false,
 };
 
-const Register: React.FC<RegisterProps> = ({ navigation }) => {
+const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
   const { t } = useTranslation(['register', 'common']);
 
   // ✅ FORM STATE (CUSTOM HOOK)
@@ -411,4 +411,4 @@ const Register: React.FC<RegisterProps> = ({ navigation }) => {
   );
 };
 
-export default Register;
+export default RegisterScreen;

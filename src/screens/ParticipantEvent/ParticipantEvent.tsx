@@ -230,10 +230,10 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 navigation.navigate('PersonalEvent');
                 return;
             }
-            navigation.navigate('Register');
+            navigation.navigate('RegisterScreen');
         } catch (error) {
             console.log('Token check failed:', error);
-            navigation.navigate('Register');
+            navigation.navigate('RegisterScreen');
         }
     }, [navigation]);
 

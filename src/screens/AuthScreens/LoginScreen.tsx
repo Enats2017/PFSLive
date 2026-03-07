@@ -12,16 +12,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { AppHeader } from '../components/common/AppHeader';
-import FloatingLabelInput from '../components/FloatingLabelInput';
-import { authService } from '../services/authService';
-import { validateLoginForm } from '../services/validation/authValidation';
-import { commonStyles } from '../styles/common.styles';
-import { loginStyles } from '../styles/login.styles';
-import { LoginScreenProps } from '../types/navigation';
-import { toastSuccess, toastError } from '../../utils/toast';
-import { useAuthForm } from '../hooks/useAuthForm';
-import { usePendingRegistration } from '../hooks/usePendingRegistration';
+import { AppHeader } from '../../components/common/AppHeader';
+import FloatingLabelInput from '../../components/FloatingLabelInput';
+import { authService } from '../../services/authService';
+import { validateLoginForm } from '../../services/validation/authValidation';
+import { commonStyles } from '../../styles/common.styles';
+import { loginStyles } from '../../styles/login.styles';
+import { LoginScreenProps } from '../../types/navigation';
+import { toastSuccess, toastError } from '../../../utils/toast';
+import { useAuthForm } from '../../hooks/useAuthForm';
+import { usePendingRegistration } from '../../hooks/usePendingRegistration';
 
 const INITIAL_FORM_DATA = {
   email: '',
@@ -180,7 +180,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             <View style={loginStyles.headerSection}>
               <View style={loginStyles.cardscetion}>
                 <Image
-                  source={require('../../assets/livio_logo.png')}
+                  source={require('../../../assets/livio_logo.png')}
                   style={loginStyles.logo}
                   resizeMode="contain"
                 />
@@ -264,7 +264,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               {/* Register Link */}
               <TouchableOpacity
                 style={loginStyles.registerButton}
-                onPress={() => navigation.navigate('Register')}
+                onPress={() => navigation.navigate('RegisterScreen')}
                 activeOpacity={0.8}
                 disabled={loading}
               >

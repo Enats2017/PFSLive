@@ -9,14 +9,16 @@ import RouteScreen from '../screens/RouteScreen';
 import ParticipantEvent from '../screens/ParticipantEvent/ParticipantEvent';
 import PersonalEvent from '../screens/ParticipantEvent/CreatePersonalEvent';
 import EventDetails from '../screens/EventDetails/EventDetails';
-import Register from '../screens/Register';
-import LoginScreen from '../screens/LoginScreen';
-import OTPVerificationScreen from '../screens/OTPVerificationScreen';
 import ParticipantResult from '../screens/EventDetails/ParticipantResult';
 import RaseResultScreen from '../screens/RaseResultScreen';
 import ResultList from '../screens/ResultList/ResultList';
+
+// ✅ AUTH SCREENS - NEW IMPORTS
+import RegisterScreen from '../screens/AuthScreens/RegisterScreen';
+import LoginScreen from '../screens/AuthScreens/LoginScreen';
+import OTPVerificationScreen from '../screens/AuthScreens/OTPVerificationScreen';
+import EditProfileScreen from '../screens/AuthScreens/EditProfileScreen';
 import ProfileScreen from '../screens/EditProfileScreen/ProfileScreen';
-import EditProfileScreen from '../screens/EditProfileScreen/EditProfileScreen';
 import EditPersonalEvent from '../screens/EditProfileScreen/EditPersonalEvent';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -29,11 +31,9 @@ export const AppNavigator: React.FC = () => {
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
-          // Enable swipe back gesture
           gestureEnabled: true,
           gestureDirection: 'horizontal',
           fullScreenGestureEnabled: true,
-          // Custom gesture config for better sensitivity
           customAnimationOnGesture: true,
           animationTypeForReplace: 'push',
         }}
@@ -41,101 +41,77 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen 
           name="Home" 
           component={HomeScreen}
-          options={{
-            gestureEnabled: false, // No swipe on home screen
-          }}
+          options={{ gestureEnabled: false }}
         />
         <Stack.Screen 
           name="ParticipantEvent" 
           component={ParticipantEvent}
-          options={{
-            gestureEnabled: false,
-          }}
+          options={{ gestureEnabled: false }}
         />
-         <Stack.Screen 
+        <Stack.Screen 
           name="PersonalEvent" 
           component={PersonalEvent}
-          options={{
-            gestureEnabled: false,
-          }}
+          options={{ gestureEnabled: false }}
         />       
-         <Stack.Screen 
+        <Stack.Screen 
           name="EventDetails" 
           component={EventDetails}
-          options={{
-            gestureEnabled: false,
-          }}
+          options={{ gestureEnabled: false }}
         />
         <Stack.Screen 
           name="ParticipantResult" 
           component={ParticipantResult}
-          options={{
-            gestureEnabled: false,
-          }}
+          options={{ gestureEnabled: false }}
         />
-          <Stack.Screen 
-          name="Register" 
-          component={Register}
-          options={{
-            gestureEnabled: false,
-          }}
-        />
-         <Stack.Screen 
-          name="OTPVerificationScreen" 
-          component={OTPVerificationScreen}
-          options={{
-            gestureEnabled: false,
-          }}
-        />
-         <Stack.Screen 
-          name="LoginScreen" 
-          component={LoginScreen}
-          options={{
-            gestureEnabled: false,
-          }}
-        />
-          <Stack.Screen 
+        <Stack.Screen 
           name="RaseResultScreen" 
           component={RaseResultScreen}
-          options={{
-            gestureEnabled: false,
-          }}
+          options={{ gestureEnabled: false }}
         />
         <Stack.Screen 
           name="ResultList" 
           component={ResultList}
-          options={{
-            gestureEnabled: false,
-          }}
+          options={{ gestureEnabled: false }}
         />
-         <Stack.Screen 
+        
+        {/* ✅ AUTH SCREENS */}
+        <Stack.Screen 
+          name="RegisterScreen" 
+          component={RegisterScreen}
+          options={{ gestureEnabled: false }}
+        />
+        <Stack.Screen 
+          name="OTPVerificationScreen" 
+          component={OTPVerificationScreen}
+          options={{ gestureEnabled: false }}
+        />
+        <Stack.Screen 
+          name="LoginScreen" 
+          component={LoginScreen}
+          options={{ gestureEnabled: false }}
+        />
+        <Stack.Screen 
           name="ProfileScreen" 
           component={ProfileScreen}
-          options={{
-            gestureEnabled: false,
-          }}
+          options={{ gestureEnabled: false }}
         />
         <Stack.Screen 
           name="EditProfileScreen" 
           component={EditProfileScreen}
-          options={{
-            gestureEnabled: false,
-          }}
+          options={{ gestureEnabled: false }}
         />
-         <Stack.Screen 
+        <Stack.Screen 
           name="EditPersonalEvent" 
           component={EditPersonalEvent}
-          options={{
-            gestureEnabled: false,
-          }}
+          options={{ gestureEnabled: false }}
         />
+        
         <Stack.Screen 
           name="Route" 
           component={RouteScreen}
           options={{
-            gestureEnabled: true, // Enable swipe to go back
+            gestureEnabled: true,
             fullScreenGestureEnabled: true,
-            // Increase gesture response distance
             gestureResponseDistance: Platform.OS === 'android' ? 150 : 50,
           }}
         />
