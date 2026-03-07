@@ -7,7 +7,7 @@ import { RootStackParamList } from '../types/navigation';
 import HomeScreen from '../screens/HomeScreen';
 import RouteScreen from '../screens/RouteScreen';
 import ParticipantEvent from '../screens/ParticipantEvent/ParticipantEvent';
-import PersonalEvent from '../screens/ParticipantEvent/CreatePersonalEvent';
+import PersonalEvent from '../screens/PersonalEventScreen/CreatePersonalEvent';
 import EventDetails from '../screens/EventDetails/EventDetails';
 import Register from '../screens/Register';
 import LoginScreen from '../screens/LoginScreen';
@@ -15,9 +15,10 @@ import OTPVerificationScreen from '../screens/OTPVerificationScreen';
 import ParticipantResult from '../screens/EventDetails/ParticipantResult';
 import RaseResultScreen from '../screens/RaseResultScreen';
 import ResultList from '../screens/ResultList/ResultList';
-import ProfileScreen from '../screens/EditProfileScreen/ProfileScreen';
+import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen/EditProfileScreen';
-import EditPersonalEvent from '../screens/EditProfileScreen/EditPersonalEvent';
+import EditPersonalEvent from '../screens/PersonalEventScreen/EditPersonalEvent';
+import ResultDetails from '../screens/ResultDetailsScreen/ResultDetails';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -125,6 +126,13 @@ export const AppNavigator: React.FC = () => {
          <Stack.Screen 
           name="EditPersonalEvent" 
           component={EditPersonalEvent}
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen 
+          name="ResultDetails" 
+          component={ResultDetails}
           options={{
             gestureEnabled: false,
           }}
