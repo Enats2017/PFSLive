@@ -1,0 +1,44 @@
+{
+  "tabs": {
+    "raceInfo": "Race informatie",
+    "timingPoint": "Tijdpunt",
+    "runnerInfo": "Loper informatie",
+    "awards": "Prijzen"
+  },
+  "raceInfo": {
+    "finisher": "Finisher",
+    "raceTime": "RACETIJD",
+    "previousTimingPoint": "VORIG TIJDPUNT",
+    "overallRanking": "ALGEMENE\nRANGLIJST",
+    "rankingInOpen": "RANGLIJST\nOPEN",
+    "genderRanking": "GESLACHT\nRANGLIJST",
+    "distanceCompleted": "AFSTAND\nVOLTOOID",
+    "elevationGain": "HOOGTEMETERS\nVANAF START"
+  },
+  "timingPoint": {
+    "checkpoint": "CHECKPOINT",
+    "startTime": "STARTTIJD",
+    "arrivalTime": "AANKOMSTTIJD",
+    "time": "RACETIJD",
+    "ranking": "RANGLIJST",
+    "distance": "AFSTAND",
+    "elevationGain": "HOOGTEMETERS",
+    "noData": "Geen tijdsgegevens beschikbaar"
+  },
+  "runnerInfo": {
+    "club": "CLUB",
+    "category": "CATEGORIE",
+    "utmbIndex": "INDEX",
+    "utmbSeries": "WORLD SERIES",
+    "noClub": "- -"
+  },
+  "awards": {
+    "time": "TIJD",
+    "country": "LAND",
+    "ranking": "RANGLIJST",
+    "genderRanking": "GESLACHT RANGLIJST",
+    "distance": "AFSTAND",
+    "elevationGain": "HOOGTEMETERS",
+    "noData": "- -"
+  }
+}

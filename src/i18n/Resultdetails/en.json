@@ -16,16 +16,20 @@
     "elevationGain":        "ELEVATION GAIN\nFROM START"
   },
   "timingPoint": {
-    "checkpoint":   "CHECKPOINT",
-    "time":         "TIME",
-    "ranking":      "RANKING",
-    "noData":       "No timing data available"
+    "checkpoint":    "CHECKPOINT",
+    "startTime":     "START TIME",
+    "arrivalTime":   "ARRIVAL TIME",
+    "time":          "RACE TIME",
+    "ranking":       "RANKING",
+    "distance":      "DISTANCE",
+    "elevationGain": "ELEVATION GAIN",
+    "noData":        "No timing data available"
   },
   "runnerInfo": {
     "club":         "CLUB",
     "category":     "CATEGORY",
-    "utmbIndex":    "UTMB INDEX",
-    "utmbSeries":   "UTMB WORLD SERIES",
+    "utmbIndex":    "INDEX",
+    "utmbSeries":   "WORLD SERIES",
     "noClub":       "- -"
   },
   "awards": {

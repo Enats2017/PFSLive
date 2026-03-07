@@ -6,12 +6,12 @@ import {
 import { SafeAreaView }    from 'react-native-safe-area-context';
 import { useFocusEffect }  from '@react-navigation/native';
 import { useTranslation }  from 'react-i18next';
-import { colors, commonStyles, spacing } from '../styles/common.styles';
-import { AppHeader }       from '../components/common/AppHeader';
-import { BottomNavigation } from '../components/common/BottomNavigation';
-import { detailsStyles }   from '../styles/details.styles';
-import { RaseResultScreenprops } from '../types/navigation';
-import { eventDetailService, Distance } from '../services/eventDetailService';
+import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { AppHeader }       from '../../components/common/AppHeader';
+import { BottomNavigation } from '../../components/common/BottomNavigation';
+import { detailsStyles }   from '../../styles/details.styles';
+import { RaseResultScreenprops } from '../../types/navigation';
+import { eventDetailService, Distance } from '../../services/eventDetailService';
 
 const RaseResultScreen: React.FC<RaseResultScreenprops> = ({ navigation, route }) => {
   const { product_app_id, event_name } = route.params;

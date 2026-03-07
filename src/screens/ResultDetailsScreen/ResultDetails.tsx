@@ -1,4 +1,3 @@
-// ResultDetails.tsx — main screen, imports all 4 tabs
 
 import React, { useCallback, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StatusBar, Dimensions, ScrollView, Animated } from 'react-native';
@@ -27,29 +26,21 @@ const ResultDetails: React.FC<ResultDetailspops> = () => {
     const flatListRef                 = useRef<FlatList<TabKey>>(null);
     const tabScrollRef                = useRef<ScrollView>(null);
 
-    // ── Tab press: scroll page list + scroll tab bar to keep active visible
     const handleTabPress = useCallback((tab: TabKey) => {
         const index = TAB_KEYS.indexOf(tab);
         setActiveTab(tab);
-
-        // scroll page
         flatListRef.current?.scrollToIndex({ index, animated: true });
-
-        // scroll tab bar so active tab is always visible
         tabScrollRef.current?.scrollTo({
             x: index * (width / 3) - width / 6,   // center the active tab
             animated: true,
         });
     }, []);
 
-    // ── Page swipe: sync tab bar highlight
     const handleSwipe = useCallback((e: any) => {
         const index = Math.round(e.nativeEvent.contentOffset.x / width);
         if (index >= 0 && index < TAB_KEYS.length) {
             const tab = TAB_KEYS[index];
             setActiveTab(tab);
-
-            // also scroll the tab bar
             tabScrollRef.current?.scrollTo({
                 x: index * (width / 3) - width / 6,
                 animated: true,
@@ -78,8 +69,8 @@ const ResultDetails: React.FC<ResultDetailspops> = () => {
                 </TouchableOpacity>
 
                 <View style={s.headerCenter}>
-                    <Text style={s.headerName}>CHEN Weiting</Text>
-                    <Text style={s.headerBib}>1040</Text>
+                    <Text style={commonStyles.title}>CHEN Weiting</Text>
+                    <Text style={commonStyles.text}>1040</Text>
                 </View>
 
                 <TouchableOpacity
@@ -95,7 +86,6 @@ const ResultDetails: React.FC<ResultDetailspops> = () => {
                     ref={tabScrollRef}
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    style={s.tabBarScroll}
                     contentContainerStyle={s.tabBarContent}
                     scrollEventThrottle={16}
                 >
@@ -107,7 +97,7 @@ const ResultDetails: React.FC<ResultDetailspops> = () => {
                             activeOpacity={0.7}
                         >
                             <Text style={[
-                                s.tabText,
+                                commonStyles.text,
                                 activeTab === tabKey && s.tabTextActive,
                             ]}>
                                 {t(`tabs.${tabKey}`)}
