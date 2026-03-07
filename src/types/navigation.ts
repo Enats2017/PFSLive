@@ -41,8 +41,9 @@ export type RootStackParamList = {
 
   EditPersonalEvent:{
     eventId:number;
+  };
 
-  }
+  ResultDetails:undefined
  
 };
 
@@ -60,4 +61,5 @@ export type ResultListprops = NativeStackScreenProps<RootStackParamList, 'Result
 export type ProfileScreenprops = NativeStackScreenProps<RootStackParamList, 'ProfileScreen'>;
 export type EditProfileScreenprops = NativeStackScreenProps<RootStackParamList, 'EditProfileScreen'>;
 export type EditPersonalEventpops = NativeStackScreenProps<RootStackParamList,'EditPersonalEvent'>;
+export type ResultDetailspops = NativeStackScreenProps<RootStackParamList,'ResultDetails'>;
 

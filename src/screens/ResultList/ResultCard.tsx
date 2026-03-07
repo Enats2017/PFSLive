@@ -5,6 +5,7 @@ import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
+import { useNavigation } from '@react-navigation/native';
 
 interface ResultCardProps {
     item:        RaceResult;
@@ -19,10 +20,11 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     fromLive,
     onToggleFav,
 }) => {
+    const navigation = useNavigation();
     const { t } = useTranslation(['allrace', 'common']);
 
     return (
-        <View style={resultListStyle.card}>
+        <TouchableOpacity style={resultListStyle.card} onPress={()=>navigation.navigate('ResultDetails')} >
 
             {/* ── green triangle corner — rank + star ── */}
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
@@ -102,7 +104,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                     </View>
                 )}
             </View>
-        </View>
+        </TouchableOpacity>
     );
 }, (prev, next) =>
     // custom comparator — only re-render when these specific props change

@@ -1,0 +1,40 @@
+{
+  "tabs": {
+    "raceInfo":     "Race Info",
+    "timingPoint":  "Timing point",
+    "runnerInfo":   "Runner Info",
+    "awards":       "Awards"
+  },
+  "raceInfo": {
+    "finisher":             "Finisher",
+    "raceTime":             "RACE TIME",
+    "previousTimingPoint":  "PREVIOUS TIMING POINT",
+    "overallRanking":       "OVERALL\nRANKING",
+    "rankingInOpen":        "RANKING IN\nOPEN",
+    "genderRanking":        "GENDER\nRANKING",
+    "distanceCompleted":    "DISTANCE\nCOMPLETED",
+    "elevationGain":        "ELEVATION GAIN\nFROM START"
+  },
+  "timingPoint": {
+    "checkpoint":   "CHECKPOINT",
+    "time":         "TIME",
+    "ranking":      "RANKING",
+    "noData":       "No timing data available"
+  },
+  "runnerInfo": {
+    "club":         "CLUB",
+    "category":     "CATEGORY",
+    "utmbIndex":    "UTMB INDEX",
+    "utmbSeries":   "UTMB WORLD SERIES",
+    "noClub":       "- -"
+  },
+  "awards": {
+    "time":           "TIME",
+    "country":        "COUNTRY",
+    "ranking":        "RANKING",
+    "genderRanking":  "GENDER RANKING",
+    "distance":       "DISTANCE",
+    "elevationGain":  "ELEVATION GAIN",
+    "noData":         "- -"
+  }
+}

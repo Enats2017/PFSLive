@@ -76,6 +76,7 @@ import errorModalNL from './ErrorModal/nl.json';
 import ProfileEN from "./ProfileScreen/en.json";
 import ProfileFR from "./ProfileScreen/fr.json";
 import ProfileNL from "./ProfileScreen/nl.json";
+import ResultDetailsEN from "./Resultdetails/en.json";
 
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
@@ -231,6 +232,7 @@ i18n.use(initReactI18next).init({
       undoModal: undoModalEN,
       errorModal: errorModalEN,
       profile:ProfileEN,
+      resultdetails:ResultDetailsEN
     },
     fr: {
       common: commonFR,
@@ -287,6 +289,7 @@ i18n.use(initReactI18next).init({
     'undoModal',
     'errorModal',
     'profile',
+    'resultdetails'
   ],
   interpolation: {
     escapeValue: false,
