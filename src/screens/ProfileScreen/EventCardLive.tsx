@@ -38,7 +38,7 @@ export const EventCard = ({ item }: { item: AthleteEvent }) => {
             return t('profile:buttons.edit_personal_event')
         }
         if (item.event_source === 'partner') {
-            return t('profile:buttons.edit_live_peronal_event')
+            return t('profile:buttons.edit_live_tracking_event')
         }
 
         if (item.race_status === 'in_progress') {

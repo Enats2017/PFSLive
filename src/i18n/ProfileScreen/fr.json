@@ -24,7 +24,7 @@
     "enable_gps": "ACTIVER LE GPS POUR COMMENCER LE SUIVI",
     "load_more": "Charger plus",
     "save_changes": "ENREGISTRER LES MODIFICATIONS",
-    "edit_live_peronal_event": "MODIFIER LE SUIVI EN DIRECT"
+    "edit_live_tracking_event": "MODIFIER LE SUIVI EN DIRECT"
   },
   "empty": {
     "no_live_events": "Aucun événement en direct pour le moment"

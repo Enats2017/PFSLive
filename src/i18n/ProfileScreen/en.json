@@ -26,7 +26,7 @@
     "enable_gps": "ENABLE GPS TO START TRACKING",
     "load_more": "Load more",
     "save_changes":"SAVE CHANGES",
-    "edit_live_peronal_event":"EDIT LIVE TRACKING"
+    "edit_live_tracking_event":"EDIT LIVE TRACKING"
   },
   "empty": {
     "no_live_events": "No live events right now"

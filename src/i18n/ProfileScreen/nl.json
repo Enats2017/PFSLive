@@ -24,7 +24,7 @@
     "enable_gps": "GPS INSCHAKELEN OM TRACKING TE STARTEN",
     "load_more": "Meer laden",
     "save_changes": "WIJZIGINGEN OPSLAAN",
-    "edit_live_peronal_event": "LIVE TRACKING BEWERKEN"
+    "edit_live_tracking_event": "LIVE TRACKING BEWERKEN"
   },
   "empty": {
     "no_live_events": "Geen live evenementen op dit moment"
