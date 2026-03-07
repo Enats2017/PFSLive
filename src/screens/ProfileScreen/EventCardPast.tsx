@@ -17,7 +17,7 @@ const EventCardPast = ({ item }: Props) => {
             <View style={profileStyles.textsection}>
                 <Text style={commonStyles.title}>{item.name}</Text>
                 <Text style={commonStyles.text}>
-                    {item.race_date} {item.race_time?.slice(0, 5)}
+                    {item.race_date_formatted} {item.race_time?.slice(0, 5)}
                 </Text>
             </View>
             <TouchableOpacity style={commonStyles.primaryButton}>

@@ -23,7 +23,7 @@ import { useFocusEffect } from '@react-navigation/native'
 
 const { width } = Dimensions.get('window')
 type Tab = 'Live' | 'Past'
-const TABS: Tab[] = ['Live', 'Past']
+const TABS: Tab[] = ['Past', 'Live']
 const EMPTY_PAGING: Pagination = { page: 1, per_page: 3, total: 0, total_pages: 0 }
 
 const ProfileEditScreen = () => {

@@ -11,23 +11,7 @@ type NavigationProp = NativeStackNavigationProp<
     RootStackParamList,
     'EditPersonalEvent'
 >
- /* ── Status badge ── */
- export const  StatusBadge = ({ status }: { status?: string }) => {
-    const { t } = useTranslation(['profile'])
-    const config: Record<string, { bg: string; dot: string; label: string }> = {
-        in_progress: { bg: '#fff0ee', dot: '#e8341a', label: t('profile:status.live') },
-        not_started: { bg: '#f0f4ff', dot: '#1a73e8', label: t('profile:status.soon') },
-        finished: { bg: '#f4f4f4', dot: '#888', label: t('profile:status.finished') },
-    }
-    const c = status ? config[status] : null
-    if (!c) return null
-    return (
-        <View style={[profileStyles.badge, { backgroundColor: c.bg }]}>
-            <View style={[profileStyles.badgeDot, { backgroundColor: c.dot }]} />
-            <Text style={[profileStyles.badgeText, { color: c.dot }]}>{c.label}</Text>
-        </View>
-    )
-}
+
 
 export const EventCard = ({ item }: { item: AthleteEvent }) => {
     const { t } = useTranslation(['profile'])
@@ -41,15 +25,20 @@ export const EventCard = ({ item }: { item: AthleteEvent }) => {
             return
         }
 
-        // navigation.navigate('MyEventDetailsScreen', {
-        //     eventId: item.id
-        // })
+        navigation.navigate('EventDetails', {
+            product_app_id: item.id,
+            event_name: item.name,
+            auto_register_id: null
+        })
 
     }
 
     const getButtonText = () => {
         if (item.event_source === 'custom') {
             return t('profile:buttons.edit_personal_event')
+        }
+        if (item.event_source === 'partner') {
+            return t('profile:buttons.edit_live_peronal_event')
         }
 
         if (item.race_status === 'in_progress') {
@@ -63,11 +52,10 @@ export const EventCard = ({ item }: { item: AthleteEvent }) => {
 
     return (
         <View style={[commonStyles.card, profileStyles.eventCard]}>
-            <StatusBadge status={item.race_status} />
             <View style={profileStyles.textsection}>
                 <Text style={commonStyles.title}>{item.name}</Text>
                 <Text style={commonStyles.text}>
-                    {item.race_date} {item.race_time?.slice(0, 5)}
+                    {item.race_date_formatted} {item.race_time?.slice(0, 5)}
                 </Text>
             </View>
             <TouchableOpacity
