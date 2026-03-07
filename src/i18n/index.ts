@@ -77,6 +77,8 @@ import ProfileEN from "./ProfileScreen/en.json";
 import ProfileFR from "./ProfileScreen/fr.json";
 import ProfileNL from "./ProfileScreen/nl.json";
 import ResultDetailsEN from "./Resultdetails/en.json";
+import ResultDetailsFR from "./Resultdetails/fr.json";
+import ResultDetailsNL from "./Resultdetails/nl.json";
 
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
@@ -251,6 +253,7 @@ i18n.use(initReactI18next).init({
       errorModal: errorModalFR,
       profile:ProfileFR,
       allrace:ResultListFr,
+      resultdetails:ResultDetailsFR,
     },
     nl: {
       common: commonNL,
@@ -269,6 +272,7 @@ i18n.use(initReactI18next).init({
       errorModal: errorModalNL,
       profile:ProfileNL,
       allrace:ResultListNL,
+      resultdetails:ResultDetailsNL
     },
   },
   lng: initialLanguage,

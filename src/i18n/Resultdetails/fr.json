@@ -1,0 +1,44 @@
+{
+  "tabs": {
+    "raceInfo": "Informations sur la course",
+    "timingPoint": "Point de chronométrage",
+    "runnerInfo": "Informations du coureur",
+    "awards": "Récompenses"
+  },
+  "raceInfo": {
+    "finisher": "Finisher",
+    "raceTime": "TEMPS DE COURSE",
+    "previousTimingPoint": "POINT DE CHRONOMÉTRAGE PRÉCÉDENT",
+    "overallRanking": "CLASSEMENT\nGÉNÉRAL",
+    "rankingInOpen": "CLASSEMENT\nOPEN",
+    "genderRanking": "CLASSEMENT\nPAR GENRE",
+    "distanceCompleted": "DISTANCE\nPARCOURUE",
+    "elevationGain": "DÉNIVELÉ POSITIF\nDEPUIS LE DÉPART"
+  },
+  "timingPoint": {
+    "checkpoint": "POINT DE CONTRÔLE",
+    "startTime": "HEURE DE DÉPART",
+    "arrivalTime": "HEURE D'ARRIVÉE",
+    "time": "TEMPS DE COURSE",
+    "ranking": "CLASSEMENT",
+    "distance": "DISTANCE",
+    "elevationGain": "DÉNIVELÉ POSITIF",
+    "noData": "Aucune donnée de chronométrage disponible"
+  },
+  "runnerInfo": {
+    "club": "CLUB",
+    "category": "CATÉGORIE",
+    "utmbIndex": "INDEX",
+    "utmbSeries": "WORLD SERIES",
+    "noClub": "- -"
+  },
+  "awards": {
+    "time": "TEMPS",
+    "country": "PAYS",
+    "ranking": "CLASSEMENT",
+    "genderRanking": "CLASSEMENT PAR GENRE",
+    "distance": "DISTANCE",
+    "elevationGain": "DÉNIVELÉ POSITIF",
+    "noData": "- -"
+  }
+}

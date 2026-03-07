@@ -1,145 +1,139 @@
 // tabs/TimingPointTab.tsx
 
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
-// hardcoded data — will come from API later
+import { resultInfoStyles } from '../../styles/resultDetails.styles';
+import { commonStyles } from '../../styles/common.styles';
+import RaceInfoTab from './RaceInfoTab';
+
 const TIMING_DATA = [
-    { name: '5 KM',    time: '0:22:22', ranking: '(1.)', done: true  },
-    { name: '10 KM',   time: '0:48:10', ranking: '(1.)', done: true  },
-    { name: '21 KM',   time: '1:42:05', ranking: '(1.)', done: true  },
-    { name: '42 KM',   time: '3:55:30', ranking: '(1.)', done: true  },
-    { name: 'Finish',  time: '13:00:05',ranking: '(1.)', done: true  },
+    {
+        name: 'Start',
+        startTime: 'Sat. 06:00:00',
+        distance: '0.00 km',
+        elevationGain: '0 ',
+        raceTime: '00:00:00',
+        ranking: '- -',
+        segmentKm: null,
+        segmentEle: null,
+        done: true,
+    },
+    {
+        name: 'Old House',
+        arrivalTime: 'Sat. 08:30:00',
+        distance: '9.69 km',
+        elevationGain: '263 ',
+        raceTime: '02:30:00',
+        ranking: '(1.)',
+        segmentKm: '9.69 ',
+        segmentEle: '263',
+        done: true,
+    },
+    {
+        name: '21 KM',
+        arrivalTime: 'Sat. 09:42:05',
+        distance: '21.00 km',
+        elevationGain: '750 ',
+        raceTime: '03:42:05',
+        ranking: '(1.)',
+        segmentKm: '11.31 ',
+        segmentEle: '487',
+        done: true,
+    },
+    {
+        name: 'Finish',
+        arrivalTime: 'Sat. 19:00:05',
+        distance: '94.63 km',
+        elevationGain: '3661 ',
+        raceTime: '13:00:05',
+        ranking: '(1.)',
+        segmentKm: '73.63 ',
+        segmentEle: '2911',
+        done: true,
+    },
 ];
 
 const TimingPointTab: React.FC = () => {
-    const { t } = useTranslation('resultDetails');
+    const { t } = useTranslation('resultdetails');
+    const isLast = (i: number) => i === TIMING_DATA.length - 1;
+    const isFirst = (i: number) => i === 0;
 
     return (
         <ScrollView
-            contentContainerStyle={{ paddingVertical: 16, paddingHorizontal: 16, paddingBottom: 32 }}
+            contentContainerStyle={[resultInfoStyles.scrollContent, { paddingHorizontal: 10 }]}
             showsVerticalScrollIndicator={false}
         >
             {TIMING_DATA.map((item, index) => (
-                <View key={index} style={styles.row}>
-
-                    {/* ── left: icon + vertical line ── */}
-                    <View style={styles.iconCol}>
-                        <View style={[styles.iconCircle, item.done && styles.iconCircleDone]}>
-                            <Ionicons
-                                name={item.name === 'Finish' ? 'flag' : 'location'}
-                                size={16}
-                                color={item.done ? '#fff' : '#aaa'}
-                            />
+                <View key={index} style={resultInfoStyles.headerBar}>
+                    <View style={resultInfoStyles.leftCol}>
+                        {isFirst(index)
+                            ? <View style={resultInfoStyles.iconSpacer} />
+                            : <View style={resultInfoStyles.lineTop} />
+                        }
+                        <View style={[resultInfoStyles.iconCircle, item.done && resultInfoStyles.iconCircleDone]}>
+                            <Ionicons name="checkmark" size={14} color="#fff" />
                         </View>
-                        {/* vertical connector line — hidden for last item */}
-                        {index < TIMING_DATA.length - 1 && (
-                            <View style={styles.connector} />
+                        {!isLast(index) && (
+                            <View style={resultInfoStyles.lineBottomWrap}>
+                                {/* blue line */}
+                                <View style={resultInfoStyles.lineBottom} />
+
+                                {item.segmentKm && (
+                                    <View style={resultInfoStyles.segmentLabels}>
+                                        <Text style={resultInfoStyles.segmentText}>{item.segmentKm}</Text>
+
+                                    </View>
+                                )}
+                            </View>
                         )}
                     </View>
+                    <View style={resultInfoStyles.timingcard}>
+                        <View style={resultInfoStyles.bibCard}>
+                            <Text style={commonStyles.title}>{item.name}</Text>
 
-                    {/* ── right: card ── */}
-                    <View style={styles.card}>
-                        <Text style={styles.checkpointName}>{item.name}</Text>
-                        <View style={styles.cardRow}>
-                            <View style={styles.cardCol}>
-                                <Text style={styles.cardLabel}>{t('timingPoint.time')}</Text>
-                                <Text style={styles.cardValue}>{item.time}</Text>
+                        </View>
+                        {isFirst(index) ? (
+                            <View style={resultInfoStyles.bibCard}>
+                                <Text style={commonStyles.subtitle}>{t('timingPoint.startTime')}</Text>
+                                <Text style={resultInfoStyles.timingPointDate}>{item.startTime}</Text>
                             </View>
-                            <View style={[styles.cardCol, styles.cardColBorder]}>
-                                <Text style={styles.cardLabel}>{t('timingPoint.ranking')}</Text>
-                                <Text style={styles.cardValue}>{item.ranking}</Text>
+                        ) : (
+                            <View style={resultInfoStyles.bibCard}>
+                                <Text style={commonStyles.subtitle}>{t('timingPoint.arrivalTime')}</Text>
+                                <Text style={resultInfoStyles.timingPointDate}>{item.arrivalTime}</Text>
+                            </View>
+                        )}
+                        <View style={resultInfoStyles.twoColRow}>
+                            <View style={resultInfoStyles.twoColLeft}>
+                                <Text style={commonStyles.subtitle}>{t('timingPoint.distance')}</Text>
+                                <Text style={commonStyles.title}>{item.distance}</Text>
+                            </View>
+                            <View style={resultInfoStyles.verticalDivider} />
+                            <View style={resultInfoStyles.twoColRight}>
+                                <Text style={commonStyles.subtitle}>{t('timingPoint.elevationGain')}</Text>
+                                <Text style={commonStyles.title}>{item.elevationGain}</Text>
                             </View>
                         </View>
+                        <View style={resultInfoStyles.twoColRow}>
+                            <View style={resultInfoStyles.twoColLeft}>
+                                <Text style={commonStyles.subtitle}>{t('timingPoint.time')}</Text>
+                                <Text style={commonStyles.title}>{item.raceTime}</Text>
+                            </View>
+                            <View style={resultInfoStyles.verticalDivider} />
+                            <View style={resultInfoStyles.twoColRight}>
+                                <Text style={commonStyles.subtitle}>{t('timingPoint.ranking')}</Text>
+                                <Text style={commonStyles.title}>{item.ranking}</Text>
+                            </View>
+                        </View>
+
                     </View>
                 </View>
             ))}
         </ScrollView>
     );
 };
-
-const styles = StyleSheet.create({
-    row: {
-        flexDirection: 'row',
-        marginBottom: 0,
-    },
-
-    // ── icon column ────────────────────────────────────────────────────────
-    iconCol: {
-        alignItems: 'center',
-        width: 40,
-        paddingTop: 16,
-    },
-    iconCircle: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#ddd',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    iconCircleDone: {
-        backgroundColor: '#27ae60',
-    },
-    connector: {
-        width: 2,
-        flex: 1,
-        minHeight: 24,
-        backgroundColor: '#27ae60',
-        marginVertical: 4,
-    },
-
-    // ── card ───────────────────────────────────────────────────────────────
-    card: {
-        flex: 1,
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        marginLeft: 12,
-        marginBottom: 12,
-        paddingTop: 14,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.07,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    checkpointName: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#111',
-        paddingHorizontal: 16,
-        marginBottom: 12,
-    },
-    cardRow: {
-        flexDirection: 'row',
-        borderTopWidth: 1,
-        borderColor: '#f0f0f0',
-    },
-    cardCol: {
-        flex: 1,
-        alignItems: 'center',
-        paddingVertical: 12,
-    },
-    cardColBorder: {
-        borderLeftWidth: 1,
-        borderColor: '#f0f0f0',
-    },
-    cardLabel: {
-        fontSize: 10,
-        fontWeight: '600',
-        color: '#999',
-        letterSpacing: 0.5,
-        textTransform: 'uppercase',
-        marginBottom: 6,
-    },
-    cardValue: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: '#111',
-    },
-});
 
 export default TimingPointTab;
