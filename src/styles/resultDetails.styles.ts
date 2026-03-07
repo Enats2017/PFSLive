@@ -18,13 +18,14 @@ export const resultInfoStyles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 13,
+    gap:10
   },
   headerBackBtn: {
     width: 32,
   },
   headerCenter: {
     flex: 1,
-    alignItems: "center",
+    
   },
 
   headerRightBtn: {

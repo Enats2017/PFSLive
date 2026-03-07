@@ -12,7 +12,7 @@ import TimingPointTab from './TimingPointTab';
 import RunnerInfoTab  from './RunnerInfoTab';
 import AwardsTab      from './AwardsTab';
 import { resultInfoStyles as s } from '../../styles/resultDetails.styles';
-import { commonStyles } from '../../styles/common.styles';
+import { colors, commonStyles } from '../../styles/common.styles';
 
 type TabKey = 'raceInfo' | 'timingPoint' | 'runnerInfo' | 'awards';
 const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo', 'awards'];
@@ -65,20 +65,13 @@ const ResultDetails: React.FC<ResultDetailspops> = () => {
                     style={s.headerBackBtn}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                    <Ionicons name="chevron-back" size={24} color="#111" />
+                    <Ionicons name="chevron-back" size={32} color={colors.gray900} />
                 </TouchableOpacity>
 
                 <View style={s.headerCenter}>
                     <Text style={commonStyles.title}>CHEN Weiting</Text>
                     <Text style={commonStyles.text}>1040</Text>
                 </View>
-
-                <TouchableOpacity
-                    style={s.headerRightBtn}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                    <Ionicons name="skull-outline" size={24} color="#111" />
-                </TouchableOpacity>
             </View>
 
             <View>
