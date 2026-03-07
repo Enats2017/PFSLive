@@ -8,8 +8,6 @@ export const profileStyles = StyleSheet.create({
   },
   list: { 
     flexGrow: 1, 
-    //paddingBottom: spacing.xl,
-    //paddingHorizontal: spacing.md,
   },
   eventCard: { 
     marginBottom: spacing.md, 
@@ -50,6 +48,7 @@ export const profileStyles = StyleSheet.create({
     alignItems: "center",
     overflow: "hidden",
     paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md, // ✅ ADDED: Horizontal padding for button
   },
   avatarWrapper: { 
     position: "relative", 
@@ -94,7 +93,8 @@ export const profileStyles = StyleSheet.create({
     textAlign: "center",
   },
   editButton: { 
-    minWidth: 160 
+    width: '100%', // ✅ UPDATED: Full width
+    alignSelf: 'center',
   },
   errorRow: {
     flexDirection: "row",
