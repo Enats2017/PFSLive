@@ -1,88 +1,98 @@
-import React, { useState, useCallback, useEffect } from 'react'
-import {
-    View, Text, TouchableOpacity, FlatList,
-    StyleSheet, ActivityIndicator, RefreshControl,
-} from 'react-native'
-import Ionicons from '@expo/vector-icons/Ionicons'
-import { commonStyles } from '../../styles/common.styles'
-import { fetchMorePastEvents, AthleteEvent, Pagination } from '../../services/athleteProfileService'
-import { profileStyles } from '../../styles/Profile.styles'
-import EventCardPast from './EventCardPast'
-import { useTranslation } from 'react-i18next'
+import React, { useCallback } from 'react';
+import { View, Text, FlatList, ActivityIndicator } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
+import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { profileStyles } from '../../styles/Profile.styles';
+import { AthleteEvent } from '../../services/athleteProfileService';
+import EventCardPast from './EventCardPast';
+import { API_CONFIG } from '../../constants/config';
 
-interface Props {
-    customerId:    number | string
-    initialEvents: AthleteEvent[]
-    initialPaging: Pagination
+interface PastTabProps {
+    events: AthleteEvent[];
+    onLoadMore: () => void;
+    loadingMore: boolean;
+    hasMore: boolean;
 }
 
-const PastTab = ({ customerId, initialEvents, initialPaging }: Props) => {
-    const { t } = useTranslation(['profile'])
-    const [events,      setEvents]      = useState<AthleteEvent[]>(initialEvents)
-    const [paging,      setPaging]      = useState<Pagination>(initialPaging)
-    const [refreshing,  setRefreshing]  = useState(false)
-    const [loadingMore, setLoadingMore] = useState(false)
+const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
+    const { t } = useTranslation(['profile']);
 
-    useEffect(() => {
-        setEvents(initialEvents)
-        setPaging(initialPaging)
-    }, [initialEvents, initialPaging])
-
-    const handleRefresh = useCallback(async () => {
-        try {
-            setRefreshing(true)
-            const data = await fetchMorePastEvents(paging.page + 1) 
-            setEvents(data.past ?? [])
-            setPaging(data.pagination)
-        } catch { /* silent */ } finally {
-            setRefreshing(false)
+    // ✅ SIMPLIFIED: Just check hasMore and loadingMore
+    const handleLoadMore = useCallback(() => {
+        if (API_CONFIG.DEBUG) {
+            console.log('🔍 Past onEndReached:', {
+                hasMore,
+                loadingMore,
+                eventsCount: events.length,
+            });
         }
-    }, [customerId])
 
-    const handleLoadMore = useCallback(async () => {
-        if (loadingMore || paging.page >= paging.total_pages) return
-        try {
-            setLoadingMore(true)
-            const data = await fetchMorePastEvents(paging.page + 1)
-            setEvents(prev => [...prev, ...(data.past ?? [])])
-            setPaging(data.pagination)
-        } catch { /* silent */ } finally {
-            setLoadingMore(false)
+        if (hasMore && !loadingMore) {
+            if (API_CONFIG.DEBUG) {
+                console.log('✅ Calling onLoadMore');
+            }
+            onLoadMore();
+        } else {
+            if (API_CONFIG.DEBUG) {
+                console.log('⏸️ Skipped - hasMore:', hasMore, 'loadingMore:', loadingMore);
+            }
         }
-    }, [customerId, paging, loadingMore])
+    }, [hasMore, loadingMore, onLoadMore, events.length]);
 
-    const renderItem  = useCallback(({ item }: { item: AthleteEvent }) => <EventCardPast item={item} />, [])
-    const keyExtractor = useCallback((item: AthleteEvent) => String(item.id), [])
+    const renderItem = useCallback(
+        ({ item }: { item: AthleteEvent }) => <EventCardPast item={item} />,
+        []
+    );
+
+    const keyExtractor = useCallback(
+        (item: AthleteEvent, index: number) => `${item.id}-${index}`,
+        []
+    );
+
+    const ListFooterComponent = useCallback(() => {
+        if (!loadingMore) return null;
+        return (
+            <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={{ marginVertical: spacing.md }}
+            />
+        );
+    }, [loadingMore]);
+
+    const ListEmptyComponent = useCallback(
+        () => (
+            <View style={profileStyles.empty}>
+                <Ionicons name="time-outline" size={48} color={colors.gray300} />
+                <Text style={commonStyles.errorText}>
+                    {t('profile:past.no_events')}
+                </Text>
+            </View>
+        ),
+        [t]
+    );
 
     return (
         <FlatList
             data={events}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
-            contentContainerStyle={profileStyles.list}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
             showsVerticalScrollIndicator={false}
-            refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#e8341a" />
-            }
-            ListEmptyComponent={
-                <View style={profileStyles.empty}>
-                    <Ionicons name="time-outline" size={48} color="#ddd" />
-                    <Text style={commonStyles.errorText}> {t('profile:past.no_events')}</Text>
-                </View>
-            }
-            ListFooterComponent={
-                paging.page < paging.total_pages ? (
-                    <TouchableOpacity style={profileStyles.loadMoreBtn} onPress={handleLoadMore} disabled={loadingMore}>
-                        {loadingMore
-                            ? <ActivityIndicator size="small" color="#e8341a" />
-                            : <Text style={commonStyles.loadingText}> {t('profile:buttons.load_more')}</Text>}
-                    </TouchableOpacity>
-                ) : null
-            }
+            contentContainerStyle={{
+                paddingHorizontal: spacing.md,
+                paddingTop: spacing.md,
+                paddingBottom: spacing.xl,
+                flexGrow: 1,
+            }}
+            ListFooterComponent={ListFooterComponent}
+            ListEmptyComponent={ListEmptyComponent}
+            keyboardShouldPersistTaps="handled"
+            removeClippedSubviews={false}
         />
-    )
-}
+    );
+};
 
-
-
-export default PastTab
+export default React.memo(PastTab);
