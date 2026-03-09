@@ -44,7 +44,11 @@
     "cannotUnregisterTitle": "Cannot Unregister",
     "cannotUnregisterMessage": "Missing participant information. Please refresh and try again.",
     "unregisterFailedTitle": "Unregister Failed",
-    "unregisterFailedMessage": "Unable to unregister. Please try again."
+    "unregisterFailedMessage": "Unable to unregister. Please try again.",
+    "networkErrorTitle": "Network Error",
+    "networkErrorMessage": "Unable to connect to the server. Please check your internet connection and try again.",
+    "trackingAlreadyStartedTitle": "Tracking Already Active",
+    "trackingAlreadyStartedMessage": "Live tracking has already been activated for this event. You cannot unregister once tracking has started."
   },
   "registrationModal": {
     "registered": {

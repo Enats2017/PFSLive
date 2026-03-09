@@ -30,14 +30,12 @@ interface UseRegistrationHandlerReturn {
   errorMessageKey: string;
   handleErrorModalClose: () => void;
   handleErrorRetry: (() => void) | undefined;
-  handleRegister: (item: Distance) => Promise<void>;
+  handleRegister: (item: Distance, showConfirmPopup?: boolean) => Promise<void>;
   handleDelete: (item: Distance) => Promise<void>;
 }
 
-// ✅ DEFINE SUCCESS ACTIONS (ACTIONS THAT MEAN SUCCESS)
 const SUCCESS_ACTIONS = ['registered', 'confirm_race_result'];
 
-// ✅ CHECK IF ACTION IS A SUCCESS ACTION
 const isSuccessAction = (action: string): boolean => {
   return SUCCESS_ACTIONS.includes(action);
 };
@@ -91,9 +89,33 @@ const useRegistrationHandler = (
     setErrorRetryAction(undefined);
   }, []);
 
-  // ✅ CALL REGISTER API (CHECK ACTION FIELD, NOT SUCCESS FLAG)
+  // ✅ INVALIDATE CACHE HELPER
+  const invalidateEventCache = useCallback(async () => {
+    try {
+      if (API_CONFIG.DEBUG) {
+        console.log('🗑️ Invalidating event detail cache for:', product_app_id);
+      }
+
+      // ✅ FETCH WITH BUST CACHE TO FORCE REFRESH
+      await eventDetailService.getEventDetails(product_app_id, true);
+
+      if (API_CONFIG.DEBUG) {
+        console.log('✅ Event detail cache invalidated and refreshed');
+      }
+
+      // ✅ CALL onRefresh TO UPDATE UI
+      onRefresh?.();
+    } catch (error) {
+      if (API_CONFIG.DEBUG) {
+        console.error('⚠️ Failed to invalidate cache (non-critical):', error);
+      }
+      // ✅ STILL CALL onRefresh EVEN IF CACHE INVALIDATION FAILS
+      onRefresh?.();
+    }
+  }, [product_app_id, onRefresh]);
+
   const callRegisterAPI = useCallback(
-    async (item: Distance) => {
+    async (item: Distance, showConfirmPopup?: boolean) => {
       if (registerLoading) return;
 
       try {
@@ -104,11 +126,15 @@ const useRegistrationHandler = (
           console.log('📝 Calling registerParticipant API for:', {
             product_option_value_app_id: item.product_option_value_app_id,
             distance_name: item.distance_name,
+            show_confirm_popup: showConfirmPopup,
           });
         }
 
         const result = await eventDetailService.registerParticipant(
-          item.product_option_value_app_id
+          item.product_option_value_app_id,
+          undefined,
+          undefined,
+          showConfirmPopup
         );
 
         if (API_CONFIG.DEBUG) {
@@ -118,16 +144,13 @@ const useRegistrationHandler = (
           });
         }
 
-        // ✅ CHECK ACTION FIELD TO DETERMINE SUCCESS OR ERROR
         const action = result.action || 'unknown_error';
 
-        // ✅ IF ACTION IS NOT A SUCCESS ACTION, IT'S AN ERROR
         if (!isSuccessAction(action)) {
           if (API_CONFIG.DEBUG) {
             console.log('⚠️ Non-success action received:', action);
           }
 
-          // ✅ HANDLE ALL ERRORS (VALIDATION + BUSINESS LOGIC)
           switch (action) {
             case 'already_registered':
               setSelectedItem({ ...item, registration_status: 'registered' });
@@ -163,7 +186,7 @@ const useRegistrationHandler = (
               showErrorModal(
                 'details:error.invalidBibTitle',
                 'details:error.invalidBibMessage',
-                () => callRegisterAPI(item)
+                () => callRegisterAPI(item, showConfirmPopup)
               );
               break;
 
@@ -172,7 +195,6 @@ const useRegistrationHandler = (
               setModalVisible(true);
               break;
 
-            // ✅ VALIDATION ERRORS
             case 'validation_error':
             case 'product_app_id_invalid':
             case 'language_id_invalid':
@@ -180,11 +202,10 @@ const useRegistrationHandler = (
               showErrorModal(
                 'details:error.validationErrorTitle',
                 'details:error.validationErrorMessage',
-                () => callRegisterAPI(item)
+                () => callRegisterAPI(item, showConfirmPopup)
               );
               break;
 
-            // ✅ UNAUTHORIZED
             case 'unauthorized':
             case 'token_invalid':
             case 'token_expired':
@@ -197,19 +218,17 @@ const useRegistrationHandler = (
               navigation.navigate('LoginScreen');
               break;
 
-            // ✅ FALLBACK FOR UNKNOWN ERRORS
             default:
               showErrorModal(
                 'details:error.registrationFailedTitle',
                 'details:error.registrationFailedMessage',
-                () => callRegisterAPI(item)
+                () => callRegisterAPI(item, showConfirmPopup)
               );
               break;
           }
           return;
         }
 
-        // ✅ HANDLE SUCCESS ACTIONS
         switch (action) {
           case 'confirm_race_result':
             if (API_CONFIG.DEBUG) {
@@ -229,7 +248,10 @@ const useRegistrationHandler = (
             setSelectedItem({ ...item, registration_status: 'registered' });
             setModalVisible(true);
             await clearPendingRegistration();
-            onRefresh?.();
+            
+            // ✅ INVALIDATE CACHE AND REFRESH
+            await invalidateEventCache();
+            
             onSuccess?.(
               item.product_option_value_app_id,
               result.participant?.participant_app_id
@@ -237,26 +259,24 @@ const useRegistrationHandler = (
             break;
 
           default:
-            // This shouldn't happen since we check isSuccessAction above
             if (API_CONFIG.DEBUG) {
               console.warn('⚠️ Unexpected success action:', action);
             }
             showErrorModal(
               'details:error.unexpectedTitle',
               'details:error.unexpectedMessage',
-              () => callRegisterAPI(item)
+              () => callRegisterAPI(item, showConfirmPopup)
             );
             break;
         }
       } catch (error: any) {
-        // ✅ ONLY NETWORK/CRITICAL ERRORS
         if (API_CONFIG.DEBUG) {
           console.error('❌ Network/Critical error:', error);
         }
         showErrorModal(
           'details:error.networkErrorTitle',
           'details:error.networkErrorMessage',
-          () => callRegisterAPI(item)
+          () => callRegisterAPI(item, showConfirmPopup)
         );
       } finally {
         setRegisterLoading(false);
@@ -267,13 +287,12 @@ const useRegistrationHandler = (
       navigation,
       product_app_id,
       event_name,
-      onRefresh,
       onSuccess,
       showErrorModal,
+      invalidateEventCache,
     ]
   );
 
-  // ✅ CALL DELETE API (ALREADY CORRECT IN YOUR FILE)
   const callDeleteAPI = useCallback(
     async (item: Distance) => {
       if (registerLoading) return;
@@ -285,7 +304,7 @@ const useRegistrationHandler = (
         showErrorModal(
           'details:error.cannotUnregisterTitle',
           'details:error.cannotUnregisterMessage',
-          () => onRefresh?.()
+          () => invalidateEventCache()
         );
         return;
       }
@@ -301,7 +320,6 @@ const useRegistrationHandler = (
           });
         }
 
-        // ✅ NOW RETURNS DeleteParticipantResponse
         const result = await eventDetailService.deleteParticipant(item.participant_app_id);
 
         if (API_CONFIG.DEBUG) {
@@ -310,13 +328,20 @@ const useRegistrationHandler = (
 
         const action = result.action || 'unknown_error';
 
-        // ✅ CHECK IF ACTION INDICATES SUCCESS
         if (action !== 'deleted' && action !== 'success' && action !== 'participant_deleted') {
           if (API_CONFIG.DEBUG) {
             console.error('❌ Delete failed with action:', action);
           }
 
           switch (action) {
+            // ✅ NEW: TRACKING ALREADY STARTED ERROR
+            case 'tracking_already_started':
+              showErrorModal(
+                'details:error.trackingAlreadyStartedTitle',
+                'details:error.trackingAlreadyStartedMessage'
+              );
+              break;
+
             case 'unauthorized':
             case 'token_invalid':
             case 'token_expired':
@@ -325,8 +350,8 @@ const useRegistrationHandler = (
 
             case 'participant_not_found':
             case 'already_deleted':
-              // Already deleted, just refresh
-              onRefresh?.();
+              // ✅ INVALIDATE CACHE EVEN IF ALREADY DELETED
+              await invalidateEventCache();
               onDeleteSuccess?.(item.product_option_value_app_id);
               break;
 
@@ -345,7 +370,8 @@ const useRegistrationHandler = (
           console.log('✅ Delete successful');
         }
 
-        onRefresh?.();
+        // ✅ INVALIDATE CACHE AND REFRESH
+        await invalidateEventCache();
         onDeleteSuccess?.(item.product_option_value_app_id);
       } catch (error: any) {
         if (API_CONFIG.DEBUG) {
@@ -360,10 +386,9 @@ const useRegistrationHandler = (
         setRegisterLoading(false);
       }
     },
-    [registerLoading, navigation, onRefresh, onDeleteSuccess, showErrorModal]
+    [registerLoading, navigation, onDeleteSuccess, showErrorModal, invalidateEventCache]
   );
 
-  // ✅ HANDLE CONFIRM REGISTER
   const handleConfirmRegister = useCallback(async () => {
     if (!confirmItem || !confirmData?.bib_number) {
       if (API_CONFIG.DEBUG) {
@@ -392,7 +417,6 @@ const useRegistrationHandler = (
 
       const action = result.action || 'unknown_error';
 
-      // ✅ CHECK IF NOT A SUCCESS ACTION
       if (!isSuccessAction(action)) {
         if (API_CONFIG.DEBUG) {
           console.error('❌ Confirmation failed with action:', action);
@@ -428,12 +452,16 @@ const useRegistrationHandler = (
         if (API_CONFIG.DEBUG) {
           console.log('✅ Confirmation successful');
         }
+        
         setConfirmModalVisible(false);
         setConfirmData(null);
         setConfirmItem(null);
         setIsFirstTracking(0);
         await clearPendingRegistration();
-        onRefresh?.();
+        
+        // ✅ INVALIDATE CACHE AND REFRESH
+        await invalidateEventCache();
+        
         onSuccess?.(
           confirmItem.product_option_value_app_id,
           result.participant?.participant_app_id
@@ -457,10 +485,10 @@ const useRegistrationHandler = (
     } finally {
       setRegisterLoading(false);
     }
-  }, [confirmItem, confirmData, navigation, onRefresh, onSuccess, showErrorModal]);
+  }, [confirmItem, confirmData, navigation, onSuccess, showErrorModal, invalidateEventCache]);
 
   const handleRegister = useCallback(
-    async (item: Distance) => {
+    async (item: Distance, showConfirmPopup?: boolean) => {
       const hasToken = await isTokenValid();
 
       if (!hasToken) {
@@ -484,7 +512,7 @@ const useRegistrationHandler = (
 
       switch (item.registration_status) {
         case 'available':
-          await callRegisterAPI(item);
+          await callRegisterAPI(item, showConfirmPopup);
           return;
         case 'registered':
           return;

@@ -89,6 +89,7 @@ const ParticipantResult = () => {
     setErrorModalVisible(true);
   }, []);
 
+  // ✅ INVALIDATE EVENT CACHE WITH BUST CACHE
   const invalidateEventCache = useCallback(async () => {
     if (!product_app_id) return;
 
@@ -97,10 +98,11 @@ const ParticipantResult = () => {
         console.log('🗑️ Invalidating event detail cache for:', product_app_id);
       }
 
+      // ✅ FETCH WITH BUST CACHE = TRUE TO FORCE REFRESH
       await eventDetailService.getEventDetails(product_app_id, true);
 
       if (API_CONFIG.DEBUG) {
-        console.log('✅ Event detail cache invalidated');
+        console.log('✅ Event detail cache invalidated and refreshed');
       }
     } catch (error) {
       if (API_CONFIG.DEBUG) {
@@ -109,7 +111,7 @@ const ParticipantResult = () => {
     }
   }, [product_app_id]);
 
-  // ✅ UPDATED: Use new participantService pattern
+  // ✅ FETCH PARTICIPANTS
   const fetchParticipants = useCallback(
     async (pageNum: number, search: string) => {
       if (!product_app_id) return;
@@ -130,12 +132,11 @@ const ParticipantResult = () => {
           });
         }
 
-        // ✅ NEW: Use object parameter pattern
         const result = await participantService.getParticipants({
           product_app_id,
           page: pageNum,
           filter_name: search,
-          product_option_value_app_id, // ✅ Pass optional param
+          product_option_value_app_id,
         });
 
         setParticipants((prev) => {
@@ -222,6 +223,7 @@ const ParticipantResult = () => {
     fetchParticipants(page + 1, searchText);
   }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
+  // ✅ HANDLE "THIS IS ME" BUTTON CLICK
   const handleThisIsMe = useCallback(
     async (participant: Participant) => {
       if (!product_option_value_app_id) {
@@ -246,14 +248,18 @@ const ParticipantResult = () => {
         setSelectedParticipant(participant);
 
         if (API_CONFIG.DEBUG) {
-          console.log('📝 Initial registration check for participant:', {
+          console.log('📝 Registration for participant from list:', {
             bib_number: participant.bib_number,
             product_option_value_app_id,
           });
         }
 
+        // ✅ PASS show_confirm_popup: true TO FORCE CONFIRMATION MODAL
         const result = await eventDetailService.registerParticipant(
-          product_option_value_app_id
+          product_option_value_app_id,
+          participant.bib_number,
+          getCurrentLanguageId(),
+          true // ✅ Force confirmation popup (skip Race Result lookup)
         );
 
         if (API_CONFIG.DEBUG) {
@@ -281,6 +287,7 @@ const ParticipantResult = () => {
               break;
 
             case 'bib_number_invalid':
+            case 'not_found_in_race_result':
               showErrorModal(
                 'participantResult:error.invalidBibTitle',
                 'participantResult:error.invalidBibMessage'
@@ -325,9 +332,8 @@ const ParticipantResult = () => {
           }
           await clearPendingRegistration();
 
-          setTimeout(() => {
-            invalidateEventCache();
-          }, 1000);
+          // ✅ INVALIDATE CACHE IMMEDIATELY AFTER REGISTRATION
+          await invalidateEventCache();
 
           setSuccessVisible(true);
         }
@@ -347,6 +353,7 @@ const ParticipantResult = () => {
     [product_option_value_app_id, navigation, showErrorModal, invalidateEventCache]
   );
 
+  // ✅ HANDLE CONFIRM REGISTRATION FROM MODAL
   const handleConfirmRegister = useCallback(async () => {
     if (!confirmData?.bib_number || !product_option_value_app_id) {
       showErrorModal(
@@ -416,9 +423,8 @@ const ParticipantResult = () => {
         setConfirmData(null);
         await clearPendingRegistration();
 
-        setTimeout(() => {
-          invalidateEventCache();
-        }, 1000);
+        // ✅ INVALIDATE CACHE IMMEDIATELY AFTER CONFIRMATION
+        await invalidateEventCache();
 
         setSuccessVisible(true);
       } else {

@@ -32,19 +32,23 @@
     "message": "Bedankt voor het aanmelden voor de live tracking van dit evenement. Vertel je familie en vrienden om je hier te volgen en vergeet niet je live tracking 1 uur voor de start van je wedstrijd in deze app te activeren!"
   },
   "error": {
-    "title": "Gegevens laden mislukt",
-    "retry": "Opnieuw Proberen",
+    "title": "Kan gegevens niet laden",
+    "retry": "Opnieuw proberen",
     "missingId": "Evenement-ID ontbreekt",
     "unexpectedTitle": "Onverwachte Reactie",
     "unexpectedMessage": "De server heeft een onverwachte reactie gegeven. Probeer het opnieuw.",
     "invalidBibTitle": "Ongeldig Startnummer",
-    "invalidBibMessage": "Het opgegeven startnummer is ongeldig. Controleer en probeer opnieuw.",
+    "invalidBibMessage": "Het opgegeven startnummer is ongeldig. Controleer en probeer het opnieuw.",
     "registrationFailedTitle": "Registratie Mislukt",
-    "registrationFailedMessage": "Kan registratie niet voltooien. Controleer uw verbinding en probeer opnieuw.",
+    "registrationFailedMessage": "Kan registratie niet voltooien. Controleer je verbinding en probeer het opnieuw.",
     "cannotUnregisterTitle": "Kan Niet Uitschrijven",
-    "cannotUnregisterMessage": "Deelnemersinformatie ontbreekt. Vernieuw en probeer opnieuw.",
+    "cannotUnregisterMessage": "Deelnemersinformatie ontbreekt. Ververs en probeer het opnieuw.",
     "unregisterFailedTitle": "Uitschrijven Mislukt",
-    "unregisterFailedMessage": "Kan niet uitschrijven. Probeer het opnieuw."
+    "unregisterFailedMessage": "Kan niet uitschrijven. Probeer het opnieuw.",
+    "networkErrorTitle": "Netwerkfout",
+    "networkErrorMessage": "Kan geen verbinding maken met de server. Controleer je internetverbinding en probeer het opnieuw.",
+    "trackingAlreadyStartedTitle": "Tracking Al Actief",
+    "trackingAlreadyStartedMessage": "Live tracking is al geactiveerd voor dit evenement. Je kunt je niet uitschrijven zodra tracking is gestart."
   },
   "registrationModal": {
     "registered": {
