@@ -124,6 +124,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
         // ✅ HANDLE SUCCESS
         if (data.success && data.data?.token) {
           await tokenService.saveToken(data.data.token);
+          await tokenService.saveCustomerId(data.data?.customer?.customer_app_id ?? 0);
 
           if (API_CONFIG.DEBUG) {
             console.log('✅ OTP verified, token saved');
