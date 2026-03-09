@@ -23,7 +23,6 @@ interface ParticipantTabProps {
 const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
   const { t } = useTranslation(['details']);
 
-  // ✅ STATE
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -32,16 +31,12 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ REFS
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<any>(null);
-  const onEndReachedCalledDuringMomentum = useRef(true);
 
-  // ✅ FETCH PARTICIPANTS
   const fetchParticipants = useCallback(
     async (pageNum: number, search: string) => {
       try {
-        // Set loading states
         if (pageNum === 1 && search.length === 0) {
           setLoading(true);
           setError(null);
@@ -56,18 +51,16 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
           });
         }
 
-        const result = await participantService.getParticipants(
+        const result = await participantService.getParticipants({
           product_app_id,
-          pageNum,
-          search
-        );
+          page: pageNum,
+          filter_name: search,
+        });
 
         setParticipants((prev) => {
           if (pageNum === 1) {
-            // First page - replace all
             return result.participants;
           } else {
-            // Subsequent pages - deduplicate and append
             const existingIds = new Set(
               prev.map((p) => participantService.getParticipantId(p))
             );
@@ -82,9 +75,6 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
                 `✅ Added ${newItems.length} new participants (Total: ${
                   prev.length + newItems.length
                 })`
-              );
-              console.log(
-                `📊 Deduplication: checked ${result.participants.length}, added ${newItems.length}`
               );
             }
 
@@ -116,14 +106,12 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     [product_app_id, t]
   );
 
-  // ✅ INITIAL LOAD ON FOCUS
   useFocusEffect(
     useCallback(() => {
       fetchParticipants(1, '');
     }, [fetchParticipants])
   );
 
-  // ✅ DEBOUNCED SEARCH
   React.useEffect(() => {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
@@ -140,48 +128,28 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     };
   }, [searchText, fetchParticipants]);
 
-  // ✅ CHECK IF MORE PAGES AVAILABLE
   const hasMorePages = useCallback((): boolean => {
     return page < totalPages;
   }, [page, totalPages]);
 
-  // ✅ LOAD MORE HANDLER
+  // ✅ SIMPLIFIED: No momentum flag
   const handleLoadMore = useCallback(() => {
     if (API_CONFIG.DEBUG) {
-      console.log('🔄 onEndReached fired', {
-        momentumFlag: onEndReachedCalledDuringMomentum.current,
+      console.log('🔍 onEndReached triggered:', {
         hasMore: hasMorePages(),
         loading: loadingMore,
         currentPage: page,
-        totalPages: totalPages,
+        totalPages,
       });
     }
 
-    if (onEndReachedCalledDuringMomentum.current) {
-      if (API_CONFIG.DEBUG) console.log('⏭️ Skipped: momentum flag set');
+    if (!hasMorePages() || loadingMore) {
       return;
-    }
-
-    if (!hasMorePages()) {
-      if (API_CONFIG.DEBUG) console.log('⏭️ Skipped: no more pages');
-      return;
-    }
-
-    if (loadingMore) {
-      if (API_CONFIG.DEBUG) console.log('⏭️ Skipped: already loading');
-      return;
-    }
-
-    onEndReachedCalledDuringMomentum.current = true;
-
-    if (API_CONFIG.DEBUG) {
-      console.log(`📥 Loading more: page ${page + 1}/${totalPages}`);
     }
 
     fetchParticipants(page + 1, searchText);
   }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
-  // ✅ RENDER PARTICIPANT ITEM
   const renderParticipant = useCallback(
     ({ item }: { item: Participant }) => {
       const fullName =
@@ -254,14 +222,13 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     [t]
   );
 
-  // ✅ RENDER FOOTER
   const renderFooter = useCallback(() => {
     if (loadingMore) {
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
           <ActivityIndicator size="small" color={colors.primary} />
           <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
-            Loading more... ({page}/{totalPages})
+            {t('details:participant.loadingMore')} ({page}/{totalPages})
           </Text>
         </View>
       );
@@ -271,16 +238,15 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
           <Text style={{ color: colors.gray500 }}>
-            Scroll for more ({participants.length} loaded)
+            {t('details:participant.scrollForMore')} ({participants.length})
           </Text>
         </View>
       );
     }
 
     return null;
-  }, [loadingMore, page, totalPages, hasMorePages, participants.length]);
+  }, [loadingMore, page, totalPages, hasMorePages, participants.length, t]);
 
-  // ✅ LOADING STATE (INITIAL)
   if (loading && searchText.length === 0) {
     return (
       <ActivityIndicator
@@ -291,7 +257,6 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     );
   }
 
-  // ✅ ERROR STATE (INITIAL)
   if (error && searchText.length === 0) {
     return (
       <View style={commonStyles.centerContainer}>
@@ -309,11 +274,15 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     );
   }
 
-  // ✅ MAIN RENDER
   return (
     <>
-      {/* Search Input */}
-      <View style={{ paddingHorizontal: spacing.lg }}>
+      {/* ✅ SEARCH INPUT - ADDED TOP PADDING */}
+      <View
+        style={{
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.md, // ✅ ADDED: Space between tab bar and search
+        }}
+      >
         <SearchInput
           ref={searchInputRef}
           placeholder={t('details:participant.search')}
@@ -323,7 +292,6 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         />
       </View>
 
-      {/* Search Loading */}
       {loading && searchText.length > 0 && (
         <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
           <ActivityIndicator size="small" color={colors.primary} />
@@ -333,7 +301,6 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         </View>
       )}
 
-      {/* Empty State */}
       {!loading && participants.length === 0 ? (
         <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
           <Text style={commonStyles.errorText}>
@@ -343,7 +310,6 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
           </Text>
         </View>
       ) : (
-        /* Participant List */
         <FlatList
           data={participants}
           keyExtractor={(item, index) =>
@@ -352,17 +318,14 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
           renderItem={renderParticipant}
           showsVerticalScrollIndicator={false}
           onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
-          onMomentumScrollBegin={() => {
-            onEndReachedCalledDuringMomentum.current = false;
-            if (API_CONFIG.DEBUG)
-              console.log('🔄 Scroll momentum began - flag reset');
-          }}
+          onEndReachedThreshold={0.5}
           contentContainerStyle={{
             paddingHorizontal: spacing.lg,
             paddingBottom: spacing.xxxl,
+            flexGrow: 1, // ✅ ADDED: Allows scrolling with few items
           }}
           keyboardShouldPersistTaps="handled"
+          removeClippedSubviews={false} // ✅ ADDED: Prevents scroll issues
           ListFooterComponent={renderFooter}
         />
       )}

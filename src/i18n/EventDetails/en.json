@@ -45,5 +45,37 @@
     "cannotUnregisterMessage": "Missing participant information. Please refresh and try again.",
     "unregisterFailedTitle": "Unregister Failed",
     "unregisterFailedMessage": "Unable to unregister. Please try again."
+  },
+  "registrationModal": {
+    "registered": {
+      "icon": "✓",
+      "title": "You're Already Registered!",
+      "description": "You're already registered for this distance. Get ready to race!"
+    },
+    "membership_required": {
+      "icon": "◆",
+      "title": "Your Premium Access Has Expired",
+      "description": "Your free trial period has ended. Log in to your account via our website to manage your access."
+    },
+    "limit_reached": {
+      "icon": "↑",
+      "title": "Your Premium Access Has Expired",
+      "description": "You've reached your yearly limit of 3 tracking sessions. Your current plan does not allow additional activations. Manage your subscription via our website."
+    },
+    "unavailable": {
+      "icon": "⊘",
+      "title": "Not Available",
+      "description": "Registration for this distance is not yet configured. Please check back soon."
+    },
+    "available": {
+      "icon": "→",
+      "title": "Ready to Race?",
+      "description": "Secure your spot now before it fills up. Let's do this!"
+    },
+    "default": {
+      "icon": "?",
+      "title": "Something Went Wrong",
+      "description": "Please try again later."
+    }
   }
 }

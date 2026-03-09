@@ -1,102 +1,98 @@
-import React, { useState, useCallback, useEffect } from 'react'
-import {
-    View, Text, TouchableOpacity, FlatList,
-    StyleSheet, ActivityIndicator, RefreshControl,
-} from 'react-native'
-import Ionicons from '@expo/vector-icons/Ionicons'
-import { commonStyles } from '../../styles/common.styles'
-import { fetchMoreLiveEvents, AthleteEvent, Pagination } from '../../services/athleteProfileService'
-import { profileStyles } from '../../styles/Profile.styles'
-import { useNavigation } from '@react-navigation/native'
-import { useTranslation } from 'react-i18next'
-import { NativeStackNavigationProp } from '@react-navigation/native-stack'
-import { RootStackParamList } from '../../types/navigation'
-type NavigationProp = NativeStackNavigationProp<
-    RootStackParamList,
-    'EditPersonalEvent'
->
-import { EventCard } from './EventCardLive'
+import React, { useCallback } from 'react';
+import { View, Text, FlatList, ActivityIndicator } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
+import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { profileStyles } from '../../styles/Profile.styles';
+import { AthleteEvent } from '../../services/athleteProfileService';
+import { EventCard } from './EventCardLive';
+import { API_CONFIG } from '../../constants/config';
 
-
-/* ── Props ── */
-interface Props {
-    customerId: number | string
-    initialEvents: AthleteEvent[]
-    initialPaging: Pagination
+interface LiveTabProps {
+    events: AthleteEvent[];
+    onLoadMore: () => void;
+    loadingMore: boolean;
+    hasMore: boolean;
 }
 
-const LiveTab = ({ customerId, initialEvents, initialPaging }: Props) => {
-    const { t } = useTranslation(['profile'])
-    const [events, setEvents] = useState<AthleteEvent[]>(initialEvents)
-    const [paging, setPaging] = useState<Pagination>(initialPaging)
-    const [refreshing, setRefreshing] = useState(false)
-    const [loadingMore, setLoadingMore] = useState(false)
+const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
+    const { t } = useTranslation(['profile']);
 
-    // sync if parent refreshes and passes new initial data
-    useEffect(() => {
-        setEvents(initialEvents)
-        setPaging(initialPaging)
-    }, [initialEvents, initialPaging])
-
-    const handleRefresh = useCallback(async () => {
-        try {
-            setRefreshing(true)
-            const data = await fetchMoreLiveEvents(paging.page + 1)
-            setEvents(data.live ?? [])
-            setPaging(data.pagination)
-        } catch { /* silent */ } finally {
-            setRefreshing(false)
+    // ✅ SIMPLIFIED: Just check hasMore and loadingMore
+    const handleLoadMore = useCallback(() => {
+        if (API_CONFIG.DEBUG) {
+            console.log('🔍 Live onEndReached:', {
+                hasMore,
+                loadingMore,
+                eventsCount: events.length,
+            });
         }
-    }, [customerId])
 
-    const handleLoadMore = useCallback(async () => {
-        if (loadingMore || paging.page >= paging.total_pages) return
-        try {
-            setLoadingMore(true)
-            const data = await fetchMoreLiveEvents(paging.page + 1)
-            setEvents(prev => [...prev, ...(data.live ?? [])])
-            setPaging(data.pagination)
-        } catch { /* silent */ } finally {
-            setLoadingMore(false)
+        if (hasMore && !loadingMore) {
+            if (API_CONFIG.DEBUG) {
+                console.log('✅ Calling onLoadMore');
+            }
+            onLoadMore();
+        } else {
+            if (API_CONFIG.DEBUG) {
+                console.log('⏸️ Skipped - hasMore:', hasMore, 'loadingMore:', loadingMore);
+            }
         }
-    }, [customerId, paging, loadingMore])
+    }, [hasMore, loadingMore, onLoadMore, events.length]);
 
+    const renderItem = useCallback(
+        ({ item }: { item: AthleteEvent }) => <EventCard item={item} />,
+        []
+    );
 
+    const keyExtractor = useCallback(
+        (item: AthleteEvent, index: number) => `${item.id}-${index}`,
+        []
+    );
 
-    const renderItem = useCallback(({ item }: { item: AthleteEvent }) =>
-        <EventCard item={item} />, [])
+    const ListFooterComponent = useCallback(() => {
+        if (!loadingMore) return null;
+        return (
+            <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={{ marginVertical: spacing.md }}
+            />
+        );
+    }, [loadingMore]);
 
-    const keyExtractor = useCallback((item: AthleteEvent) => String(item.id), [])
+    const ListEmptyComponent = useCallback(
+        () => (
+            <View style={profileStyles.empty}>
+                <Ionicons name="radio-outline" size={48} color={colors.gray300} />
+                <Text style={commonStyles.errorText}>
+                    {t('profile:empty.no_live_events')}
+                </Text>
+            </View>
+        ),
+        [t]
+    );
 
     return (
         <FlatList
             data={events}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
-            contentContainerStyle={profileStyles.list}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
             showsVerticalScrollIndicator={false}
-            refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#e8341a" />
-            }
-            ListEmptyComponent={
-                <View style={profileStyles.empty}>
-                    <Ionicons name="radio-outline" size={48} color="#ddd" />
-                    <Text style={commonStyles.errorText}> {t('profile:empty.no_live_events')}</Text>
-                </View>
-            }
-            ListFooterComponent={
-                paging.page < paging.total_pages ? (
-                    <TouchableOpacity style={profileStyles.loadMoreBtn} onPress={handleLoadMore} disabled={loadingMore}>
-                        {loadingMore
-                            ? <ActivityIndicator size="small" color="#e8341a" />
-                            : <Text style={commonStyles.loadingText}>{t('profile:buttons.load_more')}</Text>}
-                    </TouchableOpacity>
-                ) : null
-            }
+            contentContainerStyle={{
+                paddingHorizontal: spacing.md,
+                paddingTop: spacing.md,
+                paddingBottom: spacing.xl,
+                flexGrow: 1,
+            }}
+            ListFooterComponent={ListFooterComponent}
+            ListEmptyComponent={ListEmptyComponent}
+            keyboardShouldPersistTaps="handled"
+            removeClippedSubviews={false}
         />
-    )
-}
+    );
+};
 
-
-
-export default LiveTab
+export default React.memo(LiveTab);

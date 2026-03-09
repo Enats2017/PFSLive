@@ -67,7 +67,6 @@ const ParticipantResult = () => {
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<any>(null);
-  const onEndReachedCalledDuringMomentum = useRef(true);
 
   React.useEffect(() => {
     if (!product_app_id || !product_option_value_app_id) {
@@ -110,6 +109,7 @@ const ParticipantResult = () => {
     }
   }, [product_app_id]);
 
+  // ✅ UPDATED: Use new participantService pattern
   const fetchParticipants = useCallback(
     async (pageNum: number, search: string) => {
       if (!product_app_id) return;
@@ -125,15 +125,18 @@ const ParticipantResult = () => {
         if (API_CONFIG.DEBUG) {
           console.log(`📡 Fetching participants page ${pageNum}`, {
             product_app_id,
+            product_option_value_app_id,
             search: search || '(none)',
           });
         }
 
-        const result = await participantService.getParticipants(
+        // ✅ NEW: Use object parameter pattern
+        const result = await participantService.getParticipants({
           product_app_id,
-          pageNum,
-          search
-        );
+          page: pageNum,
+          filter_name: search,
+          product_option_value_app_id, // ✅ Pass optional param
+        });
 
         setParticipants((prev) => {
           if (pageNum === 1) return result.participants;
@@ -176,7 +179,7 @@ const ParticipantResult = () => {
         setLoadingMore(false);
       }
     },
-    [product_app_id, t]
+    [product_app_id, product_option_value_app_id, t]
   );
 
   useFocusEffect(
@@ -201,10 +204,10 @@ const ParticipantResult = () => {
     return page < totalPages;
   }, [page, totalPages]);
 
+  // ✅ SIMPLIFIED: No momentum flag
   const handleLoadMore = useCallback(() => {
     if (API_CONFIG.DEBUG) {
-      console.log('🔄 onEndReached fired', {
-        momentumFlag: onEndReachedCalledDuringMomentum.current,
+      console.log('🔍 onEndReached triggered:', {
         hasMore: hasMorePages(),
         loading: loadingMore,
         currentPage: page,
@@ -212,11 +215,10 @@ const ParticipantResult = () => {
       });
     }
 
-    if (onEndReachedCalledDuringMomentum.current) return;
-    if (!hasMorePages()) return;
-    if (loadingMore) return;
+    if (!hasMorePages() || loadingMore) {
+      return;
+    }
 
-    onEndReachedCalledDuringMomentum.current = true;
     fetchParticipants(page + 1, searchText);
   }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
@@ -586,12 +588,10 @@ const ParticipantResult = () => {
       <AppHeader showLogo={true} />
 
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
-        {/* ✅ EVENT TITLE */}
         <Text style={[commonStyles.title, { marginBottom: spacing.sm }]}>
           {event_name}
         </Text>
 
-        {/* ✅ INFO MESSAGE - PROMINENT & CLEAR */}
         <View
           style={{
             backgroundColor: '#FEF3C7',
@@ -633,7 +633,6 @@ const ParticipantResult = () => {
           </View>
         </View>
 
-        {/* ✅ SEARCH INPUT */}
         <SearchInput
           ref={searchInputRef}
           placeholder={t('details:participant.search')}
@@ -669,17 +668,14 @@ const ParticipantResult = () => {
           renderItem={renderParticipant}
           showsVerticalScrollIndicator={false}
           onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
-          onMomentumScrollBegin={() => {
-            onEndReachedCalledDuringMomentum.current = false;
-            if (API_CONFIG.DEBUG)
-              console.log('🔄 Scroll momentum began - flag reset');
-          }}
+          onEndReachedThreshold={0.5}
           contentContainerStyle={{
             paddingHorizontal: spacing.lg,
             paddingBottom: spacing.xxxl,
+            flexGrow: 1,
           }}
           keyboardShouldPersistTaps="handled"
+          removeClippedSubviews={false}
           ListFooterComponent={renderFooter}
         />
       )}

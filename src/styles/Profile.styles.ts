@@ -1,38 +1,59 @@
 import { StyleSheet } from "react-native";
-import { colors } from "./common.styles";
+import { colors, spacing } from "./common.styles";
+
 export const profileStyles = StyleSheet.create({
   textsection: {
     alignItems: "center",
-    paddingBottom: 10,
+    paddingBottom: spacing.sm,
   },
-  list: { flexGrow: 1, paddingBottom: 24 },
-  eventCard: { marginBottom: 10, overflow: "hidden" },
+  list: { 
+    flexGrow: 1, 
+  },
+  eventCard: { 
+    marginBottom: spacing.md, 
+    overflow: "hidden",
+    padding: 0,
+    paddingTop: spacing.xs,
+  },
   badge: {
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
     borderRadius: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     marginBottom: 6,
     gap: 5,
   },
-  badgeDot: { width: 7, height: 7, borderRadius: 4 },
-  badgeText: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
-
+  badgeDot: { 
+    width: 7, 
+    height: 7, 
+    borderRadius: 4 
+  },
+  badgeText: { 
+    fontSize: 11, 
+    fontWeight: "700", 
+    letterSpacing: 0.5 
+  },
   empty: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
+    paddingVertical: spacing.xxxl * 2,
   },
-  loadMoreBtn: { alignItems: "center", paddingVertical: 16 },
-
+  loadMoreBtn: { 
+    alignItems: "center", 
+    paddingVertical: spacing.lg 
+  },
   profileCard: {
     alignItems: "center",
     overflow: "hidden",
-    paddingVertical: 24,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md, // ✅ ADDED: Horizontal padding for button
   },
-  avatarWrapper: { position: "relative", marginVertical: 13 },
+  avatarWrapper: { 
+    position: "relative", 
+    marginVertical: spacing.md 
+  },
   avatar: {
     width: 100,
     height: 100,
@@ -43,7 +64,10 @@ export const profileStyles = StyleSheet.create({
     justifyContent: "center",
     overflow: "hidden",
   },
-  avatarImage: { width: "100%", height: "100%" },
+  avatarImage: { 
+    width: "100%", 
+    height: "100%" 
+  },
   editIcon: {
     position: "absolute",
     bottom: 0,
@@ -51,10 +75,10 @@ export const profileStyles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#e8341a",
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
@@ -63,31 +87,34 @@ export const profileStyles = StyleSheet.create({
   profileName: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#111",
+    color: colors.black,
     letterSpacing: 1,
-    marginBottom: 10,
+    marginBottom: spacing.sm,
     textAlign: "center",
   },
-  editButton: { minWidth: 160 },
+  editButton: { 
+    width: '100%', // ✅ UPDATED: Full width
+    alignSelf: 'center',
+  },
   errorRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 10,
+    marginBottom: spacing.sm,
   },
-
-
-  content: {  paddingHorizontal: 12, paddingBottom: 100 },
-
+  content: {  
+    paddingHorizontal: spacing.md, 
+    paddingBottom: 100 
+  },
   avatarFallback: {
-    backgroundColor: "#e0e0e0",
+    backgroundColor: colors.gray200,
     alignItems: "center",
     justifyContent: "center",
   },
   initials: {
     fontSize: 32,
     fontWeight: "700",
-    color: "#555",
+    color: colors.gray600,
     letterSpacing: 1,
   },
   cameraBtn: {
@@ -100,51 +127,66 @@ export const profileStyles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3,
     elevation: 4,
   },
   removeBtn: {
-    marginTop: 10,
-    paddingHorizontal: 14,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.primary,
   },
-  removeBtnText: { fontSize: 13, color: colors.primary, fontWeight: "600" },
-
-  sectionHeader: {  marginBottom: 8 },
+  removeBtnText: { 
+    fontSize: 13, 
+    color: colors.primary, 
+    fontWeight: "600" 
+  },
+  sectionHeader: {  
+    marginBottom: spacing.sm 
+  },
   sectionTitle: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#888",
+    color: colors.gray500,
     letterSpacing: 1.5,
   },
-  sectionSubtitle: { fontSize: 12, color: "#aaa", marginTop: 2 },
-  sectionLine: { height: 1, backgroundColor: "#f0f0f0", marginTop: 6 },
-
+  sectionSubtitle: { 
+    fontSize: 12, 
+    color: colors.gray400, 
+    marginTop: 2 
+  },
+  sectionLine: { 
+    height: 1, 
+    backgroundColor: colors.gray200, 
+    marginTop: 6 
+  },
   readOnlyHint: {
     fontSize: 12,
-    color: "#aaa",
+    color: colors.gray400,
     marginTop: -4,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     marginLeft: 4,
   },
-
-  
-  saveBtnDisabled: { opacity: 0.6 },
-
+  saveBtnDisabled: { 
+    opacity: 0.6 
+  },
   successBanner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 14,
-    padding: 12,
-    backgroundColor: "#f1f8e9",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.success + '15',
     borderRadius: 8,
   },
-  successText: { fontSize: 14, color: "#2e7d32", fontWeight: "600" },
+  successText: { 
+    fontSize: 14, 
+    color: colors.success, 
+    fontWeight: "600" 
+  },
 });

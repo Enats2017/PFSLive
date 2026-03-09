@@ -45,5 +45,37 @@
     "cannotUnregisterMessage": "Informations sur le participant manquantes. Veuillez actualiser et réessayer.",
     "unregisterFailedTitle": "Échec de la Désinscription",
     "unregisterFailedMessage": "Impossible de se désinscrire. Veuillez réessayer."
+  },
+  "registrationModal": {
+    "registered": {
+      "icon": "✓",
+      "title": "Vous êtes déjà inscrit !",
+      "description": "Vous êtes déjà inscrit pour cette distance. Préparez-vous à courir !"
+    },
+    "membership_required": {
+      "icon": "◆",
+      "title": "Votre accès Premium a expiré",
+      "description": "Votre période d'essai gratuite est terminée. Connectez-vous à votre compte via notre site Web pour gérer votre accès."
+    },
+    "limit_reached": {
+      "icon": "↑",
+      "title": "Votre accès Premium a expiré",
+      "description": "Vous avez atteint votre limite annuelle de 3 sessions de suivi. Votre forfait actuel ne permet pas d'activations supplémentaires. Gérez votre abonnement via notre site Web."
+    },
+    "unavailable": {
+      "icon": "⊘",
+      "title": "Non disponible",
+      "description": "L'inscription pour cette distance n'est pas encore configurée. Revenez bientôt."
+    },
+    "available": {
+      "icon": "→",
+      "title": "Prêt à courir ?",
+      "description": "Réservez votre place maintenant avant qu'elle ne soit complète. Allons-y !"
+    },
+    "default": {
+      "icon": "?",
+      "title": "Une erreur s'est produite",
+      "description": "Veuillez réessayer plus tard."
+    }
   }
 }
