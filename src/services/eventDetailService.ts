@@ -1,42 +1,16 @@
-import { apiClient } from "./api";
-import { API_CONFIG, getApiEndpoint } from "../constants/config";
-import { getCurrentLanguageId } from "../i18n";
-
-export type RegistrationStatus =
-  | "registered"
-  | "membership_required"
-  | "limit_reached"
-  | "unavailable"
-  | "available";
+import { apiClient } from './api';
+import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { getCurrentLanguageId } from '../i18n';
 
 export interface Distance {
   product_option_value_app_id: number;
-  product_option_app_id: number;
   distance_name: string;
   race_date: string;
   race_time: string;
-  countdown_type: "minutes" | "hours" | "days" | "in_progress" | "finished";
+  countdown_type: string;
   countdown_value: number;
-  countdown_label: string;
-  registration_status: RegistrationStatus;
+  registration_status: 'available' | 'registered' | 'membership_required' | 'limit_reached' | 'unavailable';
   participant_app_id?: number;
-}
-
-export interface EventDetailResponse {
-  distances: Distance[];
-  server_datetime: string;
-}
-
-interface EventDetailApiResponse {
-  success: boolean;
-  data: EventDetailResponse;
-  error: string | null;
-}
-
-export interface RegisterParticipantRequest {
-  product_option_value_app_id: number;
-  language_id: number;
-  bib_number?: string;
 }
 
 export interface RaceResultData {
@@ -50,253 +24,231 @@ export interface RaceResultData {
   nation: string;
   distance_name: string;
   email: string;
-}
-
-export interface ParticipantData {
-  participant_app_id: number;
-  race_id: number;
-  race_name: string;
-  race_distance: string;
-  race_date: string;
-  race_time: string;
-  product_option_value_app_id: number;
+  contest_id: string;
 }
 
 export interface RegisterParticipantResponse {
   success: boolean;
-  action: 
-    // Success actions
-    | 'registered'
-    | 'confirm_race_result'
-    // Error actions
-    | 'already_registered'
-    | 'membership_required'
-    | 'limit_reached'
-    | 'not_found_in_race_result'
-    | 'bib_number_invalid'
-    | 'distance_not_found'
-    | 'validation_error'
-    | 'product_app_id_invalid'
-    | 'language_id_invalid'
-    | 'missing_parameters'
-    | 'unauthorized'
-    | 'token_invalid'
-    | 'token_expired'
-    | 'unknown_error';
-  is_first_tracking: 0 | 1;
+  action: string;
+  is_first_tracking?: number;
   race_result_data?: RaceResultData;
-  participant?: ParticipantData;
+  participant?: {
+    participant_app_id: number;
+    race_id: number;
+    race_name: string;
+    race_distance: string;
+    race_date: string;
+    race_time: string;
+    product_option_value_app_id: number;
+  };
 }
 
-interface RegisterApiResponse {
+export interface DeleteParticipantResponse {
+  success: boolean;
+  action: string;
+  message?: string;
+}
+
+export interface EventDetail {
+  product_app_id: number;
+  name: string;
+  race_date: string;
+  manufacturer_name: string;
+  location: string;
+  image_url: string;
+  distances: Distance[];
+  server_datetime: string;
+}
+
+interface RegisterParticipantApiResponse {
   success: boolean;
   data: RegisterParticipantResponse;
   error: string | null;
 }
 
-// ✅ DELETE PARTICIPANT RESPONSE TYPE (EXPORTED)
-export interface DeleteParticipantResponse {
+interface DeleteParticipantApiResponse {
   success: boolean;
-  action:
-    // Success actions
-    | 'deleted'
-    | 'success'
-    | 'participant_deleted'
-    // Error actions
-    | 'participant_not_found'
-    | 'already_deleted'
-    | 'unauthorized'
-    | 'token_invalid'
-    | 'token_expired'
-    | 'unknown_error';
-  error?: string;
+  data: DeleteParticipantResponse;
+  error: string | null;
 }
 
-// ✅ DELETE API RESPONSE (WRAPPER - FIXED)
-interface DeleteApiResponse {
+interface EventDetailApiResponse {
   success: boolean;
-  data?: DeleteParticipantResponse; // ✅ Contains the actual response with action
-  error?: string;
+  data: EventDetail;
+  error: string | null;
 }
-
-const extractBackendError = (error: any): string => {
-  return (
-    error?.response?.data?.error ||
-    error?.response?.data?.message ||
-    error?.message ||
-    "unknown_error"
-  );
-};
 
 export const eventDetailService = {
-  // Get event distances
+  /**
+   * Get event details
+   * 
+   * @param product_app_id - Event/Product ID
+   * @param bustCache - Add timestamp to bypass server/CDN cache
+   */
   async getEventDetails(
     product_app_id: string | number,
     bustCache: boolean = false
-  ): Promise<EventDetailResponse> {
+  ): Promise<EventDetail> {
     try {
-      const language_id = getCurrentLanguageId();
-      
       if (API_CONFIG.DEBUG) {
-        console.log('Fetching event details for:', product_app_id, { bustCache });
+        console.log('📡 Fetching event details for:', product_app_id, {
+          bustCache,
+        });
       }
-      
-      let url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENT_DETAIL);
+
+      // ✅ CORRECT ENDPOINT NAME (no 'S')
+      const url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENT_DETAIL);
       const headers = await API_CONFIG.getHeaders();
-      
-      const body: any = { 
-        language_id, 
-        product_app_id 
+
+      // ✅ BUILD REQUEST BODY
+      const requestBody: Record<string, any> = {
+        product_app_id,
+        language_id: await getCurrentLanguageId(),
       };
-      
+
+      // ✅ ADD TIMESTAMP TO BUST API/SERVER/CDN CACHE
       if (bustCache) {
-        body._t = Date.now();
+        requestBody._t = Date.now();
+        
+        if (API_CONFIG.DEBUG) {
+          console.log('🔥 Cache busting with timestamp:', requestBody._t);
+        }
       }
-      
+
       const response = await apiClient.post<EventDetailApiResponse>(
         url,
-        body,
+        requestBody,
         { headers }
       );
 
       if (response.success && response.data) {
         if (API_CONFIG.DEBUG) {
-          console.log(
-            'Event details loaded:',
-            response.data.distances?.length ?? 0,
-            'distances'
-          );
+          console.log('✅ Event details loaded:', response.data.name);
         }
-        return {
-          distances: response.data.distances ?? [],
-          server_datetime: response.data.server_datetime ?? '',
-        };
+
+        return response.data;
       }
-      throw new Error(response.error ?? 'Failed to fetch event details');
+
+      throw new Error(response.error || 'Failed to fetch event details');
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        console.error(
-          'Error fetching event details:',
-          extractBackendError(error)
-        );
+        console.error('❌ Error fetching event details:', error.message);
       }
-      throw new Error(extractBackendError(error));
+      throw error;
     }
   },
 
-  // Register participant
+  /**
+   * Register participant for an event
+   * 
+   * @param product_option_value_app_id - Distance ID
+   * @param bib_number - Optional bib number for confirmation
+   * @param language_id - Optional language ID
+   * @param show_confirm_popup - Optional flag to force confirmation popup (skip Race Result lookup)
+   */
   async registerParticipant(
     product_option_value_app_id: number,
     bib_number?: string,
     language_id?: number,
+    show_confirm_popup?: boolean
   ): Promise<RegisterParticipantResponse> {
     try {
-      const lang_id = language_id ?? getCurrentLanguageId();
       if (API_CONFIG.DEBUG) {
-        console.log(
-          "Registering participant for distance:",
+        console.log('📡 Registering participant:', {
           product_option_value_app_id,
-        );
+          bib_number: bib_number || '(none)',
+          language_id: language_id || '(default)',
+          show_confirm_popup: show_confirm_popup || false,
+        });
       }
+
+      // ✅ CORRECT ENDPOINT NAME
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.REGISTER_PARTICIPANT);
       const headers = await API_CONFIG.getHeaders();
-      const body: RegisterParticipantRequest = {
+
+      // ✅ BUILD REQUEST BODY
+      const requestBody: Record<string, any> = {
         product_option_value_app_id,
-        language_id: lang_id,
+        language_id: language_id || (await getCurrentLanguageId()),
       };
 
-      if (bib_number && bib_number.trim() !== "") {
-        body.bib_number = bib_number.trim();
+      // ✅ ADD OPTIONAL PARAMS
+      if (bib_number) {
+        requestBody.bib_number = bib_number;
       }
+
+      if (show_confirm_popup !== undefined) {
+        requestBody.show_confirm_popup = show_confirm_popup ? 1 : 0;
+      }
+
+      const response = await apiClient.post<RegisterParticipantApiResponse>(
+        url,
+        requestBody,
+        { headers }
+      );
 
       if (API_CONFIG.DEBUG) {
-        console.log("📡 Register request body:", body);
+        console.log('✅ Register response:', {
+          success: response.success,
+          action: response.data?.action,
+        });
       }
-
-      const response = await apiClient.post<RegisterApiResponse>(url, body, {
-        headers,
-      });
 
       if (response.success && response.data) {
-        if ((response.data as any).error) {
-          throw new Error((response.data as any).error);
-        }
         return response.data;
       }
-      throw new Error(response.error ?? "Registration failed");
+
+      throw new Error(response.error || 'Registration failed');
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        console.log(
-          "Full backend response:",
-          JSON.stringify(error?.response?.data, null, 2),
-        );
+        console.error('❌ Registration error:', error.message);
       }
-      throw new Error(extractBackendError(error));
+      throw error;
     }
   },
 
-  // ✅ DELETE PARTICIPANT (FIXED - RETURNS PROPER RESPONSE)
+  /**
+   * Delete/unregister participant from an event
+   */
   async deleteParticipant(
     participant_app_id: number
   ): Promise<DeleteParticipantResponse> {
     try {
       if (API_CONFIG.DEBUG) {
-        console.log("📡 Deleting participant:", participant_app_id);
+        console.log('📡 Deleting participant:', participant_app_id);
       }
 
+      // ✅ CORRECT ENDPOINT NAME
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.DELETE_PARTICIPANT);
       const headers = await API_CONFIG.getHeaders();
 
-      const response = await apiClient.post<DeleteApiResponse>(
+      const requestBody = {
+        participant_app_id,
+      };
+
+      const response = await apiClient.post<DeleteParticipantApiResponse>(
         url,
-        { participant_app_id },
-        { headers },
+        requestBody,
+        { headers }
       );
 
       if (API_CONFIG.DEBUG) {
-        console.log("📡 Delete API response:", response);
+        console.log('✅ Delete response:', {
+          success: response.success,
+          action: response.data?.action,
+        });
       }
 
-      // ✅ IF SUCCESS AND HAS DATA WITH ACTION
       if (response.success && response.data) {
-        if (API_CONFIG.DEBUG) {
-          console.log("✅ Delete response data:", response.data);
-        }
         return response.data;
       }
 
-      // ✅ IF SUCCESS BUT NO DATA (OLD API FORMAT)
-      if (response.success) {
-        if (API_CONFIG.DEBUG) {
-          console.log("✅ Delete success (no data, returning default)");
-        }
-        return {
-          success: true,
-          action: 'deleted',
-        };
-      }
-
-      // ✅ IF NOT SUCCESS, CREATE ERROR RESPONSE
-      if (API_CONFIG.DEBUG) {
-        console.error("❌ Delete failed:", response.error);
-      }
-      
-      return {
-        success: false,
-        action: 'unknown_error',
-        error: response.error ?? 'Failed to delete participant',
-      };
+      throw new Error(response.error || 'Delete failed');
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        console.error("❌ Delete network error:", error);
+        console.error('❌ Delete error:', error.message);
       }
-      
-      // ✅ RETURN ERROR RESPONSE INSTEAD OF THROWING
-      return {
-        success: false,
-        action: 'unknown_error',
-        error: extractBackendError(error),
-      };
+      throw error;
     }
   },
 };

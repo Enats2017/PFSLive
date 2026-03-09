@@ -34,17 +34,21 @@
   "error": {
     "title": "Échec du chargement des données",
     "retry": "Réessayer",
-    "missingId": "ID de l'événement manquant",
+    "missingId": "ID d'événement manquant",
     "unexpectedTitle": "Réponse Inattendue",
     "unexpectedMessage": "Le serveur a renvoyé une réponse inattendue. Veuillez réessayer.",
     "invalidBibTitle": "Numéro de Dossard Invalide",
     "invalidBibMessage": "Le numéro de dossard fourni est invalide. Veuillez vérifier et réessayer.",
-    "registrationFailedTitle": "Échec de l'Inscription",
-    "registrationFailedMessage": "Impossible de compléter l'inscription. Vérifiez votre connexion et réessayez.",
-    "cannotUnregisterTitle": "Impossible de Se Désinscrire",
-    "cannotUnregisterMessage": "Informations sur le participant manquantes. Veuillez actualiser et réessayer.",
-    "unregisterFailedTitle": "Échec de la Désinscription",
-    "unregisterFailedMessage": "Impossible de se désinscrire. Veuillez réessayer."
+    "registrationFailedTitle": "Inscription Échouée",
+    "registrationFailedMessage": "Impossible de finaliser l'inscription. Vérifiez votre connexion et réessayez.",
+    "cannotUnregisterTitle": "Impossible de se Désinscrire",
+    "cannotUnregisterMessage": "Informations du participant manquantes. Veuillez actualiser et réessayer.",
+    "unregisterFailedTitle": "Désinscription Échouée",
+    "unregisterFailedMessage": "Impossible de se désinscrire. Veuillez réessayer.",
+    "networkErrorTitle": "Erreur Réseau",
+    "networkErrorMessage": "Impossible de se connecter au serveur. Vérifiez votre connexion Internet et réessayez.",
+    "trackingAlreadyStartedTitle": "Suivi Déjà Actif",
+    "trackingAlreadyStartedMessage": "Le suivi en direct a déjà été activé pour cet événement. Vous ne pouvez pas vous désinscrire une fois le suivi commencé."
   },
   "registrationModal": {
     "registered": {
