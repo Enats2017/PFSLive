@@ -79,6 +79,7 @@ import ProfileNL from "./ProfileScreen/nl.json";
 import ResultDetailsEN from "./Resultdetails/en.json";
 import ResultDetailsFR from "./Resultdetails/fr.json";
 import ResultDetailsNL from "./Resultdetails/nl.json";
+import FollowerEN from "./FollowerEvent/en.json";
 
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
@@ -234,7 +235,8 @@ i18n.use(initReactI18next).init({
       undoModal: undoModalEN,
       errorModal: errorModalEN,
       profile:ProfileEN,
-      resultdetails:ResultDetailsEN
+      resultdetails:ResultDetailsEN,
+      follower:FollowerEN
     },
     fr: {
       common: commonFR,
@@ -293,7 +295,8 @@ i18n.use(initReactI18next).init({
     'undoModal',
     'errorModal',
     'profile',
-    'resultdetails'
+    'resultdetails',
+    'follower'
   ],
   interpolation: {
     escapeValue: false,

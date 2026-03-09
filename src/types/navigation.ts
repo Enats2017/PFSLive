@@ -43,7 +43,15 @@ export type RootStackParamList = {
     eventId:number;
   };
 
-  ResultDetails:undefined
+  ResultDetails:undefined;
+  FollowerEvent:undefined;
+
+  FollowerProfile: { customer_app_id: number };
+  followerDetails:{
+    product_app_id: string | number;
+      event_name: string;
+      auto_register_id: number | null;
+  }
  
 };
 
@@ -52,7 +60,7 @@ export type RouteScreenProps = NativeStackScreenProps<RootStackParamList, 'Route
 export type EventDetailsProps = NativeStackScreenProps<RootStackParamList, 'EventDetails'>;
 export type ParticipantEventProps = NativeStackScreenProps<RootStackParamList, 'ParticipantEvent'>;
 export type PersonalEventProps = NativeStackScreenProps<RootStackParamList, 'PersonalEvent'>;
-export type RegisterProps = NativeStackScreenProps<RootStackParamList, 'Register'>; 
+export type RegisterProps = NativeStackScreenProps<RootStackParamList, 'RegisterScreen'>; 
 export type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'LoginScreen'>; 
 export type OTPVerificationScreenProps = NativeStackScreenProps<RootStackParamList, 'OTPVerificationScreen'>; 
 export type ParticipantResultPopes = NativeStackScreenProps<RootStackParamList, 'ParticipantResult'>;
@@ -62,4 +70,8 @@ export type ProfileScreenprops = NativeStackScreenProps<RootStackParamList, 'Pro
 export type EditProfileScreenprops = NativeStackScreenProps<RootStackParamList, 'EditProfileScreen'>;
 export type EditPersonalEventpops = NativeStackScreenProps<RootStackParamList,'EditPersonalEvent'>;
 export type ResultDetailspops = NativeStackScreenProps<RootStackParamList,'ResultDetails'>;
+export type FollowerEventpops = NativeStackScreenProps<RootStackParamList,'FollowerEvent'>;
+export type FollowerProfilepops = NativeStackScreenProps<RootStackParamList,'FollowerProfile'>;
+export type followerDetailspops = NativeStackScreenProps<RootStackParamList,'followerDetails'>;
+
 

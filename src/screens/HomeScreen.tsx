@@ -872,7 +872,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           >
             <Text style={homeStyles.buttonText}>{t('home:button.Participant')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={homeStyles.button}>
+          <TouchableOpacity style={homeStyles.button}onPress={() => navigation.navigate('FollowerEvent')}>
             <Text style={homeStyles.buttonText}>{t('home:button.Fan')}</Text>
           </TouchableOpacity>
         </View>
