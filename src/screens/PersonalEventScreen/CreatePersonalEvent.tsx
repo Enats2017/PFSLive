@@ -18,10 +18,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { personalStyles } from '../../styles/personalEvent.styles';
 import { useTranslation } from 'react-i18next';
 import { toastError, toastSuccess } from '../../../utils/toast';
+import RegistrationModal from '../../components/RegistrationModal';
+import ErrorModal from '../../components/ErrorModal';
 import { 
   createPersonalEvent, 
   formatFileSize,
-  getDeviceTimezone // ✅ IMPORT TIMEZONE HELPER
+  getDeviceTimezone,
 } from '../../services/personalEventService';
 import { API_CONFIG } from '../../constants/config';
 import { usePersonalEventForm } from '../../hooks/usePersonalEventForm';
@@ -30,7 +32,7 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
-  const { t } = useTranslation(['personal', 'common']);
+  const { t } = useTranslation(['personal', 'common', 'details']);
 
   const EVENT_TYPE_OPTIONS = useMemo(
     () => [
@@ -58,7 +60,22 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ✅ FORM SUBMISSION WITH TIMEZONE
+  // ✅ MODAL STATES (REUSE SAME PATTERN AS useRegistrationHandler)
+  const [registrationModalVisible, setRegistrationModalVisible] = useState(false);
+  type RegistrationStatus = 'membership_required' | 'limit_reached' | null;
+  const [registrationStatus, setRegistrationStatus] = useState<RegistrationStatus>(null);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorTitleKey, setErrorTitleKey] = useState('');
+  const [errorMessageKey, setErrorMessageKey] = useState('');
+
+  // ✅ SHOW ERROR MODAL HELPER
+  const showErrorModal = useCallback((titleKey: string, messageKey: string) => {
+    setErrorTitleKey(titleKey);
+    setErrorMessageKey(messageKey);
+    setErrorModalVisible(true);
+  }, []);
+
+  // ✅ FORM SUBMISSION WITH ACTION HANDLING
   const handleSubmit = useCallback(async () => {
     clearAllErrors();
 
@@ -68,7 +85,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     try {
       setIsSubmitting(true);
 
-      // ✅ GET DEVICE TIMEZONE
       const deviceTimezone = getDeviceTimezone();
 
       const response = await createPersonalEvent({
@@ -76,10 +92,69 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         eventTypeId: formData.selectedEventType?.value ?? null,
         date: formData.date,
         startTime: formData.startTime,
-        timezone: deviceTimezone, // ✅ SEND TIMEZONE
+        timezone: deviceTimezone,
         selectedFile: selectedFile || undefined,
       });
 
+      if (API_CONFIG.DEBUG) {
+        console.log('📡 Create Personal Event Response:', {
+          success: response.success,
+          action: response.action,
+        });
+      }
+
+      // ✅ CHECK ACTION FIELD (SAME PATTERN AS useRegistrationHandler)
+      const action = response.action || 'unknown_error';
+
+      // ✅ HANDLE NON-SUCCESS ACTIONS
+      if (action !== 'registered' && action !== 'success') {
+        if (API_CONFIG.DEBUG) {
+          console.log('⚠️ Non-success action received:', action);
+        }
+
+        switch (action) {
+          case 'membership_required':
+            setRegistrationStatus('membership_required');
+            setRegistrationModalVisible(true);
+            break;
+
+          case 'limit_reached':
+            setRegistrationStatus('limit_reached');
+            setRegistrationModalVisible(true);
+            break;
+
+          case 'customer_invalid':
+            showErrorModal(
+              'personal:errors.customerInvalidTitle',
+              'personal:errors.customerInvalidMessage'
+            );
+            break;
+
+          case 'validation_error':
+          case 'missing_parameters':
+            showErrorModal(
+              'personal:errors.validationErrorTitle',
+              'personal:errors.validationErrorMessage'
+            );
+            break;
+
+          case 'unauthorized':
+          case 'token_invalid':
+          case 'token_expired':
+            navigation.navigate('LoginScreen');
+            break;
+
+          default:
+            showErrorModal(
+              'personal:errors.createFailedTitle',
+              'personal:errors.createFailedMessage'
+            );
+            break;
+        }
+        return;
+      }
+
+      // ✅ SUCCESS CASE
       if (response.success) {
         toastSuccess(
           t('personal:success.title'),
@@ -98,6 +173,14 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         console.error('❌ Submit error:', error);
       }
 
+      // ✅ HANDLE VALIDATION ERRORS
+      if (error.message?.startsWith('VALIDATION_ERROR:')) {
+        const validationMessage = error.message.replace('VALIDATION_ERROR: ', '');
+        toastError(t('common:errors.validation'), validationMessage);
+        return;
+      }
+
+      // ✅ HANDLE NETWORK ERRORS
       const message =
         error.message === 'API_ERROR'
           ? t('personal:errors.createFailed')
@@ -116,6 +199,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     resetForm,
     clearFile,
     navigation,
+    showErrorModal,
     t,
   ]);
 
@@ -300,6 +384,25 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ✅ REGISTRATION MODAL (REUSE SAME COMPONENT) */}
+      <RegistrationModal
+        visible={registrationModalVisible}
+        status={registrationStatus}
+        distanceName={formData.name || t('personal:title')}
+        onClose={() => {
+          setRegistrationModalVisible(false);
+          setRegistrationStatus(null);
+        }}
+      />
+
+      {/* ✅ ERROR MODAL (REUSE SAME COMPONENT) */}
+      <ErrorModal
+        visible={errorModalVisible}
+        titleKey={errorTitleKey}
+        messageKey={errorMessageKey}
+        onClose={() => setErrorModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };

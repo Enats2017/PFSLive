@@ -1,17 +1,17 @@
 {
-  "title": "Nieuw Evenement Aanmaken",
-  "editTitle": "Uw evenement bijwerken",
-  "name": "Evenement Naam",
-  "type": "Type Evenement",
-  "date": "Evenement Datum",
+  "title": "Nieuw Evenement Maken",
+  "editTitle": "Uw Evenement Bijwerken",
+  "name": "Evenementnaam",
+  "type": "Evenementtype",
+  "date": "Evenementdatum",
   "startTime": "Starttijd",
   "fileInfo": "Het uploaden van een GPX-bestand is optioneel maar sterk aanbevolen voor nauwkeurige tracking",
   "button": {
-    "gpx": "Upload GPX Bestand",
+    "gpx": "GPX-bestand Uploaden",
     "save": "EVENEMENT INDIENEN"
   },
   "success": {
-    "title": "Succes!",
+    "title": "Gelukt!",
     "message": "Uw evenement is succesvol aangemaakt"
   },
   "errors": {
@@ -21,14 +21,22 @@
     "invalidDate": "Ongeldig datumformaat. Gebruik een geldige datum",
     "pastDateNotAllowed": "Kan geen datums uit het verleden selecteren. Kies vandaag of een toekomstige datum",
     "startTimeRequired": "Selecteer een starttijd",
-    "invalidStartTime": "Ongeldig starttijd formaat. Gebruik UU:MM",
-    "fileTooLarge": "Bestandsgrootte moet kleiner zijn dan {{size}}MB",
+    "invalidStartTime": "Ongeldig starttijdformaat. Gebruik UU:MM",
+    "fileTooLarge": "Bestandsgrootte moet minder dan {{size}}MB zijn",
     "invalidFileType": "Selecteer een geldig GPX-bestand (.gpx of .xml)",
-    "filePickFailed": "Bestand selecteren mislukt. Probeer het opnieuw",
-    "createFailed": "Evenement aanmaken mislukt. Probeer het opnieuw"
+    "filePickFailed": "Kan bestand niet selecteren. Probeer het opnieuw",
+    "createFailed": "Kan evenement niet aanmaken. Probeer het opnieuw",
+    "createFailedTitle": "Aanmaken Mislukt",
+    "createFailedMessage": "Kan uw evenement niet aanmaken. Probeer het later opnieuw.",
+    "customerInvalidTitle": "Accountprobleem",
+    "customerInvalidMessage": "Uw account is niet correct geconfigureerd. Neem contact op met ondersteuning.",
+    "validationErrorTitle": "Ongeldige Gegevens",
+    "validationErrorMessage": "Sommige velden bevatten ongeldige gegevens. Controleer en probeer opnieuw.",
+    "networkErrorTitle": "Netwerkfout",
+    "networkErrorMessage": "Kan geen verbinding maken met de server. Controleer je internetverbinding en probeer opnieuw."
   },
   "file": {
-    "uploadTitle": "Tik om GPX-bestand te uploaden",
+    "uploadTitle": "Tik om GPX-bestand te Uploaden",
     "uploadSubtitle": "Ondersteund formaat: .gpx (Max {{size}}MB)",
     "infoTitle": "Bestandsinfo",
     "infoMessage": "Naam: {{name}}\nGrootte: {{size}} KB",
@@ -36,13 +44,12 @@
     "removeMessage": "Weet u zeker dat u dit bestand wilt verwijderen?",
     "removeButton": "Verwijderen",
     "removed": "Bestand verwijderd",
-     "existingFile": "Huidig bestand",
-  "undoRemove": "Verwijderen ongedaan maken",
-  "editTitle": "Uw evenement bijwerken"
+    "existingFile": "Huidig bestand",
+    "undoRemove": "Verwijdering ongedaan maken"
   },
   "eventTypes": {
-    "organizedWithResults": "Georganiseerd evenement met ranking / resultaten",
-    "organizedWithoutResults": "Georganiseerd evenement zonder ranking / resultaten",
+    "organizedWithResults": "Georganiseerd evenement met rangschikking / resultaten",
+    "organizedWithoutResults": "Georganiseerd evenement zonder rangschikking / resultaten",
     "training": "Trainingssessie"
   }
 }

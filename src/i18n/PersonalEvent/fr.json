@@ -1,21 +1,21 @@
 {
   "title": "Créer un Nouvel Événement",
-  "editTitle": "Mettre à jour votre événement",
+  "editTitle": "Mettre à Jour Votre Événement",
   "name": "Nom de l'Événement",
   "type": "Type d'Événement",
   "date": "Date de l'Événement",
   "startTime": "Heure de Début",
-  "fileInfo": "Le téléchargement d'un fichier GPX est facultatif mais fortement recommandé pour un suivi précis",
+  "fileInfo": "Le téléchargement d'un fichier GPX est optionnel mais fortement recommandé pour un suivi précis",
   "button": {
-    "gpx": "Télécharger Fichier GPX",
+    "gpx": "Télécharger un Fichier GPX",
     "save": "SOUMETTRE L'ÉVÉNEMENT"
   },
   "success": {
-    "title": "Succès!",
+    "title": "Succès !",
     "message": "Votre événement a été créé avec succès"
   },
   "errors": {
-    "nameRequired": "Veuillez entrer un nom d'événement",
+    "nameRequired": "Veuillez saisir un nom d'événement",
     "eventTypeRequired": "Veuillez sélectionner un type d'événement",
     "dateRequired": "Veuillez sélectionner une date",
     "invalidDate": "Format de date invalide. Veuillez utiliser une date valide",
@@ -25,20 +25,27 @@
     "fileTooLarge": "La taille du fichier doit être inférieure à {{size}}MB",
     "invalidFileType": "Veuillez sélectionner un fichier GPX valide (.gpx ou .xml)",
     "filePickFailed": "Échec de la sélection du fichier. Veuillez réessayer",
-    "createFailed": "Échec de la création de l'événement. Veuillez réessayer"
+    "createFailed": "Échec de la création de l'événement. Veuillez réessayer",
+    "createFailedTitle": "Création Échouée",
+    "createFailedMessage": "Impossible de créer votre événement. Veuillez réessayer plus tard.",
+    "customerInvalidTitle": "Problème de Compte",
+    "customerInvalidMessage": "Votre compte n'est pas correctement configuré. Veuillez contacter le support.",
+    "validationErrorTitle": "Données Invalides",
+    "validationErrorMessage": "Certains champs contiennent des données invalides. Veuillez vérifier et réessayer.",
+    "networkErrorTitle": "Erreur Réseau",
+    "networkErrorMessage": "Impossible de se connecter au serveur. Vérifiez votre connexion Internet et réessayez."
   },
   "file": {
-    "uploadTitle": "Appuyez pour télécharger un fichier GPX",
-    "uploadSubtitle": "Format pris en charge: .gpx (Max {{size}}MB)",
-    "infoTitle": "Informations sur le Fichier",
-    "infoMessage": "Nom: {{name}}\nTaille: {{size}} KB",
+    "uploadTitle": "Appuyez pour Télécharger un Fichier GPX",
+    "uploadSubtitle": "Format pris en charge : .gpx (Max {{size}}MB)",
+    "infoTitle": "Info Fichier",
+    "infoMessage": "Nom : {{name}}\nTaille : {{size}} KB",
     "removeTitle": "Supprimer le Fichier",
-    "removeMessage": "Êtes-vous sûr de vouloir supprimer ce fichier?",
+    "removeMessage": "Êtes-vous sûr de vouloir supprimer ce fichier ?",
     "removeButton": "Supprimer",
     "removed": "Fichier supprimé",
     "existingFile": "Fichier actuel",
-  "undoRemove": "Annuler la suppression",
-  "editTitle": "Mettre à jour votre événement"
+    "undoRemove": "Annuler la suppression"
   },
   "eventTypes": {
     "organizedWithResults": "Événement organisé avec classement / résultats",

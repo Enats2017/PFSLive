@@ -14,15 +14,24 @@ export interface PersonalEventPayload {
   eventTypeId: number | null;
   date: string;
   startTime: string;
-  timezone?: string; // ✅ ADD TIMEZONE
+  timezone?: string;
   selectedFile?: PersonalEventFile;
 }
 
 export interface PersonalEventResponse {
   success: boolean;
+  action?: string;
   message?: string;
   data?: any;
   error?: string;
+  is_first_tracking?: number;
+}
+
+// ✅ API WRAPPER RESPONSE (NESTED STRUCTURE)
+interface PersonalEventApiResponse {
+  success: boolean;
+  data: PersonalEventResponse; // ✅ NESTED DATA
+  error: string | null;
 }
 
 // ✅ CONSTANTS
@@ -84,11 +93,9 @@ export const formatFileSize = (bytes: number): string => {
  */
 export const getDeviceTimezone = (): string => {
   try {
-    // Use Intl API to get timezone
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     return timezone || 'UTC';
   } catch (error) {
-    // Fallback to UTC if timezone detection fails
     return 'UTC';
   }
 };
@@ -106,7 +113,7 @@ export const getTimezoneOffset = (): number => {
  * @returns Offset string (e.g., "+05:30", "-08:00")
  */
 export const getTimezoneOffsetString = (): string => {
-  const offset = -getTimezoneOffset(); // Invert because getTimezoneOffset returns negative for ahead
+  const offset = -getTimezoneOffset();
   const hours = Math.floor(Math.abs(offset) / 60);
   const minutes = Math.abs(offset) % 60;
   const sign = offset >= 0 ? '+' : '-';
@@ -131,7 +138,6 @@ const buildFormData = (payload: PersonalEventPayload): FormData => {
     formData.append('start_hour', formattedTime);
   }
   
-  // ✅ APPEND TIMEZONE
   if (timezone) {
     formData.append('timezone', timezone);
     
@@ -219,7 +225,7 @@ export const createPersonalEvent = async (
     const formData = buildFormData(payload);
     const headers = await API_CONFIG.getMutiForm();
     
-    const response = await axios.post<PersonalEventResponse>(
+    const response = await axios.post<PersonalEventApiResponse>(
       getApiEndpoint(API_CONFIG.ENDPOINTS.Personal_Event),
       formData,
       {
@@ -229,10 +235,34 @@ export const createPersonalEvent = async (
     );
     
     if (API_CONFIG.DEBUG) {
-      console.log('✅ Personal event created:', response.data);
+      console.log('📡 Full API Response:', response.data);
+      console.log('📡 Response Structure:', {
+        outerSuccess: response.data.success,
+        outerError: response.data.error,
+        innerData: response.data.data,
+      });
     }
     
-    return response.data;
+    // ✅ EXTRACT INNER DATA (ACTION IS NESTED)
+    const innerData = response.data.data || {};
+    
+    if (API_CONFIG.DEBUG) {
+      console.log('✅ Inner Data:', {
+        action: innerData.action,
+        success: innerData.success,
+        message: innerData.message,
+        is_first_tracking: innerData.is_first_tracking,
+      });
+    }
+    
+    // ✅ RETURN FLATTENED RESPONSE WITH ACTION AT TOP LEVEL
+    return {
+      success: response.data.success,
+      action: innerData.action,
+      message: innerData.message || response.data.error,
+      data: innerData.data,
+      is_first_tracking: innerData.is_first_tracking,
+    };
   } catch (error) {
     if (API_CONFIG.DEBUG) {
       console.error('❌ Error creating personal event:', error);
