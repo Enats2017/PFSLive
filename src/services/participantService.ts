@@ -10,7 +10,7 @@ export interface Participant {
   country: string;
   race_distance: string;
   live_tracking_activated: number;
-  source?: string; // ✅ ADD THIS (e.g., "local" or "external")
+  source?: string; // e.g., "local" or "external"
 }
 
 export interface ParticipantPagination {
@@ -25,6 +25,14 @@ export interface ParticipantResponse {
   pagination: ParticipantPagination;
 }
 
+// ✅ CLEAN INTERFACE FOR OPTIONAL PARAMS
+interface GetParticipantsParams {
+  product_app_id: string | number;
+  page?: number;
+  filter_name?: string;
+  product_option_value_app_id?: string | number; // ✅ NEW OPTIONAL PARAM
+}
+
 interface ParticipantApiResponse {
   success: boolean;
   data: ParticipantResponse;
@@ -35,24 +43,34 @@ export const participantService = {
   /**
    * Fetch participants for an event with pagination and search
    */
-  async getParticipants(
-    product_app_id: string | number,
-    page: number = 1,
-    filter_name: string = ''
-  ): Promise<ParticipantResponse> {
+  async getParticipants(params: GetParticipantsParams): Promise<ParticipantResponse> {
     try {
+      // ✅ DESTRUCTURE WITH DEFAULTS
+      const {
+        product_app_id,
+        page = 1,
+        filter_name = '',
+        product_option_value_app_id,
+      } = params;
+
       if (API_CONFIG.DEBUG) {
-        console.log('📡 Fetching participants:', { product_app_id, page, filter_name });
+        console.log('📡 Fetching participants:', params);
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.PARTICIPANTS);
       const headers = await API_CONFIG.getHeaders();
 
-      const requestBody = {
+      // ✅ BUILD REQUEST BODY - ONLY INCLUDE NON-EMPTY VALUES
+      const requestBody: Record<string, any> = {
         product_app_id,
         page,
-        filter_name
+        filter_name,
       };
+
+      // ✅ CONDITIONALLY ADD OPTIONAL PARAM
+      if (product_option_value_app_id !== undefined && product_option_value_app_id !== null && product_option_value_app_id !== '') {
+        requestBody.product_option_value_app_id = product_option_value_app_id;
+      }
 
       const response = await apiClient.post<ParticipantApiResponse>(
         url,
@@ -71,8 +89,8 @@ export const participantService = {
             page: 1,
             per_page: 10,
             total: 0,
-            total_pages: 1
-          }
+            total_pages: 1,
+          },
         };
       }
 
@@ -89,11 +107,9 @@ export const participantService = {
    * Get unique identifier for participant based on source
    */
   getParticipantId(participant: Participant): string {
-    // ✅ If source is "local", use participant_app_id
-    // ✅ Otherwise, use bib_number
     if (participant.source === 'local') {
       return participant.participant_app_id;
     }
     return participant.bib_number || participant.participant_app_id;
-  }
+  },
 };

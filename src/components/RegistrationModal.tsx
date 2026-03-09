@@ -8,6 +8,7 @@ import {
   Animated,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../styles/common.styles';
 
 type RegistrationStatus =
@@ -24,59 +25,12 @@ interface RegistrationModalProps {
   onClose: () => void;
 }
 
-const getModalConfig = (status: RegistrationStatus) => {
-  switch (status) {
-    case 'registered':
-      return {
-        icon: '✓',
-        title: "You're Already Registered!",
-        description: "You're already registered for this distance. Get ready to race!",
-        accentColor: colors.primaryLight,
-      };
-
-    case 'membership_required':
-      return {
-        icon: '◆',
-        title: 'Your Premium Access Has Expired',
-        description:
-          'Your free trial period has ended. Log in to your account via our website to manage your access.',
-        accentColor: '#f59e0b',
-      };
-
-    case 'limit_reached':
-      return {
-        icon: '↑',
-        title: 'Your Premium Access Has Expired',
-        description:
-          "You've reached your yearly limit of 3 tracking sessions. Your current plan does not allow additional activations. Manage your subscription via our website.",
-        accentColor: colors.primary,
-      };
-
-    case 'unavailable':
-      return {
-        icon: '⊘',
-        title: 'Not Available',
-        description: 'Registration for this distance is not yet configured. Please check back soon.',
-        accentColor: '#6b7280',
-      };
-
-    case 'available':
-      return {
-        icon: '→',
-        title: 'Ready to Race?',
-        description: "Secure your spot now before it fills up. Let's do this!",
-        accentColor: '#f4a100',
-      };
-
-    default:
-      return {
-        icon: '?',
-        title: 'Something Went Wrong',
-        description: 'Please try again later.',
-        accentColor: '#6b7280',
-      };
-  }
-};
+interface ModalConfig {
+  icon: string;
+  title: string;
+  description: string;
+  accentColor: string;
+}
 
 const RegistrationModal: React.FC<RegistrationModalProps> = ({
   visible,
@@ -84,28 +38,81 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   distanceName,
   onClose,
 }) => {
+  const { t } = useTranslation(['details']);
+  
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const cardTranslateY = useRef(new Animated.Value(80)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const iconScale = useRef(new Animated.Value(0)).current;
 
+  // ✅ GET MODAL CONFIG FROM i18n
+  const getModalConfig = (status: RegistrationStatus): ModalConfig => {
+    const baseKey = `details:registrationModal.${status}`;
+    
+    const accentColors: Record<RegistrationStatus, string> = {
+      registered: colors.primaryLight,
+      membership_required: colors.primary,
+      limit_reached: colors.primary,
+      unavailable: '#6b7280',
+      available: '#f4a100',
+    };
+
+    return {
+      icon: t(`${baseKey}.icon`),
+      title: t(`${baseKey}.title`),
+      description: t(`${baseKey}.description`),
+      accentColor: accentColors[status],
+    };
+  };
+
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.timing(backdropOpacity, { toValue: 1, duration: 260, useNativeDriver: true }),
-        Animated.spring(cardTranslateY, { toValue: 0, tension: 70, friction: 10, useNativeDriver: true }),
-        Animated.timing(cardOpacity, { toValue: 1, duration: 240, useNativeDriver: true }),
-        Animated.spring(iconScale, { toValue: 1, delay: 200, tension: 130, friction: 6, useNativeDriver: true }),
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: 260,
+          useNativeDriver: true,
+        }),
+        Animated.spring(cardTranslateY, {
+          toValue: 0,
+          tension: 70,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cardOpacity, {
+          toValue: 1,
+          duration: 240,
+          useNativeDriver: true,
+        }),
+        Animated.spring(iconScale, {
+          toValue: 1,
+          delay: 200,
+          tension: 130,
+          friction: 6,
+          useNativeDriver: true,
+        }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(backdropOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-        Animated.timing(cardOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
-        Animated.timing(cardTranslateY, { toValue: 80, duration: 200, useNativeDriver: true }),
+        Animated.timing(backdropOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cardOpacity, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cardTranslateY, {
+          toValue: 80,
+          duration: 200,
+          useNativeDriver: true,
+        }),
       ]).start();
       iconScale.setValue(0);
     }
-  }, [visible]);
+  }, [visible, backdropOpacity, cardTranslateY, cardOpacity, iconScale]);
 
   if (!status) return null;
 
@@ -121,7 +128,11 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
     >
       {/* Backdrop */}
       <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        />
       </Animated.View>
 
       {/* Card */}
@@ -162,7 +173,10 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
           {/* Distance chip */}
           {distanceName ? (
-            <Text style={[styles.distanceName, { color: config.accentColor }]} numberOfLines={1}>
+            <Text
+              style={[styles.distanceName, { color: config.accentColor }]}
+              numberOfLines={1}
+            >
               {distanceName}
             </Text>
           ) : null}
@@ -172,7 +186,6 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
           {/* Description */}
           <Text style={styles.description}>{config.description}</Text>
-
         </Animated.View>
       </View>
     </Modal>

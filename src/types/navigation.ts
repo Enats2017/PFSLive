@@ -29,6 +29,7 @@ export type RootStackParamList = {
   RaseResultScreen:{
     product_app_id: number;
     product_option_value_app_id: number;
+    event_name: string;
   };
   ResultList: {
   product_app_id: number;

@@ -45,5 +45,37 @@
     "cannotUnregisterMessage": "Deelnemersinformatie ontbreekt. Vernieuw en probeer opnieuw.",
     "unregisterFailedTitle": "Uitschrijven Mislukt",
     "unregisterFailedMessage": "Kan niet uitschrijven. Probeer het opnieuw."
+  },
+  "registrationModal": {
+    "registered": {
+      "icon": "✓",
+      "title": "Je bent al geregistreerd!",
+      "description": "Je bent al geregistreerd voor deze afstand. Maak je klaar voor de race!"
+    },
+    "membership_required": {
+      "icon": "◆",
+      "title": "Je Premium-toegang is verlopen",
+      "description": "Je gratis proefperiode is afgelopen. Log in op je account via onze website om je toegang te beheren."
+    },
+    "limit_reached": {
+      "icon": "↑",
+      "title": "Je Premium-toegang is verlopen",
+      "description": "Je hebt je jaarlijkse limiet van 3 trackingsessies bereikt. Je huidige plan staat geen extra activeringen toe. Beheer je abonnement via onze website."
+    },
+    "unavailable": {
+      "icon": "⊘",
+      "title": "Niet beschikbaar",
+      "description": "Registratie voor deze afstand is nog niet geconfigureerd. Kom later terug."
+    },
+    "available": {
+      "icon": "→",
+      "title": "Klaar om te racen?",
+      "description": "Reserveer nu je plek voordat het vol is. Laten we dit doen!"
+    },
+    "default": {
+      "icon": "?",
+      "title": "Er is iets misgegaan",
+      "description": "Probeer het later opnieuw."
+    }
   }
 }
