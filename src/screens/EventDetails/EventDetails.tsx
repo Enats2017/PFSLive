@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
+import { BottomNavigation } from '../../components/common/BottomNavigation';
 import { commonStyles } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import DistanceTab from './DistanceTab';
@@ -99,7 +100,7 @@ const EventDetails = ({ route }: EventDetailsProps) => {
   }, []);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
+    <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={true} />
 
@@ -155,6 +156,13 @@ const EventDetails = ({ route }: EventDetailsProps) => {
           scrollEnabled={true}
         />
       </View>
+
+      {/* ✅ BOTTOM NAVIGATION - HOME ACTIVE */}
+      <BottomNavigation 
+        activeTab="Home" 
+        product_app_id={product_app_id}
+        event_name={event_name}
+      />
     </SafeAreaView>
   );
 };

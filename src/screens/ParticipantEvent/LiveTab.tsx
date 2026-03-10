@@ -1,13 +1,15 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { EventItem } from '../../services/eventService';
-import { commonStyles, spacing } from '../../styles/common.styles';
-import { eventStyles } from '../../styles/event';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
+import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { eventStyles } from '../../styles/event';
+import { EventItem } from '../../services/eventService';
 import { formatEventDate } from '../../utils/dateFormatter';
+import { API_CONFIG } from '../../constants/config';
 
 interface LiveTabProps {
     events: EventItem[];
@@ -19,48 +21,65 @@ interface LiveTabProps {
 const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { t } = useTranslation(['event', 'common']);
-    const onEndReachedCalledDuringMomentum = useRef(false);
 
+    // ✅ SIMPLIFIED: Just check hasMore and loadingMore (EXACT PROFILESCREEN PATTERN)
     const handleLoadMore = useCallback(() => {
-        if (!onEndReachedCalledDuringMomentum.current && hasMore && !loadingMore) {
-            onLoadMore();
-            onEndReachedCalledDuringMomentum.current = true;
+        if (API_CONFIG.DEBUG) {
+            console.log('🔍 Live onEndReached:', {
+                hasMore,
+                loadingMore,
+                eventsCount: events.length,
+            });
         }
-    }, [hasMore, loadingMore, onLoadMore]);
 
-    const renderItem = useCallback(({ item }: { item: EventItem }) => (
-        <View style={[
-            commonStyles.card,
-            {
-                paddingTop: spacing.xs,
-                padding: 0,
-                overflow: 'hidden',
-                marginBottom: spacing.md // ✅ Consistent spacing
+        if (hasMore && !loadingMore) {
+            if (API_CONFIG.DEBUG) {
+                console.log('✅ Calling onLoadMore');
             }
-        ]}>
-            <View style={eventStyles.header}>
-                <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
-                    {item.name}
-                </Text>
-                <Text style={commonStyles.subtitle}>
-                    {formatEventDate(item.race_date, t)}
-                </Text>
-            </View>
-            <TouchableOpacity
-                style={[commonStyles.primaryButton, { borderRadius: 0 }]}
-                onPress={() => navigation.navigate('EventDetails', {
-                    product_app_id: item.product_app_id,
-                    event_name: item.name,
-                    auto_register_id: null
-                })}
-                activeOpacity={0.8}
+            onLoadMore();
+        } else {
+            if (API_CONFIG.DEBUG) {
+                console.log('⏸️ Skipped - hasMore:', hasMore, 'loadingMore:', loadingMore);
+            }
+        }
+    }, [hasMore, loadingMore, onLoadMore, events.length]);
+
+    const renderItem = useCallback(
+        ({ item }: { item: EventItem }) => (
+            <View
+                style={[
+                    commonStyles.card,
+                    {
+                        paddingTop: spacing.xs,
+                        padding: 0,
+                        overflow: 'hidden',
+                        marginBottom: spacing.md,
+                    },
+                ]}
             >
-                <Text style={commonStyles.primaryButtonText}>
-                    {t('event:official.button')}
-                </Text>
-            </TouchableOpacity>
-        </View>
-    ), [navigation, t]);
+                <View style={eventStyles.header}>
+                    <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
+                        {item.name}
+                    </Text>
+                    <Text style={commonStyles.subtitle}>{formatEventDate(item.race_date, t)}</Text>
+                </View>
+                <TouchableOpacity
+                    style={[commonStyles.primaryButton, { borderRadius: 0 }]}
+                    onPress={() =>
+                        navigation.navigate('EventDetails', {
+                            product_app_id: item.product_app_id,
+                            event_name: item.name,
+                            auto_register_id: null,
+                        })
+                    }
+                    activeOpacity={0.8}
+                >
+                    <Text style={commonStyles.primaryButtonText}>{t('event:official.button')}</Text>
+                </TouchableOpacity>
+            </View>
+        ),
+        [navigation, t]
+    );
 
     const keyExtractor = useCallback(
         (item: EventItem, index: number) => `${item.product_app_id}-${index}`,
@@ -72,19 +91,21 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
         return (
             <ActivityIndicator
                 size="small"
-                color="#FF5722"
+                color={colors.primary}
                 style={{ marginVertical: spacing.md }}
             />
         );
     }, [loadingMore]);
 
-    const ListEmptyComponent = useCallback(() => (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing.xxl }}>
-            <Text style={commonStyles.errorText}>
-                {t('event:empty.live')}
-            </Text>
-        </View>
-    ), [t]);
+    const ListEmptyComponent = useCallback(
+        () => (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing.xxl }}>
+                <Ionicons name="radio-outline" size={48} color={colors.gray300} />
+                <Text style={commonStyles.errorText}>{t('event:empty.live')}</Text>
+            </View>
+        ),
+        [t]
+    );
 
     return (
         <FlatList
@@ -93,14 +114,12 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
             renderItem={renderItem}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
-            onMomentumScrollBegin={() => {
-                onEndReachedCalledDuringMomentum.current = false;
-            }}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
                 paddingHorizontal: spacing.md,
+                paddingTop: spacing.md,
                 paddingBottom: spacing.xl,
-                flexGrow: 1
+                flexGrow: 1,
             }}
             ListFooterComponent={ListFooterComponent}
             ListEmptyComponent={ListEmptyComponent}

@@ -3,9 +3,9 @@
     "result": "RESULTAAT",
     "route": "ROUTE"
   },
-  "finished": "Voltooid",
+  "noResults": "Nog geen afgelopen evenementen",
   "error": {
-    "title": "Gegevens laden mislukt",
+    "title": "Kan resultaten niet laden",
     "retry": "Opnieuw proberen",
     "missingId": "Evenement-ID ontbreekt"
   }

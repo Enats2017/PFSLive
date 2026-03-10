@@ -26,7 +26,7 @@ export type RootStackParamList = {
     verification_token: string;
   };
 
-  RaseResultScreen:{
+  RaceResultScreen:{
     product_app_id: number;
     product_option_value_app_id: number;
     event_name: string;
@@ -66,7 +66,7 @@ export type RegisterProps = NativeStackScreenProps<RootStackParamList, 'Register
 export type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'LoginScreen'>; 
 export type OTPVerificationScreenProps = NativeStackScreenProps<RootStackParamList, 'OTPVerificationScreen'>; 
 export type ParticipantResultPopes = NativeStackScreenProps<RootStackParamList, 'ParticipantResult'>;
-export type RaseResultScreenprops = NativeStackScreenProps<RootStackParamList, 'RaseResultScreen'>;
+export type RaceResultScreenprops = NativeStackScreenProps<RootStackParamList, 'RaceResultScreen'>;
 export type ResultListprops = NativeStackScreenProps<RootStackParamList, 'ResultList'>;
 export type ProfileScreenprops = NativeStackScreenProps<RootStackParamList, 'ProfileScreen'>;
 export type EditProfileScreenprops = NativeStackScreenProps<RootStackParamList, 'EditProfileScreen'>;

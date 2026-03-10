@@ -1,0 +1,12 @@
+{
+  "button": {
+    "result": "RÉSULTAT",
+    "route": "ITINÉRAIRE"
+  },
+  "noResults": "Aucun événement terminé pour le moment",
+  "error": {
+    "title": "Échec du chargement des résultats",
+    "retry": "Réessayer",
+    "missingId": "ID d'événement manquant"
+  }
+}
