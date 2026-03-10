@@ -1,37 +1,46 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    FlatList,
+    ActivityIndicator,
+    Dimensions,
+    StatusBar,
+    ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
-import { commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, colors } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import { homeStyles } from '../../styles/home.styles';
 import PastTab from './PastTab';
 import LiveTab from './LiveTab';
 import UpcomingTab from './UpcomingTab';
 import { eventService, EventItem } from '../../services/eventService';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useTranslation } from 'react-i18next';
 import { ParticipantEventProps } from '../../types/navigation';
 import { API_CONFIG } from '../../constants/config';
 import { tokenService } from '../../services/tokenService';
 
+const { width, height } = Dimensions.get('window');
+
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
-const { width, height } = Dimensions.get('window');
-const TAB_CONTENT_HEIGHT = height * 0.5;
+const TAB_CONTENT_HEIGHT = height * 0.5; // ✅ FIXED HEIGHT (50% of screen)
 
 const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     const { t } = useTranslation(['event', 'common']);
+    const flatListRef = useRef<FlatList>(null);
+    
     const [activeTab, setActiveTab] = useState<Tab>('Live');
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [pastEvents, setPastEvents] = useState<EventItem[]>([]);
     const [liveEvents, setLiveEvents] = useState<EventItem[]>([]);
     const [upcomingEvents, setUpcomingEvents] = useState<EventItem[]>([]);
-    const flatListRef = useRef<FlatList>(null);
-    
-    const pastSearchQueryRef = useRef('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const [loadingMorePast, setLoadingMorePast] = useState(false);
     const [loadingMoreLive, setLoadingMoreLive] = useState(false);
@@ -43,14 +52,48 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         upcoming: { page: 1, total_pages: 1 },
     });
 
+    // ✅ PREVENT DUPLICATE CALLS (EXACT PROFILESCREEN PATTERN)
+    const isInitialMount = useRef(true);
+    const isFetching = useRef(false);
+
+    // ✅ FETCH INITIAL DATA (EXACT PROFILESCREEN PATTERN)
     useFocusEffect(
         useCallback(() => {
-            fetchEvents('');
+            // Skip if already fetching
+            if (isFetching.current) {
+                if (API_CONFIG.DEBUG) {
+                    console.log('⏸️ Already fetching, skipping duplicate call');
+                }
+                return;
+            }
+
+            // Only fetch on first mount or when coming back to screen
+            if (isInitialMount.current) {
+                isInitialMount.current = false;
+                fetchEvents();
+            } else {
+                // Refresh data when returning to screen
+                fetchEvents();
+            }
+
+            return () => {
+                // Cleanup
+                isFetching.current = false;
+            };
         }, [])
     );
 
-    const fetchEvents = useCallback(async (search: string) => {
+    const fetchEvents = useCallback(async () => {
+        // Prevent duplicate calls
+        if (isFetching.current) {
+            if (API_CONFIG.DEBUG) {
+                console.log('⏸️ Fetch already in progress');
+            }
+            return;
+        }
+
         try {
+            isFetching.current = true;
             setLoading(true);
             setError(null);
 
@@ -62,7 +105,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 page_past: 1,
                 page_live: 1,
                 page_upcoming: 1,
-                filter_name_past: search,
             });
 
             setPastEvents(result.tabs.past);
@@ -73,16 +115,24 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 setPaginationInfo({
                     past: {
                         page: result.pagination.past.page,
-                        total_pages: result.pagination.past.total_pages
+                        total_pages: result.pagination.past.total_pages,
                     },
                     live: {
                         page: result.pagination.live.page,
-                        total_pages: result.pagination.live.total_pages
+                        total_pages: result.pagination.live.total_pages,
                     },
                     upcoming: {
                         page: result.pagination.upcoming.page,
-                        total_pages: result.pagination.upcoming.total_pages
+                        total_pages: result.pagination.upcoming.total_pages,
                     },
+                });
+            }
+
+            if (API_CONFIG.DEBUG) {
+                console.log('✅ Events loaded:', {
+                    past: result.tabs.past.length,
+                    live: result.tabs.live.length,
+                    upcoming: result.tabs.upcoming.length,
                 });
             }
         } catch (error: any) {
@@ -90,14 +140,11 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             setError(error.message || t('event:error.failed'));
         } finally {
             setLoading(false);
+            isFetching.current = false;
         }
     }, [t]);
 
-    const handlePastSearch = useCallback((query: string) => {
-        pastSearchQueryRef.current = query;
-        fetchEvents(query);
-    }, [fetchEvents]);
-
+    // ✅ LOAD MORE PAST (EXACT PROFILESCREEN PATTERN)
     const loadMorePast = useCallback(async () => {
         if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) {
             return;
@@ -113,31 +160,36 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
 
             const result = await eventService.getEvents({
                 page_past: nextPage,
-                filter_name_past: pastSearchQueryRef.current,
             });
 
-            setPastEvents(prev => {
-                const existingIds = new Set(prev.map(e => e.product_app_id));
-                const newItems = result.tabs.past.filter(item => !existingIds.has(item.product_app_id));
+            setPastEvents((prev) => {
+                const existingIds = new Set(prev.map((e) => e.product_app_id));
+                const newItems = result.tabs.past.filter((item) => !existingIds.has(item.product_app_id));
+                
+                if (API_CONFIG.DEBUG) {
+                    console.log(`➕ Past: Adding ${newItems.length} new events (${result.tabs.past.length - newItems.length} duplicates filtered)`);
+                }
+                
                 return [...prev, ...newItems];
             });
 
             if (result.pagination?.past) {
-                setPaginationInfo(prev => ({
+                setPaginationInfo((prev) => ({
                     ...prev,
                     past: {
                         page: nextPage,
-                        total_pages: result.pagination.past.total_pages
-                    }
+                        total_pages: result.pagination.past.total_pages,
+                    },
                 }));
             }
         } catch (error) {
-            console.log('Past: Load more failed:', error);
+            console.log('❌ Past: Load more failed:', error);
         } finally {
             setLoadingMorePast(false);
         }
     }, [loadingMorePast, paginationInfo.past.page, paginationInfo.past.total_pages]);
 
+    // ✅ LOAD MORE LIVE (EXACT PROFILESCREEN PATTERN)
     const loadMoreLive = useCallback(async () => {
         if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) {
             return;
@@ -151,30 +203,38 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 console.log(`Live: Loading page ${nextPage}`);
             }
 
-            const result = await eventService.getEvents({ page_live: nextPage });
+            const result = await eventService.getEvents({
+                page_live: nextPage,
+            });
 
-            setLiveEvents(prev => {
-                const existingIds = new Set(prev.map(e => e.product_app_id));
-                const newItems = result.tabs.live.filter(item => !existingIds.has(item.product_app_id));
+            setLiveEvents((prev) => {
+                const existingIds = new Set(prev.map((e) => e.product_app_id));
+                const newItems = result.tabs.live.filter((item) => !existingIds.has(item.product_app_id));
+                
+                if (API_CONFIG.DEBUG) {
+                    console.log(`➕ Live: Adding ${newItems.length} new events (${result.tabs.live.length - newItems.length} duplicates filtered)`);
+                }
+                
                 return [...prev, ...newItems];
             });
 
             if (result.pagination?.live) {
-                setPaginationInfo(prev => ({
+                setPaginationInfo((prev) => ({
                     ...prev,
                     live: {
                         page: nextPage,
-                        total_pages: result.pagination.live.total_pages
-                    }
+                        total_pages: result.pagination.live.total_pages,
+                    },
                 }));
             }
         } catch (error) {
-            console.log('Live: Load more failed:', error);
+            console.log('❌ Live: Load more failed:', error);
         } finally {
             setLoadingMoreLive(false);
         }
     }, [loadingMoreLive, paginationInfo.live.page, paginationInfo.live.total_pages]);
 
+    // ✅ LOAD MORE UPCOMING (EXACT PROFILESCREEN PATTERN)
     const loadMoreUpcoming = useCallback(async () => {
         if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
             return;
@@ -188,30 +248,38 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 console.log(`Upcoming: Loading page ${nextPage}`);
             }
 
-            const result = await eventService.getEvents({ page_upcoming: nextPage });
+            const result = await eventService.getEvents({
+                page_upcoming: nextPage,
+            });
 
-            setUpcomingEvents(prev => {
-                const existingIds = new Set(prev.map(e => e.product_app_id));
-                const newItems = result.tabs.upcoming.filter(item => !existingIds.has(item.product_app_id));
+            setUpcomingEvents((prev) => {
+                const existingIds = new Set(prev.map((e) => e.product_app_id));
+                const newItems = result.tabs.upcoming.filter((item) => !existingIds.has(item.product_app_id));
+                
+                if (API_CONFIG.DEBUG) {
+                    console.log(`➕ Upcoming: Adding ${newItems.length} new events (${result.tabs.upcoming.length - newItems.length} duplicates filtered)`);
+                }
+                
                 return [...prev, ...newItems];
             });
 
             if (result.pagination?.upcoming) {
-                setPaginationInfo(prev => ({
+                setPaginationInfo((prev) => ({
                     ...prev,
                     upcoming: {
                         page: nextPage,
-                        total_pages: result.pagination.upcoming.total_pages
-                    }
+                        total_pages: result.pagination.upcoming.total_pages,
+                    },
                 }));
             }
         } catch (error) {
-            console.log('Upcoming: Load more failed:', error);
+            console.log('❌ Upcoming: Load more failed:', error);
         } finally {
             setLoadingMoreUpcoming(false);
         }
     }, [loadingMoreUpcoming, paginationInfo.upcoming.page, paginationInfo.upcoming.total_pages]);
 
+    // ✅ TAB HANDLERS (EXACT PROFILESCREEN PATTERN)
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
         setActiveTab(tab);
@@ -232,23 +300,25 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             }
             navigation.navigate('RegisterScreen');
         } catch (error) {
-            console.log('Token check failed:', error);
+            console.log('❌ Token check failed:', error);
             navigation.navigate('RegisterScreen');
         }
     }, [navigation]);
 
+    // ✅ LOADING STATE
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
                 <AppHeader showLogo={true} />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color="#FF5722" />
+                    <ActivityIndicator size="large" color={colors.primary} />
                 </View>
             </SafeAreaView>
         );
     }
 
+    // ✅ ERROR STATE
     if (error) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -258,7 +328,8 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                     <Text style={commonStyles.errorText}>{error}</Text>
                     <TouchableOpacity
                         style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-                        onPress={() => fetchEvents('')}
+                        onPress={fetchEvents}
+                        activeOpacity={0.8}
                     >
                         <Text style={commonStyles.primaryButtonText}>
                             {t('event:error.retry')}
@@ -283,6 +354,8 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                     <View style={eventStyles.section}>
                         <Text style={commonStyles.title}>{t('event:official.title')}</Text>
                     </View>
+
+                    {/* ✅ TAB BAR */}
                     <View style={eventStyles.tabBar}>
                         {TABS.map((tab) => (
                             <TouchableOpacity
@@ -290,10 +363,12 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                                 style={eventStyles.tabItem}
                                 onPress={() => handleTabPress(tab)}
                             >
-                                <Text style={[
-                                    commonStyles.subtitle,
-                                    activeTab === tab && eventStyles.activeTabText
-                                ]}>
+                                <Text
+                                    style={[
+                                        commonStyles.subtitle,
+                                        activeTab === tab && eventStyles.activeTabText,
+                                    ]}
+                                >
                                     {t(`event:live.${tab}`)}
                                 </Text>
                                 {activeTab === tab && (
@@ -307,6 +382,8 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                             </TouchableOpacity>
                         ))}
                     </View>
+
+                    {/* ✅ TAB CONTENT - FIXED HEIGHT */}
                     <View style={{ height: TAB_CONTENT_HEIGHT }}>
                         <FlatList
                             ref={flatListRef}
@@ -331,7 +408,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                                             onLoadMore={loadMorePast}
                                             loadingMore={loadingMorePast}
                                             hasMore={paginationInfo.past.page < paginationInfo.past.total_pages}
-                                            onSearch={handlePastSearch}
                                         />
                                     )}
                                     {item === 'Live' && (
@@ -355,18 +431,21 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                         />
                     </View>
 
+                    {/* ✅ PERSONAL EVENT SECTION */}
                     <View style={[eventStyles.section, { marginBottom: 0, marginTop: spacing.sm }]}>
                         <Text style={commonStyles.title}>{t('event:personal.title')}</Text>
                     </View>
-                    <View style={[
-                        commonStyles.card,
-                        {
-                            marginHorizontal: spacing.md,
-                            padding: 0,
-                            overflow: 'hidden',
-                            marginBottom: spacing.xl
-                        }
-                    ]}>
+                    <View
+                        style={[
+                            commonStyles.card,
+                            {
+                                marginHorizontal: spacing.md,
+                                padding: 0,
+                                overflow: 'hidden',
+                                marginBottom: spacing.xl,
+                            },
+                        ]}
+                    >
                         <View style={eventStyles.header}>
                             <Text style={[homeStyles.heading, { marginBottom: 0 }]}>
                                 {t('event:personal.description')}
@@ -375,6 +454,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                         <TouchableOpacity
                             style={[commonStyles.primaryButton, { borderRadius: 0 }]}
                             onPress={handlePersonalEventPress}
+                            activeOpacity={0.8}
                         >
                             <Text style={commonStyles.primaryButtonText}>{t('personal.button')}</Text>
                         </TouchableOpacity>
