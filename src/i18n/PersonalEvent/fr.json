@@ -1,46 +1,49 @@
 {
-  "title": "Créer un Nouvel Événement",
-  "editTitle": "Mettre à Jour Votre Événement",
-  "name": "Nom de l'Événement",
-  "type": "Type d'Événement",
-  "date": "Date de l'Événement",
-  "startTime": "Heure de Début",
-  "fileInfo": "Le téléchargement d'un fichier GPX est optionnel mais fortement recommandé pour un suivi précis",
+  "title": "Créer un nouvel événement",
+  "editTitle": "Mettre à jour votre événement",
+  "name": "Nom de l'événement",
+  "type": "Type d'événement",
+  "date": "Date de l'événement",
+  "startTime": "Heure de départ",
+  "fileInfo": "Le téléchargement d'un fichier GPX est facultatif mais fortement recommandé pour un suivi précis",
   "button": {
-    "gpx": "Télécharger un Fichier GPX",
+    "gpx": "Télécharger un fichier GPX",
     "save": "SOUMETTRE L'ÉVÉNEMENT"
   },
   "success": {
     "title": "Succès !",
-    "message": "Votre événement a été créé avec succès"
+    "message": "Votre événement a été créé avec succès",
+    "editMessage": "Votre événement a été mis à jour avec succès"
   },
   "errors": {
-    "nameRequired": "Veuillez saisir un nom d'événement",
+    "nameRequired": "Veuillez entrer un nom d'événement",
     "eventTypeRequired": "Veuillez sélectionner un type d'événement",
     "dateRequired": "Veuillez sélectionner une date",
     "invalidDate": "Format de date invalide. Veuillez utiliser une date valide",
     "pastDateNotAllowed": "Impossible de sélectionner des dates passées. Veuillez choisir aujourd'hui ou une date future",
-    "startTimeRequired": "Veuillez sélectionner une heure de début",
-    "invalidStartTime": "Format d'heure de début invalide. Veuillez utiliser HH:MM",
+    "startTimeRequired": "Veuillez sélectionner une heure de départ",
+    "invalidStartTime": "Format d'heure invalide. Veuillez utiliser HH:MM",
     "fileTooLarge": "La taille du fichier doit être inférieure à {{size}}MB",
     "invalidFileType": "Veuillez sélectionner un fichier GPX valide (.gpx ou .xml)",
     "filePickFailed": "Échec de la sélection du fichier. Veuillez réessayer",
     "createFailed": "Échec de la création de l'événement. Veuillez réessayer",
-    "createFailedTitle": "Création Échouée",
+    "createFailedTitle": "Échec de la création",
     "createFailedMessage": "Impossible de créer votre événement. Veuillez réessayer plus tard.",
-    "customerInvalidTitle": "Problème de Compte",
+    "customerInvalidTitle": "Problème de compte",
     "customerInvalidMessage": "Votre compte n'est pas correctement configuré. Veuillez contacter le support.",
-    "validationErrorTitle": "Données Invalides",
+    "validationErrorTitle": "Données invalides",
     "validationErrorMessage": "Certains champs contiennent des données invalides. Veuillez vérifier et réessayer.",
-    "networkErrorTitle": "Erreur Réseau",
-    "networkErrorMessage": "Impossible de se connecter au serveur. Vérifiez votre connexion Internet et réessayez."
+    "networkErrorTitle": "Erreur réseau",
+    "networkErrorMessage": "Impossible de se connecter au serveur. Veuillez vérifier votre connexion Internet et réessayer.",
+    "loadFailed": "Échec du chargement des détails de l'événement",
+    "updateFailed": "Échec de la mise à jour de l'événement"
   },
   "file": {
-    "uploadTitle": "Appuyez pour Télécharger un Fichier GPX",
+    "uploadTitle": "Appuyez pour télécharger un fichier GPX",
     "uploadSubtitle": "Format pris en charge : .gpx (Max {{size}}MB)",
-    "infoTitle": "Info Fichier",
+    "infoTitle": "Informations sur le fichier",
     "infoMessage": "Nom : {{name}}\nTaille : {{size}} KB",
-    "removeTitle": "Supprimer le Fichier",
+    "removeTitle": "Supprimer le fichier",
     "removeMessage": "Êtes-vous sûr de vouloir supprimer ce fichier ?",
     "removeButton": "Supprimer",
     "removed": "Fichier supprimé",
@@ -48,8 +51,8 @@
     "undoRemove": "Annuler la suppression"
   },
   "eventTypes": {
-    "organizedWithResults": "Événement organisé avec classement / résultats",
-    "organizedWithoutResults": "Événement organisé sans classement / résultats",
-    "training": "Session d'entraînement"
+    "organizedWithResults": "Événement organisé avec classement/résultats",
+    "organizedWithoutResults": "Événement organisé sans classement/résultats",
+    "training": "Séance d'entraînement"
   }
 }

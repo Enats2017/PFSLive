@@ -1,5 +1,5 @@
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
-import axios, { AxiosError } from 'axios';
+import { apiClient } from './api';
 
 // ✅ TYPES
 export interface PersonalEventFile {
@@ -25,20 +25,13 @@ export interface PersonalEventResponse {
   data?: any;
   error?: string;
   is_first_tracking?: number;
-}
-
-// ✅ API WRAPPER RESPONSE (NESTED STRUCTURE)
-interface PersonalEventApiResponse {
-  success: boolean;
-  data: PersonalEventResponse; // ✅ NESTED DATA
-  error: string | null;
+  event?: any;
 }
 
 // ✅ CONSTANTS
 const TIME_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_MIME_TYPE = 'application/gpx+xml';
-const API_TIMEOUT = 60000;
 const VALID_EVENT_TYPES = [1, 2, 3] as const;
 
 // ✅ VALIDATION FUNCTIONS
@@ -84,7 +77,9 @@ export const formatTimeHHMM = (time: string): string => {
 };
 
 export const formatFileSize = (bytes: number): string => {
-  return `${(bytes / 1024).toFixed(2)} KB`;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1_048_576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1_048_576).toFixed(1)} MB`;
 };
 
 /**
@@ -121,23 +116,28 @@ export const getTimezoneOffsetString = (): string => {
   return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
+// ✅ BUILD FORM DATA
 const buildFormData = (payload: PersonalEventPayload): FormData => {
   const { name, eventTypeId, date, startTime, timezone, selectedFile } = payload;
   
   const formData = new FormData();
   
+  // ✅ REQUIRED FIELDS
   formData.append('name', name.trim());
   formData.append('race_date', date);
   
+  // ✅ OPTIONAL: EVENT TYPE
   if (eventTypeId !== null && eventTypeId !== undefined) {
     formData.append('event_type', String(eventTypeId));
   }
   
+  // ✅ OPTIONAL: START TIME
   if (startTime?.trim()) {
     const formattedTime = formatTimeHHMM(startTime);
     formData.append('start_hour', formattedTime);
   }
   
+  // ✅ OPTIONAL: TIMEZONE
   if (timezone) {
     formData.append('timezone', timezone);
     
@@ -147,6 +147,7 @@ const buildFormData = (payload: PersonalEventPayload): FormData => {
     }
   }
   
+  // ✅ OPTIONAL: GPX FILE
   if (selectedFile) {
     const fileData: any = {
       uri: selectedFile.uri,
@@ -168,14 +169,7 @@ const buildFormData = (payload: PersonalEventPayload): FormData => {
   return formData;
 };
 
-const extractErrorMessage = (error: AxiosError): string => {
-  if (error.response?.data) {
-    const data = error.response.data as any;
-    return data.message || data.error || error.message;
-  }
-  return error.message || 'API_ERROR';
-};
-
+// ✅ VALIDATE PAYLOAD
 const validatePayload = (payload: PersonalEventPayload): void => {
   const { name, eventTypeId, date, startTime } = payload;
   
@@ -204,7 +198,7 @@ const validatePayload = (payload: PersonalEventPayload): void => {
   }
 };
 
-// ✅ MAIN API FUNCTION
+// ✅ MAIN API FUNCTION (FIXED FOR FLAT RESPONSE)
 export const createPersonalEvent = async (
   payload: PersonalEventPayload
 ): Promise<PersonalEventResponse> => {
@@ -220,64 +214,73 @@ export const createPersonalEvent = async (
       });
     }
     
+    // ✅ VALIDATE BEFORE SENDING
     validatePayload(payload);
     
     const formData = buildFormData(payload);
     const headers = await API_CONFIG.getMutiForm();
     
-    const response = await axios.post<PersonalEventApiResponse>(
+    // ✅ USE CONSISTENT apiClient
+    const response = await apiClient.post<PersonalEventResponse>(
       getApiEndpoint(API_CONFIG.ENDPOINTS.Personal_Event),
       formData,
       {
         headers,
-        timeout: API_TIMEOUT,
+        timeout: API_CONFIG.TIMEOUT,
       }
     );
     
     if (API_CONFIG.DEBUG) {
       console.log('📡 Full API Response:', response.data);
-      console.log('📡 Response Structure:', {
-        outerSuccess: response.data.success,
-        outerError: response.data.error,
-        innerData: response.data.data,
-      });
     }
     
-    // ✅ EXTRACT INNER DATA (ACTION IS NESTED)
-    const innerData = response.data.data || {};
+    // ✅ API RETURNS FLAT STRUCTURE - USE DIRECTLY
+    const data = response.data;
     
     if (API_CONFIG.DEBUG) {
-      console.log('✅ Inner Data:', {
-        action: innerData.action,
-        success: innerData.success,
-        message: innerData.message,
-        is_first_tracking: innerData.is_first_tracking,
+      console.log('✅ Response Data:', {
+        action: data.action,
+        is_first_tracking: data.is_first_tracking,
+        event: data.event,
       });
     }
     
-    // ✅ RETURN FLATTENED RESPONSE WITH ACTION AT TOP LEVEL
+    // ✅ RETURN RESPONSE AS-IS (ALREADY FLAT)
     return {
-      success: response.data.success,
-      action: innerData.action,
-      message: innerData.message || response.data.error,
-      data: innerData.data,
-      is_first_tracking: innerData.is_first_tracking,
+      success: true, // ✅ Assume success if no error thrown
+      action: data.action,
+      event: data.event,
+      is_first_tracking: data.is_first_tracking,
+      data: data,
     };
-  } catch (error) {
+  } catch (error: any) {
     if (API_CONFIG.DEBUG) {
       console.error('❌ Error creating personal event:', error);
     }
     
-    if (error instanceof Error && error.message.startsWith('VALIDATION_ERROR:')) {
+    // ✅ PRESERVE VALIDATION ERRORS
+    if (error.message?.startsWith('VALIDATION_ERROR:')) {
       throw error;
     }
     
-    if (axios.isAxiosError(error)) {
-      const errorMessage = extractErrorMessage(error);
-      throw new Error(errorMessage);
+    // ✅ HANDLE API ERRORS
+    if (error.response?.data) {
+      const errorData = error.response.data;
+      
+      if (API_CONFIG.DEBUG) {
+        console.log('❌ API Error Response:', errorData);
+      }
+      
+      // ✅ RETURN ERROR AS RESPONSE
+      return {
+        success: false,
+        action: errorData.action || 'error',
+        message: errorData.message || errorData.error,
+        error: errorData.error,
+      };
     }
     
-    throw error;
+    throw new Error('API_ERROR');
   }
 };
 

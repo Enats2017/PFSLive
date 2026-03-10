@@ -12,7 +12,7 @@ export interface AthleteProfile {
 
 export interface AthleteEvent {
   participant_app_id: number;
-  product_option_value_app_id:number;
+  product_option_value_app_id: number;
   id: number;
   name: string;
   race_date_formatted: string;
@@ -62,13 +62,19 @@ interface EventsData {
 }
 
 export const eventService = {
+  /**
+   * Fetch athlete profile with events
+   * @param pagination - Page numbers for past and live events
+   * @param targetId - Optional customer ID (defaults to current user)
+   * @param bustCache - If true, adds timestamp to bypass cache
+   */
   async getAthleteProfile(
     pagination: PaginationParams = {
       page_past: 1,
       page_live: 1,
     },
     targetId?: number,
-     bustCache?: boolean,
+    bustCache: boolean = false // ✅ CACHE BUSTING PARAMETER
   ): Promise<AthleteProfileResponse> {
     try {
       const language_id = getCurrentLanguageId();
@@ -81,32 +87,48 @@ export const eventService = {
           customerId,
           language_id,
           pagination,
+          bustCache, // ✅ LOG CACHE BUST FLAG
         });
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.ATHLETE_PROFILE);
       const headers = await API_CONFIG.getHeaders();
 
-      const requestBody = {
+      // ✅ BUILD REQUEST BODY
+      const requestBody: any = {
         customer_app_id: customerId,
         language_id: language_id,
         page_past: pagination.page_past || 1,
         page_live: pagination.page_live || 1,
       };
 
+      // ✅ ADD CACHE BUSTING TIMESTAMP
+      if (bustCache) {
+        requestBody._t = Date.now();
+        
+        if (API_CONFIG.DEBUG) {
+          console.log("🔄 Cache busting enabled with timestamp:", requestBody._t);
+        }
+      }
+
       const response = await apiClient.post<EventsData>(url, requestBody, {
         headers,
+        timeout: API_CONFIG.TIMEOUT,
       });
-      
+
       if (response.success && response.data) {
         const eventsData = response.data;
 
-        // ✅ Modern format (initial load - has profile + tabs + pagination)
+        // ✅ MODERN FORMAT (initial load - has profile + tabs + pagination)
         if (eventsData.profile && eventsData.tabs && eventsData.pagination) {
           if (API_CONFIG.DEBUG) {
             console.log("✅ Profile loaded (modern format):", {
               past: eventsData.tabs.past.length,
               live: eventsData.tabs.live.length,
+              pagination: {
+                past: eventsData.pagination.past,
+                live: eventsData.pagination.live,
+              },
             });
           }
 
@@ -117,10 +139,15 @@ export const eventService = {
           };
         }
 
+        // ✅ LEGACY FORMAT (pagination requests - flat structure)
         if (eventsData.pagination) {
           if (API_CONFIG.DEBUG) {
-            console.log("✅ Profile loaded (legacy format)");
+            console.log("✅ Profile loaded (legacy format):", {
+              past: eventsData.past?.length || 0,
+              live: eventsData.live?.length || 0,
+            });
           }
+
           const flatPagination = eventsData.pagination as unknown as Pagination;
 
           return {
@@ -135,19 +162,30 @@ export const eventService = {
               live: eventsData.live || [],
             },
             pagination: {
-              past: flatPagination, // ✅ same pagination for all tabs
+              past: flatPagination, // ✅ Same pagination for all tabs
               live: flatPagination,
             },
           };
         }
 
+        // ✅ ERROR: Invalid response
+        if (API_CONFIG.DEBUG) {
+          console.error("❌ Invalid response format:", eventsData);
+        }
         throw new Error("Invalid response format: missing pagination data");
       }
 
+      // ✅ ERROR: API returned error
+      if (API_CONFIG.DEBUG) {
+        console.error("❌ API error:", response.error);
+      }
       throw new Error(response.error || "Failed to fetch athlete profile");
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        console.error("❌ Error fetching athlete profile:", error.message);
+        console.error("❌ Error fetching athlete profile:", {
+          message: error.message,
+          response: error.response?.data,
+        });
       }
       throw error;
     }

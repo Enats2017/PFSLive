@@ -26,7 +26,7 @@ const { width, height } = Dimensions.get('window');
 
 type Tab = 'Past' | 'Live';
 const TABS: Tab[] = ['Past', 'Live'];
-const LIVE_INDEX = TABS.indexOf('Live'); // 1
+const LIVE_INDEX = TABS.indexOf('Live');
 const TAB_CONTENT_HEIGHT = height * 0.5;
 
 interface PaginationState {
@@ -43,11 +43,12 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const { t } = useTranslation(['profile', 'common']);
     const flatListRef = useRef<FlatList>(null);
 
-    // ✅ Only fetch once — don't re-fetch every time screen is focused
-    const hasFetchedOnce = useRef(false);
+    // ✅ PREVENT DUPLICATE CALLS (EXACT PARTICIPANTEVENT PATTERN)
+    const isInitialMount = useRef(true);
     const isFetching = useRef(false);
 
     const targetId = route.params?.customer_app_id;
+    const fromEdit = route.params?.fromEdit;
 
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [profile, setProfile] = useState<AthleteProfile | null>(null);
@@ -59,17 +60,29 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const [loadingMorePast, setLoadingMorePast] = useState(false);
     const [pagination, setPagination] = useState<PaginationState>(INITIAL_PAGINATION);
 
-    // ── fetch profile ──
-    const fetchProfile = useCallback(async () => {
-        if (isFetching.current) return;
-        isFetching.current = true;
-        setLoading(true);
-        setError(null);
+    // ✅ FETCH PROFILE (with optional cache busting)
+    const fetchProfile = useCallback(async (bustCache: boolean = false) => {
+        // ✅ GUARD AGAINST CONCURRENT CALLS
+        if (isFetching.current) {
+            if (API_CONFIG.DEBUG) {
+                console.log('⏸️ Already fetching, skipping duplicate call');
+            }
+            return;
+        }
 
         try {
+            isFetching.current = true;
+            setLoading(true);
+            setError(null);
+
+            if (API_CONFIG.DEBUG) {
+                console.log('📡 Fetching profile:', { targetId, bustCache });
+            }
+
             const result = await eventService.getAthleteProfile(
                 { page_live: 1, page_past: 1 },
                 targetId,
+                bustCache
             );
 
             setProfile(result.profile);
@@ -89,8 +102,16 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                 });
             }
 
-            hasFetchedOnce.current = true;
+            if (API_CONFIG.DEBUG) {
+                console.log('✅ Profile loaded:', {
+                    live: result.tabs.live.length,
+                    past: result.tabs.past.length,
+                });
+            }
         } catch (err: any) {
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Profile fetch failed:', err);
+            }
             setError(err?.message || t('profile:errors.load_profile_failed'));
         } finally {
             setLoading(false);
@@ -98,22 +119,48 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         }
     }, [targetId, t]);
 
-    // ✅ Fetch only on first mount
-    // ✅ On return from another screen — re-sync FlatList scroll to fix tab desync
+    // ✅ FETCH INITIAL DATA (EXACT PARTICIPANTEVENT PATTERN)
     useFocusEffect(
         useCallback(() => {
-            if (!hasFetchedOnce.current) {
-                fetchProfile();
-            } else {
+            // ✅ Skip if already fetching
+            if (isFetching.current) {
+                if (API_CONFIG.DEBUG) {
+                    console.log('⏸️ Already fetching, skipping duplicate call');
+                }
+                return;
+            }
+
+            // ✅ PRIORITY 1: Cache busting (from edit screens)
+            if (fromEdit) {
+                if (API_CONFIG.DEBUG) {
+                    console.log('🔄 Coming from edit screen - busting cache');
+                }
+                fetchProfile(true);
+            }
+            // ✅ PRIORITY 2: Initial mount
+            else if (isInitialMount.current) {
+                isInitialMount.current = false;
+                fetchProfile(false);
+            }
+            // ✅ PRIORITY 3: Return from navigation - just sync scroll
+            else {
+                if (API_CONFIG.DEBUG) {
+                    console.log('🔄 Returning to screen - syncing scroll only');
+                }
                 const index = TABS.indexOf(activeTab);
                 setTimeout(() => {
                     flatListRef.current?.scrollToIndex({ index, animated: false });
                 }, 50);
             }
-        }, [fetchProfile, activeTab])
+
+            return () => {
+                // ✅ Cleanup
+                isFetching.current = false;
+            };
+        }, [fetchProfile, activeTab, fromEdit])
     );
 
-    // ── load more live ──
+    // ✅ LOAD MORE LIVE
     const loadMoreLive = useCallback(async () => {
         if (loadingMoreLive || pagination.live.page >= pagination.live.total_pages) return;
 
@@ -121,9 +168,13 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         setLoadingMoreLive(true);
 
         try {
+            if (API_CONFIG.DEBUG) {
+                console.log(`📡 Loading more live events: page ${nextPage}`);
+            }
+
             const result = await eventService.getAthleteProfile(
                 { page_live: nextPage },
-                targetId,
+                targetId
             );
 
             setLiveEvents(prev => {
@@ -131,6 +182,11 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                 const newItems = result.tabs.live.filter(
                     item => !existingIds.has(item.participant_app_id)
                 );
+
+                if (API_CONFIG.DEBUG) {
+                    console.log(`➕ Live: Adding ${newItems.length} new events`);
+                }
+
                 return [...prev, ...newItems];
             });
 
@@ -141,13 +197,15 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                 }));
             }
         } catch (err) {
-            if (API_CONFIG.DEBUG) console.warn('Live load more failed:', err);
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Live load more failed:', err);
+            }
         } finally {
             setLoadingMoreLive(false);
         }
     }, [loadingMoreLive, pagination.live.page, pagination.live.total_pages, targetId]);
 
-    // ── load more past ──
+    // ✅ LOAD MORE PAST
     const loadMorePast = useCallback(async () => {
         if (loadingMorePast || pagination.past.page >= pagination.past.total_pages) return;
 
@@ -155,9 +213,13 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         setLoadingMorePast(true);
 
         try {
+            if (API_CONFIG.DEBUG) {
+                console.log(`📡 Loading more past events: page ${nextPage}`);
+            }
+
             const result = await eventService.getAthleteProfile(
                 { page_past: nextPage },
-                targetId,
+                targetId
             );
 
             setPastEvents(prev => {
@@ -165,6 +227,11 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                 const newItems = result.tabs.past.filter(
                     item => !existingIds.has(item.participant_app_id)
                 );
+
+                if (API_CONFIG.DEBUG) {
+                    console.log(`➕ Past: Adding ${newItems.length} new events`);
+                }
+
                 return [...prev, ...newItems];
             });
 
@@ -175,20 +242,21 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                 }));
             }
         } catch (err) {
-            if (API_CONFIG.DEBUG) console.warn('Past load more failed:', err);
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Past load more failed:', err);
+            }
         } finally {
             setLoadingMorePast(false);
         }
     }, [loadingMorePast, pagination.past.page, pagination.past.total_pages, targetId]);
 
-    // ── tab press: update state + scroll FlatList ──
+    // ✅ TAB HANDLERS (EXACT PARTICIPANTEVENT PATTERN - simple, no guards)
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
         setActiveTab(tab);
         flatListRef.current?.scrollToIndex({ index, animated: true });
     }, []);
 
-    // ── swipe: sync tab indicator with scroll position ──
     const handleSwipe = useCallback((e: any) => {
         const index = Math.round(e.nativeEvent.contentOffset.x / width);
         if (TABS[index] && TABS[index] !== activeTab) {
@@ -204,7 +272,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                     onLoadMore={loadMoreLive}
                     loadingMore={loadingMoreLive}
                     hasMore={pagination.live.page < pagination.live.total_pages}
-                    profile={profile}
+                    profile={profile ?? undefined}
                 />
             ) : (
                 <PastTab
@@ -212,7 +280,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                     onLoadMore={loadMorePast}
                     loadingMore={loadingMorePast}
                     hasMore={pagination.past.page < pagination.past.total_pages}
-                    profile={profile}
+                    profile={profile ?? undefined}
                 />
             )}
         </View>
@@ -223,6 +291,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         pagination, profile,
     ]);
 
+    // ✅ LOADING STATE
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -235,6 +304,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         );
     }
 
+    // ✅ ERROR STATE
     if (error) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -244,7 +314,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                     <Text style={commonStyles.errorText}>{error}</Text>
                     <TouchableOpacity
                         style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-                        onPress={fetchProfile}
+                        onPress={() => fetchProfile(true)}
                         activeOpacity={0.8}
                     >
                         <Text style={commonStyles.primaryButtonText}>
@@ -261,7 +331,8 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
 
-            <ProfileCard profile={profile} fetchError={error} />
+            {/* ✅ PASS profile AND error DIRECTLY - ProfileCard accepts null */}
+            <ProfileCard profile={profile ?? null} fetchError={error ?? ''} />
 
             {/* TAB BAR */}
             <View style={detailsStyles.tabBar}>
