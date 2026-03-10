@@ -24,8 +24,8 @@ import EditPersonalEvent from '../screens/PersonalEventScreen/EditPersonalEvent'
 
 import ResultDetails from '../screens/ResultDetailsScreen/ResultDetails';
 import FollowerEvent from '../screens/FollowerEventList/FollowerEvent';
-import FollowerProfile from '../screens/FollowerProfile/FollowerProfile';
-import followerDetails from '../screens/FollowerDetails/FollowerDetails';
+
+ import FollowDetails from '../screens/FollowerDetailsList/FollowerDetails';
 
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -127,17 +127,11 @@ export const AppNavigator: React.FC = () => {
             gestureEnabled: false,
           }}
         />
-         <Stack.Screen 
-          name="FollowerProfile" 
-          component={FollowerProfile}
-          options={{
-            gestureEnabled: false,
-          }}
-        />
+      
 
         <Stack.Screen 
-          name="followerDetails" 
-          component={followerDetails}
+          name="FollowDetails" 
+          component={FollowDetails}
           options={{
             gestureEnabled: false,
           }}

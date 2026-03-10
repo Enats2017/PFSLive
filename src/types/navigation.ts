@@ -36,7 +36,7 @@ export type RootStackParamList = {
   product_option_value_app_id: number;
 };
 
-  ProfileScreen:undefined;
+  ProfileScreen: { customer_app_id?: number };
 
   EditProfileScreen:undefined;
 
@@ -47,11 +47,12 @@ export type RootStackParamList = {
   ResultDetails:undefined;
   FollowerEvent:undefined;
 
-  FollowerProfile: { customer_app_id: number };
-  followerDetails:{
-    product_app_id: string | number;
+  
+    
+  FollowDetails:{
+     product_app_id: string | number;
       event_name: string;
-      auto_register_id: number | null;
+
   }
  
 };
@@ -72,7 +73,7 @@ export type EditProfileScreenprops = NativeStackScreenProps<RootStackParamList, 
 export type EditPersonalEventpops = NativeStackScreenProps<RootStackParamList,'EditPersonalEvent'>;
 export type ResultDetailspops = NativeStackScreenProps<RootStackParamList,'ResultDetails'>;
 export type FollowerEventpops = NativeStackScreenProps<RootStackParamList,'FollowerEvent'>;
-export type FollowerProfilepops = NativeStackScreenProps<RootStackParamList,'FollowerProfile'>;
-export type followerDetailspops = NativeStackScreenProps<RootStackParamList,'followerDetails'>;
+
+export type followerDetailspops = NativeStackScreenProps<RootStackParamList,'FollowDetails'>;
 
 

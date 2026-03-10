@@ -1,0 +1,43 @@
+{
+
+    "live": {
+    "Past": "Past",
+    "Live": "Live",
+    "Upcoming": "Upcoming"
+  },
+
+   "official": {
+    "title": "OFFICIAL PARTNER EVENTS"
+  
+  },
+
+
+  "searching": "Searching...",
+  "empty": {
+    "past": "No past events found.",
+    "live": "No live events at the moment.",
+    "upcoming": "No upcoming events found.",
+    "searchNoResults": "No events match your search"
+  },
+  "personal": {
+    "title": "FIND AN ATHLETE",
+    "description": "Racing an event or planning a training session that is not an official partner event? Create it here!",
+    "button": "CREATE PERSONAL EVENT"
+  },
+  "error": {
+    "failed": "Failed to load events",
+    "retry": "Retry"
+  },
+
+    "button":{
+    "result":"VIEW RESULT",
+    "follower":"FOLLOW" ,
+    "show_event":"SHOW EVENT" 
+      
+    }
+        
+  
+
+  
+
+}

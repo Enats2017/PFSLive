@@ -10,38 +10,61 @@ import { profileStyles } from '../../styles/Profile.styles';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditPersonalEvent'>;
 
-export const EventCard = React.memo(({ item }: { item: AthleteEvent }) => {
+export const EventCard = React.memo(({ item, isOwnProfile = true }: {
+    item: AthleteEvent
+    isOwnProfile?: boolean
+}) => {
     const { t } = useTranslation(['profile']);
     const navigation = useNavigation<NavigationProp>();
 
     const handlePress = useCallback(() => {
+        if (!isOwnProfile) {
+            navigation.navigate('FollowDetails', {
+                product_app_id: item.id,
+                event_name: item.name,
+            });
+            return;
+        }
         if (item.event_source === 'custom') {
             navigation.navigate('EditPersonalEvent', { eventId: item.id });
             return;
         }
-
-        navigation.navigate('EventDetails', {
-            product_app_id: item.id,
-            event_name: item.name,
-            auto_register_id: null,
-        });
-    }, [item.event_source, item.id, item.name, navigation]);
+        if (item.event_source === 'partner') {
+            navigation.navigate('EventDetails', {
+                product_app_id: item.id,
+                event_name: item.name,
+                auto_register_id: null,
+            });
+        }
+    }, [item, isOwnProfile, navigation]);
 
     const getButtonText = useCallback(() => {
+        if (!isOwnProfile) {
+            if (item.race_status === 'in_progress') {
+                return t('profile:buttons.live_tracking_progress');
+            }
+            if (item.race_status === 'not_started') {
+                return t('profile:buttons.live_tracking_soon');
+            }
+            if (item.race_status === 'finished') {
+                return t('profile:buttons.live_tracking_ended');
+            }
+            
+        }
         if (item.event_source === 'custom') {
             return t('profile:buttons.edit_personal_event');
         }
         if (item.event_source === 'partner') {
             return t('profile:buttons.edit_live_tracking_event');
         }
-        if (item.race_status === 'in_progress') {
-            return t('profile:buttons.live_tracking_progress');
-        }
-        if (item.race_status === 'not_started') {
-            return t('profile:buttons.live_tracking_soon');
-        }
-        return t('profile:buttons.enable_gps');
-    }, [item.event_source, item.race_status, t]);
+        // if (item.race_status === 'in_progress') {
+        //     return t('profile:buttons.live_tracking_progress');
+        // }
+        // if (item.race_status === 'not_started') {
+        //     return t('profile:buttons.live_tracking_soon');
+        // }
+
+    }, [item.event_source, item.race_status, isOwnProfile, t]);
 
     return (
         <View style={[commonStyles.card, profileStyles.eventCard]}>

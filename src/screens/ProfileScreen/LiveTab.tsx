@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, colors } from '../../styles/common.styles';
 import { profileStyles } from '../../styles/Profile.styles';
-import { AthleteEvent } from '../../services/athleteProfileService';
+import { AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { EventCard } from './EventCardLive';
 import { API_CONFIG } from '../../constants/config';
 
@@ -13,10 +13,13 @@ interface LiveTabProps {
     onLoadMore: () => void;
     loadingMore: boolean;
     hasMore: boolean;
+    profile?:    AthleteProfile
 }
 
-const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
+const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasMore,profile }) => {
     const { t } = useTranslation(['profile']);
+    console.log("111",profile);
+    
 
     // ✅ SIMPLIFIED: Just check hasMore and loadingMore
     const handleLoadMore = useCallback(() => {
@@ -41,9 +44,14 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
     }, [hasMore, loadingMore, onLoadMore, events.length]);
 
     const renderItem = useCallback(
-        ({ item }: { item: AthleteEvent }) => <EventCard item={item} />,
-        []
-    );
+    ({ item }: { item: AthleteEvent }) => (
+        <EventCard 
+            item={item} 
+            isOwnProfile={profile?.is_own_profile === 1}
+        />
+    ),
+    [profile]  // ← add profile to dependencies
+);
 
     const keyExtractor = useCallback(
         (item: AthleteEvent, index: number) => `${item.id}-${index}`,

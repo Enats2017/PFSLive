@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 
 import { AppHeader } from '../../components/common/AppHeader';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
@@ -31,6 +32,7 @@ const MB = MAX_FILE_SIZE / 1_048_576;
 const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation }) => {
   const { eventId } = route.params;
   const { t } = useTranslation(['personal', 'common']);
+
 
   const {
     formData, errors, eventTypeOptions,
@@ -111,7 +113,9 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
       });
 
       toastSuccess(t('personal:success.title'), response.message || t('personal:success.editMessage'));
-      navigation.goBack();
+      navigation.navigate('ProfileScreen', {
+        customer_app_id: eventId
+      });
     } catch (err: any) {
       if (API_CONFIG.DEBUG) console.error('❌ Update event:', err?.message);
       toastError(
@@ -148,14 +152,14 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
       <AppHeader showLogo />
 
       <KeyboardAvoidingView
-        style={{flex:1}}
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
         <ScrollView
-          
+
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{flexGrow:1}}
+          contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
           <View style={personalStyles.section}>

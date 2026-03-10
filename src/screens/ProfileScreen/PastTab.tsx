@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, colors } from '../../styles/common.styles';
 import { profileStyles } from '../../styles/Profile.styles';
-import { AthleteEvent } from '../../services/athleteProfileService';
+import { AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import EventCardPast from './EventCardPast';
 import { API_CONFIG } from '../../constants/config';
 
@@ -13,9 +13,10 @@ interface PastTabProps {
     onLoadMore: () => void;
     loadingMore: boolean;
     hasMore: boolean;
+     profile?:AthleteProfile 
 }
 
-const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
+const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasMore, profile }) => {
     const { t } = useTranslation(['profile']);
 
     // ✅ SIMPLIFIED: Just check hasMore and loadingMore
@@ -41,7 +42,10 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
     }, [hasMore, loadingMore, onLoadMore, events.length]);
 
     const renderItem = useCallback(
-        ({ item }: { item: AthleteEvent }) => <EventCardPast item={item} />,
+        ({ item }: { item: AthleteEvent }) => <EventCardPast 
+            item={item}
+            isOwnProfile={profile?.is_own_profile === 1}  // ← add
+        />,
         []
     );
 

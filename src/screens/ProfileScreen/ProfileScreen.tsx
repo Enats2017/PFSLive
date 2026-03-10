@@ -20,92 +20,64 @@ import PastTab from './PastTab';
 import ProfileCard from '../../components/ProfileCard';
 import { eventService, AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { API_CONFIG } from '../../constants/config';
+import { ProfileScreenprops } from '../../types/navigation';
 
 const { width, height } = Dimensions.get('window');
 
-type Tab = 'Live' | 'Past';
-const TABS: Tab[] = ['Live', 'Past'];
-const TAB_CONTENT_HEIGHT = height * 0.5; // ✅ FIXED HEIGHT (50% of screen)
+type Tab = 'Past' | 'Live';
+const TABS: Tab[] = ['Past', 'Live'];
+const LIVE_INDEX = TABS.indexOf('Live'); // 1
+const TAB_CONTENT_HEIGHT = height * 0.5;
 
-const ProfileScreen = () => {
-    const { t } = useTranslation(['profile']);
+interface PaginationState {
+    live: { page: number; total_pages: number };
+    past: { page: number; total_pages: number };
+}
+
+const INITIAL_PAGINATION: PaginationState = {
+    live: { page: 1, total_pages: 1 },
+    past: { page: 1, total_pages: 1 },
+};
+
+const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
+    const { t } = useTranslation(['profile', 'common']);
     const flatListRef = useRef<FlatList>(null);
-    
+
+    // ✅ Only fetch once — don't re-fetch every time screen is focused
+    const hasFetchedOnce = useRef(false);
+    const isFetching = useRef(false);
+
+    const targetId = route.params?.customer_app_id;
+
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [profile, setProfile] = useState<AthleteProfile | null>(null);
     const [liveEvents, setLiveEvents] = useState<AthleteEvent[]>([]);
     const [pastEvents, setPastEvents] = useState<AthleteEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
     const [loadingMoreLive, setLoadingMoreLive] = useState(false);
     const [loadingMorePast, setLoadingMorePast] = useState(false);
+    const [pagination, setPagination] = useState<PaginationState>(INITIAL_PAGINATION);
 
-    const [paginationInfo, setPaginationInfo] = useState({
-        live: { page: 1, total_pages: 1 },
-        past: { page: 1, total_pages: 1 },
-    });
-
-    // ✅ PREVENT DUPLICATE CALLS
-    const isInitialMount = useRef(true);
-    const isFetching = useRef(false);
-
-    // ✅ FETCH INITIAL DATA
-    useFocusEffect(
-        useCallback(() => {
-            // Skip if already fetching
-            if (isFetching.current) {
-                if (API_CONFIG.DEBUG) {
-                    console.log('⏸️ Already fetching, skipping duplicate call');
-                }
-                return;
-            }
-
-            // Only fetch on first mount or when coming back to screen
-            if (isInitialMount.current) {
-                isInitialMount.current = false;
-                fetchProfile();
-            } else {
-                // Refresh data when returning to screen
-                fetchProfile();
-            }
-
-            return () => {
-                // Cleanup
-                isFetching.current = false;
-            };
-        }, [])
-    );
-
+    // ── fetch profile ──
     const fetchProfile = useCallback(async () => {
-        // Prevent duplicate calls
-        if (isFetching.current) {
-            if (API_CONFIG.DEBUG) {
-                console.log('⏸️ Fetch already in progress');
-            }
-            return;
-        }
+        if (isFetching.current) return;
+        isFetching.current = true;
+        setLoading(true);
+        setError(null);
 
         try {
-            isFetching.current = true;
-            setLoading(true);
-            setError(null);
-
-            if (API_CONFIG.DEBUG) {
-                console.log('📡 Fetching athlete profile');
-            }
-
-            const result = await eventService.getAthleteProfile({
-                page_live: 1,
-                page_past: 1,
-            });
+            const result = await eventService.getAthleteProfile(
+                { page_live: 1, page_past: 1 },
+                targetId,
+            );
 
             setProfile(result.profile);
             setLiveEvents(result.tabs.live);
             setPastEvents(result.tabs.past);
 
             if (result.pagination) {
-                setPaginationInfo({
+                setPagination({
                     live: {
                         page: result.pagination.live.page,
                         total_pages: result.pagination.live.total_pages,
@@ -117,124 +89,140 @@ const ProfileScreen = () => {
                 });
             }
 
-            if (API_CONFIG.DEBUG) {
-                console.log('✅ Profile loaded:', {
-                    live: result.tabs.live.length,
-                    past: result.tabs.past.length,
-                });
-            }
-        } catch (error: any) {
-            console.log('❌ Failed to fetch profile:', error);
-            setError(error.message || t('profile:errors.load_profile_failed'));
+            hasFetchedOnce.current = true;
+        } catch (err: any) {
+            setError(err?.message || t('profile:errors.load_profile_failed'));
         } finally {
             setLoading(false);
             isFetching.current = false;
         }
-    }, [t]);
+    }, [targetId, t]);
 
-    // ✅ LOAD MORE LIVE
+    // ✅ Fetch only on first mount
+    // ✅ On return from another screen — re-sync FlatList scroll to fix tab desync
+    useFocusEffect(
+        useCallback(() => {
+            if (!hasFetchedOnce.current) {
+                fetchProfile();
+            } else {
+                const index = TABS.indexOf(activeTab);
+                setTimeout(() => {
+                    flatListRef.current?.scrollToIndex({ index, animated: false });
+                }, 50);
+            }
+        }, [fetchProfile, activeTab])
+    );
+
+    // ── load more live ──
     const loadMoreLive = useCallback(async () => {
-        if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) {
-            return;
-        }
+        if (loadingMoreLive || pagination.live.page >= pagination.live.total_pages) return;
+
+        const nextPage = pagination.live.page + 1;
+        setLoadingMoreLive(true);
 
         try {
-            setLoadingMoreLive(true);
-            const nextPage = paginationInfo.live.page + 1;
+            const result = await eventService.getAthleteProfile(
+                { page_live: nextPage },
+                targetId,
+            );
 
-            if (API_CONFIG.DEBUG) {
-                console.log(`Live: Loading page ${nextPage}`);
-            }
-
-            const result = await eventService.getAthleteProfile({
-                page_live: nextPage,
-            });
-
-            setLiveEvents((prev) => {
-                const existingIds = new Set(prev.map((e) => e.participant_app_id));
-                const newItems = result.tabs.live.filter((item) => !existingIds.has(item.participant_app_id));
-                
-                if (API_CONFIG.DEBUG) {
-                    console.log(`➕ Live: Adding ${newItems.length} new events (${result.tabs.live.length - newItems.length} duplicates filtered)`);
-                }
-                
+            setLiveEvents(prev => {
+                const existingIds = new Set(prev.map(e => e.participant_app_id));
+                const newItems = result.tabs.live.filter(
+                    item => !existingIds.has(item.participant_app_id)
+                );
                 return [...prev, ...newItems];
             });
 
             if (result.pagination?.live) {
-                setPaginationInfo((prev) => ({
+                setPagination(prev => ({
                     ...prev,
-                    live: {
-                        page: nextPage,
-                        total_pages: result.pagination.live.total_pages,
-                    },
+                    live: { page: nextPage, total_pages: result.pagination.live.total_pages },
                 }));
             }
-        } catch (error) {
-            console.log('Live: Load more failed:', error);
+        } catch (err) {
+            if (API_CONFIG.DEBUG) console.warn('Live load more failed:', err);
         } finally {
             setLoadingMoreLive(false);
         }
-    }, [loadingMoreLive, paginationInfo.live.page, paginationInfo.live.total_pages]);
+    }, [loadingMoreLive, pagination.live.page, pagination.live.total_pages, targetId]);
 
-    // ✅ LOAD MORE PAST
+    // ── load more past ──
     const loadMorePast = useCallback(async () => {
-        if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) {
-            return;
-        }
+        if (loadingMorePast || pagination.past.page >= pagination.past.total_pages) return;
+
+        const nextPage = pagination.past.page + 1;
+        setLoadingMorePast(true);
 
         try {
-            setLoadingMorePast(true);
-            const nextPage = paginationInfo.past.page + 1;
+            const result = await eventService.getAthleteProfile(
+                { page_past: nextPage },
+                targetId,
+            );
 
-            if (API_CONFIG.DEBUG) {
-                console.log(`Past: Loading page ${nextPage}`);
-            }
-
-            const result = await eventService.getAthleteProfile({
-                page_past: nextPage,
-            });
-
-            setPastEvents((prev) => {
-                const existingIds = new Set(prev.map((e) => e.participant_app_id));
-                const newItems = result.tabs.past.filter((item) => !existingIds.has(item.participant_app_id));
-                
-                if (API_CONFIG.DEBUG) {
-                    console.log(`➕ Past: Adding ${newItems.length} new events (${result.tabs.past.length - newItems.length} duplicates filtered)`);
-                }
-                
+            setPastEvents(prev => {
+                const existingIds = new Set(prev.map(e => e.participant_app_id));
+                const newItems = result.tabs.past.filter(
+                    item => !existingIds.has(item.participant_app_id)
+                );
                 return [...prev, ...newItems];
             });
 
             if (result.pagination?.past) {
-                setPaginationInfo((prev) => ({
+                setPagination(prev => ({
                     ...prev,
-                    past: {
-                        page: nextPage,
-                        total_pages: result.pagination.past.total_pages,
-                    },
+                    past: { page: nextPage, total_pages: result.pagination.past.total_pages },
                 }));
             }
-        } catch (error) {
-            console.log('Past: Load more failed:', error);
+        } catch (err) {
+            if (API_CONFIG.DEBUG) console.warn('Past load more failed:', err);
         } finally {
             setLoadingMorePast(false);
         }
-    }, [loadingMorePast, paginationInfo.past.page, paginationInfo.past.total_pages]);
+    }, [loadingMorePast, pagination.past.page, pagination.past.total_pages, targetId]);
 
-    // ✅ TAB HANDLERS
+    // ── tab press: update state + scroll FlatList ──
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
         setActiveTab(tab);
         flatListRef.current?.scrollToIndex({ index, animated: true });
     }, []);
 
+    // ── swipe: sync tab indicator with scroll position ──
     const handleSwipe = useCallback((e: any) => {
         const index = Math.round(e.nativeEvent.contentOffset.x / width);
-        setActiveTab(TABS[index]);
-    }, []);
+        if (TABS[index] && TABS[index] !== activeTab) {
+            setActiveTab(TABS[index]);
+        }
+    }, [activeTab]);
 
-    // ✅ LOADING STATE
+    const renderTabContent = useCallback(({ item }: { item: Tab }) => (
+        <View style={{ width }}>
+            {item === 'Live' ? (
+                <LiveTab
+                    events={liveEvents}
+                    onLoadMore={loadMoreLive}
+                    loadingMore={loadingMoreLive}
+                    hasMore={pagination.live.page < pagination.live.total_pages}
+                    profile={profile}
+                />
+            ) : (
+                <PastTab
+                    events={pastEvents}
+                    onLoadMore={loadMorePast}
+                    loadingMore={loadingMorePast}
+                    hasMore={pagination.past.page < pagination.past.total_pages}
+                    profile={profile}
+                />
+            )}
+        </View>
+    ), [
+        liveEvents, pastEvents,
+        loadMoreLive, loadMorePast,
+        loadingMoreLive, loadingMorePast,
+        pagination, profile,
+    ]);
+
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -247,7 +235,6 @@ const ProfileScreen = () => {
         );
     }
 
-    // ✅ ERROR STATE
     if (error) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -258,6 +245,7 @@ const ProfileScreen = () => {
                     <TouchableOpacity
                         style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
                         onPress={fetchProfile}
+                        activeOpacity={0.8}
                     >
                         <Text style={commonStyles.primaryButtonText}>
                             {t('common:buttons.retry')}
@@ -273,38 +261,36 @@ const ProfileScreen = () => {
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
 
-            {/* ✅ PROFILE CARD */}
             <ProfileCard profile={profile} fetchError={error} />
 
-            {/* ✅ TAB BAR */}
+            {/* TAB BAR */}
             <View style={detailsStyles.tabBar}>
-                {TABS.map((tab) => (
-                    <TouchableOpacity
-                        key={tab}
-                        style={detailsStyles.tabItem}
-                        onPress={() => handleTabPress(tab)}
-                    >
-                        <Text
-                            style={[
-                                commonStyles.subtitle,
-                                activeTab === tab && detailsStyles.activeTabText,
-                            ]}
+                {TABS.map(tab => {
+                    const isActive = activeTab === tab;
+                    return (
+                        <TouchableOpacity
+                            key={tab}
+                            style={detailsStyles.tabItem}
+                            onPress={() => handleTabPress(tab)}
+                            activeOpacity={0.7}
                         >
-                            {t(`profile:tab.${tab}`)}
-                        </Text>
-                        {activeTab === tab && (
-                            <LinearGradient
-                                colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={detailsStyles.underline}
-                            />
-                        )}
-                    </TouchableOpacity>
-                ))}
+                            <Text style={[commonStyles.subtitle, isActive && detailsStyles.activeTabText]}>
+                                {t(`profile:tab.${tab}`)}
+                            </Text>
+                            {isActive && (
+                                <LinearGradient
+                                    colors={['#e8341a', '#f4a100', '#1a73e8']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={detailsStyles.underline}
+                                />
+                            )}
+                        </TouchableOpacity>
+                    );
+                })}
             </View>
 
-            {/* ✅ TAB CONTENT - FIXED HEIGHT */}
+            {/* TAB CONTENT */}
             <View style={{ height: TAB_CONTENT_HEIGHT }}>
                 <FlatList
                     ref={flatListRef}
@@ -312,35 +298,16 @@ const ProfileScreen = () => {
                     horizontal
                     pagingEnabled
                     showsHorizontalScrollIndicator={false}
-                    keyExtractor={(item) => item}
+                    keyExtractor={item => item}
                     onMomentumScrollEnd={handleSwipe}
-                    initialScrollIndex={TABS.indexOf('Live')}
+                    initialScrollIndex={LIVE_INDEX}
                     scrollEnabled={true}
                     getItemLayout={(_, index) => ({
                         length: width,
                         offset: width * index,
                         index,
                     })}
-                    renderItem={({ item }) => (
-                        <View style={{ width }}>
-                            {item === 'Live' && (
-                                <LiveTab
-                                    events={liveEvents}
-                                    onLoadMore={loadMoreLive}
-                                    loadingMore={loadingMoreLive}
-                                    hasMore={paginationInfo.live.page < paginationInfo.live.total_pages}
-                                />
-                            )}
-                            {item === 'Past' && (
-                                <PastTab
-                                    events={pastEvents}
-                                    onLoadMore={loadMorePast}
-                                    loadingMore={loadingMorePast}
-                                    hasMore={paginationInfo.past.page < paginationInfo.past.total_pages}
-                                />
-                            )}
-                        </View>
-                    )}
+                    renderItem={renderTabContent}
                 />
             </View>
         </SafeAreaView>
