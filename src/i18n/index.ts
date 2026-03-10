@@ -298,7 +298,8 @@ i18n.use(initReactI18next).init({
     'errorModal',
     'profile',
     'resultdetails',
-    'follower'
+    'follower',
+    'result'
   ],
   interpolation: {
     escapeValue: false,

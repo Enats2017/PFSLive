@@ -16,7 +16,7 @@ interface DistanceTabProps {
 
 const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
     const navigation = useNavigation<any>();
-    const { t } = useTranslation(['reuslt', 'details', 'common']);
+    const { t } = useTranslation(['result', 'details', 'common']);
 
     const [results, setResults] = useState<Distance[]>([]);
     const [loading, setLoading] = useState(true);
@@ -100,7 +100,7 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
                         })}
                     >
                         <Text style={commonStyles.primaryButtonText}>
-                            {t('reuslt:button.result')}
+                            {t('button.result')}
                         </Text>
                     </TouchableOpacity>
 
@@ -113,7 +113,7 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
                         })}
                     >
                         <Text style={commonStyles.primaryButtonText}>
-                            {t('reuslt:button.route')}
+                            {t('button.route')}
                         </Text>
                     </TouchableOpacity>
                 </View>
