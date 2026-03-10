@@ -148,7 +148,10 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           color={colors.primary}
           style={{ marginTop: 40 }}
         />
-        <BottomNavigation activeTab="Map" />
+        <BottomNavigation 
+          activeTab="Home" 
+          product_app_id={product_app_id}
+        />
       </SafeAreaView>
     );
   }
@@ -171,7 +174,10 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             </Text>
           </TouchableOpacity>
         </View>
-        <BottomNavigation activeTab="Map" />
+        <BottomNavigation 
+          activeTab="Home" 
+          product_app_id={product_app_id}
+        />
       </SafeAreaView>
     );
   }
@@ -206,7 +212,12 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         />
       )}
 
-      <BottomNavigation activeTab="Map" />
+      {/* ✅ BOTTOM NAVIGATION - HOME ACTIVE */}
+      <BottomNavigation 
+        activeTab="Home" 
+        product_app_id={product_app_id}
+        event_name={event_name}
+      />
     </SafeAreaView>
   );
 };
