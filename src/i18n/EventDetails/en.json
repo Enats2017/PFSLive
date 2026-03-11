@@ -31,6 +31,10 @@
   "success": {
     "message": "Thank you for signing up for the live tracking of this event. Tell your family and friends to follow you here and don't forget to activate your live tracking from 1 hour before the start of your race in this app!"
   },
+  "unregister": {
+    "successTitle": "Unregistered Successfully",
+    "successMessage": "You have been successfully unregistered from this distance."
+  },
   "error": {
     "title": "Failed to load data",
     "retry": "Retry",
@@ -48,7 +52,13 @@
     "networkErrorTitle": "Network Error",
     "networkErrorMessage": "Unable to connect to the server. Please check your internet connection and try again.",
     "trackingAlreadyStartedTitle": "Tracking Already Active",
-    "trackingAlreadyStartedMessage": "Live tracking has already been activated for this event. You cannot unregister once tracking has started."
+    "trackingAlreadyStartedMessage": "Live tracking has already been activated for this event. You cannot unregister once tracking has started.",
+    "eventInProgressTitle": "Event Already Started",
+    "eventInProgressMessage": "The event is currently in progress. You cannot unregister while the event is ongoing.",
+    "eventFinishedTitle": "Event Has Ended",
+    "eventFinishedMessage": "This event has already finished. Registration is no longer available.",
+    "validationErrorTitle": "Validation Error",
+    "validationErrorMessage": "The information provided is invalid. Please check and try again."
   },
   "registrationModal": {
     "registered": {

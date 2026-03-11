@@ -3,8 +3,8 @@
     "Distance": "Afstand",
     "Participant": "Deelnemer"
   },
-  "button": "AANMELDEN VOOR LIVE TRACKING",
-  "undo": "UITSCHRIJVEN",
+  "button": "AANMELDEN LIVE TRACKING",
+  "undo": "ANNULEER AANMELDING",
   "live": "LIVE",
   "countdown": {
     "in_progress": "Live",
@@ -26,59 +26,69 @@
   },
   "tracking": {
     "live": "Live Tracking Actief",
-    "bib": "Startnummer"
+    "bib": "Rugnummer"
   },
   "success": {
-    "message": "Bedankt voor het aanmelden voor de live tracking van dit evenement. Vertel je familie en vrienden om je hier te volgen en vergeet niet je live tracking 1 uur voor de start van je wedstrijd in deze app te activeren!"
+    "message": "Bedankt voor je aanmelding voor de live tracking van dit evenement. Vertel je familie en vrienden om je hier te volgen en vergeet niet je live tracking te activeren vanaf 1 uur voor de start van je race in deze app!"
+  },
+  "unregister": {
+    "successTitle": "Uitschrijving Succesvol",
+    "successMessage": "Je bent succesvol uitgeschreven voor deze afstand."
   },
   "error": {
-    "title": "Kan gegevens niet laden",
+    "title": "Gegevens laden mislukt",
     "retry": "Opnieuw proberen",
-    "missingId": "Evenement-ID ontbreekt",
-    "unexpectedTitle": "Onverwachte Reactie",
-    "unexpectedMessage": "De server heeft een onverwachte reactie gegeven. Probeer het opnieuw.",
-    "invalidBibTitle": "Ongeldig Startnummer",
-    "invalidBibMessage": "Het opgegeven startnummer is ongeldig. Controleer en probeer het opnieuw.",
+    "missingId": "Evenement ID ontbreekt",
+    "unexpectedTitle": "Onverwacht Antwoord",
+    "unexpectedMessage": "De server gaf een onverwacht antwoord. Probeer het opnieuw.",
+    "invalidBibTitle": "Ongeldig Rugnummer",
+    "invalidBibMessage": "Het opgegeven rugnummer is ongeldig. Controleer en probeer opnieuw.",
     "registrationFailedTitle": "Registratie Mislukt",
-    "registrationFailedMessage": "Kan registratie niet voltooien. Controleer je verbinding en probeer het opnieuw.",
+    "registrationFailedMessage": "Kan registratie niet voltooien. Controleer je verbinding en probeer opnieuw.",
     "cannotUnregisterTitle": "Kan Niet Uitschrijven",
-    "cannotUnregisterMessage": "Deelnemersinformatie ontbreekt. Ververs en probeer het opnieuw.",
+    "cannotUnregisterMessage": "Deelnemersinformatie ontbreekt. Ververs en probeer opnieuw.",
     "unregisterFailedTitle": "Uitschrijven Mislukt",
     "unregisterFailedMessage": "Kan niet uitschrijven. Probeer het opnieuw.",
     "networkErrorTitle": "Netwerkfout",
-    "networkErrorMessage": "Kan geen verbinding maken met de server. Controleer je internetverbinding en probeer het opnieuw.",
+    "networkErrorMessage": "Kan geen verbinding maken met de server. Controleer je internetverbinding en probeer opnieuw.",
     "trackingAlreadyStartedTitle": "Tracking Al Actief",
-    "trackingAlreadyStartedMessage": "Live tracking is al geactiveerd voor dit evenement. Je kunt je niet uitschrijven zodra tracking is gestart."
+    "trackingAlreadyStartedMessage": "Live tracking is al geactiveerd voor dit evenement. Je kunt je niet uitschrijven zodra tracking is gestart.",
+    "eventInProgressTitle": "Evenement Al Begonnen",
+    "eventInProgressMessage": "Het evenement is momenteel bezig. Je kunt je niet uitschrijven terwijl het evenement loopt.",
+    "eventFinishedTitle": "Evenement Is Afgelopen",
+    "eventFinishedMessage": "Dit evenement is al afgelopen. Registratie is niet meer mogelijk.",
+    "validationErrorTitle": "Validatiefout",
+    "validationErrorMessage": "De verstrekte informatie is ongeldig. Controleer en probeer opnieuw."
   },
   "registrationModal": {
     "registered": {
       "icon": "✓",
-      "title": "Je bent al geregistreerd!",
-      "description": "Je bent al geregistreerd voor deze afstand. Maak je klaar voor de race!"
+      "title": "Je Bent Al Geregistreerd!",
+      "description": "Je bent al geregistreerd voor deze afstand. Bereid je voor op de race!"
     },
     "membership_required": {
       "icon": "◆",
-      "title": "Je Premium-toegang is verlopen",
+      "title": "Je Premium Toegang Is Verlopen",
       "description": "Je gratis proefperiode is afgelopen. Log in op je account via onze website om je toegang te beheren."
     },
     "limit_reached": {
       "icon": "↑",
-      "title": "Je Premium-toegang is verlopen",
-      "description": "Je hebt je jaarlijkse limiet van 3 trackingsessies bereikt. Je huidige plan staat geen extra activeringen toe. Beheer je abonnement via onze website."
+      "title": "Je Premium Toegang Is Verlopen",
+      "description": "Je hebt je jaarlijkse limiet van 3 tracking sessies bereikt. Je huidige plan staat geen extra activeringen toe. Beheer je abonnement via onze website."
     },
     "unavailable": {
       "icon": "⊘",
-      "title": "Niet beschikbaar",
-      "description": "Registratie voor deze afstand is nog niet geconfigureerd. Kom later terug."
+      "title": "Niet Beschikbaar",
+      "description": "Registratie voor deze afstand is nog niet geconfigureerd. Kom binnenkort terug."
     },
     "available": {
       "icon": "→",
-      "title": "Klaar om te racen?",
+      "title": "Klaar Om Te Racen?",
       "description": "Reserveer nu je plek voordat het vol is. Laten we dit doen!"
     },
     "default": {
       "icon": "?",
-      "title": "Er is iets misgegaan",
+      "title": "Er Is Iets Misgegaan",
       "description": "Probeer het later opnieuw."
     }
   }

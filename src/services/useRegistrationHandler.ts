@@ -195,6 +195,14 @@ const useRegistrationHandler = (
               setModalVisible(true);
               break;
 
+            // ✅ NEW: EVENT FINISHED ERROR
+            case 'event_finished':
+              showErrorModal(
+                'details:error.eventFinishedTitle',
+                'details:error.eventFinishedMessage'
+              );
+              break;
+
             case 'validation_error':
             case 'product_app_id_invalid':
             case 'language_id_invalid':
@@ -334,11 +342,19 @@ const useRegistrationHandler = (
           }
 
           switch (action) {
-            // ✅ NEW: TRACKING ALREADY STARTED ERROR
+            // ✅ TRACKING ALREADY STARTED ERROR
             case 'tracking_already_started':
               showErrorModal(
                 'details:error.trackingAlreadyStartedTitle',
                 'details:error.trackingAlreadyStartedMessage'
+              );
+              break;
+
+            // ✅ NEW: EVENT IN PROGRESS ERROR
+            case 'event_in_progress':
+              showErrorModal(
+                'details:error.eventInProgressTitle',
+                'details:error.eventInProgressMessage'
               );
               break;
 

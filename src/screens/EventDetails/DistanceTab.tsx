@@ -19,6 +19,7 @@ import ErrorModal from '../../components/ErrorModal';
 import useRegistrationHandler from '../../services/useRegistrationHandler';
 import { useNavigation } from '@react-navigation/native';
 import { API_CONFIG } from '../../constants/config';
+import { toastSuccess } from '../../../utils/toast'; // ✅ IMPORT TOAST
 
 interface DistanceTabProps {
   product_app_id: string | number;
@@ -44,7 +45,6 @@ const DistanceTab = ({
   const [undoModalVisible, setUndoModalVisible] = useState(false);
   const [selectedUndoItem, setSelectedUndoItem] = useState<Distance | null>(null);
   
-  // ✅ NEW: Track if we need to refresh after modal closes
   const [pendingRefresh, setPendingRefresh] = useState(false);
 
   // ✅ FETCH DISTANCES WITH CACHE BUSTING
@@ -139,7 +139,7 @@ const DistanceTab = ({
     [updateDistanceStatus]
   );
 
-  // ✅ DELETE SUCCESS CALLBACK (DON'T REFRESH IMMEDIATELY)
+  // ✅ DELETE SUCCESS CALLBACK WITH TOAST
   const handleDeleteSuccess = useCallback(
     async (product_option_value_app_id: number) => {
       if (API_CONFIG.DEBUG) {
@@ -149,10 +149,23 @@ const DistanceTab = ({
       // ✅ OPTIMISTICALLY UPDATE UI
       updateDistanceStatus(product_option_value_app_id, 'available');
 
-      // ✅ MARK THAT WE NEED TO REFRESH AFTER MODAL CLOSES
+      // ✅ SHOW SUCCESS TOAST
+      toastSuccess(
+        t('details:unregister.successTitle'),
+        t('details:unregister.successMessage')
+      );
+
+      // ✅ MARK THAT WE NEED TO REFRESH AFTER TOAST
       setPendingRefresh(true);
+
+      // ✅ REFRESH AFTER SHORT DELAY
+      setTimeout(() => {
+        fetchDistances(true); // Bust cache
+        onRefresh?.(); // Refresh parent
+        setPendingRefresh(false);
+      }, 500);
     },
-    [updateDistanceStatus]
+    [updateDistanceStatus, t, fetchDistances, onRefresh]
   );
 
   // ✅ HANDLE SUCCESS MODAL CLOSE (REFRESH AFTER CLOSING)
@@ -332,6 +345,7 @@ const DistanceTab = ({
                 : handleRegister(item)
             }
             disabled={isRegistering}
+            activeOpacity={0.8}
           >
             {isRegistering ? (
               <ActivityIndicator size="small" color="#fff" />
@@ -374,6 +388,7 @@ const DistanceTab = ({
         <TouchableOpacity
           style={[commonStyles.primaryButton, { marginTop: 16 }]}
           onPress={() => fetchDistances(true)}
+          activeOpacity={0.8}
         >
           <Text style={commonStyles.primaryButtonText}>
             {t('details:error.retry')}
@@ -419,7 +434,6 @@ const DistanceTab = ({
         onClose={handleConfirmModalClose}
       />
 
-      {/* ✅ SUCCESS MODAL - REFRESH AFTER CLOSE */}
       <SuccessCelebrationModal
         visible={successVisible}
         message={t('details:success.message')}
