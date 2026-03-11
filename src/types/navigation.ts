@@ -36,7 +36,7 @@ export type RootStackParamList = {
   product_option_value_app_id: number;
 };
 
-  ProfileScreen: { customer_app_id?: number };
+  ProfileScreen: { customer_app_id?: number;fromEdit?: boolean; };
 
   EditProfileScreen:undefined;
 

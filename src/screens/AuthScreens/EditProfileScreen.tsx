@@ -12,11 +12,12 @@ import CountrySelector from '../../components/CountrySelector'
 import { commonStyles } from '../../styles/common.styles'
 import { useEditProfile } from '../../hooks/Useeditprofile'
 import { fetchProfileApi } from '../../services/profileServices'
+import { tokenService } from '../../services/tokenService'
 import { AppHeader } from '../../components/common/AppHeader'
 import { profileStyles } from '../../styles/Profile.styles'
 import { toastSuccess } from '../../../utils/toast'
-import { useNavigation } from '@react-navigation/native'
 import { getImageUrl } from '../../constants/config'
+import { useNavigation } from '@react-navigation/native'
 
 const GENDER_VALUES = [
     'male',
@@ -30,17 +31,21 @@ const EditProfileScreen = () => {
     const [profileLoading, setProfileLoading] = useState(true)
     const [profileError, setProfileError] = useState('')
     const [profile, setProfile] = useState<Awaited<ReturnType<typeof fetchProfileApi>> | null>(null)
+    
+    // ✅ USE ANY TYPE FOR NAVIGATION
+    const navigation = useNavigation<any>()
+    
     const genderOptions = GENDER_VALUES.map((value) => ({
         label: t(`profile:gender.${value}`),
         value
     }))
-    const navigation = useNavigation()
+
     useEffect(() => {
         fetchProfileApi()
             .then(setProfile)
             .catch((e) => setProfileError(e.message || t('profile:errors.load_profile_failed')))
             .finally(() => setProfileLoading(false))
-    }, [])
+    }, [t])
 
     const {
         form, setField,
@@ -80,16 +85,24 @@ const EditProfileScreen = () => {
             })
             setRemovePicture(false)
         }
-    }, [setPicture, setRemovePicture])
+    }, [setPicture, setRemovePicture, t])
 
     /* ── submit ── */
     const handleSave = useCallback(async () => {
         const ok = await submit()
         if (ok) {
             toastSuccess(t('profile:messages.success_profile_updated'))
-            navigation.goBack()
+            
+            // ✅ GET CUSTOMER_APP_ID FROM TOKEN SERVICE
+            const customer_app_id = await tokenService.getCustomerId()
+            
+            // ✅ NAVIGATE WITH fromEdit FLAG (NO TYPE ERRORS)
+            navigation.navigate('ProfileScreen', {
+                customer_app_id: customer_app_id || 0,
+                fromEdit: true,
+            })
         }
-    }, [submit, emailChanged])
+    }, [submit, navigation, t])
 
     const avatarUri: string | null = picture
         ? picture.uri
@@ -140,7 +153,11 @@ const EditProfileScreen = () => {
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={profileStyles.profileCard}>
-                        <TouchableOpacity style={profileStyles.avatarWrapper} onPress={pickAvatar} activeOpacity={0.8}>
+                        <TouchableOpacity 
+                            style={profileStyles.avatarWrapper} 
+                            onPress={pickAvatar} 
+                            activeOpacity={0.8}
+                        >
                             {avatarUri ? (
                                 <Image
                                     source={{ uri: avatarUri }}
@@ -161,8 +178,11 @@ const EditProfileScreen = () => {
                             <TouchableOpacity
                                 style={profileStyles.removeBtn}
                                 onPress={() => { setPicture(null); setRemovePicture(true) }}
+                                activeOpacity={0.8}
                             >
-                                <Text style={profileStyles.removeBtnText}> {t('profile:avatar.remove_photo')}</Text>
+                                <Text style={profileStyles.removeBtnText}>
+                                    {t('profile:avatar.remove_photo')}
+                                </Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -188,15 +208,19 @@ const EditProfileScreen = () => {
                         error={!!errors.lastname}
                         errorMessage={errors.lastname}
                     />
+
                     <FloatingLabelInput
                         label={t('profile:labels.email')}
                         value={form.email}
-                        onChangeText={() => { }}
+                        onChangeText={() => {}}
                         iconName="mail-outline"
                         editable={false}
                         error={false}
                     />
-                    <Text style={profileStyles.readOnlyHint}>  {t('profile:messages.email_readonly')}</Text>
+                    <Text style={profileStyles.readOnlyHint}>
+                        {t('profile:messages.email_readonly')}
+                    </Text>
+
                     <CountrySelector
                         label={t('profile:labels.country')}
                         value={form.countryName}
@@ -204,6 +228,7 @@ const EditProfileScreen = () => {
                         isoCode={form.country_iso}
                         error={errors.countryName}
                     />
+
                     <FloatingLabelInput
                         label={t('profile:labels.city')}
                         value={form.city}
@@ -213,6 +238,7 @@ const EditProfileScreen = () => {
                         error={!!errors.city}
                         errorMessage={errors.city}
                     />
+
                     <FloatingLabelInput
                         label={t('profile:labels.dob')}
                         value={form.dob}
@@ -239,8 +265,11 @@ const EditProfileScreen = () => {
                         errorMessage={errors.gender}
                     />
 
+                    <SectionHeader 
+                        title={t('profile:sections.change_password')} 
+                        subtitle={t('profile:sections.password_hint')} 
+                    />
 
-                    <SectionHeader title={t('profile:sections.change_password')} subtitle={t('profile:sections.password_hint')} />
                     <FloatingLabelInput
                         label={t('profile:labels.new_password')}
                         value={form.password}
@@ -251,6 +280,7 @@ const EditProfileScreen = () => {
                         error={!!errors.password}
                         errorMessage={errors.password}
                     />
+
                     <FloatingLabelInput
                         label={t('profile:labels.confirm_password')}
                         value={form.confirmPassword}
@@ -263,21 +293,29 @@ const EditProfileScreen = () => {
                     />
 
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, loading && profileStyles.saveBtnDisabled]}
+                        style={[
+                            commonStyles.primaryButton, 
+                            loading && profileStyles.saveBtnDisabled
+                        ]}
                         onPress={handleSave}
                         disabled={loading}
                         activeOpacity={0.85}
                     >
-                        {loading
-                            ? <ActivityIndicator color="#fff" size="small" />
-                            : <Text style={commonStyles.primaryButtonText}>  {t('profile:buttons.save_changes')}</Text>
-                        }
+                        {loading ? (
+                            <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                            <Text style={commonStyles.primaryButtonText}>
+                                {t('profile:buttons.save_changes')}
+                            </Text>
+                        )}
                     </TouchableOpacity>
 
                     {success && !emailChanged && (
                         <View style={profileStyles.successBanner}>
                             <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
-                            <Text style={profileStyles.successText}> {t('profile:messages.success_profile_updated')}</Text>
+                            <Text style={profileStyles.successText}>
+                                {t('profile:messages.success_profile_updated')}
+                            </Text>
                         </View>
                     )}
                 </ScrollView>
@@ -285,7 +323,6 @@ const EditProfileScreen = () => {
         </SafeAreaView>
     )
 }
-
 
 const SectionHeader = ({ title, subtitle }: { title: string; subtitle?: string }) => (
     <View style={profileStyles.sectionHeader}>

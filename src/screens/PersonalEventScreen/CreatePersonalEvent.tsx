@@ -10,13 +10,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
 import { commonStyles, spacing, colors } from '../../styles/common.styles';
 import { PersonalEventProps } from '../../types/navigation';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
-import { Ionicons } from '@expo/vector-icons';
 import { personalStyles } from '../../styles/personalEvent.styles';
-import { useTranslation } from 'react-i18next';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import RegistrationModal from '../../components/RegistrationModal';
 import ErrorModal from '../../components/ErrorModal';
@@ -31,9 +31,12 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+type RegistrationStatus = 'membership_required' | 'limit_reached' | null;
+
 const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
   const { t } = useTranslation(['personal', 'common', 'details']);
 
+  // ✅ MEMOIZED EVENT TYPE OPTIONS
   const EVENT_TYPE_OPTIONS = useMemo(
     () => [
       { label: t('personal:eventTypes.organizedWithResults'), value: 1 },
@@ -43,6 +46,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     [t]
   );
 
+  // ✅ FORM MANAGEMENT
   const {
     formData,
     errors,
@@ -53,16 +57,17 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     resetForm,
   } = usePersonalEventForm();
 
+  // ✅ FILE UPLOAD MANAGEMENT
   const { selectedFile, pickFile, viewFile, removeFile, clearFile } = useFileUpload(
     MAX_FILE_SIZE,
     (message) => setFieldError('file', message)
   );
 
+  // ✅ SUBMISSION STATE
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ✅ MODAL STATES (REUSE SAME PATTERN AS useRegistrationHandler)
+  // ✅ MODAL STATES
   const [registrationModalVisible, setRegistrationModalVisible] = useState(false);
-  type RegistrationStatus = 'membership_required' | 'limit_reached' | null;
   const [registrationStatus, setRegistrationStatus] = useState<RegistrationStatus>(null);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorTitleKey, setErrorTitleKey] = useState('');
@@ -79,13 +84,30 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
   const handleSubmit = useCallback(async () => {
     clearAllErrors();
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      if (API_CONFIG.DEBUG) {
+        console.log('❌ Form validation failed');
+      }
+      return;
+    }
+
     if (isSubmitting) return;
 
     try {
       setIsSubmitting(true);
 
       const deviceTimezone = getDeviceTimezone();
+
+      if (API_CONFIG.DEBUG) {
+        console.log('📤 Submitting personal event:', {
+          name: formData.name,
+          eventTypeId: formData.selectedEventType?.value,
+          date: formData.date,
+          startTime: formData.startTime,
+          timezone: deviceTimezone,
+          hasFile: !!selectedFile,
+        });
+      }
 
       const response = await createPersonalEvent({
         name: formData.name.trim(),
@@ -97,13 +119,13 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
       });
 
       if (API_CONFIG.DEBUG) {
-        console.log('📡 Create Personal Event Response:', {
+        console.log('✅ Create Personal Event Response:', {
           success: response.success,
           action: response.action,
         });
       }
 
-      // ✅ CHECK ACTION FIELD (SAME PATTERN AS useRegistrationHandler)
+      // ✅ CHECK ACTION FIELD
       const action = response.action || 'unknown_error';
 
       // ✅ HANDLE NON-SUCCESS ACTIONS
@@ -161,9 +183,11 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
           response.message || t('personal:success.message')
         );
 
+        // ✅ RESET FORM AND FILE
         resetForm();
         clearFile();
 
+        // ✅ GO BACK
         navigation.goBack();
       } else {
         throw new Error(response.message || 'API_ERROR');
@@ -180,7 +204,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         return;
       }
 
-      // ✅ HANDLE NETWORK ERRORS
+      // ✅ HANDLE API ERRORS
       const message =
         error.message === 'API_ERROR'
           ? t('personal:errors.createFailed')
@@ -342,6 +366,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
                       style={personalStyles.actionButton}
                       onPress={viewFile}
                       disabled={isSubmitting}
+                      activeOpacity={0.7}
                     >
                       <Ionicons name="eye-outline" size={20} color={colors.gray600} />
                     </TouchableOpacity>
@@ -349,6 +374,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
                       style={personalStyles.actionButton}
                       onPress={removeFile}
                       disabled={isSubmitting}
+                      activeOpacity={0.7}
                     >
                       <Ionicons name="close-circle" size={20} color={colors.error} />
                     </TouchableOpacity>
@@ -385,7 +411,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ✅ REGISTRATION MODAL (REUSE SAME COMPONENT) */}
+      {/* ✅ REGISTRATION MODAL */}
       <RegistrationModal
         visible={registrationModalVisible}
         status={registrationStatus}
@@ -396,7 +422,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         }}
       />
 
-      {/* ✅ ERROR MODAL (REUSE SAME COMPONENT) */}
+      {/* ✅ ERROR MODAL */}
       <ErrorModal
         visible={errorModalVisible}
         titleKey={errorTitleKey}

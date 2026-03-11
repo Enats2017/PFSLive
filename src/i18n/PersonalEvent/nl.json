@@ -1,55 +1,58 @@
 {
-  "title": "Nieuw Evenement Maken",
-  "editTitle": "Uw Evenement Bijwerken",
+  "title": "Nieuw evenement aanmaken",
+  "editTitle": "Werk je evenement bij",
   "name": "Evenementnaam",
   "type": "Evenementtype",
   "date": "Evenementdatum",
   "startTime": "Starttijd",
   "fileInfo": "Het uploaden van een GPX-bestand is optioneel maar sterk aanbevolen voor nauwkeurige tracking",
   "button": {
-    "gpx": "GPX-bestand Uploaden",
+    "gpx": "GPX-bestand uploaden",
     "save": "EVENEMENT INDIENEN"
   },
   "success": {
     "title": "Gelukt!",
-    "message": "Uw evenement is succesvol aangemaakt"
+    "message": "Je evenement is succesvol aangemaakt",
+    "editMessage": "Je evenement is succesvol bijgewerkt"
   },
   "errors": {
     "nameRequired": "Voer een evenementnaam in",
     "eventTypeRequired": "Selecteer een evenementtype",
     "dateRequired": "Selecteer een datum",
-    "invalidDate": "Ongeldig datumformaat. Gebruik een geldige datum",
-    "pastDateNotAllowed": "Kan geen datums uit het verleden selecteren. Kies vandaag of een toekomstige datum",
+    "invalidDate": "Ongeldige datumnotatie. Gebruik een geldige datum",
+    "pastDateNotAllowed": "Kan geen datum in het verleden selecteren. Kies vandaag of een toekomstige datum",
     "startTimeRequired": "Selecteer een starttijd",
-    "invalidStartTime": "Ongeldig starttijdformaat. Gebruik UU:MM",
-    "fileTooLarge": "Bestandsgrootte moet minder dan {{size}}MB zijn",
+    "invalidStartTime": "Ongeldige tijdnotatie. Gebruik UU:MM",
+    "fileTooLarge": "Bestandsgrootte moet kleiner zijn dan {{size}}MB",
     "invalidFileType": "Selecteer een geldig GPX-bestand (.gpx of .xml)",
     "filePickFailed": "Kan bestand niet selecteren. Probeer het opnieuw",
     "createFailed": "Kan evenement niet aanmaken. Probeer het opnieuw",
-    "createFailedTitle": "Aanmaken Mislukt",
-    "createFailedMessage": "Kan uw evenement niet aanmaken. Probeer het later opnieuw.",
+    "createFailedTitle": "Aanmaken mislukt",
+    "createFailedMessage": "Kan je evenement niet aanmaken. Probeer het later opnieuw.",
     "customerInvalidTitle": "Accountprobleem",
-    "customerInvalidMessage": "Uw account is niet correct geconfigureerd. Neem contact op met ondersteuning.",
-    "validationErrorTitle": "Ongeldige Gegevens",
+    "customerInvalidMessage": "Je account is niet correct geconfigureerd. Neem contact op met support.",
+    "validationErrorTitle": "Ongeldige gegevens",
     "validationErrorMessage": "Sommige velden bevatten ongeldige gegevens. Controleer en probeer opnieuw.",
     "networkErrorTitle": "Netwerkfout",
-    "networkErrorMessage": "Kan geen verbinding maken met de server. Controleer je internetverbinding en probeer opnieuw."
+    "networkErrorMessage": "Kan geen verbinding maken met de server. Controleer je internetverbinding en probeer opnieuw.",
+    "loadFailed": "Kan evenementdetails niet laden",
+    "updateFailed": "Kan evenement niet bijwerken"
   },
   "file": {
-    "uploadTitle": "Tik om GPX-bestand te Uploaden",
+    "uploadTitle": "Tik om GPX-bestand te uploaden",
     "uploadSubtitle": "Ondersteund formaat: .gpx (Max {{size}}MB)",
     "infoTitle": "Bestandsinfo",
     "infoMessage": "Naam: {{name}}\nGrootte: {{size}} KB",
-    "removeTitle": "Bestand Verwijderen",
-    "removeMessage": "Weet u zeker dat u dit bestand wilt verwijderen?",
+    "removeTitle": "Bestand verwijderen",
+    "removeMessage": "Weet je zeker dat je dit bestand wilt verwijderen?",
     "removeButton": "Verwijderen",
     "removed": "Bestand verwijderd",
     "existingFile": "Huidig bestand",
-    "undoRemove": "Verwijdering ongedaan maken"
+    "undoRemove": "Verwijderen ongedaan maken"
   },
   "eventTypes": {
-    "organizedWithResults": "Georganiseerd evenement met rangschikking / resultaten",
-    "organizedWithoutResults": "Georganiseerd evenement zonder rangschikking / resultaten",
+    "organizedWithResults": "Georganiseerd evenement met ranking/resultaten",
+    "organizedWithoutResults": "Georganiseerd evenement zonder ranking/resultaten",
     "training": "Trainingssessie"
   }
 }
