@@ -16,12 +16,16 @@ import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
 import { API_CONFIG } from '../../constants/config';
 
+import ParticipantCard from './ParticipantCard';
+import { clearCache } from '../../../utils/followStorage';
+
+
 interface ParticipantTabProps {
   product_app_id: string | number;
 }
 
 const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
-  const { t } = useTranslation(['details']);
+  const { t } = useTranslation(['details','follower']);
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,6 +112,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
 
   useFocusEffect(
     useCallback(() => {
+       clearCache();
       fetchParticipants(1, '');
     }, [fetchParticipants])
   );
@@ -150,77 +155,14 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     fetchParticipants(page + 1, searchText);
   }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
-  const renderParticipant = useCallback(
-    ({ item }: { item: Participant }) => {
-      const fullName =
-        `${item.firstname ?? ''} ${item.lastname ?? ''}`.trim().toUpperCase() ||
-        t('details:participant.unknownName');
-      const hasBibNumber = item.bib_number && item.bib_number.trim() !== '';
-      const isLiveTracking = item.live_tracking_activated === 1;
+   
+   
 
-      return (
-        <View
-          style={[
-            commonStyles.card,
-            { padding: 0, overflow: 'hidden', marginBottom: spacing.lg },
-          ]}
-        >
-          <View style={detailsStyles.topRow}>
-            <View style={detailsStyles.avatar}>
-              <Ionicons
-                name="person-circle-outline"
-                size={55}
-                color="#9ca3af"
-                style={detailsStyles.logo}
-              />
-            </View>
-            <LinearGradient
-              colors={['#e8341a', '#f4a100', '#1a73e8']}
-              start={{ x: 0, y: 1 }}
-              end={{ x: 1, y: 0 }}
-              style={detailsStyles.divider}
-            />
-            <View style={detailsStyles.info}>
-              <Text style={commonStyles.title}>{fullName}</Text>
-              <Text style={commonStyles.text}>
-                {item.city} | {item.country}
-              </Text>
-              <Text style={commonStyles.subtitle}>{item.race_distance}</Text>
-              {hasBibNumber && (
-                <Text
-                  style={[
-                    commonStyles.subtitle,
-                    { color: colors.primary, fontWeight: '600' },
-                  ]}
-                >
-                  {t('details:tracking.bib')}: {item.bib_number}
-                </Text>
-              )}
-            </View>
-          </View>
 
-          {isLiveTracking && (
-            <View style={detailsStyles.liveTrackingBadge}>
-              <Ionicons name="radio" size={14} color={colors.success} />
-              <Text style={detailsStyles.liveTrackingText}>
-                {t('details:tracking.live')}
-              </Text>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={[commonStyles.primaryButton, { borderRadius: 0 }]}
-            activeOpacity={0.8}
-          >
-            <Text style={commonStyles.primaryButtonText}>
-              {t('details:participant.favorite')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      );
-    },
-    [t]
-  );
+    const renderParticipant = useCallback(
+  ({ item }: { item: Participant }) => <ParticipantCard item={item} t={t} />,
+  [t]
+);
 
   const renderFooter = useCallback(() => {
     if (loadingMore) {

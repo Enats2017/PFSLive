@@ -3,6 +3,7 @@ import { API_CONFIG, getApiEndpoint } from '../constants/config';
 
 export interface Participant {
   participant_app_id: string;
+   customer_app_id:number| null;
   firstname: string | null;
   lastname: string | null;
   bib_number: string;

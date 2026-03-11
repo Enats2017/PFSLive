@@ -21,6 +21,7 @@ import ProfileCard from '../../components/ProfileCard';
 import { eventService, AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { API_CONFIG } from '../../constants/config';
 import { ProfileScreenprops } from '../../types/navigation';
+import { tokenService } from '../../services/tokenService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -42,13 +43,10 @@ const INITIAL_PAGINATION: PaginationState = {
 const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const { t } = useTranslation(['profile', 'common']);
     const flatListRef = useRef<FlatList>(null);
-
-    // ✅ Only fetch once — don't re-fetch every time screen is focused
     const hasFetchedOnce = useRef(false);
     const isFetching = useRef(false);
 
     const targetId = route.params?.customer_app_id;
-
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [profile, setProfile] = useState<AthleteProfile | null>(null);
     const [liveEvents, setLiveEvents] = useState<AthleteEvent[]>([]);
@@ -261,7 +259,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
 
-            <ProfileCard profile={profile} fetchError={error} />
+            <ProfileCard profile={profile} fetchError={error} customer_app_id={targetId} />
 
             {/* TAB BAR */}
             <View style={detailsStyles.tabBar}>

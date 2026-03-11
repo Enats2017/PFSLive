@@ -10,7 +10,7 @@ import ParticipantEvent from '../screens/ParticipantEvent/ParticipantEvent';
 import PersonalEvent from '../screens/PersonalEventScreen/CreatePersonalEvent';
 import EventDetails from '../screens/EventDetails/EventDetails';
 import ParticipantResult from '../screens/EventDetails/ParticipantResult';
-import RaceResultScreen from '../screens/ParticipantEvent/RaceResultScreen';
+ import RaceResultScreen from '../screens/ParticipantEvent/RaceResultScreen';
 import ResultList from '../screens/ResultList/ResultList';
 
 // ✅ AUTH SCREENS - NEW IMPORTS
@@ -127,7 +127,6 @@ export const AppNavigator: React.FC = () => {
             gestureEnabled: false,
           }}
         />
-      
 
         <Stack.Screen 
           name="FollowDetails" 

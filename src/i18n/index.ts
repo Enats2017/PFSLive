@@ -82,6 +82,8 @@ import ResultDetailsEN from "./Resultdetails/en.json";
 import ResultDetailsFR from "./Resultdetails/fr.json";
 import ResultDetailsNL from "./Resultdetails/nl.json";
 import FollowerEN from "./FollowerEvent/en.json";
+import FollowerFR from "./FollowerEvent/fr.json";
+import FollowerNL from "./FollowerEvent/nl.json";
 
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
@@ -258,6 +260,7 @@ i18n.use(initReactI18next).init({
       profile:ProfileFR,
       allrace:ResultListFr,
       resultdetails:ResultDetailsFR,
+      follower:FollowerFR
     },
     nl: {
       common: commonNL,
@@ -276,7 +279,8 @@ i18n.use(initReactI18next).init({
       errorModal: errorModalNL,
       profile:ProfileNL,
       allrace:ResultListNL,
-      resultdetails:ResultDetailsNL
+      resultdetails:ResultDetailsNL,
+      follower:FollowerNL
     },
   },
   lng: initialLanguage,

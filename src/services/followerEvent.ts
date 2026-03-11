@@ -37,7 +37,7 @@ export interface PaginationParams {
 }
 
 export interface ParticipantItem {
-  customer_app_id: string;
+  customer_app_id: number;
   firstname: string;
   lastname: string;
   city: string;
