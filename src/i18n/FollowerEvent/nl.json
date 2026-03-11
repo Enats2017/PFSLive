@@ -1,37 +1,41 @@
 {
   "live": {
-    "Past": "Passé",
-    "Live": "En direct",
-    "Upcoming": "À venir"
+    "Past": "Verleden",
+    "Live": "Live",
+    "Upcoming": "Binnenkort"
   },
-
   "official": {
-    "title": "ÉVÉNEMENTS PARTENAIRES OFFICIELS"
+    "title": "OFFICIËLE PARTNER EVENEMENTEN"
   },
-
-  "searching": "Recherche...",
-
+  "personal": {
+    "title": "PERSOONLIJKE EVENEMENTEN",
+    "description": "Volg je eigen activiteiten",
+    "button": "GA NAAR PERSOONLIJK EVENEMENT"
+  },
+  "searching": "Zoeken...",
   "empty": {
-    "past": "Aucun événement passé trouvé.",
-    "live": "Aucun événement en direct pour le moment.",
-    "upcoming": "Aucun événement à venir trouvé.",
-    "searchNoResults": "Aucun événement ne correspond à votre recherche"
+    "past": "Geen eerdere evenementen gevonden.",
+    "live": "Momenteel geen live evenementen.",
+    "upcoming": "Geen aankomende evenementen gevonden.",
+    "searchNoResults": "Geen evenementen komen overeen met je zoekopdracht"
   },
-
-  "message": {
-    "follow": "Vous suivez maintenant cet utilisateur. Ajouté aux favoris avec succès.",
-    "unfollow": "Vous ne suivez plus cet utilisateur. Supprimé des favoris."
+  "success": {
+    "followTitle": "Toegevoegd aan Favorieten",
+    "followMessage": "Je hebt succesvol toegevoegd aan favorieten.",
+    "unfollowTitle": "Verwijderd uit Favorieten",
+    "unfollowMessage": "Je bent verwijderd uit favorieten."
   },
-
   "error": {
-    "failed": "Échec du chargement des événements",
-    "retry": "Réessayer"
+    "failed": "Kan evenementen niet laden",
+    "retry": "Opnieuw proberen",
+    "title": "Fout",
+    "message": "Er is iets misgegaan. Probeer het opnieuw."
   },
-
   "button": {
-    "result": "VOIR LE RÉSULTAT",
-    "follower": "SUIVRE",
-    "show_event": "VOIR L'ÉVÉNEMENT",
-    "unfollow": "NE PLUS SUIVRE"
+    "result": "BEKIJK RESULTAAT",
+    "follower": "VOLGEN",
+    "show_event": "TOON EVENEMENT",
+    "unfollow": "ONTVOLGEN",
+    "favourite": "TOEVOEGEN AAN FAVORIETEN"
   }
 }

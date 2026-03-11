@@ -6,26 +6,24 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { LinearGradient } from 'expo-linear-gradient';
 import { commonStyles, spacing, colors } from '../../styles/common.styles';
-import { detailsStyles } from '../../styles/details.styles';
 import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
 import { API_CONFIG } from '../../constants/config';
-
 import ParticipantCard from './ParticipantCard';
-import { clearCache } from '../../../utils/followStorage';
-
+import { useFollowManager } from '../../hooks/useFollowManager'; // ✅ IMPORT HOOK
 
 interface ParticipantTabProps {
   product_app_id: string | number;
 }
 
 const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
-  const { t } = useTranslation(['details','follower']);
+  const { t } = useTranslation(['details', 'follower']);
+
+  // ✅ USE FOLLOW MANAGER HOOK
+  const { isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,13 +108,15 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     [product_app_id, t]
   );
 
+  // ✅ INITIAL LOAD
   useFocusEffect(
     useCallback(() => {
-       clearCache();
+      refreshFollowedUsers(); // Refresh follow state
       fetchParticipants(1, '');
-    }, [fetchParticipants])
+    }, [fetchParticipants, refreshFollowedUsers])
   );
 
+  // ✅ DEBOUNCED SEARCH
   React.useEffect(() => {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
@@ -137,7 +137,6 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     return page < totalPages;
   }, [page, totalPages]);
 
-  // ✅ SIMPLIFIED: No momentum flag
   const handleLoadMore = useCallback(() => {
     if (API_CONFIG.DEBUG) {
       console.log('🔍 onEndReached triggered:', {
@@ -155,14 +154,18 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     fetchParticipants(page + 1, searchText);
   }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
-   
-   
-
-
-    const renderParticipant = useCallback(
-  ({ item }: { item: Participant }) => <ParticipantCard item={item} t={t} />,
-  [t]
-);
+  // ✅ SIMPLIFIED RENDER
+  const renderParticipant = useCallback(
+    ({ item }: { item: Participant }) => (
+      <ParticipantCard
+        item={item}
+        isFollowed={isFollowed(item.customer_app_id)}
+        isLoading={isLoading(item.customer_app_id)}
+        onToggleFollow={() => toggleFollow(item.customer_app_id)}
+      />
+    ),
+    [isFollowed, isLoading, toggleFollow]
+  );
 
   const renderFooter = useCallback(() => {
     if (loadingMore) {
@@ -170,7 +173,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
           <ActivityIndicator size="small" color={colors.primary} />
           <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
-            {t('details:participant.loadingMore')} ({page}/{totalPages})
+            Loading more... ({page}/{totalPages})
           </Text>
         </View>
       );
@@ -180,14 +183,14 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
           <Text style={{ color: colors.gray500 }}>
-            {t('details:participant.scrollForMore')} ({participants.length})
+            Scroll for more ({participants.length})
           </Text>
         </View>
       );
     }
 
     return null;
-  }, [loadingMore, page, totalPages, hasMorePages, participants.length, t]);
+  }, [loadingMore, page, totalPages, hasMorePages, participants.length]);
 
   if (loading && searchText.length === 0) {
     return (
@@ -218,11 +221,10 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
 
   return (
     <>
-      {/* ✅ SEARCH INPUT - ADDED TOP PADDING */}
       <View
         style={{
           paddingHorizontal: spacing.lg,
-          paddingTop: spacing.md, // ✅ ADDED: Space between tab bar and search
+          paddingTop: spacing.md,
         }}
       >
         <SearchInput
@@ -264,10 +266,10 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
           contentContainerStyle={{
             paddingHorizontal: spacing.lg,
             paddingBottom: spacing.xxxl,
-            flexGrow: 1, // ✅ ADDED: Allows scrolling with few items
+            flexGrow: 1,
           }}
           keyboardShouldPersistTaps="handled"
-          removeClippedSubviews={false} // ✅ ADDED: Prevents scroll issues
+          removeClippedSubviews={false}
           ListFooterComponent={renderFooter}
         />
       )}

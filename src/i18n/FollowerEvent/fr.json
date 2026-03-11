@@ -4,34 +4,38 @@
     "Live": "En direct",
     "Upcoming": "À venir"
   },
-
   "official": {
     "title": "ÉVÉNEMENTS PARTENAIRES OFFICIELS"
   },
-
+  "personal": {
+    "title": "ÉVÉNEMENTS PERSONNELS",
+    "description": "Suivez vos propres activités",
+    "button": "ALLER À L'ÉVÉNEMENT PERSONNEL"
+  },
   "searching": "Recherche...",
-
   "empty": {
     "past": "Aucun événement passé trouvé.",
     "live": "Aucun événement en direct pour le moment.",
     "upcoming": "Aucun événement à venir trouvé.",
     "searchNoResults": "Aucun événement ne correspond à votre recherche"
   },
-
-  "message": {
-    "follow": "Vous suivez maintenant cet utilisateur. Ajouté aux favoris avec succès.",
-    "unfollow": "Vous ne suivez plus cet utilisateur. Supprimé des favoris."
+  "success": {
+    "followTitle": "Ajouté aux Favoris",
+    "followMessage": "Vous avez ajouté avec succès aux favoris.",
+    "unfollowTitle": "Retiré des Favoris",
+    "unfollowMessage": "Vous avez été retiré des favoris."
   },
-
   "error": {
-    "failed": "Échec du chargement des événements",
-    "retry": "Réessayer"
+    "failed": "Impossible de charger les événements",
+    "retry": "Réessayer",
+    "title": "Erreur",
+    "message": "Quelque chose s'est mal passé. Veuillez réessayer."
   },
-
   "button": {
     "result": "VOIR LE RÉSULTAT",
     "follower": "SUIVRE",
-    "show_event": "VOIR L'ÉVÉNEMENT",
-    "unfollow": "NE PLUS SUIVRE"
+    "show_event": "AFFICHER L'ÉVÉNEMENT",
+    "unfollow": "NE PLUS SUIVRE",
+    "favourite": "AJOUTER AUX FAVORIS"
   }
 }
