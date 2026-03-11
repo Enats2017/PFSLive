@@ -1,17 +1,17 @@
 {
-
-    "live": {
+  "live": {
     "Past": "Past",
     "Live": "Live",
     "Upcoming": "Upcoming"
   },
-
-   "official": {
+  "official": {
     "title": "OFFICIAL PARTNER EVENTS"
-  
   },
-
-
+  "personal": {
+    "title":"FIND AN ATHLETE",
+    "description": "Track your own activities",
+    "button": "GO TO PERSONAL EVENT"
+  },
   "searching": "Searching...",
   "empty": {
     "past": "No past events found.",
@@ -20,32 +20,30 @@
     "searchNoResults": "No events match your search"
   },
 
-
    "message":{
         "follow":"Following You have successfully added to favourites",
         "unfollow":"Unfollowed You have been removed from favourites"
     },
 
-    "personal":{
-      "title":"FIND AN ATHLETE"
-    },
+
+  "success": {
+    "followTitle": "Added to Favorites",
+    "followMessage": "You have successfully added to favourites.",
+    "unfollowTitle": "Removed from Favorites",
+    "unfollowMessage": "You have been removed from favourites."
+  },
 
   "error": {
     "failed": "Failed to load events",
-    "retry": "Retry"
+    "retry": "Retry",
+    "title": "Error",
+    "message": "Something went wrong. Please try again."
   },
-
-    "button":{
-    "result":"VIEW RESULT",
-    "follower":"FOLLOW" ,
-    "show_event":"SHOW EVENT" ,
-     "unfollow":"UNFOLLOW",
-     "favourite":"ADD TO FAVOURITE"
-      
-    }
-        
-  
-
-  
-
+  "button": {
+    "result": "VIEW RESULT",
+    "follower": "FOLLOW",
+    "show_event": "SHOW EVENT",
+    "unfollow": "UNFOLLOW",
+    "favourite": "ADD TO FAVOURITE"
+  }
 }

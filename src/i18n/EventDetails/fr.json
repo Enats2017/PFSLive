@@ -7,7 +7,7 @@
   "undo": "ANNULER L'INSCRIPTION",
   "live": "EN DIRECT",
   "countdown": {
-    "in_progress": "En Direct",
+    "in_progress": "En direct",
     "finished": "Terminé",
     "hours": "Heures",
     "days": "Jours",
@@ -29,56 +29,66 @@
     "bib": "Dossard"
   },
   "success": {
-    "message": "Merci de vous être inscrit au suivi en direct de cet événement. Dites à votre famille et à vos amis de vous suivre ici et n'oubliez pas d'activer votre suivi en direct 1 heure avant le début de votre course dans cette application!"
+    "message": "Merci de vous être inscrit au suivi en direct de cet événement. Dites à votre famille et à vos amis de vous suivre ici et n'oubliez pas d'activer votre suivi en direct 1 heure avant le début de votre course dans cette application !"
+  },
+  "unregister": {
+    "successTitle": "Désinscription Réussie",
+    "successMessage": "Vous avez été désinscrit avec succès de cette distance."
   },
   "error": {
     "title": "Échec du chargement des données",
     "retry": "Réessayer",
-    "missingId": "ID d'événement manquant",
+    "missingId": "ID de l'événement manquant",
     "unexpectedTitle": "Réponse Inattendue",
     "unexpectedMessage": "Le serveur a renvoyé une réponse inattendue. Veuillez réessayer.",
     "invalidBibTitle": "Numéro de Dossard Invalide",
     "invalidBibMessage": "Le numéro de dossard fourni est invalide. Veuillez vérifier et réessayer.",
-    "registrationFailedTitle": "Inscription Échouée",
-    "registrationFailedMessage": "Impossible de finaliser l'inscription. Vérifiez votre connexion et réessayez.",
+    "registrationFailedTitle": "Échec de l'Inscription",
+    "registrationFailedMessage": "Impossible de terminer l'inscription. Veuillez vérifier votre connexion et réessayer.",
     "cannotUnregisterTitle": "Impossible de se Désinscrire",
-    "cannotUnregisterMessage": "Informations du participant manquantes. Veuillez actualiser et réessayer.",
-    "unregisterFailedTitle": "Désinscription Échouée",
+    "cannotUnregisterMessage": "Informations sur le participant manquantes. Veuillez actualiser et réessayer.",
+    "unregisterFailedTitle": "Échec de la Désinscription",
     "unregisterFailedMessage": "Impossible de se désinscrire. Veuillez réessayer.",
     "networkErrorTitle": "Erreur Réseau",
-    "networkErrorMessage": "Impossible de se connecter au serveur. Vérifiez votre connexion Internet et réessayez.",
+    "networkErrorMessage": "Impossible de se connecter au serveur. Veuillez vérifier votre connexion Internet et réessayer.",
     "trackingAlreadyStartedTitle": "Suivi Déjà Actif",
-    "trackingAlreadyStartedMessage": "Le suivi en direct a déjà été activé pour cet événement. Vous ne pouvez pas vous désinscrire une fois le suivi commencé."
+    "trackingAlreadyStartedMessage": "Le suivi en direct a déjà été activé pour cet événement. Vous ne pouvez pas vous désinscrire une fois le suivi commencé.",
+    "eventInProgressTitle": "Événement Déjà Commencé",
+    "eventInProgressMessage": "L'événement est actuellement en cours. Vous ne pouvez pas vous désinscrire pendant que l'événement est en cours.",
+    "eventFinishedTitle": "Événement Terminé",
+    "eventFinishedMessage": "Cet événement est déjà terminé. L'inscription n'est plus disponible.",
+    "validationErrorTitle": "Erreur de Validation",
+    "validationErrorMessage": "Les informations fournies sont invalides. Veuillez vérifier et réessayer."
   },
   "registrationModal": {
     "registered": {
       "icon": "✓",
-      "title": "Vous êtes déjà inscrit !",
+      "title": "Vous Êtes Déjà Inscrit !",
       "description": "Vous êtes déjà inscrit pour cette distance. Préparez-vous à courir !"
     },
     "membership_required": {
       "icon": "◆",
-      "title": "Votre accès Premium a expiré",
-      "description": "Votre période d'essai gratuite est terminée. Connectez-vous à votre compte via notre site Web pour gérer votre accès."
+      "title": "Votre Accès Premium a Expiré",
+      "description": "Votre période d'essai gratuite est terminée. Connectez-vous à votre compte via notre site web pour gérer votre accès."
     },
     "limit_reached": {
       "icon": "↑",
-      "title": "Votre accès Premium a expiré",
-      "description": "Vous avez atteint votre limite annuelle de 3 sessions de suivi. Votre forfait actuel ne permet pas d'activations supplémentaires. Gérez votre abonnement via notre site Web."
+      "title": "Votre Accès Premium a Expiré",
+      "description": "Vous avez atteint votre limite annuelle de 3 sessions de suivi. Votre forfait actuel ne permet pas d'activations supplémentaires. Gérez votre abonnement via notre site web."
     },
     "unavailable": {
       "icon": "⊘",
-      "title": "Non disponible",
+      "title": "Non Disponible",
       "description": "L'inscription pour cette distance n'est pas encore configurée. Revenez bientôt."
     },
     "available": {
       "icon": "→",
-      "title": "Prêt à courir ?",
-      "description": "Réservez votre place maintenant avant qu'elle ne soit complète. Allons-y !"
+      "title": "Prêt à Courir ?",
+      "description": "Réservez votre place maintenant avant que ce soit complet. Allons-y !"
     },
     "default": {
       "icon": "?",
-      "title": "Une erreur s'est produite",
+      "title": "Quelque Chose S'est Mal Passé",
       "description": "Veuillez réessayer plus tard."
     }
   }
