@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
     resultList,
@@ -8,6 +7,7 @@ import {
     Pagination,
     FilterOption,
 } from '../services/resultList';
+import { API_CONFIG } from '../constants/config';
 
 export const TYPE_OPTIONS: FilterOption[] = [
     { label: 'allrace:filter.results', value: '0' },
@@ -18,7 +18,7 @@ export const TYPE_OPTIONS: FilterOption[] = [
 type FetchMode = 'initial' | 'filter' | 'paginate' | 'refresh';
 
 interface FetchOpts {
-    povId: number;
+    povId?: number; // ✅ NOW OPTIONAL
     live: 0 | 1;
     category: string;
     page: number;
@@ -27,12 +27,14 @@ interface FetchOpts {
 
 export const useResultList = (
     product_app_id: number,
-    initial_pov_id: number,
+    initial_pov_id?: number, // ✅ NOW OPTIONAL
 ) => {
-
     const isMounted = useRef(true);
     const requestLock = useRef(false);
-    const [selectedPovId, setSelectedPovId] = useState<number>(initial_pov_id);
+    const hasFetched = useRef(false);
+
+    // ✅ START WITH UNDEFINED IF NO initial_pov_id
+    const [selectedPovId, setSelectedPovId] = useState<number | undefined>(initial_pov_id);
     const [selectedType, setSelectedType] = useState<FilterOption>(TYPE_OPTIONS[0]);
     const [selectedCategory, setSelectedCategory] = useState<string>('scratch');
 
@@ -42,18 +44,13 @@ export const useResultList = (
     );
 
     const isFavTab = selectedType.value === 'fav';
+
     const [distances, setDistances] = useState<Distance[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [results, setResults] = useState<RaceResult[]>([]);
     const [pagination, setPagination] = useState<Pagination | null>(null);
     const [favBibs, setFavBibs] = useState<Set<string>>(new Set());
-    const toggleFav = useCallback((bib: string): void => {
-        setFavBibs(prev => {
-            const next = new Set(prev);
-            next.has(bib) ? next.delete(bib) : next.add(bib);
-            return next;
-        });
-    }, []);
+
     const [initialLoad, setInitialLoad] = useState(true);
     const [filterLoad, setFilterLoad] = useState(false);
     const [pageLoad, setPageLoad] = useState(false);
@@ -61,15 +58,31 @@ export const useResultList = (
     const [error, setError] = useState<string | null>(null);
 
     const currentPage = useRef(1);
-    const fetchData = useCallback(async (opts: FetchOpts): Promise<void> => {
 
-        if (requestLock.current) return;
+    // ✅ TOGGLE FAVORITE
+    const toggleFav = useCallback((bib: string): void => {
+        setFavBibs(prev => {
+            const next = new Set(prev);
+            next.has(bib) ? next.delete(bib) : next.add(bib);
+            return next;
+        });
+    }, []);
+
+    // ✅ FETCH DATA (HANDLES OPTIONAL povId)
+    const fetchData = useCallback(async (opts: FetchOpts): Promise<void> => {
+        if (requestLock.current) {
+            if (API_CONFIG.DEBUG) {
+                console.log('⏸️ Request already in progress, skipping');
+            }
+            return;
+        }
+
         requestLock.current = true;
 
         const { povId, live, category, page, mode } = opts;
 
         try {
-
+            // ✅ SET LOADING STATES
             if (mode === 'initial') setInitialLoad(true);
             if (mode === 'filter') setFilterLoad(true);
             if (mode === 'paginate') setPageLoad(true);
@@ -77,9 +90,20 @@ export const useResultList = (
 
             setError(null);
 
+            if (API_CONFIG.DEBUG) {
+                console.log('📡 Fetching results:', {
+                    product_app_id,
+                    product_option_value_app_id: povId,
+                    from_live: live,
+                    filter_category: category,
+                    page,
+                    mode,
+                });
+            }
+
             const data = await resultList.getEventRanking({
                 product_app_id,
-                product_option_value_app_id: povId,
+                product_option_value_app_id: povId, // ✅ CAN BE UNDEFINED
                 from_live: live,
                 filter_category: category === 'scratch' ? '' : category,
                 page,
@@ -87,6 +111,20 @@ export const useResultList = (
 
             if (!isMounted.current) return;
 
+            // ✅ AUTO-SELECT FIRST DISTANCE IF NONE PROVIDED
+            if (povId === undefined && data.distances.length > 0) {
+                const firstDistance = data.distances[0];
+                setSelectedPovId(firstDistance.product_option_value_app_id);
+
+                if (API_CONFIG.DEBUG) {
+                    console.log('✅ Auto-selected first distance:', {
+                        id: firstDistance.product_option_value_app_id,
+                        name: firstDistance.distance_name,
+                    });
+                }
+            }
+
+            // ✅ UPDATE DATA
             if (mode !== 'paginate') {
                 setDistances(data.distances);
                 setCategories(data.categories);
@@ -101,43 +139,64 @@ export const useResultList = (
             setPagination(data.pagination);
             currentPage.current = page;
 
+            if (API_CONFIG.DEBUG) {
+                console.log('✅ Results loaded:', {
+                    distances: data.distances.length,
+                    categories: data.categories.length,
+                    results: data.results.length,
+                    page: data.pagination.page,
+                    total_pages: data.pagination.total_pages,
+                });
+            }
         } catch (e: any) {
-
             if (!isMounted.current) return;
 
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Fetch results error:', e);
+            }
+
             setError(e?.message ?? 'Failed to load. Tap to retry.');
-
         } finally {
-
             if (!isMounted.current) return;
 
             requestLock.current = false;
-
             setInitialLoad(false);
             setFilterLoad(false);
             setPageLoad(false);
             setRefreshing(false);
         }
-
     }, [product_app_id]);
+
+    // ✅ INITIAL FETCH
     useEffect(() => {
         isMounted.current = true;
-        fetchData({
-            povId: initial_pov_id,
-            live: 0,
-            category: 'scratch',
-            page: 1,
-            mode: 'initial',
-        });
+
+        if (!hasFetched.current) {
+            hasFetched.current = true;
+
+            fetchData({
+                povId: initial_pov_id, // ✅ CAN BE UNDEFINED
+                live: 0,
+                category: 'scratch',
+                page: 1,
+                mode: 'initial',
+            });
+        }
 
         return () => {
             isMounted.current = false;
         };
+    }, [initial_pov_id, fetchData]);
 
-    }, []);
+    // ✅ DISTANCE SELECTED
     const onDistanceSelect = useCallback((opt: FilterOption): void => {
         const newId = Number(opt.value);
         if (newId === selectedPovId) return;
+
+        if (API_CONFIG.DEBUG) {
+            console.log('📍 Distance selected:', opt.label);
+        }
+
         setSelectedPovId(newId);
         setSelectedCategory('scratch');
         setFavBibs(new Set());
@@ -149,13 +208,15 @@ export const useResultList = (
             page: 1,
             mode: 'filter',
         });
-
     }, [selectedPovId, fromLive, fetchData]);
 
-    // ── Type selected 
+    // ✅ TYPE SELECTED
     const onTypeSelect = useCallback((opt: FilterOption): void => {
-
         if (opt.value === selectedType.value) return;
+
+        if (API_CONFIG.DEBUG) {
+            console.log('🔄 Type selected:', opt.label);
+        }
 
         setSelectedType(opt);
         setSelectedCategory('scratch');
@@ -171,13 +232,15 @@ export const useResultList = (
             page: 1,
             mode: 'filter',
         });
-
     }, [selectedType.value, selectedPovId, fetchData]);
 
-    // ── Category selected 
+    // ✅ CATEGORY SELECTED
     const onCategorySelect = useCallback((opt: FilterOption): void => {
-
         if (opt.value === selectedCategory) return;
+
+        if (API_CONFIG.DEBUG) {
+            console.log('🏷️ Category selected:', opt.label);
+        }
 
         setSelectedCategory(opt.value);
 
@@ -188,21 +251,24 @@ export const useResultList = (
             page: 1,
             mode: 'filter',
         });
-
     }, [selectedCategory, selectedPovId, fromLive, fetchData]);
 
-    // ── Pagination 
+    // ✅ PAGINATION
     const onEndReached = useCallback((): void => {
+        if (pageLoad || filterLoad || initialLoad || isFavTab || !pagination) {
+            return;
+        }
 
-        if (
-            pageLoad ||
-            filterLoad ||
-            initialLoad ||
-            isFavTab ||
-            !pagination
-        ) return;
+        if (currentPage.current >= pagination.total_pages) {
+            if (API_CONFIG.DEBUG) {
+                console.log('⏸️ Already at last page');
+            }
+            return;
+        }
 
-        if (currentPage.current >= pagination.total_pages) return;
+        if (API_CONFIG.DEBUG) {
+            console.log('📄 Loading next page:', currentPage.current + 1);
+        }
 
         fetchData({
             povId: selectedPovId,
@@ -211,7 +277,6 @@ export const useResultList = (
             page: currentPage.current + 1,
             mode: 'paginate',
         });
-
     }, [
         pageLoad,
         filterLoad,
@@ -224,10 +289,13 @@ export const useResultList = (
         fetchData,
     ]);
 
-    // ── Refresh 
+    // ✅ REFRESH
     const onRefresh = useCallback((): void => {
-
         if (isFavTab) return;
+
+        if (API_CONFIG.DEBUG) {
+            console.log('🔄 Refreshing results');
+        }
 
         fetchData({
             povId: selectedPovId,
@@ -236,11 +304,13 @@ export const useResultList = (
             page: 1,
             mode: 'refresh',
         });
-
     }, [isFavTab, selectedPovId, fromLive, selectedCategory, fetchData]);
 
-    // ── Retry 
+    // ✅ RETRY
     const retry = useCallback((): void => {
+        if (API_CONFIG.DEBUG) {
+            console.log('🔁 Retrying fetch');
+        }
 
         fetchData({
             povId: selectedPovId,
@@ -249,10 +319,9 @@ export const useResultList = (
             page: 1,
             mode: 'initial',
         });
-
     }, [selectedPovId, fromLive, selectedCategory, fetchData]);
 
-    // ── Memo dropdown options 
+    // ✅ MEMOIZED DROPDOWN OPTIONS
     const distanceOptions = useMemo<FilterOption[]>(() =>
         distances.map(d => ({
             label: d.distance_name,
@@ -284,6 +353,8 @@ export const useResultList = (
             )?.label ?? 'Scratch',
         [categories, selectedCategory]
     );
+
+    // ✅ DISPLAY RESULTS
     const displayResults = useMemo<RaceResult[]>(() => {
         const list = isFavTab
             ? results.filter(r => favBibs.has(r.bib))
@@ -293,7 +364,6 @@ export const useResultList = (
             ...item,
             category_rank: String(index + 1),
         }));
-
     }, [isFavTab, results, favBibs]);
 
     return {

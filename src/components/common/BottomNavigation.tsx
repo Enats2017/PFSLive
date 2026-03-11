@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { bottomNavStyles } from '../../styles/bottomNav.styles';
 
@@ -11,6 +11,7 @@ interface BottomNavigationProps {
   product_app_id?: string | number;
   event_name?: string;
   product_option_value_app_id?: string | number;
+  sourceScreen?: string; // ✅ NEW: Track where we came from
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({ 
@@ -18,8 +19,10 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   product_app_id,
   event_name,
   product_option_value_app_id,
+  sourceScreen, // ✅ NEW PROP
 }) => {
-  const navigation = useNavigation<any>(); // ✅ Use any type for navigation
+  const navigation = useNavigation<any>();
+  const route = useRoute();
   const { t } = useTranslation('common');
 
   const tabs = [
@@ -30,42 +33,38 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   ];
 
   const handleTabPress = (tabName: TabName) => {
-    console.log('Tab pressed:', tabName, { product_app_id, product_option_value_app_id });
+    console.log('Tab pressed:', tabName, {
+      currentRoute: route.name,
+      sourceScreen,
+      product_app_id,
+      product_option_value_app_id,
+    });
     
     switch (tabName) {
       case 'Home':
-        if (product_app_id) {
-          // ✅ Navigate to EventDetails with product_app_id
-          navigation.navigate('EventDetails', {
-            product_app_id,
-            event_name,
-            auto_register_id: null,
-          });
-        } else {
-          // ✅ Navigate to Home screen
-          navigation.navigate('Home');
-        }
+        handleHomeNavigation();
         break;
         
       case 'Results':
         if (product_app_id) {
-          // ✅ Navigate to ResultList
           navigation.navigate('ResultList', {
             product_app_id,
             product_option_value_app_id,
+            event_name: event_name || '',
+            sourceScreen: route.name, // ✅ PASS CURRENT SCREEN AS SOURCE
           });
         } else {
-          console.log('Results: Missing required parameters');
+          console.log('Results: Missing product_app_id');
         }
         break;
         
       case 'Map':
         if (product_app_id && product_option_value_app_id) {
-          // ✅ Navigate to Route
           navigation.navigate('Route', {
             product_app_id,
             product_option_value_app_id,
-            event_name: '',
+            event_name: event_name || '',
+            sourceScreen: route.name, // ✅ PASS CURRENT SCREEN AS SOURCE
           });
         } else {
           console.log('Map: Missing required parameters');
@@ -75,6 +74,74 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
       case 'Favorites':
         console.log('Favorites screen not implemented yet');
         break;
+    }
+  };
+
+  // ✅ SMART HOME NAVIGATION WITH SOURCE TRACKING
+  const handleHomeNavigation = () => {
+    const currentRoute = route.name;
+
+    console.log('🏠 Home navigation:', {
+      currentRoute,
+      sourceScreen,
+      product_app_id,
+    });
+
+    // ✅ CASE 1: ON RESULTLIST
+    if (currentRoute === 'ResultList') {
+      // Check where we came from
+      if (sourceScreen === 'EventDetails') {
+        // Came from EventDetails → Go back to EventDetails
+        console.log('📍 ResultList (from EventDetails) → EventDetails');
+        navigation.navigate('EventDetails', {
+          product_app_id,
+          event_name: event_name || '',
+          auto_register_id: null,
+        });
+      } else if (sourceScreen === 'RaceResultScreen') {
+        // Came from RaceResultScreen → Go back to RaceResultScreen
+        console.log('📍 ResultList (from RaceResultScreen) → RaceResultScreen');
+        navigation.navigate('RaceResultScreen', {
+          product_app_id,
+          event_name: event_name || '',
+        });
+      } else {
+        // Default: Go to EventDetails
+        console.log('📍 ResultList (unknown source) → EventDetails');
+        if (product_app_id) {
+          navigation.navigate('EventDetails', {
+            product_app_id,
+            event_name: event_name || '',
+            auto_register_id: null,
+          });
+        } else {
+          navigation.navigate('Home');
+        }
+      }
+    }
+    // ✅ CASE 2: ON RACERESULTSCREEN → STAY
+    else if (currentRoute === 'RaceResultScreen') {
+      console.log('📍 Already on RaceResultScreen - staying');
+      // Do nothing, already on the right screen
+    }
+    // ✅ CASE 3: ON EVENTDETAILS → STAY
+    else if (currentRoute === 'EventDetails') {
+      console.log('📍 Already on EventDetails - staying');
+      // Do nothing, already on the right screen
+    }
+    // ✅ CASE 4: DEFAULT
+    else {
+      if (product_app_id) {
+        console.log('📍 Default → EventDetails');
+        navigation.navigate('EventDetails', {
+          product_app_id,
+          event_name: event_name || '',
+          auto_register_id: null,
+        });
+      } else {
+        console.log('📍 Default → Home');
+        navigation.navigate('Home');
+      }
     }
   };
 

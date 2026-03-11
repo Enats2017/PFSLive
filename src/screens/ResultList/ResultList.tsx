@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useCallback } from 'react';
 import {
     View,
     Text,
@@ -23,7 +22,10 @@ import { RaceResult } from '../../services/resultList';
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
-    const { product_app_id, product_option_value_app_id } = route.params;
+    const { product_app_id, product_option_value_app_id, event_name, sourceScreen } = route.params; // ✅ GET event_name
+
+    console.log('event_name ResultListScreen');
+    console.log(event_name);
 
     const {
         displayResults, pagination,
@@ -51,7 +53,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             : null
     , [pageLoad]);
 
-      const keyExtractor = useCallback(
+    const keyExtractor = useCallback(
         (item: RaceResult, index: number) => `${item.bib}_${item.position}_${index}`,
         []
     );
@@ -60,6 +62,8 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={false} />
+
+            {/* FILTER ROW 1: Distance */}
             <View style={resultListStyle.filterRow1}>
                 <Dropdown
                     label={selectedDistanceLabel}
@@ -68,6 +72,8 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     onSelect={onDistanceSelect}
                 />
             </View>
+
+            {/* FILTER ROW 2: Type & Category */}
             <View style={resultListStyle.filterRow2}>
                 <Dropdown
                     label={t(selectedType.label)}
@@ -83,6 +89,8 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     onSelect={onCategorySelect}
                 />
             </View>
+
+            {/* CONTENT */}
             {initialLoad ? (
                 <View style={resultListStyle.center}>
                     <ActivityIndicator size="large" color={colors.success} />
@@ -90,17 +98,19 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                         {t('common:loading.loading')}
                     </Text>
                 </View>
-
             ) : error ? (
                 <View style={resultListStyle.center}>
                     <Text style={resultListStyle.errorText}>{error}</Text>
-                    <TouchableOpacity style={resultListStyle.retryBtn} onPress={retry}>
+                    <TouchableOpacity 
+                        style={resultListStyle.retryBtn} 
+                        onPress={retry}
+                        activeOpacity={0.8}
+                    >
                         <Text style={resultListStyle.retryText}>
                             {t('common:buttons.retry')}
                         </Text>
                     </TouchableOpacity>
                 </View>
-
             ) : isFavTab && displayResults.length === 0 ? (
                 <View style={resultListStyle.center}>
                     <Text style={{ fontSize: 48 }}>☆</Text>
@@ -108,14 +118,12 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                         {t('allrace:filter.noFavourites')}
                     </Text>
                 </View>
-
             ) : displayResults.length === 0 ? (
                 <View style={resultListStyle.center}>
                     <Text style={resultListStyle.errorText}>
                         {t('allrace:race.noResults')}
                     </Text>
                 </View>
-
             ) : (
                 <View style={{ flex: 1 }}>
                     <FlatList
@@ -134,7 +142,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                                 tintColor={colors.primary}
                             />
                         }
-                         initialNumToRender={12}
+                        initialNumToRender={12}
                         maxToRenderPerBatch={12}
                         windowSize={7}
                         removeClippedSubviews
@@ -150,7 +158,15 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     )}
                 </View>
             )}
-            <BottomNavigation />
+
+            {/* ✅ BOTTOM NAVIGATION WITH event_name */}
+            <BottomNavigation
+                activeTab="Results"
+                product_app_id={product_app_id}
+                event_name={event_name} // ✅ PASS event_name
+                product_option_value_app_id={selectedPovId}
+                sourceScreen={sourceScreen}
+            />
         </SafeAreaView>
     );
 };

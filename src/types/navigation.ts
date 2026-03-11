@@ -7,6 +7,7 @@ export type RootStackParamList = {
     product_app_id: string | number;
     product_option_value_app_id: string | number;
     event_name: string;
+    sourceScreen?: string;
   };
   ParticipantEvent:undefined
   PersonalEvent : undefined
@@ -32,9 +33,11 @@ export type RootStackParamList = {
     event_name: string;
   };
   ResultList: {
-  product_app_id: number;
-  product_option_value_app_id: number;
-};
+    product_app_id: number;
+    product_option_value_app_id: number;
+    event_name?: string;
+    sourceScreen?: string;
+  };
 
   ProfileScreen: { customer_app_id?: number;fromEdit?: boolean; };
 

@@ -1,16 +1,15 @@
-
 import React, { memo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
-import { useNavigation } from '@react-navigation/native';
 
 interface ResultCardProps {
-    item:        RaceResult;
-    isFav:       boolean;
-    fromLive:    0 | 1;
+    item: RaceResult;
+    isFav: boolean;
+    fromLive: 0 | 1;
     onToggleFav: (bib: string) => void;
 }
 
@@ -20,12 +19,25 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     fromLive,
     onToggleFav,
 }) => {
-    const navigation = useNavigation();
+    const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
 
-    return (
-        <TouchableOpacity style={resultListStyle.card} onPress={()=>navigation.navigate('ResultDetails')} >
+    const handlePress = () => {
+        // ✅ NAVIGATE TO RESULT DETAILS WITH PARTICIPANT_APP_ID
+        if (item.participant_app_id) {
+            navigation.navigate('ResultDetails', {
+                participant_app_id: item.participant_app_id,
+            });
+        }
+    };
 
+    return (
+        <TouchableOpacity 
+            style={resultListStyle.card} 
+            onPress={handlePress}
+            activeOpacity={0.7}
+            disabled={!item.participant_app_id} // ✅ DISABLE IF NO ID
+        >
             {/* ── green triangle corner — rank + star ── */}
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
                 <View style={resultListStyle.cornerTriangle} />
@@ -36,6 +48,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                     style={resultListStyle.cornerStarBtn}
                     onPress={() => onToggleFav(item.bib)}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    activeOpacity={0.7}
                 >
                     <Text style={[
                         resultListStyle.cornerStar,
@@ -52,14 +65,17 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 </View>
                 <View style={{ width: 64 }} />
             </View>
+
             <Text style={resultListStyle.bibText}>
                 {t('allrace:race.bibNumber')} {item.bib}
             </Text>
+
             {fromLive === 0 && (
                 <Text style={resultListStyle.teamText} numberOfLines={1}>
                     {[item.club, item.nation].filter(Boolean).join(' · ')}
                 </Text>
             )}
+
             <View style={resultListStyle.statsRow}>
                 <View style={resultListStyle.statCol}>
                     <Text style={resultListStyle.statLabel}>
@@ -87,7 +103,6 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                     <View style={[
                         resultListStyle.statCol,
                         resultListStyle.statFlagMid,
-                    
                     ]}>
                         <View style={resultListStyle.flagRow}>
                             {!!item.nation_flag && (
@@ -107,8 +122,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
         </TouchableOpacity>
     );
 }, (prev, next) =>
-    // custom comparator — only re-render when these specific props change
-    prev.isFav    === next.isFav    &&
+    prev.isFav === next.isFav &&
     prev.fromLive === next.fromLive &&
     prev.item.bib === next.item.bib &&
     prev.item.position === next.item.position

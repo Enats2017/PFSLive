@@ -1,5 +1,5 @@
-
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { apiClient } from './api';
 import { getCurrentLanguageId } from '../i18n';
 
 export interface RaceResult {
@@ -51,7 +51,7 @@ export interface Pagination {
 
 export interface EventRankingParams {
   product_app_id: number;
-  product_option_value_app_id: number;
+  product_option_value_app_id?: number; // ✅ OPTIONAL
   from_live: 0 | 1;
   filter_category: string;
   page: number;
@@ -62,25 +62,100 @@ export interface EventRankingResponse {
   categories: Category[];
   results: RaceResult[];
   pagination: Pagination;
+  event?: {
+    race_name: string;
+    distance_name: string;
+    product_app_id: number;
+    product_option_value_app_id: number;
+    from_live: 0 | 1;
+  };
 }
 
 export const resultList = {
+  /**
+   * Get event ranking with filters
+   * @param params - Ranking parameters
+   * @returns Event ranking response
+   */
   getEventRanking: async (params: EventRankingParams): Promise<EventRankingResponse> => {
-    const headers = await API_CONFIG.getHeaders();
-    const language_id = getCurrentLanguageId();
+    try {
+      const headers = await API_CONFIG.getHeaders();
+      const language_id = getCurrentLanguageId();
 
-    const res = await fetch(getApiEndpoint(API_CONFIG.ENDPOINTS.GET_EVENT_RANKING), {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        ...params,
+      if (API_CONFIG.DEBUG) {
+        console.log('📡 Fetching event ranking:', {
+          product_app_id: params.product_app_id,
+          product_option_value_app_id: params.product_option_value_app_id,
+          from_live: params.from_live,
+          filter_category: params.filter_category,
+          page: params.page,
+        });
+      }
+
+      // ✅ BUILD REQUEST BODY
+      const requestBody: any = {
+        product_app_id: params.product_app_id,
+        from_live: params.from_live,
+        filter_category: params.filter_category,
+        page: params.page,
         language_id,
-      }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    if (!json.success || !json.data) throw new Error(json.error ?? 'unknown_error');
+      };
 
-    return json.data as EventRankingResponse;
+      // ✅ ONLY ADD product_option_value_app_id IF PROVIDED
+      if (params.product_option_value_app_id !== undefined) {
+        requestBody.product_option_value_app_id = params.product_option_value_app_id;
+      }
+
+      // ✅ USE CONSISTENT apiClient
+      const response = await apiClient.post<EventRankingResponse>(
+        getApiEndpoint(API_CONFIG.ENDPOINTS.GET_EVENT_RANKING),
+        requestBody,
+        {
+          headers,
+          timeout: API_CONFIG.TIMEOUT,
+        }
+      );
+
+      if (API_CONFIG.DEBUG) {
+        //console.log('📡 Full API Response:', response.data);
+      }
+
+      // ✅ API RETURNS DATA DIRECTLY (NOT NESTED)
+      const data = response.data;
+
+      if (API_CONFIG.DEBUG) {
+        console.log('✅ Event ranking loaded:', {
+          distances: data.distances?.length || 0,
+          categories: data.categories?.length || 0,
+          results: data.results?.length || 0,
+          pagination: data.pagination,
+          event: data.event,
+        });
+      }
+
+      // ✅ VALIDATE RESPONSE STRUCTURE
+      if (!data.distances || !data.categories || !data.results || !data.pagination) {
+        if (API_CONFIG.DEBUG) {
+          console.error('❌ Invalid response structure:', data);
+        }
+        throw new Error('Invalid response structure');
+      }
+
+      return data;
+    } catch (error: any) {
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Get event ranking error:', error);
+        if (error.response?.data) {
+          console.error('❌ Error response data:', error.response.data);
+        }
+      }
+
+      // ✅ HANDLE API ERRORS
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+
+      throw error;
+    }
   },
 };

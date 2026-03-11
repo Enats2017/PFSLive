@@ -106,6 +106,8 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
               navigation.navigate('ResultList', {
                 product_app_id,
                 product_option_value_app_id: Number(item.product_option_value_app_id),
+                event_name: event_name,
+                sourceScreen: 'RaceResultScreen',
               })
             }
             activeOpacity={0.8}
@@ -122,7 +124,8 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
               navigation.navigate('Route', {
                 product_app_id,
                 product_option_value_app_id: item.product_option_value_app_id || '',
-                event_name: item.distance_name,
+                event_name: event_name,
+                sourceScreen: 'RaceResultScreen',
               })
             }
             activeOpacity={0.8}

@@ -29,7 +29,7 @@ const { width, height } = Dimensions.get('window');
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
-const TAB_CONTENT_HEIGHT = height * 0.5; // ✅ FIXED HEIGHT (50% of screen)
+const TAB_CONTENT_HEIGHT = height * 0.5;
 
 const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     const { t } = useTranslation(['event', 'common']);
@@ -52,11 +52,11 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         upcoming: { page: 1, total_pages: 1 },
     });
 
-    // ✅ PREVENT DUPLICATE CALLS (EXACT PROFILESCREEN PATTERN)
+    // ✅ PREVENT DUPLICATE CALLS
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
 
-    // ✅ FETCH INITIAL DATA (EXACT PROFILESCREEN PATTERN)
+    // ✅ FETCH DATA AND SYNC SCROLL
     useFocusEffect(
         useCallback(() => {
             // Skip if already fetching
@@ -67,24 +67,36 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 return;
             }
 
-            // Only fetch on first mount or when coming back to screen
+            // ✅ FETCH DATA (BOTH INITIAL AND ON RETURN)
+            const fetchAndSync = async () => {
+                await fetchEvents();
+                
+                // ✅ AFTER FETCH, SYNC SCROLL TO ACTIVE TAB
+                if (!isInitialMount.current) {
+                    if (API_CONFIG.DEBUG) {
+                        console.log('🔄 Syncing scroll to:', activeTab);
+                    }
+                    const index = TABS.indexOf(activeTab);
+                    setTimeout(() => {
+                        flatListRef.current?.scrollToIndex({ index, animated: false });
+                    }, 100); // ✅ Slightly longer delay to ensure data is rendered
+                }
+            };
+
+            fetchAndSync();
+
             if (isInitialMount.current) {
                 isInitialMount.current = false;
-                fetchEvents();
-            } else {
-                // Refresh data when returning to screen
-                fetchEvents();
             }
 
             return () => {
                 // Cleanup
                 isFetching.current = false;
             };
-        }, [])
+        }, [activeTab]) // ✅ Depend on activeTab to preserve selection
     );
 
     const fetchEvents = useCallback(async () => {
-        // Prevent duplicate calls
         if (isFetching.current) {
             if (API_CONFIG.DEBUG) {
                 console.log('⏸️ Fetch already in progress');
@@ -94,7 +106,12 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
 
         try {
             isFetching.current = true;
-            setLoading(true);
+            
+            // ✅ ONLY SHOW LOADING ON INITIAL MOUNT
+            if (isInitialMount.current) {
+                setLoading(true);
+            }
+            
             setError(null);
 
             if (API_CONFIG.DEBUG) {
@@ -144,7 +161,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         }
     }, [t]);
 
-    // ✅ LOAD MORE PAST (EXACT PROFILESCREEN PATTERN)
+    // ✅ LOAD MORE PAST
     const loadMorePast = useCallback(async () => {
         if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) {
             return;
@@ -155,7 +172,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             const nextPage = paginationInfo.past.page + 1;
 
             if (API_CONFIG.DEBUG) {
-                console.log(`Past: Loading page ${nextPage}`);
+                console.log(`📡 Past: Loading page ${nextPage}`);
             }
 
             const result = await eventService.getEvents({
@@ -167,7 +184,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 const newItems = result.tabs.past.filter((item) => !existingIds.has(item.product_app_id));
                 
                 if (API_CONFIG.DEBUG) {
-                    console.log(`➕ Past: Adding ${newItems.length} new events (${result.tabs.past.length - newItems.length} duplicates filtered)`);
+                    console.log(`➕ Past: Adding ${newItems.length} new events`);
                 }
                 
                 return [...prev, ...newItems];
@@ -189,7 +206,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         }
     }, [loadingMorePast, paginationInfo.past.page, paginationInfo.past.total_pages]);
 
-    // ✅ LOAD MORE LIVE (EXACT PROFILESCREEN PATTERN)
+    // ✅ LOAD MORE LIVE
     const loadMoreLive = useCallback(async () => {
         if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) {
             return;
@@ -200,7 +217,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             const nextPage = paginationInfo.live.page + 1;
 
             if (API_CONFIG.DEBUG) {
-                console.log(`Live: Loading page ${nextPage}`);
+                console.log(`📡 Live: Loading page ${nextPage}`);
             }
 
             const result = await eventService.getEvents({
@@ -212,7 +229,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 const newItems = result.tabs.live.filter((item) => !existingIds.has(item.product_app_id));
                 
                 if (API_CONFIG.DEBUG) {
-                    console.log(`➕ Live: Adding ${newItems.length} new events (${result.tabs.live.length - newItems.length} duplicates filtered)`);
+                    console.log(`➕ Live: Adding ${newItems.length} new events`);
                 }
                 
                 return [...prev, ...newItems];
@@ -234,7 +251,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         }
     }, [loadingMoreLive, paginationInfo.live.page, paginationInfo.live.total_pages]);
 
-    // ✅ LOAD MORE UPCOMING (EXACT PROFILESCREEN PATTERN)
+    // ✅ LOAD MORE UPCOMING
     const loadMoreUpcoming = useCallback(async () => {
         if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
             return;
@@ -245,7 +262,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             const nextPage = paginationInfo.upcoming.page + 1;
 
             if (API_CONFIG.DEBUG) {
-                console.log(`Upcoming: Loading page ${nextPage}`);
+                console.log(`📡 Upcoming: Loading page ${nextPage}`);
             }
 
             const result = await eventService.getEvents({
@@ -257,7 +274,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 const newItems = result.tabs.upcoming.filter((item) => !existingIds.has(item.product_app_id));
                 
                 if (API_CONFIG.DEBUG) {
-                    console.log(`➕ Upcoming: Adding ${newItems.length} new events (${result.tabs.upcoming.length - newItems.length} duplicates filtered)`);
+                    console.log(`➕ Upcoming: Adding ${newItems.length} new events`);
                 }
                 
                 return [...prev, ...newItems];
@@ -279,7 +296,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         }
     }, [loadingMoreUpcoming, paginationInfo.upcoming.page, paginationInfo.upcoming.total_pages]);
 
-    // ✅ TAB HANDLERS (EXACT PROFILESCREEN PATTERN)
+    // ✅ TAB HANDLERS
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
         setActiveTab(tab);
@@ -288,8 +305,10 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
 
     const handleSwipe = useCallback((e: any) => {
         const index = Math.round(e.nativeEvent.contentOffset.x / width);
-        setActiveTab(TABS[index]);
-    }, []);
+        if (TABS[index] && TABS[index] !== activeTab) {
+            setActiveTab(TABS[index]);
+        }
+    }, [activeTab]);
 
     const handlePersonalEventPress = useCallback(async () => {
         try {
@@ -355,13 +374,14 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                         <Text style={commonStyles.title}>{t('event:official.title')}</Text>
                     </View>
 
-                    {/* ✅ TAB BAR */}
+                    {/* TAB BAR */}
                     <View style={eventStyles.tabBar}>
                         {TABS.map((tab) => (
                             <TouchableOpacity
                                 key={tab}
                                 style={eventStyles.tabItem}
                                 onPress={() => handleTabPress(tab)}
+                                activeOpacity={0.7}
                             >
                                 <Text
                                     style={[
@@ -383,7 +403,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                         ))}
                     </View>
 
-                    {/* ✅ TAB CONTENT - FIXED HEIGHT */}
+                    {/* TAB CONTENT */}
                     <View style={{ height: TAB_CONTENT_HEIGHT }}>
                         <FlatList
                             ref={flatListRef}
@@ -431,7 +451,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                         />
                     </View>
 
-                    {/* ✅ PERSONAL EVENT SECTION */}
+                    {/* PERSONAL EVENT SECTION */}
                     <View style={[eventStyles.section, { marginBottom: 0, marginTop: spacing.sm }]}>
                         <Text style={commonStyles.title}>{t('event:personal.title')}</Text>
                     </View>
