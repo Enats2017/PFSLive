@@ -76,7 +76,6 @@ export type EditProfileScreenprops = NativeStackScreenProps<RootStackParamList, 
 export type EditPersonalEventpops = NativeStackScreenProps<RootStackParamList,'EditPersonalEvent'>;
 export type ResultDetailspops = NativeStackScreenProps<RootStackParamList,'ResultDetails'>;
 export type FollowerEventpops = NativeStackScreenProps<RootStackParamList,'FollowerEvent'>;
-
 export type followerDetailspops = NativeStackScreenProps<RootStackParamList,'FollowDetails'>;
 
 

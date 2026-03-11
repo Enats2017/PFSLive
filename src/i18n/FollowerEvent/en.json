@@ -19,11 +19,13 @@
     "upcoming": "No upcoming events found.",
     "searchNoResults": "No events match your search"
   },
-  "personal": {
-    "title": "FIND AN ATHLETE",
-    "description": "Racing an event or planning a training session that is not an official partner event? Create it here!",
-    "button": "CREATE PERSONAL EVENT"
-  },
+
+
+   "message":{
+        "follow":"Following You have successfully added to favourites",
+        "unfollow":"Unfollowed You have been removed from favourites"
+    },
+
   "error": {
     "failed": "Failed to load events",
     "retry": "Retry"
@@ -32,7 +34,9 @@
     "button":{
     "result":"VIEW RESULT",
     "follower":"FOLLOW" ,
-    "show_event":"SHOW EVENT" 
+    "show_event":"SHOW EVENT" ,
+     "unfollow":"UNFOLLOW",
+     "favourite":"ADD TO FAVOURITE"
       
     }
         
