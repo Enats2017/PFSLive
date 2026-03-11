@@ -26,6 +26,10 @@
         "unfollow":"Unfollowed You have been removed from favourites"
     },
 
+    "personal":{
+      "title":"FIND AN ATHLETE"
+    },
+
   "error": {
     "failed": "Failed to load events",
     "retry": "Retry"

@@ -8,6 +8,7 @@ import { formatEventDate } from '../../utils/dateFormatter';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
+import { API_CONFIG } from '../../constants/config';
 
 interface UpcomingTabProps {
     events: EventItem[];
@@ -19,14 +20,26 @@ interface UpcomingTabProps {
 const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { t } = useTranslation(['follower', 'common']);
-    const onEndReachedCalledDuringMomentum = useRef(false);
-
-    const handleLoadMore = useCallback(() => {
-        if (!onEndReachedCalledDuringMomentum.current && hasMore && !loadingMore) {
-            onLoadMore();
-            onEndReachedCalledDuringMomentum.current = true;
-        }
-    }, [hasMore, loadingMore, onLoadMore]);
+     const handleLoadMore = useCallback(() => {
+            if (API_CONFIG.DEBUG) {
+                console.log('🔍 Upcoming onEndReached:', {
+                    hasMore,
+                    loadingMore,
+                    eventsCount: events.length,
+                });
+            }
+    
+            if (hasMore && !loadingMore) {
+                if (API_CONFIG.DEBUG) {
+                    console.log('✅ Calling onLoadMore');
+                }
+                onLoadMore();
+            } else {
+                if (API_CONFIG.DEBUG) {
+                    console.log('⏸️ Skipped - hasMore:', hasMore, 'loadingMore:', loadingMore);
+                }
+            }
+        }, [hasMore, loadingMore, onLoadMore, events.length]);
 
     const renderItem = useCallback(({ item }: { item: EventItem }) => (
         <View style={[
@@ -92,9 +105,6 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
             renderItem={renderItem}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
-            onMomentumScrollBegin={() => {
-                onEndReachedCalledDuringMomentum.current = false;
-            }}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
                 paddingHorizontal: spacing.md,

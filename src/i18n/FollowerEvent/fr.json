@@ -11,6 +11,10 @@
 
   "searching": "Recherche...",
 
+    "personal": {
+    "title": "TROUVER UN ATHLÈTE"
+  },
+
   "empty": {
     "past": "Aucun événement passé trouvé.",
     "live": "Aucun événement en direct pour le moment.",

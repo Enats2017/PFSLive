@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions, Activity
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
-import { commonStyles, spacing } from '../../styles/common.styles';
+import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import PastTab from './PastTab';
 import LiveTab from './LiveTab';
@@ -11,9 +11,7 @@ import UpcomingTab from './UpcomingTab';
 import { eventService, EventItem, ParticipantItem } from '../../services/followerEvent';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-
 import { API_CONFIG } from '../../constants/config';
-import { tokenService } from '../../services/tokenService';
 import SearchInput from '../../components/SearchInput';
 import FanEventCard from './FollowerCard';
 import { FollowerEventpops } from '../../types/navigation';
@@ -27,6 +25,8 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const { t } = useTranslation(['follower', 'common']);
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [loading, setLoading] = useState(true);
+    const [searchResults, setSearchResults] = useState<ParticipantItem[]>([]);
+    const [searching, setSearching] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pastEvents, setPastEvents] = useState<EventItem[]>([]);
     const [liveEvents, setLiveEvents] = useState<EventItem[]>([]);
@@ -41,23 +41,65 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         past: { page: 1, total_pages: 1 },
         live: { page: 1, total_pages: 1 },
         upcoming: { page: 1, total_pages: 1 },
+        participants: { page: 1, total_pages: 1 },
     });
-    const [participantPagination, setParticipantPagination] = useState({ page: 1, total_pages: 1 });
-
     const flatListRef = useRef<FlatList>(null);
-    const pastSearchQueryRef = useRef('');
-    const participantSearchQueryRef = useRef('');
+    const isInitialMount = useRef(true);
+    const isFetching = useRef(false);
+    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
     useFocusEffect(
         useCallback(() => {
-            fetchEvents('');
-        }, [])
+            if (isFetching.current) {
+                if (API_CONFIG.DEBUG) {
+                    console.log('⏸️ Already fetching, skipping duplicate call');
+                }
+                return;
+            }
+
+            const fetchAndSync = async () => {
+                await fetchEvents('');
+
+                // ✅ AFTER FETCH, SYNC SCROLL TO ACTIVE TAB
+                if (!isInitialMount.current) {
+                    if (API_CONFIG.DEBUG) {
+                        console.log('🔄 Syncing scroll to:', activeTab);
+                    }
+                    const index = TABS.indexOf(activeTab);
+                    setTimeout(() => {
+                        flatListRef.current?.scrollToIndex({ index, animated: false });
+                    }, 100); // ✅ Slightly longer delay to ensure data is rendered
+                }
+            };
+            fetchAndSync();
+            if (isInitialMount.current) {
+                isInitialMount.current = false;
+
+            }
+            return () => {
+                isFetching.current = false;
+            };
+        }, [activeTab])
     );
 
     const fetchEvents = useCallback(async (search: string) => {
+        if (isFetching.current) {
+            if (API_CONFIG.DEBUG) {
+                console.log('⏸️ Fetch already in progress');
+            }
+            return;
+        }
         try {
-            setLoading(true);
+            isFetching.current = true;
+            if (isInitialMount.current) {
+                setLoading(true);
+            }
             setError(null);
+
+
+            if (API_CONFIG.DEBUG) {
+                console.log('📡 Fetching events');
+            }
 
             const result = await eventService.getEvents({
                 page_past: 1,
@@ -79,149 +121,176 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                     past: { page: result.pagination.past.page, total_pages: result.pagination.past.total_pages },
                     live: { page: result.pagination.live.page, total_pages: result.pagination.live.total_pages },
                     upcoming: { page: result.pagination.upcoming.page, total_pages: result.pagination.upcoming.total_pages },
+                    participants: { page: result.pagination?.participants?.page, total_pages: result.pagination?.participants?.total_pages },
+
                 });
             }
-            if (result.pagination?.participants) {
-                setParticipantPagination({
-                    page: result.pagination.participants.page,
-                    total_pages: result.pagination.participants.total_pages,
+
+            if (API_CONFIG.DEBUG) {
+                console.log('✅ Events loaded:', {
+                    past: result.tabs.past.length,
+                    live: result.tabs.live.length,
+                    upcoming: result.tabs.upcoming.length,
+                    participants: (result.participants || []).length,
                 });
             }
         } catch (err: any) {
             setError(err.message || t('event:error.failed'));
         } finally {
             setLoading(false);
+            isFetching.current = false;
         }
     }, [t]);
 
-    const handlePastSearch = useCallback((query: string) => {
 
-        pastSearchQueryRef.current = query;
-        fetchEvents(query);
-    }, [fetchEvents]);
-
-    const handleParticipantSearch = useCallback((query: string) => {
-        console.log('🔍 handleParticipantSearch called with:', query); // ✅ debug 1
-        participantSearchQueryRef.current = query;
-        setSearchText(query);
-        setParticipants([]);
-        setParticipantPagination({ page: 1, total_pages: 1 });
-
-        eventService.getEvents({
-            is_participant: "1",
-            page_participant: 1,
-            filter_name_participant: query,
-        }).then(result => {
-            console.log('✅ Search API result participants:', result.participants?.length); // ✅ debug 2
-            console.log('✅ Search API pagination:', result.pagination?.participants);      // ✅ debug 3
-            setParticipants(result.participants || []);
-            if (result.pagination?.participants) {
-                setParticipantPagination({
-                    page: result.pagination.participants.page,
-                    total_pages: result.pagination.participants.total_pages,
-                });
-            }
-        }).catch(err => {
-            console.log('❌ Search API failed:', err); // ✅ debug 4
-        });
-    }, []);
 
     const loadMorePast = useCallback(async () => {
-        if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) return;
+        if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) {
+            return;
+        }
         try {
             setLoadingMorePast(true);
             const nextPage = paginationInfo.past.page + 1;
+            if (API_CONFIG.DEBUG) {
+                console.log(`📡 Past: Loading page ${nextPage}`);
+            }
             const result = await eventService.getEvents({
                 page_past: nextPage,
-                filter_name_past: pastSearchQueryRef.current,
             });
-            setPastEvents(prev => {
-                const ids = new Set(prev.map(e => e.product_app_id));
-                return [...prev, ...result.tabs.past.filter(i => !ids.has(i.product_app_id))];
+
+            setPastEvents((prev) => {
+                const existingIds = new Set(prev.map((e) => e.product_app_id));
+                const newItems = result.tabs.past.filter((item) => !existingIds.has(item.product_app_id));
+
+                if (API_CONFIG.DEBUG) {
+                    console.log(`➕ Past: Adding ${newItems.length} new events`);
+                }
+                return [...prev, ...newItems];
             });
             if (result.pagination?.past) {
-                setPaginationInfo(prev => ({
+                setPaginationInfo((prev) => ({
                     ...prev,
-                    past: { page: nextPage, total_pages: result.pagination.past.total_pages }
+                    past: {
+                        page: nextPage,
+                        total_pages: result.pagination.past.total_pages,
+                    },
                 }));
             }
-        } catch (err) {
-            console.log('Past: Load more failed:', err);
+        } catch (error) {
+            console.log('❌ Past: Load more failed:', error);
         } finally {
             setLoadingMorePast(false);
         }
-    }, [loadingMorePast, paginationInfo.past]);
+    }, [loadingMorePast, paginationInfo.past.page, paginationInfo.past.total_pages]);
 
     const loadMoreLive = useCallback(async () => {
-        if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) return;
+        if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) {
+            return;
+        }
         try {
             setLoadingMoreLive(true);
             const nextPage = paginationInfo.live.page + 1;
-            const result = await eventService.getEvents({ page_live: nextPage });
-            setLiveEvents(prev => {
-                const ids = new Set(prev.map(e => e.product_app_id));
-                return [...prev, ...result.tabs.live.filter(i => !ids.has(i.product_app_id))];
+            if (API_CONFIG.DEBUG) {
+                console.log(`📡 Live: Loading page ${nextPage}`);
+            }
+            const result = await eventService.getEvents({
+                page_live: nextPage,
             });
+            setLiveEvents((prev) => {
+                const existingIds = new Set(prev.map((e) => e.product_app_id));
+                const newItems = result.tabs.live.filter((item) => !existingIds.has(item.product_app_id));
+                if (API_CONFIG.DEBUG) {
+                    console.log(`➕ Live: Adding ${newItems.length} new events`);
+                }
+                return [...prev, ...newItems];
+            });
+
             if (result.pagination?.live) {
-                setPaginationInfo(prev => ({
+                setPaginationInfo((prev) => ({
                     ...prev,
-                    live: { page: nextPage, total_pages: result.pagination.live.total_pages }
+                    live: {
+                        page: nextPage,
+                        total_pages: result.pagination.live.total_pages,
+                    },
                 }));
             }
-        } catch (err) {
-            console.log('Live: Load more failed:', err);
+        } catch (error) {
+            console.log('❌ Live: Load more failed:', error);
         } finally {
             setLoadingMoreLive(false);
         }
-    }, [loadingMoreLive, paginationInfo.live]);
+    }, [loadingMoreLive, paginationInfo.live.page, paginationInfo.live.total_pages]);
 
     const loadMoreUpcoming = useCallback(async () => {
-        if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) return;
+        if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
+            return;
+        }
         try {
             setLoadingMoreUpcoming(true);
             const nextPage = paginationInfo.upcoming.page + 1;
-            const result = await eventService.getEvents({ page_upcoming: nextPage });
-            setUpcomingEvents(prev => {
-                const ids = new Set(prev.map(e => e.product_app_id));
-                return [...prev, ...result.tabs.upcoming.filter(i => !ids.has(i.product_app_id))];
+
+            if (API_CONFIG.DEBUG) {
+                console.log(`📡 Upcoming: Loading page ${nextPage}`);
+            }
+            const result = await eventService.getEvents({
+                page_upcoming: nextPage,
             });
+            setUpcomingEvents((prev) => {
+                const existingIds = new Set(prev.map((e) => e.product_app_id));
+                const newItems = result.tabs.upcoming.filter((item) => !existingIds.has(item.product_app_id));
+
+                if (API_CONFIG.DEBUG) {
+                    console.log(`➕ Upcoming: Adding ${newItems.length} new events`);
+                }
+
+                return [...prev, ...newItems];
+            });
+
             if (result.pagination?.upcoming) {
-                setPaginationInfo(prev => ({
+                setPaginationInfo((prev) => ({
                     ...prev,
-                    upcoming: { page: nextPage, total_pages: result.pagination.upcoming.total_pages }
+                    upcoming: {
+                        page: nextPage,
+                        total_pages: result.pagination.upcoming.total_pages,
+                    },
                 }));
             }
-        } catch (err) {
-            console.log('Upcoming: Load more failed:', err);
+        } catch (error) {
+            console.log('❌ Upcoming: Load more failed:', error);
         } finally {
             setLoadingMoreUpcoming(false);
         }
-    }, [loadingMoreUpcoming, paginationInfo.upcoming]);
+    }, [loadingMoreUpcoming, paginationInfo.upcoming.page, paginationInfo.upcoming.total_pages]);
 
     const loadMoreParticipant = useCallback(async () => {
-        if (loadingMoreParticipant || participantPagination.page >= participantPagination.total_pages) return;
+        if (loadingMoreParticipant || paginationInfo.participants.page >= paginationInfo.participants.total_pages) return;
+
         try {
             setLoadingMoreParticipant(true);
-            const nextPage = participantPagination.page + 1;
+            const nextPage = paginationInfo.participants.page + 1;
             const result = await eventService.getEvents({
-                is_participant: "1",
+                is_participant: '1',
                 page_participant: nextPage,
-                filter_name_participant: participantSearchQueryRef.current,
+                filter_name_participant: searchText,
             });
             setParticipants(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
                 return [...prev, ...(result.participants || []).filter(i => !ids.has(i.customer_app_id))];
             });
-            setParticipantPagination({
-                page: nextPage,
-                total_pages: result.pagination?.participants?.total_pages || participantPagination.total_pages,
-            });
+            // ✅ Only update participants slice
+            setPaginationInfo(prev => ({
+                ...prev,
+                participants: {
+                    page: nextPage,
+                    total_pages: result.pagination?.participants?.total_pages ?? prev.participants.total_pages,
+                },
+            }));
         } catch (err) {
-            console.log('Participant: Load more failed:', err);
+            console.log('❌ Participant: Load more failed:', err);
         } finally {
             setLoadingMoreParticipant(false);
         }
-    }, [loadingMoreParticipant, participantPagination]);
+    }, [loadingMoreParticipant, paginationInfo.participants]);
 
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
@@ -231,48 +300,66 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
 
     const handleSwipe = useCallback((e: any) => {
         const index = Math.round(e.nativeEvent.contentOffset.x / width);
-        setActiveTab(TABS[index]);
-    }, []);
+        if (TABS[index] && TABS[index] !== activeTab) {
+            setActiveTab(TABS[index]);
+        }
+    }, [activeTab]);
 
-
-
-    // ✅ Add this debounce effect
-    const participantDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        if (participantDebounceTimer.current) {
-            clearTimeout(participantDebounceTimer.current);
+        if (debounceTimer.current) {
+            clearTimeout(debounceTimer.current);
+        }
+        if (searchText.trim().length === 0) {
+            setSearchResults([]);
+            return;
         }
 
-        participantDebounceTimer.current = setTimeout(() => {
-            participantSearchQueryRef.current = searchText;
-            setParticipants([]);
-            setParticipantPagination({ page: 1, total_pages: 1 });
-
-            eventService.getEvents({
-                is_participant: "1",
-                page_participant: 1,
-                filter_name_participant: searchText,
-            }).then(result => {
-                console.log('✅ Search result:', result.participants?.length);
-                setParticipants(result.participants || []);
-                if (result.pagination?.participants) {
-                    setParticipantPagination({
-                        page: result.pagination.participants.page,
-                        total_pages: result.pagination.participants.total_pages,
-                    });
-                }
-            }).catch(err => {
-                console.log('❌ Search failed:', err);
-            });
+        debounceTimer.current = setTimeout(async () => {
+            try {
+                setSearching(true);
+                const result = await eventService.getEvents({
+                    is_participant: '1',
+                    page_participant: 1,
+                    filter_name_participant: searchText,
+                });
+                setSearchResults(result.participants);
+            } catch (error) {
+                console.log('❌ Search failed:', error);
+            } finally {
+                setSearching(false);
+            }
         }, 500);
 
         return () => {
-            if (participantDebounceTimer.current) {
-                clearTimeout(participantDebounceTimer.current);
+            if (debounceTimer.current) {
+                clearTimeout(debounceTimer.current);
             }
         };
-    }, [searchText]); // ✅ triggers when searchText changes
+    }, [searchText]);
+
+    const displayEvents = searchText.trim().length > 0 ? searchResults : participants;
+
+    const handleLoadMoreParticipant = useCallback(() => {
+        if (searchText.trim().length > 0) return;
+        if (API_CONFIG.DEBUG) {
+            console.log('🔍 Participant onEndReached:', {
+                hasMore: paginationInfo.participants.page < paginationInfo.participants.total_pages,
+                loadingMore: loadingMoreParticipant,
+                participantsCount: participants.length,
+            });
+        }
+        if (paginationInfo.participants.page < paginationInfo.participants.total_pages && !loadingMoreParticipant) {
+            if (API_CONFIG.DEBUG) {
+                console.log('✅ Calling loadMoreParticipant');
+            }
+            loadMoreParticipant();
+        } else {
+            if (API_CONFIG.DEBUG) {
+                console.log('⏸️ Skipped - hasMore:', paginationInfo.participants.page < paginationInfo.participants.total_pages, 'loadingMore:', loadingMoreParticipant);
+            }
+        }
+    }, [paginationInfo.participants, loadingMoreParticipant, loadMoreParticipant, participants.length, searchText]);
 
     if (loading) {
         return (
@@ -308,9 +395,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
-
             <View style={{ flex: 1 }}>
-                {/* ✅ Official Events - 3 Tabs */}
                 <View style={eventStyles.section}>
                     <Text style={commonStyles.title}>{t('follower:official.title')}</Text>
                 </View>
@@ -359,7 +444,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                                         onLoadMore={loadMorePast}
                                         loadingMore={loadingMorePast}
                                         hasMore={paginationInfo.past.page < paginationInfo.past.total_pages}
-                                        onSearch={handlePastSearch}
+
                                     />
                                 )}
                                 {item === 'Live' && (
@@ -385,24 +470,24 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 <View style={[eventStyles.section, { marginBottom: spacing.md, marginTop: spacing.sm }]}>
                     <Text style={commonStyles.title}>{t('follower:personal.title')}</Text>
                 </View>
-                    <FlatList
-                        data={participants}
-                        keyExtractor={(item, index) => `${item.customer_app_id}_${index}`}
-                        onEndReached={loadMoreParticipant}
-                        showsVerticalScrollIndicator={false}
-                        onEndReachedThreshold={0.5}
-                        contentContainerStyle={{
-                            paddingHorizontal: spacing.md,
-                           
-                            paddingBottom: spacing.xxxl,
-                        }}
-                        keyboardShouldPersistTaps="handled"
-                        getItemLayout={(_, index) => ({
-                            length: width,
-                            offset: width * index,
-                            index,
-                        })}
-                        ListHeaderComponent={
+                <FlatList
+                    data={displayEvents}
+                    keyExtractor={(item, index) => `${item.customer_app_id}_${index}`}
+                    onEndReached={handleLoadMoreParticipant}
+                    showsVerticalScrollIndicator={false}
+                    onEndReachedThreshold={0.5}
+                    contentContainerStyle={{
+                        paddingHorizontal: spacing.md,
+                        paddingBottom: spacing.xxxl,
+                    }}
+                    keyboardShouldPersistTaps="handled"
+                    getItemLayout={(_, index) => ({
+                        length: width,
+                        offset: width * index,
+                        index,
+                    })}
+                    ListHeaderComponent={
+                        <>
                             <SearchInput
                                 placeholder={t('details:participant.search')}
                                 value={searchText}
@@ -410,21 +495,27 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                                 icon="search"
 
                             />
-                        }
-                        ListEmptyComponent={
-                            <Text style={commonStyles.errorText}>No participants found.</Text>
-                        }
-                        ListFooterComponent={
-                            loadingMoreParticipant
-                                ? <ActivityIndicator size="small" color="#f4a100" style={{ marginVertical: 16 }} />
-                                : null
-                        }
-                        renderItem={({ item }) => (
-                            <FanEventCard item={item} />
-                        )}
-                    />                                
-            </View>
+                            {searching && (
+                                <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                </View>
+                            )}
+                        </>
 
+                    }
+                    ListEmptyComponent={
+                        <Text style={commonStyles.errorText}>No participants found.</Text>
+                    }
+                    ListFooterComponent={
+                        loadingMoreParticipant
+                            ? <ActivityIndicator size="small" color="#f4a100" style={{ marginVertical: 16 }} />
+                            : null
+                    }
+                    renderItem={({ item }) => (
+                        <FanEventCard item={item} />
+                    )}
+                />
+            </View>
         </SafeAreaView>
     );
 };
