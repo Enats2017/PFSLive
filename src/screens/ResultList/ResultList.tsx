@@ -19,10 +19,14 @@ import Dropdown from '../../components/FilterDropdown';
 import ResultCard from './ResultCard';
 import { useResultList, TYPE_OPTIONS } from '../../hooks/useResultList';
 import { RaceResult } from '../../services/resultList';
+import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
-    const { product_app_id, product_option_value_app_id, event_name, sourceScreen } = route.params; // ✅ GET event_name
+    const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType } = route.params; // ✅ GET event_name
+
+    console.log("1111",sectionType);
+    
 
     console.log('event_name ResultListScreen');
     console.log(event_name);
@@ -51,7 +55,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         pageLoad
             ? <ActivityIndicator size="small" color={colors.primary} style={{ paddingVertical: 16 }} />
             : null
-    , [pageLoad]);
+        , [pageLoad]);
 
     const keyExtractor = useCallback(
         (item: RaceResult, index: number) => `${item.bib}_${item.position}_${index}`,
@@ -62,8 +66,6 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={false} />
-
-            {/* FILTER ROW 1: Distance */}
             <View style={resultListStyle.filterRow1}>
                 <Dropdown
                     label={selectedDistanceLabel}
@@ -73,7 +75,6 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 />
             </View>
 
-            {/* FILTER ROW 2: Type & Category */}
             <View style={resultListStyle.filterRow2}>
                 <Dropdown
                     label={t(selectedType.label)}
@@ -81,7 +82,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     selected={selectedType}
                     onSelect={onTypeSelect}
                 />
-                
+
                 <Dropdown
                     label={selectedCategoryLabel}
                     options={categoryOptions}
@@ -101,8 +102,8 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             ) : error ? (
                 <View style={resultListStyle.center}>
                     <Text style={resultListStyle.errorText}>{error}</Text>
-                    <TouchableOpacity 
-                        style={resultListStyle.retryBtn} 
+                    <TouchableOpacity
+                        style={resultListStyle.retryBtn}
                         onPress={retry}
                         activeOpacity={0.8}
                     >
@@ -159,14 +160,22 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 </View>
             )}
 
-            {/* ✅ BOTTOM NAVIGATION WITH event_name */}
-            <BottomNavigation
-                activeTab="Results"
-                product_app_id={product_app_id}
-                event_name={event_name} // ✅ PASS event_name
-                product_option_value_app_id={selectedPovId}
-                sourceScreen={sourceScreen}
-            />
+            {sectionType === 'follower' ? (
+                <BottomNavigationFollower
+                    activeTab="Results"
+                    product_app_id={product_app_id}
+                    event_name={event_name}
+                    product_option_value_app_id={product_option_value_app_id}
+                />
+            ) : (
+                <BottomNavigation
+                    activeTab="Results"
+                    product_app_id={product_app_id}
+                    event_name={event_name}
+                    product_option_value_app_id={product_option_value_app_id}
+                    sourceScreen={sourceScreen}
+                />
+            )}
         </SafeAreaView>
     );
 };

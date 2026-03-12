@@ -6,21 +6,19 @@ import { bottomNavStyles } from '../../styles/bottomNav.styles';
 
 type TabName = 'Home' | 'Favorites' | 'Results' | 'Map';
 
-interface BottomNavigationProps {
+interface BottomNavigationFollowerProps {
   activeTab?: TabName;
   product_app_id?: string | number;
   event_name?: string;
   product_option_value_app_id?: string | number;
-  sourceScreen?: string;
+  
 }
 
-export const BottomNavigation: React.FC<BottomNavigationProps> = ({ 
+export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> = ({ 
   activeTab = 'Home',
   product_app_id,
   event_name,
   product_option_value_app_id,
-  sourceScreen,
-  // ✅ NEW PROP
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute();
@@ -36,7 +34,6 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   const handleTabPress = (tabName: TabName) => {
     console.log('Tab pressed:', tabName, {
       currentRoute: route.name,
-      sourceScreen,
       product_app_id,
       product_option_value_app_id,
     });
@@ -53,7 +50,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             product_option_value_app_id,
             event_name: event_name || '',
             sourceScreen: route.name,
-            sectionType: 'participant', 
+            sectionType: 'follower',
           });
         } else {
           console.log('Results: Missing product_app_id');
@@ -67,7 +64,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             product_option_value_app_id,
             event_name: event_name || '',
             sourceScreen: route.name,
-             sectionType: 'participant', // ✅ PASS CURRENT SCREEN AS SOURCE
+            sectionType: 'follower',
           });
         } else {
           console.log('Map: Missing required parameters');
@@ -80,66 +77,26 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     }
   };
 
-  // ✅ SMART HOME NAVIGATION WITH SOURCE TRACKING
   const handleHomeNavigation = () => {
     const currentRoute = route.name;
 
-    console.log('🏠 Home navigation:', {
+    console.log('🏠 Follower Home navigation:', {
       currentRoute,
-      sourceScreen,
       product_app_id,
     });
 
-    // ✅ CASE 1: ON RESULTLIST
-    if (currentRoute === 'ResultList') {
-      // Check where we came from
-      if (sourceScreen === 'EventDetails') {
-        // Came from EventDetails → Go back to EventDetails
-        console.log('📍 ResultList (from EventDetails) → EventDetails');
-        navigation.navigate('EventDetails', {
-          product_app_id,
-          event_name: event_name || '',
-          auto_register_id: null,
-        });
-      } else if (sourceScreen === 'RaceResultScreen') {
-        // Came from RaceResultScreen → Go back to RaceResultScreen
-        console.log('📍 ResultList (from RaceResultScreen) → RaceResultScreen');
-        navigation.navigate('RaceResultScreen', {
-          product_app_id,
-          event_name: event_name || '',
-        });
-      } else {
-        // Default: Go to EventDetails
-        console.log('📍 ResultList (unknown source) → EventDetails');
-        if (product_app_id) {
-          navigation.navigate('EventDetails', {
-            product_app_id,
-            event_name: event_name || '',
-            auto_register_id: null,
-          });
-        } else {
-          navigation.navigate('Home');
-        }
-      }
-    }
-    // ✅ CASE 2: ON RACERESULTSCREEN → STAY
-    else if (currentRoute === 'RaceResultScreen') {
-      console.log('📍 Already on RaceResultScreen - staying');
+    // CASE 1: ON FOLLOWERLIST → STAY
+    if (currentRoute === 'FollowDetails') {
+      console.log('📍 Already on FollowerList - staying');
       // Do nothing, already on the right screen
     }
-    // ✅ CASE 3: ON EVENTDETAILS → STAY
-    else if (currentRoute === 'EventDetails') {
-      console.log('📍 Already on EventDetails - staying');
-      // Do nothing, already on the right screen
-    }
-    // ✅ CASE 4: DEFAULT
+    // CASE 2: DEFAULT → Navigate to FollowerList
     else {
       if (product_app_id) {
-        console.log('📍 Default → EventDetails');
-        navigation.navigate('EventDetails', {
+        console.log('📍 Default → FollowerList');
+        navigation.navigate('FollowDetails', {
           product_app_id,
           event_name: event_name || '',
-          auto_register_id: null,
         });
       } else {
         console.log('📍 Default → Home');

@@ -37,6 +37,7 @@ export type RootStackParamList = {
     product_option_value_app_id: number;
     event_name?: string;
     sourceScreen?: string;
+     sectionType:string;
   };
 
   ProfileScreen: { customer_app_id?: number;fromEdit?: boolean; };

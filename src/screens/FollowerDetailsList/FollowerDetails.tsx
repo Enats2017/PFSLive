@@ -18,6 +18,7 @@ import ParticipantTab from '../EventDetails/ParticipantTab';
 import type { followerDetailspops } from '../../types/navigation';
 import { API_CONFIG } from '../../constants/config';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
+import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 
 const { width } = Dimensions.get('window');
 
@@ -151,7 +152,11 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
           scrollEnabled={true}
         />
       </View>
-        <BottomNavigation/>
+        <BottomNavigationFollower
+          activeTab="Home"
+          product_app_id={product_app_id}
+          event_name={event_name}
+        />
     </SafeAreaView>
   );
 };
