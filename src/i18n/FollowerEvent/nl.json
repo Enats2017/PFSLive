@@ -7,6 +7,7 @@
   "official": {
     "title": "OFFICIËLE PARTNER EVENEMENTEN"
   },
+
   "personal": {
     "title": "VIND EEN ATLEET",
     "description": "Volg je eigen activiteiten",
@@ -22,7 +23,7 @@
 
   "message": {
     "follow": "Vous suivez maintenant cet utilisateur. Ajouté aux favoris avec succès.",
-    "unfollow": "Vous ne suivez plus cet utilisateur. Supprimé des favoris.",
+    "unfollow": "Vous ne suivez plus cet utilisateur. Supprimé des favoris."
   },
 
   "success": {
@@ -41,7 +42,6 @@
     "result": "BEKIJK RESULTAAT",
     "follower": "VOLGEN",
     "show_event": "TOON EVENEMENT",
-    "unfollow": "ONTVOLGEN",
-      "favourite": "TOEVOEGEN AAN FAVORIETEN"
+    "unfollow": "ONTVOLGEN",      "favourite": "TOEVOEGEN AAN FAVORIETEN"
   }
 }
