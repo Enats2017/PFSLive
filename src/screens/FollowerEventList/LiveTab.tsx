@@ -20,7 +20,7 @@ interface LiveTabProps {
 
 const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-    const { t } = useTranslation(['event', 'common']);
+    const { t } = useTranslation(['event', 'common', 'follower']);
 
     // ✅ SIMPLIFIED: Just check hasMore and loadingMore (EXACT PROFILESCREEN PATTERN)
     const handleLoadMore = useCallback(() => {
@@ -66,15 +66,15 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 <TouchableOpacity
                     style={[commonStyles.primaryButton, { borderRadius: 0 }]}
                     onPress={() =>
-                        navigation.navigate('EventDetails', {
+                        navigation.navigate('FollowDetails', {
                             product_app_id: item.product_app_id,
                             event_name: item.name,
-                            auto_register_id: null,
+                            
                         })
                     }
                     activeOpacity={0.8}
                 >
-                    <Text style={commonStyles.primaryButtonText}>{t('event:official.button')}</Text>
+                    <Text style={commonStyles.primaryButtonText}>{t('follower:button.show_event')}</Text>
                 </TouchableOpacity>
             </View>
         ),
