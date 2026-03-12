@@ -107,7 +107,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 <TouchableOpacity
                     style={[commonStyles.primaryButton, { borderRadius: 0 }]}
                     onPress={() =>
-                        navigation.navigate('RaceResultScreen', {
+                        navigation.navigate('FollowDetails', {
                             product_app_id: item.product_app_id,
                             event_name: item.name,
                         })

@@ -66,10 +66,10 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 <TouchableOpacity
                     style={[commonStyles.primaryButton, { borderRadius: 0 }]}
                     onPress={() =>
-                        navigation.navigate('EventDetails', {
+                        navigation.navigate('FollowDetails', {
                             product_app_id: item.product_app_id,
                             event_name: item.name,
-                            auto_register_id: null,
+                            
                         })
                     }
                     activeOpacity={0.8}
