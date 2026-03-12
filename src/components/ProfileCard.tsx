@@ -1,37 +1,47 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { commonStyles, spacing } from '../styles/common.styles';
 import { AthleteProfile } from '../services/athleteProfileService';
 import { profileStyles } from '../styles/Profile.styles';
 import { getImageUrl, API_CONFIG } from '../constants/config';
-import { useFollow } from '../hooks/useFollow'
-
 import { useTranslation } from 'react-i18next';
 
-interface Props {
+interface ProfileCardProps {
     profile: AthleteProfile | null;
     fetchError: string;
     customer_app_id: number;
+    isFollowed: boolean;
+    isFollowLoading: boolean;
+    onToggleFollow: () => void;
 }
 
-
-const ProfileCard = ({ profile, fetchError, customer_app_id }: Props) => {
-    const { t } = useTranslation('follower');
-    console.log(profile);
+const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
+    profile,
+    fetchError,
+    customer_app_id,
+    isFollowed,
+    isFollowLoading,
+    onToggleFollow,
+}) => {
+    const { t } = useTranslation(['follower', 'profile']);
     const navigation = useNavigation();
-    const { isFollowed, isLoading, toggleFollow } = useFollow(customer_app_id);
 
     const fullName = profile
         ? `${profile.firstname} ${profile.lastname}`.toUpperCase()
         : '';
 
     const isOwn = profile?.is_own_profile === 1;
+
     if (API_CONFIG.DEBUG) {
-        console.log('RAW PROFILE IMAGE:', profile?.profile_picture);
-        console.log('FIXED PROFILE IMAGE:', getImageUrl(profile?.profile_picture));
+        console.log('ProfileCard render:', {
+            customer_app_id,
+            isFollowed,
+            isFollowLoading,
+            isOwn,
+        });
     }
 
     return (
@@ -44,7 +54,7 @@ const ProfileCard = ({ profile, fetchError, customer_app_id }: Props) => {
                 </View>
             )}
 
-            {/* ✅ NAME (MOVED TO TOP) */}
+            {/* ✅ NAME */}
             <Text style={[commonStyles.title, { marginBottom: spacing.sm }]}>
                 {fullName || '—'}
             </Text>
@@ -61,7 +71,7 @@ const ProfileCard = ({ profile, fetchError, customer_app_id }: Props) => {
                         <Ionicons name="person" size={50} color="#555" />
                     )}
                 </View>
-                {!!profile?.is_own_profile && (
+                {isOwn && (
                     <TouchableOpacity
                         style={profileStyles.editIcon}
                         onPress={() => navigation.navigate('EditProfileScreen' as never)}
@@ -77,7 +87,7 @@ const ProfileCard = ({ profile, fetchError, customer_app_id }: Props) => {
                     style={[
                         commonStyles.primaryButton,
                         {
-                            width: '90%', // ✅ Full width with margins
+                            width: '90%',
                             alignSelf: 'center',
                             marginTop: spacing.sm,
                         }
@@ -85,7 +95,9 @@ const ProfileCard = ({ profile, fetchError, customer_app_id }: Props) => {
                     onPress={() => navigation.navigate('EditProfileScreen' as never)}
                     activeOpacity={0.8}
                 >
-                    <Text style={commonStyles.primaryButtonText}>Edit Profile</Text>
+                    <Text style={commonStyles.primaryButtonText}>
+                        {t('profile:buttons.editProfile')}
+                    </Text>
                 </TouchableOpacity>
             ) : (
                 <TouchableOpacity
@@ -98,14 +110,14 @@ const ProfileCard = ({ profile, fetchError, customer_app_id }: Props) => {
                             flexDirection: 'row',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            opacity: isLoading ? 0.6 : 1,
+                            opacity: isFollowLoading ? 0.6 : 1,
                         }
                     ]}
-                    onPress={toggleFollow}
-                    disabled={isLoading}
+                    onPress={onToggleFollow}
+                    disabled={isFollowLoading}
                     activeOpacity={0.8}
                 >
-                    {isLoading ? (
+                    {isFollowLoading ? (
                         <ActivityIndicator size="small" color="#fff" />
                     ) : (
                         <>
@@ -116,7 +128,7 @@ const ProfileCard = ({ profile, fetchError, customer_app_id }: Props) => {
                                 style={{ marginRight: 6 }}
                             />
                             <Text style={commonStyles.primaryButtonText}>
-                                {isFollowed ? t('button.unfollow') : t('button.favourite')}
+                                {isFollowed ? t('follower:button.unfollow') : t('follower:button.favourite')}
                             </Text>
                         </>
                     )}
@@ -124,6 +136,8 @@ const ProfileCard = ({ profile, fetchError, customer_app_id }: Props) => {
             )}
         </View>
     );
-};
+});
+
+ProfileCard.displayName = 'ProfileCard';
 
 export default ProfileCard;

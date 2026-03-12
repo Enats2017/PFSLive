@@ -21,7 +21,7 @@ import ProfileCard from '../../components/ProfileCard';
 import { eventService, AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { API_CONFIG } from '../../constants/config';
 import { ProfileScreenprops } from '../../types/navigation';
-import { tokenService } from '../../services/tokenService';
+import { useFollowManager } from '../../hooks/useFollowManager';
 
 const { width, height } = Dimensions.get('window');
 
@@ -41,13 +41,19 @@ const INITIAL_PAGINATION: PaginationState = {
 };
 
 const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
-    const { t } = useTranslation(['profile', 'common']);
+    const { t } = useTranslation(['profile', 'common', 'follower']);
     const flatListRef = useRef<FlatList>(null);
-    // ✅ PREVENT DUPLICATE CALLS (EXACT PARTICIPANTEVENT PATTERN)
+    
+    // ✅ USE FOLLOW MANAGER HOOK
+    const { isFollowed, isLoading, toggleFollow } = useFollowManager(t);
+    
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
-    const targetId = route.params?.customer_app_id;
+    
+    // ✅ SAFELY EXTRACT targetId WITH DEFAULT
+    const targetId = route.params?.customer_app_id ?? 0;
     const fromEdit = route.params?.fromEdit;
+    
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [profile, setProfile] = useState<AthleteProfile | null>(null);
     const [liveEvents, setLiveEvents] = useState<AthleteEvent[]>([]);
@@ -58,9 +64,24 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const [loadingMorePast, setLoadingMorePast] = useState(false);
     const [pagination, setPagination] = useState<PaginationState>(INITIAL_PAGINATION);
 
+    // ✅ VALIDATE targetId ON MOUNT
+    React.useEffect(() => {
+        if (!targetId || targetId === 0) {
+            setError(t('profile:errors.invalid_user_id'));
+            setLoading(false);
+        }
+    }, [targetId, t]);
+
     // ✅ FETCH PROFILE (with optional cache busting)
     const fetchProfile = useCallback(async (bustCache: boolean = false) => {
-        // ✅ GUARD AGAINST CONCURRENT CALLS
+        // ✅ GUARD: Check if targetId is valid
+        if (!targetId || targetId === 0) {
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Invalid targetId:', targetId);
+            }
+            return;
+        }
+
         if (isFetching.current) {
             if (API_CONFIG.DEBUG) {
                 console.log('⏸️ Already fetching, skipping duplicate call');
@@ -117,10 +138,14 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         }
     }, [targetId, t]);
 
-    // ✅ FETCH INITIAL DATA (EXACT PARTICIPANTEVENT PATTERN)
+    // ✅ FETCH INITIAL DATA
     useFocusEffect(
         useCallback(() => {
-            // ✅ Skip if already fetching
+            // ✅ Skip if targetId is invalid
+            if (!targetId || targetId === 0) {
+                return;
+            }
+
             if (isFetching.current) {
                 if (API_CONFIG.DEBUG) {
                     console.log('⏸️ Already fetching, skipping duplicate call');
@@ -128,20 +153,15 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                 return;
             }
 
-            // ✅ PRIORITY 1: Cache busting (from edit screens)
             if (fromEdit) {
                 if (API_CONFIG.DEBUG) {
                     console.log('🔄 Coming from edit screen - busting cache');
                 }
                 fetchProfile(true);
-            }
-            // ✅ PRIORITY 2: Initial mount
-            else if (isInitialMount.current) {
+            } else if (isInitialMount.current) {
                 isInitialMount.current = false;
                 fetchProfile(false);
-            }
-            // ✅ PRIORITY 3: Return from navigation - just sync scroll
-            else {
+            } else {
                 if (API_CONFIG.DEBUG) {
                     console.log('🔄 Returning to screen - syncing scroll only');
                 }
@@ -152,14 +172,14 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             }
 
             return () => {
-                // ✅ Cleanup
                 isFetching.current = false;
             };
-        }, [fetchProfile, activeTab, fromEdit])
+        }, [fetchProfile, activeTab, fromEdit, targetId])
     );
 
     // ✅ LOAD MORE LIVE
     const loadMoreLive = useCallback(async () => {
+        if (!targetId || targetId === 0) return;
         if (loadingMoreLive || pagination.live.page >= pagination.live.total_pages) return;
 
         const nextPage = pagination.live.page + 1;
@@ -205,6 +225,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
 
     // ✅ LOAD MORE PAST
     const loadMorePast = useCallback(async () => {
+        if (!targetId || targetId === 0) return;
         if (loadingMorePast || pagination.past.page >= pagination.past.total_pages) return;
 
         const nextPage = pagination.past.page + 1;
@@ -248,7 +269,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         }
     }, [loadingMorePast, pagination.past.page, pagination.past.total_pages, targetId]);
 
-    // ✅ TAB HANDLERS (EXACT PARTICIPANTEVENT PATTERN - simple, no guards)
+    // ✅ TAB HANDLERS
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
         setActiveTab(tab);
@@ -329,7 +350,15 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
 
-            <ProfileCard profile={profile ?? null} fetchError={error ?? ''} customer_app_id={targetId} />
+            {/* ✅ PASS FOLLOW PROPS - TYPESCRIPT SAFE */}
+            <ProfileCard
+                profile={profile}
+                fetchError={error ?? ''}
+                customer_app_id={targetId}
+                isFollowed={isFollowed(targetId)}
+                isFollowLoading={isLoading(targetId)}
+                onToggleFollow={() => toggleFollow(targetId)}
+            />
 
             {/* TAB BAR */}
             <View style={detailsStyles.tabBar}>

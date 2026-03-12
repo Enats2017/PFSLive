@@ -8,12 +8,11 @@
     "title": "ÉVÉNEMENTS PARTENAIRES OFFICIELS"
   },
   "personal": {
-     "title": "TROUVER UN ATHLÈTE",
+    "title": "TROUVER UN ATHLÈTE",
     "description": "Suivez vos propres activités",
     "button": "ALLER À L'ÉVÉNEMENT PERSONNEL"
   },
   "searching": "Recherche...",
-
   "empty": {
     "past": "Aucun événement passé trouvé.",
     "live": "Aucun événement en direct pour le moment.",
@@ -33,7 +32,7 @@
     "message": "Quelque chose s'est mal passé. Veuillez réessayer."
   },
   "button": {
-    "result": "VOIR LE RÉSULTAT",
+    "viewprofile": "VOIR",
     "follower": "SUIVRE",
     "show_event": "AFFICHER L'ÉVÉNEMENT",
     "unfollow": "NE PLUS SUIVRE",

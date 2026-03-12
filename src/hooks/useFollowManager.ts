@@ -11,9 +11,9 @@ import { API_CONFIG } from '../constants/config';
 interface UseFollowManagerResult {
   followedUsers: Set<number>;
   followingInProgress: Set<number>;
-  isFollowed: (customerId: number | null) => boolean;
-  isLoading: (customerId: number | null) => boolean;
-  toggleFollow: (customerId: number | null) => Promise<void>;
+  isFollowed: (customerId: number | null | undefined) => boolean;
+  isLoading: (customerId: number | null | undefined) => boolean;
+  toggleFollow: (customerId: number | null | undefined) => Promise<void>;
   refreshFollowedUsers: () => Promise<void>;
 }
 
@@ -22,21 +22,6 @@ interface UseFollowManagerResult {
  * 
  * Use this hook at the PARENT/SCREEN level, not in individual cards.
  * Loads followed users once and provides helpers for child components.
- * 
- * @example
- * ```typescript
- * function ParticipantTab() {
- *   const { isFollowed, isLoading, toggleFollow } = useFollowManager(t);
- * 
- *   return participants.map(p => (
- *     <Card
- *       isFollowed={isFollowed(p.customer_app_id)}
- *       isLoading={isLoading(p.customer_app_id)}
- *       onToggle={() => toggleFollow(p.customer_app_id)}
- *     />
- *   ));
- * }
- * ```
  */
 export function useFollowManager(t: any): UseFollowManagerResult {
   const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set());
@@ -49,7 +34,7 @@ export function useFollowManager(t: any): UseFollowManagerResult {
       setFollowedUsers(new Set(followed));
 
       if (API_CONFIG.DEBUG) {
-        console.log('✅ useFollowManager: Loaded followed users:', followed.length);
+        console.log('✅ useFollowManager: Loaded followed users:', followed);
       }
     } catch (error) {
       if (API_CONFIG.DEBUG) {
@@ -69,66 +54,113 @@ export function useFollowManager(t: any): UseFollowManagerResult {
     await loadFollowedUsers();
   }, [loadFollowedUsers]);
 
-  // ✅ CHECK IF USER IS FOLLOWED
+  // ✅ CHECK IF USER IS FOLLOWED (WITH TYPE CONVERSION)
   const isFollowed = useCallback(
-    (customerId: number | null): boolean => {
-      if (customerId === null || customerId <= 0) return false;
-      return followedUsers.has(customerId);
+    (customerId: number | null | undefined): boolean => {
+      // ✅ CONVERT TO NUMBER SAFELY
+      const id = typeof customerId === 'number' 
+        ? customerId 
+        : typeof customerId === 'string' 
+          ? Number(customerId) 
+          : null;
+
+      if (id === null || isNaN(id) || id <= 0) {
+        return false;
+      }
+
+      const result = followedUsers.has(id);
+
+      if (API_CONFIG.DEBUG) {
+        console.log('🔍 isFollowed check:', {
+          input: customerId,
+          converted: id,
+          type: typeof id,
+          followedUsers: Array.from(followedUsers),
+          result,
+        });
+      }
+
+      return result;
     },
     [followedUsers]
   );
 
   // ✅ CHECK IF FOLLOW ACTION IS IN PROGRESS
   const isLoading = useCallback(
-    (customerId: number | null): boolean => {
-      if (customerId === null || customerId <= 0) return false;
-      return followingInProgress.has(customerId);
+    (customerId: number | null | undefined): boolean => {
+      const id = typeof customerId === 'number' 
+        ? customerId 
+        : typeof customerId === 'string' 
+          ? Number(customerId) 
+          : null;
+
+      if (id === null || isNaN(id) || id <= 0) {
+        return false;
+      }
+
+      return followingInProgress.has(id);
     },
     [followingInProgress]
   );
 
   // ✅ TOGGLE FOLLOW/UNFOLLOW
   const toggleFollow = useCallback(
-    async (customerId: number | null) => {
-      if (customerId === null || customerId <= 0) {
+    async (customerId: number | null | undefined) => {
+      // ✅ CONVERT TO NUMBER SAFELY
+      const id = typeof customerId === 'number' 
+        ? customerId 
+        : typeof customerId === 'string' 
+          ? Number(customerId) 
+          : null;
+
+      if (id === null || isNaN(id) || id <= 0) {
         if (API_CONFIG.DEBUG) {
           console.warn('⚠️ useFollowManager: Invalid customerId:', customerId);
         }
         return;
       }
 
-      if (followingInProgress.has(customerId)) {
+      if (followingInProgress.has(id)) {
         if (API_CONFIG.DEBUG) {
-          console.log('⏸️ useFollowManager: Already processing:', customerId);
+          console.log('⏸️ useFollowManager: Already processing:', id);
         }
         return;
       }
 
-      const wasFollowed = followedUsers.has(customerId);
+      const wasFollowed = followedUsers.has(id);
       const willFollow = !wasFollowed;
+
+      if (API_CONFIG.DEBUG) {
+        console.log('🔄 Toggle follow:', {
+          id,
+          wasFollowed,
+          willFollow,
+          followedUsers: Array.from(followedUsers),
+        });
+      }
 
       // ✅ OPTIMISTIC UPDATE
       setFollowedUsers((prev) => {
         const next = new Set(prev);
         if (willFollow) {
-          next.add(customerId);
+          next.add(id);
         } else {
-          next.delete(customerId);
+          next.delete(id);
         }
         return next;
       });
 
-      setFollowingInProgress((prev) => new Set(prev).add(customerId));
+      setFollowingInProgress((prev) => new Set(prev).add(id));
 
       try {
         if (willFollow) {
-          await followUser(customerId);
+          await followUser(id);
           toastSuccess(
             t('follower:success.followTitle'),
             t('follower:success.followMessage')
           );
         } else {
-          await unfollowUser(customerId);
+          await unfollowUser(id);
           toastSuccess(
             t('follower:success.unfollowTitle'),
             t('follower:success.unfollowMessage')
@@ -138,7 +170,7 @@ export function useFollowManager(t: any): UseFollowManagerResult {
         if (API_CONFIG.DEBUG) {
           console.log(
             `✅ useFollowManager: ${willFollow ? 'Followed' : 'Unfollowed'}:`,
-            customerId
+            id
           );
         }
       } catch (error) {
@@ -150,9 +182,9 @@ export function useFollowManager(t: any): UseFollowManagerResult {
         setFollowedUsers((prev) => {
           const next = new Set(prev);
           if (wasFollowed) {
-            next.add(customerId);
+            next.add(id);
           } else {
-            next.delete(customerId);
+            next.delete(id);
           }
           return next;
         });
@@ -161,7 +193,7 @@ export function useFollowManager(t: any): UseFollowManagerResult {
       } finally {
         setFollowingInProgress((prev) => {
           const next = new Set(prev);
-          next.delete(customerId);
+          next.delete(id);
           return next;
         });
       }

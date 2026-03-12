@@ -8,7 +8,7 @@
     "title": "OFFICIAL PARTNER EVENTS"
   },
   "personal": {
-    "title":"FIND AN ATHLETE",
+    "title": "FIND AN ATHLETE",
     "description": "Track your own activities",
     "button": "GO TO PERSONAL EVENT"
   },
@@ -19,20 +19,12 @@
     "upcoming": "No upcoming events found.",
     "searchNoResults": "No events match your search"
   },
-
-   "message":{
-        "follow":"Following You have successfully added to favourites",
-        "unfollow":"Unfollowed You have been removed from favourites"
-    },
-
-
   "success": {
     "followTitle": "Added to Favorites",
     "followMessage": "You have successfully added to favourites.",
     "unfollowTitle": "Removed from Favorites",
     "unfollowMessage": "You have been removed from favourites."
   },
-
   "error": {
     "failed": "Failed to load events",
     "retry": "Retry",
@@ -40,7 +32,7 @@
     "message": "Something went wrong. Please try again."
   },
   "button": {
-    "result": "VIEW RESULT",
+    "viewprofile": "VIEW",
     "follower": "FOLLOW",
     "show_event": "SHOW EVENT",
     "unfollow": "UNFOLLOW",

@@ -16,7 +16,7 @@ export type RootStackParamList = {
       event_name: string;
       auto_register_id: number | null;
   };
-   ParticipantResult: { 
+  ParticipantResult: { 
     product_app_id: string | number;
     item: Distance;
   };
@@ -26,7 +26,6 @@ export type RootStackParamList = {
     email: string;
     verification_token: string;
   };
-
   RaceResultScreen:{
     product_app_id: number;
     product_option_value_app_id: number;
@@ -38,26 +37,17 @@ export type RootStackParamList = {
     event_name?: string;
     sourceScreen?: string;
   };
-
   ProfileScreen: { customer_app_id?: number;fromEdit?: boolean; };
-
   EditProfileScreen:undefined;
-
   EditPersonalEvent:{
     eventId:number;
   };
-
   ResultDetails:undefined;
   FollowerEvent:undefined;
-
-  
-    
   FollowDetails:{
-     product_app_id: string | number;
-      event_name: string;
-
+    product_app_id: string | number;
+    event_name: string;
   }
- 
 };
 
 export type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
