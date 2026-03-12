@@ -6,6 +6,7 @@ export interface Distance {
   product_option_value_app_id: number;
   distance_name: string;
   race_date: string;
+  race_date_formatted: string;
   race_time: string;
   countdown_type: string;
   countdown_value: number;
