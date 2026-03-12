@@ -1,18 +1,30 @@
-import React from 'react'
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native'
-import { ParticipantItem } from '../../services/followerEvent'
-import { commonStyles, spacing } from '../../styles/common.styles'
-import { detailsStyles } from '../../styles/details.styles'
-import { Ionicons } from '@expo/vector-icons'
-import { LinearGradient } from 'expo-linear-gradient'
-import { useTranslation } from 'react-i18next'
-import { useNavigation } from '@react-navigation/native'
-import { useFollow } from '../../hooks/useFollow'
+import React from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { ParticipantItem } from '../../services/followerEvent';
+import { commonStyles, spacing } from '../../styles/common.styles';
+import { detailsStyles } from '../../styles/details.styles';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 
-const FanEventCard = ({ item }: { item: ParticipantItem }) => {
+interface FanEventCardProps {
+    item: ParticipantItem;
+    isFollowed: boolean;
+    isFollowLoading: boolean;
+    onToggleFollow: () => void;
+}
+
+const FanEventCard: React.FC<FanEventCardProps> = ({
+    item,
+    isFollowed,
+    isFollowLoading,
+    onToggleFollow,
+}) => {
     const { t } = useTranslation(['follower', 'common']);
     const navigation = useNavigation<any>();
-    const { isFollowed, isLoading, toggleFollow } = useFollow(item.customer_app_id);
+
+    const fullName = `${item.firstname} ${item.lastname}`.trim();
 
     return (
         <View
@@ -37,15 +49,14 @@ const FanEventCard = ({ item }: { item: ParticipantItem }) => {
                     style={detailsStyles.divider}
                 />
                 <View style={detailsStyles.info}>
-                    <Text style={commonStyles.title}>
-                        {item.firstname} {item.lastname}
-                    </Text>
+                    <Text style={commonStyles.title}>{fullName}</Text>
                     <Text style={commonStyles.text}>
                         {item.city} | {item.country}
                     </Text>
                 </View>
             </View>
 
+            {/* BUTTONS ROW */}
             <View style={{ flexDirection: 'row', gap: 6 }}>
                 <TouchableOpacity
                     style={[commonStyles.favoriteButton, { borderRadius: 0 }]}
@@ -57,21 +68,23 @@ const FanEventCard = ({ item }: { item: ParticipantItem }) => {
                     }
                 >
                     <Text style={commonStyles.primaryButtonText}>
-                        {t('follower:button.result')}
+                        {t('follower:button.viewprofile')}
                     </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                     style={[
                         commonStyles.livetracking,
-                        { borderRadius: 0 },
-
+                        { 
+                            borderRadius: 0,
+                            opacity: isFollowLoading ? 0.6 : 1,
+                        },
                     ]}
-
-                    onPress={toggleFollow}
-                    disabled={isLoading}
+                    onPress={onToggleFollow}
+                    disabled={isFollowLoading}
+                    activeOpacity={0.8}
                 >
-                    {isLoading ? (
+                    {isFollowLoading ? (
                         <ActivityIndicator size="small" color="#ffffff" />
                     ) : (
                         <Text style={commonStyles.primaryButtonText}>
@@ -86,4 +99,5 @@ const FanEventCard = ({ item }: { item: ParticipantItem }) => {
     );
 };
 
+// ✅ CRITICAL: Use default export (NOT React.memo for now to debug)
 export default FanEventCard;

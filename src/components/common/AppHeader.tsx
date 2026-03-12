@@ -18,7 +18,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
    const handleProfilePress = async () => {
     const isValid = await tokenService.isTokenValid();
     if (isValid) {
-      navigation.navigate('ProfileScreen');
+      const customer_app_id = await tokenService.getCustomerId();
+      navigation.navigate('ProfileScreen', {
+        customer_app_id: customer_app_id,
+      });
     } else {
       navigation.navigate('LoginScreen');
     }

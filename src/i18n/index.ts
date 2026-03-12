@@ -78,9 +78,11 @@ import errorModalNL from './ErrorModal/nl.json';
 import ProfileEN from "./ProfileScreen/en.json";
 import ProfileFR from "./ProfileScreen/fr.json";
 import ProfileNL from "./ProfileScreen/nl.json";
+
 import ResultDetailsEN from "./Resultdetails/en.json";
 import ResultDetailsFR from "./Resultdetails/fr.json";
 import ResultDetailsNL from "./Resultdetails/nl.json";
+
 import FollowerEN from "./FollowerEvent/en.json";
 import FollowerFR from "./FollowerEvent/fr.json";
 import FollowerNL from "./FollowerEvent/nl.json";

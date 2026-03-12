@@ -7,9 +7,8 @@
   "official": {
     "title": "OFFICIËLE PARTNER EVENEMENTEN"
   },
-
   "personal": {
-    "title": "VIND EEN ATLEET",
+    "title": "ZOEK EEN ATLEET",
     "description": "Volg je eigen activiteiten",
     "button": "GA NAAR PERSOONLIJK EVENEMENT"
   },
@@ -20,12 +19,6 @@
     "upcoming": "Geen aankomende evenementen gevonden.",
     "searchNoResults": "Geen evenementen komen overeen met je zoekopdracht"
   },
-
-  "message": {
-    "follow": "Vous suivez maintenant cet utilisateur. Ajouté aux favoris avec succès.",
-    "unfollow": "Vous ne suivez plus cet utilisateur. Supprimé des favoris."
-  },
-
   "success": {
     "followTitle": "Toegevoegd aan Favorieten",
     "followMessage": "Je hebt succesvol toegevoegd aan favorieten.",
@@ -39,9 +32,10 @@
     "message": "Er is iets misgegaan. Probeer het opnieuw."
   },
   "button": {
-    "result": "BEKIJK RESULTAAT",
+    "viewprofile": "BEKIJKEN",
     "follower": "VOLGEN",
     "show_event": "TOON EVENEMENT",
-    "unfollow": "ONTVOLGEN",      "favourite": "TOEVOEGEN AAN FAVORIETEN"
+    "unfollow": "ONTVOLGEN",
+    "favourite": "TOEVOEGEN AAN FAVORIETEN"
   }
 }

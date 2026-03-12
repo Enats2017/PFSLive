@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
@@ -15,6 +15,7 @@ import { API_CONFIG } from '../../constants/config';
 import SearchInput from '../../components/SearchInput';
 import FanEventCard from './FollowerCard';
 import { FollowerEventpops } from '../../types/navigation';
+import { useFollowManager } from '../../hooks/useFollowManager'; // ✅ IMPORT HOOK
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
@@ -23,6 +24,10 @@ const TAB_CONTENT_HEIGHT = height * 0.39;
 
 const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const { t } = useTranslation(['follower', 'common']);
+    
+    // ✅ USE FOLLOW MANAGER HOOK
+    const { isFollowed, isLoading: isFollowLoading, toggleFollow } = useFollowManager(t);
+    
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [loading, setLoading] = useState(true);
     const [searchResults, setSearchResults] = useState<ParticipantItem[]>([]);
@@ -43,45 +48,13 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         upcoming: { page: 1, total_pages: 1 },
         participants: { page: 1, total_pages: 1 },
     });
+    
     const flatListRef = useRef<FlatList>(null);
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-    useFocusEffect(
-        useCallback(() => {
-            if (isFetching.current) {
-                if (API_CONFIG.DEBUG) {
-                    console.log('⏸️ Already fetching, skipping duplicate call');
-                }
-                return;
-            }
-
-            const fetchAndSync = async () => {
-                await fetchEvents('');
-
-                // ✅ AFTER FETCH, SYNC SCROLL TO ACTIVE TAB
-                if (!isInitialMount.current) {
-                    if (API_CONFIG.DEBUG) {
-                        console.log('🔄 Syncing scroll to:', activeTab);
-                    }
-                    const index = TABS.indexOf(activeTab);
-                    setTimeout(() => {
-                        flatListRef.current?.scrollToIndex({ index, animated: false });
-                    }, 100); // ✅ Slightly longer delay to ensure data is rendered
-                }
-            };
-            fetchAndSync();
-            if (isInitialMount.current) {
-                isInitialMount.current = false;
-
-            }
-            return () => {
-                isFetching.current = false;
-            };
-        }, [activeTab])
-    );
-
+    // ✅ FETCH EVENTS
     const fetchEvents = useCallback(async (search: string) => {
         if (isFetching.current) {
             if (API_CONFIG.DEBUG) {
@@ -89,13 +62,15 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             }
             return;
         }
+        
         try {
             isFetching.current = true;
+            
             if (isInitialMount.current) {
                 setLoading(true);
             }
+            
             setError(null);
-
 
             if (API_CONFIG.DEBUG) {
                 console.log('📡 Fetching events');
@@ -118,11 +93,22 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
 
             if (result.pagination) {
                 setPaginationInfo({
-                    past: { page: result.pagination.past.page, total_pages: result.pagination.past.total_pages },
-                    live: { page: result.pagination.live.page, total_pages: result.pagination.live.total_pages },
-                    upcoming: { page: result.pagination.upcoming.page, total_pages: result.pagination.upcoming.total_pages },
-                    participants: { page: result.pagination?.participants?.page, total_pages: result.pagination?.participants?.total_pages },
-
+                    past: { 
+                        page: result.pagination.past.page, 
+                        total_pages: result.pagination.past.total_pages 
+                    },
+                    live: { 
+                        page: result.pagination.live.page, 
+                        total_pages: result.pagination.live.total_pages 
+                    },
+                    upcoming: { 
+                        page: result.pagination.upcoming.page, 
+                        total_pages: result.pagination.upcoming.total_pages 
+                    },
+                    participants: { 
+                        page: result.pagination?.participants?.page ?? 1, 
+                        total_pages: result.pagination?.participants?.total_pages ?? 1 
+                    },
                 });
             }
 
@@ -135,25 +121,67 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 });
             }
         } catch (err: any) {
-            setError(err.message || t('event:error.failed'));
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Fetch events failed:', err);
+            }
+            setError(err.message || t('follower:error.failed'));
         } finally {
             setLoading(false);
             isFetching.current = false;
         }
     }, [t]);
 
+    // ✅ FOCUS EFFECT (EXACT PARTICIPANTEVENT PATTERN)
+    useFocusEffect(
+        useCallback(() => {
+            if (isFetching.current) {
+                if (API_CONFIG.DEBUG) {
+                    console.log('⏸️ Already fetching, skipping duplicate call');
+                }
+                return;
+            }
 
+            const fetchAndSync = async () => {
+                await fetchEvents('');
 
+                // ✅ SYNC SCROLL TO ACTIVE TAB AFTER FETCH
+                if (!isInitialMount.current) {
+                    if (API_CONFIG.DEBUG) {
+                        console.log('🔄 Syncing scroll to:', activeTab);
+                    }
+                    const index = TABS.indexOf(activeTab);
+                    setTimeout(() => {
+                        flatListRef.current?.scrollToIndex({ index, animated: false });
+                    }, 100);
+                }
+            };
+
+            fetchAndSync();
+
+            if (isInitialMount.current) {
+                isInitialMount.current = false;
+            }
+
+            return () => {
+                isFetching.current = false;
+            };
+        }, [fetchEvents, activeTab])
+    );
+
+    // ✅ LOAD MORE PAST
     const loadMorePast = useCallback(async () => {
         if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) {
             return;
         }
+        
         try {
             setLoadingMorePast(true);
             const nextPage = paginationInfo.past.page + 1;
+            
             if (API_CONFIG.DEBUG) {
                 console.log(`📡 Past: Loading page ${nextPage}`);
             }
+            
             const result = await eventService.getEvents({
                 page_past: nextPage,
             });
@@ -165,8 +193,10 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 if (API_CONFIG.DEBUG) {
                     console.log(`➕ Past: Adding ${newItems.length} new events`);
                 }
+                
                 return [...prev, ...newItems];
             });
+            
             if (result.pagination?.past) {
                 setPaginationInfo((prev) => ({
                     ...prev,
@@ -177,31 +207,40 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 }));
             }
         } catch (error) {
-            console.log('❌ Past: Load more failed:', error);
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Past: Load more failed:', error);
+            }
         } finally {
             setLoadingMorePast(false);
         }
     }, [loadingMorePast, paginationInfo.past.page, paginationInfo.past.total_pages]);
 
+    // ✅ LOAD MORE LIVE
     const loadMoreLive = useCallback(async () => {
         if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) {
             return;
         }
+        
         try {
             setLoadingMoreLive(true);
             const nextPage = paginationInfo.live.page + 1;
+            
             if (API_CONFIG.DEBUG) {
                 console.log(`📡 Live: Loading page ${nextPage}`);
             }
+            
             const result = await eventService.getEvents({
                 page_live: nextPage,
             });
+            
             setLiveEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
                 const newItems = result.tabs.live.filter((item) => !existingIds.has(item.product_app_id));
+                
                 if (API_CONFIG.DEBUG) {
                     console.log(`➕ Live: Adding ${newItems.length} new events`);
                 }
+                
                 return [...prev, ...newItems];
             });
 
@@ -215,16 +254,20 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 }));
             }
         } catch (error) {
-            console.log('❌ Live: Load more failed:', error);
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Live: Load more failed:', error);
+            }
         } finally {
             setLoadingMoreLive(false);
         }
     }, [loadingMoreLive, paginationInfo.live.page, paginationInfo.live.total_pages]);
 
+    // ✅ LOAD MORE UPCOMING
     const loadMoreUpcoming = useCallback(async () => {
         if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
             return;
         }
+        
         try {
             setLoadingMoreUpcoming(true);
             const nextPage = paginationInfo.upcoming.page + 1;
@@ -232,9 +275,11 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             if (API_CONFIG.DEBUG) {
                 console.log(`📡 Upcoming: Loading page ${nextPage}`);
             }
+            
             const result = await eventService.getEvents({
                 page_upcoming: nextPage,
             });
+            
             setUpcomingEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
                 const newItems = result.tabs.upcoming.filter((item) => !existingIds.has(item.product_app_id));
@@ -256,28 +301,45 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 }));
             }
         } catch (error) {
-            console.log('❌ Upcoming: Load more failed:', error);
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Upcoming: Load more failed:', error);
+            }
         } finally {
             setLoadingMoreUpcoming(false);
         }
     }, [loadingMoreUpcoming, paginationInfo.upcoming.page, paginationInfo.upcoming.total_pages]);
 
+    // ✅ LOAD MORE PARTICIPANTS
     const loadMoreParticipant = useCallback(async () => {
-        if (loadingMoreParticipant || paginationInfo.participants.page >= paginationInfo.participants.total_pages) return;
+        if (loadingMoreParticipant || paginationInfo.participants.page >= paginationInfo.participants.total_pages) {
+            return;
+        }
 
         try {
             setLoadingMoreParticipant(true);
             const nextPage = paginationInfo.participants.page + 1;
+            
+            if (API_CONFIG.DEBUG) {
+                console.log(`📡 Participants: Loading page ${nextPage}`);
+            }
+            
             const result = await eventService.getEvents({
                 is_participant: '1',
                 page_participant: nextPage,
                 filter_name_participant: searchText,
             });
+            
             setParticipants(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
-                return [...prev, ...(result.participants || []).filter(i => !ids.has(i.customer_app_id))];
+                const newItems = (result.participants || []).filter(i => !ids.has(i.customer_app_id));
+                
+                if (API_CONFIG.DEBUG) {
+                    console.log(`➕ Participants: Adding ${newItems.length} new items`);
+                }
+                
+                return [...prev, ...newItems];
             });
-            // ✅ Only update participants slice
+            
             setPaginationInfo(prev => ({
                 ...prev,
                 participants: {
@@ -286,12 +348,15 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 },
             }));
         } catch (err) {
-            console.log('❌ Participant: Load more failed:', err);
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Participant: Load more failed:', err);
+            }
         } finally {
             setLoadingMoreParticipant(false);
         }
-    }, [loadingMoreParticipant, paginationInfo.participants]);
+    }, [loadingMoreParticipant, paginationInfo.participants, searchText]);
 
+    // ✅ TAB HANDLERS
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
         setActiveTab(tab);
@@ -305,11 +370,12 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         }
     }, [activeTab]);
 
-
+    // ✅ DEBOUNCED SEARCH
     useEffect(() => {
         if (debounceTimer.current) {
             clearTimeout(debounceTimer.current);
         }
+        
         if (searchText.trim().length === 0) {
             setSearchResults([]);
             return;
@@ -318,14 +384,26 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         debounceTimer.current = setTimeout(async () => {
             try {
                 setSearching(true);
+                
+                if (API_CONFIG.DEBUG) {
+                    console.log('🔍 Searching participants:', searchText);
+                }
+                
                 const result = await eventService.getEvents({
                     is_participant: '1',
                     page_participant: 1,
                     filter_name_participant: searchText,
                 });
-                setSearchResults(result.participants);
+                
+                setSearchResults(result.participants || []);
+                
+                if (API_CONFIG.DEBUG) {
+                    console.log('✅ Search results:', (result.participants || []).length);
+                }
             } catch (error) {
-                console.log('❌ Search failed:', error);
+                if (API_CONFIG.DEBUG) {
+                    console.error('❌ Search failed:', error);
+                }
             } finally {
                 setSearching(false);
             }
@@ -340,8 +418,10 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
 
     const displayEvents = searchText.trim().length > 0 ? searchResults : participants;
 
+    // ✅ HANDLE LOAD MORE PARTICIPANTS
     const handleLoadMoreParticipant = useCallback(() => {
         if (searchText.trim().length > 0) return;
+        
         if (API_CONFIG.DEBUG) {
             console.log('🔍 Participant onEndReached:', {
                 hasMore: paginationInfo.participants.page < paginationInfo.participants.total_pages,
@@ -349,30 +429,42 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 participantsCount: participants.length,
             });
         }
+        
         if (paginationInfo.participants.page < paginationInfo.participants.total_pages && !loadingMoreParticipant) {
             if (API_CONFIG.DEBUG) {
                 console.log('✅ Calling loadMoreParticipant');
             }
             loadMoreParticipant();
-        } else {
-            if (API_CONFIG.DEBUG) {
-                console.log('⏸️ Skipped - hasMore:', paginationInfo.participants.page < paginationInfo.participants.total_pages, 'loadingMore:', loadingMoreParticipant);
-            }
         }
     }, [paginationInfo.participants, loadingMoreParticipant, loadMoreParticipant, participants.length, searchText]);
 
+    // ✅ RENDER PARTICIPANT CARD
+    const renderParticipantCard = useCallback(
+        ({ item }: { item: ParticipantItem }) => (
+            <FanEventCard
+                item={item}
+                isFollowed={isFollowed(item.customer_app_id)}
+                isFollowLoading={isFollowLoading(item.customer_app_id)}
+                onToggleFollow={() => toggleFollow(item.customer_app_id)}
+            />
+        ),
+        [isFollowed, isFollowLoading, toggleFollow]
+    );
+
+    // ✅ LOADING STATE
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
                 <AppHeader showLogo={true} />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color="#FF5722" />
+                    <ActivityIndicator size="large" color={colors.primary} />
                 </View>
             </SafeAreaView>
         );
     }
 
+    // ✅ ERROR STATE
     if (error) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -383,8 +475,11 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                     <TouchableOpacity
                         style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
                         onPress={() => fetchEvents('')}
+                        activeOpacity={0.8}
                     >
-                        <Text style={commonStyles.primaryButtonText}>{t('event:error.retry')}</Text>
+                        <Text style={commonStyles.primaryButtonText}>
+                            {t('follower:error.retry')}
+                        </Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -395,18 +490,26 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
+            
             <View style={{ flex: 1 }}>
+                {/* SECTION TITLE */}
                 <View style={eventStyles.section}>
                     <Text style={commonStyles.title}>{t('follower:official.title')}</Text>
                 </View>
+
+                {/* TAB BAR */}
                 <View style={eventStyles.tabBar}>
                     {TABS.map((tab) => (
                         <TouchableOpacity
                             key={tab}
                             style={eventStyles.tabItem}
                             onPress={() => handleTabPress(tab)}
+                            activeOpacity={0.7}
                         >
-                            <Text style={[commonStyles.subtitle, activeTab === tab && eventStyles.activeTabText]}>
+                            <Text style={[
+                                commonStyles.subtitle, 
+                                activeTab === tab && eventStyles.activeTabText
+                            ]}>
                                 {t(`follower:live.${tab}`)}
                             </Text>
                             {activeTab === tab && (
@@ -420,6 +523,8 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                         </TouchableOpacity>
                     ))}
                 </View>
+
+                {/* TAB CONTENT */}
                 <View style={{ height: TAB_CONTENT_HEIGHT }}>
                     <FlatList
                         ref={flatListRef}
@@ -444,7 +549,6 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                                         onLoadMore={loadMorePast}
                                         loadingMore={loadingMorePast}
                                         hasMore={paginationInfo.past.page < paginationInfo.past.total_pages}
-
                                     />
                                 )}
                                 {item === 'Live' && (
@@ -467,25 +571,26 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                         )}
                     />
                 </View>
+
+                {/* PARTICIPANTS SECTION */}
                 <View style={[eventStyles.section, { marginBottom: spacing.md, marginTop: spacing.sm }]}>
                     <Text style={commonStyles.title}>{t('follower:personal.title')}</Text>
                 </View>
+
+                {/* PARTICIPANTS LIST */}
                 <FlatList
                     data={displayEvents}
                     keyExtractor={(item, index) => `${item.customer_app_id}_${index}`}
+                    renderItem={renderParticipantCard}
                     onEndReached={handleLoadMoreParticipant}
-                    showsVerticalScrollIndicator={false}
                     onEndReachedThreshold={0.5}
+                    showsVerticalScrollIndicator={false}
                     contentContainerStyle={{
                         paddingHorizontal: spacing.md,
                         paddingBottom: spacing.xxxl,
                     }}
                     keyboardShouldPersistTaps="handled"
-                    getItemLayout={(_, index) => ({
-                        length: width,
-                        offset: width * index,
-                        index,
-                    })}
+                    removeClippedSubviews={false}
                     ListHeaderComponent={
                         <>
                             <SearchInput
@@ -493,7 +598,6 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                                 value={searchText}
                                 onChangeText={setSearchText}
                                 icon="search"
-
                             />
                             {searching && (
                                 <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
@@ -501,19 +605,25 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                                 </View>
                             )}
                         </>
-
                     }
                     ListEmptyComponent={
-                        <Text style={commonStyles.errorText}>No participants found.</Text>
+                        <View style={{ marginTop: 40, alignItems: 'center' }}>
+                            <Text style={commonStyles.errorText}>
+                                {searchText.trim().length > 0
+                                    ? t('follower:empty.searchNoResults')
+                                    : t('details:participant.empty')}
+                            </Text>
+                        </View>
                     }
                     ListFooterComponent={
-                        loadingMoreParticipant
-                            ? <ActivityIndicator size="small" color="#f4a100" style={{ marginVertical: 16 }} />
-                            : null
+                        loadingMoreParticipant ? (
+                            <ActivityIndicator 
+                                size="small" 
+                                color={colors.primary} 
+                                style={{ marginVertical: spacing.md }} 
+                            />
+                        ) : null
                     }
-                    renderItem={({ item }) => (
-                        <FanEventCard item={item} />
-                    )}
                 />
             </View>
         </SafeAreaView>
