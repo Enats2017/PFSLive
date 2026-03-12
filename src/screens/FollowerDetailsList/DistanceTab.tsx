@@ -97,6 +97,7 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
                         onPress={() => navigation.navigate('ResultList', {
                             product_app_id,
                             product_option_value_app_id: Number(item.product_option_value_app_id),
+                            sectionType: 'follower',
                         })}
                     >
                         <Text style={commonStyles.primaryButtonText}>
