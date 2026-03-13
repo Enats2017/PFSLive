@@ -111,6 +111,7 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
                             product_app_id,
                             product_option_value_app_id: item.product_option_value_app_id || '',
                             event_name: item.distance_name,
+                            sectionType:'follower',
                         })}
                     >
                         <Text style={commonStyles.primaryButtonText}>

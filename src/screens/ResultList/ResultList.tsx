@@ -20,16 +20,26 @@ import ResultCard from './ResultCard';
 import { useResultList, TYPE_OPTIONS } from '../../hooks/useResultList';
 import { RaceResult } from '../../services/resultList';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
+import { useFollowManager } from '../../hooks/useFollowManager';
+import { useFocusEffect } from '@react-navigation/native';
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
-    const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType } = route.params; // ✅ GET event_name
+    const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType } = route.params;
 
-    console.log("1111",sectionType);
-    
+    const {followedUsers, isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
+
+    console.log("1111", sectionType);
+
 
     console.log('event_name ResultListScreen');
     console.log(event_name);
+
+    useFocusEffect(
+    useCallback(() => {
+        refreshFollowedUsers();
+    }, [refreshFollowedUsers])
+);
 
     const {
         displayResults, pagination,
@@ -40,16 +50,17 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         onCategorySelect, onEndReached, onRefresh, retry,
         distanceOptions, categoryOptions,
         selectedDistanceLabel, selectedCategoryLabel,
-    } = useResultList(product_app_id, product_option_value_app_id);
+    } = useResultList(product_app_id, product_option_value_app_id, followedUsers,);
 
     const renderItem = useCallback(({ item }: { item: RaceResult }) => (
         <ResultCard
             item={item}
-            isFav={favBibs.has(item.bib)}
             fromLive={fromLive}
-            onToggleFav={toggleFav}
+            isFollowed={followedUsers.has(Number(item.customer_app_id))}
+            isLoading={isLoading(item.customer_app_id)}
+            onToggleFollow={() => toggleFollow(item.customer_app_id)}
         />
-    ), [favBibs, fromLive, toggleFav]);
+    ), [fromLive,  isFollowed, isLoading, toggleFollow]);
 
     const ListFooter = useCallback(() =>
         pageLoad
@@ -91,7 +102,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 />
             </View>
 
-            {/* CONTENT */}
+
             {initialLoad ? (
                 <View style={resultListStyle.center}>
                     <ActivityIndicator size="large" color={colors.success} />

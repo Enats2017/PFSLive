@@ -109,7 +109,7 @@ export const resultListStyle = StyleSheet.create({
     height: 0,
     borderTopWidth: 72,
     borderLeftWidth: 72,
-    borderTopColor: colors.success,
+    borderTopColor: colors.primary,
     borderLeftColor: "transparent",
   },
   cornerNum: {
@@ -120,9 +120,9 @@ export const resultListStyle = StyleSheet.create({
     fontSize: 20,
     fontWeight: "900",
   },
-  cornerStarBtn: { position: "absolute", top: 25, right: 5 },
-  cornerStar: { color: "rgba(255,255,255,0.75)", fontSize: 25 },
-  cornerStarActive: { color: "#FFD700" },
+  cornerStarBtn: { position: "absolute", top: 35, right: 20},
+  cornerStar: { color: colors.gray700, fontSize: 40},
+  cornerStarActive: { color: colors.success },
 
   cardTop: {
     flexDirection: "row",

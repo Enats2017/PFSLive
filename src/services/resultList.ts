@@ -18,6 +18,7 @@ export interface RaceResult {
   category_rank: string;
   live_tracking_activated: number;
   participant_app_id: number | null;
+  customer_app_id: number | null;
 }
 
 export interface FilterOption {

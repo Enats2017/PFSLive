@@ -27,7 +27,8 @@ interface FetchOpts {
 
 export const useResultList = (
     product_app_id: number,
-    initial_pov_id?: number, // ✅ NOW OPTIONAL
+    initial_pov_id?: number,
+    followedIds?: Set<number>, // ✅ NOW OPTIONAL
 ) => {
     const isMounted = useRef(true);
     const requestLock = useRef(false);
@@ -355,16 +356,20 @@ export const useResultList = (
     );
 
     // ✅ DISPLAY RESULTS
-    const displayResults = useMemo<RaceResult[]>(() => {
-        const list = isFavTab
-            ? results.filter(r => favBibs.has(r.bib))
-            : results;
-
-        return list.map((item, index) => ({
+const displayResults = useMemo<RaceResult[]>(() => {
+    if (!isFavTab) {
+        return results.map((item, index) => ({
             ...item,
             category_rank: String(index + 1),
         }));
-    }, [isFavTab, results, favBibs]);
+    }
+    return results
+        .filter(r => followedIds?.has(Number(r.customer_app_id)))
+        .map((item, index) => ({
+            ...item,
+            category_rank: String(index + 1),
+        }));
+}, [isFavTab, results, followedIds]);
 
     return {
         results,

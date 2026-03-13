@@ -29,10 +29,11 @@ import { RouteData, ChartDataPoint, ParticipantPosition } from '../types';
 import { RouteScreenProps } from '../types/navigation';
 import { commonStyles } from '../styles/common.styles';
 import { routeStyles } from '../styles/route.styles';
+import { BottomNavigationFollower } from '../components/common/BottomNavigationFollower';
 
 const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
   const { t } = useTranslation(['route', 'common']);
-  const { product_app_id, product_option_value_app_id, event_name } = route.params;
+  const { product_app_id, product_option_value_app_id, event_name, sectionType } = route.params;
 
   const [routeData, setRouteData] = useState<RouteData | null>(null);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
@@ -110,7 +111,7 @@ const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
 
       const response = await fetch(asset.localUri);
       const gpxContent = await response.text();
-      
+
       console.log('✅ GPX content loaded');
 
       const parsed = await parseGPX(gpxContent);
@@ -137,8 +138,8 @@ const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
       const routeLine = trackPointsToGeoJSON(parsed.trackPoints);
       const snapped = snapToRoute(routeLine, hardcodedCoords);
 
-      const nearestIdx = parsed.trackPoints.findIndex(pt => 
-        Math.abs(pt.lat - snapped.lat) < 0.001 && 
+      const nearestIdx = parsed.trackPoints.findIndex(pt =>
+        Math.abs(pt.lat - snapped.lat) < 0.001 &&
         Math.abs(pt.lon - snapped.lon) < 0.001
       );
 
@@ -195,16 +196,16 @@ const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
     >
       <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
         <StatusBar barStyle="dark-content" />
-        
+
         {/* App Header */}
         <AppHeader title={event_name || routeData.name} showLogo={true} />
 
         {/* Distance Dropdown */}
-        <DistanceDropdown 
+        <DistanceDropdown
           onSelect={(distance) => {
             setSelectedDistance(distance);
             console.log('Selected distance:', distance);
-          }} 
+          }}
         />
 
         {/* Map Container */}
@@ -231,8 +232,16 @@ const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
           />
         </View>
 
-        {/* Bottom Navigation */}
-        <BottomNavigation activeTab="Map" />
+        {
+          sectionType == 'folllower' ? (
+            <BottomNavigationFollower activeTab="Map" />
+
+          ) : (
+
+            <BottomNavigation activeTab="Map" />
+          )
+        }
+
       </SafeAreaView>
     </Animated.View>
   );
