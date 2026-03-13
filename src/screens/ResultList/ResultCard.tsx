@@ -1,64 +1,82 @@
-import React, { memo } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { memo, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
+import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 
 interface ResultCardProps {
     item: RaceResult;
-    isFav: boolean;
+    isLoading: boolean;
     fromLive: 0 | 1;
-    onToggleFav: (bib: string) => void;
+    isFollowed: boolean;
+    onToggleFollow: () => void;
 }
+
 
 const ResultCard: React.FC<ResultCardProps> = memo(({
     item,
-    isFav,
     fromLive,
-    onToggleFav,
+    isFollowed,
+    isLoading,
+    onToggleFollow
 }) => {
     const navigation = useNavigation<any>();
-    const { t } = useTranslation(['allrace', 'common']);
+    const { t } = useTranslation(['allrace', 'common']);    
+
+    const isLive = item.live_tracking_activated === 1;
+    const canFollow = item.customer_app_id !== null && item.customer_app_id > 0;
 
     const handlePress = () => {
-        // ✅ NAVIGATE TO RESULT DETAILS WITH PARTICIPANT_APP_ID
         if (item.participant_app_id) {
             navigation.navigate('ResultDetails', {
-                participant_app_id: item.participant_app_id,
+                participant_app_id: item.customer_app_id,
             });
         }
     };
 
     return (
-        <TouchableOpacity 
-            style={resultListStyle.card} 
+        <TouchableOpacity
+            style={[
+                resultListStyle.card,
+                isLive && {
+                    borderLeftWidth: 3,
+                    borderLeftColor: '#FF3B30',
+                },
+            ]}
             onPress={handlePress}
             activeOpacity={0.7}
-            disabled={!item.participant_app_id} // ✅ DISABLE IF NO ID
+            disabled={!item.participant_app_id}
         >
-            {/* ── green triangle corner — rank + star ── */}
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
                 <View style={resultListStyle.cornerTriangle} />
                 <Text style={resultListStyle.cornerNum}>
                     {item.category_rank || item.position.replace('.', '')}
                 </Text>
-                <TouchableOpacity
-                    style={resultListStyle.cornerStarBtn}
-                    onPress={() => onToggleFav(item.bib)}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    activeOpacity={0.7}
-                >
-                    <Text style={[
-                        resultListStyle.cornerStar,
-                        isFav && resultListStyle.cornerStarActive,
-                    ]}>
-                        {isFav ? '★' : '☆'}
-                    </Text>
-                </TouchableOpacity>
+                {
+                    canFollow && (
+                        <TouchableOpacity
+                            style={[resultListStyle.cornerStarBtn]}
+                            onPress={onToggleFollow}
+                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                            
+                            disabled={isLoading}
+                        >
+                            <Text style={[
+                                resultListStyle.cornerStar,
+                                
+                            ]}>
+                                {isFollowed ? '★' : '☆'}
+                            </Text>
+                        </TouchableOpacity>
+
+                    )
+                }
             </View>
 
+            {/* ── name row ── */}
             <View style={resultListStyle.cardTop}>
                 <View style={resultListStyle.cardTopLeft}>
                     <Text style={resultListStyle.cardName}>{item.name}</Text>
@@ -66,16 +84,25 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 <View style={{ width: 64 }} />
             </View>
 
+            {/* ── bib ── */}
             <Text style={resultListStyle.bibText}>
                 {t('allrace:race.bibNumber')} {item.bib}
             </Text>
+
+            {/* ── LIVE TRACKING BAR — shown right after bib ── */}
+
 
             {fromLive === 0 && (
                 <Text style={resultListStyle.teamText} numberOfLines={1}>
                     {[item.club, item.nation].filter(Boolean).join(' · ')}
                 </Text>
             )}
+ 
+            
+            {isLive && <LiveTrackingBar />}
 
+
+            {/* ── stats ── */}
             <View style={resultListStyle.statsRow}>
                 <View style={resultListStyle.statCol}>
                     <Text style={resultListStyle.statLabel}>
@@ -100,17 +127,10 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                         </View>
                     </>
                 ) : (
-                    <View style={[
-                        resultListStyle.statCol,
-                        resultListStyle.statFlagMid,
-                    ]}>
+                    <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
                         <View style={resultListStyle.flagRow}>
                             {!!item.nation_flag && (
-                                <SvgUri
-                                    width={28}
-                                    height={20}
-                                    uri={item.nation_flag}
-                                />
+                                <SvgUri width={28} height={20} uri={item.nation_flag} />
                             )}
                             <Text style={resultListStyle.statVal} numberOfLines={1}>
                                 {item.nation || '—'}
@@ -122,10 +142,11 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
         </TouchableOpacity>
     );
 }, (prev, next) =>
-    prev.isFav === next.isFav &&
     prev.fromLive === next.fromLive &&
     prev.item.bib === next.item.bib &&
-    prev.item.position === next.item.position
+    prev.isFollowed === next.isFollowed && 
+    prev.item.position === next.item.position &&
+    prev.item.live_tracking_activated === next.item.live_tracking_activated
 );
 
 export default ResultCard;
