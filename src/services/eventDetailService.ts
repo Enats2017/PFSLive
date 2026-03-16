@@ -8,8 +8,12 @@ export interface Distance {
   race_date: string;
   race_date_formatted: string;
   race_time: string;
-  countdown_type: string;
-  countdown_value: number;
+  countdown: {
+    status: 'not_started' | 'in_progress' | 'finished';
+    days: number;
+    hours: number;
+    minutes: number;
+  };
   registration_status: 'available' | 'registered' | 'membership_required' | 'limit_reached' | 'unavailable';
   participant_app_id?: number;
 }
@@ -82,9 +86,6 @@ interface EventDetailApiResponse {
 export const eventDetailService = {
   /**
    * Get event details
-   * 
-   * @param product_app_id - Event/Product ID
-   * @param bustCache - Add timestamp to bypass server/CDN cache
    */
   async getEventDetails(
     product_app_id: string | number,
@@ -97,17 +98,14 @@ export const eventDetailService = {
         });
       }
 
-      // ✅ CORRECT ENDPOINT NAME (no 'S')
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENT_DETAIL);
       const headers = await API_CONFIG.getHeaders();
 
-      // ✅ BUILD REQUEST BODY
       const requestBody: Record<string, any> = {
         product_app_id,
         language_id: await getCurrentLanguageId(),
       };
 
-      // ✅ ADD TIMESTAMP TO BUST API/SERVER/CDN CACHE
       if (bustCache) {
         requestBody._t = Date.now();
         
@@ -139,14 +137,6 @@ export const eventDetailService = {
     }
   },
 
-  /**
-   * Register participant for an event
-   * 
-   * @param product_option_value_app_id - Distance ID
-   * @param bib_number - Optional bib number for confirmation
-   * @param language_id - Optional language ID
-   * @param show_confirm_popup - Optional flag to force confirmation popup (skip Race Result lookup)
-   */
   async registerParticipant(
     product_option_value_app_id: number,
     bib_number?: string,
@@ -163,17 +153,14 @@ export const eventDetailService = {
         });
       }
 
-      // ✅ CORRECT ENDPOINT NAME
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.REGISTER_PARTICIPANT);
       const headers = await API_CONFIG.getHeaders();
 
-      // ✅ BUILD REQUEST BODY
       const requestBody: Record<string, any> = {
         product_option_value_app_id,
         language_id: language_id || (await getCurrentLanguageId()),
       };
 
-      // ✅ ADD OPTIONAL PARAMS
       if (bib_number) {
         requestBody.bib_number = bib_number;
       }
@@ -208,9 +195,6 @@ export const eventDetailService = {
     }
   },
 
-  /**
-   * Delete/unregister participant from an event
-   */
   async deleteParticipant(
     participant_app_id: number
   ): Promise<DeleteParticipantResponse> {
@@ -219,7 +203,6 @@ export const eventDetailService = {
         console.log('📡 Deleting participant:', participant_app_id);
       }
 
-      // ✅ CORRECT ENDPOINT NAME
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.DELETE_PARTICIPANT);
       const headers = await API_CONFIG.getHeaders();
 

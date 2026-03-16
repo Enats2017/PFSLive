@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import ErrorModal from '../../components/ErrorModal';
 import useRegistrationHandler from '../../services/useRegistrationHandler';
 import { useNavigation } from '@react-navigation/native';
 import { API_CONFIG } from '../../constants/config';
-import { toastSuccess } from '../../../utils/toast'; // ✅ IMPORT TOAST
+import { toastSuccess } from '../../../utils/toast';
 
 interface DistanceTabProps {
   product_app_id: string | number;
@@ -44,7 +44,6 @@ const DistanceTab = ({
   const [successVisible, setSuccessVisible] = useState(false);
   const [undoModalVisible, setUndoModalVisible] = useState(false);
   const [selectedUndoItem, setSelectedUndoItem] = useState<Distance | null>(null);
-  
   const [pendingRefresh, setPendingRefresh] = useState(false);
 
   // ✅ FETCH DISTANCES WITH CACHE BUSTING
@@ -113,7 +112,7 @@ const DistanceTab = ({
     []
   );
 
-  // ✅ SUCCESS CALLBACK (DON'T REFRESH IMMEDIATELY)
+  // ✅ SUCCESS CALLBACK
   const handleSuccess = useCallback(
     async (
       product_option_value_app_id: number,
@@ -123,17 +122,13 @@ const DistanceTab = ({
         console.log('🎉 Registration successful');
       }
 
-      // ✅ OPTIMISTICALLY UPDATE UI
       updateDistanceStatus(
         product_option_value_app_id,
         'registered',
         participant_app_id
       );
 
-      // ✅ SHOW SUCCESS MODAL
       setSuccessVisible(true);
-
-      // ✅ MARK THAT WE NEED TO REFRESH AFTER MODAL CLOSES
       setPendingRefresh(true);
     },
     [updateDistanceStatus]
@@ -146,43 +141,38 @@ const DistanceTab = ({
         console.log('✅ Unregister successful');
       }
 
-      // ✅ OPTIMISTICALLY UPDATE UI
       updateDistanceStatus(product_option_value_app_id, 'available');
 
-      // ✅ SHOW SUCCESS TOAST
       toastSuccess(
         t('details:unregister.successTitle'),
         t('details:unregister.successMessage')
       );
 
-      // ✅ MARK THAT WE NEED TO REFRESH AFTER TOAST
       setPendingRefresh(true);
 
-      // ✅ REFRESH AFTER SHORT DELAY
       setTimeout(() => {
-        fetchDistances(true); // Bust cache
-        onRefresh?.(); // Refresh parent
+        fetchDistances(true);
+        onRefresh?.();
         setPendingRefresh(false);
       }, 500);
     },
     [updateDistanceStatus, t, fetchDistances, onRefresh]
   );
 
-  // ✅ HANDLE SUCCESS MODAL CLOSE (REFRESH AFTER CLOSING)
+  // ✅ HANDLE SUCCESS MODAL CLOSE
   const handleSuccessModalClose = useCallback(() => {
     setSuccessVisible(false);
 
-    // ✅ NOW REFRESH AFTER MODAL IS CLOSED
     if (pendingRefresh) {
       if (API_CONFIG.DEBUG) {
         console.log('🔄 Refreshing after modal close');
       }
 
       setTimeout(() => {
-        fetchDistances(true); // Bust cache
-        onRefresh?.(); // Refresh parent
+        fetchDistances(true);
+        onRefresh?.();
         setPendingRefresh(false);
-      }, 300); // Small delay for smooth transition
+      }, 300);
     }
   }, [pendingRefresh, fetchDistances, onRefresh]);
 
@@ -266,39 +256,75 @@ const DistanceTab = ({
     setSelectedUndoItem(null);
   }, [selectedUndoItem, handleDelete]);
 
-  const getCountdownBadge = useMemo(() => {
-    return (item: Distance) => {
-      switch (item.countdown_type) {
+  // ✅ GET COUNTDOWN BADGE (SMART UNIT DISPLAY)
+  const getCountdownBadge = useCallback(
+    (item: Distance) => {
+      const { status, days, hours, minutes } = item.countdown;
+
+      if (API_CONFIG.DEBUG) {
+        console.log('⏱️ Countdown:', { status, days, hours, minutes });
+      }
+
+      switch (status) {
         case 'in_progress':
           return {
-            label: t('details:countdown.in_progress'),
+            label: t('details:countdown.live'),
             color: colors.success,
           };
+        
         case 'finished':
           return {
             label: t('details:countdown.finished'),
             color: colors.gray500,
           };
-        case 'hours':
+        
+        case 'not_started': {
+          // ✅ SMART DISPLAY LOGIC
+          const parts: string[] = [];
+          let color = colors.gray500;
+
+          // ✅ PRIORITY 1: If days exist, show ONLY days
+          if (days > 0) {
+            parts.push(`${days} ${t('details:countdown.days')}`);
+            color = colors.info; // Blue for days
+          }
+          // ✅ PRIORITY 2: If no days but hours exist, show hours and minutes
+          else if (hours > 0) {
+            parts.push(`${hours} ${t('details:countdown.hours')}`);
+            if (minutes > 0) {
+              parts.push(`${minutes} ${t('details:countdown.minutes')}`);
+            }
+            color = colors.success; // Green for hours
+          }
+          // ✅ PRIORITY 3: If only minutes exist, show only minutes
+          else if (minutes > 0) {
+            parts.push(`${minutes} ${t('details:countdown.minutes')}`);
+            color = colors.warning; // Orange for minutes only
+          }
+
+          // ✅ IF ALL ARE ZERO
+          if (parts.length === 0) {
+            return {
+              label: t('details:countdown.startingSoon'),
+              color: colors.warning,
+            };
+          }
+
+          // ✅ JOIN PARTS
+          const countdownText = parts.join(' ');
+
           return {
-            label: `${item.countdown_value} ${t('details:countdown.hours')}`,
-            color: colors.success,
+            label: `${t('details:countdown.startsIn')} ${countdownText}`,
+            color,
           };
-        case 'minutes':
-          return {
-            label: `${item.countdown_value} ${t('details:countdown.minutes')}`,
-            color: colors.warning,
-          };
-        case 'days':
-          return {
-            label: `${item.countdown_value} ${t('details:countdown.days')}`,
-            color: colors.info,
-          };
+        }
+        
         default:
           return { label: '', color: colors.gray500 };
       }
-    };
-  }, [t]);
+    },
+    [t]
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: Distance }) => {
@@ -322,16 +348,18 @@ const DistanceTab = ({
               <Text style={[commonStyles.title, { marginBottom: 4 }]}>
                 {item.distance_name}
               </Text>
-              <Text style={commonStyles.subtitle}>{item.race_date}</Text>
+              <Text style={commonStyles.subtitle}>{item.race_date_formatted}</Text>
               <Text style={commonStyles.subtitle}>{item.race_time}</Text>
             </View>
-            <View style={[detailsStyles.count, { backgroundColor: badge.color }]}>
-              <Text
-                style={[commonStyles.text, { color: '#fff', fontWeight: '600' }]}
-              >
-                {badge.label}
-              </Text>
-            </View>
+            {badge.label ? (
+              <View style={[detailsStyles.count, { backgroundColor: badge.color }]}>
+                <Text
+                  style={[commonStyles.text, { color: '#fff', fontWeight: '600' }]}
+                >
+                  {badge.label}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           <TouchableOpacity

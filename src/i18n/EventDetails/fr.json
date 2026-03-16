@@ -7,10 +7,12 @@
   "undo": "ANNULER L'INSCRIPTION",
   "live": "EN DIRECT",
   "countdown": {
-    "in_progress": "En direct",
-    "finished": "Terminé",
-    "hours": "Heures",
+    "live": "EN DIRECT",
+    "finished": "TERMINÉ",
+    "startsIn": "Commence dans",
+    "startingSoon": "Commence Bientôt",
     "days": "Jours",
+    "hours": "Heures",
     "minutes": "Minutes"
   },
   "distance": {
@@ -38,7 +40,7 @@
   "error": {
     "title": "Échec du chargement des données",
     "retry": "Réessayer",
-    "missingId": "ID de l'événement manquant",
+    "missingId": "ID d'événement manquant",
     "unexpectedTitle": "Réponse Inattendue",
     "unexpectedMessage": "Le serveur a renvoyé une réponse inattendue. Veuillez réessayer.",
     "invalidBibTitle": "Numéro de Dossard Invalide",
@@ -69,22 +71,22 @@
     "membership_required": {
       "icon": "◆",
       "title": "Votre Accès Premium a Expiré",
-      "description": "Votre période d'essai gratuite est terminée. Connectez-vous à votre compte via notre site web pour gérer votre accès."
+      "description": "Votre période d'essai gratuite est terminée. Connectez-vous à votre compte via notre site Web pour gérer votre accès."
     },
     "limit_reached": {
       "icon": "↑",
       "title": "Votre Accès Premium a Expiré",
-      "description": "Vous avez atteint votre limite annuelle de 3 sessions de suivi. Votre forfait actuel ne permet pas d'activations supplémentaires. Gérez votre abonnement via notre site web."
+      "description": "Vous avez atteint votre limite annuelle de 3 sessions de suivi. Votre forfait actuel ne permet pas d'activations supplémentaires. Gérez votre abonnement via notre site Web."
     },
     "unavailable": {
       "icon": "⊘",
       "title": "Non Disponible",
-      "description": "L'inscription pour cette distance n'est pas encore configurée. Revenez bientôt."
+      "description": "L'inscription pour cette distance n'est pas encore configurée. Veuillez revenir plus tard."
     },
     "available": {
       "icon": "→",
       "title": "Prêt à Courir ?",
-      "description": "Réservez votre place maintenant avant que ce soit complet. Allons-y !"
+      "description": "Réservez votre place maintenant avant qu'elle ne soit complète. Allons-y !"
     },
     "default": {
       "icon": "?",
