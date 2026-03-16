@@ -12,7 +12,9 @@ interface ResultCardProps {
     isLoading: boolean;
     fromLive: 0 | 1;
     isFollowed: boolean;
+
     onToggleFollow: () => void;
+    sourceTab?: 'past' | 'live' | 'upcoming';
 }
 
 
@@ -21,21 +23,25 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     fromLive,
     isFollowed,
     isLoading,
-    onToggleFollow
+    onToggleFollow,
+    sourceTab
 }) => {
     const navigation = useNavigation<any>();
-    const { t } = useTranslation(['allrace', 'common']);    
-
+    const { t } = useTranslation(['allrace', 'common']);
+    console.log(sourceTab);
     const isLive = item.live_tracking_activated === 1;
     const canFollow = item.customer_app_id !== null && item.customer_app_id > 0;
 
     const handlePress = () => {
-        if (item.participant_app_id) {
-            navigation.navigate('ResultDetails', {
-                participant_app_id: item.customer_app_id,
-            });
-        }
-    };
+
+       
+        navigation.navigate('ResultDetails', {
+            participant_app_id: item.customer_app_id,
+            sourceTab
+
+        });
+    }
+
 
     return (
         <TouchableOpacity
@@ -48,7 +54,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
             ]}
             onPress={handlePress}
             activeOpacity={0.7}
-            disabled={!item.participant_app_id}
+           
         >
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
                 <View style={resultListStyle.cornerTriangle} />
@@ -61,12 +67,12 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                             style={[resultListStyle.cornerStarBtn]}
                             onPress={onToggleFollow}
                             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                            
+
                             disabled={isLoading}
                         >
                             <Text style={[
                                 resultListStyle.cornerStar,
-                                
+
                             ]}>
                                 {isFollowed ? '★' : '☆'}
                             </Text>
@@ -76,33 +82,25 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 }
             </View>
 
-            {/* ── name row ── */}
             <View style={resultListStyle.cardTop}>
                 <View style={resultListStyle.cardTopLeft}>
                     <Text style={resultListStyle.cardName}>{item.name}</Text>
                 </View>
                 <View style={{ width: 64 }} />
             </View>
-
-            {/* ── bib ── */}
             <Text style={resultListStyle.bibText}>
                 {t('allrace:race.bibNumber')} {item.bib}
             </Text>
-
-            {/* ── LIVE TRACKING BAR — shown right after bib ── */}
-
 
             {fromLive === 0 && (
                 <Text style={resultListStyle.teamText} numberOfLines={1}>
                     {[item.club, item.nation].filter(Boolean).join(' · ')}
                 </Text>
             )}
- 
-            
+
+
             {isLive && <LiveTrackingBar />}
 
-
-            {/* ── stats ── */}
             <View style={resultListStyle.statsRow}>
                 <View style={resultListStyle.statCol}>
                     <Text style={resultListStyle.statLabel}>
@@ -144,7 +142,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 }, (prev, next) =>
     prev.fromLive === next.fromLive &&
     prev.item.bib === next.item.bib &&
-    prev.isFollowed === next.isFollowed && 
+    prev.isFollowed === next.isFollowed &&
     prev.item.position === next.item.position &&
     prev.item.live_tracking_activated === next.item.live_tracking_activated
 );

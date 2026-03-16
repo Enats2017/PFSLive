@@ -47,6 +47,16 @@
     "november": "November",
     "december": "December"
   },
+
+ "week": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+},
   "update": {
     "currentVersion": "Current Version",
     "latestVersion": "Latest Version",
@@ -56,5 +66,5 @@
   },
   "retry": "Retry",
   "ok": "OK",
-  "cancel": "Cancel",
+  "cancel": "Cancel"
 }

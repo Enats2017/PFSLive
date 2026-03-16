@@ -1,10 +1,8 @@
-// tabs/TimingPointTab.tsx
 
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
 import { commonStyles } from '../../styles/common.styles';
 import RaceInfoTab from './RaceInfoTab';

@@ -31,7 +31,9 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
-  const { product_app_id, event_name} = route.params;
+  const { product_app_id, event_name, sourceTab} = route.params;
+
+  const isLiveTab = sourceTab === 'live';
 
   if (API_CONFIG.DEBUG) {
     console.log('📋 EventDetails params:', {
@@ -65,6 +67,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
           return (
             <DistanceTab
               product_app_id={product_app_id}
+              sourceTab={sourceTab}
             />
           );
         case 'Participant':

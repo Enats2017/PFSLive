@@ -22,24 +22,29 @@ import { RaceResult } from '../../services/resultList';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { useFocusEffect } from '@react-navigation/native';
+import ResultCardLive from './ResultCardLive';  
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
-    const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType } = route.params;
+    const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab } = route.params;
+    console.log("which page user comming", sourceTab);
 
-    const {followedUsers, isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
+
+    const { followedUsers, isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
+
+    const initialType = sourceTab === 'live'
+        ? TYPE_OPTIONS[1]  // live option
+        : TYPE_OPTIONS[0]; // results option
 
     console.log("1111", sectionType);
-
-
     console.log('event_name ResultListScreen');
     console.log(event_name);
 
     useFocusEffect(
-    useCallback(() => {
-        refreshFollowedUsers();
-    }, [refreshFollowedUsers])
-);
+        useCallback(() => {
+            refreshFollowedUsers();
+        }, [refreshFollowedUsers])
+    );
 
     const {
         displayResults, pagination,
@@ -50,17 +55,31 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         onCategorySelect, onEndReached, onRefresh, retry,
         distanceOptions, categoryOptions,
         selectedDistanceLabel, selectedCategoryLabel,
-    } = useResultList(product_app_id, product_option_value_app_id, followedUsers,);
+        raceStatus, currentPovId
+    } = useResultList(product_app_id, product_option_value_app_id, followedUsers, initialType);
 
-    const renderItem = useCallback(({ item }: { item: RaceResult }) => (
-        <ResultCard
-            item={item}
-            fromLive={fromLive}
-            isFollowed={followedUsers.has(Number(item.customer_app_id))}
-            isLoading={isLoading(item.customer_app_id)}
-            onToggleFollow={() => toggleFollow(item.customer_app_id)}
-        />
-    ), [fromLive,  isFollowed, isLoading, toggleFollow]);
+    console.log("selectedPovId",selectedPovId);
+    
+    
+
+    console.log(fromLive);
+    const renderItem = useCallback(({ item }: { item: RaceResult }) => {
+        const props = {
+            item,
+            fromLive,
+            isFollowed: followedUsers.has(Number(item.customer_app_id)),
+            isLoading: isLoading(item.customer_app_id),
+            onToggleFollow: () => toggleFollow(item.customer_app_id),
+            raceStatus,
+            product_app_id,
+            currentPovId
+        };
+
+        return sourceTab === 'live'
+            ? <ResultCardLive {...props} />
+            : <ResultCard {...props} />;
+
+    }, [fromLive, followedUsers, isLoading, toggleFollow, raceStatus, product_app_id, currentPovId]);
 
     const ListFooter = useCallback(() =>
         pageLoad
@@ -75,7 +94,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
 
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="dark-content" />   
             <AppHeader showLogo={false} />
             <View style={resultListStyle.filterRow1}>
                 <Dropdown

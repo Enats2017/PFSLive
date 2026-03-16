@@ -1,6 +1,6 @@
-import { API_CONFIG, getApiEndpoint } from '../constants/config';
-import { apiClient } from './api';
-import { getCurrentLanguageId } from '../i18n';
+import { API_CONFIG, getApiEndpoint } from "../constants/config";
+import { apiClient } from "./api";
+import { getCurrentLanguageId } from "../i18n";
 
 export interface RaceResult {
   position: string;
@@ -19,6 +19,17 @@ export interface RaceResult {
   live_tracking_activated: number;
   participant_app_id: number | null;
   customer_app_id: number | null;
+  checkpoints: Checkpoint[];
+}
+
+export interface Checkpoint {
+  name: string;
+  race_time: string;
+  actual_time: string;
+  ranking: string;
+  rank_gender: string;
+  rank_agegroup: string;
+  day_name: string;
 }
 
 export interface FilterOption {
@@ -69,6 +80,7 @@ export interface EventRankingResponse {
     product_app_id: number;
     product_option_value_app_id: number;
     from_live: 0 | 1;
+    race_status:string,
   };
 }
 
@@ -78,13 +90,15 @@ export const resultList = {
    * @param params - Ranking parameters
    * @returns Event ranking response
    */
-  getEventRanking: async (params: EventRankingParams): Promise<EventRankingResponse> => {
+  getEventRanking: async (
+    params: EventRankingParams,
+  ): Promise<EventRankingResponse> => {
     try {
       const headers = await API_CONFIG.getHeaders();
       const language_id = getCurrentLanguageId();
 
       if (API_CONFIG.DEBUG) {
-        console.log('📡 Fetching event ranking:', {
+        console.log("📡 Fetching event ranking:", {
           product_app_id: params.product_app_id,
           product_option_value_app_id: params.product_option_value_app_id,
           from_live: params.from_live,
@@ -102,9 +116,12 @@ export const resultList = {
         language_id,
       };
 
+      console.log("1111", requestBody);
+
       // ✅ ONLY ADD product_option_value_app_id IF PROVIDED
       if (params.product_option_value_app_id !== undefined) {
-        requestBody.product_option_value_app_id = params.product_option_value_app_id;
+        requestBody.product_option_value_app_id =
+          params.product_option_value_app_id;
       }
 
       // ✅ USE CONSISTENT apiClient
@@ -114,7 +131,7 @@ export const resultList = {
         {
           headers,
           timeout: API_CONFIG.TIMEOUT,
-        }
+        },
       );
 
       if (API_CONFIG.DEBUG) {
@@ -125,7 +142,7 @@ export const resultList = {
       const data = response.data;
 
       if (API_CONFIG.DEBUG) {
-        console.log('✅ Event ranking loaded:', {
+        console.log("✅ Event ranking loaded:", {
           distances: data.distances?.length || 0,
           categories: data.categories?.length || 0,
           results: data.results?.length || 0,
@@ -135,19 +152,24 @@ export const resultList = {
       }
 
       // ✅ VALIDATE RESPONSE STRUCTURE
-      if (!data.distances || !data.categories || !data.results || !data.pagination) {
+      if (
+        !data.distances ||
+        !data.categories ||
+        !data.results ||
+        !data.pagination
+      ) {
         if (API_CONFIG.DEBUG) {
-          console.error('❌ Invalid response structure:', data);
+          console.error("❌ Invalid response structure:", data);
         }
-        throw new Error('Invalid response structure');
+        throw new Error("Invalid response structure");
       }
 
       return data;
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        console.error('❌ Get event ranking error:', error);
+        console.error("❌ Get event ranking error:", error);
         if (error.response?.data) {
-          console.error('❌ Error response data:', error.response.data);
+          console.error("❌ Error response data:", error.response.data);
         }
       }
 

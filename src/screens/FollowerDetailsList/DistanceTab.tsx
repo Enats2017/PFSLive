@@ -12,12 +12,12 @@ import { useNavigation } from '@react-navigation/native';
 
 interface DistanceTabProps {
     product_app_id: number;
+    sourceTab?: 'past' | 'live' | 'upcoming';
 }
 
-const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
+const DistanceTab = ({ product_app_id, sourceTab }: DistanceTabProps) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['result', 'details', 'common']);
-
     const [results, setResults] = useState<Distance[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -84,9 +84,9 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
                         <Text style={commonStyles.subtitle}>{item.race_date}</Text>
                         <Text style={commonStyles.subtitle}>{item.race_time}</Text>
                     </View>
-                    <View style={[detailsStyles.count, { backgroundColor: badge.color }]}> {/* ✅ badge.color */}
+                    <View style={[detailsStyles.count, { backgroundColor: badge.color }]}> 
                         <Text style={[commonStyles.text, { color: '#fff', fontWeight: '600' }]}>
-                            {badge.label} {/* ✅ badge.label */}
+                            {badge.label} 
                         </Text>
                     </View>
                 </View>
@@ -98,6 +98,7 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
                             product_app_id,
                             product_option_value_app_id: Number(item.product_option_value_app_id),
                             sectionType: 'follower',
+                            sourceTab: sourceTab ?? 'past',
                         })}
                     >
                         <Text style={commonStyles.primaryButtonText}>
@@ -150,7 +151,7 @@ const DistanceTab = ({ product_app_id }: DistanceTabProps) => {
             {results.length === 0 ? (
                 <View style={{ marginTop: 40, alignItems: 'center' }}>
                     <Text style={commonStyles.errorText}>
-                        {t('reuslt:noResults')}
+                      {t('result:noResults')}
                     </Text>
                 </View>
             ) : (

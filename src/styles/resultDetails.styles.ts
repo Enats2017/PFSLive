@@ -11,6 +11,7 @@ export const resultInfoStyles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.white,
     paddingTop: spacing.sm,
+    marginBottom:spacing.xxxl
   },
 
   header: {

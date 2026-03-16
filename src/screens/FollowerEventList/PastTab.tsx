@@ -110,6 +110,8 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         navigation.navigate('FollowDetails', {
                             product_app_id: item.product_app_id,
                             event_name: item.name,
+                            sourceTab: 'past',
+
                         })
                     }
                     activeOpacity={0.8}
