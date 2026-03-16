@@ -118,7 +118,7 @@ const DistanceTab = ({ product_app_id, sourceTab }: DistanceTabProps) => {
                         <Text style={[commonStyles.title, { marginBottom: 4 }]}>
                             {item.distance_name}
                         </Text>
-                        <Text style={commonStyles.subtitle}>{item.race_date}</Text>
+                        <Text style={commonStyles.subtitle}>{item.race_date_formatted}</Text>
                         <Text style={commonStyles.subtitle}>{item.race_time}</Text>
                     </View>
                     <View style={[detailsStyles.count, { backgroundColor: badge.color }]}> 

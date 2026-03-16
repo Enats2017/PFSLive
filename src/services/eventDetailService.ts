@@ -9,7 +9,7 @@ export interface Distance {
   race_date_formatted: string;
   race_time: string;
   countdown: {
-    status: 'not_started' | 'in_progress' | 'finished';
+    status: string;
     days: number;
     hours: number;
     minutes: number;
