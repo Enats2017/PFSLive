@@ -7,13 +7,13 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import EmailStep from './EmailStep';
 import OtpStep from './OtpStep';
 import NewPasswordStep from './NewPasswordStep';
 import { ForgotPasswordScreenProps } from '../../../types/navigation';
 import { AppHeader } from '../../../components/common/AppHeader';
 import { commonStyles } from '../../../styles/common.styles';
-import { useTranslation } from 'react-i18next';
 import SuccessCelebrationModal from '../../../components/SuccessCelebrationModal';
 import { toastSuccess } from '../../../../utils/toast';
 import { forgotStyles } from '../../../styles/forgetPassword.styles';
@@ -23,35 +23,44 @@ const STEPS: Step[] = ['email', 'otp', 'newPassword'];
 
 const ForgotPassword: React.FC<ForgotPasswordScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['forget', 'common']);
+  
   const [currentStep, setCurrentStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
   const [passwordResetToken, setPasswordResetToken] = useState('');
-  const [successVisible, setSuccessVisible] = useState(false)
+  const [successVisible, setSuccessVisible] = useState(false);
 
   const stepIndex = useMemo(() => STEPS.indexOf(currentStep), [currentStep]);
 
-  const handleEmailNext = (submittedEmail: string, token: string) => {
+  const handleEmailNext = useCallback((submittedEmail: string, token: string) => {
     setEmail(submittedEmail);
     setVerificationToken(token);
     setCurrentStep('otp');
-  };
+  }, []);
 
-  const handleOtpNext = (resetToken: string) => {
+  const handleOtpNext = useCallback((resetToken: string) => {
     setPasswordResetToken(resetToken);
     setCurrentStep('newPassword');
-  };
+  }, []);
 
-  const handleResendOtp = () => {
+  const handleResendOtp = useCallback(() => {
     toastSuccess(
       t('forget:emailStep.otp'),
       t('forget:emailStep.otpmsg')
     );
-  };
+  }, [t]);
 
-  const handleResetSuccess = () => {
+  const handleResetSuccess = useCallback(() => {
     setSuccessVisible(true);
-  };
+  }, []);
+
+  const handleSuccessClose = useCallback(() => {
+    setSuccessVisible(false);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'LoginScreen' }],
+    });
+  }, [navigation]);
 
   const backStepMap = useMemo<Record<Step, () => void>>(() => ({
     email: () => navigation.goBack(),
@@ -67,6 +76,8 @@ const ForgotPassword: React.FC<ForgotPasswordScreenProps> = ({ navigation }) => 
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={true} />
+      
+      {/* Progress Bar */}
       <View style={forgotStyles.progressContainer}>
         {STEPS.map((step, index) => (
           <View
@@ -113,25 +124,20 @@ const ForgotPassword: React.FC<ForgotPasswordScreenProps> = ({ navigation }) => 
               onBack={handleBack}
             />
           )}
-
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Success Modal */}
       <SuccessCelebrationModal
         visible={successVisible}
         message={t('forget:passwordStep.successMessage')}
         title={t('forget:passwordStep.successTitle')}
-        onClose={() => {
-          setSuccessVisible(false);
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'LoginScreen' }],
-          });
-        }}
+        onClose={handleSuccessClose}
       />
     </SafeAreaView>
   );
 };
 
-
+ForgotPassword.displayName = 'ForgotPassword';
 
 export default ForgotPassword;

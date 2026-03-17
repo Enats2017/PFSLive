@@ -1,54 +1,45 @@
 {
   "emailStep": {
     "title": "Wachtwoord vergeten?",
-    "subtitle": "Geen zorgen! Voer je geregistreerde e-mailadres in en we sturen een 6-cijferige OTP om je wachtwoord opnieuw in te stellen.",
-    "sendOtpButton": "OTP verzenden",
+    "email": "E-mailadres",
+    "subtitle": "Geen zorgen! Voer uw geregistreerde e-mailadres in en we sturen u een 6-cijferige OTP om uw wachtwoord opnieuw in te stellen.",
+    "sendOtpButton": "Verstuur OTP",
     "backtologin": "Terug naar inloggen",
     "otp": "OTP opnieuw verzonden",
-    "otpmsg": "Er is een nieuwe code naar je e-mail gestuurd.",
+    "otpmsg": "Een nieuwe code is naar uw e-mail verzonden.",
     "errors": {
       "emailInvalid": "Voer een geldig e-mailadres in",
-      "emailNotFound": "Voer je geregistreerde e-mailadres in",
-      "noConnection": "Geen verbinding. Controleer je internet.",
-      "genericError": "Er is iets misgegaan. Probeer opnieuw."
+      "emailNotFound": "Voer uw geregistreerde e-mailadres in",
+      "noConnection": "Geen verbinding. Controleer uw internet.",
+      "genericError": "Er is iets misgegaan. Probeer het opnieuw."
     }
   },
   "otpStep": {
-    "title": "Controleer je e-mail",
-    "subtitle": "We hebben een 6-cijferige code gestuurd naar",
-    "verifyButton": "OTP verifiëren",
+    "title": "Controleer uw e-mail",
+    "subtitle": "We hebben een 6-cijferige code verzonden naar",
     "resendOtp": "OTP opnieuw verzenden",
-    "resendIn": "Opnieuw verzenden in 0:{{seconds}}",
-    "didntReceive": "Geen code ontvangen?",
-    "changeEmail": "E-mailadres wijzigen",
-    "errors": {
-      "incomplete": "Voer de volledige 6-cijferige code in",
-      "invalid": "Ongeldige OTP-code. Probeer opnieuw.",
-      "expired": "OTP is verlopen. Vraag een nieuwe aan.",
-      "tooManyAttempts": "Te veel pogingen. Ga terug en probeer opnieuw.",
-      "tokenInvalid": "Sessie verlopen. Ga terug en probeer opnieuw.",
-      "noConnection": "Geen verbinding. Controleer je internet.",
-      "genericError": "Er is iets misgegaan. Probeer opnieuw."
-    }
+    "resendIn": "Opnieuw verzenden over 0:{{seconds}}",
+    "changeEmail": "E-mail wijzigen"
   },
   "passwordStep": {
     "title": "Nieuw wachtwoord aanmaken",
-    "subtitle": "Bijna klaar! Stel een sterk nieuw wachtwoord in voor je account.",
+    "subtitle": "Bijna klaar! Stel een sterk nieuw wachtwoord in voor uw account.",
     "resetButton": "Wachtwoord resetten",
     "newPassword": "Nieuw wachtwoord",
     "confirmPassword": "Bevestig wachtwoord",
-    "backToOtp": "Terug naar OTP",
-    "successTitle": "Wachtwoord succesvol gewijzigd! 🎉",
-    "successMessage": "🎉 Je wachtwoord is succesvol bijgewerkt. Log in met je nieuwe wachtwoord.",
-    "loginButton": "Inloggen",
+    "successTitle": "Wachtwoord succesvol gereset! 🎉",
+    "successMessage": "Uw wachtwoord is succesvol bijgewerkt. Log in met uw nieuwe wachtwoord om door te gaan.",
     "errors": {
       "passwordShort": "Wachtwoord moet minimaal 4 tekens bevatten",
-      "passwordLong": "Wachtwoord moet minder dan 200 tekens bevatten",
+      "passwordLong": "Wachtwoord moet minder dan 20 tekens bevatten",
+      "confirmRequired": "Bevestig uw wachtwoord",
       "passwordMismatch": "Wachtwoorden komen niet overeen",
-      "confirmRequired": "Bevestig je wachtwoord",
-      "tokenExpired": "Je sessie is verlopen. Begin opnieuw.",
-      "noConnection": "Geen verbinding. Controleer je internet.",
-      "genericError": "Er is iets misgegaan. Probeer opnieuw."
+      "sessionExpired": "Sessie verlopen",
+      "sessionExpiredMessage": "Uw herstel sessie is verlopen. Begin opnieuw.",
+      "noConnection": "Geen verbinding",
+      "noConnectionMessage": "Controleer uw internetverbinding.",
+      "genericError": "Fout",
+      "genericErrorMessage": "Er is iets misgegaan. Probeer het opnieuw."
     }
   }
 }
