@@ -31,7 +31,6 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
                 <View style={resultListStyle.cornerTriangle} />
                 <Text style={resultListStyle.cornerNum}>
-                    {item.position.replace('.', '')}
                 </Text>
                 {canFollow && (
                     <TouchableOpacity
