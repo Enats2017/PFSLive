@@ -18,6 +18,7 @@ import RaceLive from './RaceLive';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import LiveTimingPoint from './LiveTimingPoint';
 import { useResultDetail } from '../../hooks/useResultDetail';
+import UpcomingRace from './UpcomingRace';
 
 type TabKey = 'raceInfo' | 'timingPoint' | 'runnerInfo' | 'awards';
 const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo', 'awards'];
@@ -78,9 +79,22 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     const renderTabPage = useCallback(({ item }: { item: TabKey }) => (
         <View style={s.page}>
             {item === 'raceInfo' && (
-                raceStatus === 'in_progress'
-                    ? <RaceLive raceInfo={data?.race_info} event={data?.event} />
-                    : <RaceInfoTab raceInfo={data?.race_info} event={data?.event} />
+                raceStatus === 'in_progress' ? (
+                    <RaceLive
+                        raceInfo={data?.race_info}
+                        event={data?.event}
+                    />
+                ) : raceStatus === 'finished' ? (
+                    <RaceInfoTab
+                        raceInfo={data?.race_info}
+                        event={data?.event}
+                    />
+                ) : raceStatus === 'not_started' ? (
+                    <UpcomingRace
+                        raceInfo={data?.race_info}
+                        event={data?.event}
+                    />
+                ) : null
             )}
             {item === 'timingPoint' && (
                 raceStatus === 'finished'
