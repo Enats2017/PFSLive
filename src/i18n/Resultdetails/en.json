@@ -14,7 +14,14 @@
     "rankingInOpen":        "RANKING IN\nOPEN",
     "genderRanking":        "GENDER\nRANKING",
     "distanceCompleted":    "DISTANCE\nCOMPLETED",
-    "elevationGain":        "ELEVATION GAIN\nFROM START"
+    "elevationGain":        "ELEVATION GAIN\nFROM START",
+    "startsIn": "Race starts in",
+    "raceStarted": "Race has started",
+    "raceInProgress": "Race is in progress",
+    "age": "Age",
+    "overallRank": "Overall",
+    "genderRank": "Gender",
+    "categoryRank": "Category"
   },
   "timingPoint": {
     "checkpoint":    "CHECKPOINT",
@@ -41,5 +48,19 @@
     "distance":       "DISTANCE",
     "elevationGain":  "ELEVATION GAIN",
     "noData":         "- -"
+  },
+  "status": {
+    "notStarted": "Not Started",
+    "inProgress": "In Progress",
+    "finished": "Finished"
+  },
+  "countdown": {
+    "days": "Days",
+    "hours": "Hrs",
+    "minutes": "Min",
+    "seconds": "Sec"
   }
+ 
+
+  
 }

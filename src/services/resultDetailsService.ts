@@ -16,7 +16,12 @@ export interface CheckpointDetail {
     rank_agegroup: string;
     speed: string;
     pace: string;
-    is_crossed: boolean;
+     is_crossed: boolean;
+    is_start: boolean;       // ✅ added
+    is_finish: boolean;      // ✅ added
+    elevation: string;       // ✅ added
+    elevation_gain: string;  // ✅ added
+    predicted_minutes: number | null;
 }
 
 export interface PreviousCp {
@@ -43,6 +48,8 @@ export interface ResultDetailEvent {
     timezone: string;
     server_datetime: string;
     from_live: 0 | 1;
+     race_status: string;   // ✅ added
+    gpx_url: string; 
 }
 
 export interface RaceInfo {
@@ -58,6 +65,7 @@ export interface RaceInfo {
     gender_ranking: string;
     last_cp_distance: string;
     distance_completed: string;
+    elevation_gain: string; 
     race_time_display: string;
     previous_cp: PreviousCp | null;
     next_cp: NextCp | null;
@@ -84,6 +92,7 @@ export interface ResultDetailResponse {
     race_info: RaceInfo;
     checkpoints: CheckpointDetail[];
     runner_info: RunnerInfo;
+     location: null | object;
 }
 
 export interface ResultDetailParams {
