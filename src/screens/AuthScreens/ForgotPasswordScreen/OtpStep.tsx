@@ -6,25 +6,25 @@ import {
     ActivityIndicator,
     TextInput,
 } from 'react-native';
-import { Ionicons }    from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { otpService }    from '../../../services/otpService';
-import { toastError }    from '../../../../utils/toast';
-import { forgotStyles }  from '../../../styles/forgetPassword.styles';
-import { commonStyles }  from '../../../styles/common.styles';
+import { otpService } from '../../../services/otpService';
+import { toastError } from '../../../../utils/toast';
+import { forgotStyles } from '../../../styles/forgetPassword.styles';
+import { commonStyles, colors } from '../../../styles/common.styles'; // ✅ IMPORT colors
 
 // ─── Constants ───────────────────────────────────────────────────
-const OTP_LENGTH        = 6;
+const OTP_LENGTH = 6;
 const INITIAL_COUNTDOWN = 60;
 
 // ─── Props ───────────────────────────────────────────────────────
 interface OtpStepProps {
-    email:             string;
+    email: string;
     verificationToken: string;
-    onNext:            (passwordResetToken: string) => void;
-    onBack:            () => void;
-    onResend:          () => void;
+    onNext: (passwordResetToken: string) => void;
+    onBack: () => void;
+    onResend: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────
@@ -37,11 +37,11 @@ const OtpStep: React.FC<OtpStepProps> = ({
 }) => {
     const { t } = useTranslation(['forget', 'otp', 'common']);
 
-    const [otp,       setOtp]       = useState<string[]>(Array(OTP_LENGTH).fill(''));
-    const [error,     setError]     = useState('');
-    const [loading,   setLoading]   = useState(false);
+    const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const [resending, setResending] = useState(false);
-    const [countdown, setCountdown] = useState(INITIAL_COUNTDOWN); // ✅ use constant
+    const [countdown, setCountdown] = useState(INITIAL_COUNTDOWN);
     const [canResend, setCanResend] = useState(false);
 
     const inputRefs = useRef<TextInput[]>([]);
@@ -95,7 +95,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
     // ── OTP input ────────────────────────────────────────────────
     const handleChange = useCallback((text: string, index: number) => {
         const cleaned = text.replace(/[^0-9]/g, '').slice(-1);
-        const newOtp  = [...otp];
+        const newOtp = [...otp];
         newOtp[index] = cleaned;
         setOtp(newOtp);
         setError('');
@@ -132,8 +132,8 @@ const OtpStep: React.FC<OtpStepProps> = ({
         try {
             const data = await otpService.verify({
                 verification_token: verificationToken,
-                otp:                otpCode,
-                purpose:            'forgot_password',
+                otp: otpCode,
+                purpose: 'forgot_password',
             });
 
             if (data.success && data.data?.password_reset_token) {
@@ -157,7 +157,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
         try {
             const data = await otpService.resend({
                 verification_token: verificationToken,
-                purpose:            'forgot_password',
+                purpose: 'forgot_password',
             });
 
             if (data.success) {
@@ -180,7 +180,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
 
             {/* Icon */}
             <View style={forgotStyles.iconCircle}>
-                <Ionicons name="mail-open-outline" size={38} color="#FF5722" />
+                <Ionicons name="mail-open-outline" size={38} color={colors.primary} /> {/* ✅ USE colors.primary */}
             </View>
 
             {/* Title & Subtitle */}
@@ -200,8 +200,8 @@ const OtpStep: React.FC<OtpStepProps> = ({
                         ref={(ref) => { if (ref) inputRefs.current[index] = ref; }}
                         style={[
                             forgotStyles.otpInput,
-                            digit   ? forgotStyles.otpFilled : {},
-                            !!error ? forgotStyles.otpError  : {},
+                            digit ? forgotStyles.otpFilled : {},
+                            !!error ? forgotStyles.otpError : {},
                         ]}
                         value={digit}
                         onChangeText={(text) => handleChange(text, index)}
@@ -225,8 +225,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
             <TouchableOpacity
                 style={[
                     commonStyles.primaryButton,
-                    {width:"100%"},
-                    
+                    { width: "100%" },
                     loading && { opacity: 0.7 },
                 ]}
                 onPress={() => handleVerify()}
@@ -237,7 +236,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
                     ? <ActivityIndicator color="#fff" size="small" />
                     : <Text style={commonStyles.primaryButtonText}>
                         {t('otp:verifyButton')}
-                      </Text>
+                    </Text>
                 }
             </TouchableOpacity>
 
@@ -247,10 +246,10 @@ const OtpStep: React.FC<OtpStepProps> = ({
                 {canResend ? (
                     <TouchableOpacity onPress={handleResend} disabled={resending}>
                         {resending
-                            ? <ActivityIndicator size="small" color="#FF5722" />
+                            ? <ActivityIndicator size="small" color={colors.primary} />
                             : <Text style={forgotStyles.resendLink}>
                                 {t('forget:otpStep.resendOtp')}
-                              </Text>
+                            </Text>
                         }
                     </TouchableOpacity>
                 ) : (
@@ -277,5 +276,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
         </View>
     );
 };
+
+OtpStep.displayName = 'OtpStep';
 
 export default OtpStep;

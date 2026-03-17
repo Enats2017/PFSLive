@@ -1,161 +1,193 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-    View,
-    Text,
-    TouchableOpacity,
-    StyleSheet,
-    ActivityIndicator,
-    Image,
-    Alert,
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import FloatingLabelInput from '../../../components/FloatingLabelInput';
-import { API_CONFIG, getApiEndpoint } from '../../../constants/config';
-import { authService, ResetPasswordResponse } from '../../../services/authService';
-import { forgotStyles } from '../../../styles/forgetPassword.styles';
-import { commonStyles } from '../../../styles/common.styles';
 import { useTranslation } from 'react-i18next';
+import FloatingLabelInput from '../../../components/FloatingLabelInput';
+import { authService } from '../../../services/authService';
+import { forgotStyles } from '../../../styles/forgetPassword.styles';
+import { commonStyles, colors } from '../../../styles/common.styles'; // ✅ IMPORT colors
 
-
-// ─── Props ───────────────────────────────────────────────────────
 interface NewPasswordStepProps {
-    passwordResetToken: string;
-    onSuccess: () => void;   // called after successful reset
-    onBack: () => void;
+  passwordResetToken: string;
+  onSuccess: () => void;
+  onBack: () => void;
 }
 
-// ─── Component ───────────────────────────────────────────────────
 const NewPasswordStep: React.FC<NewPasswordStepProps> = ({
-    passwordResetToken,
-    onSuccess,
-    onBack,
+  passwordResetToken,
+  onSuccess,
+  onBack,
 }) => {
-    const { t } = useTranslation(['register', 'common', 'forget']);
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [loading, setLoading] = useState(false);
+  const { t } = useTranslation(['forget', 'common']);
+  
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
-    // ── Validate ─────────────────────────────────────────────────
-    const validate = (): boolean => {
-        const newErrors: Record<string, string> = {};
+  const validate = useCallback((): boolean => {
+    const newErrors: Record<string, string> = {};
 
-        if (!password || password.length < 4)
-            newErrors.password = 'Password must be at least 4 characters';
+    if (!password || password.length < 4) {
+      newErrors.password = t('forget:passwordStep.errors.passwordShort');
+    }
 
-        if (password.length > 20)
-            newErrors.password = 'Password must be less than 20 characters';
+    if (password.length > 20) {
+      newErrors.password = t('forget:passwordStep.errors.passwordLong');
+    }
 
-        if (!confirmPassword)
-            newErrors.confirmPassword = 'Please confirm your password';
+    if (!confirmPassword) {
+      newErrors.confirmPassword = t('forget:passwordStep.errors.confirmRequired');
+    }
 
-        if (password && confirmPassword && password !== confirmPassword)
-            newErrors.confirmPassword = 'Passwords do not match';
+    if (password && confirmPassword && password !== confirmPassword) {
+      newErrors.confirmPassword = t('forget:passwordStep.errors.passwordMismatch');
+    }
 
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [password, confirmPassword, t]);
 
-    const handleSubmit = async () => {
-        if (!validate()) return;
-        setLoading(true);
+  const handleSubmit = useCallback(async () => {
+    if (!validate()) return;
+    
+    setLoading(true);
+    setErrors({});
 
-        try {
-            const response = await authService.resetPassword(
-                passwordResetToken,
-                password,
-                confirmPassword,
+    try {
+      const response = await authService.resetPassword(
+        passwordResetToken,
+        password,
+        confirmPassword,
+      );
+
+      if (response.success) {
+        onSuccess();
+      }
+    } catch (error: any) {
+      const errCode = error.response?.data?.error;
+
+      switch (errCode) {
+        case 'password_reset_token_invalid':
+        case 'password_reset_token_expired':
+          Alert.alert(
+            t('forget:passwordStep.errors.sessionExpired'),
+            t('forget:passwordStep.errors.sessionExpiredMessage'),
+          );
+          break;
+
+        case 'password_too_short':
+          setErrors({ password: t('forget:passwordStep.errors.passwordShort') });
+          break;
+
+        case 'password_too_long':
+          setErrors({ password: t('forget:passwordStep.errors.passwordLong') });
+          break;
+
+        case 'password_mismatch':
+          setErrors({ confirmPassword: t('forget:passwordStep.errors.passwordMismatch') });
+          break;
+
+        default:
+          if (error.request && !error.response) {
+            Alert.alert(
+              t('forget:passwordStep.errors.noConnection'),
+              t('forget:passwordStep.errors.noConnectionMessage'),
             );
+          } else {
+            Alert.alert(
+              t('forget:passwordStep.errors.genericError'),
+              t('forget:passwordStep.errors.genericErrorMessage'),
+            );
+          }
+          break;
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [validate, passwordResetToken, password, confirmPassword, onSuccess, t]);
 
-            if (response.success) {
-                onSuccess();
-            }
+  const handlePasswordChange = useCallback((text: string) => {
+    setPassword(text);
+    if (errors.password) {
+      setErrors((prev) => ({ ...prev, password: '' }));
+    }
+  }, [errors.password]);
 
-        } catch (error: any) {
-            const errCode = error.response?.data?.error;
+  const handleConfirmPasswordChange = useCallback((text: string) => {
+    setConfirmPassword(text);
+    if (errors.confirmPassword) {
+      setErrors((prev) => ({ ...prev, confirmPassword: '' }));
+    }
+  }, [errors.confirmPassword]);
 
-            switch (errCode) {
-                case 'password_reset_token_invalid':
-                case 'password_reset_token_expired':
-                    Alert.alert(
-                        'Session Expired',
-                        'Your reset session has expired. Please start again.',
-                    );
-                    break;
-                case 'password_too_short':
-                    setErrors({ password: 'Password must be at least 4 characters' });
-                    break;
-                case 'password_too_long':
-                    setErrors({ password: 'Password must be less than 200 characters' });
-                    break;
-                case 'password_mismatch':
-                    setErrors({ confirmPassword: 'Passwords do not match' });
-                    break;
-                default:
-                    if (error.request && !error.response) {
-                        Alert.alert('No Connection', 'Please check your internet connection.');
-                    } else {
-                        Alert.alert('Error', 'Something went wrong. Please try again.');
-                    }
-                    break;
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-    return (
-        <View style={forgotStyles.container}>
-            <View style={forgotStyles.iconCircle}>
-                <Ionicons name="shield-checkmark-outline" size={38} color="#FF5722" />
-            </View>
-            <Text style={commonStyles.title}>{t('forget:passwordStep.title')}</Text>
-            <Text style={[commonStyles.subtitle, { textAlign: "center", marginTop: 12, marginBottom: 15, lineHeight: 22, }]}>
-                {t('forget:passwordStep.subtitle')}
+  return (
+    <View style={forgotStyles.container}>
+      {/* Icon */}
+      <View style={forgotStyles.iconCircle}>
+        <Ionicons name="shield-checkmark-outline" size={38} color={colors.primary} /> {/* ✅ USE colors.primary */}
+      </View>
+
+      {/* Title & Subtitle */}
+      <Text style={commonStyles.title}>
+        {t('forget:passwordStep.title')}
+      </Text>
+      <Text style={[commonStyles.subtitle, forgotStyles.subtitle]}>
+        {t('forget:passwordStep.subtitle')}
+      </Text>
+
+      {/* Form */}
+      <View style={forgotStyles.form}>
+        <FloatingLabelInput
+          label={t('forget:passwordStep.newPassword')}
+          value={password}
+          onChangeText={handlePasswordChange}
+          iconName="lock-closed-outline"
+          isPassword
+          required
+          errorMessage={errors.password}
+        />
+
+        <FloatingLabelInput
+          label={t('forget:passwordStep.confirmPassword')}
+          value={confirmPassword}
+          onChangeText={handleConfirmPasswordChange}
+          iconName="lock-closed-outline"
+          isPassword
+          required
+          errorMessage={errors.confirmPassword}
+        />
+
+        {/* Reset Button */}
+        <TouchableOpacity
+          style={[
+            commonStyles.primaryButton,
+            { marginTop: 12 },
+            loading && { opacity: 0.7 }
+          ]}
+          onPress={handleSubmit}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={commonStyles.primaryButtonText}>
+              {t('forget:passwordStep.resetButton')}
             </Text>
-            <View style={forgotStyles.form}>
-                <FloatingLabelInput
-                    label={t('forget:passwordStep.newPassword')}
-                    value={password}
-                    onChangeText={(text) => {
-                        setPassword(text);
-                        if (errors.password) setErrors((p) => ({ ...p, password: '' }));
-                    }}
-                    iconName="lock-closed-outline"
-                    isPassword
-                    required
-                    errorMessage={errors.password}
-                />
-
-                <FloatingLabelInput
-                    label={t('forget:passwordStep.confirmPassword')}
-                    value={confirmPassword}
-                    onChangeText={(text) => {
-                        setConfirmPassword(text);
-                        if (errors.confirmPassword) setErrors((p) => ({ ...p, confirmPassword: '' }));
-                    }}
-                    iconName="lock-closed-outline"
-                    isPassword
-                    required
-                    errorMessage={errors.confirmPassword}
-                />
-
-                <TouchableOpacity
-                    style={[commonStyles.primaryButton, { marginTop: 12 }, loading && forgotStyles.buttonDisabled]}
-                    onPress={handleSubmit}
-                    disabled={loading}
-                    activeOpacity={0.8}
-                >
-                    {loading
-                        ? <ActivityIndicator color="#fff" size="small" />
-                        : <Text style={commonStyles.primaryButtonText}>{t('forget:passwordStep.resetButton')}</Text>
-                    }
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 };
 
-
+NewPasswordStep.displayName = 'NewPasswordStep';
 
 export default NewPasswordStep;
