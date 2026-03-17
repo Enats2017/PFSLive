@@ -1,0 +1,54 @@
+{
+  "emailStep": {
+    "title": "Wachtwoord vergeten?",
+    "subtitle": "Geen zorgen! Voer je geregistreerde e-mailadres in en we sturen een 6-cijferige OTP om je wachtwoord opnieuw in te stellen.",
+    "sendOtpButton": "OTP verzenden",
+    "backtologin": "Terug naar inloggen",
+    "otp": "OTP opnieuw verzonden",
+    "otpmsg": "Er is een nieuwe code naar je e-mail gestuurd.",
+    "errors": {
+      "emailInvalid": "Voer een geldig e-mailadres in",
+      "emailNotFound": "Voer je geregistreerde e-mailadres in",
+      "noConnection": "Geen verbinding. Controleer je internet.",
+      "genericError": "Er is iets misgegaan. Probeer opnieuw."
+    }
+  },
+  "otpStep": {
+    "title": "Controleer je e-mail",
+    "subtitle": "We hebben een 6-cijferige code gestuurd naar",
+    "verifyButton": "OTP verifiëren",
+    "resendOtp": "OTP opnieuw verzenden",
+    "resendIn": "Opnieuw verzenden in 0:{{seconds}}",
+    "didntReceive": "Geen code ontvangen?",
+    "changeEmail": "E-mailadres wijzigen",
+    "errors": {
+      "incomplete": "Voer de volledige 6-cijferige code in",
+      "invalid": "Ongeldige OTP-code. Probeer opnieuw.",
+      "expired": "OTP is verlopen. Vraag een nieuwe aan.",
+      "tooManyAttempts": "Te veel pogingen. Ga terug en probeer opnieuw.",
+      "tokenInvalid": "Sessie verlopen. Ga terug en probeer opnieuw.",
+      "noConnection": "Geen verbinding. Controleer je internet.",
+      "genericError": "Er is iets misgegaan. Probeer opnieuw."
+    }
+  },
+  "passwordStep": {
+    "title": "Nieuw wachtwoord aanmaken",
+    "subtitle": "Bijna klaar! Stel een sterk nieuw wachtwoord in voor je account.",
+    "resetButton": "Wachtwoord resetten",
+    "newPassword": "Nieuw wachtwoord",
+    "confirmPassword": "Bevestig wachtwoord",
+    "backToOtp": "Terug naar OTP",
+    "successTitle": "Wachtwoord succesvol gewijzigd! 🎉",
+    "successMessage": "🎉 Je wachtwoord is succesvol bijgewerkt. Log in met je nieuwe wachtwoord.",
+    "loginButton": "Inloggen",
+    "errors": {
+      "passwordShort": "Wachtwoord moet minimaal 4 tekens bevatten",
+      "passwordLong": "Wachtwoord moet minder dan 200 tekens bevatten",
+      "passwordMismatch": "Wachtwoorden komen niet overeen",
+      "confirmRequired": "Bevestig je wachtwoord",
+      "tokenExpired": "Je sessie is verlopen. Begin opnieuw.",
+      "noConnection": "Geen verbinding. Controleer je internet.",
+      "genericError": "Er is iets misgegaan. Probeer opnieuw."
+    }
+  }
+}

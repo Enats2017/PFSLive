@@ -32,7 +32,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
   route,
 }) => {
   const { t } = useTranslation(['otp', 'common']);
-  const { email, verification_token } = route.params;
+  const { email, verification_token, purpose } = route.params;
 
   const { handleAfterAuth } = usePendingRegistration(navigation);
 
@@ -119,6 +119,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
         const data = await otpService.verify({
           verification_token,
           otp: code,
+          purpose,
         });
 
         // ✅ HANDLE SUCCESS
@@ -221,7 +222,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
     setError('');
 
     try {
-      const data = await otpService.resend({ verification_token });
+      const data = await otpService.resend({ verification_token, purpose });
 
       if (data.success) {
         setCountdown(INITIAL_COUNTDOWN);

@@ -155,8 +155,9 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
         );
 
         navigation.navigate('OTPVerificationScreen', {
-          email: response.data.email ?? formData.email,
-          verification_token: response.data.verification_token,
+          email: response.data.email || '',
+          verification_token: response.data.verification_token ?? '',
+          purpose: 'registration',
         });
       }
     } catch (error: any) {

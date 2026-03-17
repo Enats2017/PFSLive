@@ -31,6 +31,7 @@
     "bib": "Bib"
   },
   "success": {
+    "label":"Registration Successful!",
     "message": "Thank you for signing up for the live tracking of this event. Tell your family and friends to follow you here and don't forget to activate your live tracking from 1 hour before the start of your race in this app!"
   },
   "unregister": {

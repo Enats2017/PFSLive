@@ -52,7 +52,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       <View style={headerStyles.rightSection}>
         <TouchableOpacity
           style={headerStyles.iconButton}
-          onPress={() => console.log('Settings pressed')}
+          onPress={() =>navigation.navigate('LoginScreen')}
         >
           <Text style={headerStyles.icon}>⚙️</Text>
         </TouchableOpacity>

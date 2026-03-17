@@ -226,10 +226,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 style={loginStyles.forgotButton}
                 activeOpacity={0.7}
                 onPress={() =>
-                  toastError(
-                    t('login:forgotPassword'),
-                    t('login:errors.forgotPasswordComingSoon')
-                  )
+                  navigation.navigate('ForgotPassword')
                 }
                 disabled={loading}
               >

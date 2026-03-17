@@ -1,0 +1,54 @@
+{
+  "emailStep": {
+    "title": "Mot de passe oublié ?",
+    "subtitle": "Pas de souci ! Entrez votre e-mail enregistré et nous vous enverrons un code OTP à 6 chiffres pour réinitialiser votre mot de passe.",
+    "sendOtpButton": "Envoyer le code",
+    "backtologin": "Retour à la connexion",
+    "otp": "OTP renvoyé",
+    "otpmsg": "Un nouveau code a été envoyé à votre e-mail.",
+    "errors": {
+      "emailInvalid": "Veuillez entrer une adresse e-mail valide",
+      "emailNotFound": "Veuillez entrer votre adresse e-mail enregistrée",
+      "noConnection": "Pas de connexion. Veuillez vérifier votre internet.",
+      "genericError": "Une erreur s'est produite. Veuillez réessayer."
+    }
+  },
+  "otpStep": {
+    "title": "Vérifiez votre e-mail",
+    "subtitle": "Nous avons envoyé un code à 6 chiffres à",
+    "verifyButton": "Vérifier le code",
+    "resendOtp": "Renvoyer le code",
+    "resendIn": "Renvoyer dans 0:{{seconds}}",
+    "didntReceive": "Vous n'avez pas reçu le code ?",
+    "changeEmail": "Changer l'e-mail",
+    "errors": {
+      "incomplete": "Veuillez entrer le code complet à 6 chiffres",
+      "invalid": "Code OTP invalide. Veuillez réessayer.",
+      "expired": "Le code OTP a expiré. Veuillez en demander un nouveau.",
+      "tooManyAttempts": "Trop de tentatives. Veuillez revenir en arrière et réessayer.",
+      "tokenInvalid": "Session expirée. Veuillez revenir en arrière et réessayer.",
+      "noConnection": "Pas de connexion. Veuillez vérifier votre internet.",
+      "genericError": "Une erreur s'est produite. Veuillez réessayer."
+    }
+  },
+  "passwordStep": {
+    "title": "Créer un nouveau mot de passe",
+    "subtitle": "Presque terminé ! Définissez un nouveau mot de passe sécurisé pour votre compte.",
+    "resetButton": "Réinitialiser le mot de passe",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "backToOtp": "Retour au code",
+    "successTitle": "Réinitialisation réussie ! 🎉",
+    "successMessage": "🎉 Votre mot de passe a été mis à jour avec succès. Veuillez vous connecter avec votre nouveau mot de passe.",
+    "loginButton": "Connexion",
+    "errors": {
+      "passwordShort": "Le mot de passe doit contenir au moins 4 caractères",
+      "passwordLong": "Le mot de passe doit contenir moins de 200 caractères",
+      "passwordMismatch": "Les mots de passe ne correspondent pas",
+      "confirmRequired": "Veuillez confirmer votre mot de passe",
+      "tokenExpired": "Votre session a expiré. Veuillez recommencer.",
+      "noConnection": "Pas de connexion. Veuillez vérifier votre internet.",
+      "genericError": "Une erreur s'est produite. Veuillez réessayer."
+    }
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "emailStep": {
+    "title": "Forgot Password?",
+    "subtitle": "No worries! Enter your registered email and we'll send a 6-digit OTP to reset your password.",
+    "sendOtpButton": "Send OTP",
+    "backtologin": "Back to Login",
+     "otp":"OTP Resent",
+     "otpmsg":"A new code has been sent to your email.",
+    "errors": {
+      "emailInvalid": "Please enter a valid email address",
+      "emailNotFound": "Please enter your registered email address",
+      "noConnection": "No connection. Please check your internet.",
+      "genericError": "Something went wrong. Please try again."
+    }
+  },
+  "otpStep": {
+    "title": "Check Your Email",
+    "subtitle": "We've sent a 6-digit code to",
+    "verifyButton": "Verify OTP",
+    "resendOtp": "Resend OTP",
+    "resendIn": "Resend in 0:{{seconds}}",
+    "didntReceive": "Didn't receive the code?",
+    "changeEmail": "Change Email",
+    "errors": {
+      "incomplete": "Please enter the complete 6-digit code",
+      "invalid": "Invalid OTP code. Please try again.",
+      "expired": "OTP has expired. Please request a new one.",
+      "tooManyAttempts": "Too many attempts. Please go back and try again.",
+      "tokenInvalid": "Session expired. Please go back and try again.",
+      "noConnection": "No connection. Please check your internet.",
+      "genericError": "Something went wrong. Please try again."
+    }
+  },
+  "passwordStep": {
+    "title": "Create New Password",
+    "subtitle": "Almost done! Set a strong new password for your account.",
+    "resetButton": "Reset Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "backToOtp": "Back to OTP",
+    "successTitle": "Password Reset Successful! 🎉",
+    "successMessage": " 🎉 Your password has been updated successfully. Please sign in with your new password to continue.",
+    "loginButton": "Login",
+    "errors": {
+      "passwordShort": "Password must be at least 4 characters",
+      "passwordLong": "Password must be less than 200 characters",
+      "passwordMismatch": "Passwords do not match",
+      "confirmRequired": "Please confirm your password",
+      "tokenExpired": "Your reset session has expired. Please start again.",
+      "noConnection": "No connection. Please check your internet.",
+      "genericError": "Something went wrong. Please try again."
+    }
+  }
+}
