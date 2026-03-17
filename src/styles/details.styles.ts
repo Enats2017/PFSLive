@@ -34,17 +34,19 @@ export const detailsStyles = StyleSheet.create({
     width: "60%",
     borderRadius: 2,
   },
+  // ✅ UPDATED COUNT BADGE - MORE PADDING FOR READABILITY
   count: {
     backgroundColor: colors.success,
-    width: "35%",
-    paddingVertical: 12,
+    minWidth: 100,              // ✅ Minimum width for long text
+    paddingHorizontal: 12,      // ✅ More horizontal padding (was implicit via width)
+    paddingVertical: 10,        // ✅ Reduced from 12 for better proportion
     borderTopRightRadius: 20,
     borderBottomStartRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 4
+    elevation: 4,
   },
   distance: {
     flexDirection: "row",
@@ -79,7 +81,7 @@ export const detailsStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  // ✅ ADD LIVE TRACKING BADGE STYLES
+  // ✅ LIVE TRACKING BADGE STYLES
   liveTrackingBadge: {
     flexDirection: 'row',
     alignItems: 'center',

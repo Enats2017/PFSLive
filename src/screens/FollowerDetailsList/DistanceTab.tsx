@@ -9,6 +9,7 @@ import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
 import { useNavigation } from '@react-navigation/native';
+import { API_CONFIG } from '../../constants/config';
 
 interface DistanceTabProps {
     product_app_id: number;
@@ -37,39 +38,75 @@ const DistanceTab = ({ product_app_id, sourceTab }: DistanceTabProps) => {
 
     useFocusEffect(useCallback(() => { fetchResults(); }, [fetchResults]));
 
-    const getCountdownBadge = useMemo(() => {
-        return (item: Distance) => {
-            switch (item.countdown_type) {
-                case 'in_progress':
-                    return {
-                        label: t('details:countdown.in_progress'),
-                        color: colors.success,
-                    };
-                case 'finished':
-                    return {
-                        label: t('details:countdown.finished'),
-                        color: colors.gray500,
-                    };
-                case 'hours':
-                    return {
-                        label: `${item.countdown_value} ${t('details:countdown.hours')}`,
-                        color: colors.success,
-                    };
-                case 'minutes':
-                    return {
-                        label: `${item.countdown_value} ${t('details:countdown.minutes')}`,
-                        color: colors.warning,
-                    };
-                case 'days':
-                    return {
-                        label: `${item.countdown_value} ${t('details:countdown.days')}`,
-                        color: colors.info,
-                    };
-                default:
-                    return { label: '', color: colors.gray500 };
+    // ✅ GET COUNTDOWN BADGE (SMART UNIT DISPLAY)
+    const getCountdownBadge = useCallback(
+    (item: Distance) => {
+        const { status, days, hours, minutes } = item.countdown;
+
+        if (API_CONFIG.DEBUG) {
+            console.log('⏱️ Countdown:', { status, days, hours, minutes });
+        }
+
+        switch (status) {
+        case 'in_progress':
+            return {
+            label: t('details:countdown.live'),
+            color: colors.success,
+            };
+        
+        case 'finished':
+            return {
+            label: t('details:countdown.finished'),
+            color: colors.gray500,
+            };
+        
+        case 'not_started': {
+            // ✅ SMART DISPLAY LOGIC
+            const parts: string[] = [];
+            let color = colors.gray500;
+
+            // ✅ PRIORITY 1: If days exist, show ONLY days
+            if (days > 0) {
+            parts.push(`${days} ${t('details:countdown.days')}`);
+            color = colors.info; // Blue for days
             }
-        };
-    }, [t]);
+            // ✅ PRIORITY 2: If no days but hours exist, show hours and minutes
+            else if (hours > 0) {
+            parts.push(`${hours} ${t('details:countdown.hours')}`);
+            if (minutes > 0) {
+                parts.push(`${minutes} ${t('details:countdown.minutes')}`);
+            }
+            color = colors.success; // Green for hours
+            }
+            // ✅ PRIORITY 3: If only minutes exist, show only minutes
+            else if (minutes > 0) {
+            parts.push(`${minutes} ${t('details:countdown.minutes')}`);
+            color = colors.warning; // Orange for minutes only
+            }
+
+            // ✅ IF ALL ARE ZERO
+            if (parts.length === 0) {
+            return {
+                label: t('details:countdown.startingSoon'),
+                color: colors.warning,
+            };
+            }
+
+            // ✅ JOIN PARTS
+            const countdownText = parts.join(' ');
+
+            return {
+            label: `${t('details:countdown.startsIn')} ${countdownText}`,
+            color,
+            };
+        }
+        
+        default:
+            return { label: '', color: colors.gray500 };
+        }
+    },
+    [t]
+    );
 
     const renderItem = useCallback(({ item }: { item: Distance }) => {
         const badge = getCountdownBadge(item); // ✅ call it here
@@ -81,7 +118,7 @@ const DistanceTab = ({ product_app_id, sourceTab }: DistanceTabProps) => {
                         <Text style={[commonStyles.title, { marginBottom: 4 }]}>
                             {item.distance_name}
                         </Text>
-                        <Text style={commonStyles.subtitle}>{item.race_date}</Text>
+                        <Text style={commonStyles.subtitle}>{item.race_date_formatted}</Text>
                         <Text style={commonStyles.subtitle}>{item.race_time}</Text>
                     </View>
                     <View style={[detailsStyles.count, { backgroundColor: badge.color }]}> 

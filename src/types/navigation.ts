@@ -8,6 +8,7 @@ export type RootStackParamList = {
     product_option_value_app_id: string | number;
     event_name: string;
     sourceScreen?: string;
+    sectionType?: string;
   };
   ParticipantEvent: undefined;
   PersonalEvent: undefined;

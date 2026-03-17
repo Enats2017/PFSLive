@@ -7,10 +7,12 @@
   "undo": "UNDO FOR SIGNUP",
   "live": "LIVE",
   "countdown": {
-    "in_progress": "Live",
-    "finished": "Finished",
-    "hours": "Hours",
+    "live": "LIVE",
+    "finished": "FINISHED",
+    "startsIn": "Starts in",
+    "startingSoon": "Starting Soon",
     "days": "Days",
+    "hours": "Hours",
     "minutes": "Minutes"
   },
   "distance": {

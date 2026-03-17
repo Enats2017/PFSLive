@@ -22,23 +22,28 @@ import { RaceResult } from '../../services/resultList';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { useFocusEffect } from '@react-navigation/native';
-import ResultCardLive from './ResultCardLive';  
+import ResultCardLive from './ResultCardLive';
+import ResultCardBeforeRace from './ResultCardBeforeRace';
+import { API_CONFIG } from '../../constants/config';
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
     const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab } = route.params;
-    console.log("which page user comming", sourceTab);
 
+    if (API_CONFIG.DEBUG) {
+        console.log('📍 ResultListScreen params:', {
+            product_app_id,
+            product_option_value_app_id,
+            sourceTab,
+            sectionType,
+        });
+    }
 
     const { followedUsers, isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
 
     const initialType = sourceTab === 'live'
-        ? TYPE_OPTIONS[1]  // live option
-        : TYPE_OPTIONS[0]; // results option
-
-    console.log("1111", sectionType);
-    console.log('event_name ResultListScreen');
-    console.log(event_name);
+        ? TYPE_OPTIONS[1]
+        : TYPE_OPTIONS[0];
 
     useFocusEffect(
         useCallback(() => {
@@ -55,31 +60,66 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         onCategorySelect, onEndReached, onRefresh, retry,
         distanceOptions, categoryOptions,
         selectedDistanceLabel, selectedCategoryLabel,
-        raceStatus, currentPovId
+        raceStatus, currentPovId,
+        showUtmbIndex, // ✅ GET FLAG FROM HOOK
     } = useResultList(product_app_id, product_option_value_app_id, followedUsers, initialType);
 
-    console.log("selectedPovId",selectedPovId);
-    
-    
+    if (API_CONFIG.DEBUG) {
+        console.log('📊 Race status:', raceStatus);
+        console.log('🎯 Show UTMB Index:', showUtmbIndex);
+    }
 
-    console.log(fromLive);
+    // ✅ DETERMINE WHICH CARD TO RENDER
     const renderItem = useCallback(({ item }: { item: RaceResult }) => {
-        const props = {
+        const commonProps = {
             item,
-            fromLive,
             isFollowed: followedUsers.has(Number(item.customer_app_id)),
             isLoading: isLoading(item.customer_app_id),
             onToggleFollow: () => toggleFollow(item.customer_app_id),
-            raceStatus,
-            product_app_id,
-            currentPovId
         };
 
-        return sourceTab === 'live'
-            ? <ResultCardLive {...props} />
-            : <ResultCard {...props} />;
+        // ✅ PRIORITY 1: If race hasn't started, show BeforeRace card
+        if (raceStatus === 'not_started') {
+            return (
+                <ResultCardBeforeRace 
+                    {...commonProps} 
+                    showUtmbIndex={showUtmbIndex} // ✅ PASS FLAG
+                />
+            );
+        }
 
-    }, [fromLive, followedUsers, isLoading, toggleFollow, raceStatus, product_app_id, currentPovId]);
+        // ✅ PRIORITY 2: If sourceTab is 'live', show Live card
+        if (sourceTab === 'live' && raceStatus !== 'finished') {
+            return (
+                <ResultCardLive
+                    {...commonProps}
+                    fromLive={fromLive}
+                    raceStatus={raceStatus}
+                    product_app_id={product_app_id}
+                    currentPovId={currentPovId}
+                />
+            );
+        }
+
+        // ✅ PRIORITY 3: Default to regular ResultCard
+        return (
+            <ResultCard
+                {...commonProps}
+                fromLive={fromLive}
+                sourceTab={sourceTab}
+            />
+        );
+    }, [
+        followedUsers,
+        isLoading,
+        toggleFollow,
+        raceStatus,
+        sourceTab,
+        fromLive,
+        product_app_id,
+        currentPovId,
+        showUtmbIndex, // ✅ ADD TO DEPENDENCIES
+    ]);
 
     const ListFooter = useCallback(() =>
         pageLoad
@@ -94,8 +134,9 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
 
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-            <StatusBar barStyle="dark-content" />   
+            <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={false} />
+
             <View style={resultListStyle.filterRow1}>
                 <Dropdown
                     label={selectedDistanceLabel}
@@ -120,7 +161,6 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     onSelect={onCategorySelect}
                 />
             </View>
-
 
             {initialLoad ? (
                 <View style={resultListStyle.center}>

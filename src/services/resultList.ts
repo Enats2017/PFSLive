@@ -20,6 +20,7 @@ export interface RaceResult {
   participant_app_id: number | null;
   customer_app_id: number | null;
   checkpoints: Checkpoint[];
+  utmb_index?: string; // ✅ UTMB Index field
 }
 
 export interface Checkpoint {
@@ -64,7 +65,7 @@ export interface Pagination {
 
 export interface EventRankingParams {
   product_app_id: number;
-  product_option_value_app_id?: number; // ✅ OPTIONAL
+  product_option_value_app_id?: number;
   from_live: 0 | 1;
   filter_category: string;
   page: number;
@@ -81,15 +82,14 @@ export interface EventRankingResponse {
     product_app_id: number;
     product_option_value_app_id: number;
     from_live: 0 | 1;
-    race_status:string,
+    race_status: string;
+    show_utmb_index?: number; // ✅ NEW: 0 = hide, 1 = show
   };
 }
 
 export const resultList = {
   /**
    * Get event ranking with filters
-   * @param params - Ranking parameters
-   * @returns Event ranking response
    */
   getEventRanking: async (
     params: EventRankingParams,
@@ -108,7 +108,6 @@ export const resultList = {
         });
       }
 
-      // ✅ BUILD REQUEST BODY
       const requestBody: any = {
         product_app_id: params.product_app_id,
         from_live: params.from_live,
@@ -117,15 +116,11 @@ export const resultList = {
         language_id,
       };
 
-      console.log("1111", requestBody);
-
-      // ✅ ONLY ADD product_option_value_app_id IF PROVIDED
       if (params.product_option_value_app_id !== undefined) {
         requestBody.product_option_value_app_id =
           params.product_option_value_app_id;
       }
 
-      // ✅ USE CONSISTENT apiClient
       const response = await apiClient.post<EventRankingResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.GET_EVENT_RANKING),
         requestBody,
@@ -135,11 +130,6 @@ export const resultList = {
         },
       );
 
-      if (API_CONFIG.DEBUG) {
-        //console.log('📡 Full API Response:', response.data);
-      }
-
-      // ✅ API RETURNS DATA DIRECTLY (NOT NESTED)
       const data = response.data;
 
       if (API_CONFIG.DEBUG) {
@@ -149,10 +139,10 @@ export const resultList = {
           results: data.results?.length || 0,
           pagination: data.pagination,
           event: data.event,
+          show_utmb_index: data.event?.show_utmb_index,
         });
       }
 
-      // ✅ VALIDATE RESPONSE STRUCTURE
       if (
         !data.distances ||
         !data.categories ||
@@ -174,7 +164,6 @@ export const resultList = {
         }
       }
 
-      // ✅ HANDLE API ERRORS
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }

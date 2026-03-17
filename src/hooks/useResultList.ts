@@ -18,7 +18,7 @@ export const TYPE_OPTIONS: FilterOption[] = [
 type FetchMode = "initial" | "filter" | "paginate" | "refresh";
 
 interface FetchOpts {
-  povId?: number; // ✅ NOW OPTIONAL
+  povId?: number;
   live: 0 | 1;
   category: string;
   page: number;
@@ -29,20 +29,18 @@ export const useResultList = (
   product_app_id: number,
   initial_pov_id?: number,
   followedIds?: Set<number>,
-  initialType?: FilterOption, // ✅ NOW OPTIONAL
+  initialType?: FilterOption,
 ) => {
   const isMounted = useRef(true);
   const requestLock = useRef(false);
   const hasFetched = useRef(false);
 
-  // ✅ START WITH UNDEFINED IF NO initial_pov_id
   const [selectedPovId, setSelectedPovId] = useState<number | undefined>(
     initial_pov_id,
   );
-  console.log("1111", initialType);
 
   const [selectedType, setSelectedType] = useState<FilterOption>(
-    initialType ?? TYPE_OPTIONS[0], // ← use it here
+    initialType ?? TYPE_OPTIONS[0],
   );
   const [selectedCategory, setSelectedCategory] = useState<string>("scratch");
 
@@ -64,10 +62,10 @@ export const useResultList = (
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [raceStatus, setRaceStatus] = useState<string>("");
+  const [showUtmbIndex, setShowUtmbIndex] = useState(false); // ✅ NEW STATE
 
   const currentPage = useRef(1);
 
-  // ✅ TOGGLE FAVORITE
   const toggleFav = useCallback((bib: string): void => {
     setFavBibs((prev) => {
       const next = new Set(prev);
@@ -76,7 +74,6 @@ export const useResultList = (
     });
   }, []);
 
-  // ✅ FETCH DATA (HANDLES OPTIONAL povId)
   const fetchData = useCallback(
     async (opts: FetchOpts): Promise<void> => {
       if (requestLock.current) {
@@ -91,7 +88,6 @@ export const useResultList = (
       const { povId, live, category, page, mode } = opts;
 
       try {
-        // ✅ SET LOADING STATES
         if (mode === "initial") setInitialLoad(true);
         if (mode === "filter") setFilterLoad(true);
         if (mode === "paginate") setPageLoad(true);
@@ -112,7 +108,7 @@ export const useResultList = (
 
         const data = await resultList.getEventRanking({
           product_app_id,
-          product_option_value_app_id: povId, // ✅ CAN BE UNDEFINED
+          product_option_value_app_id: povId,
           from_live: live,
           filter_category: category === "scratch" ? "" : category,
           page,
@@ -120,14 +116,24 @@ export const useResultList = (
 
         if (!isMounted.current) return;
 
+        // ✅ SET RACE STATUS
         if (data.event?.race_status) {
           setRaceStatus(data.event.race_status);
+          
+          if (API_CONFIG.DEBUG) {
+            console.log('✅ Race Status:', data.event.race_status);
+          }
         }
 
-        console.log("1111",raceStatus);
-        
+        // ✅ SET SHOW UTMB INDEX FLAG
+        if (data.event?.show_utmb_index !== undefined) {
+          setShowUtmbIndex(data.event.show_utmb_index === 1);
+          
+          if (API_CONFIG.DEBUG) {
+            console.log('✅ Show UTMB Index:', data.event.show_utmb_index === 1);
+          }
+        }
 
-        // ✅ AUTO-SELECT FIRST DISTANCE IF NONE PROVIDED
         if (povId === undefined && data.distances.length > 0) {
           const firstDistance = data.distances[0];
           setSelectedPovId(firstDistance.product_option_value_app_id);
@@ -140,7 +146,6 @@ export const useResultList = (
           }
         }
 
-        // ✅ UPDATE DATA
         if (mode !== "paginate") {
           setDistances(data.distances);
           setCategories(data.categories);
@@ -183,7 +188,6 @@ export const useResultList = (
     [product_app_id],
   );
 
-  // ✅ INITIAL FETCH
   useEffect(() => {
     isMounted.current = true;
 
@@ -191,7 +195,7 @@ export const useResultList = (
       hasFetched.current = true;
 
       fetchData({
-        povId: initial_pov_id, // ✅ CAN BE UNDEFINED
+        povId: initial_pov_id,
         live: 0,
         category: "scratch",
         page: 1,
@@ -204,7 +208,6 @@ export const useResultList = (
     };
   }, [initial_pov_id, fetchData]);
 
-  // ✅ DISTANCE SELECTED
   const onDistanceSelect = useCallback(
     (opt: FilterOption): void => {
       const newId = Number(opt.value);
@@ -229,7 +232,6 @@ export const useResultList = (
     [selectedPovId, fromLive, fetchData],
   );
 
-  // ✅ TYPE SELECTED
   const onTypeSelect = useCallback(
     (opt: FilterOption): void => {
       if (opt.value === selectedType.value) return;
@@ -256,7 +258,6 @@ export const useResultList = (
     [selectedType.value, selectedPovId, fetchData],
   );
 
-  // ✅ CATEGORY SELECTED
   const onCategorySelect = useCallback(
     (opt: FilterOption): void => {
       if (opt.value === selectedCategory) return;
@@ -278,7 +279,6 @@ export const useResultList = (
     [selectedCategory, selectedPovId, fromLive, fetchData],
   );
 
-  // ✅ PAGINATION
   const onEndReached = useCallback((): void => {
     if (pageLoad || filterLoad || initialLoad || isFavTab || !pagination) {
       return;
@@ -330,7 +330,6 @@ export const useResultList = (
     });
   }, [isFavTab, selectedPovId, fromLive, selectedCategory, fetchData]);
 
-  // ✅ RETRY
   const retry = useCallback((): void => {
     if (API_CONFIG.DEBUG) {
       console.log("🔁 Retrying fetch");
@@ -345,7 +344,6 @@ export const useResultList = (
     });
   }, [selectedPovId, fromLive, selectedCategory, fetchData]);
 
-  // ✅ MEMOIZED DROPDOWN OPTIONS
   const distanceOptions = useMemo<FilterOption[]>(
     () =>
       distances.map((d) => ({
@@ -373,14 +371,14 @@ export const useResultList = (
 
   const currentPovId = useMemo(() => {
     const unique = distances.filter(
-        (d, index, self) =>
-            index === self.findIndex(
-                x => x.product_option_value_app_id === d.product_option_value_app_id
-            )
+      (d, index, self) =>
+        index === self.findIndex(
+          x => x.product_option_value_app_id === d.product_option_value_app_id
+        )
     );
     return unique.find(d => d.is_selected === 1)?.product_option_value_app_id 
-        ?? unique[0]?.product_option_value_app_id;
-}, [distances]);
+      ?? unique[0]?.product_option_value_app_id;
+  }, [distances]);
 
   const selectedCategoryLabel = useMemo(
     () =>
@@ -388,7 +386,6 @@ export const useResultList = (
     [categories, selectedCategory],
   );
 
-  // ✅ DISPLAY RESULTS
   const displayResults = useMemo<RaceResult[]>(() => {
     if (!isFavTab) {
       return results.map((item, index) => ({
@@ -432,5 +429,6 @@ export const useResultList = (
     selectedDistanceLabel,
     selectedCategoryLabel,
     currentPovId,
+    showUtmbIndex, // ✅ EXPOSE FLAG
   };
 };

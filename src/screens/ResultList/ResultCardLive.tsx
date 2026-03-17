@@ -13,10 +13,9 @@ interface ResultCardLiveProps {
     fromLive: 0 | 1;
     isFollowed: boolean;
     raceStatus: string;
-    currentPovId: number ,
+    currentPovId: number;
     onToggleFollow: () => void;
-    product_app_id: number,
-
+    product_app_id: number;
 }
 
 const getActiveCheckpoints = (checkpoints: RaceResult['checkpoints']) =>
@@ -36,14 +35,10 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
-    console.log("selectedPovId1111", currentPovId);
-
 
     const isLive = item.live_tracking_activated === 1;
     const canFollow = item.customer_app_id !== null && item.customer_app_id > 0;
     const activeCheckpoints = getActiveCheckpoints(item.checkpoints);
-
-
 
     const handlePress = () => {
         navigation.navigate('ResultDetails', {
@@ -52,19 +47,15 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
             bib: item.bib,
             raceStatus
         });
-
     };
 
     return (
         <TouchableOpacity
-            style={[
-                resultListStyle.card,
-                { borderLeftWidth: 3, borderLeftColor: '#FF3B30' },
-            ]}
+            style={resultListStyle.cardWithLeftBorder}
             onPress={handlePress}
             activeOpacity={0.7}
-        //disabled={!item.participant_app_id}
         >
+            {/* CORNER RANK AND FOLLOW STAR */}
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
                 <View style={resultListStyle.cornerTriangle} />
                 <Text style={resultListStyle.cornerNum}>
@@ -84,6 +75,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                 )}
             </View>
 
+            {/* PARTICIPANT NAME */}
             <View style={resultListStyle.cardTop}>
                 <View style={resultListStyle.cardTopLeft}>
                     <Text style={resultListStyle.cardName}>{item.name}</Text>
@@ -91,19 +83,26 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                 <View style={{ width: 64 }} />
             </View>
 
+            {/* BIB NUMBER */}
             <Text style={resultListStyle.bibText}>
                 {t('allrace:race.bibNumber')} {item.bib}
             </Text>
 
+            {/* CLUB AND NATION */}
             <Text style={resultListStyle.teamText} numberOfLines={1}>
                 {[item.club, item.nation].filter(Boolean).join(' · ')}
             </Text>
 
-            <View style={{ marginTop: 6 }}>
-                {isLive && <LiveTrackingBar />}
-            </View>
+            {/* LIVE TRACKING BAR */}
+            {isLive && (
+                <View style={{ marginTop: 6 }}>
+                    <LiveTrackingBar />
+                </View>
+            )}
 
+            {/* STATS ROW */}
             <View style={resultListStyle.statsRow}>
+                {/* TIME */}
                 <View style={resultListStyle.statCol}>
                     <Text style={resultListStyle.statLabel}>
                         {t('allrace:race.time')}
@@ -113,12 +112,14 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
 
                 {fromLive === 0 ? (
                     <>
+                        {/* DIFF FIRST */}
                         <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                             <Text style={resultListStyle.statLabel}>
                                 {t('allrace:race.diffFirst')}
                             </Text>
                             <Text style={resultListStyle.statVal}>{item.diff}</Text>
                         </View>
+                        {/* RANKING */}
                         <View style={resultListStyle.statCol}>
                             <Text style={resultListStyle.statLabel}>
                                 {t('allrace:race.ranking')}{'\n'}{item.category_name}
@@ -128,7 +129,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     </>
                 ) : (
                     <>
-                        {/* only render if has value — ignore blank */}
+                        {/* CHECKPOINTS */}
                         {activeCheckpoints[0] && (
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                 <Text style={resultListStyle.statLabel}>
@@ -173,5 +174,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     prev.item.position === next.item.position &&
     prev.item.live_tracking_activated === next.item.live_tracking_activated
 );
+
+ResultCardLive.displayName = 'ResultCardLive';
 
 export default ResultCardLive;
