@@ -31,17 +31,19 @@ export interface PaginationParams {
   page_live?: number;
   page_upcoming?: number;
   filter_name_past?: string;
-  is_participant?: string; // ✅ add this
-  page_participant?: number; // ✅ add this
-  filter_name_participant?: string; // ✅ add this for search
+  is_participant?: string;
+  page_participant?: number;
+  filter_name_participant?: string;
 }
 
+// ✅ ADD PROFILE_PICTURE FIELD
 export interface ParticipantItem {
   customer_app_id: number;
   firstname: string;
   lastname: string;
   city: string;
   country: string;
+  profile_picture?: string; // ✅ NEW FIELD
 }
 
 export interface EventResponse {
@@ -50,9 +52,9 @@ export interface EventResponse {
     past: Pagination;
     live: Pagination;
     upcoming: Pagination;
-    participants: Pagination; // ✅ add this
+    participants: Pagination;
   };
-  participants: ParticipantItem[]; // ✅ add this
+  participants: ParticipantItem[];
 }
 
 interface EventsData {
@@ -67,9 +69,9 @@ interface EventsData {
   live?: EventItem[];
   upcoming?: EventItem[];
   participants?: ParticipantItem[];
-  // ✅ Legacy flat pagination (what your API actually returns)
   pagination_flat?: Pagination;
 }
+
 interface EventApiResponse {
   success: boolean;
   data: EventsData;
@@ -103,9 +105,9 @@ export const eventService = {
         page_live: pagination.page_live || 1,
         page_upcoming: pagination.page_upcoming || 1,
         filter_name_past: pagination.filter_name_past || "",
-        is_participant: pagination.is_participant || "0", // ✅ add this
-        page_participant: pagination.page_participant || 1, // ✅ add this
-        filter_name_participant: pagination.filter_name_participant || "", // ✅ add this
+        is_participant: pagination.is_participant || "0",
+        page_participant: pagination.page_participant || 1,
+        filter_name_participant: pagination.filter_name_participant || "",
       };
 
       const response = await apiClient.post<EventsData>(url, requestBody, {
@@ -114,7 +116,6 @@ export const eventService = {
 
       if (response.success && response.data) {
         const eventsData = response.data;
-        
 
         // Modern format (preferred)
         if (eventsData.tabs && eventsData.pagination) {
@@ -134,13 +135,11 @@ export const eventService = {
         }
 
         // Legacy format fallback
-        // Legacy format fallback
         if (eventsData.pagination) {
           if (API_CONFIG.DEBUG) {
             console.log("✅ Events loaded (legacy format)");
           }
 
-          // ✅ API returns single flat pagination, apply it to all tabs
           const flatPagination = eventsData.pagination as unknown as Pagination;
 
           return {
@@ -150,7 +149,7 @@ export const eventService = {
               upcoming: eventsData.upcoming || [],
             },
             pagination: {
-              past: flatPagination, // ✅ same pagination for all tabs
+              past: flatPagination,
               live: flatPagination,
               upcoming: flatPagination,
               participants: flatPagination,

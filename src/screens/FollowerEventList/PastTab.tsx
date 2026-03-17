@@ -108,7 +108,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     style={[commonStyles.primaryButton, { borderRadius: 0 }]}
                     onPress={() =>
                         navigation.navigate('FollowDetails', {
-                            product_app_id: item.product_app_id,
+                            product_app_id: Number(item.product_app_id),
                             event_name: item.name,
                             sourceTab: 'past',
 

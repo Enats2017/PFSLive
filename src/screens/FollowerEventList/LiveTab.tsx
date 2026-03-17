@@ -69,8 +69,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         navigation.navigate('FollowDetails', {
                             product_app_id: Number(item.product_app_id),
                             event_name: item.name,
-                             sourceTab: 'live',
-                            
+                            sourceTab: 'live',
                         })
                     }
                     activeOpacity={0.8}

@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Participant } from '../../services/participantService';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
+import { getImageUrl } from '../../constants/config';
 
 interface ParticipantCardProps {
   item: Participant;
@@ -22,9 +23,28 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
 }) => {
   const { t } = useTranslation(['details', 'follower']);
 
-  const fullName =
+  // ✅ MEMOIZED VALUES
+  const fullName = useMemo(() =>
     `${item.firstname ?? ''} ${item.lastname ?? ''}`.trim().toUpperCase() ||
-    t('details:participant.unknownName');
+    t('details:participant.unknownName'),
+    [item.firstname, item.lastname, t]
+  );
+
+  const initials = useMemo(() =>
+    [item.firstname?.[0], item.lastname?.[0]]
+      .filter(Boolean)
+      .join('')
+      .toUpperCase() || '?',
+    [item.firstname, item.lastname]
+  );
+
+  const profileImageUri = useMemo(() =>
+    item.profile_picture && item.profile_picture.trim() !== ''
+      ? getImageUrl(item.profile_picture)
+      : null,
+    [item.profile_picture]
+  );
+
   const hasBibNumber = item.bib_number && item.bib_number.trim() !== '';
   const isLiveTracking = item.live_tracking_activated === 1;
   const canFollow = item.customer_app_id !== null && item.customer_app_id > 0;
@@ -37,20 +57,28 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
       ]}
     >
       <View style={detailsStyles.topRow}>
+        {/* ✅ PROFILE PICTURE WITH FALLBACK TO INITIALS */}
         <View style={detailsStyles.avatar}>
-          <Ionicons
-            name="person-circle-outline"
-            size={55}
-            color="#9ca3af"
-            style={detailsStyles.logo}
-          />
+          {profileImageUri ? (
+            <Image
+              source={{ uri: profileImageUri }}
+              style={detailsStyles.avatarImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={detailsStyles.avatarFallback}>
+              <Text style={detailsStyles.avatarInitials}>{initials}</Text>
+            </View>
+          )}
         </View>
+
         <LinearGradient
           colors={['#e8341a', '#f4a100', '#1a73e8']}
           start={{ x: 0, y: 1 }}
           end={{ x: 1, y: 0 }}
           style={detailsStyles.divider}
         />
+
         <View style={detailsStyles.info}>
           <Text style={commonStyles.title}>{fullName}</Text>
           <Text style={commonStyles.text}>
@@ -97,6 +125,14 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
         </TouchableOpacity>
       )}
     </View>
+  );
+}, (prevProps, nextProps) => {
+  // ✅ OPTIMIZED MEMO COMPARISON
+  return (
+    prevProps.item.participant_app_id === nextProps.item.participant_app_id &&
+    prevProps.item.profile_picture === nextProps.item.profile_picture &&
+    prevProps.isFollowed === nextProps.isFollowed &&
+    prevProps.isLoading === nextProps.isLoading
   );
 });
 

@@ -62,8 +62,9 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
             <TouchableOpacity
                 style={[commonStyles.primaryButton, { borderRadius: 0 }]}
                  onPress={() => navigation.navigate('FollowDetails', {
-                    product_app_id: item.product_app_id,
-                    event_name: item.name,         
+                    product_app_id: Number(item.product_app_id),
+                    event_name: item.name,
+                    sourceTab: 'upcoming',         
                 })}
                 activeOpacity={0.8}
             >
