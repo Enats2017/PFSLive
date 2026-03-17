@@ -236,6 +236,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     product_app_id={product_app_id}
                     event_name={event_name}
                     product_option_value_app_id={product_option_value_app_id}
+                    sourceTab={sourceTab}
                 />
             ) : (
                 <BottomNavigation

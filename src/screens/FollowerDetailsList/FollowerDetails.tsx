@@ -16,8 +16,6 @@ import { detailsStyles } from '../../styles/details.styles';
 import DistanceTab from './DistanceTab';
 import ParticipantTab from '../EventDetails/ParticipantTab';
 import type { followerDetailspops } from '../../types/navigation';
-import { API_CONFIG } from '../../constants/config';
-import { BottomNavigation } from '../../components/common/BottomNavigation';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 
 const { width } = Dimensions.get('window');
@@ -28,27 +26,9 @@ const TABS: Tab[] = ['Participant', 'Distance'];
 const FollowerDetails = ({ route }: followerDetailspops) => {
   const { t } = useTranslation(['details']);
   const [activeTab, setActiveTab] = useState<Tab>('Distance');
-  const [refreshKey, setRefreshKey] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
-  const { product_app_id, event_name, sourceTab} = route.params;
-
-  const isLiveTab = sourceTab === 'live';
-
-  if (API_CONFIG.DEBUG) {
-    console.log('📋 EventDetails params:', {
-      product_app_id,
-      event_name,
-    });
-  }
-
-  // ✅ REFRESH CALLBACK (called after successful registration)
-  const handleRefresh = useCallback(() => {
-    if (API_CONFIG.DEBUG) {
-      console.log('🔄 Refreshing both tabs');
-    }
-    setRefreshKey((prev) => prev + 1);
-  }, []);
+  const { product_app_id, event_name, sourceTab } = route.params;
 
   const renderContent = useCallback(
     (tab: Tab) => {
@@ -68,12 +48,12 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
             <DistanceTab
               product_app_id={product_app_id}
               sourceTab={sourceTab}
+              event_name={event_name}
             />
           );
         case 'Participant':
           return (
             <ParticipantTab
-              key={`participant-${refreshKey}`}
               product_app_id={product_app_id}
             />
           );
@@ -81,7 +61,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
           return null;
       }
     },
-    [product_app_id, event_name,  refreshKey, handleRefresh, t]
+    [product_app_id, sourceTab, t]
   );
 
   const handleTabPress = useCallback(
@@ -99,7 +79,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   }, []);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top','bottom']}>
+    <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={true} />
 
@@ -155,11 +135,13 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
           scrollEnabled={true}
         />
       </View>
-        <BottomNavigationFollower
-          activeTab="Home"
-          product_app_id={product_app_id}
-          event_name={event_name}
-        />
+      <BottomNavigationFollower
+        activeTab="Home"
+        product_app_id={product_app_id}
+        event_name={event_name}
+        product_option_value_app_id={0}
+        sourceTab={sourceTab}
+      />
     </SafeAreaView>
   );
 };
