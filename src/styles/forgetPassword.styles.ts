@@ -23,7 +23,7 @@ export const forgotStyles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
   },
   progressActive: {
-    backgroundColor: colors.primary, // ✅ USE colors.primary
+    backgroundColor: colors.primary,
   },
   scroll: {
     flexGrow: 1,
@@ -61,10 +61,16 @@ export const forgotStyles = StyleSheet.create({
     gap: 6,
   },
 
+  backButtonText: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+
   email: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.primary, // ✅ USE colors.primary
+    color: colors.primary,
     marginBottom: 28,
     marginTop: 4,
   },
@@ -99,11 +105,18 @@ export const forgotStyles = StyleSheet.create({
     backgroundColor: '#fff5f5',
   },
 
+  // ✅ ADD ERROR CONTAINER
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    gap: 6,
+  },
+
   errorText: {
     fontSize: 13,
     color: colors.primaryDark,
-    textAlign: 'center',
-    marginBottom: 12,
     fontWeight: '500',
   },
 
@@ -121,7 +134,7 @@ export const forgotStyles = StyleSheet.create({
 
   resendLink: {
     fontSize: 14,
-    color: colors.primary, // ✅ USE colors.primary
+    color: colors.primary,
     fontWeight: '700',
   },
 

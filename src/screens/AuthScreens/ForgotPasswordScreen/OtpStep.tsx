@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { otpService } from '../../../services/otpService';
 import { toastError } from '../../../../utils/toast';
 import { forgotStyles } from '../../../styles/forgetPassword.styles';
-import { commonStyles, colors } from '../../../styles/common.styles'; // ✅ IMPORT colors
+import { commonStyles, colors } from '../../../styles/common.styles';
 
 // ─── Constants ───────────────────────────────────────────────────
 const OTP_LENGTH = 6;
@@ -180,14 +180,14 @@ const OtpStep: React.FC<OtpStepProps> = ({
 
             {/* Icon */}
             <View style={forgotStyles.iconCircle}>
-                <Ionicons name="mail-open-outline" size={38} color={colors.primary} /> {/* ✅ USE colors.primary */}
+                <Ionicons name="mail-open-outline" size={38} color={colors.primary} />
             </View>
 
             {/* Title & Subtitle */}
             <Text style={commonStyles.title}>
                 {t('forget:otpStep.title')}
             </Text>
-            <Text style={commonStyles.subtitle}>
+            <Text style={[commonStyles.subtitle, forgotStyles.subtitle]}>
                 {t('forget:otpStep.subtitle')}
             </Text>
             <Text style={forgotStyles.email}>{email}</Text>
@@ -214,11 +214,12 @@ const OtpStep: React.FC<OtpStepProps> = ({
                 ))}
             </View>
 
-            {/* Error */}
+            {/* ✅ FIX: Error Message - Proper Text Wrapping */}
             {!!error && (
-                <Text style={forgotStyles.errorText}>
-                    <Ionicons name="alert-circle-outline" size={13} color="#ef4444" /> {error}
-                </Text>
+                <View style={forgotStyles.errorContainer}>
+                    <Ionicons name="alert-circle-outline" size={13} color="#ef4444" />
+                    <Text style={forgotStyles.errorText}>{error}</Text>
+                </View>
             )}
 
             {/* Verify Button */}
@@ -242,7 +243,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
 
             {/* Resend */}
             <View style={forgotStyles.resendRow}>
-                <Text style={commonStyles.subtitle}>{t('otp:didntReceive')}</Text>
+                <Text style={forgotStyles.resendLabel}>{t('otp:didntReceive')}</Text>
                 {canResend ? (
                     <TouchableOpacity onPress={handleResend} disabled={resending}>
                         {resending
@@ -261,14 +262,14 @@ const OtpStep: React.FC<OtpStepProps> = ({
                 )}
             </View>
 
-            {/* Back */}
+            {/* ✅ FIX: Back Button */}
             <TouchableOpacity
                 style={forgotStyles.backButton}
                 onPress={onBack}
                 activeOpacity={0.7}
             >
                 <Ionicons name="arrow-back-outline" size={16} color="#6b7280" />
-                <Text style={commonStyles.subtitle}>
+                <Text style={forgotStyles.backButtonText}>
                     {t('forget:otpStep.changeEmail')}
                 </Text>
             </TouchableOpacity>

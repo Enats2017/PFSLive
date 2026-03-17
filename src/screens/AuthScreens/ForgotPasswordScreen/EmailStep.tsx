@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import FloatingLabelInput from '../../../components/FloatingLabelInput';
 import { authService } from '../../../services/authService';
-import { commonStyles, colors } from '../../../styles/common.styles'; // ✅ IMPORT colors
+import { commonStyles, colors } from '../../../styles/common.styles';
 import { forgotStyles } from '../../../styles/forgetPassword.styles';
 
 interface EmailStepProps {
@@ -71,7 +71,7 @@ const EmailStep: React.FC<EmailStepProps> = ({ onNext, onBack }) => {
     <View style={forgotStyles.container}>
       {/* Icon */}
       <View style={forgotStyles.iconCircle}>
-        <Ionicons name="lock-open-outline" size={38} color={colors.primary} /> {/* ✅ USE colors.primary */}
+        <Ionicons name="lock-open-outline" size={38} color={colors.primary} />
       </View>
 
       {/* Title & Subtitle */}
@@ -115,14 +115,14 @@ const EmailStep: React.FC<EmailStepProps> = ({ onNext, onBack }) => {
           )}
         </TouchableOpacity>
 
-        {/* Back to Login */}
+        {/* ✅ FIX: Back to Login - Wrap icon and text separately */}
         <TouchableOpacity
           style={forgotStyles.backButton}
           onPress={onBack}
           activeOpacity={0.7}
         >
           <Ionicons name="arrow-back-outline" size={20} color="#6b7280" />
-          <Text style={commonStyles.subtitle}>
+          <Text style={forgotStyles.backButtonText}>
             {t('forget:emailStep.backtologin')}
           </Text>
         </TouchableOpacity>
