@@ -9,22 +9,23 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
-import { AppHeader } from '../../components/common/AppHeader'; // ✅ FIXED
-import FloatingLabelInput from '../../components/FloatingLabelInput'; // ✅ FIXED
-import CountrySelector from '../../components/CountrySelector'; // ✅ FIXED
-import { commonStyles } from '../../styles/common.styles'; // ✅ FIXED
-import { registerStyles } from '../../styles/Register.styles'; // ✅ FIXED
-import { RegisterProps } from '../../types/navigation'; // ✅ FIXED
-import { authService } from '../../services/authService'; // ✅ FIXED
-import { validateRegisterForm } from '../../services/validation/authValidation'; // ✅ FIXED
-import { toastError, toastSuccess } from '../../../utils/toast'; // ✅ CORRECT (one level up)
-import { useAuthForm } from '../../hooks/useAuthForm'; // ✅ FIXED
-import { API_CONFIG } from '../../constants/config'; // ✅ FIXED
+import { AppHeader } from '../../components/common/AppHeader';
+import FloatingLabelInput from '../../components/FloatingLabelInput';
+import CountrySelector from '../../components/CountrySelector';
+import { commonStyles } from '../../styles/common.styles';
+import { registerStyles } from '../../styles/Register.styles';
+import { RegisterProps } from '../../types/navigation';
+import { authService } from '../../services/authService';
+import { validateRegisterForm } from '../../services/validation/authValidation';
+import { toastError, toastSuccess } from '../../../utils/toast';
+import { useAuthForm } from '../../hooks/useAuthForm';
+import { API_CONFIG } from '../../constants/config';
 
 // ✅ CONSTANTS
 const INITIAL_FORM_DATA = {
@@ -60,8 +61,64 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
     [t]
   );
 
-  // ✅ IMAGE PICKER
-  const pickImage = useCallback(async () => {
+  // ✅ SHOW IMAGE SOURCE PICKER
+  const showImageSourcePicker = useCallback(() => {
+    Alert.alert(
+      t('register:imageSource.title'),
+      t('register:imageSource.message'),
+      [
+        {
+          text: t('register:imageSource.camera'),
+          onPress: () => pickImageFromCamera(),
+        },
+        {
+          text: t('register:imageSource.gallery'),
+          onPress: () => pickImageFromGallery(),
+        },
+        {
+          text: t('common:buttons.cancel'),
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
+  }, [t]);
+
+  // ✅ PICK IMAGE FROM CAMERA
+  const pickImageFromCamera = useCallback(async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (!permission.granted) {
+        toastError(
+          t('register:alerts.permissionRequired'),
+          t('register:alerts.cameraPermission')
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets?.[0]) {
+        setField('profileImage', result.assets[0].uri);
+      }
+    } catch (error) {
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Camera error:', error);
+      }
+      toastError(
+        t('common:errors.generic'),
+        t('register:alerts.genericErrorMessage')
+      );
+    }
+  }, [setField, t]);
+
+  // ✅ PICK IMAGE FROM GALLERY
+  const pickImageFromGallery = useCallback(async () => {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -210,9 +267,9 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={{ paddingHorizontal: 15 }}>
-            {/* Profile Image Section */}
+            {/* ✅ PROFILE IMAGE SECTION - NOW WITH CAMERA & GALLERY OPTIONS */}
             <View style={registerStyles.imagesection}>
-              <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
+              <TouchableOpacity onPress={showImageSourcePicker} activeOpacity={0.8}>
                 <View style={registerStyles.imageWrapper}>
                   {formData.profileImage ? (
                     <>

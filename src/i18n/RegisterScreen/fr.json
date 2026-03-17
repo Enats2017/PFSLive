@@ -32,15 +32,22 @@
     "termsRequired": "Vous devez accepter les conditions générales",
     "deviceAlreadyRegistered": "Cet appareil est déjà lié à un compte. Veuillez vous connecter."
   },
+  "imageSource": {
+    "title": "Kies fotobron",
+    "message": "Selecteer waar u uw profielfoto wilt kiezen",
+    "camera": "Foto maken",
+    "gallery": "Kies uit galerij"
+  },
   "alerts": {
-    "email_exists": "Cet email est déjà enregistré",
-    "permissionRequired": "Autorisation Requise",
-    "galleryPermission": "Veuillez autoriser l'accès à votre galerie pour télécharger une photo.",
-    "deviceNotAllowed": "Appareil Non Autorisé",
-    "deviceNotAllowedMessage": "Ce compte est lié à un autre appareil. Veuillez contacter le support.",
-    "noConnection": "Pas de Connexion Internet",
-    "noConnectionMessage": "Veuillez vérifier votre connexion Internet et réessayer.",
-    "genericError": "Erreur",
-    "genericErrorMessage": "Une erreur s'est produite. Veuillez réessayer plus tard."
+    "permissionRequired": "Toestemming vereist",
+    "cameraPermission": "Cameratoestemming is vereist om foto's te maken",
+    "galleryPermission": "Galerij toestemming is vereist om foto's te selecteren",
+    "deviceNotAllowed": "Apparaat niet toegestaan",
+    "deviceNotAllowedMessage": "Dit apparaat is niet geautoriseerd voor registratie",
+    "noConnection": "Geen verbinding",
+    "noConnectionMessage": "Controleer uw internetverbinding",
+    "genericError": "Fout",
+    "genericErrorMessage": "Er is iets misgegaan. Probeer het opnieuw.",
+    "email_exists": "Dit e-mailadres is al geregistreerd"
   }
 }

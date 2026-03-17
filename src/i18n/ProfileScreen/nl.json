@@ -4,10 +4,10 @@
     "Past": "Verleden"
   },
   "buttons": {
-    "editProfile": "Profiel Bewerken",
+    "editProfile": "Profiel bewerken",
     "edit_personal_event": "PERSOONLIJK EVENEMENT BEWERKEN",
     "live_tracking_progress": "LIVE TRACKING BEZIG",
-    "live_tracking_soon": "LIVE TRACKING BEGINT BINNENKORT",
+    "live_tracking_soon": "LIVE TRACKING START BINNENKORT",
     "enable_gps": "SCHAKEL GPS IN OM TRACKING TE STARTEN",
     "load_more": "Meer laden",
     "save_changes": "WIJZIGINGEN OPSLAAN",
@@ -18,19 +18,39 @@
     "user_not_found": "Gebruiker niet gevonden. Log opnieuw in.",
     "load_profile_failed": "Kan profiel niet laden.",
     "load_profile_api_failed": "Kan atleetprofiel niet laden.",
-    "load_more_past_failed": "Kan meer eerdere evenementen niet laden.",
-    "load_more_live_failed": "Kan meer live evenementen niet laden.",
-    "permission_needed_title": "Toestemming nodig",
-    "permission_needed_message": "Sta toegang tot foto's toe om je avatar te wijzigen.",
-    "invalid_user_id": "Ongeldig gebruikers-ID"
+    "load_more_past_failed": "Kan niet meer eerdere evenementen laden.",
+    "load_more_live_failed": "Kan niet meer live evenementen laden.",
+    "permission_title": "Toestemming vereist",
+    "permission_message": "Sta toegang tot foto's toe om uw avatar te wijzigen.",
+    "camera_permission": "Cameratoestemming is vereist om foto's te maken.",
+    "invalid_user_id": "Ongeldige gebruikers-ID",
+    "generic_error": "Er is iets misgegaan. Probeer het opnieuw."
+  },
+  "validation": {
+    "firstname_invalid": "Voornaam moet minimaal 2 tekens bevatten",
+    "lastname_invalid": "Achternaam moet minimaal 2 tekens bevatten",
+    "city_invalid": "Stad moet minimaal 2 tekens bevatten",
+    "country_invalid": "Selecteer een geldig land",
+    "country_not_found": "Land niet gevonden",
+    "dob_required": "Geboortedatum is verplicht",
+    "dob_invalid_format": "Ongeldige datumnotatie",
+    "dob_underage": "U moet minimaal 13 jaar oud zijn",
+    "dob_invalid": "Ongeldige geboortedatum",
+    "gender_invalid": "Selecteer een geldig geslacht",
+    "password_too_short": "Wachtwoord moet minimaal 4 tekens bevatten",
+    "password_too_long": "Wachtwoord moet minder dan 20 tekens bevatten",
+    "passwords_do_not_match": "Wachtwoorden komen niet overeen",
+    "email_invalid": "Voer een geldig e-mailadres in",
+    "email_too_long": "E-mail is te lang",
+    "email_already_taken": "Dit e-mailadres is al in gebruik"
   },
   "status": {
     "live": "LIVE",
     "soon": "BINNENKORT",
-    "finished": "AFGELOPEN"
+    "finished": "VOLTOOID"
   },
   "empty": {
-    "no_live_events": "Momenteel geen live evenementen"
+    "no_live_events": "Geen live evenementen op dit moment"
   },
   "past": {
     "view_results": "BEKIJK RESULTATEN",
@@ -44,8 +64,8 @@
     "dob": "Geboortedatum",
     "gender": "Geslacht",
     "country": "Land",
-    "new_password": "Nieuw Wachtwoord",
-    "confirm_password": "Bevestig Wachtwoord"
+    "new_password": "Nieuw wachtwoord",
+    "confirm_password": "Bevestig wachtwoord"
   },
   "gender": {
     "male": "Man",
@@ -55,18 +75,22 @@
   },
   "messages": {
     "email_readonly": "E-mail kan hier niet worden gewijzigd.",
-    "verify_email_title": "Verifieer je e-mail",
-    "verify_email_message": "Een verificatiecode is naar je nieuwe e-mailadres gestuurd.",
+    "verify_email_title": "Verifieer uw e-mail",
+    "verify_email_message": "Een verificatiecode is verzonden naar uw nieuwe e-mailadres.",
     "saved_title": "Opgeslagen",
-    "saved_message": "Je profiel is bijgewerkt.",
+    "saved_message": "Uw profiel is bijgewerkt.",
     "success_profile_updated": "Profiel succesvol bijgewerkt!"
   },
   "avatar": {
-    "remove_photo": "Foto verwijderen"
+    "remove_photo": "Foto verwijderen",
+    "choose_source_title": "Kies fotobron",
+    "choose_source_message": "Selecteer waar u uw profielfoto wilt kiezen",
+    "take_photo": "Foto maken",
+    "choose_gallery": "Kies uit galerij"
   },
   "sections": {
-    "personal_info": "PERSOONLIJKE INFO",
+    "personal_info": "PERSOONLIJKE INFORMATIE",
     "change_password": "WACHTWOORD WIJZIGEN",
-    "password_hint": "Laat leeg om huidig wachtwoord te behouden"
+    "password_hint": "Laat leeg om huidig te behouden"
   }
 }
