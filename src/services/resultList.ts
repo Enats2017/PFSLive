@@ -21,6 +21,7 @@ export interface RaceResult {
   customer_app_id: number | null;
   checkpoints: Checkpoint[];
   utmb_index?: string; // ✅ UTMB Index field
+  finish_rank_agegroup?: number | null;
 }
 
 export interface Checkpoint {
@@ -31,6 +32,7 @@ export interface Checkpoint {
   rank_gender: string;
   rank_agegroup: string;
   day_name: string;
+  is_crossed: boolean;
 }
 
 export interface FilterOption {

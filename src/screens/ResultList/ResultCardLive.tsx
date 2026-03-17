@@ -18,10 +18,25 @@ interface ResultCardLiveProps {
     product_app_id: number;
 }
 
-const getActiveCheckpoints = (checkpoints: RaceResult['checkpoints']) =>
-    checkpoints
-        ?.filter(cp => cp.ranking && cp.ranking.trim() !== '')
-        .slice(-2) ?? [];
+// ✅ GET LAST 2 CROSSED CHECKPOINTS
+const getActiveCheckpoints = (checkpoints: RaceResult['checkpoints']) => {
+    if (!checkpoints || checkpoints.length === 0) return [];
+    
+    // Filter checkpoints where is_crossed = true
+    const crossedCheckpoints = checkpoints.filter(cp => cp.is_crossed === true);
+    
+    // Return last 2 crossed checkpoints (most recent first)
+    return crossedCheckpoints.slice(-2);
+};
+
+// ✅ TRUNCATE CHECKPOINT NAME
+const truncateCheckpointName = (name: string, maxLength: number = 12): string => {
+    if (!name) return '';
+    if (name.length <= maxLength) return name;
+    
+    // Truncate and add abbreviation
+    return name.substring(0, maxLength - 1).trim() + '.';
+};
 
 const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     item,
@@ -59,7 +74,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
                 <View style={resultListStyle.cornerTriangle} />
                 <Text style={resultListStyle.cornerNum}>
-                    {item.category_rank || item.position.replace('.', '')}
+                    {item.position.replace('.', '')}
                 </Text>
                 {canFollow && (
                     <TouchableOpacity
@@ -124,41 +139,43 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             <Text style={resultListStyle.statLabel}>
                                 {t('allrace:race.ranking')}{'\n'}{item.category_name}
                             </Text>
-                            <Text style={resultListStyle.statVal}>{item.category_rank}</Text>
+                            <Text style={resultListStyle.statVal}>{item.finish_rank_agegroup}</Text>
                         </View>
                     </>
                 ) : (
                     <>
-                        {/* CHECKPOINTS */}
+                        {/* ✅ CHECKPOINT 1 (FIRST CROSSED) */}
                         {activeCheckpoints[0] && (
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
-                                <Text style={resultListStyle.statLabel}>
-                                    {activeCheckpoints[0].name}
+                                <Text style={resultListStyle.statLabel} numberOfLines={1}>
+                                    {truncateCheckpointName(activeCheckpoints[0].name)}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
-                                    {activeCheckpoints[0]?.day_name
+                                    {activeCheckpoints[0].day_name
                                         ? t(`common:week.${activeCheckpoints[0].day_name.toLowerCase()}`)
                                         : '-'
                                     }
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
-                                    {activeCheckpoints[0].actual_time}
+                                    {activeCheckpoints[0].actual_time || '-'}
                                 </Text>
                             </View>
                         )}
+                        
+                        {/* ✅ CHECKPOINT 2 (SECOND CROSSED) */}
                         {activeCheckpoints[1] && (
                             <View style={resultListStyle.statCol}>
-                                <Text style={resultListStyle.statLabel}>
-                                    {activeCheckpoints[1].name}
+                                <Text style={resultListStyle.statLabel} numberOfLines={1}>
+                                    {truncateCheckpointName(activeCheckpoints[1].name)}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
-                                    {activeCheckpoints[1]?.day_name
+                                    {activeCheckpoints[1].day_name
                                         ? t(`common:week.${activeCheckpoints[1].day_name.toLowerCase()}`)
                                         : '-'
                                     }
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
-                                    {activeCheckpoints[1].actual_time}
+                                    {activeCheckpoints[1].actual_time || '-'}
                                 </Text>
                             </View>
                         )}
