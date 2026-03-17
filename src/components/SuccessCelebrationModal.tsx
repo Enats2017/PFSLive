@@ -15,6 +15,7 @@ interface SuccessCelebrationModalProps {
   visible: boolean;
   message: string;
   onClose: () => void;
+  title:string,
 }
 
 const { width } = Dimensions.get('window');
@@ -22,6 +23,7 @@ const { width } = Dimensions.get('window');
 const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
   visible,
   message,
+  title = "Registration Successful!",
   onClose,
 }) => {
   const confettiAnims = useRef(
@@ -128,7 +130,7 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Registration Successful!</Text>
+          <Text style={styles.title}>{title}</Text>
 
           {/* Message */}
           <Text style={styles.message}>{message}</Text>

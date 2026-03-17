@@ -30,6 +30,7 @@ export interface Checkpoint {
   rank_gender: string;
   rank_agegroup: string;
   day_name: string;
+  is_crossed:boolean,
 }
 
 export interface FilterOption {

@@ -25,6 +25,7 @@ export type RootStackParamList = {
   OTPVerificationScreen: {
     email: string;
     verification_token: string;
+    purpose:'registration' | 'forgot_password';
   };
   RaceResultScreen: {
     product_app_id: number;
@@ -57,6 +58,8 @@ export type RootStackParamList = {
     event_name: string;
     sourceTab?: "past" | "live" | "upcoming";
   };
+
+  ForgotPassword:undefined
 };
 
 export type HomeScreenProps = NativeStackScreenProps<
@@ -126,4 +129,9 @@ export type FollowerEventpops = NativeStackScreenProps<
 export type followerDetailspops = NativeStackScreenProps<
   RootStackParamList,
   "FollowDetails"
+>;
+
+export type ForgotPasswordScreenProps = NativeStackScreenProps<
+  RootStackParamList,
+  "ForgotPassword"
 >;

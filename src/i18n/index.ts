@@ -87,6 +87,8 @@ import FollowerEN from "./FollowerEvent/en.json";
 import FollowerFR from "./FollowerEvent/fr.json";
 import FollowerNL from "./FollowerEvent/nl.json";
 
+import ForgetEN from "./ForgotPassword/en.json";
+
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
@@ -242,7 +244,8 @@ i18n.use(initReactI18next).init({
       errorModal: errorModalEN,
       profile:ProfileEN,
       resultdetails:ResultDetailsEN,
-      follower:FollowerEN
+      follower:FollowerEN,
+      forget:ForgetEN
     },
     fr: {
       common: commonFR,
@@ -305,7 +308,8 @@ i18n.use(initReactI18next).init({
     'profile',
     'resultdetails',
     'follower',
-    'result'
+    'result',
+    'forget'
   ],
   interpolation: {
     escapeValue: false,

@@ -5,18 +5,33 @@ import { API_CONFIG, getApiEndpoint } from '../constants/config';
 export interface VerifyOtpPayload {
   verification_token: string;
   otp: string;
+    purpose: 'registration' | 'forgot_password'; 
 }
 
 export interface ResendOtpPayload {
   verification_token: string;
+  purpose: 'registration' | 'forgot_password';
 }
 
 export interface OtpResponse {
   success: boolean;
-  error?: string;
+  error?:  string | null;
   data?: {
-    token?: string;
-    message?: string;
+    purpose?:              string;       // ✅ both flows
+    token?:                string;       // ✅ registration only
+    password_reset_token?: string;       // ✅ forgot password only
+    customer?: {                         // ✅ registration only
+      customer_app_id: number;
+      firstname:       string;
+      lastname:        string;
+      email:           string;
+      city:            string;
+      country:         string;
+      country_id:      number;
+      dob:             string;
+      gender:          string;
+      profile_picture: string;
+    };
   };
 }
 
@@ -65,6 +80,8 @@ export const otpService = {
       if (API_CONFIG.DEBUG) {
         console.log('📤 Resend OTP request');
       }
+      console.log("111",payload);
+      
 
       const response = await axios.post<OtpResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.RESEND_OTP),
@@ -82,7 +99,7 @@ export const otpService = {
       return response.data;
     } catch (error) {
       if (API_CONFIG.DEBUG) {
-        console.error('❌ Resend OTP error:', error);
+        console.error('❌ Resend OTP error:', JSON.stringify(error));
       }
       throw error;
     }

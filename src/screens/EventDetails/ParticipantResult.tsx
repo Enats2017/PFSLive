@@ -700,6 +700,7 @@ const ParticipantResult = () => {
 
       <SuccessCelebrationModal
         visible={successVisible}
+        title={t('details:success.label')}
         message={t('details:success.message')}
         onClose={() => {
           setSuccessVisible(false);

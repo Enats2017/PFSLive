@@ -12,9 +12,10 @@ interface ResultCardProps {
     isLoading: boolean;
     fromLive: 0 | 1;
     isFollowed: boolean;
-
+     raceStatus: string;
+    currentPovId: number ,
     onToggleFollow: () => void;
-    sourceTab?: 'past' | 'live' | 'upcoming';
+    product_app_id: number,
 }
 
 
@@ -24,23 +25,25 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     isFollowed,
     isLoading,
     onToggleFollow,
-    sourceTab
+      raceStatus,
+    currentPovId,
+    product_app_id
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
-    console.log(sourceTab);
+    console.log(raceStatus);
     const isLive = item.live_tracking_activated === 1;
     const canFollow = item.customer_app_id !== null && item.customer_app_id > 0;
 
     const handlePress = () => {
-
-       
         navigation.navigate('ResultDetails', {
-            participant_app_id: item.customer_app_id,
-            sourceTab
-
+            product_app_id,
+            product_option_value_app_id: Number(currentPovId),
+            bib: item.bib,
+            raceStatus
         });
-    }
+
+    };
 
 
     return (
@@ -54,7 +57,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
             ]}
             onPress={handlePress}
             activeOpacity={0.7}
-           
+
         >
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
                 <View style={resultListStyle.cornerTriangle} />

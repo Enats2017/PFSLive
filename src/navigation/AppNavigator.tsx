@@ -26,6 +26,7 @@ import ResultDetails from '../screens/ResultDetailsScreen/ResultDetails';
 import FollowerEvent from '../screens/FollowerEventList/FollowerEvent';
 
  import FollowDetails from '../screens/FollowerDetailsList/FollowerDetails';
+ import ForgotPassword from '../screens/AuthScreens/ForgotPasswordScreen/ForgotPassword';
 
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -131,6 +132,13 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen 
           name="FollowDetails" 
           component={FollowDetails}
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen 
+          name="ForgotPassword" 
+          component={ForgotPassword}
           options={{
             gestureEnabled: false,
           }}

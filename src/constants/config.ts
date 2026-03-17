@@ -95,6 +95,9 @@ export const API_CONFIG = {
     EVENT_GPX: "/events/:eventId/gpx.php",
     COUNTRIES: "/country_api.php",
 
+    FORGOT_PASSWORD: "/forgot_password_api.php",
+    RESET_PASSWORD: "/reset_password_api.php",
+
     // Participants
     DELETE_PARTICIPANT: "/delete_participant_app_api.php",
     PARTICIPANT_LOCATION: "/insert_participant_location_api.php",
