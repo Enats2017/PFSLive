@@ -128,13 +128,25 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                                 style={{ marginRight: 6 }}
                             />
                             <Text style={commonStyles.primaryButtonText}>
-                                {isFollowed ? t('follower:button.unfollow') : t('follower:button.favourite')}
+                                {isFollowed ? t('follower:button.unfollow') : t('follower:button.follower')}
                             </Text>
                         </>
                     )}
                 </TouchableOpacity>
             )}
         </View>
+    );
+}, (prevProps, nextProps) => {
+    // ✅ OPTIMIZED MEMO COMPARISON
+    return (
+        prevProps.customer_app_id === nextProps.customer_app_id &&
+        prevProps.isFollowed === nextProps.isFollowed &&
+        prevProps.isFollowLoading === nextProps.isFollowLoading &&
+        prevProps.profile?.firstname === nextProps.profile?.firstname &&
+        prevProps.profile?.lastname === nextProps.profile?.lastname &&
+        prevProps.profile?.profile_picture === nextProps.profile?.profile_picture &&
+        prevProps.profile?.is_own_profile === nextProps.profile?.is_own_profile &&
+        prevProps.fetchError === nextProps.fetchError
     );
 });
 

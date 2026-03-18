@@ -20,10 +20,10 @@
     "searchNoResults": "No events match your search"
   },
   "success": {
-    "followTitle": "Added to Favorites",
-    "followMessage": "You have successfully added to favourites.",
-    "unfollowTitle": "Removed from Favorites",
-    "unfollowMessage": "You have been removed from favourites."
+    "followTitle": "Follow Successful",
+    "followMessage": "You are now following this athlete.",
+    "unfollowTitle": "Unfollow Successful",
+    "unfollowMessage": "You have unfollowed this athlete."
   },
   "error": {
     "failed": "Failed to load events",

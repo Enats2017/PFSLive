@@ -74,7 +74,6 @@ export const resultListStyle = StyleSheet.create({
     fontWeight: typography.weights.bold,
   },
 
-  // ── Result card ────────────────────────────────────────────────────────
   card: {
     backgroundColor: "#fff",
     marginBottom: 10,
@@ -90,7 +89,6 @@ export const resultListStyle = StyleSheet.create({
     elevation: 10,
   },
 
-  // ✅ CARD WITH LEFT BORDER (FOR BEFORE RACE AND LIVE)
   cardWithLeftBorder: {
     backgroundColor: "#fff",
     marginBottom: 10,
@@ -108,6 +106,7 @@ export const resultListStyle = StyleSheet.create({
     borderLeftColor: colors.primary,
   },
 
+  // ✅ VERIFIED: CORNER WRAPPER
   cornerWrap: {
     position: "absolute",
     top: 0,
@@ -115,10 +114,9 @@ export const resultListStyle = StyleSheet.create({
     width: 72,
     height: 72,
     zIndex: 10,
-    alignItems: "flex-end",
-    borderTopRightRadius: 10,
-    overflow: "hidden",
+    overflow: 'visible',
   },
+
   cornerTriangle: {
     position: "absolute",
     top: 0,
@@ -130,6 +128,7 @@ export const resultListStyle = StyleSheet.create({
     borderTopColor: colors.primary,
     borderLeftColor: "transparent",
   },
+
   cornerNum: {
     position: "absolute",
     top: 6,
@@ -138,9 +137,41 @@ export const resultListStyle = StyleSheet.create({
     fontSize: 20,
     fontWeight: "900",
   },
-  cornerStarBtn: { position: "absolute", top: 35, right: 20 },
-  cornerStar: { color: colors.gray700, fontSize: 40 },
-  cornerStarActive: { color: colors.success },
+
+  // ✅ VERIFIED: MUCH LARGER STAR BUTTON
+  cornerStarBtn: {
+    position: "absolute",
+    bottom: 0,           // ✅ CHANGED: Align to bottom
+    right: 0,            // ✅ CHANGED: Align to right
+    width: 50,           // ✅ INCREASED: Larger touch area
+    height: 50,          // ✅ INCREASED: Larger touch area
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 20,
+    backgroundColor: 'transparent',
+  },
+
+  // ✅ VERIFIED: MUCH LARGER FILLED STAR (GOLDEN)
+  cornerStar: {
+    fontSize: 50,        // ✅ INCREASED: Much larger star
+    lineHeight: 50,
+    color: '#FFD700',    // Golden
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+
+  // ✅ VERIFIED: MUCH LARGER UNFILLED STAR (WHITE)
+  cornerStarUnfilled: {
+    fontSize: 32,        // ✅ INCREASED: Much larger star
+    lineHeight: 32,
+    color: '#FFFFFF',    // White
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
 
   cardTop: {
     flexDirection: "row",

@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableWithoutFeedback } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { resultListStyle } from '../../styles/ResultList.styles';
@@ -7,6 +7,7 @@ import { RaceResult } from '../../services/resultList';
 
 interface ResultCardBeforeRaceProps {
     item: RaceResult;
+    product_app_id: number; // ✅ ADDED
     isLoading: boolean;
     isFollowed: boolean;
     onToggleFollow: () => void;
@@ -15,6 +16,7 @@ interface ResultCardBeforeRaceProps {
 
 const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
     item,
+    product_app_id, // ✅ ADDED
     isFollowed,
     isLoading,
     onToggleFollow,
@@ -22,51 +24,50 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
 }) => {
     const { t } = useTranslation(['allrace', 'common']);
 
-    const canFollow = item.customer_app_id !== null && item.customer_app_id > 0;
+    // ✅ REMOVED: canFollow check
     const hasUtmbIndex = showUtmbIndex && item.utmb_index && item.utmb_index.trim() !== '';
 
     return (
         <View style={resultListStyle.cardWithLeftBorder}>
-            {/* CORNER RANK AND FOLLOW STAR */}
+            {/* ✅ ALWAYS SHOW STAR */}
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
-                <View style={resultListStyle.cornerTriangle} />
-                <Text style={resultListStyle.cornerNum}>
+                <View style={resultListStyle.cornerTriangle} pointerEvents="none" />
+                <Text style={resultListStyle.cornerNum} pointerEvents="none">
                 </Text>
-                {canFollow && (
-                    <TouchableOpacity
-                        style={resultListStyle.cornerStarBtn}
-                        onPress={onToggleFollow}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        disabled={isLoading}
-                    >
-                        <Text style={resultListStyle.cornerStar}>
+                <TouchableWithoutFeedback
+                    onPress={(e) => {
+                        e?.preventDefault?.();
+                        e?.stopPropagation?.();
+                        if (!isLoading) {
+                            onToggleFollow();
+                        }
+                    }}
+                    disabled={isLoading}
+                >
+                    <View style={resultListStyle.cornerStarBtn}>
+                        <Text style={isFollowed ? resultListStyle.cornerStar : resultListStyle.cornerStarUnfilled}>
                             {isFollowed ? '★' : '☆'}
                         </Text>
-                    </TouchableOpacity>
-                )}
+                    </View>
+                </TouchableWithoutFeedback>
             </View>
 
-            {/* PARTICIPANT NAME */}
             <View style={resultListStyle.cardTop}>
                 <View style={resultListStyle.cardTopLeft}>
                     <Text style={resultListStyle.cardName}>{item.name}</Text>
                 </View>
-                <View style={{ width: 64 }} />
+                <View style={{ width: 72 }} />
             </View>
 
-            {/* BIB NUMBER */}
             <Text style={resultListStyle.bibText}>
                 {t('allrace:race.bibNumber')} {item.bib}
             </Text>
 
-            {/* CLUB AND NATION */}
             <Text style={resultListStyle.teamText} numberOfLines={1}>
                 {[item.club, item.nation].filter(Boolean).join(' · ')}
             </Text>
 
-            {/* STATS ROW */}
             <View style={resultListStyle.statsRow}>
-                {/* UTMB INDEX (IF AVAILABLE) */}
                 {hasUtmbIndex ? (
                     <View style={resultListStyle.statCol}>
                         <Text style={resultListStyle.statLabel}>
@@ -81,7 +82,6 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                     </View>
                 )}
 
-                {/* NATION FLAG */}
                 <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
                     <View style={resultListStyle.flagRow}>
                         {item.nation_flag && (

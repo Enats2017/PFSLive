@@ -7,6 +7,7 @@ export interface Participant {
   firstname: string | null;
   lastname: string | null;
   bib_number: string;
+  bib?: string;
   city: string;
   country: string;
   race_distance: string;

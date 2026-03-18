@@ -15,7 +15,7 @@ import { API_CONFIG } from '../../constants/config';
 import SearchInput from '../../components/SearchInput';
 import FanEventCard from './FollowerCard';
 import { FollowerEventpops } from '../../types/navigation';
-import { useFollowManager } from '../../hooks/useFollowManager'; // ✅ IMPORT HOOK
+import { useFollowManager } from '../../hooks/useFollowManager';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
@@ -25,8 +25,8 @@ const TAB_CONTENT_HEIGHT = height * 0.39;
 const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const { t } = useTranslation(['follower', 'common']);
     
-    // ✅ USE FOLLOW MANAGER HOOK
-    const { isFollowed, isLoading: isFollowLoading, toggleFollow } = useFollowManager(t);
+    // ✅ USE FOLLOW MANAGER (NO PRODUCT_APP_ID NEEDED FOR CUSTOMER-ONLY)
+    const { followedUsers, isFollowed, isLoading: isFollowLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
     
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [loading, setLoading] = useState(true);
@@ -131,7 +131,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         }
     }, [t]);
 
-    // ✅ FOCUS EFFECT (EXACT PARTICIPANTEVENT PATTERN)
+    // ✅ FOCUS EFFECT
     useFocusEffect(
         useCallback(() => {
             if (isFetching.current) {
@@ -142,6 +142,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             }
 
             const fetchAndSync = async () => {
+                await refreshFollowedUsers(); // ✅ Refresh follow state first
                 await fetchEvents('');
 
                 // ✅ SYNC SCROLL TO ACTIVE TAB AFTER FETCH
@@ -165,7 +166,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             return () => {
                 isFetching.current = false;
             };
-        }, [fetchEvents, activeTab])
+        }, [fetchEvents, activeTab, refreshFollowedUsers])
     );
 
     // ✅ LOAD MORE PAST
@@ -438,7 +439,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         }
     }, [paginationInfo.participants, loadingMoreParticipant, loadMoreParticipant, participants.length, searchText]);
 
-    // ✅ RENDER PARTICIPANT CARD
+    // ✅ RENDER PARTICIPANT CARD (CUSTOMER-ONLY FOLLOW)
     const renderParticipantCard = useCallback(
         ({ item }: { item: ParticipantItem }) => (
             <FanEventCard

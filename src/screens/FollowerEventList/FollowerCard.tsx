@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { getImageUrl } from '../../constants/config'; // ✅ ADD THIS IMPORT
+import { getImageUrl } from '../../constants/config';
 
 interface FanEventCardProps {
     item: ParticipantItem;
@@ -25,10 +25,8 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
     const { t } = useTranslation(['follower', 'common']);
     const navigation = useNavigation<any>();
 
-    // ✅ FULL NAME
     const fullName = `${item.firstname} ${item.lastname}`.trim();
 
-    // ✅ ADD: INITIALS FOR FALLBACK
     const initials = useMemo(() =>
         [item.firstname?.[0], item.lastname?.[0]]
             .filter(Boolean)
@@ -37,7 +35,6 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
         [item.firstname, item.lastname]
     );
 
-    // ✅ ADD: PROFILE IMAGE URI
     const profileImageUri = useMemo(() =>
         item.profile_picture && item.profile_picture.trim() !== ''
             ? getImageUrl(item.profile_picture)
@@ -53,7 +50,6 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
             ]}
         >
             <View style={detailsStyles.topRow}>
-                {/* ✅ UPDATED: AVATAR WITH PROFILE PICTURE SUPPORT */}
                 <View style={detailsStyles.avatar}>
                     {profileImageUri ? (
                         <Image
@@ -83,7 +79,6 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                 </View>
             </View>
 
-            {/* BUTTONS ROW */}
             <View style={{ flexDirection: 'row', gap: 6 }}>
                 <TouchableOpacity
                     style={[commonStyles.favoriteButton, { borderRadius: 0 }]}
@@ -126,5 +121,4 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
     );
 };
 
-// ✅ KEEP AS IS - DEFAULT EXPORT (NO MEMO)
 export default FanEventCard;

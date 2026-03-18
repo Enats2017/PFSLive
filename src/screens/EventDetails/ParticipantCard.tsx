@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { Participant } from '../../services/participantService';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
@@ -10,6 +10,7 @@ import { getImageUrl } from '../../constants/config';
 
 interface ParticipantCardProps {
   item: Participant;
+  product_app_id: number; // ✅ ADDED
   isFollowed: boolean;
   isLoading: boolean;
   onToggleFollow: () => void;
@@ -17,6 +18,7 @@ interface ParticipantCardProps {
 
 const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({ 
   item, 
+  product_app_id, // ✅ ADDED
   isFollowed, 
   isLoading, 
   onToggleFollow 
@@ -47,7 +49,8 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
 
   const hasBibNumber = item.bib_number && item.bib_number.trim() !== '';
   const isLiveTracking = item.live_tracking_activated === 1;
-  const canFollow = item.customer_app_id !== null && item.customer_app_id > 0;
+  
+  // ✅ REMOVED: canFollow check - show button for ALL participants
 
   return (
     <View
@@ -107,23 +110,26 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
         </View>
       )}
 
-      {canFollow && (
-        <TouchableOpacity
-          style={[
-            commonStyles.primaryButton,
-            { borderRadius: 0, opacity: isLoading ? 0.6 : 1 },
-          ]}
-          activeOpacity={0.8}
-          onPress={onToggleFollow}
-          disabled={isLoading}
-        >
+      {/* ✅ SHOW BUTTON FOR ALL PARTICIPANTS */}
+      <TouchableOpacity
+        style={[
+          commonStyles.primaryButton,
+          { borderRadius: 0, opacity: isLoading ? 0.6 : 1 },
+        ]}
+        activeOpacity={0.8}
+        onPress={onToggleFollow}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#ffffff" />
+        ) : (
           <Text style={commonStyles.primaryButtonText}>
             {isFollowed
               ? t('follower:button.unfollow')
-              : t('follower:button.favourite')}
+              : t('follower:button.follower')}
           </Text>
-        </TouchableOpacity>
-      )}
+        )}
+      </TouchableOpacity>
     </View>
   );
 }, (prevProps, nextProps) => {
@@ -131,6 +137,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
   return (
     prevProps.item.participant_app_id === nextProps.item.participant_app_id &&
     prevProps.item.profile_picture === nextProps.item.profile_picture &&
+    prevProps.item.bib_number === nextProps.item.bib_number &&
     prevProps.isFollowed === nextProps.isFollowed &&
     prevProps.isLoading === nextProps.isLoading
   );

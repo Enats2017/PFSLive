@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -9,32 +9,24 @@ import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 
 interface ResultCardLiveProps {
     item: RaceResult;
+    product_app_id: number; // ✅ ALREADY EXISTS
     isLoading: boolean;
     fromLive: 0 | 1;
     isFollowed: boolean;
     raceStatus: string;
     currentPovId: number;
     onToggleFollow: () => void;
-    product_app_id: number;
 }
 
-// ✅ GET LAST 2 CROSSED CHECKPOINTS
 const getActiveCheckpoints = (checkpoints: RaceResult['checkpoints']) => {
     if (!checkpoints || checkpoints.length === 0) return [];
-    
-    // Filter checkpoints where is_crossed = true
     const crossedCheckpoints = checkpoints.filter(cp => cp.is_crossed === true);
-    
-    // Return last 2 crossed checkpoints (most recent first)
     return crossedCheckpoints.slice(-2);
 };
 
-// ✅ TRUNCATE CHECKPOINT NAME
 const truncateCheckpointName = (name: string, maxLength: number = 12): string => {
     if (!name) return '';
     if (name.length <= maxLength) return name;
-    
-    // Truncate and add abbreviation
     return name.substring(0, maxLength - 1).trim() + '.';
 };
 
@@ -52,7 +44,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     const { t } = useTranslation(['allrace', 'common']);
 
     const isLive = item.live_tracking_activated === 1;
-    const canFollow = item.customer_app_id !== null && item.customer_app_id > 0;
+    // ✅ REMOVED: canFollow check
     const activeCheckpoints = getActiveCheckpoints(item.checkpoints);
 
     const handlePress = () => {
@@ -70,54 +62,52 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
             onPress={handlePress}
             activeOpacity={0.7}
         >
-            {/* CORNER RANK AND FOLLOW STAR */}
+            {/* ✅ ALWAYS SHOW STAR */}
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
-                <View style={resultListStyle.cornerTriangle} />
-                <Text style={resultListStyle.cornerNum}>
+                <View style={resultListStyle.cornerTriangle} pointerEvents="none" />
+                <Text style={resultListStyle.cornerNum} pointerEvents="none">
                     {item.position.replace('.', '')}
                 </Text>
-                {canFollow && (
-                    <TouchableOpacity
-                        style={resultListStyle.cornerStarBtn}
-                        onPress={onToggleFollow}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                        disabled={isLoading}
-                    >
-                        <Text style={resultListStyle.cornerStar}>
+                <TouchableWithoutFeedback
+                    onPress={(e) => {
+                        e?.preventDefault?.();
+                        e?.stopPropagation?.();
+                        if (!isLoading) {
+                            onToggleFollow();
+                        }
+                    }}
+                    disabled={isLoading}
+                >
+                    <View style={resultListStyle.cornerStarBtn}>
+                        <Text style={isFollowed ? resultListStyle.cornerStar : resultListStyle.cornerStarUnfilled}>
                             {isFollowed ? '★' : '☆'}
                         </Text>
-                    </TouchableOpacity>
-                )}
+                    </View>
+                </TouchableWithoutFeedback>
             </View>
 
-            {/* PARTICIPANT NAME */}
             <View style={resultListStyle.cardTop}>
                 <View style={resultListStyle.cardTopLeft}>
                     <Text style={resultListStyle.cardName}>{item.name}</Text>
                 </View>
-                <View style={{ width: 64 }} />
+                <View style={{ width: 72 }} />
             </View>
 
-            {/* BIB NUMBER */}
             <Text style={resultListStyle.bibText}>
                 {t('allrace:race.bibNumber')} {item.bib}
             </Text>
 
-            {/* CLUB AND NATION */}
             <Text style={resultListStyle.teamText} numberOfLines={1}>
                 {[item.club, item.nation].filter(Boolean).join(' · ')}
             </Text>
 
-            {/* LIVE TRACKING BAR */}
             {isLive && (
                 <View style={{ marginTop: 6 }}>
                     <LiveTrackingBar />
                 </View>
             )}
 
-            {/* STATS ROW */}
             <View style={resultListStyle.statsRow}>
-                {/* TIME */}
                 <View style={resultListStyle.statCol}>
                     <Text style={resultListStyle.statLabel}>
                         {t('allrace:race.time')}
@@ -127,14 +117,12 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
 
                 {fromLive === 0 ? (
                     <>
-                        {/* DIFF FIRST */}
                         <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                             <Text style={resultListStyle.statLabel}>
                                 {t('allrace:race.diffFirst')}
                             </Text>
                             <Text style={resultListStyle.statVal}>{item.diff}</Text>
                         </View>
-                        {/* RANKING */}
                         <View style={resultListStyle.statCol}>
                             <Text style={resultListStyle.statLabel}>
                                 {t('allrace:race.ranking')}{'\n'}{item.category_name}
@@ -144,7 +132,6 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     </>
                 ) : (
                     <>
-                        {/* ✅ CHECKPOINT 1 (FIRST CROSSED) */}
                         {activeCheckpoints[0] && (
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                 <Text style={resultListStyle.statLabel} numberOfLines={1}>
@@ -162,7 +149,6 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             </View>
                         )}
                         
-                        {/* ✅ CHECKPOINT 2 (SECOND CROSSED) */}
                         {activeCheckpoints[1] && (
                             <View style={resultListStyle.statCol}>
                                 <Text style={resultListStyle.statLabel} numberOfLines={1}>
