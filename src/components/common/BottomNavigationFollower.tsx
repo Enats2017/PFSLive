@@ -104,7 +104,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
         });
       } else {
         console.log('📍 Default → Home');
-        navigation.navigate('Home');
+        navigation.navigate('HomeScreen');
       }
     }
   };

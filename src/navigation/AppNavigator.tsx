@@ -35,7 +35,7 @@ export const AppNavigator: React.FC = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName="HomeScreen"
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
@@ -47,7 +47,7 @@ export const AppNavigator: React.FC = () => {
         }}
       >
         <Stack.Screen 
-          name="Home" 
+          name="HomeScreen" 
           component={HomeScreen}
           options={{ gestureEnabled: false }}
         />

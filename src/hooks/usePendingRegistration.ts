@@ -140,7 +140,7 @@ export const usePendingRegistration = (navigation: NavigationProp<any>) => {
         await clearPendingRegistration();
 
         // Navigate to EventDetails with auto-register
-        navigation.replace('EventDetails', {
+        navigation.navigate('EventDetails', {
           product_app_id: Number(productId),
           event_name: eventName || 'Event', // Fallback if event_name missing
           auto_register_id: Number(optionId),
@@ -152,7 +152,7 @@ export const usePendingRegistration = (navigation: NavigationProp<any>) => {
         }
         navigation.reset({
           index: 0,
-          routes: [{ name: 'Home' }],
+          routes: [{ name: 'HomeScreen' }],
         });
       }
     } catch (error) {
@@ -162,7 +162,7 @@ export const usePendingRegistration = (navigation: NavigationProp<any>) => {
       // Always fallback to Home on error
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Home' }],
+        routes: [{ name: 'HomeScreen' }],
       });
     }
   }, [navigation]);

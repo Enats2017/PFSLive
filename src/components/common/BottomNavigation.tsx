@@ -119,7 +119,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             auto_register_id: null,
           });
         } else {
-          navigation.navigate('Home');
+          navigation.navigate('HomeScreen');
         }
       }
     }
@@ -144,7 +144,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         });
       } else {
         console.log('📍 Default → Home');
-        navigation.navigate('Home');
+        navigation.navigate('HomeScreen');
       }
     }
   };

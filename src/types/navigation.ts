@@ -2,7 +2,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Distance } from "../services/eventDetailService";
 
 export type RootStackParamList = {
-  Home: undefined;
+  HomeScreen: undefined;
   Route: {
     product_app_id: string | number;
     product_option_value_app_id: string | number;
@@ -65,7 +65,7 @@ export type RootStackParamList = {
 
 export type HomeScreenProps = NativeStackScreenProps<
   RootStackParamList,
-  "Home"
+  "HomeScreen"
 >;
 export type RouteScreenProps = NativeStackScreenProps<
   RootStackParamList,
