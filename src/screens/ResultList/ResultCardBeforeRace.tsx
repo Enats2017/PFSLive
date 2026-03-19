@@ -4,6 +4,7 @@ import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
+import { useNavigation } from '@react-navigation/native';
 
 interface ResultCardBeforeRaceProps {
     item: RaceResult;
@@ -11,6 +12,9 @@ interface ResultCardBeforeRaceProps {
     isFollowed: boolean;
     onToggleFollow: () => void;
     showUtmbIndex: boolean;
+    raceStatus: string;
+    currentPovId: number;
+    product_app_id: number;
 }
 
 const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
@@ -19,14 +23,26 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
     isLoading,
     onToggleFollow,
     showUtmbIndex,
+    raceStatus,
+    currentPovId,
+    product_app_id
 }) => {
     const { t } = useTranslation(['allrace', 'common']);
-
+    const navigation = useNavigation<any>();
     const canFollow = item.customer_app_id !== null && item.customer_app_id > 0;
     const hasUtmbIndex = showUtmbIndex && item.utmb_index && item.utmb_index.trim() !== '';
 
+     const handlePress = () => {
+        navigation.navigate('ResultDetails', {
+            product_app_id,
+            product_option_value_app_id: Number(currentPovId),
+            bib: item.bib,
+            raceStatus
+        });
+    };
+
     return (
-        <View style={resultListStyle.cardWithLeftBorder}>
+        <TouchableOpacity style={resultListStyle.cardWithLeftBorder} onPress={handlePress}>
             {/* CORNER RANK AND FOLLOW STAR */}
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
                 <View style={resultListStyle.cornerTriangle} />
@@ -93,7 +109,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                     </View>
                 </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 }, (prev, next) =>
     prev.item.bib === next.item.bib &&

@@ -21,7 +21,9 @@
     "age": "Age",
     "overallRank": "Overall",
     "genderRank": "Gender",
-    "categoryRank": "Category"
+    "categoryRank": "Category",
+    "in":"in",
+    "minutes":"minutes"
   },
   "timingPoint": {
     "checkpoint":    "CHECKPOINT",
@@ -31,7 +33,9 @@
     "ranking":       "RANKING",
     "distance":      "DISTANCE",
     "elevationGain": "ELEVATION GAIN",
-    "noData":        "No timing data available"
+    "noData":        "No timing data available",
+    "pace":           "PACE",
+    "speed":           "SPEED"
   },
   "runnerInfo": {
     "club":         "CLUB",
@@ -50,8 +54,8 @@
     "noData":         "- -"
   },
   "status": {
-    "notStarted": "Not Started",
-    "inProgress": "In Progress",
+    "not_started": "Not Launched",
+    "in_progress": "In Race",
     "finished": "Finished"
   },
   "countdown": {
@@ -59,6 +63,17 @@
     "hours": "Hrs",
     "minutes": "Min",
     "seconds": "Sec"
+  },
+  "units": {
+  "km": "KM",
+   "meterPlus": "m+",
+   "min/km":"min/km"
+},
+ "defaults": {
+    "distance": "0.00",
+    "time": "00:00",
+    "elevation": "0",
+    "empty": "—"
   }
  
 

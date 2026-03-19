@@ -81,9 +81,12 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         // ✅ PRIORITY 1: If race hasn't started, show BeforeRace card
         if (raceStatus === 'not_started') {
             return (
-                <ResultCardBeforeRace 
-                    {...commonProps} 
-                    showUtmbIndex={showUtmbIndex} // ✅ PASS FLAG
+                <ResultCardBeforeRace
+                    {...commonProps}
+                    showUtmbIndex={showUtmbIndex} 
+                     raceStatus={raceStatus}
+                    product_app_id={product_app_id}
+                    currentPovId={currentPovId}// ✅ PASS FLAG
                 />
             );
         }
@@ -105,8 +108,10 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         return (
             <ResultCard
                 {...commonProps}
-                fromLive={fromLive}
-                sourceTab={sourceTab}
+                 fromLive={fromLive}
+                raceStatus={raceStatus}
+                product_app_id={product_app_id}
+                currentPovId={currentPovId}
             />
         );
     }, [

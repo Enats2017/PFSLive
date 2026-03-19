@@ -85,6 +85,7 @@ export interface RunnerInfo {
     utmb_index: string;
     age: string;
     gender: string;
+    profile_picture: string;
 }
 
 export interface ResultDetailResponse {

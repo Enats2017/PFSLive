@@ -205,12 +205,16 @@ export const resultInfoStyles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: colors.gray700,
+    backgroundColor: colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 2,
   },
   iconCircleDone: {
+    backgroundColor: colors.primaryLight,
+  },
+
+    iconCirclePending: {
     backgroundColor: colors.primaryLight,
   },
 
@@ -231,11 +235,11 @@ export const resultInfoStyles = StyleSheet.create({
 
   segmentLabels: {
     position: "absolute",
-    top: 100,
-    bottom: 0,
-    left: 0, // flush left of the leftCol
-    width: 28, // just left of center line
-    gap: 2,
+    top: 200,
+    bottom: 10,
+    left: -15, // flush left of the leftCol
+     // just left of center line
+    gap: 10,
   },
   segmentText: {
     fontSize: typography.sizes.md,
@@ -292,15 +296,26 @@ export const resultInfoStyles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   avatarCircle: {
+    marginTop:10,
     width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: colors.primary,
+    height: 140,
+    borderRadius: 15,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
+    
+  },
+
+  initials:{
+   marginTop:10,
+    width: 120,
+    height: 140,
+    borderRadius: 15,
+    backgroundColor:colors.gray200,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+
   },
 
   // ── Row / Col layout ──────────────────────────────────────────────────

@@ -20,8 +20,8 @@ import LiveTimingPoint from './LiveTimingPoint';
 import { useResultDetail } from '../../hooks/useResultDetail';
 import UpcomingRace from './UpcomingRace';
 
-type TabKey = 'raceInfo' | 'timingPoint' | 'runnerInfo' | 'awards';
-const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo', 'awards'];
+type TabKey = 'raceInfo' | 'timingPoint' | 'runnerInfo';
+const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo'];
 
 const { width } = Dimensions.get('window');
 
@@ -42,7 +42,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         from_live ?? 0,
     );
 
-    console.log("111", data);
+    console.log("111", data?.runner_info);
 
 
     console.log("11111", raceStatus);
@@ -53,6 +53,21 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     const [activeTab, setActiveTab] = useState<TabKey>('raceInfo');
     const flatListRef = useRef<FlatList<TabKey>>(null);
     const tabScrollRef = useRef<ScrollView>(null);
+
+    const canFollow =
+        data?.race_info?.customer_app_id != null &&
+        data?.race_info?.customer_app_id > 0;
+
+    const Followed = isFollowed(data?.race_info?.customer_app_id)
+
+    const handleFollow = () => {
+        if (!data?.race_info?.customer_app_id) return;
+
+        toggleFollow(
+            data?.race_info?.customer_app_id
+
+        );
+    };
 
     const handleTabPress = useCallback((tab: TabKey) => {
         const index = TAB_KEYS.indexOf(tab);
@@ -83,28 +98,33 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     <RaceLive
                         raceInfo={data?.race_info}
                         event={data?.event}
+                        checkpoints={data?.checkpoints}
                     />
                 ) : raceStatus === 'finished' ? (
                     <RaceInfoTab
                         raceInfo={data?.race_info}
                         event={data?.event}
+                        checkpoints={data?.checkpoints}
                     />
                 ) : raceStatus === 'not_started' ? (
                     <UpcomingRace
                         raceInfo={data?.race_info}
                         event={data?.event}
+
                     />
                 ) : null
             )}
             {item === 'timingPoint' && (
-                raceStatus === 'finished'
-                    ? <LiveTimingPoint checkpoints={data?.checkpoints} />
-                    : <TimingPointTab checkpoints={data?.checkpoints} />
+
+                <LiveTimingPoint checkpoints={data?.checkpoints}
+
+                />
+
             )}
             {item === 'runnerInfo' && (
                 <RunnerInfoTab runnerInfo={data?.runner_info} />
             )}
-            {item === 'awards' && <AwardsTab />}
+
         </View>
     ), [data, raceStatus]);
     return (
@@ -124,19 +144,17 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     <Text style={commonStyles.text}> {data?.race_info.bib ?? ''}</Text>
                 </View>
                 {
-                    raceStatus == 'in_progress' && (
+                    canFollow && (
                         <>
                             <TouchableOpacity
-                                onPress={() => toggleFollow}>
+                                onPress={handleFollow}>
                                 {
-                                    isFollowed ?
+                                    Followed ?
                                         <Entypo name="heart" size={30} color="black" /> :
                                         <Entypo name="heart-outlined" size={30} color="black" />
                                 }
                             </TouchableOpacity>
-                            <TouchableOpacity>
-                                <Entypo name="share" size={30} color="black" />
-                            </TouchableOpacity>
+
 
                         </>
 

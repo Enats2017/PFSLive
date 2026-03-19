@@ -11,9 +11,11 @@ interface ResultCardProps {
     item: RaceResult;
     isLoading: boolean;
     fromLive: 0 | 1;
+    raceStatus:string,
     isFollowed: boolean;
     onToggleFollow: () => void;
-    sourceTab?: 'past' | 'live' | 'upcoming';
+    product_app_id: number;
+    currentPovId: number;
 }
 
 const ResultCard: React.FC<ResultCardProps> = memo(({
@@ -21,8 +23,10 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     fromLive,
     isFollowed,
     isLoading,
-    onToggleFollow,
-    sourceTab
+     raceStatus,
+    currentPovId,
+    product_app_id,
+    onToggleFollow
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
@@ -32,8 +36,10 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 
     const handlePress = () => {
         navigation.navigate('ResultDetails', {
-            participant_app_id: item.customer_app_id,
-            sourceTab
+            product_app_id,
+            product_option_value_app_id: Number(currentPovId),
+            bib: item.bib,
+            raceStatus
         });
     };
 

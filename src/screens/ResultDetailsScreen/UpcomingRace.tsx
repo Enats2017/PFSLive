@@ -21,7 +21,7 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                 <View style={resultInfoStyles.headerBar}>
                     <View style={resultInfoStyles.headerGreen}>
                         <Text style={commonStyles.text}>
-                            {event?.race_status}
+                            {t(`status.${event?.race_status}`)}
                         </Text>
                     </View>
                     <View style={resultInfoStyles.diagLeft} />
@@ -40,39 +40,27 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                 </View>
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.subtitle}>{t('raceInfo.raceTime')}</Text>
-                    <Text style={resultInfoStyles.raceTimeText}>{raceInfo?.race_time_display}</Text>
+                    <Text style={resultInfoStyles.raceTimeText}>{raceInfo?.time || "00:00:00"}</Text>
                 </View>
 
                 <View style={resultInfoStyles.statsCard}>
-                    {[
-                        {
-                            labelKey: 'raceInfo.distanceCompleted',
-                            value: raceInfo?.distance_completed
-                                ? `${raceInfo.distance_completed} km`
-                                : '—',
-                        },
-                        {
-                            labelKey: 'raceInfo.elevationGain',
-                            value: raceInfo?.elevation_gain
-                                ? `${raceInfo.elevation_gain} m+`
-                                : '—',
-                        },
-                    ].map((item, i) => (
-                        <View
-                            key={item.labelKey}
+                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text
                             style={[
-                                resultInfoStyles.statsCol,
-                                i === 1 && resultInfoStyles.statsColBorder,
+                                commonStyles.subtitle,
+                                { textAlign: 'center', marginBottom: 8 },
                             ]}
                         >
-                            <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
-                                {t(item.labelKey)}
-                            </Text>
-                            <Text style={resultInfoStyles.raceTimeText}>{item.value}</Text>
-                        </View>
-                    ))}
-                </View>
+                            {t('raceInfo.distanceCompleted')}
+                        </Text>
 
+                        <Text style={resultInfoStyles.raceTimeText}>
+                            {raceInfo?.distance_completed != null
+                                ? `${raceInfo.distance_completed} ${t('units.km')}`
+                                : `0.00 ${t('units.km')}`}
+                        </Text>
+                    </View>
+                </View>
             </View>
         </ScrollView>
     );
