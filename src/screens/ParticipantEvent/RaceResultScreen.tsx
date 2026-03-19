@@ -181,7 +181,8 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
                   product_option_value_app_id: Number(item.product_option_value_app_id),
                   event_name: event_name,
                   sourceScreen: 'RaceResultScreen',
-                  sectionType:'participant'
+                  sectionType:'participant',
+                  sourceTab: 'past',
                 })
               }
               activeOpacity={0.8}

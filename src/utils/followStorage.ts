@@ -1,56 +1,100 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STORAGE_KEY = 'followed_users';
+const STORAGE_KEY_BIBS = 'followed_bibs_by_product';
 
 let cache: Set<number> | null = null;
-let lock: Promise<void> = Promise.resolve();
+let bibCache: Map<number, Set<string>> | null = null;
 
-// ✅ Central converter — always returns valid number or null
 function toValidId(id: any): number | null {
   if (id === null || id === undefined) return null;
   const parsed = Number(id);
   return !isNaN(parsed) && parsed > 0 ? parsed : null;
 }
 
-function withLock<T>(fn: () => Promise<T>): Promise<T> {
-  const next = lock.then(fn);
-  lock = next.then(() => {}, () => {});
-  return next;
+function toValidBib(bib: any): string | null {
+  if (bib === null || bib === undefined) return null;
+  const str = String(bib).trim();
+  return str.length > 0 ? str : null;
 }
 
-// ✅ Always parse everything to number when loading
 async function loadCache(): Promise<Set<number>> {
   if (cache) return cache;
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     const parsed = raw ? (JSON.parse(raw) as any[]) : [];
 
-    // ✅ Convert ALL values to number — fixes mixed string/number in storage
     cache = new Set(
       parsed
         .map(toValidId)
         .filter((id): id is number => id !== null)
     );
-    console.log('📦 Cache loaded as numbers:', [...cache]);
-  } catch {
+  } catch (error) {
+    console.warn('Failed to load customer cache:', error);
     cache = new Set();
   }
   return cache;
 }
 
+async function loadBibCache(): Promise<Map<number, Set<string>>> {
+  if (bibCache) return bibCache;
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY_BIBS);
+    if (!raw) {
+      bibCache = new Map();
+      return bibCache;
+    }
+
+    const parsed = JSON.parse(raw) as Record<string, string[]>;
+    bibCache = new Map();
+
+    Object.entries(parsed).forEach(([productId, bibs]) => {
+      const validProductId = toValidId(productId);
+      if (validProductId !== null && Array.isArray(bibs)) {
+        const bibSet = new Set(
+          bibs
+            .map(toValidBib)
+            .filter((bib): bib is string => bib !== null)
+        );
+        if (bibSet.size > 0) {
+          bibCache!.set(validProductId, bibSet);
+        }
+      }
+    });
+  } catch (error) {
+    console.warn('Failed to load BIB cache:', error);
+    bibCache = new Map();
+  }
+  return bibCache;
+}
+
 async function persistCache(set: Set<number>): Promise<void> {
   try {
-    // ✅ Always saves as numbers
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([...set]));
-    console.log('💾 Saved to AsyncStorage:', [...set]);
-  } catch {
-    console.warn('⚠️ Failed to persist cache');
+  } catch (error) {
+    console.warn('Failed to persist customer cache:', error);
+    throw error;
+  }
+}
+
+async function persistBibCache(map: Map<number, Set<string>>): Promise<void> {
+  try {
+    const obj: Record<number, string[]> = {};
+    map.forEach((bibSet, productId) => {
+      if (bibSet.size > 0) {
+        obj[productId] = [...bibSet];
+      }
+    });
+    await AsyncStorage.setItem(STORAGE_KEY_BIBS, JSON.stringify(obj));
+  } catch (error) {
+    console.warn('Failed to persist BIB cache:', error);
+    throw error;
   }
 }
 
 export function clearCache(): void {
   cache = null;
-  console.log('🗑️ Cache cleared');
+  bibCache = null;
 }
 
 export async function getFollowedUsers(): Promise<number[]> {
@@ -58,47 +102,194 @@ export async function getFollowedUsers(): Promise<number[]> {
   return [...set];
 }
 
+export async function getFollowedBibs(productAppId: number): Promise<string[]> {
+  const validProductId = toValidId(productAppId);
+  if (validProductId === null) return [];
+
+  const map = await loadBibCache();
+  const bibSet = map.get(validProductId);
+  return bibSet ? [...bibSet] : [];
+}
+
 export async function isUserFollowed(id: any): Promise<boolean> {
-  const validId = toValidId(id); // ✅ convert to number before check
+  const validId = toValidId(id);
   if (validId === null) return false;
   const set = await loadCache();
-  const result = set.has(validId);
-  console.log(`🔍 isUserFollowed(${validId}):`, result, '| cache:', [...set]);
-  return result;
+  return set.has(validId);
+}
+
+export async function isBibFollowed(productAppId: number, bib: string): Promise<boolean> {
+  const validProductId = toValidId(productAppId);
+  const validBib = toValidBib(bib);
+  
+  if (validProductId === null || validBib === null) return false;
+
+  const map = await loadBibCache();
+  const bibSet = map.get(validProductId);
+  return bibSet?.has(validBib) ?? false;
 }
 
 export async function followUser(id: any): Promise<void> {
-  const validId = toValidId(id); // ✅ always number
+  const validId = toValidId(id);
   if (validId === null) {
-    console.warn('⚠️ followUser — invalid id:', id);
-    return;
+    throw new Error(`Invalid customer ID: ${id}`);
   }
-  return withLock(async () => {
+
+  try {
     const set = await loadCache();
+    
     if (set.has(validId)) {
-      console.log(`⚠️ Already followed: ${validId}`);
       return;
     }
+    
     set.add(validId);
+    cache = set;
     await persistCache(set);
-    console.log(`✅ Followed: ${validId} | Total: ${set.size}`);
-  });
+  } catch (error) {
+    console.error('Follow user error:', error);
+    throw error;
+  }
+}
+
+export async function followBib(productAppId: number, bib: string): Promise<void> {
+  const validProductId = toValidId(productAppId);
+  const validBib = toValidBib(bib);
+
+  if (validProductId === null || validBib === null) {
+    throw new Error(`Invalid productAppId (${productAppId}) or bib (${bib})`);
+  }
+
+  try {
+    const map = await loadBibCache();
+    
+    let bibSet = map.get(validProductId);
+    if (!bibSet) {
+      bibSet = new Set();
+      map.set(validProductId, bibSet);
+    }
+
+    if (bibSet.has(validBib)) {
+      return;
+    }
+
+    bibSet.add(validBib);
+    bibCache = map;
+    await persistBibCache(map);
+  } catch (error) {
+    console.error('Follow BIB error:', error);
+    throw error;
+  }
 }
 
 export async function unfollowUser(id: any): Promise<void> {
-  const validId = toValidId(id); // ✅ always number
+  const validId = toValidId(id);
   if (validId === null) {
-    console.warn('⚠️ unfollowUser — invalid id:', id);
-    return;
+    throw new Error(`Invalid customer ID: ${id}`);
   }
-  return withLock(async () => {
+
+  try {
     const set = await loadCache();
+    
     if (!set.has(validId)) {
-      console.log(`⚠️ Not followed: ${validId}`);
       return;
     }
+    
     set.delete(validId);
+    cache = set;
     await persistCache(set);
-    console.log(`❌ Unfollowed: ${validId} | Total: ${set.size}`);
-  });
+  } catch (error) {
+    console.error('Unfollow user error:', error);
+    throw error;
+  }
+}
+
+export async function unfollowBib(productAppId: number, bib: string): Promise<void> {
+  const validProductId = toValidId(productAppId);
+  const validBib = toValidBib(bib);
+
+  if (validProductId === null || validBib === null) {
+    throw new Error(`Invalid productAppId (${productAppId}) or bib (${bib})`);
+  }
+
+  try {
+    const map = await loadBibCache();
+    const bibSet = map.get(validProductId);
+
+    if (!bibSet || !bibSet.has(validBib)) {
+      return;
+    }
+
+    bibSet.delete(validBib);
+
+    if (bibSet.size === 0) {
+      map.delete(validProductId);
+    }
+
+    bibCache = map;
+    await persistBibCache(map);
+  } catch (error) {
+    console.error('Unfollow BIB error:', error);
+    throw error;
+  }
+}
+
+export async function getFollowStatus(
+  productAppId: number,
+  bib: string,
+  customerAppId?: number | null
+): Promise<{ isFollowed: boolean; followType: 'customer' | 'bib' | null }> {
+  try {
+    const validCustomerId = toValidId(customerAppId);
+    if (validCustomerId !== null) {
+      const customerFollowed = await isUserFollowed(validCustomerId);
+      if (customerFollowed) {
+        return { isFollowed: true, followType: 'customer' };
+      }
+    }
+
+    const bibFollowed = await isBibFollowed(productAppId, bib);
+    if (bibFollowed) {
+      return { isFollowed: true, followType: 'bib' };
+    }
+
+    return { isFollowed: false, followType: null };
+  } catch (error) {
+    console.error('Get follow status error:', error);
+    return { isFollowed: false, followType: null };
+  }
+}
+
+export async function smartFollow(
+  productAppId: number,
+  bib: string,
+  customerAppId?: number | null
+): Promise<void> {
+  const validCustomerId = toValidId(customerAppId);
+
+  if (validCustomerId !== null) {
+    await followUser(validCustomerId);
+  } else {
+    await followBib(productAppId, bib);
+  }
+}
+
+export async function smartUnfollow(
+  productAppId: number,
+  bib: string,
+  customerAppId?: number | null
+): Promise<void> {
+  const validCustomerId = toValidId(customerAppId);
+
+  if (validCustomerId !== null) {
+    const customerFollowed = await isUserFollowed(validCustomerId);
+    if (customerFollowed) {
+      await unfollowUser(validCustomerId);
+      return;
+    }
+  }
+
+  const bibFollowed = await isBibFollowed(productAppId, bib);
+  if (bibFollowed) {
+    await unfollowBib(productAppId, bib);
+  }
 }

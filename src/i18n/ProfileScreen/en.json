@@ -20,9 +20,29 @@
     "load_profile_api_failed": "Failed to load athlete profile.",
     "load_more_past_failed": "Failed to load more past events.",
     "load_more_live_failed": "Failed to load more live events.",
-    "permission_needed_title": "Permission needed",
-    "permission_needed_message": "Please allow photo access to change your avatar.",
-    "invalid_user_id": "Invalid user ID"
+    "permission_title": "Permission Required",
+    "permission_message": "Please allow photo access to change your avatar.",
+    "camera_permission": "Camera permission is required to take photos.",
+    "invalid_user_id": "Invalid user ID",
+    "generic_error": "Something went wrong. Please try again."
+  },
+  "validation": {
+    "firstname_invalid": "First name must be at least 2 characters",
+    "lastname_invalid": "Last name must be at least 2 characters",
+    "city_invalid": "City must be at least 2 characters",
+    "country_invalid": "Please select a valid country",
+    "country_not_found": "Country not found",
+    "dob_required": "Date of birth is required",
+    "dob_invalid_format": "Invalid date format",
+    "dob_underage": "You must be at least 13 years old",
+    "dob_invalid": "Invalid date of birth",
+    "gender_invalid": "Please select a valid gender",
+    "password_too_short": "Password must be at least 4 characters",
+    "password_too_long": "Password must be less than 20 characters",
+    "passwords_do_not_match": "Passwords do not match",
+    "email_invalid": "Please enter a valid email address",
+    "email_too_long": "Email is too long",
+    "email_already_taken": "This email is already in use"
   },
   "status": {
     "live": "LIVE",
@@ -62,7 +82,11 @@
     "success_profile_updated": "Profile updated successfully!"
   },
   "avatar": {
-    "remove_photo": "Remove photo"
+    "remove_photo": "Remove photo",
+    "choose_source_title": "Choose Photo Source",
+    "choose_source_message": "Select where you want to pick your profile photo from",
+    "take_photo": "Take Photo",
+    "choose_gallery": "Choose from Gallery"
   },
   "sections": {
     "personal_info": "PERSONAL INFO",

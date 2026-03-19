@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Profile } from '../services/profileServices'
 import {
     editProfileApi,
@@ -58,6 +59,7 @@ const initialFormState: EditProfileForm = {
 }
 
 export const useEditProfile = (initialProfile: Profile | null) => {
+    const { t } = useTranslation(['profile']) // ✅ ADD i18n HOOK
 
     const [form, setForm] = useState<EditProfileForm>(initialFormState)
     const [errors, setErrors] = useState<FormErrors>({})
@@ -85,7 +87,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             gender: initialProfile.gender ?? '',
             countryName: initialProfile.country ?? '',
             country_id: String(initialProfile.country_id ?? ''),
-            country_iso:  initialProfile.iso_code_2   ?? '', 
+            country_iso: initialProfile.iso_code_2 ?? '', 
             password: '',
             confirmPassword: '',
         })
@@ -112,39 +114,40 @@ export const useEditProfile = (initialProfile: Profile | null) => {
     }, [])
 
 
+    // ✅ VALIDATION WITH i18n TRANSLATIONS
     const validate = (): boolean => {
         const newErrors: FormErrors = {}
 
         if (form.firstname.trim().length < 2)
-            newErrors.firstname = 'firstname_invalid'
+            newErrors.firstname = t('profile:validation.firstname_invalid')
 
         if (form.lastname.trim().length < 2)
-            newErrors.lastname = 'lastname_invalid'
+            newErrors.lastname = t('profile:validation.lastname_invalid')
 
         if (form.city.trim().length < 2)
-            newErrors.city = 'city_invalid'
+            newErrors.city = t('profile:validation.city_invalid')
 
         if (form.dob) {
             const dobDate = new Date(form.dob)
 
             if (isNaN(dobDate.getTime())) {
-                newErrors.dob = 'dob_invalid_format'
+                newErrors.dob = t('profile:validation.dob_invalid_format')
             } else {
                 const age = Math.floor(
                     (Date.now() - dobDate.getTime()) /
                     (365.25 * 24 * 60 * 60 * 1000)
                 )
 
-                if (age < 13) newErrors.dob = 'dob_underage'
-                if (age > 120) newErrors.dob = 'dob_invalid'
+                if (age < 13) newErrors.dob = t('profile:validation.dob_underage')
+                if (age > 120) newErrors.dob = t('profile:validation.dob_invalid')
             }
         }
 
         if (form.password && form.password.length < 4)
-            newErrors.password = 'password_too_short'
+            newErrors.password = t('profile:validation.password_too_short')
 
         if (form.password && form.password !== form.confirmPassword)
-            newErrors.confirmPassword = 'passwords_do_not_match'
+            newErrors.confirmPassword = t('profile:validation.passwords_do_not_match')
 
         setErrors(newErrors)
 
@@ -201,9 +204,12 @@ export const useEditProfile = (initialProfile: Profile | null) => {
 
                 const newErrors: FormErrors = {}
 
+                // ✅ MAP SERVER ERRORS TO TRANSLATED MESSAGES
                 err.fields.forEach((fieldError) => {
                     const key = fieldErrorMap[fieldError]
-                    if (key) newErrors[key] = fieldError
+                    if (key) {
+                        newErrors[key] = t(`profile:validation.${fieldError}`)
+                    }
                 })
 
                 setErrors(newErrors)
@@ -215,7 +221,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             setLoading(false)
         }
 
-    }, [form, picture, removePicture])
+    }, [form, picture, removePicture, t])
 
     return {
         form,

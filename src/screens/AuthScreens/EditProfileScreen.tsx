@@ -15,8 +15,8 @@ import { fetchProfileApi } from '../../services/profileServices'
 import { tokenService } from '../../services/tokenService'
 import { AppHeader } from '../../components/common/AppHeader'
 import { profileStyles } from '../../styles/Profile.styles'
-import { toastSuccess } from '../../../utils/toast'
-import { getImageUrl } from '../../constants/config'
+import { toastSuccess, toastError } from '../../../utils/toast'
+import { getImageUrl, API_CONFIG } from '../../constants/config'
 import { useNavigation } from '@react-navigation/native'
 
 const GENDER_VALUES = [
@@ -32,7 +32,6 @@ const EditProfileScreen = () => {
     const [profileError, setProfileError] = useState('')
     const [profile, setProfile] = useState<Awaited<ReturnType<typeof fetchProfileApi>> | null>(null)
     
-    // ✅ USE ANY TYPE FOR NAVIGATION
     const navigation = useNavigation<any>()
     
     const genderOptions = GENDER_VALUES.map((value) => ({
@@ -60,30 +59,107 @@ const EditProfileScreen = () => {
     const genderDisplayValue =
         genderOptions.find(g => g.value === form.gender)?.label || ''
 
-    const pickAvatar = useCallback(async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-        if (status !== 'granted') {
-            Alert.alert(
-                t('profile:errors.permission_title'),
-                t('profile:errors.permission_message')
-            )
-            return
-        }
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-        })
-        if (!result.canceled && result.assets[0]) {
-            const asset = result.assets[0]
-            const ext = asset.uri.split('.').pop() ?? 'jpg'
-            setPicture({
-                uri: asset.uri,
-                name: `profile_${Date.now()}.${ext}`,
-                type: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+    // ✅ SHOW IMAGE SOURCE PICKER
+    const showImageSourcePicker = useCallback(() => {
+        Alert.alert(
+            t('profile:avatar.choose_source_title'),
+            t('profile:avatar.choose_source_message'),
+            [
+                {
+                    text: t('profile:avatar.take_photo'),
+                    onPress: () => pickImageFromCamera(),
+                },
+                {
+                    text: t('profile:avatar.choose_gallery'),
+                    onPress: () => pickImageFromGallery(),
+                },
+                {
+                    text: t('common:buttons.cancel'),
+                    style: 'cancel',
+                },
+            ],
+            { cancelable: true }
+        )
+    }, [t])
+
+    // ✅ PICK IMAGE FROM CAMERA
+    const pickImageFromCamera = useCallback(async () => {
+        try {
+            const permission = await ImagePicker.requestCameraPermissionsAsync()
+
+            if (permission.status !== 'granted') {
+                toastError(
+                    t('profile:errors.permission_title'),
+                    t('profile:errors.camera_permission')
+                )
+                return
+            }
+
+            const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
             })
-            setRemovePicture(false)
+
+            if (!result.canceled && result.assets[0]) {
+                const asset = result.assets[0]
+                const ext = asset.uri.split('.').pop() ?? 'jpg'
+                setPicture({
+                    uri: asset.uri,
+                    name: `profile_${Date.now()}.${ext}`,
+                    type: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+                })
+                setRemovePicture(false)
+            }
+        } catch (error) {
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Camera error:', error)
+            }
+            toastError(
+                t('profile:errors.permission_title'),
+                t('profile:errors.generic_error')
+            )
+        }
+    }, [setPicture, setRemovePicture, t])
+
+    // ✅ PICK IMAGE FROM GALLERY
+    const pickImageFromGallery = useCallback(async () => {
+        try {
+            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+
+            if (permission.status !== 'granted') {
+                toastError(
+                    t('profile:errors.permission_title'),
+                    t('profile:errors.permission_message')
+                )
+                return
+            }
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+            })
+
+            if (!result.canceled && result.assets[0]) {
+                const asset = result.assets[0]
+                const ext = asset.uri.split('.').pop() ?? 'jpg'
+                setPicture({
+                    uri: asset.uri,
+                    name: `profile_${Date.now()}.${ext}`,
+                    type: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+                })
+                setRemovePicture(false)
+            }
+        } catch (error) {
+            if (API_CONFIG.DEBUG) {
+                console.error('❌ Gallery picker error:', error)
+            }
+            toastError(
+                t('profile:errors.permission_title'),
+                t('profile:errors.generic_error')
+            )
         }
     }, [setPicture, setRemovePicture, t])
 
@@ -93,10 +169,8 @@ const EditProfileScreen = () => {
         if (ok) {
             toastSuccess(t('profile:messages.success_profile_updated'))
             
-            // ✅ GET CUSTOMER_APP_ID FROM TOKEN SERVICE
             const customer_app_id = await tokenService.getCustomerId()
             
-            // ✅ NAVIGATE WITH fromEdit FLAG (NO TYPE ERRORS)
             navigation.navigate('ProfileScreen', {
                 customer_app_id: customer_app_id || 0,
                 fromEdit: true,
@@ -153,9 +227,10 @@ const EditProfileScreen = () => {
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={profileStyles.profileCard}>
+                        {/* ✅ UPDATED: Now shows camera/gallery options */}
                         <TouchableOpacity 
                             style={profileStyles.avatarWrapper} 
-                            onPress={pickAvatar} 
+                            onPress={showImageSourcePicker} 
                             activeOpacity={0.8}
                         >
                             {avatarUri ? (

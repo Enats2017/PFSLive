@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { ParticipantItem } from '../../services/followerEvent';
 import { commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
+import { getImageUrl } from '../../constants/config';
 
 interface FanEventCardProps {
     item: ParticipantItem;
@@ -26,6 +27,21 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
 
     const fullName = `${item.firstname} ${item.lastname}`.trim();
 
+    const initials = useMemo(() =>
+        [item.firstname?.[0], item.lastname?.[0]]
+            .filter(Boolean)
+            .join('')
+            .toUpperCase() || '?',
+        [item.firstname, item.lastname]
+    );
+
+    const profileImageUri = useMemo(() =>
+        item.profile_picture && item.profile_picture.trim() !== ''
+            ? getImageUrl(item.profile_picture)
+            : null,
+        [item.profile_picture]
+    );
+
     return (
         <View
             style={[
@@ -35,19 +51,26 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
         >
             <View style={detailsStyles.topRow}>
                 <View style={detailsStyles.avatar}>
-                    <Ionicons
-                        name="person-circle-outline"
-                        size={55}
-                        color="#9ca3af"
-                        style={detailsStyles.logo}
-                    />
+                    {profileImageUri ? (
+                        <Image
+                            source={{ uri: profileImageUri }}
+                            style={detailsStyles.avatarImage}
+                            resizeMode="cover"
+                        />
+                    ) : (
+                        <View style={detailsStyles.avatarFallback}>
+                            <Text style={detailsStyles.avatarInitials}>{initials}</Text>
+                        </View>
+                    )}
                 </View>
+
                 <LinearGradient
                     colors={['#e8341a', '#f4a100', '#1a73e8']}
                     start={{ x: 0, y: 1 }}
                     end={{ x: 1, y: 0 }}
                     style={detailsStyles.divider}
                 />
+
                 <View style={detailsStyles.info}>
                     <Text style={commonStyles.title}>{fullName}</Text>
                     <Text style={commonStyles.text}>
@@ -56,7 +79,6 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                 </View>
             </View>
 
-            {/* BUTTONS ROW */}
             <View style={{ flexDirection: 'row', gap: 6 }}>
                 <TouchableOpacity
                     style={[commonStyles.favoriteButton, { borderRadius: 0 }]}
@@ -99,5 +121,4 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
     );
 };
 
-// ✅ CRITICAL: Use default export (NOT React.memo for now to debug)
 export default FanEventCard;

@@ -5,14 +5,14 @@
     "Upcoming": "À venir"
   },
   "official": {
-    "title": "ÉVÉNEMENTS PARTENAIRES OFFICIELS"
+    "title": "ÉVÉNEMENTS DES PARTENAIRES OFFICIELS"
   },
   "personal": {
     "title": "TROUVER UN ATHLÈTE",
     "description": "Suivez vos propres activités",
     "button": "ALLER À L'ÉVÉNEMENT PERSONNEL"
   },
-  "searching": "Recherche...",
+  "searching": "Recherche en cours...",
   "empty": {
     "past": "Aucun événement passé trouvé.",
     "live": "Aucun événement en direct pour le moment.",
@@ -20,16 +20,16 @@
     "searchNoResults": "Aucun événement ne correspond à votre recherche"
   },
   "success": {
-    "followTitle": "Ajouté aux Favoris",
-    "followMessage": "Vous avez ajouté avec succès aux favoris.",
-    "unfollowTitle": "Retiré des Favoris",
-    "unfollowMessage": "Vous avez été retiré des favoris."
+    "followTitle": "Suivi Réussi",
+    "followMessage": "Vous suivez maintenant cet athlète.",
+    "unfollowTitle": "Ne Plus Suivre Réussi",
+    "unfollowMessage": "Vous ne suivez plus cet athlète."
   },
   "error": {
-    "failed": "Impossible de charger les événements",
+    "failed": "Échec du chargement des événements",
     "retry": "Réessayer",
     "title": "Erreur",
-    "message": "Quelque chose s'est mal passé. Veuillez réessayer."
+    "message": "Une erreur s'est produite. Veuillez réessayer."
   },
   "button": {
     "viewprofile": "VOIR",

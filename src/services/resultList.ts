@@ -117,7 +117,7 @@ export const resultList = {
         language_id,
       };
 
-      if (params.product_option_value_app_id !== undefined) {
+      if (params.product_option_value_app_id !== undefined && params.product_option_value_app_id != 0) {
         requestBody.product_option_value_app_id =
           params.product_option_value_app_id;
       }

@@ -37,9 +37,9 @@ export const detailsStyles = StyleSheet.create({
   // ✅ UPDATED COUNT BADGE - MORE PADDING FOR READABILITY
   count: {
     backgroundColor: colors.success,
-    minWidth: 100,              // ✅ Minimum width for long text
-    paddingHorizontal: 12,      // ✅ More horizontal padding (was implicit via width)
-    paddingVertical: 10,        // ✅ Reduced from 12 for better proportion
+    minWidth: 100,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderTopRightRadius: 20,
     borderBottomStartRadius: 20,
     alignItems: "center",
@@ -55,15 +55,47 @@ export const detailsStyles = StyleSheet.create({
     padding: 16,
   },
   topRow: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
+    padding: spacing.md,
   },
+  
+  // ✅ AVATAR CONTAINER
   avatar: {
-    alignItems: "center",
-    justifyContent: "center",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    overflow: 'hidden',
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+
+  // ✅ AVATAR IMAGE STYLE
+  avatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+
+  // ✅ AVATAR FALLBACK (FOR INITIALS)
+  avatarFallback: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ✅ AVATAR INITIALS TEXT
+  avatarInitials: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.primary,
+    textTransform: 'uppercase',
+  },
+
   logo: {
     textAlign: "center",
     width: 100,
@@ -71,8 +103,8 @@ export const detailsStyles = StyleSheet.create({
   },
   divider: {
     width: 3,
-    height: 100,
-    marginHorizontal: 15,
+    height: 55,
+    marginHorizontal: spacing.md,
   },
   info: {
     flex: 1,
@@ -81,24 +113,22 @@ export const detailsStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
+  
   // ✅ LIVE TRACKING BADGE STYLES
   liveTrackingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.success + '15', // Light green background
-    paddingVertical: 8,
+    backgroundColor: '#f0fdf4',
+    paddingVertical: 6,
     paddingHorizontal: 12,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.success,
+    gap: 6,
   },
+  
   liveTrackingText: {
-    color: colors.success,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    marginLeft: 6,
+    color: colors.success,
+    textTransform: 'uppercase',
   },
 });

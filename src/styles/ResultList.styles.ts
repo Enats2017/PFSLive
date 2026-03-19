@@ -74,7 +74,6 @@ export const resultListStyle = StyleSheet.create({
     fontWeight: typography.weights.bold,
   },
 
-  // ── Result card ────────────────────────────────────────────────────────
   card: {
     backgroundColor: "#fff",
     marginBottom: 10,
@@ -90,7 +89,6 @@ export const resultListStyle = StyleSheet.create({
     elevation: 10,
   },
 
-  // ✅ CARD WITH LEFT BORDER (FOR BEFORE RACE AND LIVE)
   cardWithLeftBorder: {
     backgroundColor: "#fff",
     marginBottom: 10,
@@ -108,6 +106,18 @@ export const resultListStyle = StyleSheet.create({
     borderLeftColor: colors.primary,
   },
 
+  // ✅ CORNER OVERLAY - BLOCKS CARD CLICKS (INVISIBLE)
+  cornerOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 72,
+    height: 72,
+    zIndex: 15,
+    backgroundColor: 'transparent', // Invisible
+  },
+
+  // ✅ CORNER WRAPPER (VISUAL ONLY)
   cornerWrap: {
     position: "absolute",
     top: 0,
@@ -115,10 +125,9 @@ export const resultListStyle = StyleSheet.create({
     width: 72,
     height: 72,
     zIndex: 10,
-    alignItems: "flex-end",
-    borderTopRightRadius: 10,
-    overflow: "hidden",
+    overflow: 'visible',
   },
+
   cornerTriangle: {
     position: "absolute",
     top: 0,
@@ -130,6 +139,7 @@ export const resultListStyle = StyleSheet.create({
     borderTopColor: colors.primary,
     borderLeftColor: "transparent",
   },
+
   cornerNum: {
     position: "absolute",
     top: 6,
@@ -138,9 +148,43 @@ export const resultListStyle = StyleSheet.create({
     fontSize: 20,
     fontWeight: "900",
   },
-  cornerStarBtn: { position: "absolute", top: 35, right: 20 },
-  cornerStar: { color: colors.gray700, fontSize: 40 },
-  cornerStarActive: { color: colors.success },
+
+  // ✅ STAR BUTTON - CORRECT POSITION (BOTTOM-RIGHT OF CORNER)
+  cornerStarBtn: {
+    position: "absolute",
+    top: 0,              // ✅ Position at top-right corner
+    right: 0,            // ✅ Align to right edge
+    width: 72,           // ✅ Cover entire corner area
+    height: 72,          // ✅ Cover entire corner area
+    justifyContent: 'flex-end',  // ✅ Align content to bottom
+    alignItems: 'flex-end',      // ✅ Align content to right
+    paddingBottom: 2,    // ✅ Small padding from bottom
+    paddingRight: 2,     // ✅ Small padding from right
+    zIndex: 20,          // ✅ Highest z-index
+    backgroundColor: 'transparent',
+  },
+
+  // ✅ FILLED STAR (GOLDEN)
+  cornerStar: {
+    fontSize: 50,
+    lineHeight: 50,
+    color: '#FFD700',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+
+  // ✅ UNFILLED STAR (WHITE)
+  cornerStarUnfilled: {
+    fontSize: 50,
+    lineHeight: 50,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
 
   cardTop: {
     flexDirection: "row",

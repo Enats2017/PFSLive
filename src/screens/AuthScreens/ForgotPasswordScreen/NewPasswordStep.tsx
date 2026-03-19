@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import FloatingLabelInput from '../../../components/FloatingLabelInput';
 import { authService } from '../../../services/authService';
 import { forgotStyles } from '../../../styles/forgetPassword.styles';
-import { commonStyles, colors } from '../../../styles/common.styles'; // ✅ IMPORT colors
+import { commonStyles, colors } from '../../../styles/common.styles';
 
 interface NewPasswordStepProps {
   passwordResetToken: string;
@@ -131,7 +131,7 @@ const NewPasswordStep: React.FC<NewPasswordStepProps> = ({
     <View style={forgotStyles.container}>
       {/* Icon */}
       <View style={forgotStyles.iconCircle}>
-        <Ionicons name="shield-checkmark-outline" size={38} color={colors.primary} /> {/* ✅ USE colors.primary */}
+        <Ionicons name="shield-checkmark-outline" size={38} color={colors.primary} />
       </View>
 
       {/* Title & Subtitle */}

@@ -39,7 +39,8 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         });
     }
 
-    const { followedUsers, isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
+    // ✅ PASS product_app_id TO HOOK
+    const { isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t, product_app_id);
 
     const initialType = sourceTab === 'live'
         ? TYPE_OPTIONS[1]
@@ -61,24 +62,24 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         distanceOptions, categoryOptions,
         selectedDistanceLabel, selectedCategoryLabel,
         raceStatus, currentPovId,
-        showUtmbIndex, // ✅ GET FLAG FROM HOOK
-    } = useResultList(product_app_id, product_option_value_app_id, followedUsers, initialType);
+        showUtmbIndex,
+    } = useResultList(product_app_id, product_option_value_app_id, new Set(), initialType); // ✅ Pass empty set
 
     if (API_CONFIG.DEBUG) {
         console.log('📊 Race status:', raceStatus);
         console.log('🎯 Show UTMB Index:', showUtmbIndex);
     }
 
-    // ✅ DETERMINE WHICH CARD TO RENDER
+    // ✅ RENDER ITEM WITH DUAL FOLLOW SYSTEM
     const renderItem = useCallback(({ item }: { item: RaceResult }) => {
         const commonProps = {
             item,
-            isFollowed: followedUsers.has(Number(item.customer_app_id)),
-            isLoading: isLoading(item.customer_app_id),
-            onToggleFollow: () => toggleFollow(item.customer_app_id),
+            product_app_id, // ✅ PASS product_app_id
+            isFollowed: isFollowed(product_app_id, item.bib, item.customer_app_id),
+            isLoading: isLoading(product_app_id, item.bib, item.customer_app_id),
+            onToggleFollow: () => toggleFollow(product_app_id, item.bib, item.customer_app_id),
         };
 
-        // ✅ PRIORITY 1: If race hasn't started, show BeforeRace card
         if (raceStatus === 'not_started') {
             return (
                 <ResultCardBeforeRace
@@ -86,25 +87,23 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     showUtmbIndex={showUtmbIndex} 
                      raceStatus={raceStatus}
                     product_app_id={product_app_id}
-                    currentPovId={currentPovId}// ✅ PASS FLAG
+                    currentPovId={currentPovId}
+                     showUtmbIndex={showUtmbIndex}// ✅ PASS FLAG                  
                 />
             );
         }
 
-        // ✅ PRIORITY 2: If sourceTab is 'live', show Live card
         if (sourceTab === 'live' && raceStatus !== 'finished') {
             return (
                 <ResultCardLive
                     {...commonProps}
                     fromLive={fromLive}
                     raceStatus={raceStatus}
-                    product_app_id={product_app_id}
                     currentPovId={currentPovId}
                 />
             );
         }
 
-        // ✅ PRIORITY 3: Default to regular ResultCard
         return (
             <ResultCard
                 {...commonProps}
@@ -115,7 +114,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             />
         );
     }, [
-        followedUsers,
+        isFollowed,
         isLoading,
         toggleFollow,
         raceStatus,
@@ -123,7 +122,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         fromLive,
         product_app_id,
         currentPovId,
-        showUtmbIndex, // ✅ ADD TO DEPENDENCIES
+        showUtmbIndex,
     ]);
 
     const ListFooter = useCallback(() =>
@@ -241,6 +240,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     product_app_id={product_app_id}
                     event_name={event_name}
                     product_option_value_app_id={product_option_value_app_id}
+                    sourceTab={sourceTab}
                 />
             ) : (
                 <BottomNavigation

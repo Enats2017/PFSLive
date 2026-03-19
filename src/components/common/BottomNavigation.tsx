@@ -53,7 +53,8 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             product_option_value_app_id,
             event_name: event_name || '',
             sourceScreen: route.name,
-            sectionType: 'participant', 
+            sectionType: 'participant',
+            sourceTab: 'live', 
           });
         } else {
           console.log('Results: Missing product_app_id');
@@ -67,7 +68,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             product_option_value_app_id,
             event_name: event_name || '',
             sourceScreen: route.name,
-             sectionType: 'participant', // ✅ PASS CURRENT SCREEN AS SOURCE
+            sectionType: 'participant', // ✅ PASS CURRENT SCREEN AS SOURCE
           });
         } else {
           console.log('Map: Missing required parameters');
@@ -118,7 +119,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             auto_register_id: null,
           });
         } else {
-          navigation.navigate('Home');
+          navigation.navigate('HomeScreen');
         }
       }
     }
@@ -143,7 +144,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         });
       } else {
         console.log('📍 Default → Home');
-        navigation.navigate('Home');
+        navigation.navigate('HomeScreen');
       }
     }
   };

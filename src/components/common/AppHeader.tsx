@@ -15,7 +15,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   const navigation = useNavigation<any>();
 
-   const handleProfilePress = async () => {
+  const handleLogoPress = () => {
+    navigation.navigate('HomeScreen');
+  };
+
+  const handleProfilePress = async () => {
     const isValid = await tokenService.isTokenValid();
     if (isValid) {
       const customer_app_id = await tokenService.getCustomerId();
@@ -26,17 +30,22 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       navigation.navigate('LoginScreen');
     }
   };
+
   return (
     <View style={headerStyles.container}>
-      {/* Left Side - Logo Image */}
+      {/* Left Side - Logo Image (Clickable) */}
       <View style={headerStyles.leftSection}>
-        <View style={headerStyles.logo}>
+        <TouchableOpacity 
+          style={headerStyles.logo}
+          onPress={handleLogoPress}
+          activeOpacity={0.7}
+        >
           <Image
             source={require('../../../assets/livio_logo.png')}
             style={headerStyles.logoImage}
             resizeMode="contain"
           />
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Center - Title (only if provided) */}
@@ -52,14 +61,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       <View style={headerStyles.rightSection}>
         <TouchableOpacity
           style={headerStyles.iconButton}
-          onPress={() =>navigation.navigate('LoginScreen')}
+          onPress={() => navigation.navigate('LoginScreen')}
         >
           <Text style={headerStyles.icon}>⚙️</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
           style={headerStyles.iconButton}
-         onPress={handleProfilePress}
+          onPress={handleProfilePress}
         >
           <Text style={headerStyles.icon}>👤</Text>
         </TouchableOpacity>

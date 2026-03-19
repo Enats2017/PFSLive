@@ -44,8 +44,8 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const { t } = useTranslation(['profile', 'common', 'follower']);
     const flatListRef = useRef<FlatList>(null);
     
-    // ✅ USE FOLLOW MANAGER HOOK
-    const { isFollowed, isLoading, toggleFollow } = useFollowManager(t);
+    // ✅ USE FOLLOW MANAGER (CUSTOMER-ONLY MODE)
+    const { isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
     
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
@@ -74,7 +74,6 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
 
     // ✅ FETCH PROFILE (with optional cache busting)
     const fetchProfile = useCallback(async (bustCache: boolean = false) => {
-        // ✅ GUARD: Check if targetId is valid
         if (!targetId || targetId === 0) {
             if (API_CONFIG.DEBUG) {
                 console.error('❌ Invalid targetId:', targetId);
@@ -141,7 +140,6 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     // ✅ FETCH INITIAL DATA
     useFocusEffect(
         useCallback(() => {
-            // ✅ Skip if targetId is invalid
             if (!targetId || targetId === 0) {
                 return;
             }
@@ -153,28 +151,35 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                 return;
             }
 
-            if (fromEdit) {
-                if (API_CONFIG.DEBUG) {
-                    console.log('🔄 Coming from edit screen - busting cache');
+            const fetchData = async () => {
+                // ✅ Refresh follow state first
+                await refreshFollowedUsers();
+
+                if (fromEdit) {
+                    if (API_CONFIG.DEBUG) {
+                        console.log('🔄 Coming from edit screen - busting cache');
+                    }
+                    await fetchProfile(true);
+                } else if (isInitialMount.current) {
+                    isInitialMount.current = false;
+                    await fetchProfile(false);
+                } else {
+                    if (API_CONFIG.DEBUG) {
+                        console.log('🔄 Returning to screen - syncing scroll only');
+                    }
+                    const index = TABS.indexOf(activeTab);
+                    setTimeout(() => {
+                        flatListRef.current?.scrollToIndex({ index, animated: false });
+                    }, 50);
                 }
-                fetchProfile(true);
-            } else if (isInitialMount.current) {
-                isInitialMount.current = false;
-                fetchProfile(false);
-            } else {
-                if (API_CONFIG.DEBUG) {
-                    console.log('🔄 Returning to screen - syncing scroll only');
-                }
-                const index = TABS.indexOf(activeTab);
-                setTimeout(() => {
-                    flatListRef.current?.scrollToIndex({ index, animated: false });
-                }, 50);
-            }
+            };
+
+            fetchData();
 
             return () => {
                 isFetching.current = false;
             };
-        }, [fetchProfile, activeTab, fromEdit, targetId])
+        }, [fetchProfile, activeTab, fromEdit, targetId, refreshFollowedUsers])
     );
 
     // ✅ LOAD MORE LIVE
@@ -350,7 +355,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
 
-            {/* ✅ PASS FOLLOW PROPS - TYPESCRIPT SAFE */}
+            {/* ✅ PROFILE CARD - CUSTOMER-ONLY FOLLOW */}
             <ProfileCard
                 profile={profile}
                 fetchError={error ?? ''}

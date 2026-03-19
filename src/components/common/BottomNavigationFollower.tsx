@@ -11,6 +11,7 @@ interface BottomNavigationFollowerProps {
   product_app_id?: string | number;
   event_name?: string;
   product_option_value_app_id?: string | number;
+  sourceTab?: 'past' | 'live' | 'upcoming';
   
 }
 
@@ -19,6 +20,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
   product_app_id,
   event_name,
   product_option_value_app_id,
+  sourceTab
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute();
@@ -51,6 +53,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
             event_name: event_name || '',
             sourceScreen: route.name,
             sectionType: 'follower',
+            sourceTab: sourceTab,
           });
         } else {
           console.log('Results: Missing product_app_id');
@@ -97,10 +100,11 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
         navigation.navigate('FollowDetails', {
           product_app_id,
           event_name: event_name || '',
+          sourceTab: sourceTab,
         });
       } else {
         console.log('📍 Default → Home');
-        navigation.navigate('Home');
+        navigation.navigate('HomeScreen');
       }
     }
   };

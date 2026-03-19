@@ -13,7 +13,7 @@ import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
 import { API_CONFIG } from '../../constants/config';
 import ParticipantCard from './ParticipantCard';
-import { useFollowManager } from '../../hooks/useFollowManager'; // ✅ IMPORT HOOK
+import { useFollowManager } from '../../hooks/useFollowManager';
 
 interface ParticipantTabProps {
   product_app_id: string | number;
@@ -22,8 +22,9 @@ interface ParticipantTabProps {
 const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
   const { t } = useTranslation(['details', 'follower']);
 
-  // ✅ USE FOLLOW MANAGER HOOK
-  const { isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
+  // ✅ PASS product_app_id TO HOOK
+  const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
+  const { isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t, productId);
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,12 +50,12 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         if (API_CONFIG.DEBUG) {
           console.log(`📡 Fetching participants page ${pageNum}`, {
             search: search || '(none)',
-            product_app_id,
+            product_app_id: productId,
           });
         }
 
         const result = await participantService.getParticipants({
-          product_app_id,
+          product_app_id: productId,
           page: pageNum,
           filter_name: search,
         });
@@ -105,13 +106,13 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         setLoadingMore(false);
       }
     },
-    [product_app_id, t]
+    [productId, t]
   );
 
   // ✅ INITIAL LOAD
   useFocusEffect(
     useCallback(() => {
-      refreshFollowedUsers(); // Refresh follow state
+      refreshFollowedUsers();
       fetchParticipants(1, '');
     }, [fetchParticipants, refreshFollowedUsers])
   );
@@ -154,17 +155,23 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     fetchParticipants(page + 1, searchText);
   }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
-  // ✅ SIMPLIFIED RENDER
+  // ✅ RENDER WITH DUAL FOLLOW SYSTEM
   const renderParticipant = useCallback(
-    ({ item }: { item: Participant }) => (
-      <ParticipantCard
-        item={item}
-        isFollowed={isFollowed(item.customer_app_id)}
-        isLoading={isLoading(item.customer_app_id)}
-        onToggleFollow={() => toggleFollow(item.customer_app_id)}
-      />
-    ),
-    [isFollowed, isLoading, toggleFollow]
+    ({ item }: { item: Participant }) => {
+      // Use bib_number as fallback if bib doesn't exist
+      const bib = item.bib || item.bib_number || '';
+      
+      return (
+        <ParticipantCard
+          item={item}
+          product_app_id={productId}
+          isFollowed={isFollowed(productId, bib, item.customer_app_id)}
+          isLoading={isLoading(productId, bib, item.customer_app_id)}
+          onToggleFollow={() => toggleFollow(productId, bib, item.customer_app_id)}
+        />
+      );
+    },
+    [productId, isFollowed, isLoading, toggleFollow]
   );
 
   const renderFooter = useCallback(() => {

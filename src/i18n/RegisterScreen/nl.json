@@ -32,15 +32,22 @@
     "termsRequired": "U moet akkoord gaan met de algemene voorwaarden",
     "deviceAlreadyRegistered": "Dit apparaat is al gekoppeld aan een account. Log in."
   },
+  "imageSource": {
+    "title": "Choose Photo Source",
+    "message": "Select where you want to pick your profile photo from",
+    "camera": "Take Photo",
+    "gallery": "Choose from Gallery"
+  },
   "alerts": {
-    "email_exists": "Dit e-mailadres is al geregistreerd",
-    "permissionRequired": "Toestemming Vereist",
-    "galleryPermission": "Geef toegang tot uw galerij om een foto te uploaden.",
-    "deviceNotAllowed": "Apparaat Niet Toegestaan",
-    "deviceNotAllowedMessage": "Dit account is gekoppeld aan een ander apparaat. Neem contact op met support.",
-    "noConnection": "Geen Internetverbinding",
-    "noConnectionMessage": "Controleer uw internetverbinding en probeer het opnieuw.",
-    "genericError": "Fout",
-    "genericErrorMessage": "Er is iets misgegaan. Probeer het later opnieuw."
+    "permissionRequired": "Permission Required",
+    "cameraPermission": "Camera permission is required to take photos",
+    "galleryPermission": "Gallery permission is required to select photos",
+    "deviceNotAllowed": "Device Not Allowed",
+    "deviceNotAllowedMessage": "This device is not authorized for registration",
+    "noConnection": "No Connection",
+    "noConnectionMessage": "Please check your internet connection",
+    "genericError": "Error",
+    "genericErrorMessage": "Something went wrong. Please try again.",
+    "email_exists": "This email is already registered"
   }
 }

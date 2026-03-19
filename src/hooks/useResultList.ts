@@ -134,7 +134,7 @@ export const useResultList = (
           }
         }
 
-        if (povId === undefined && data.distances.length > 0) {
+        if ((povId === undefined || povId === 0) && data.distances.length > 0) {
           const firstDistance = data.distances[0];
           setSelectedPovId(firstDistance.product_option_value_app_id);
 

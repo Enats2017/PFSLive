@@ -466,6 +466,7 @@ const DistanceTab = ({
         visible={successVisible}
         message={t('details:success.message')}
         onClose={handleSuccessModalClose}
+        title={t('details:success.label')}
       />
 
       <UndoConfirmModal

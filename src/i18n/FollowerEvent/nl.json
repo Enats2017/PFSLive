@@ -8,22 +8,22 @@
     "title": "OFFICIËLE PARTNER EVENEMENTEN"
   },
   "personal": {
-    "title": "ZOEK EEN ATLEET",
+    "title": "VIND EEN ATLEET",
     "description": "Volg je eigen activiteiten",
     "button": "GA NAAR PERSOONLIJK EVENEMENT"
   },
   "searching": "Zoeken...",
   "empty": {
-    "past": "Geen eerdere evenementen gevonden.",
+    "past": "Geen evenementen uit het verleden gevonden.",
     "live": "Momenteel geen live evenementen.",
     "upcoming": "Geen aankomende evenementen gevonden.",
     "searchNoResults": "Geen evenementen komen overeen met je zoekopdracht"
   },
   "success": {
-    "followTitle": "Toegevoegd aan Favorieten",
-    "followMessage": "Je hebt succesvol toegevoegd aan favorieten.",
-    "unfollowTitle": "Verwijderd uit Favorieten",
-    "unfollowMessage": "Je bent verwijderd uit favorieten."
+    "followTitle": "Volgen Gelukt",
+    "followMessage": "Je volgt nu deze atleet.",
+    "unfollowTitle": "Ontvolgen Gelukt",
+    "unfollowMessage": "Je bent gestopt met het volgen van deze atleet."
   },
   "error": {
     "failed": "Kan evenementen niet laden",
@@ -32,7 +32,7 @@
     "message": "Er is iets misgegaan. Probeer het opnieuw."
   },
   "button": {
-    "viewprofile": "BEKIJKEN",
+    "viewprofile": "BEKIJK",
     "follower": "VOLGEN",
     "show_event": "TOON EVENEMENT",
     "unfollow": "ONTVOLGEN",
