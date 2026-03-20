@@ -88,7 +88,6 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                      raceStatus={raceStatus}
                     product_app_id={product_app_id}
                     currentPovId={currentPovId}
-                     showUtmbIndex={showUtmbIndex}// ✅ PASS FLAG                  
                 />
             );
         }
