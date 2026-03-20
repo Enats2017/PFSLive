@@ -75,7 +75,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
         break;
         
       case 'Favorites':
-        console.log('Favorites screen not implemented yet');
+        navigation.navigate('FavouriteList');
         break;
     }
   };

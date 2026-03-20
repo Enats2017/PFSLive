@@ -60,8 +60,10 @@ export type RootStackParamList = {
     sourceTab?: "past" | "live" | "upcoming";
   };
 
-  ForgotPassword:undefined
+  ForgotPassword:undefined;
+  FavouriteList:undefined;
 };
+
 
 export type HomeScreenProps = NativeStackScreenProps<
   RootStackParamList,
@@ -135,4 +137,9 @@ export type followerDetailspops = NativeStackScreenProps<
 export type ForgotPasswordScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "ForgotPassword"
+>;
+
+export type FavouriteListpops = NativeStackScreenProps<
+  RootStackParamList,
+  "FavouriteList"
 >;
