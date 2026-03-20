@@ -11,7 +11,7 @@ export const resultInfoStyles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.white,
     paddingTop: spacing.sm,
-    marginBottom:spacing.xxxl
+    marginBottom: spacing.xxxl,
   },
 
   header: {
@@ -19,16 +19,14 @@ export const resultInfoStyles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 13,
-    gap:10
+    gap: 10,
   },
   headerBackBtn: {
     width: 32,
   },
   headerCenter: {
     flex: 1,
-    
   },
-
   headerRightBtn: {
     width: 32,
     alignItems: "flex-end",
@@ -47,7 +45,6 @@ export const resultInfoStyles = StyleSheet.create({
     minWidth: width / 3,
     position: "relative",
   },
-
   tabTextActive: {
     color: colors.black,
     fontWeight: typography.weights.bold,
@@ -104,7 +101,6 @@ export const resultInfoStyles = StyleSheet.create({
     borderBottomColor: "transparent",
     borderLeftColor: "transparent",
   },
-
   diagRight: {
     width: 0,
     height: 0,
@@ -118,7 +114,6 @@ export const resultInfoStyles = StyleSheet.create({
     borderBottomColor: "transparent",
     borderLeftColor: "transparent",
   },
-
   headerMiddle: {
     flex: 1,
   },
@@ -185,77 +180,83 @@ export const resultInfoStyles = StyleSheet.create({
     borderColor: colors.gray300,
   },
 
+  // ── Timeline Styles ──────────────────────────────────────
   leftCol: {
-    width: 64,
-    alignSelf: "stretch",
-    alignItems: "center",
+      width: 64,
+      alignSelf: "stretch",
+      alignItems: "center",
   },
 
   iconSpacer: {
-    height: 158,
+      height: 158,
   },
 
   lineTop: {
-    width: 2,
-    height: 158,
-    backgroundColor: colors.primaryLight,
+      width: 2,
+      height: 158,
+      backgroundColor: colors.primaryLight,
   },
 
   iconCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 2,
   },
   iconCircleDone: {
-    backgroundColor: colors.primaryLight,
+      backgroundColor: colors.primaryLight,
   },
-
-    iconCirclePending: {
-    backgroundColor: colors.primaryLight,
+  iconCirclePending: {
+      backgroundColor: colors.primaryLight,
   },
 
   lineBottomWrap: {
-    flex: 1,
-    width: "100%",
-    alignItems: "center",
-    position: "relative",
+      flex: 1,
+      width: "100%",
+      alignItems: "center",
+      position: "relative",
+      minHeight: 200,        // ✅ Ensure consistent minimum height
   },
 
   lineBottom: {
-    position: "absolute",
-    top: 4,
-    bottom: 0,
-    width: 2,
-    backgroundColor: colors.primaryLight,
+      position: "absolute",
+      top: 4,
+      bottom: 0,
+      width: 2,
+      backgroundColor: colors.primaryLight,
   },
 
+  // ✅ VERIFIED: Fixed positioning at approximately half the card height
   segmentLabels: {
-    position: "absolute",
-    top: 200,
-    bottom: 10,
-    left: -15, // flush left of the leftCol
-     // just left of center line
-    gap: 10,
+      position: "absolute",
+      top: 180,              // ✅ Approximately half of typical card height (~360px)
+      left: -25,
+      width: 80,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
   },
+
   segmentText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.primary,
-    letterSpacing: 0.3,
-    transform: [{ rotate: "-90deg" }],
-
-    textAlign: "center",
+      fontSize: 15,
+      fontWeight: typography.weights.bold,
+      color: colors.primary,
+      letterSpacing: 0.3,
+      transform: [{ rotate: "-90deg" }],
+      textAlign: "center",
+      width: 80,
+      height: 20,
   },
 
+  // ── Checkpoint Card Styles ──────────────────────────────
   timingcard: {
     flex: 1,
     backgroundColor: colors.white,
     borderRadius: 14,
-    marginBottom: 5, // NO bottom margin — no gap
+    marginBottom: 5,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -269,14 +270,12 @@ export const resultInfoStyles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 20,
     paddingHorizontal: 16,
-
     marginBottom: 4,
   },
 
   twoColRow: {
     flexDirection: "row",
     alignItems: "stretch",
-
     paddingVertical: 30,
   },
   twoColLeft: {
@@ -295,30 +294,30 @@ export const resultInfoStyles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 8,
   },
+
+  // ── Avatar / Profile ─────────────────────────────────────
   avatarCircle: {
-    marginTop:10,
+    marginTop: 10,
     width: 120,
     height: 140,
     borderRadius: 15,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    
   },
 
-  initials:{
-   marginTop:10,
+  initials: {
+    marginTop: 10,
     width: 120,
     height: 140,
     borderRadius: 15,
-    backgroundColor:colors.gray200,
+    backgroundColor: colors.gray200,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-
   },
 
-  // ── Row / Col layout ──────────────────────────────────────────────────
+  // ── Row / Col Layout ─────────────────────────────────────
   row: {
     flexDirection: "row",
     marginBottom: 20,
@@ -333,6 +332,7 @@ export const resultInfoStyles = StyleSheet.create({
     backgroundColor: colors.gray400,
   },
 
+  // ── UTMB Badges ──────────────────────────────────────────
   utmbIndexBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -382,6 +382,7 @@ export const resultInfoStyles = StyleSheet.create({
     letterSpacing: 1,
   },
 
+  // ── Misc ─────────────────────────────────────────────────
   cornerBadge: {
     backgroundColor: colors.info,
     alignSelf: "flex-start",

@@ -31,10 +31,12 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
     const { t } = useTranslation(['allrace', 'common']);
     const navigation = useNavigation<any>();
 
-    const hasUtmbIndex =
-        showUtmbIndex &&
+    // ✅ Check if UTMB index exists and is not 0
+    const hasUtmbIndex = showUtmbIndex &&
         item.utmb_index &&
-        item.utmb_index.trim() !== '';
+        item.utmb_index.trim() !== '' &&
+        item.utmb_index !== '0' &&
+        Number(item.utmb_index) !== 0;
 
     const handlePress = () => {
         navigation.navigate('ResultDetails', {
@@ -56,7 +58,6 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
             style={resultListStyle.cardWithLeftBorder}
             onPress={handlePress}
         >
-
             {/* Corner Star */}
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
                 <View style={resultListStyle.cornerTriangle} pointerEvents="none" />
@@ -103,22 +104,38 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                 </Text>
 
                 <View style={resultListStyle.statsRow}>
-                    {hasUtmbIndex ? (
-                        <View style={resultListStyle.statCol}>
-                            <Text style={resultListStyle.statLabel}>
-                                {t('allrace:race.BonBola_ca')}
-                            </Text>
-                            <Text style={resultListStyle.statVal}>
-                                {item.utmb_index}
-                            </Text>
-                        </View>
-                    ) : (
-                        <View style={resultListStyle.statCol}>
-                            <Text style={resultListStyle.statLabel}>—</Text>
-                            <Text style={resultListStyle.statVal}>—</Text>
-                        </View>
-                    )}
+                    {/* ✅ UTMB Index Section - Always visible */}
+                    <View style={resultListStyle.statCol}>
+                        {hasUtmbIndex ? (
+                            <View style={resultListStyle.beforeRaceLeftHalf}>
+                                <View style={resultListStyle.utmbSection}>
+                                    <View style={resultListStyle.utmbBadge}>
+                                        <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
+                                        <Text style={resultListStyle.utmbBadgeTextBottom}>
+                                            {t('allrace:race.utmbIndex')}
+                                        </Text>
+                                    </View>
+                                    <Text style={resultListStyle.utmbValue}>
+                                        {item.utmb_index}
+                                    </Text>
+                                </View>
+                            </View>
+                        ) : (
+                            <View style={resultListStyle.beforeRaceLeftHalf}>
+                                <View style={resultListStyle.utmbSection}>
+                                    <View style={resultListStyle.utmbBadge}>
+                                        <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
+                                        <Text style={resultListStyle.utmbBadgeTextBottom}>
+                                            {t('allrace:race.utmbIndex')}
+                                        </Text>
+                                    </View>
+                                    <Text style={resultListStyle.statLabel}>—</Text>
+                                </View>
+                            </View>
+                        )}
+                    </View>
 
+                    {/* Flag Section */}
                     <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
                         <View style={resultListStyle.flagRow}>
                             {item.nation_flag && (

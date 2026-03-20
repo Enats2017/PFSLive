@@ -1,17 +1,14 @@
-
 import React, { useCallback, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StatusBar, Dimensions, ScrollView, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StatusBar, Dimensions, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, Entypo } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ResultDetailspops } from '../../types/navigation';
 import RaceInfoTab from './RaceInfoTab';
 import TimingPointTab from './TimingPointTab';
 import RunnerInfoTab from './RunnerInfoTab';
-import AwardsTab from './AwardsTab';
-import Entypo from '@expo/vector-icons/Entypo';
 import { resultInfoStyles as s } from '../../styles/resultDetails.styles';
 import { colors, commonStyles } from '../../styles/common.styles';
 import RaceLive from './RaceLive';
@@ -42,30 +39,38 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         from_live ?? 0,
     );
 
-    console.log("111", data?.runner_info);
-
-
-    console.log("11111", raceStatus);
-    console.log("product_app_id", product_app_id);
-    console.log("product_option_value_app_id", product_option_value_app_id);
-    console.log("bib", bib);
-    const { isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
+    const { isFollowed, isLoading, toggleFollow } = useFollowManager(t, product_app_id);
+    
     const [activeTab, setActiveTab] = useState<TabKey>('raceInfo');
     const flatListRef = useRef<FlatList<TabKey>>(null);
     const tabScrollRef = useRef<ScrollView>(null);
 
-    const canFollow =
-        data?.race_info?.customer_app_id != null &&
-        data?.race_info?.customer_app_id > 0;
+    const canFollow = !!(
+        (data?.race_info?.customer_app_id && data.race_info.customer_app_id > 0) ||
+        (data?.race_info?.bib && product_app_id)
+    );
 
-    const Followed = isFollowed(data?.race_info?.customer_app_id)
+    // ✅ FIX: Call isFollowed as a function
+    const Followed = isFollowed(
+        product_app_id,
+        data?.race_info?.bib ?? '',
+        data?.race_info?.customer_app_id
+    );
+
+    // ✅ FIX: Call isLoading as a function
+    const Loading = isLoading(
+        product_app_id,
+        data?.race_info?.bib ?? '',
+        data?.race_info?.customer_app_id
+    );
 
     const handleFollow = () => {
-        if (!data?.race_info?.customer_app_id) return;
-
+        if (!canFollow) return;
+        
         toggleFollow(
+            product_app_id,
+            data?.race_info?.bib ?? '',
             data?.race_info?.customer_app_id
-
         );
     };
 
@@ -74,7 +79,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         setActiveTab(tab);
         flatListRef.current?.scrollToIndex({ index, animated: true });
         tabScrollRef.current?.scrollTo({
-            x: index * (width / 3) - width / 6,   // center the active tab
+            x: index * (width / 3) - width / 6,
             animated: true,
         });
     }, []);
@@ -110,23 +115,18 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     <UpcomingRace
                         raceInfo={data?.race_info}
                         event={data?.event}
-
                     />
                 ) : null
             )}
             {item === 'timingPoint' && (
-
-                <LiveTimingPoint checkpoints={data?.checkpoints}
-
-                />
-
+                <LiveTimingPoint checkpoints={data?.checkpoints} />
             )}
             {item === 'runnerInfo' && (
                 <RunnerInfoTab runnerInfo={data?.runner_info} />
             )}
-
         </View>
     ), [data, raceStatus]);
+
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
@@ -140,28 +140,22 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                 </TouchableOpacity>
 
                 <View style={s.headerCenter}>
-                    <Text style={commonStyles.title}> {data?.race_info.name ?? '...'}</Text>
-                    <Text style={commonStyles.text}> {data?.race_info.bib ?? ''}</Text>
+                    <Text style={commonStyles.title}>{data?.race_info?.name ?? '...'}</Text>
+                    <Text style={commonStyles.text}>{data?.race_info?.bib ?? ''}</Text>
                 </View>
-                {
-                    canFollow && (
-                        <>
-                            <TouchableOpacity
-                                onPress={handleFollow}>
-                                {
-                                    Followed ?
-                                        <Entypo name="heart" size={30} color="black" /> :
-                                        <Entypo name="heart-outlined" size={30} color="black" />
-                                }
-                            </TouchableOpacity>
 
-
-                        </>
-
-                    )
-                }
-
-
+                {canFollow && (
+                    <TouchableOpacity 
+                        onPress={handleFollow} 
+                        disabled={Loading}
+                    >
+                        <Entypo 
+                            name={Followed ? "heart" : "heart-outlined"} 
+                            size={30} 
+                            color="black" 
+                        />
+                    </TouchableOpacity>
+                )}
             </View>
 
             <View>

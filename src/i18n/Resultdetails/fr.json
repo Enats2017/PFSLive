@@ -1,19 +1,29 @@
 {
   "tabs": {
-    "raceInfo": "Informations sur la course",
-    "timingPoint": "Point de chronométrage",
-    "runnerInfo": "Informations du coureur",
+    "raceInfo": "Info Course",
+    "timingPoint": "Point de Temps",
+    "runnerInfo": "Info Coureur",
     "awards": "Récompenses"
   },
   "raceInfo": {
     "finisher": "Finisher",
     "raceTime": "TEMPS DE COURSE",
-    "previousTimingPoint": "POINT DE CHRONOMÉTRAGE PRÉCÉDENT",
+    "previousTimingPoint": "POINT PRÉCÉDENT",
+    "nextTimingPoint": "POINT SUIVANT",
     "overallRanking": "CLASSEMENT\nGÉNÉRAL",
     "rankingInOpen": "CLASSEMENT\nOPEN",
-    "genderRanking": "CLASSEMENT\nPAR GENRE",
+    "genderRanking": "CLASSEMENT\nSEXE",
     "distanceCompleted": "DISTANCE\nPARCOURUE",
-    "elevationGain": "DÉNIVELÉ POSITIF\nDEPUIS LE DÉPART"
+    "elevationGain": "DÉNIVELÉ\nDEPUIS LE DÉPART",
+    "startsIn": "La course commence dans",
+    "raceStarted": "La course a commencé",
+    "raceInProgress": "La course est en cours",
+    "age": "Âge",
+    "overallRank": "Général",
+    "genderRank": "Sexe",
+    "categoryRank": "Catégorie",
+    "in": "dans",
+    "minutes": "minutes"
   },
   "timingPoint": {
     "checkpoint": "POINT DE CONTRÔLE",
@@ -22,23 +32,48 @@
     "time": "TEMPS DE COURSE",
     "ranking": "CLASSEMENT",
     "distance": "DISTANCE",
-    "elevationGain": "DÉNIVELÉ POSITIF",
-    "noData": "Aucune donnée de chronométrage disponible"
+    "elevationGain": "DÉNIVELÉ",
+    "noData": "Aucune donnée de chronométrage disponible",
+    "pace": "ALLURE",
+    "speed": "VITESSE"
   },
   "runnerInfo": {
     "club": "CLUB",
     "category": "CATÉGORIE",
     "utmbIndex": "INDEX",
-    "utmbSeries": "WORLD SERIES",
-    "noClub": "- -"
+    "utmbSeries": "SÉRIE MONDIALE",
+    "noClub": "—"
   },
   "awards": {
     "time": "TEMPS",
     "country": "PAYS",
     "ranking": "CLASSEMENT",
-    "genderRanking": "CLASSEMENT PAR GENRE",
+    "genderRanking": "CLASSEMENT SEXE",
     "distance": "DISTANCE",
-    "elevationGain": "DÉNIVELÉ POSITIF",
-    "noData": "- -"
+    "elevationGain": "DÉNIVELÉ",
+    "noData": "—"
+  },
+  "status": {
+    "not_started": "Pas Commencé",
+    "in_progress": "En Cours",
+    "finished": "Terminé"
+  },
+  "countdown": {
+    "days": "Jours",
+    "hours": "Heures",
+    "minutes": "Min",
+    "seconds": "Sec"
+  },
+  "units": {
+    "km": "km",
+    "meterPlus": "m+",
+    "minPerKm": "min/km",
+    "kmh": "km/h"
+  },
+  "defaults": {
+    "distance": "0.00",
+    "time": "00:00:00",
+    "elevation": "0",
+    "empty": "—"
   }
 }

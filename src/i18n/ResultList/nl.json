@@ -8,13 +8,14 @@
     "diffFirst": "VERSCHIL 1E",
     "ranking": "RANGSCHIKKING",
     "retry": "Opnieuw proberen",
-    "errorLoad": "Resultaten laden mislukt. Tik om opnieuw te proberen."
+    "errorLoad": "Kan resultaten niet laden. Tik om opnieuw te proberen.",
+    "utmbIndex": "INDEX"
   },
-
+  
   "filter": {
     "results": "Resultaten",
     "live": "Live",
-    "favourite": "Favoriet",
+    "favourite": "Favorieten",
     "noFavourites": "Nog geen favorieten. Tik op ☆ bij een resultaat om het op te slaan."
   }
 }

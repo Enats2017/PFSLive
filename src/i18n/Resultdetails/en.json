@@ -1,20 +1,20 @@
 {
   "tabs": {
-    "raceInfo":     "Race Info",
-    "timingPoint":  "Timing point",
-    "runnerInfo":   "Runner Info",
-    "awards":       "Awards"
+    "raceInfo": "Race Info",
+    "timingPoint": "Timing Point",
+    "runnerInfo": "Runner Info",
+    "awards": "Awards"
   },
   "raceInfo": {
-    "finisher":             "Finisher",
-    "raceTime":             "RACE TIME",
-    "previousTimingPoint":  "PREVIOUS TIMING POINT",
-    "nextTimingPoint":   "NEXT TIMING POINT",
-    "overallRanking":       "OVERALL\nRANKING",
-    "rankingInOpen":        "RANKING IN\nOPEN",
-    "genderRanking":        "GENDER\nRANKING",
-    "distanceCompleted":    "DISTANCE\nCOMPLETED",
-    "elevationGain":        "ELEVATION GAIN\nFROM START",
+    "finisher": "Finisher",
+    "raceTime": "RACE TIME",
+    "previousTimingPoint": "PREVIOUS TIMING POINT",
+    "nextTimingPoint": "NEXT TIMING POINT",
+    "overallRanking": "OVERALL\nRANKING",
+    "rankingInOpen": "RANKING IN\nOPEN",
+    "genderRanking": "GENDER\nRANKING",
+    "distanceCompleted": "DISTANCE\nCOMPLETED",
+    "elevationGain": "ELEVATION GAIN\nFROM START",
     "startsIn": "Race starts in",
     "raceStarted": "Race has started",
     "raceInProgress": "Race is in progress",
@@ -22,60 +22,58 @@
     "overallRank": "Overall",
     "genderRank": "Gender",
     "categoryRank": "Category",
-    "in":"in",
-    "minutes":"minutes"
+    "in": "in",
+    "minutes": "minutes"
   },
   "timingPoint": {
-    "checkpoint":    "CHECKPOINT",
-    "startTime":     "START TIME",
-    "arrivalTime":   "ARRIVAL TIME",
-    "time":          "RACE TIME",
-    "ranking":       "RANKING",
-    "distance":      "DISTANCE",
+    "checkpoint": "CHECKPOINT",
+    "startTime": "START TIME",
+    "arrivalTime": "ARRIVAL TIME",
+    "time": "RACE TIME",
+    "ranking": "RANKING",
+    "distance": "DISTANCE",
     "elevationGain": "ELEVATION GAIN",
-    "noData":        "No timing data available",
-    "pace":           "PACE",
-    "speed":           "SPEED"
+    "noData": "No timing data available",
+    "pace": "PACE",
+    "speed": "SPEED"
   },
   "runnerInfo": {
-    "club":         "CLUB",
-    "category":     "CATEGORY",
-    "utmbIndex":    "INDEX",
-    "utmbSeries":   "WORLD SERIES",
-    "noClub":       "- -"
+    "club": "CLUB",
+    "category": "CATEGORY",
+    "utmbIndex": "INDEX",
+    "utmbSeries": "WORLD SERIES",
+    "noClub": "—"
   },
   "awards": {
-    "time":           "TIME",
-    "country":        "COUNTRY",
-    "ranking":        "RANKING",
-    "genderRanking":  "GENDER RANKING",
-    "distance":       "DISTANCE",
-    "elevationGain":  "ELEVATION GAIN",
-    "noData":         "- -"
+    "time": "TIME",
+    "country": "COUNTRY",
+    "ranking": "RANKING",
+    "genderRanking": "GENDER RANKING",
+    "distance": "DISTANCE",
+    "elevationGain": "ELEVATION GAIN",
+    "noData": "—"
   },
   "status": {
-    "not_started": "Not Launched",
-    "in_progress": "In Race",
+    "not_started": "Not Started",
+    "in_progress": "In Progress",
     "finished": "Finished"
   },
   "countdown": {
     "days": "Days",
-    "hours": "Hrs",
+    "hours": "Hours",
     "minutes": "Min",
     "seconds": "Sec"
   },
   "units": {
-  "km": "KM",
-   "meterPlus": "m+",
-   "min/km":"min/km"
-},
- "defaults": {
+    "km": "km",
+    "meterPlus": "m+",
+    "minPerKm": "min/km",
+    "kmh": "km/h"
+  },
+  "defaults": {
     "distance": "0.00",
-    "time": "00:00",
+    "time": "00:00:00",
     "elevation": "0",
     "empty": "—"
   }
- 
-
-  
 }

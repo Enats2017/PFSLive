@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,7 +8,6 @@ import { RunnerInfo } from '../../services/resultDetailsService';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { SvgUri } from 'react-native-svg';
 import { getImageUrl } from '../../constants/config';
-import { profileStyles } from '../../styles/Profile.styles';
 
 interface RunnerInfoProps {
     runnerInfo?: RunnerInfo;
@@ -24,6 +23,12 @@ const getInitials = (name?: string): string => {
 const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo }) => {
     const { t } = useTranslation('resultdetails');
     const initials = getInitials(runnerInfo?.name);
+    
+    // ✅ Check if UTMB index exists, is not empty, and is not 0
+    const hasUtmbIndex = runnerInfo?.utmb_index && 
+                         runnerInfo.utmb_index.trim() !== '' && 
+                         runnerInfo.utmb_index !== '0' &&
+                         Number(runnerInfo.utmb_index) !== 0;
 
     return (
         <View style={commonStyles.container}>
@@ -36,18 +41,19 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo }) => {
                             style={resultInfoStyles.avatarCircle}
                         />
                     ) : (
-                        <View  style ={ resultInfoStyles.initials}>
-                        <Text style={{
-                            fontSize: 30,
-                            fontWeight: '600',
-                            color: colors.participantColor,
-                            letterSpacing: 1,
-                        }}>
-                            {initials}
-                        </Text>
+                        <View style={resultInfoStyles.initials}>
+                            <Text style={{
+                                fontSize: 30,
+                                fontWeight: '600',
+                                color: colors.participantColor,
+                                letterSpacing: 1,
+                            }}>
+                                {initials}
+                            </Text>
                         </View>
                     )}
                 </View>
+
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.title}>{runnerInfo?.name ?? '—'}</Text>
                     <View style={[resultListStyle.flagRow, { marginTop: 10, marginBottom: 8 }]}>
@@ -69,7 +75,6 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo }) => {
                 <View style={resultInfoStyles.row}>
                     <View style={resultInfoStyles.col}>
                         <Text style={commonStyles.subtitle}>{t('runnerInfo.club')}</Text>
-                        {/* ✅ Fix: || catches empty string "" from API */}
                         <Text style={commonStyles.subtitle}>
                             {runnerInfo?.club || '—'}
                         </Text>
@@ -79,43 +84,44 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo }) => {
 
                     <View style={resultInfoStyles.col}>
                         <Text style={commonStyles.subtitle}>{t('runnerInfo.category')}</Text>
-                        {/* ✅ Fix: || catches empty string "" from API */}
                         <Text style={commonStyles.title}>
                             {runnerInfo?.category_name || '—'}
                         </Text>
                     </View>
                 </View>
 
-                <View style={resultInfoStyles.row}>
-                    <View style={resultInfoStyles.col}>
-                        <View style={resultInfoStyles.utmbIndexBadge}>
-                            <Text style={resultInfoStyles.utmbText}>UTMB</Text>
-                            <View style={resultInfoStyles.utmbIndexTag}>
-                                <Text style={resultInfoStyles.utmbIndexText}>
-                                    {t('runnerInfo.utmbIndex')}
-                                </Text>
+                {/* ✅ Only show UTMB section if utmb_index exists and is not 0 */}
+                {hasUtmbIndex && (
+                    <View style={resultInfoStyles.row}>
+                        <View style={resultInfoStyles.col}>
+                            <View style={resultInfoStyles.utmbIndexBadge}>
+                                <Text style={resultInfoStyles.utmbText}>UTMB</Text>
+                                <View style={resultInfoStyles.utmbIndexTag}>
+                                    <Text style={resultInfoStyles.utmbIndexText}>
+                                        {t('runnerInfo.utmbIndex')}
+                                    </Text>
+                                </View>
                             </View>
-                        </View>
-                        {/* ✅ Fix: utmb_index "" → '—' */}
-                        <Text style={commonStyles.title}>
-                            {runnerInfo?.utmb_index || '—'}
-                        </Text>
-                    </View>
-
-                    <View style={resultInfoStyles.colDivider} />
-
-                    <View style={resultInfoStyles.col}>
-                        <View style={resultInfoStyles.utmbSeriesBadge}>
-                            <Text style={resultInfoStyles.utmbSeriesTitle}>UTMB®</Text>
-                            <Text style={resultInfoStyles.utmbSeriesSub}>
-                                {t('runnerInfo.utmbSeries')}
+                            <Text style={commonStyles.title}>
+                                {runnerInfo.utmb_index}
                             </Text>
                         </View>
-                        <View>
-                            <Ionicons name="card-outline" size={28} color="#333" />
+
+                        <View style={resultInfoStyles.colDivider} />
+
+                        <View style={resultInfoStyles.col}>
+                            <View style={resultInfoStyles.utmbSeriesBadge}>
+                                <Text style={resultInfoStyles.utmbSeriesTitle}>UTMB®</Text>
+                                <Text style={resultInfoStyles.utmbSeriesSub}>
+                                    {t('runnerInfo.utmbSeries')}
+                                </Text>
+                            </View>
+                            <View>
+                                <Ionicons name="card-outline" size={28} color="#333" />
+                            </View>
                         </View>
                     </View>
-                </View>
+                )}
 
             </View>
         </View>

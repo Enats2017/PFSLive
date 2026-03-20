@@ -9,16 +9,13 @@
     "ranking": "RANKING",
     "retry": "Retry",
     "errorLoad": "Failed to load results. Tap to retry.",
-    "BonBola_ca":"BONBOLA CA",
-    "kenting":"KENTING V2"
+    "utmbIndex": "INDEX"
   },
   
- "filter": {
-  "results":      "Results",
-  "live":         "Live",
-  "favourite":    "Favourite",
-  "noFavourites": "No favourites yet. Tap ☆ on any result to save it."
-}
-
-  
+  "filter": {
+    "results": "Results",
+    "live": "Live",
+    "favourite": "Favourite",
+    "noFavourites": "No favourites yet. Tap ☆ on any result to save it."
+  }
 }

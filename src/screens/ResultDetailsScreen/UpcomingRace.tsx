@@ -40,7 +40,7 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                 </View>
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.subtitle}>{t('raceInfo.raceTime')}</Text>
-                    <Text style={resultInfoStyles.raceTimeText}>{raceInfo?.time || "00:00:00"}</Text>
+                    <Text style={resultInfoStyles.raceTimeText}>{"00:00:00"}</Text>
                 </View>
 
                 <View style={resultInfoStyles.statsCard}>
@@ -55,9 +55,7 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                         </Text>
 
                         <Text style={resultInfoStyles.raceTimeText}>
-                            {raceInfo?.distance_completed != null
-                                ? `${raceInfo.distance_completed} ${t('units.km')}`
-                                : `0.00 ${t('units.km')}`}
+                            {`0.00 ${t('units.km')}`}
                         </Text>
                     </View>
                 </View>
