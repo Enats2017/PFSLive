@@ -28,8 +28,9 @@ interface FetchOpts {
 export const useResultList = (
   product_app_id: number,
   initial_pov_id?: number,
-  followedIds?: Set<number>,
+  followedUsers?: Set<number>,
   initialType?: FilterOption,
+  followedBibs?: Map<number, Set<string>>,
 ) => {
   const isMounted = useRef(true);
   const requestLock = useRef(false);
@@ -62,7 +63,7 @@ export const useResultList = (
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [raceStatus, setRaceStatus] = useState<string>("");
-  const [showUtmbIndex, setShowUtmbIndex] = useState(false); // ✅ NEW STATE
+  const [showUtmbIndex, setShowUtmbIndex] = useState(false);
 
   const currentPage = useRef(1);
 
@@ -116,7 +117,6 @@ export const useResultList = (
 
         if (!isMounted.current) return;
 
-        // ✅ SET RACE STATUS
         if (data.event?.race_status) {
           setRaceStatus(data.event.race_status);
           
@@ -125,7 +125,6 @@ export const useResultList = (
           }
         }
 
-        // ✅ SET SHOW UTMB INDEX FLAG
         if (data.event?.show_utmb_index !== undefined) {
           setShowUtmbIndex(data.event.show_utmb_index === 1);
           
@@ -243,6 +242,7 @@ export const useResultList = (
       setSelectedType(opt);
       setSelectedCategory("scratch");
 
+      // ✅ For favourite tab, don't fetch - we'll filter locally
       if (opt.value === "fav") return;
 
       const newLive: 0 | 1 = opt.value === "1" ? 1 : 0;
@@ -386,6 +386,7 @@ export const useResultList = (
     [categories, selectedCategory],
   );
 
+  // ✅ FILTER RESULTS BASED ON FOLLOW STATUS
   const displayResults = useMemo<RaceResult[]>(() => {
     if (!isFavTab) {
       return results.map((item, index) => ({
@@ -393,13 +394,30 @@ export const useResultList = (
         category_rank: String(index + 1),
       }));
     }
-    return results
-      .filter((r) => followedIds?.has(Number(r.customer_app_id)))
-      .map((item, index) => ({
-        ...item,
-        category_rank: String(index + 1),
-      }));
-  }, [isFavTab, results, followedIds]);
+
+    // ✅ Filter by BOTH customer_app_id AND BIB
+    const filtered = results.filter((result) => {
+      // Check customer-based follow
+      if (result.customer_app_id && followedUsers?.has(Number(result.customer_app_id))) {
+        return true;
+      }
+
+      // Check BIB-based follow
+      if (result.bib && product_app_id && followedBibs) {
+        const bibSet = followedBibs.get(product_app_id);
+        if (bibSet?.has(String(result.bib))) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+
+    return filtered.map((item, index) => ({
+      ...item,
+      category_rank: String(index + 1),
+    }));
+  }, [isFavTab, results, followedUsers, followedBibs, product_app_id]);
 
   return {
     results,
@@ -429,6 +447,6 @@ export const useResultList = (
     selectedDistanceLabel,
     selectedCategoryLabel,
     currentPovId,
-    showUtmbIndex, // ✅ EXPOSE FLAG
+    showUtmbIndex,
   };
 };

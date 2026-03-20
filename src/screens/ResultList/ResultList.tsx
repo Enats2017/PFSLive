@@ -24,23 +24,20 @@ import { useFollowManager } from '../../hooks/useFollowManager';
 import { useFocusEffect } from '@react-navigation/native';
 import ResultCardLive from './ResultCardLive';
 import ResultCardBeforeRace from './ResultCardBeforeRace';
-import { API_CONFIG } from '../../constants/config';
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
     const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab } = route.params;
 
-    if (API_CONFIG.DEBUG) {
-        console.log('📍 ResultListScreen params:', {
-            product_app_id,
-            product_option_value_app_id,
-            sourceTab,
-            sectionType,
-        });
-    }
-
-    // ✅ PASS product_app_id TO HOOK
-    const { isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t, product_app_id);
+    // ✅ GET FOLLOW DATA
+    const { 
+        isFollowed, 
+        isLoading, 
+        toggleFollow, 
+        refreshFollowedUsers,
+        followedUsers,
+        followedBibs,
+    } = useFollowManager(t, product_app_id);
 
     const initialType = sourceTab === 'live'
         ? TYPE_OPTIONS[1]
@@ -52,6 +49,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         }, [refreshFollowedUsers])
     );
 
+    // ✅ PASS FOLLOW DATA TO HOOK
     const {
         displayResults, pagination,
         selectedPovId, selectedType, selectedCategory,
@@ -63,18 +61,18 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         selectedDistanceLabel, selectedCategoryLabel,
         raceStatus, currentPovId,
         showUtmbIndex,
-    } = useResultList(product_app_id, product_option_value_app_id, new Set(), initialType); // ✅ Pass empty set
+    } = useResultList(
+        product_app_id, 
+        product_option_value_app_id, 
+        followedUsers,
+        initialType,
+        followedBibs
+    );
 
-    if (API_CONFIG.DEBUG) {
-        console.log('📊 Race status:', raceStatus);
-        console.log('🎯 Show UTMB Index:', showUtmbIndex);
-    }
-
-    // ✅ RENDER ITEM WITH DUAL FOLLOW SYSTEM
     const renderItem = useCallback(({ item }: { item: RaceResult }) => {
         const commonProps = {
             item,
-            product_app_id, // ✅ PASS product_app_id
+            product_app_id,
             isFollowed: isFollowed(product_app_id, item.bib, item.customer_app_id),
             isLoading: isLoading(product_app_id, item.bib, item.customer_app_id),
             onToggleFollow: () => toggleFollow(product_app_id, item.bib, item.customer_app_id),
@@ -84,11 +82,9 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             return (
                 <ResultCardBeforeRace
                     {...commonProps}
-                    showUtmbIndex={showUtmbIndex} 
-                     raceStatus={raceStatus}
-                    product_app_id={product_app_id}
+                    showUtmbIndex={showUtmbIndex}
+                    raceStatus={raceStatus}
                     currentPovId={currentPovId}
-                     showUtmbIndex={showUtmbIndex}// ✅ PASS FLAG                  
                 />
             );
         }
@@ -107,9 +103,8 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         return (
             <ResultCard
                 {...commonProps}
-                 fromLive={fromLive}
+                fromLive={fromLive}
                 raceStatus={raceStatus}
-                product_app_id={product_app_id}
                 currentPovId={currentPovId}
             />
         );
