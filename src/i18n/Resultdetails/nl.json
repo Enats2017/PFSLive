@@ -1,44 +1,79 @@
 {
   "tabs": {
-    "raceInfo": "Race informatie",
+    "raceInfo": "Race Info",
     "timingPoint": "Tijdpunt",
-    "runnerInfo": "Loper informatie",
+    "runnerInfo": "Loper Info",
     "awards": "Prijzen"
   },
   "raceInfo": {
     "finisher": "Finisher",
-    "raceTime": "RACETIJD",
+    "raceTime": "RACE TIJD",
     "previousTimingPoint": "VORIG TIJDPUNT",
-    "overallRanking": "ALGEMENE\nRANGLIJST",
-    "rankingInOpen": "RANGLIJST\nOPEN",
-    "genderRanking": "GESLACHT\nRANGLIJST",
+    "nextTimingPoint": "VOLGEND TIJDPUNT",
+    "overallRanking": "ALGEMENE\nRANGSCHIKKING",
+    "rankingInOpen": "RANGSCHIKKING IN\nOPEN",
+    "genderRanking": "GESLACHT\nRANGSCHIKKING",
     "distanceCompleted": "AFSTAND\nVOLTOOID",
-    "elevationGain": "HOOGTEMETERS\nVANAF START"
+    "elevationGain": "HOOGTEMETERS\nVANAF START",
+    "startsIn": "Race begint over",
+    "raceStarted": "Race is begonnen",
+    "raceInProgress": "Race is bezig",
+    "age": "Leeftijd",
+    "overallRank": "Algemeen",
+    "genderRank": "Geslacht",
+    "categoryRank": "Categorie",
+    "in": "over",
+    "minutes": "minuten"
   },
   "timingPoint": {
     "checkpoint": "CHECKPOINT",
     "startTime": "STARTTIJD",
     "arrivalTime": "AANKOMSTTIJD",
-    "time": "RACETIJD",
-    "ranking": "RANGLIJST",
+    "time": "RACE TIJD",
+    "ranking": "RANGSCHIKKING",
     "distance": "AFSTAND",
     "elevationGain": "HOOGTEMETERS",
-    "noData": "Geen tijdsgegevens beschikbaar"
+    "noData": "Geen tijdgegevens beschikbaar",
+    "pace": "TEMPO",
+    "speed": "SNELHEID"
   },
   "runnerInfo": {
     "club": "CLUB",
     "category": "CATEGORIE",
     "utmbIndex": "INDEX",
-    "utmbSeries": "WORLD SERIES",
-    "noClub": "- -"
+    "utmbSeries": "WERELD SERIE",
+    "noClub": "—"
   },
   "awards": {
     "time": "TIJD",
     "country": "LAND",
-    "ranking": "RANGLIJST",
-    "genderRanking": "GESLACHT RANGLIJST",
+    "ranking": "RANGSCHIKKING",
+    "genderRanking": "GESLACHT RANGSCHIKKING",
     "distance": "AFSTAND",
     "elevationGain": "HOOGTEMETERS",
-    "noData": "- -"
+    "noData": "—"
+  },
+  "status": {
+    "not_started": "Niet Gestart",
+    "in_progress": "Bezig",
+    "finished": "Voltooid"
+  },
+  "countdown": {
+    "days": "Dagen",
+    "hours": "Uren",
+    "minutes": "Min",
+    "seconds": "Sec"
+  },
+  "units": {
+    "km": "km",
+    "meterPlus": "m+",
+    "minPerKm": "min/km",
+    "kmh": "km/u"
+  },
+  "defaults": {
+    "distance": "0.00",
+    "time": "00:00:00",
+    "elevation": "0",
+    "empty": "—"
   }
 }

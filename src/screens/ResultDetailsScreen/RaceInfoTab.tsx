@@ -16,7 +16,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
 
     const lastCheckpoint = [...(checkpoints || [])]
         .reverse()
-        .find(cp => cp.is_crossed)
+        .find(cp => cp.is_crossed);
 
     return (
         <ScrollView
@@ -39,16 +39,19 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                         </Text>
                     </View>
                 </View>
+
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.title}>{raceInfo?.bib ?? '—'}</Text>
                     <Text style={commonStyles.title}>{raceInfo?.name ?? '—'}</Text>
                 </View>
+
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.subtitle}>{t('raceInfo.raceTime')}</Text>
                     <Text style={resultInfoStyles.raceTimeText}>
                         {raceInfo?.time ?? '—'}
                     </Text>
                 </View>
+
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.subtitle}>{t('raceInfo.previousTimingPoint')}</Text>
                     <Text style={commonStyles.text}>
@@ -56,10 +59,11 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                     </Text>
                     <Text style={resultInfoStyles.timingPointDate}>
                         {raceInfo?.previous_cp?.day_name && raceInfo?.previous_cp?.actual_time
-                            ? `${t(`common:week.${raceInfo.previous_cp.day_name.toLowerCase()}`)}: ${raceInfo.previous_cp.actual_time}`
+                            ? `${t(`common:week.${raceInfo.previous_cp.day_name.toLowerCase()}`)} ${raceInfo.previous_cp.actual_time}`
                             : '—'}
                     </Text>
                 </View>
+
                 <View style={resultInfoStyles.rankingsCard}>
                     {[
                         { labelKey: 'raceInfo.overallRanking', value: lastCheckpoint?.ranking || '—' },
@@ -83,6 +87,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                         </View>
                     ))}
                 </View>
+
                 <View style={resultInfoStyles.statsCard}>
                     <View style={resultInfoStyles.statsCol}>
                         <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
@@ -90,7 +95,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                         </Text>
                         <Text style={resultInfoStyles.raceTimeText}>
                             {raceInfo?.distance_completed
-                                ? `${raceInfo?.distance_completed} ${t('units.km')}`
+                                ? `${raceInfo.distance_completed} ${t('units.km')}`
                                 : '—'}
                         </Text>
                     </View>

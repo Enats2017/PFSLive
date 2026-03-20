@@ -5,16 +5,17 @@
     "live": "EN DIRECT",
     "bibNumber": "Numéro de dossard",
     "time": "TEMPS",
-    "diffFirst": "ÉCART 1ER",
+    "diffFirst": "DIFF 1ER",
     "ranking": "CLASSEMENT",
     "retry": "Réessayer",
-    "errorLoad": "Échec du chargement des résultats. Appuyez pour réessayer."
+    "errorLoad": "Échec du chargement des résultats. Appuyez pour réessayer.",
+    "utmbIndex": "INDEX"
   },
-
+  
   "filter": {
     "results": "Résultats",
-    "live": "Direct",
-    "favourite": "Favori",
-    "noFavourites": "Aucun favori pour le moment. Appuyez sur ☆ sur un résultat pour l'enregistrer."
+    "live": "En direct",
+    "favourite": "Favoris",
+    "noFavourites": "Pas encore de favoris. Appuyez sur ☆ sur un résultat pour l'enregistrer."
   }
 }
