@@ -230,26 +230,26 @@ export const resultInfoStyles = StyleSheet.create({
   },
 
   // ✅ VERIFIED: Fixed positioning at approximately half the card height
-segmentLabels: {
-    position: "absolute",
-    top: 180,              // ✅ Approximately half of typical card height (~360px)
-    left: -25,
-    width: 80,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-},
+  segmentLabels: {
+      position: "absolute",
+      top: 180,              // ✅ Approximately half of typical card height (~360px)
+      left: -25,
+      width: 80,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+  },
 
-segmentText: {
-    fontSize: 15,
-    fontWeight: typography.weights.bold,
-    color: colors.primary,
-    letterSpacing: 0.3,
-    transform: [{ rotate: "-90deg" }],
-    textAlign: "center",
-    width: 80,
-    height: 20,
-},
+  segmentText: {
+      fontSize: 15,
+      fontWeight: typography.weights.bold,
+      color: colors.primary,
+      letterSpacing: 0.3,
+      transform: [{ rotate: "-90deg" }],
+      textAlign: "center",
+      width: 80,
+      height: 20,
+  },
 
   // ── Checkpoint Card Styles ──────────────────────────────
   timingcard: {
