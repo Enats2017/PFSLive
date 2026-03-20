@@ -97,6 +97,7 @@ export const API_CONFIG = {
 
     FORGOT_PASSWORD: "/forgot_password_api.php",
     RESET_PASSWORD: "/reset_password_api.php",
+    GET_FAVOURITES: "/get_favourite_api.php",
 
     // Participants
     DELETE_PARTICIPANT: "/delete_participant_app_api.php",

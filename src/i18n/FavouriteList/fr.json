@@ -1,0 +1,13 @@
+{
+  "message": {
+    "follow": "Vous suivez maintenant ce coureur. Ajouté aux favoris avec succès",
+    "unfollow": "Vous ne suivez plus ce coureur. Supprimé des favoris",
+    "nofavourite": "Aucun favori pour le moment",
+    "favouritemsg": "Commencez à suivre des coureurs pour les voir ici"
+  },
+  "status": {
+    "in_progress": "En cours",
+    "finished": "Terminé",
+    "not_started": "Pas commencé"
+  }
+}

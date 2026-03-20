@@ -61,7 +61,13 @@ export type RootStackParamList = {
   };
 
   ForgotPassword:undefined;
-  FavouriteList:undefined;
+  FavouriteList:{
+    product_app_id:number;
+  };
+    AllParticipant:{
+      product_app_id:number 
+    }
+
 };
 
 
@@ -142,4 +148,9 @@ export type ForgotPasswordScreenProps = NativeStackScreenProps<
 export type FavouriteListpops = NativeStackScreenProps<
   RootStackParamList,
   "FavouriteList"
+>;
+
+export type AllParticipantpops = NativeStackScreenProps<
+  RootStackParamList,
+  "AllParticipant"
 >;
