@@ -76,9 +76,13 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
         break;
         
       case 'Favorites':
-        navigation.navigate('FavouriteList');
+        if(product_app_id){
+          navigation.navigate('FavouriteList',{
+            product_app_id
+          });
+        }
         break;
-    }
+      }
   };
 
   const handleHomeNavigation = () => {

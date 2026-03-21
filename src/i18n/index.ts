@@ -90,6 +90,9 @@ import LiveTrackingEN from "./livetracking/en.json";
 import LiveTrackingFR from "./livetracking/fr.json";
 import LiveTrackingNL from "./livetracking/nl.json";
 
+import FavouriteEN from "./FavouriteList/en.json";
+import FavouriteFR from "./FavouriteList/fr.json";
+import FavouriteNL from "./FavouriteList/nl.json";
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
@@ -247,6 +250,7 @@ i18n.use(initReactI18next).init({
       resultdetails:ResultDetailsEN,
       follower:FollowerEN,
       forget:ForgetEN,
+      favourite:FavouriteEN
       
     },
     fr: {
@@ -268,7 +272,8 @@ i18n.use(initReactI18next).init({
       allrace:ResultListFr,
       resultdetails:ResultDetailsFR,
       follower:FollowerFR,
-      forget:ForgetFR
+      forget:ForgetFR,
+      favourite:FavouriteFR
     },
     nl: {
       common: commonNL,
@@ -289,7 +294,8 @@ i18n.use(initReactI18next).init({
       allrace:ResultListNL,
       resultdetails:ResultDetailsNL,
       follower:FollowerNL,
-      forget:ForgetNL
+      forget:ForgetNL,
+      favourite:FavouriteNL
     },
   },
   lng: initialLanguage,
@@ -313,7 +319,8 @@ i18n.use(initReactI18next).init({
     'resultdetails',
     'follower',
     'result',
-    'forget'
+    'forget',
+    'favourite'
   ],
   interpolation: {
     escapeValue: false,

@@ -28,6 +28,7 @@ import FollowerEvent from '../screens/FollowerEventList/FollowerEvent';
  import FollowDetails from '../screens/FollowerDetailsList/FollowerDetails';
  import ForgotPassword from '../screens/AuthScreens/ForgotPasswordScreen/ForgotPassword';
  import FavouriteList from '../screens/FavouriteScreen/FavouriteList';
+ import AllParticipant from '../screens/FavouriteScreen/AllParticipant';
 
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -147,6 +148,13 @@ export const AppNavigator: React.FC = () => {
          <Stack.Screen 
           name="FavouriteList" 
           component={FavouriteList}
+          options={{
+            gestureEnabled: false,
+          }}
+        />
+         <Stack.Screen 
+          name="AllParticipant" 
+          component={AllParticipant}
           options={{
             gestureEnabled: false,
           }}
