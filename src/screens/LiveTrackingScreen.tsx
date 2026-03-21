@@ -83,6 +83,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         });
     }, [participants]);
 
+    // ✅ Initial load with followed users check
     useEffect(() => {
         if (hasLoadedInitialData.current) return;
 
@@ -93,7 +94,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             if (usersArray.length > 0) {
                 console.log('✅ Followed users ready:', usersArray);
                 hasLoadedInitialData.current = true;
-                loadLiveTrackingData();
+                loadLiveTrackingData(false);
             }
         };
 
@@ -105,7 +106,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             if (!hasLoadedInitialData.current) {
                 console.log('⏱️ Timeout reached, loading anyway');
                 hasLoadedInitialData.current = true;
-                loadLiveTrackingData();
+                loadLiveTrackingData(false);
             }
         }, 500);
 
@@ -117,6 +118,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         };
     }, [followedUsers, product_option_value_app_id]);
 
+    // ✅ Auto-refresh interval
     useEffect(() => {
         if (!hasLoadedInitialData.current || loading) return;
 
@@ -132,15 +134,15 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         };
     }, [hasLoadedInitialData.current, loading, selectedDistance, followedUsers]);
 
-    const loadLiveTrackingData = async (silent = false) => {
+    const loadLiveTrackingData = async (autoRefresh: boolean) => {
         try {
-            if (!silent) {
+            if (!autoRefresh) {
                 setLoading(true);
                 setError(null);
             }
 
             setParticipantsLoading(true);
-            console.log('📡 Fetching live tracking data...');
+            console.log('📡 Fetching live tracking data...', { autoRefresh });
 
             const customerAppIds = Array.from(followedUsers);
             console.log('👥 Followed users:', customerAppIds);
@@ -149,32 +151,32 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             let optionValueId: number | undefined;
             
             if (selectedDistance) {
-                // Use selected distance
                 optionValueId = selectedDistance.product_option_value_app_id;
             } else if (product_option_value_app_id && product_option_value_app_id > 0) {
-                // Use route param if valid
                 optionValueId = product_option_value_app_id;
             }
-            // Otherwise, undefined - API will return first distance by sort order
 
             console.log('📊 Request params:', {
                 product_app_id,
                 product_option_value_app_id: optionValueId,
+                auto_refresh: autoRefresh,
             });
 
             const response = await liveTrackingService.getLiveTrackingData(
                 product_app_id,
                 customerAppIds,
-                2,
-                optionValueId
+                optionValueId,
+                autoRefresh
             );
 
             console.log('✅ Live tracking data received:', {
+                auto_refresh: response.data.auto_refresh,
                 participants: response.data.participants.length,
-                distances: response.data.distances.length,
-                selected_distance: response.data.selected_distance,
+                distances: response.data.distances?.length || 0,
+                selected_distance: response.data.selected_distance || 'N/A',
             });
 
+            // ✅ Update participants data (always present)
             if (response.data.participants.length > 0) {
                 console.log('👤 First participant:', {
                     bib: response.data.participants[0].bib_number,
@@ -208,32 +210,43 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 }
             } else {
                 console.log('⚠️ No participants in response');
-                setApiCheckpoints([]);
-            }
-
-            setDistances(response.data.distances);
-
-            // ✅ Set selected distance from API response
-            if (!selectedDistance) {
-                const apiSelectedDistance = response.data.distances.find(
-                    d => d.product_option_value_app_id === response.data.selected_distance.product_option_value_app_id
-                );
-                
-                if (apiSelectedDistance) {
-                    console.log('✅ Setting selected distance:', apiSelectedDistance.distance_name);
-                    setSelectedDistance(apiSelectedDistance);
-                }
             }
 
             setParticipants(response.data.participants);
 
-            const newGpxUrl = response.data.selected_distance.gpx_url;
-            if (loadedGpxUrl !== newGpxUrl) {
-                console.log('📂 GPX URL changed, loading new GPX');
-                await loadGPX(newGpxUrl);
-                setLoadedGpxUrl(newGpxUrl);
+            // ✅ Only update distances and GPX on initial load (not auto-refresh)
+            if (!autoRefresh || response.data.auto_refresh === 0) {
+                console.log('📋 Processing full response (distances + GPX)');
+
+                if (response.data.distances && response.data.distances.length > 0) {
+                    setDistances(response.data.distances);
+
+                    // ✅ Set selected distance from API response (only on initial load)
+                    if (!selectedDistance && response.data.selected_distance) {
+                        const apiSelectedDistance = response.data.distances.find(
+                            d => d.product_option_value_app_id === response.data.selected_distance.product_option_value_app_id
+                        );
+                        
+                        if (apiSelectedDistance) {
+                            console.log('✅ Setting selected distance:', apiSelectedDistance.distance_name);
+                            setSelectedDistance(apiSelectedDistance);
+                        }
+                    }
+                }
+
+                // ✅ Load GPX only if URL is present and changed
+                if (response.data.selected_distance?.gpx_url) {
+                    const newGpxUrl = response.data.selected_distance.gpx_url;
+                    if (loadedGpxUrl !== newGpxUrl) {
+                        console.log('📂 GPX URL changed, loading new GPX');
+                        await loadGPX(newGpxUrl);
+                        setLoadedGpxUrl(newGpxUrl);
+                    } else {
+                        console.log('✅ Using cached GPX data');
+                    }
+                }
             } else {
-                console.log('✅ Using cached GPX data');
+                console.log('🔄 Auto-refresh: Skipping distances and GPX (using cached data)');
             }
 
             setLoading(false);
@@ -249,7 +262,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             setLoading(false);
             setParticipantsLoading(false);
             
-            if (!silent) {
+            if (!autoRefresh) {
                 Alert.alert(
                     t('common:errors.generic'),
                     t('livetracking:errorLoadingData')
@@ -313,7 +326,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         setSelectedDistance(distance);
         setLoading(true);
         setLoadedGpxUrl(null);
-        await loadLiveTrackingData();
+        await loadLiveTrackingData(false);
     };
 
     const handleParticipantPress = (participant: ParticipantMapMarker) => {
@@ -345,7 +358,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 </Text>
                 <TouchableOpacity
                     style={commonStyles.primaryButton}
-                    onPress={() => loadLiveTrackingData()}
+                    onPress={() => loadLiveTrackingData(false)}
                 >
                     <Text style={commonStyles.primaryButtonText}>
                         {t('common:buttons.retry')}

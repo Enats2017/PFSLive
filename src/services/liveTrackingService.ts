@@ -1,5 +1,6 @@
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { tokenService } from './tokenService';
+import { getCurrentLanguageId } from '../i18n';
 
 export interface LiveTrackingCheckpoint {
     name: string;
@@ -70,6 +71,7 @@ export interface LiveTrackingResponse {
     success: boolean;
     data: {
         source: string;
+        auto_refresh: number;
         selected_distance: SelectedDistance;
         distances: DistanceOption[];
         participants: LiveTrackingParticipant[];
@@ -81,17 +83,19 @@ class LiveTrackingService {
     async getLiveTrackingData(
         productAppId: number,
         customerAppIds: number[],
-        languageId: number = 2,
-        productOptionValueAppId?: number
+        productOptionValueAppId?: number,
+        autoRefresh: boolean = false
     ): Promise<LiveTrackingResponse> {
         try {
             const token = await tokenService.getToken();
+            const languageId = getCurrentLanguageId();
             
             // ✅ Build request body
             const requestBody: any = {
                 language_id: languageId,
-                product_app_id: productAppId,
+                product_app_id: productAppId.toString(),
                 customer_app_ids: customerAppIds.join(','),
+                auto_refresh: autoRefresh ? 1 : 0,
             };
 
             // ✅ Only add product_option_value_app_id if it's valid (not 0 or undefined)
