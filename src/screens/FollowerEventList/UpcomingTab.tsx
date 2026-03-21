@@ -109,6 +109,7 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
                 paddingHorizontal: spacing.md,
+                paddingTop: spacing.md,
                 paddingBottom: spacing.xl,
                 flexGrow: 1
             }}

@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { RootStackParamList } from '../types/navigation';
 
 import HomeScreen from '../screens/HomeScreen';
-import RouteScreen from '../screens/RouteScreen';
+import LiveTrackingScreen from '../screens/LiveTrackingScreen';
 import ParticipantEvent from '../screens/ParticipantEvent/ParticipantEvent';
 import PersonalEvent from '../screens/PersonalEventScreen/CreatePersonalEvent';
 import EventDetails from '../screens/EventDetails/EventDetails';
@@ -153,8 +153,8 @@ export const AppNavigator: React.FC = () => {
         />
 
         <Stack.Screen 
-          name="Route" 
-          component={RouteScreen}
+          name="LiveTracking" 
+          component={LiveTrackingScreen}
           options={{
             gestureEnabled: true,
             fullScreenGestureEnabled: true,

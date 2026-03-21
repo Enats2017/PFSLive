@@ -38,9 +38,9 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
     const { points: gpxPoints, loading: gpxLoading } = useGpxElevation(event?.gpx_url);
 
     useEffect(() => {
-        if (!raceInfo?.race_time_display) return;
+        if (!raceInfo?.server_time) return;
 
-        const initial = parseTimeToSeconds(raceInfo.race_time_display);
+        const initial = parseTimeToSeconds(raceInfo.server_time);
         setElapsedSeconds(initial);
 
         if (event?.race_status === 'in_progress') {
@@ -49,7 +49,7 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
             }, 1000);
             return () => clearInterval(interval);
         }
-    }, [raceInfo?.race_time_display, event?.race_status]);
+    }, [raceInfo?.server_time, event?.race_status]);
 
     const lastCheckpoint = [...(checkpoints || [])]
         .reverse()

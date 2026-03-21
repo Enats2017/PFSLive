@@ -3,12 +3,13 @@ import { Distance } from "../services/eventDetailService";
 
 export type RootStackParamList = {
   HomeScreen: undefined;
-  Route: {
-    product_app_id: string | number;
-    product_option_value_app_id: string | number;
+  LiveTracking: {
+    product_app_id: number;
+    product_option_value_app_id: number;
     event_name: string;
     sourceScreen?: string;
     sectionType?: string;
+    sourceTab?: "past" | "live" | "upcoming";
   };
   ParticipantEvent: undefined;
   PersonalEvent: undefined;
@@ -69,9 +70,9 @@ export type HomeScreenProps = NativeStackScreenProps<
   RootStackParamList,
   "HomeScreen"
 >;
-export type RouteScreenProps = NativeStackScreenProps<
+export type LiveTrackingScreenProps = NativeStackScreenProps<
   RootStackParamList,
-  "Route"
+  "LiveTracking"
 >;
 export type EventDetailsProps = NativeStackScreenProps<
   RootStackParamList,

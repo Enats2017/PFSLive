@@ -13,11 +13,6 @@ import homeEN from './HomeScreen/en.json';
 import homeFR from './HomeScreen/fr.json';
 import homeNL from './HomeScreen/nl.json';
 
-// ✅ ROUTE SCREEN
-import routeEN from './RouteScreen/en.json';
-import routeFR from './RouteScreen/fr.json';
-import routeNL from './RouteScreen/nl.json';
-
 import raceResultEN from "./RaceResult/en.json";
 import raceResultFR from "./RaceResult/fr.json";
 import raceResultNL from "./RaceResult/nl.json";
@@ -90,6 +85,10 @@ import FollowerNL from "./FollowerEvent/nl.json";
 import ForgetEN from "./ForgotPassword/en.json";
 import ForgetFR from "./ForgotPassword/fr.json";
 import ForgetNL from "./ForgotPassword/nl.json";
+
+import LiveTrackingEN from "./livetracking/en.json";
+import LiveTrackingFR from "./livetracking/fr.json";
+import LiveTrackingNL from "./livetracking/nl.json";
 
 
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
@@ -231,7 +230,7 @@ i18n.use(initReactI18next).init({
     en: {
       common: commonEN,
       home: homeEN,
-      route: routeEN,
+      livetracking: LiveTrackingEN,
       event: eventEN,
       details: detailsEN,
       personal:personalEventEN,
@@ -253,7 +252,7 @@ i18n.use(initReactI18next).init({
     fr: {
       common: commonFR,
       home: homeFR,
-      route: routeFR,
+      livetracking: LiveTrackingFR,
       event: eventFR,
       personal: personalEventFR,
       details: detailsFR,
@@ -274,7 +273,7 @@ i18n.use(initReactI18next).init({
     nl: {
       common: commonNL,
       home: homeNL,
-      route: routeNL,
+      livetracking: LiveTrackingNL,
       event: eventNL,
       personal: personalEventNL,
       details: detailsNL,
@@ -299,7 +298,7 @@ i18n.use(initReactI18next).init({
   ns: [
     'common',
     'home',
-    'route',
+    'livetracking',
     'event',
     'personal',
     'details',

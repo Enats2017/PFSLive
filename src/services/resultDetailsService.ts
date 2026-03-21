@@ -67,6 +67,7 @@ export interface RaceInfo {
     distance_completed: string;
     elevation_gain: string; 
     race_time_display: string;
+    server_time: string;
     previous_cp: PreviousCp | null;
     next_cp: NextCp | null;
     live_tracking_activated: number;

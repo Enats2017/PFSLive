@@ -1,77 +1,83 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { routeStyles } from '../styles/route.styles';
-
-interface DistanceOption {
-  id: string;
-  label: string;
-  value: number;
-}
+import { View, Text, TouchableOpacity, Modal, FlatList } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { DistanceOption } from '../services/liveTrackingService';
+import { liveTrackingStyles } from '../styles/liveTracking.styles';
+import { colors } from '../styles/common.styles';
 
 interface DistanceDropdownProps {
-  onSelect?: (distance: number) => void;
+    distances: DistanceOption[];
+    selectedDistance: DistanceOption;
+    onSelect: (distance: DistanceOption) => void;
 }
 
-export const DistanceDropdown: React.FC<DistanceDropdownProps> = ({ onSelect }) => {
-  const { t } = useTranslation('route');
-  
-  const distances: DistanceOption[] = [
-    { id: '1', label: '100 km', value: 100 },
-    { id: '2', label: '75 km', value: 75 },
-    { id: '3', label: '50 km', value: 50 },
-    { id: '4', label: '25 km', value: 25 },
-  ];
+export const DistanceDropdown: React.FC<DistanceDropdownProps> = ({
+    distances,
+    selectedDistance,
+    onSelect,
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
 
-  const [selectedDistance, setSelectedDistance] = useState<DistanceOption>(distances[0]);
-  const [isOpen, setIsOpen] = useState(false);
+    const handleSelect = (distance: DistanceOption) => {
+        onSelect(distance);
+        setIsOpen(false);
+    };
 
-  const handleSelect = (distance: DistanceOption) => {
-    setSelectedDistance(distance);
-    setIsOpen(false);
-    if (onSelect) {
-      onSelect(distance.value);
-    }
-  };
-
-  return (
-    <View style={routeStyles.distanceDropdown}>
-      <TouchableOpacity
-        style={routeStyles.dropdownButton}
-        onPress={() => setIsOpen(!isOpen)}
-        activeOpacity={0.7}
-      >
-        <Text style={routeStyles.dropdownButtonText}>
-          {selectedDistance.label}
-        </Text>
-        <Text style={routeStyles.dropdownArrow}>
-          {isOpen ? '▲' : '▼'}
-        </Text>
-      </TouchableOpacity>
-
-      {isOpen && (
-        <ScrollView style={routeStyles.dropdownList}>
-          {distances.map((distance) => (
+    return (
+        <View style={liveTrackingStyles.dropdownContainer}>
             <TouchableOpacity
-              key={distance.id}
-              style={[
-                routeStyles.dropdownItem,
-                selectedDistance.id === distance.id && routeStyles.dropdownItemActive,
-              ]}
-              onPress={() => handleSelect(distance)}
+                style={liveTrackingStyles.dropdownButton}
+                onPress={() => setIsOpen(true)}
+                activeOpacity={0.7}
             >
-              <Text
-                style={[
-                  routeStyles.dropdownItemText,
-                  selectedDistance.id === distance.id && routeStyles.dropdownItemTextActive,
-                ]}
-              >
-                {distance.label}
-              </Text>
+                <Text style={liveTrackingStyles.dropdownButtonText}>
+                    {selectedDistance.distance_name}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={colors.gray900} />
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-    </View>
-  );
+
+            <Modal
+                visible={isOpen}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setIsOpen(false)}
+            >
+                <TouchableOpacity
+                    style={liveTrackingStyles.dropdownModalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setIsOpen(false)}
+                >
+                    <View style={liveTrackingStyles.dropdownModal}>
+                        <FlatList
+                            data={distances}
+                            keyExtractor={(item) => item.product_option_value_app_id.toString()}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={[
+                                        liveTrackingStyles.dropdownItem,
+                                        item.product_option_value_app_id === selectedDistance.product_option_value_app_id &&
+                                            liveTrackingStyles.dropdownItemActive,
+                                    ]}
+                                    onPress={() => handleSelect(item)}
+                                >
+                                    <Text
+                                        style={[
+                                            liveTrackingStyles.dropdownItemText,
+                                            item.product_option_value_app_id === selectedDistance.product_option_value_app_id &&
+                                                liveTrackingStyles.dropdownItemTextActive,
+                                        ]}
+                                    >
+                                        {item.distance_name}
+                                    </Text>
+                                    {item.product_option_value_app_id === selectedDistance.product_option_value_app_id && (
+                                        <Ionicons name="checkmark" size={20} color={colors.primary} />
+                                    )}
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+        </View>
+    );
 };
