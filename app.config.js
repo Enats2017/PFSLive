@@ -35,7 +35,8 @@ export default ({ config }) => {
       //   foregroundImage: "./assets/adaptive-icon.png",
       //   backgroundColor: "#ffffff"
       // },
-      package: "com.pfs.Livio",
+      package: "com.pfs.livio",
+       googleServicesFile: "./google-services.json",
       permissions: [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -64,10 +65,6 @@ export default ({ config }) => {
       "expo-localization",
       "@react-native-community/datetimepicker"  
     ],
-    extra: {
-      eas: {
-        projectId: "your-project-id"
-      }
-    }
+   
   };
 };
