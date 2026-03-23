@@ -64,10 +64,15 @@ export type RootStackParamList = {
   ForgotPassword:undefined;
   FavouriteList:{
     product_app_id:number;
+    product_option_value_app_id?: number;
+    event_name?: string;
+    sourceScreen?: string;
+    sectionType: string;
+    sourceTab?: "past" | "live" | "upcoming";
   };
-    AllParticipant:{
-      product_app_id:number 
-    }
+  AllParticipant:{
+    product_app_id:number 
+  }
 
 };
 

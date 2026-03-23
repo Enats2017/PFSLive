@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { colors, commonStyles } from "../styles/common.styles";
+import { colors, typography } from "../styles/common.styles";
 
 export const favstyle = StyleSheet.create({
   wrapper: {
@@ -17,16 +17,17 @@ export const favstyle = StyleSheet.create({
     shadowOpacity: 0.07,
     shadowRadius: 12,
     elevation: 4,
-
     paddingBottom: 10,
   },
 
   headerLeft: {
-    backgroundColor: colors.gray400,
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: 14,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     width: 120,
+    height: 33,
     zIndex: 3,
   },
 
@@ -39,8 +40,9 @@ export const favstyle = StyleSheet.create({
     borderRightWidth: 20,
     borderBottomWidth: 0,
     borderLeftWidth: 0,
-    borderTopColor: colors.gray400,
     borderRightColor: "transparent",
+    borderBottomColor: "transparent",
+    borderLeftColor: "transparent",
     zIndex: 2,
   },
 
@@ -57,6 +59,8 @@ export const favstyle = StyleSheet.create({
     borderRightWidth: 0,
     borderLeftWidth: 20,
     borderTopColor: colors.primary,
+    borderRightColor: "transparent",
+    borderBottomColor: "transparent",
     borderLeftColor: "transparent",
     zIndex: 2,
   },
@@ -65,29 +69,56 @@ export const favstyle = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    paddingRight: 14,
-    paddingLeft: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     width: 120,
-
+    height: 33,
     zIndex: 1,
-  },
-
-  headerRightText: {
-    color: "#FCEBEB",
-    fontSize: 13,
-    fontWeight: "500",
-    letterSpacing: 0.6,
   },
 
   body: {
     alignItems: "center",
+    paddingTop: 10,
+  },
+
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 8,
+  },
+
+  profilePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.gray200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
+  profileInitials: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: colors.gray700,
+  },
+
+  // ✅ Finish time style
+  finishTime: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
+    marginTop: 4,
+    letterSpacing: 0.5,
   },
 
   addButtonContainer: {
     position: "absolute",
-    bottom: 140, // sits above BottomNavigationFollower
+    bottom: 140,
     right: 25,
   },
+
   addButton: {
     width: 56,
     height: 56,
@@ -101,6 +132,7 @@ export const favstyle = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+
   iconWrapper: {
     alignItems: "center",
     justifyContent: "center",
@@ -120,7 +152,6 @@ export const favstyle = StyleSheet.create({
     marginLeft: 10,
   },
 
-
   addBtn: {
     width: 44,
     height: 44,
@@ -129,19 +160,14 @@ export const favstyle = StyleSheet.create({
     borderColor: '#ccc',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight:5
+    marginRight: 5,
   },
-  addBtnActive:{
-    width: 34,
-    height: 34,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight:5
 
+  addBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
+
   participantcard: {
     flexDirection: 'row',
     alignItems: 'center',

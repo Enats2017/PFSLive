@@ -81,10 +81,10 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           navigation.navigate('FavouriteList',{
             product_app_id,
             event_name: event_name || '',
+            sectionType: 'participant',
             sourceScreen: route.name,
-             sectionType: 'participant',
-             product_option_value_app_id,
-              sourceTab: 'live', 
+            sourceTab: 'live', 
+            product_option_value_app_id: product_option_value_app_id || 0,
           });
         }
         break;

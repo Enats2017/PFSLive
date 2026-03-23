@@ -7,8 +7,10 @@ import {
     TouchableOpacity,
     StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, spacing, colors } from '../../styles/common.styles';
 import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
@@ -16,14 +18,13 @@ import { API_CONFIG } from '../../constants/config';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import AllParticipantCard from './AllParticipantCard';
 import { AllParticipantpops } from '../../types/navigation';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 
 const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => {
     const { product_app_id } = route.params;
     const { t } = useTranslation(['details', 'follower']);
     const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
     const { isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t, productId);
+    
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -72,8 +73,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
 
                         if (API_CONFIG.DEBUG) {
                             console.log(
-                                `✅ Added ${newItems.length} new participants (Total: ${prev.length + newItems.length
-                                })`
+                                `✅ Added ${newItems.length} new participants (Total: ${prev.length + newItems.length})`
                             );
                         }
 
@@ -112,7 +112,6 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
         }, [fetchParticipants, refreshFollowedUsers])
     );
 
-    // ✅ DEBOUNCED SEARCH
     React.useEffect(() => {
         if (debounceTimer.current) {
             clearTimeout(debounceTimer.current);
@@ -152,7 +151,6 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
  
     const renderParticipant = useCallback(
         ({ item }: { item: Participant }) => {
-            // Use bib_number as fallback if bib doesn't exist
             const bib = item.bib || item.bib_number || '';
 
             return (
@@ -173,75 +171,67 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
             return (
                 <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
                     <ActivityIndicator size="small" color={colors.primary} />
-                    <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
-                        Loading more... ({page}/{totalPages})
-                    </Text>
-                </View>
-            );
-        }
-
-        if (hasMorePages() && participants.length > 0) {
-            return (
-                <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-                    <Text style={{ color: colors.gray500 }}>
-                        Scroll for more ({participants.length})
-                    </Text>
                 </View>
             );
         }
 
         return null;
-    }, [loadingMore, page, totalPages, hasMorePages, participants.length]);
+    }, [loadingMore]);
+
+    const renderEmpty = useCallback(() => (
+        <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
+            <Text style={commonStyles.errorText}>
+                {searchText
+                    ? `${t('details:participant.noResults')} "${searchText}"`
+                    : t('details:participant.empty')}
+            </Text>
+        </View>
+    ), [searchText, t]);
 
     if (loading && searchText.length === 0) {
         return (
-            <ActivityIndicator
-                size="large"
-                color={colors.primary}
-                style={{ marginTop: 40 }}
-            />
+            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+                <View style={commonStyles.centerContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            </SafeAreaView>
         );
     }
 
     if (error && searchText.length === 0) {
         return (
-            <View style={commonStyles.centerContainer}>
-                <Text style={commonStyles.errorText}>{error}</Text>
-                <TouchableOpacity
-                    style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-                    onPress={() => fetchParticipants(1, searchText)}
-                    activeOpacity={0.8}
-                >
-                    <Text style={commonStyles.primaryButtonText}>
-                        {t('details:error.retry')}
-                    </Text>
-                </TouchableOpacity>
-            </View>
+            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+                <View style={commonStyles.centerContainer}>
+                    <Text style={commonStyles.errorText}>{error}</Text>
+                    <TouchableOpacity
+                        style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
+                        onPress={() => fetchParticipants(1, searchText)}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={commonStyles.primaryButtonText}>
+                            {t('details:error.retry')}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style = {commonStyles.container} edges={['top', 'bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
 
-            <View
-                style={{
-                    paddingHorizontal: spacing.lg,
-                    paddingTop: spacing.md,
-                }}
-            >
-                <View style={{flexDirection:"row",  alignItems:"center", paddingVertical:10, gap:10 }}>
-                  <TouchableOpacity
-                          style={{width: 32,}}
-                          hitSlop={{ top: 8, bottom: 8, left: 10, right: 8 }}
-                          onPress={() => navigation.goBack()}
-                      >
-                          <Ionicons name="chevron-back" size={32} color={colors.gray900} />
-      
-                      </TouchableOpacity>
-                      <Text style={commonStyles.title}> My Favourite Runners</Text>
-      
-                  </View>  
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 }}>
+                    <TouchableOpacity
+                        style={{ width: 32 }}
+                        hitSlop={{ top: 8, bottom: 8, left: 10, right: 8 }}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Ionicons name="chevron-back" size={32} color={colors.gray900} />
+                    </TouchableOpacity>
+                    <Text style={commonStyles.title}>{t('favourite:addRunner')}</Text>
+                </View>  
                 <SearchInput
                     ref={searchInputRef}
                     placeholder={t('details:participant.search')}
@@ -250,6 +240,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
                     icon="search"
                 />
             </View>
+
             {loading && searchText.length > 0 && (
                 <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
                     <ActivityIndicator size="small" color={colors.primary} />
@@ -259,34 +250,25 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
                 </View>
             )}
 
-            {!loading && participants.length === 0 ? (
-                <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
-                    <Text style={commonStyles.errorText}>
-                        {searchText
-                            ? `${t('details:participant.noResults')} "${searchText}"`
-                            : t('details:participant.empty')}
-                    </Text>
-                </View>
-            ) : (
-                <FlatList
-                    data={participants}
-                    keyExtractor={(item, index) =>
-                        `${participantService.getParticipantId(item)}-${index}`
-                    }
-                    renderItem={renderParticipant}
-                    showsVerticalScrollIndicator={false}
-                    onEndReached={handleLoadMore}
-                    onEndReachedThreshold={0.5}
-                    contentContainerStyle={{
-                        paddingHorizontal: spacing.sm,
-                        paddingBottom: spacing.xxxl,
-                        flexGrow: 1,
-                    }}
-                    keyboardShouldPersistTaps="handled"
-                    removeClippedSubviews={false}
-                    ListFooterComponent={renderFooter}
-                />
-            )}
+            <FlatList
+                data={participants}
+                keyExtractor={(item, index) =>
+                    `${participantService.getParticipantId(item)}-${index}`
+                }
+                renderItem={renderParticipant}
+                showsVerticalScrollIndicator={false}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                contentContainerStyle={{
+                    paddingHorizontal: spacing.sm,
+                    paddingBottom: spacing.xxxl,
+                    flexGrow: 1,
+                }}
+                keyboardShouldPersistTaps="handled"
+                removeClippedSubviews={false}
+                ListFooterComponent={renderFooter}
+                ListEmptyComponent={!loading ? renderEmpty : null}
+            />
         </SafeAreaView>
     );
 };

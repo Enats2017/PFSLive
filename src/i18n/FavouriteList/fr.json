@@ -1,13 +1,15 @@
 {
+  "title": "Favoris",
+  "addRunner": "Mes Coureurs Favoris",
   "message": {
-    "follow": "Vous suivez maintenant ce coureur. Ajouté aux favoris avec succès",
-    "unfollow": "Vous ne suivez plus ce coureur. Supprimé des favoris",
-    "nofavourite": "Aucun favori pour le moment",
+    "follow": "Suivi ! Vous avez été ajouté aux favoris avec succès",
+    "unfollow": "Non suivi ! Vous avez été retiré des favoris",
+    "nofavourite": "Pas encore de favoris",
     "favouritemsg": "Commencez à suivre des coureurs pour les voir ici"
   },
   "status": {
-    "in_progress": "En cours",
+    "in_progress": "En Cours",
     "finished": "Terminé",
-    "not_started": "Pas commencé"
+    "not_started": "Pas Commencé"
   }
 }
