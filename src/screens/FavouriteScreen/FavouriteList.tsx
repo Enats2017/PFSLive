@@ -12,9 +12,12 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { favstyle } from '../../styles/favourite.style';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { BottomNavigation } from '../../components/common/BottomNavigation';
 
 const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }: any) => {
-    const { product_app_id } = route.params;
+    const { product_app_id, event_name, sectionType, sourceScreen , sourceTab,   product_option_value_app_id,} = route.params;
+    console.log("11111sectiontype",  product_option_value_app_id,);
+
     const { t } = useTranslation(['favourite', 'common']);
     const [favourites, setFavourites] = useState<FavouriteItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -225,7 +228,26 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }: any) 
                     </View>
                 </TouchableOpacity>
             </View>
-            <BottomNavigationFollower activeTab='Favorites' />
+            {sectionType === 'follower' ? (
+                <BottomNavigationFollower activeTab='Favorites'
+                    product_app_id={product_app_id}
+                    event_name={event_name}
+                    sourceTab={sourceTab}
+                    product_option_value_app_id={product_option_value_app_id}
+                />
+
+            ) : (
+                <BottomNavigation
+                    activeTab="Results"
+                    product_app_id={product_app_id}
+                    event_name={event_name}
+                    sourceScreen={sourceScreen}
+                    product_option_value_app_id={product_option_value_app_id}
+                />
+
+            )
+
+            }
         </SafeAreaView>
     );
 };

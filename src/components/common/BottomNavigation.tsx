@@ -76,7 +76,16 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         break;
         
       case 'Favorites':
-        console.log('Favorites screen not implemented yet');
+         if(product_app_id){
+          navigation.navigate('FavouriteList',{
+            product_app_id,
+            event_name: event_name || '',
+            sourceScreen: route.name,
+             sectionType: 'participant',
+             product_option_value_app_id,
+              sourceTab: 'live', 
+          });
+        }
         break;
     }
   };
@@ -121,6 +130,21 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         } else {
           navigation.navigate('HomeScreen');
         }
+      }
+    }
+
+     else if (currentRoute === 'FavouriteList') {
+      if (sourceScreen === 'RaceResultScreen') {
+        navigation.navigate('RaceResultScreen', {
+          product_app_id,
+          event_name: event_name || '',
+        });
+      } else {
+        navigation.navigate('EventDetails', {
+          product_app_id,
+          event_name: event_name || '',
+          auto_register_id: null,
+        });
       }
     }
     // ✅ CASE 2: ON RACERESULTSCREEN → STAY

@@ -12,10 +12,9 @@ interface BottomNavigationFollowerProps {
   event_name?: string;
   product_option_value_app_id?: string | number;
   sourceTab?: 'past' | 'live' | 'upcoming';
-  
 }
 
-export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> = ({ 
+export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> = ({
   activeTab = 'Home',
   product_app_id,
   event_name,
@@ -39,12 +38,12 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
       product_app_id,
       product_option_value_app_id,
     });
-    
+
     switch (tabName) {
       case 'Home':
         handleHomeNavigation();
         break;
-        
+
       case 'Results':
         if (product_app_id) {
           navigation.navigate('ResultList', {
@@ -59,7 +58,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
           console.log('Results: Missing product_app_id');
         }
         break;
-        
+
       case 'Map':
         if (product_app_id && product_option_value_app_id) {
           navigation.navigate('Route', {
@@ -73,15 +72,20 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
           console.log('Map: Missing required parameters');
         }
         break;
-        
+
       case 'Favorites':
-        if(product_app_id){
-          navigation.navigate('FavouriteList',{
-            product_app_id
+        if (product_app_id) {
+          navigation.navigate('FavouriteList', {
+            product_app_id,
+            event_name: event_name || '',
+            sourceScreen: route.name,
+            sourceTab: sourceTab,
+            sectionType: 'follower',
+
           });
         }
         break;
-      }
+    }
   };
 
   const handleHomeNavigation = () => {
@@ -90,14 +94,12 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
     console.log('🏠 Follower Home navigation:', {
       currentRoute,
       product_app_id,
+      event_name: event_name || '',
     });
 
-    // CASE 1: ON FOLLOWERLIST → STAY
     if (currentRoute === 'FollowDetails') {
       console.log('📍 Already on FollowerList - staying');
-      // Do nothing, already on the right screen
     }
-    // CASE 2: DEFAULT → Navigate to FollowerList
     else {
       if (product_app_id) {
         console.log('📍 Default → FollowerList');
