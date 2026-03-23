@@ -20,7 +20,7 @@
   },
   "participant": {
     "empty": "No participants yet",
-    "search": "Search participants",
+    "search": "Search participants by name, bib number",
     "searching": "Searching...",
     "noResults": "No participants found for",
     "favorite": "ADD TO FAVORITE",

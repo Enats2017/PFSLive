@@ -20,7 +20,7 @@
   },
   "participant": {
     "empty": "Nog geen deelnemers",
-    "search": "Zoek deelnemers",
+    "search": "Zoek deelnemers op naam, rugnummer",
     "searching": "Zoeken...",
     "noResults": "Geen deelnemers gevonden voor",
     "favorite": "TOEVOEGEN AAN FAVORIETEN",

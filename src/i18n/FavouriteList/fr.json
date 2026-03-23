@@ -1,6 +1,6 @@
 {
   "title": "Favoris",
-  "addRunner": "Mes Coureurs Favoris",
+  "addRunner": "Tous les Coureurs",
   "message": {
     "follow": "Suivi ! Vous avez été ajouté aux favoris avec succès",
     "unfollow": "Non suivi ! Vous avez été retiré des favoris",

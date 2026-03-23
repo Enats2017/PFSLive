@@ -1,6 +1,6 @@
 {
   "title": "Favourites",
-  "addRunner": "My Favourite Runners",
+  "addRunner": "All Runners",
   "message": {
     "follow": "Following! You have successfully added to favourites",
     "unfollow": "Unfollowed! You have been removed from favourites",
