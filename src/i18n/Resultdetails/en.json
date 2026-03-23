@@ -35,7 +35,8 @@
     "elevationGain": "ELEVATION GAIN",
     "noData": "No timing data available",
     "pace": "PACE",
-    "speed": "SPEED"
+    "speed": "SPEED",
+    "elevation": "Elevation"
   },
   "runnerInfo": {
     "club": "CLUB",

@@ -44,7 +44,7 @@ export interface ParticipantItem {
   city: string;
   country: string;
   profile_picture?: string; // ✅ NEW FIELD
-  flag_url?: string;
+  flag_url?: string | null;
 }
 
 export interface EventResponse {

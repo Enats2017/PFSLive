@@ -16,7 +16,7 @@ export interface CheckpointDetail {
     rank_agegroup: string;
     speed: string;
     pace: string;
-     is_crossed: boolean;
+    is_crossed: boolean;
     is_start: boolean;       // ✅ added
     is_finish: boolean;      // ✅ added
     elevation: string;       // ✅ added

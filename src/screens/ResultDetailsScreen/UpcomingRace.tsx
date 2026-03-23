@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
@@ -11,7 +11,8 @@ interface Props {
 }
 
 const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
-    const { t } = useTranslation('resultdetails');
+    const { t } = useTranslation(['resultdetails', 'common']);
+    
     return (
         <ScrollView
             contentContainerStyle={resultInfoStyles.scrollContent}
@@ -21,7 +22,7 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                 <View style={resultInfoStyles.headerBar}>
                     <View style={resultInfoStyles.headerGreen}>
                         <Text style={commonStyles.text}>
-                            {t(`status.${event?.race_status}`)}
+                            {t(`status.${event?.race_status ?? 'not_started'}`)}
                         </Text>
                     </View>
                     <View style={resultInfoStyles.diagLeft} />
@@ -38,24 +39,28 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                     <Text style={commonStyles.title}>{raceInfo?.bib ?? '—'}</Text>
                     <Text style={commonStyles.title}>{raceInfo?.name ?? '—'}</Text>
                 </View>
+
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.subtitle}>{t('raceInfo.raceTime')}</Text>
-                    <Text style={resultInfoStyles.raceTimeText}>{"00:00:00"}</Text>
+                    <Text style={resultInfoStyles.raceTimeText}>00:00:00</Text>
                 </View>
 
                 <View style={resultInfoStyles.statsCard}>
-                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                        <Text
-                            style={[
-                                commonStyles.subtitle,
-                                { textAlign: 'center', marginBottom: 8 },
-                            ]}
-                        >
+                    <View style={resultInfoStyles.statsCol}>
+                        <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
                             {t('raceInfo.distanceCompleted')}
                         </Text>
-
                         <Text style={resultInfoStyles.raceTimeText}>
-                            {`0.00 ${t('units.km')}`}
+                            0.00 {t('units.km')}
+                        </Text>
+                    </View>
+                    <View style={resultInfoStyles.statsColBorder} />
+                    <View style={resultInfoStyles.statsCol}>
+                        <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
+                            {t('raceInfo.elevationGain')}
+                        </Text>
+                        <Text style={resultInfoStyles.raceTimeText}>
+                            0 {t('units.meterPlus')}
                         </Text>
                     </View>
                 </View>
