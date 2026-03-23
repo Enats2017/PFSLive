@@ -1,7 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
+import { apiClient } from '../services/api';
 
 const STORAGE_KEY = 'followed_users';
 const STORAGE_KEY_BIBS = 'followed_bibs_by_product';
+const FOLLOWER_ID_KEY = 'follower_app_id';
+const DEVICE_ID_KEY = 'device_id';
 
 let cache: Set<number> | null = null;
 let bibCache: Map<number, Set<string>> | null = null;
@@ -92,6 +96,81 @@ async function persistBibCache(map: Map<number, Set<string>>): Promise<void> {
   }
 }
 
+// ✅ NEW: Sync follow data to API
+async function syncFollowDataToAPI(): Promise<void> {
+  try {
+    // Get follower_id and device_id from storage
+    const followerIdRaw = 1;//await AsyncStorage.getItem(FOLLOWER_ID_KEY);
+    const deviceId = await getDeviceId();
+
+    if (!followerIdRaw || !deviceId) {
+      if (API_CONFIG.DEBUG) {
+        console.log('⏭️ Skipping API sync: follower_id or device_id not found');
+      }
+      return;
+    }
+
+    const followerId = toValidId(followerIdRaw);
+    if (followerId === null) {
+      if (API_CONFIG.DEBUG) {
+        console.log('⏭️ Skipping API sync: invalid follower_id');
+      }
+      return;
+    }
+
+    // Get current follow data
+    const customerSet = await loadCache();
+    const bibMap = await loadBibCache();
+
+    // Build customer_app_id_string
+    const customer_app_id_string = [...customerSet].join(',');
+
+    // Build bib_number_string object
+    const bib_number_string: Record<string, string> = {};
+    bibMap.forEach((bibSet, productId) => {
+      if (bibSet.size > 0) {
+        bib_number_string[productId] = [...bibSet].join(',');
+      }
+    });
+
+    const requestBody = {
+      follower_id: followerId,
+      device_id: deviceId,
+      customer_app_id_string,
+      bib_number_string,
+    };
+
+    if (API_CONFIG.DEBUG) {
+      console.log('📡 Syncing follow data to API:', {
+        follower_id: followerId,
+        device_id: deviceId,
+        customers: customer_app_id_string,
+        bibs: bib_number_string,
+      });
+    }
+
+    const headers = await API_CONFIG.getHeaders();
+
+    await apiClient.post(
+      getApiEndpoint(API_CONFIG.ENDPOINTS.SYNC_FOLLOW_DATA),
+      requestBody,
+      {
+        headers,
+        timeout: API_CONFIG.TIMEOUT,
+      }
+    );
+
+    if (API_CONFIG.DEBUG) {
+      console.log('✅ Follow data synced to API');
+    }
+  } catch (error: any) {
+    if (API_CONFIG.DEBUG) {
+      console.error('❌ Failed to sync follow data to API:', error);
+    }
+    // Don't throw - sync failure shouldn't break the app
+  }
+}
+
 export function clearCache(): void {
   cache = null;
   bibCache = null;
@@ -145,6 +224,9 @@ export async function followUser(id: any): Promise<void> {
     set.add(validId);
     cache = set;
     await persistCache(set);
+    
+    // ✅ Sync to API after successful local save
+    await syncFollowDataToAPI();
   } catch (error) {
     console.error('Follow user error:', error);
     throw error;
@@ -175,6 +257,9 @@ export async function followBib(productAppId: number, bib: string): Promise<void
     bibSet.add(validBib);
     bibCache = map;
     await persistBibCache(map);
+    
+    // ✅ Sync to API after successful local save
+    await syncFollowDataToAPI();
   } catch (error) {
     console.error('Follow BIB error:', error);
     throw error;
@@ -197,6 +282,9 @@ export async function unfollowUser(id: any): Promise<void> {
     set.delete(validId);
     cache = set;
     await persistCache(set);
+    
+    // ✅ Sync to API after successful local save
+    await syncFollowDataToAPI();
   } catch (error) {
     console.error('Unfollow user error:', error);
     throw error;
@@ -227,6 +315,9 @@ export async function unfollowBib(productAppId: number, bib: string): Promise<vo
 
     bibCache = map;
     await persistBibCache(map);
+    
+    // ✅ Sync to API after successful local save
+    await syncFollowDataToAPI();
   } catch (error) {
     console.error('Unfollow BIB error:', error);
     throw error;
@@ -293,3 +384,6 @@ export async function smartUnfollow(
     await unfollowBib(productAppId, bib);
   }
 }
+
+// ✅ Export sync function for manual triggers if needed
+export { syncFollowDataToAPI };
