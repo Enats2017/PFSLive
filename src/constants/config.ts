@@ -98,6 +98,8 @@ export const API_CONFIG = {
     FORGOT_PASSWORD: "/forgot_password_api.php",
     RESET_PASSWORD: "/reset_password_api.php",
     GET_FAVOURITES: "/get_favourite_api.php",
+    SAVE_PUSH_TOKEN: "/save_push_token_api.php",
+     SEND_NOTIFICATION: "/send_notification.php",
 
     // Participants
     DELETE_PARTICIPANT: "/delete_participant_app_api.php",
