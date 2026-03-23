@@ -196,12 +196,13 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             <TouchableOpacity
               style={[commonStyles.livetracking, { borderRadius: 0, flex: 1 }]}
               onPress={() =>
-                navigation.navigate('Route', {
+                navigation.navigate('LiveTracking', {
                   product_app_id,
-                  product_option_value_app_id: item.product_option_value_app_id || '',
+                  product_option_value_app_id: item.product_option_value_app_id || 0,
                   event_name: event_name,
                   sourceScreen: 'RaceResultScreen',
                   sectionType:'participant',
+                  sourceTab: 'past',
                 })
               }
               activeOpacity={0.8}

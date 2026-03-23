@@ -122,11 +122,13 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name}: Distance
 
           <TouchableOpacity
             style={[commonStyles.livetracking, { borderRadius: 0 }]}
-            onPress={() => navigation.navigate('Route', {
+            onPress={() => navigation.navigate('LiveTracking', {
               product_app_id,
               product_option_value_app_id: item.product_option_value_app_id || '',
-              event_name: item.distance_name,
+              event_name: event_name,
+              sourceScreen: 'FollowerDistanceScreen',
               sectionType: 'follower',
+              sourceTab,
             })}
           >
             <Text style={commonStyles.primaryButtonText}>
@@ -173,7 +175,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name}: Distance
           data={results}
           keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, padding: spacing.xs, paddingBottom: 10 }}
+          contentContainerStyle={{ flexGrow: 1, padding: spacing.xs, paddingBottom: 10, paddingTop: spacing.md }}
           renderItem={renderItem}
         />
       )}

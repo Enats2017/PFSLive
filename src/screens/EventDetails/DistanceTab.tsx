@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, colors } from '../../styles/common.styles';
+import { commonStyles, colors, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
 import RegistrationModal from '../../components/RegistrationModal';
@@ -442,7 +442,7 @@ const DistanceTab = ({
           `${item.product_option_value_app_id}-${index}`
         }
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 50, paddingTop: spacing.md }}
         renderItem={renderItem}
       />
 

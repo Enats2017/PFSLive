@@ -1,20 +1,20 @@
 {
   "tabs": {
     "raceInfo": "Info Course",
-    "timingPoint": "Point de Temps",
+    "timingPoint": "Point de Chronométrage",
     "runnerInfo": "Info Coureur",
     "awards": "Récompenses"
   },
   "raceInfo": {
     "finisher": "Finisher",
     "raceTime": "TEMPS DE COURSE",
-    "previousTimingPoint": "POINT PRÉCÉDENT",
-    "nextTimingPoint": "POINT SUIVANT",
+    "previousTimingPoint": "POINT DE CHRONOMÉTRAGE PRÉCÉDENT",
+    "nextTimingPoint": "PROCHAIN POINT DE CHRONOMÉTRAGE",
     "overallRanking": "CLASSEMENT\nGÉNÉRAL",
     "rankingInOpen": "CLASSEMENT\nOPEN",
     "genderRanking": "CLASSEMENT\nSEXE",
     "distanceCompleted": "DISTANCE\nPARCOURUE",
-    "elevationGain": "DÉNIVELÉ\nDEPUIS LE DÉPART",
+    "elevationGain": "DÉNIVELÉ POSITIF\nDEPUIS LE DÉPART",
     "startsIn": "La course commence dans",
     "raceStarted": "La course a commencé",
     "raceInProgress": "La course est en cours",
@@ -26,22 +26,23 @@
     "minutes": "minutes"
   },
   "timingPoint": {
-    "checkpoint": "POINT DE CONTRÔLE",
+    "checkpoint": "CHECKPOINT",
     "startTime": "HEURE DE DÉPART",
     "arrivalTime": "HEURE D'ARRIVÉE",
     "time": "TEMPS DE COURSE",
     "ranking": "CLASSEMENT",
     "distance": "DISTANCE",
-    "elevationGain": "DÉNIVELÉ",
+    "elevationGain": "DÉNIVELÉ POSITIF",
     "noData": "Aucune donnée de chronométrage disponible",
     "pace": "ALLURE",
-    "speed": "VITESSE"
+    "speed": "VITESSE",
+    "elevation": "Altitude"
   },
   "runnerInfo": {
     "club": "CLUB",
     "category": "CATÉGORIE",
     "utmbIndex": "INDEX",
-    "utmbSeries": "SÉRIE MONDIALE",
+    "utmbSeries": "WORLD SERIES",
     "noClub": "—"
   },
   "awards": {
@@ -50,7 +51,7 @@
     "ranking": "CLASSEMENT",
     "genderRanking": "CLASSEMENT SEXE",
     "distance": "DISTANCE",
-    "elevationGain": "DÉNIVELÉ",
+    "elevationGain": "DÉNIVELÉ POSITIF",
     "noData": "—"
   },
   "status": {
@@ -71,7 +72,7 @@
     "kmh": "km/h"
   },
   "defaults": {
-    "distance": "0.00",
+    "distance": "0,00",
     "time": "00:00:00",
     "elevation": "0",
     "empty": "—"

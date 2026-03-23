@@ -1,22 +1,22 @@
 {
   "tabs": {
     "raceInfo": "Race Info",
-    "timingPoint": "Tijdpunt",
+    "timingPoint": "Timing Point",
     "runnerInfo": "Loper Info",
     "awards": "Prijzen"
   },
   "raceInfo": {
     "finisher": "Finisher",
-    "raceTime": "RACE TIJD",
-    "previousTimingPoint": "VORIG TIJDPUNT",
-    "nextTimingPoint": "VOLGEND TIJDPUNT",
-    "overallRanking": "ALGEMENE\nRANGSCHIKKING",
-    "rankingInOpen": "RANGSCHIKKING IN\nOPEN",
-    "genderRanking": "GESLACHT\nRANGSCHIKKING",
-    "distanceCompleted": "AFSTAND\nVOLTOOID",
+    "raceTime": "RACETIJD",
+    "previousTimingPoint": "VORIG TIMING POINT",
+    "nextTimingPoint": "VOLGEND TIMING POINT",
+    "overallRanking": "ALGEMEEN\nKLASSEMENT",
+    "rankingInOpen": "KLASSEMENT IN\nOPEN",
+    "genderRanking": "GESLACHT\nKLASSEMENT",
+    "distanceCompleted": "AFSTAND\nAFGELEGD",
     "elevationGain": "HOOGTEMETERS\nVANAF START",
-    "startsIn": "Race begint over",
-    "raceStarted": "Race is begonnen",
+    "startsIn": "Race start over",
+    "raceStarted": "Race is gestart",
     "raceInProgress": "Race is bezig",
     "age": "Leeftijd",
     "overallRank": "Algemeen",
@@ -29,26 +29,27 @@
     "checkpoint": "CHECKPOINT",
     "startTime": "STARTTIJD",
     "arrivalTime": "AANKOMSTTIJD",
-    "time": "RACE TIJD",
-    "ranking": "RANGSCHIKKING",
+    "time": "RACETIJD",
+    "ranking": "KLASSEMENT",
     "distance": "AFSTAND",
     "elevationGain": "HOOGTEMETERS",
-    "noData": "Geen tijdgegevens beschikbaar",
+    "noData": "Geen timing gegevens beschikbaar",
     "pace": "TEMPO",
-    "speed": "SNELHEID"
+    "speed": "SNELHEID",
+    "elevation": "Hoogte"
   },
   "runnerInfo": {
     "club": "CLUB",
     "category": "CATEGORIE",
     "utmbIndex": "INDEX",
-    "utmbSeries": "WERELD SERIE",
+    "utmbSeries": "WORLD SERIES",
     "noClub": "—"
   },
   "awards": {
     "time": "TIJD",
     "country": "LAND",
-    "ranking": "RANGSCHIKKING",
-    "genderRanking": "GESLACHT RANGSCHIKKING",
+    "ranking": "KLASSEMENT",
+    "genderRanking": "GESLACHT KLASSEMENT",
     "distance": "AFSTAND",
     "elevationGain": "HOOGTEMETERS",
     "noData": "—"
@@ -56,7 +57,7 @@
   "status": {
     "not_started": "Niet Gestart",
     "in_progress": "Bezig",
-    "finished": "Voltooid"
+    "finished": "Gefinished"
   },
   "countdown": {
     "days": "Dagen",
@@ -71,7 +72,7 @@
     "kmh": "km/u"
   },
   "defaults": {
-    "distance": "0.00",
+    "distance": "0,00",
     "time": "00:00:00",
     "elevation": "0",
     "empty": "—"

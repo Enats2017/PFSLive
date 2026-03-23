@@ -106,7 +106,8 @@ export const API_CONFIG = {
     PARTICIPANT_LOCATION: "/insert_participant_location_api.php",
     PARTICIPANT_STATS: "/participants/:participantId/stats.php",
     VERSION_CHECK: '/check_update_api.php',
-    GET_RESULT_DETAIL: '/get_result_detail_api.php'
+    GET_RESULT_DETAIL: '/get_result_detail_api.php',
+    GET_LIVE_TRACKING: '/get_live_tracking_data_api.php'
   },
 
   TIMEOUT: 15000,

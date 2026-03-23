@@ -25,7 +25,10 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
     const { t } = useTranslation(['follower', 'common']);
     const navigation = useNavigation<any>();
 
-    const fullName = `${item.firstname} ${item.lastname}`.trim();
+    const fullName = useMemo(() => 
+        `${item.firstname} ${item.lastname}`.trim(),
+        [item.firstname, item.lastname]
+    );
 
     const initials = useMemo(() =>
         [item.firstname?.[0], item.lastname?.[0]]
@@ -40,6 +43,13 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
             ? getImageUrl(item.profile_picture)
             : null,
         [item.profile_picture]
+    );
+
+    const flagImageUri = useMemo(() =>
+        item.flag_url && item.flag_url.trim() !== ''
+            ? getImageUrl(item.flag_url)
+            : null,
+        [item.flag_url]
     );
 
     return (
@@ -73,9 +83,23 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
 
                 <View style={detailsStyles.info}>
                     <Text style={commonStyles.title}>{fullName}</Text>
-                    <Text style={commonStyles.text}>
-                        {item.city} | {item.country}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={commonStyles.text}>{item.city}</Text>
+                        {flagImageUri && (
+                            <>
+                                <Text style={commonStyles.text}>|</Text>
+                                <Image
+                                    source={{ uri: flagImageUri }}
+                                    style={{
+                                        width: 20,
+                                        height: 14,
+                                        borderRadius: 2,
+                                    }}
+                                    resizeMode="cover"
+                                />
+                            </>
+                        )}
+                    </View>
                 </View>
             </View>
 

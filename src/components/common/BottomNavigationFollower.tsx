@@ -48,7 +48,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
         if (product_app_id) {
           navigation.navigate('ResultList', {
             product_app_id,
-            product_option_value_app_id,
+            product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
             sourceScreen: route.name,
             sectionType: 'follower',
@@ -60,13 +60,14 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
         break;
 
       case 'Map':
-        if (product_app_id && product_option_value_app_id) {
-          navigation.navigate('Route', {
+        if (product_app_id) {
+          navigation.navigate('LiveTracking', {
             product_app_id,
-            product_option_value_app_id,
+            product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
             sourceScreen: route.name,
             sectionType: 'follower',
+            sourceTab: sourceTab,
           });
         } else {
           console.log('Map: Missing required parameters');

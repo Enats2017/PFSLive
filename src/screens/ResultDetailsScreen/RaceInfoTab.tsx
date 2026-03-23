@@ -99,6 +99,17 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                                 : '—'}
                         </Text>
                     </View>
+                    <View style={resultInfoStyles.statsColBorder} />
+                    <View style={resultInfoStyles.statsCol}>
+                        <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
+                            {t('raceInfo.elevationGain')}
+                        </Text>
+                        <Text style={resultInfoStyles.raceTimeText}>
+                            {raceInfo?.elevation_gain
+                                ? `${raceInfo.elevation_gain} ${t('units.meterPlus')}`
+                                : '—'}
+                        </Text>
+                    </View>
                 </View>
             </View>
         </ScrollView>
