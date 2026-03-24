@@ -94,6 +94,10 @@ import FavouriteEN from "./FavouriteList/en.json";
 import FavouriteFR from "./FavouriteList/fr.json";
 import FavouriteNL from "./FavouriteList/nl.json";
 
+import SettingScreenEN from "./SettingScreen/en.json";
+import SettingScreenFR from "./SettingScreen/fr.json";
+import SettingScreenNL from "./SettingScreen/nl.json";
+
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
 export const LANGUAGES = {
@@ -250,7 +254,8 @@ i18n.use(initReactI18next).init({
       resultdetails:ResultDetailsEN,
       follower:FollowerEN,
       forget:ForgetEN,
-      favourite:FavouriteEN
+      favourite:FavouriteEN,
+      setting:SettingScreenEN,
       
     },
     fr: {
@@ -273,7 +278,8 @@ i18n.use(initReactI18next).init({
       resultdetails:ResultDetailsFR,
       follower:FollowerFR,
       forget:ForgetFR,
-      favourite:FavouriteFR
+      favourite:FavouriteFR,
+      setting:SettingScreenFR,
     },
     nl: {
       common: commonNL,
@@ -295,7 +301,8 @@ i18n.use(initReactI18next).init({
       resultdetails:ResultDetailsNL,
       follower:FollowerNL,
       forget:ForgetNL,
-      favourite:FavouriteNL
+      favourite:FavouriteNL,
+      setting:SettingScreenNL,
     },
   },
   lng: initialLanguage,
@@ -320,7 +327,8 @@ i18n.use(initReactI18next).init({
     'follower',
     'result',
     'forget',
-    'favourite'
+    'favourite',
+    'setting'
   ],
   interpolation: {
     escapeValue: false,

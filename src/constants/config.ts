@@ -110,6 +110,7 @@ export const API_CONFIG = {
     GET_RESULT_DETAIL: '/get_result_detail_api.php',
     GET_LIVE_TRACKING: '/get_live_tracking_data_api.php',
     SYNC_FOLLOW_DATA: '/update_follower_favourites_api.php',
+    update_customer_setting: '/update_customer_setting_api.php'
   },
 
   TIMEOUT: 15000,
