@@ -31,6 +31,7 @@ import { API_CONFIG, getApiEndpoint } from '../constants/config';
 // Styles
 import { colors, spacing, typography, commonStyles } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
+import { useNotifications } from '../hooks/useNotifications';
 
 // Types
 interface StandardApiResponse<T = any> {
@@ -93,6 +94,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const raceStartTimeRef = useRef<Date | null>(null);
   const isGPSActiveRef = useRef<boolean>(false);
   const serverTimeOffsetRef = useRef<number>(0);
+
+    const { expoPushToken, lastNotification, clearLastNotification } =
+      useNotifications();
+  
+    useEffect(() => {
+      if (__DEV__ && expoPushToken) {
+        console.log('📲 Push token ready:', expoPushToken);
+      }
+    }, [expoPushToken]);
+  
+     useEffect(() => {
+      if (!lastNotification) return;
+  
+      const { title, body } = lastNotification.request.content;
+  
+      if (__DEV__) {
+        console.log('📬 Foreground notification:', title, body);
+      }
+  
+      clearLastNotification();
+    }, [lastNotification, clearLastNotification]);
 
   // Derived values
   const participantId = homeData?.next_race_participant_app_id || null;

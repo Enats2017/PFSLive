@@ -4,11 +4,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
-import { apiClient } from "../services/api";
-import { API_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
 import { followerApi } from "../services/registerFollowerServices";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// ─── Notification Handler (module-level, runs once) ──────────────────────────
+const EXPO_TOKEN_STORAGE_KEY = "expo_push_token";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -20,7 +19,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// ─── Android Channel Setup ────────────────────────────────────────────────────
+
 
 async function setupAndroidChannel(): Promise<void> {
   if (Platform.OS !== "android") return;
@@ -32,8 +31,6 @@ async function setupAndroidChannel(): Promise<void> {
     lightColor: "#FF231F7C",
   });
 }
-
-// ─── Permission + Token Registration ─────────────────────────────────────────
 
 async function registerForPushNotifications(): Promise<string | null> {
   if (!Device.isDevice) {
@@ -73,13 +70,21 @@ async function registerForPushNotifications(): Promise<string | null> {
 
 async function sendTokenToBackend(token: string): Promise<void> {
   try {
+     const savedToken = await AsyncStorage.getItem(EXPO_TOKEN_STORAGE_KEY);
+
+     if (savedToken === token) {
+      if (__DEV__) console.log("ℹ️ Expo token unchanged — skipping backend call.");
+      return;
+    }
+
     const result = await followerApi.registerFollower(token);
  
     if (__DEV__) {
       console.log("📤 Follower registered, follower_id:", result.follower_id);
     }
+     await AsyncStorage.setItem(EXPO_TOKEN_STORAGE_KEY, token);
   } catch (error) {
-    // Non-fatal — app still works without a registered push token
+
     console.error("❌ Failed to register follower:", error);
   }
 }
@@ -104,7 +109,6 @@ export function useNotifications(): UseNotificationsReturn {
     typeof Notifications.addNotificationResponseReceivedListener
   > | null>(null);
 
-  // ✅ Stable callback — won't cause re-subscriptions
   const handleNotificationReceived = useCallback(
     (notification: Notifications.Notification) => {
       if (__DEV__) {

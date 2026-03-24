@@ -46,26 +46,7 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
   const { changeLanguage } = useLanguageStore();
 
-  const { expoPushToken, lastNotification, clearLastNotification } =
-    useNotifications();
 
-  useEffect(() => {
-    if (__DEV__ && expoPushToken) {
-      console.log('📲 Push token ready:', expoPushToken);
-    }
-  }, [expoPushToken]);
-
-   useEffect(() => {
-    if (!lastNotification) return;
-
-    const { title, body } = lastNotification.request.content;
-
-    if (__DEV__) {
-      console.log('📬 Foreground notification:', title, body);
-    }
-
-    clearLastNotification();
-  }, [lastNotification, clearLastNotification]);
 
 
 
