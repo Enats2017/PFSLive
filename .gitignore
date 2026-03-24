@@ -93,3 +93,8 @@ firebase-adminsdk*.json
 *.json
 
 firebase-adminsdk*.json
+
+firebase-service-account.json
+service-account-key.json
+google-services.json
+GoogleService-Info.plist

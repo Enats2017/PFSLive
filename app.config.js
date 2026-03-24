@@ -11,41 +11,62 @@ export default ({ config }) => {
     slug: "livio",
     version: "1.0.0",
     orientation: "portrait",
-    // icon: "./assets/icon.png",
+    icon: "./assets/icon.png",
     userInterfaceStyle: "light",
-    // splash: {
-    //   image: "./assets/splash.png",
-    //   resizeMode: "contain",
-    //   backgroundColor: "#ffffff"
-    // },
-    assetBundlePatterns: [
-      "**/*"
-    ],
+    newArchEnabled: true,
+    splash: {
+      image: "./assets/splash-icon.png",
+      resizeMode: "contain",
+      backgroundColor: "#ffffff"
+    },
+    assetBundlePatterns: ["**/*"],
+
+    // ✅ iOS Configuration
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.pfs.livio",
+      buildNumber: "1",
       infoPlist: {
-        NSLocationWhenInUseUsageDescription: "Livio - Live tracking & Results app",
-        NSLocationAlwaysAndWhenInUseUsageDescription: "Livio - Live tracking & Results app",
-        NSLocationAlwaysUsageDescription: "Livio - Live tracking & Results app"
+        NSLocationWhenInUseUsageDescription: "Livio uses your location to track your race progress in real-time.",
+        NSLocationAlwaysAndWhenInUseUsageDescription: "Livio needs background location access to track your race even when the app is minimized.",
+        NSLocationAlwaysUsageDescription: "Livio requires continuous location access to provide accurate race tracking.",
+        UIBackgroundModes: ["remote-notification", "location"]
+      },
+      entitlements: {
+        "aps-environment": process.env.EXPO_PUBLIC_ENV === "production" 
+          ? "production" 
+          : "development"
       }
     },
+
+    // ✅ Android Configuration
     android: {
-      // adaptiveIcon: {
-      //   foregroundImage: "./assets/adaptive-icon.png",
-      //   backgroundColor: "#ffffff"
-      // },
+      adaptiveIcon: {
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#ffffff"
+      },
       package: "com.pfs.livio",
-       googleServicesFile: "./google-services.json",
+      versionCode: 1,
+      googleServicesFile: "./google-services.json",
       permissions: [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION"
-      ]
+        "ACCESS_BACKGROUND_LOCATION",
+        "POST_NOTIFICATIONS",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ],
+      useNextNotificationsApi: true,
+      edgeToEdgeEnabled: true,
+      predictiveBackGestureEnabled: false
     },
+
+    // ✅ Web Configuration
     web: {
-      // favicon: "./assets/favicon.png"
+      favicon: "./assets/favicon.png"
     },
+
+    // ✅ Plugins
     plugins: [
       [
         "@rnmapbox/maps",
@@ -63,8 +84,35 @@ export default ({ config }) => {
         }
       ],
       "expo-localization",
-      "@react-native-community/datetimepicker"  
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/notification-icon.png",
+          color: "#3B82F6",
+          defaultChannel: "default",
+          sounds: [],
+          mode: "production"
+        }
+      ]
     ],
-   
+
+    // ✅ Extra Configuration
+    extra: {
+      eas: {
+        projectId: "e72144dd-72cd-47f1-8409-125734130233"
+      }
+    },
+
+    // ✅ Organization Owner
+    owner: "livio_app", // ✅ Your organization slug
+
+    // ✅ Updates Configuration
+    updates: {
+      url: "https://u.expo.dev/e72144dd-72cd-47f1-8409-125734130233"
+    },
+    runtimeVersion: {
+      policy: "appVersion"
+    }
   };
 };

@@ -1,12 +1,9 @@
-// services/followerApi.ts
-
 import { API_CONFIG, APP_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
 import { apiClient } from "./api";
 import { getCurrentLanguageId } from "../i18n";
-import * as Application from "expo-application";
 import { Platform } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// ✅ Interfaces
 export interface RegisterFollowerParams {
   language_id?: number;
 }
@@ -23,40 +20,28 @@ export interface RegisterFollowerResponse {
   follower_id: number;
 }
 
+// ✅ Helper functions
 const getDevicePlatform = (): "ios" | "android" | "" => {
   if (Platform.OS === "ios") return "ios";
   if (Platform.OS === "android") return "android";
   return "";
 };
 
-const getAppVersion = (): string => {
-  const version = Application.nativeApplicationVersion ?? "";
-  return version.slice(0, 20);
-};
-
-const currentVersion = APP_CONFIG.VERSION;
-console.log("11111",currentVersion);
-
-
-
+// ✅ API
 export const followerApi = {
   /**
-   * Register (or update) this device as a follower.
-   * Uses an UPSERT on the server — safe to call on every app launch.
-   *
-   * @param expoToken  - Expo push token (ExponentPushToken[…] or ExpoPushToken[…])
-   * @param params     - Optional overrides (language_id)
-   * @returns          follower_id assigned by the server
+   * Register or update device as a follower
+   * Uses UPSERT on backend - safe to call multiple times
    */
   registerFollower: async (
     expoToken: string,
-    params: RegisterFollowerParams = {},
+    params: RegisterFollowerParams = {}
   ): Promise<RegisterFollowerResponse> => {
     try {
       const headers = await API_CONFIG.getHeaders();
       const device_id = await getDeviceId();
       const platform = getDevicePlatform();
-      const app_version =  APP_CONFIG.VERSION;
+      const app_version = APP_CONFIG.VERSION;
       const language_id = params.language_id ?? getCurrentLanguageId() ?? null;
 
       const requestBody: RegisterFollowerRequest = {
@@ -73,7 +58,7 @@ export const followerApi = {
           platform,
           app_version,
           language_id,
-          expo_token: expoToken,
+          expo_token_preview: `${expoToken.substring(0, 20)}...`,
         });
       }
 
@@ -83,30 +68,25 @@ export const followerApi = {
         {
           headers,
           timeout: API_CONFIG.TIMEOUT,
-        },
+        }
       );
-
-      const data = response.data;
-
-      if (data.follower_id) {
-         await AsyncStorage.setItem("follower_app_id", String(data.follower_id));
-      }
 
       if (API_CONFIG.DEBUG) {
         console.log("✅ Follower registered:", {
-          follower_id: data.follower_id,
+          follower_id: response.data.follower_id,
         });
       }
 
-      return data;
+      return response.data;
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
-        console.error("❌ Register follower error:", error);
+        console.error("❌ Register follower error:", error?.response?.data || error?.message);
       }
+
       throw new Error(
         error?.response?.data?.error ??
-          error?.message ??
-          "Failed to register follower",
+        error?.message ??
+        "Failed to register follower"
       );
     }
   },
