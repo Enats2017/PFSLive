@@ -90,7 +90,7 @@ ios/Pods/
 .env.production
 
 firebase-adminsdk*.json
-*.json
+
 
 firebase-adminsdk*.json
 

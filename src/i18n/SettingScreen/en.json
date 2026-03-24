@@ -1,0 +1,32 @@
+{
+  "liveTrackingSettings": {
+    "header": "Settings",
+    "pageTitle": "Live Tracking",
+    "pageSubtitle": "Manage who can see your location",
+    "cardTitle": "Live Tracking Settings",
+    "cardSubtitle": "Control access to your live location",
+    "visibilityLabel": "Visibility",
+    "public": "Public",
+    "private": "Private",
+    "statusPublic": "Anyone with your link can view your location",
+    "statusPrivate": "Protected with password",
+    "statusNotSet": "not set",
+    "saveSettings": "Save ",
+    "editPassword": "⚙️  Edit",
+    "modalTitle": "🔒 Private Access Settings",
+    "modalSubtitle": "Set a password to protect your live tracking link",
+    "passwordLabel": "Access Password",
+    "passwordPlaceholder": "Enter or generate a password",
+    "generatePassword": "✨  Generate Strong Password",
+    "passwordRequired": "Password is required for Private mode.",
+    "strengthWeak": "🔴 Too short",
+    "strengthModerate": "🟡 Moderate",
+    "strengthStrong": "🟢 Strong",
+    "loadingText": "Loading settings…",
+    "saving": "Saving…",
+    "toastSuccess": "Settings saved successfully!",
+    "toastErrorLoad": "Could not load settings.",
+    "toastErrorSave": "Failed to save settings.",
+    "chars": "characters"
+  }
+}

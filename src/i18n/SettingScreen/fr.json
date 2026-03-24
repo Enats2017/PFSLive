@@ -1,0 +1,32 @@
+{
+  "liveTrackingSettings": {
+    "header": "Paramètres",
+    "pageTitle": "Suivi en direct",
+    "pageSubtitle": "Gérez qui peut voir votre position",
+    "cardTitle": "Paramètres du suivi en direct",
+    "cardSubtitle": "Contrôlez l'accès à votre position en temps réel",
+    "visibilityLabel": "Visibilité",
+    "public": "Public",
+    "private": "Privé",
+    "statusPublic": "Toute personne disposant de votre lien peut voir votre position",
+    "statusPrivate": "Protégé par mot de passe",
+    "statusNotSet": "non défini",
+    "saveSettings": "Enregistrer",
+    "editPassword": "⚙️ Modifier",
+    "modalTitle": "🔒 Paramètres d'accès privé",
+    "modalSubtitle": "Définissez un mot de passe pour protéger votre lien de suivi",
+    "passwordLabel": "Mot de passe d'accès",
+    "passwordPlaceholder": "Entrez ou générez un mot de passe",
+    "generatePassword": "✨ Générer un mot de passe fort",
+    "passwordRequired": "Un mot de passe est requis pour le mode privé.",
+    "strengthWeak": "🔴 Trop court",
+    "strengthModerate": "🟡 Moyen",
+    "strengthStrong": "🟢 Fort",
+    "loadingText": "Chargement des paramètres…",
+    "saving": "Enregistrement…",
+    "toastSuccess": "Paramètres enregistrés avec succès !",
+    "toastErrorLoad": "Impossible de charger les paramètres.",
+    "toastErrorSave": "Échec de l'enregistrement des paramètres.",
+    "chars": "caractères"
+  }
+}

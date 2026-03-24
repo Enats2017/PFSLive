@@ -1,0 +1,32 @@
+{
+  "liveTrackingSettings": {
+    "header": "Instellingen",
+    "pageTitle": "Live tracking",
+    "pageSubtitle": "Beheer wie je locatie kan zien",
+    "cardTitle": "Live tracking instellingen",
+    "cardSubtitle": "Beheer de toegang tot je live locatie",
+    "visibilityLabel": "Zichtbaarheid",
+    "public": "Openbaar",
+    "private": "Privé",
+    "statusPublic": "Iedereen met je link kan je locatie bekijken",
+    "statusPrivate": "Beveiligd met wachtwoord",
+    "statusNotSet": "niet ingesteld",
+    "saveSettings": "Opslaan",
+    "editPassword": "⚙️ Bewerken",
+    "modalTitle": "🔒 Privé toegang instellingen",
+    "modalSubtitle": "Stel een wachtwoord in om je live tracking link te beschermen",
+    "passwordLabel": "Toegangswachtwoord",
+    "passwordPlaceholder": "Voer een wachtwoord in of genereer er een",
+    "generatePassword": "✨ Sterk wachtwoord genereren",
+    "passwordRequired": "Een wachtwoord is vereist voor de privé modus.",
+    "strengthWeak": "🔴 Te kort",
+    "strengthModerate": "🟡 Gemiddeld",
+    "strengthStrong": "🟢 Sterk",
+    "loadingText": "Instellingen laden…",
+    "saving": "Opslaan…",
+    "toastSuccess": "Instellingen succesvol opgeslagen!",
+    "toastErrorLoad": "Kon instellingen niet laden.",
+    "toastErrorSave": "Opslaan van instellingen mislukt.",
+    "chars": "tekens"
+  }
+}
