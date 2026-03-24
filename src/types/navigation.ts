@@ -72,7 +72,11 @@ export type RootStackParamList = {
   };
   AllParticipant:{
     product_app_id:number 
-  }
+  },
+
+  LiveTrackingSettings:undefined
+
+
 
 };
 
@@ -159,4 +163,9 @@ export type FavouriteListpops = NativeStackScreenProps<
 export type AllParticipantpops = NativeStackScreenProps<
   RootStackParamList,
   "AllParticipant"
+>;
+
+export type LiveTrackingSettingspops = NativeStackScreenProps<
+  RootStackParamList,
+  "LiveTrackingSettings"
 >;

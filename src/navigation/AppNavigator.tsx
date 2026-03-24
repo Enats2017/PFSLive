@@ -29,6 +29,7 @@ import FollowerEvent from '../screens/FollowerEventList/FollowerEvent';
  import ForgotPassword from '../screens/AuthScreens/ForgotPasswordScreen/ForgotPassword';
  import FavouriteList from '../screens/FavouriteScreen/FavouriteList';
  import AllParticipant from '../screens/FavouriteScreen/AllParticipant';
+ import LiveTrackingSettings from '../screens/SettingScreen/LiveTrackingSettingsScreen';
 
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -167,6 +168,14 @@ export const AppNavigator: React.FC = () => {
             gestureEnabled: true,
             fullScreenGestureEnabled: true,
             gestureResponseDistance: Platform.OS === 'android' ? 150 : 50,
+          }}
+        />
+
+         <Stack.Screen 
+          name="LiveTrackingSettings" 
+          component={LiveTrackingSettings}
+          options={{
+            gestureEnabled: false,
           }}
         />
       </Stack.Navigator>

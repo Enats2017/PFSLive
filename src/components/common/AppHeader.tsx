@@ -31,6 +31,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     }
   };
 
+    const handleSettingPress = async () => {
+    const isValid = await tokenService.isTokenValid();
+    if (isValid) {
+     navigation.navigate('LiveTrackingSettings')
+    } else {
+      navigation.navigate('LoginScreen');
+    }
+  };
+
   return (
     <View style={headerStyles.container}>
       {/* Left Side - Logo Image (Clickable) */}
@@ -61,7 +70,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       <View style={headerStyles.rightSection}>
         <TouchableOpacity
           style={headerStyles.iconButton}
-          onPress={() => navigation.navigate('LoginScreen')}
+          onPress={handleSettingPress}
         >
           <Text style={headerStyles.icon}>⚙️</Text>
         </TouchableOpacity>
