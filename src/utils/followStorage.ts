@@ -100,7 +100,7 @@ async function persistBibCache(map: Map<number, Set<string>>): Promise<void> {
 async function syncFollowDataToAPI(): Promise<void> {
   try {
     // Get follower_id and device_id from storage
-    const followerIdRaw = 1;//await AsyncStorage.getItem(FOLLOWER_ID_KEY);
+    const followerIdRaw = await AsyncStorage.getItem(FOLLOWER_ID_KEY);
     const deviceId = await getDeviceId();
 
     if (!followerIdRaw || !deviceId) {

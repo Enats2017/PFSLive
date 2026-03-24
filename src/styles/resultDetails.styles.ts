@@ -182,73 +182,93 @@ export const resultInfoStyles = StyleSheet.create({
 
   // ── Timeline Styles ──────────────────────────────────────
   leftCol: {
-      width: 64,
-      alignSelf: "stretch",
-      alignItems: "center",
+    width: 64,
+    alignSelf: "stretch",
+    alignItems: "center",
   },
 
   iconSpacer: {
-      height: 158,
+    height: 158,
   },
 
   lineTop: {
-      width: 2,
-      height: 158,
-      backgroundColor: colors.primaryLight,
+    width: 2,
+    height: 158,
+    backgroundColor: colors.primaryLight,
   },
 
   iconCircle: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      backgroundColor: colors.primaryLight,
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
   },
   iconCircleDone: {
-      backgroundColor: colors.primaryLight,
+    backgroundColor: colors.primaryLight,
   },
   iconCirclePending: {
-      backgroundColor: colors.primaryLight,
+    backgroundColor: colors.primaryLight,
   },
 
   lineBottomWrap: {
-      flex: 1,
-      width: "100%",
-      alignItems: "center",
-      position: "relative",
-      minHeight: 200,        // ✅ Ensure consistent minimum height
+    flex: 1,
+    width: "100%",
+    alignItems: "center",
+    position: "relative",
+    minHeight: 200,
   },
 
   lineBottom: {
-      position: "absolute",
-      top: 4,
-      bottom: 0,
-      width: 2,
-      backgroundColor: colors.primaryLight,
+    position: "absolute",
+    top: 4,
+    bottom: 0,
+    width: 2,
+    backgroundColor: colors.primaryLight,
   },
 
-  // ✅ VERIFIED: Fixed positioning at approximately half the card height
-  segmentLabels: {
-      position: "absolute",
-      top: 180,              // ✅ Approximately half of typical card height (~360px)
-      left: -25,
-      width: 80,
-      height: 40,
-      justifyContent: "center",
-      alignItems: "center",
+  // ✅ VERIFIED: Distance Label - Upper position (ORANGE)
+  segmentDistanceLabel: {
+    position: "absolute",
+    top: 150,              // ✅ Upper position
+    left: -25,
+    width: 80,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
-  segmentText: {
-      fontSize: 15,
-      fontWeight: typography.weights.bold,
-      color: colors.primary,
-      letterSpacing: 0.3,
-      transform: [{ rotate: "-90deg" }],
-      textAlign: "center",
-      width: 80,
-      height: 20,
+  segmentDistanceText: {
+    fontSize: 15,
+    fontWeight: typography.weights.bold,
+    color: "#FF6B35",     // ✅ ORANGE
+    letterSpacing: 0.3,
+    transform: [{ rotate: "-90deg" }],
+    textAlign: "center",
+    width: 80,
+  },
+
+  // ✅ VERIFIED: Elevation Label - Lower position (ORANGE)
+  segmentElevationLabel: {
+    position: "absolute",
+    top: 250,             // ✅ Below distance (NOT bottom)
+    left: -25,
+    width: 80,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  segmentElevationText: {
+    fontSize: 13,
+    fontWeight: typography.weights.bold,
+    color: "#FF6B35",     // ✅ ORANGE (same as distance)
+    letterSpacing: 0.3,
+    transform: [{ rotate: "-90deg" }],
+    textAlign: "center",
+    width: 80,
   },
 
   // ── Checkpoint Card Styles ──────────────────────────────

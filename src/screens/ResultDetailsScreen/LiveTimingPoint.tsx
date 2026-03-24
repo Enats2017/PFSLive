@@ -63,7 +63,6 @@ const StatCol = memo(({ label, value }: { label: string; value: string }) => (
     </View>
 ));
 
-// ✅ Centered two-column display (vertically centered in the card)
 const CenteredDistanceElevation = memo(({
     leftLabel, leftVal, rightLabel, rightVal,
 }: {
@@ -117,16 +116,12 @@ const CheckpointCard = memo(({
     const isStartedOrPastRace = raceStatus === 'in_progress' || raceStatus === 'finished';
     const isCrossed = item.is_crossed;
 
-    // ✅ UPCOMING RACE - ALL CHECKPOINTS (CENTERED)
     if (isUpcomingRace) {
         return (
             <View style={resultInfoStyles.timingcard}>
-                {/* Line 1: Name */}
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.title}>{item.name}</Text>
                 </View>
-
-                {/* Line 2: Distance | Elevation Gain (CENTERED VERTICALLY) */}
                 <CenteredDistanceElevation
                     leftLabel={t('timingPoint.distance')}
                     leftVal={dist(item.distance, t)}
@@ -137,16 +132,12 @@ const CheckpointCard = memo(({
         );
     }
 
-    // ✅ STARTED/PAST RACE - FIRST CHECKPOINT (START)
     if (isFirstCheckpoint && isStartedOrPastRace) {
         return (
             <View style={resultInfoStyles.timingcard}>
-                {/* Line 1: Name */}
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.title}>{item.name}</Text>
                 </View>
-
-                {/* Line 2: Day Name + Start Time */}
                 <StatCol
                     label={t('timingPoint.startTime')}
                     value={item.day_name 
@@ -154,39 +145,29 @@ const CheckpointCard = memo(({
                         : val(item.actual_time, t)
                     }
                 />
-
-                {/* Line 3: Distance | Elevation Gain - NOT CENTERED */}
                 <StatRow
                     leftLabel={t('timingPoint.distance')}
                     leftVal={dist(item.distance, t)}
                     rightLabel={t('timingPoint.elevationGain')}
                     rightVal={elevation(item.elevation_gain, t)}
                 />
-
-                {/* Line 4: Race Time | Ranking */}
                 <StatRow
                     leftLabel={t('timingPoint.time')}
                     leftVal={time(item.race_time, t)}
                     rightLabel={t('timingPoint.ranking')}
                     rightVal={val(item.ranking, t)}
                 />
-
-                {/* ✅ Empty spacer to match height */}
                 <View style={{ height: 30 }} />
             </View>
         );
     }
 
-    // ✅ STARTED/PAST RACE - NOT CROSSED (UPCOMING CHECKPOINT) - CENTERED
     if (isStartedOrPastRace && !isCrossed) {
         return (
             <View style={resultInfoStyles.timingcard}>
-                {/* Line 1: Name */}
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.title}>{item.name}</Text>
                 </View>
-
-                {/* Line 2: Distance | Elevation Gain (CENTERED VERTICALLY) */}
                 <CenteredDistanceElevation
                     leftLabel={t('timingPoint.distance')}
                     leftVal={dist(item.distance, t)}
@@ -197,16 +178,12 @@ const CheckpointCard = memo(({
         );
     }
 
-    // ✅ STARTED/PAST RACE - CROSSED (INTERMEDIATE/FINISH) - NOT CENTERED
     if (isStartedOrPastRace && isCrossed) {
         return (
             <View style={resultInfoStyles.timingcard}>
-                {/* Line 1: Name */}
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.title}>{item.name}</Text>
                 </View>
-
-                {/* Line 2: Day Name + Arrival Time */}
                 <StatCol
                     label={t('timingPoint.arrivalTime')}
                     value={item.day_name 
@@ -214,24 +191,18 @@ const CheckpointCard = memo(({
                         : val(item.actual_time, t)
                     }
                 />
-
-                {/* Line 3: Distance | Elevation Gain - NOT CENTERED */}
                 <StatRow
                     leftLabel={t('timingPoint.distance')}
                     leftVal={dist(item.distance, t)}
                     rightLabel={t('timingPoint.elevationGain')}
                     rightVal={elevation(item.elevation_gain, t)}
                 />
-
-                {/* Line 4: Race Time | Ranking */}
                 <StatRow
                     leftLabel={t('timingPoint.time')}
                     leftVal={time(item.race_time, t)}
                     rightLabel={t('timingPoint.ranking')}
                     rightVal={val(item.ranking, t)}
                 />
-
-                {/* Line 5: Speed | Pace */}
                 <StatRow
                     leftLabel={t('timingPoint.speed')}
                     leftVal={speed(item.speed, t)}
@@ -242,7 +213,6 @@ const CheckpointCard = memo(({
         );
     }
 
-    // Fallback (should never reach here)
     return null;
 });
 
@@ -288,14 +258,24 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
                         {index < lastIndex && (
                             <View style={resultInfoStyles.lineBottomWrap}>
                                 <View style={resultInfoStyles.lineBottom} />
-                                <View style={resultInfoStyles.segmentLabels}>
-                                    <Text style={resultInfoStyles.segmentText}>
-                                        {item.is_crossed && checkpoints[index + 1]?.segment_distance
-                                            ? `${checkpoints[index + 1].segment_distance} ${t('units.km')}`
-                                            : ' '
-                                        }
-                                    </Text>
-                                </View>
+                                
+                                {/* ✅ Distance at TOP of line (blue) */}
+                                {item.is_crossed && checkpoints[index + 1]?.segment_distance && (
+                                    <View style={resultInfoStyles.segmentDistanceLabel}>
+                                        <Text style={resultInfoStyles.segmentDistanceText}>
+                                            {checkpoints[index + 1].segment_distance} {t('units.km')}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {/* ✅ Elevation at BOTTOM of line (green) */}
+                                {item.is_crossed && checkpoints[index + 1]?.segment_elevation_gain && (
+                                    <View style={resultInfoStyles.segmentElevationLabel}>
+                                        <Text style={resultInfoStyles.segmentElevationText}>
+                                            {checkpoints[index + 1].segment_elevation_gain} {t('units.meterPlus')}
+                                        </Text>
+                                    </View>
+                                )}
                             </View>
                         )}
                     </View>

@@ -21,6 +21,7 @@ export interface CheckpointDetail {
     is_finish: boolean;      // ✅ added
     elevation: string;       // ✅ added
     elevation_gain: string;  // ✅ added
+    segment_elevation_gain: string;
     predicted_minutes: number | null;
 }
 
