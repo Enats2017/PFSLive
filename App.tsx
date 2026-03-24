@@ -11,6 +11,7 @@ import i18n, { loadLanguage } from './src/i18n';
 import { useLanguageStore } from './src/store/useLanguageStore';
 import Toast from "react-native-toast-message";
 import { toastConfig } from "./utils/toastConfig";
+import { useNotifications } from './src/hooks/useNotifications';
 
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 
@@ -18,24 +19,24 @@ const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 if (__DEV__) {
   // Disable all LogBox warnings/errors (no yellow/red boxes)
   LogBox.ignoreAllLogs(true);
-  
+
   // Suppress global error handler (no black bottom overlay)
   const originalHandler = ErrorUtils.getGlobalHandler();
-  
+
   ErrorUtils.setGlobalHandler((error, isFatal) => {
     // Log to console for debugging (you can still see in terminal/Expo logs)
     console.log('🚫 Error overlay suppressed:', error.message);
-    
+
     // Don't call original handler - this prevents the black overlay
     // originalHandler(error, isFatal);
   });
-  
+
   // Suppress console.error to prevent triggering overlays
   const originalConsoleError = console.error;
   console.error = (...args: any[]) => {
     // Still log as console.log so you can debug
     console.log('[ERROR]', ...args);
-    
+
     // Don't call originalConsoleError - prevents overlay
     // originalConsoleError(...args);
   };
@@ -44,6 +45,29 @@ if (__DEV__) {
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   const { changeLanguage } = useLanguageStore();
+
+  const { expoPushToken, lastNotification, clearLastNotification } =
+    useNotifications();
+
+  useEffect(() => {
+    if (__DEV__ && expoPushToken) {
+      console.log('📲 Push token ready:', expoPushToken);
+    }
+  }, [expoPushToken]);
+
+   useEffect(() => {
+    if (!lastNotification) return;
+
+    const { title, body } = lastNotification.request.content;
+
+    if (__DEV__) {
+      console.log('📬 Foreground notification:', title, body);
+    }
+
+    clearLastNotification();
+  }, [lastNotification, clearLastNotification]);
+
+
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -87,7 +111,7 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AppNavigator />
         {/* ✅ Toast positioned at top with offset */}
-        <Toast 
+        <Toast
           config={toastConfig}
           position="top"
           topOffset={60}

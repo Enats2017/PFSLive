@@ -1,19 +1,15 @@
 {
-    "message":{
-        "follow":"Following You have successfully added to favourites",
-        "unfollow":"Unfollowed You have been removed from favourites",
-        "nofavourite":"No favourites yet",
-        "favouritemsg":"Start following runners to see them here"
-    },
-
-    
-
-      "status": {
-      "in_progress": "In Progress",
-      "finished": "Finished",
-      "not_started": "Not Started"
-    }
-
-     
-     
+  "title": "Favourites",
+  "addRunner": "All Runners",
+  "message": {
+    "follow": "Following! You have successfully added to favourites",
+    "unfollow": "Unfollowed! You have been removed from favourites",
+    "nofavourite": "No favourites yet",
+    "favouritemsg": "Start following runners to see them here"
+  },
+  "status": {
+    "in_progress": "In Progress",
+    "finished": "Finished",
+    "not_started": "Not Started"
+  }
 }

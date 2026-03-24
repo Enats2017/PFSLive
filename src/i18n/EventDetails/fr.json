@@ -20,7 +20,7 @@
   },
   "participant": {
     "empty": "Pas encore de participants",
-    "search": "Rechercher des participants",
+    "search": "Rechercher des participants par nom, numéro de dossard",
     "searching": "Recherche...",
     "noResults": "Aucun participant trouvé pour",
     "favorite": "AJOUTER AUX FAVORIS",

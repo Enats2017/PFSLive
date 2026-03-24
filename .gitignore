@@ -88,3 +88,8 @@ ios/Pods/
 .env
 .env.local
 .env.production
+
+firebase-adminsdk*.json
+*.json
+
+firebase-adminsdk*.json

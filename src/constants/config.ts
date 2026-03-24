@@ -98,16 +98,18 @@ export const API_CONFIG = {
     FORGOT_PASSWORD: "/forgot_password_api.php",
     RESET_PASSWORD: "/reset_password_api.php",
     GET_FAVOURITES: "/get_favourite_api.php",
-    SAVE_PUSH_TOKEN: "/save_push_token_api.php",
-     SEND_NOTIFICATION: "/send_notification.php",
+    SAVE_PUSH_TOKEN: "/register_follower_api.php",
+    
 
     // Participants
     DELETE_PARTICIPANT: "/delete_participant_app_api.php",
     PARTICIPANT_LOCATION: "/insert_participant_location_api.php",
     PARTICIPANT_STATS: "/participants/:participantId/stats.php",
     VERSION_CHECK: '/check_update_api.php',
+
     GET_RESULT_DETAIL: '/get_result_detail_api.php',
-    GET_LIVE_TRACKING: '/get_live_tracking_data_api.php'
+    GET_LIVE_TRACKING: '/get_live_tracking_data_api.php',
+    SYNC_FOLLOW_DATA: '/update_follower_favourites_api.php',
   },
 
   TIMEOUT: 15000,

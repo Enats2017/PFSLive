@@ -1,15 +1,12 @@
 import React, { useMemo } from 'react';
-import { View, Text, Pressable, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { Participant } from '../../services/participantService';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
-import { detailsStyles } from '../../styles/details.styles';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { getImageUrl } from '../../constants/config';
+import { Participant } from '../../services/participantService';
+import { colors, commonStyles } from '../../styles/common.styles';
 import { favstyle } from '../../styles/favourite.style';
 
-interface ParticipantCardProps {
+interface AllParticipantCardProps {
     item: Participant;
     product_app_id: number; 
     isFollowed: boolean;
@@ -17,9 +14,8 @@ interface ParticipantCardProps {
     onToggleFollow: () => void;
 }
 
-const AllParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
+const AllParticipantCard: React.FC<AllParticipantCardProps> = React.memo(({
     item,
-    product_app_id, 
     isFollowed,
     isLoading,
     onToggleFollow
@@ -27,7 +23,7 @@ const AllParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     const { t } = useTranslation(['details', 'follower']);
 
     const fullName = useMemo(() =>
-        `${item.firstname ?? ''} ${item.lastname ?? ''}`.trim().toUpperCase() ||
+        `${item.firstname ?? ''} ${item.lastname ?? ''}`.trim() ||
         t('details:participant.unknownName'),
         [item.firstname, item.lastname, t]
     );
@@ -53,7 +49,7 @@ const AllParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
                 disabled={isLoading}
             >
                 {isLoading ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
+                    <ActivityIndicator size="small" color={colors.primary} />
                 ) : isFollowed ? (
                     <Ionicons name="checkmark" size={22} color={colors.primary} />
                 ) : (
@@ -65,13 +61,12 @@ const AllParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
 }, (prevProps, nextProps) => {
     return (
         prevProps.item.participant_app_id === nextProps.item.participant_app_id &&
-        prevProps.item.profile_picture === nextProps.item.profile_picture &&
         prevProps.item.bib_number === nextProps.item.bib_number &&
         prevProps.isFollowed === nextProps.isFollowed &&
         prevProps.isLoading === nextProps.isLoading
     );
 });
 
-AllParticipantCard.displayName = 'ParticipantCard';
+AllParticipantCard.displayName = 'AllParticipantCard';
 
 export default AllParticipantCard;

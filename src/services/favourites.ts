@@ -1,5 +1,3 @@
-// services/favourites.ts
-
 import { API_CONFIG, getApiEndpoint } from "../constants/config";
 import { apiClient } from "./api";
 import { getCurrentLanguageId } from "../i18n";
@@ -10,7 +8,10 @@ export interface FavouriteItem {
   firstname: string;
   lastname: string;
   distance_name: string;
+  product_option_value_app_id: number; // ✅ Added
+  sort_order: number; // ✅ Added
   race_status: "not_started" | "in_progress" | "finished";
+  finish_time: string; // ✅ Added
   profile_picture: string;
   live_tracking_activated: 0 | 1;
   customer_app_id: number | null;
@@ -59,7 +60,7 @@ export const favouritesApi = {
       if (customer_app_id_string === "" && bib_number_string === "") {
         if (API_CONFIG.DEBUG) {
           console.log(
-            "ℹ No favourites in local storage for product:",
+            "ℹ️ No favourites in local storage for product:",
             params.product_app_id,
           );
         }
@@ -73,8 +74,6 @@ export const favouritesApi = {
         language_id,
         page: params.page ?? 1,
       };
-
-      console.log("11111requstbody", requestBody);
 
       if (API_CONFIG.DEBUG) {
         console.log("📡 Fetching favourites:", {
@@ -95,6 +94,7 @@ export const favouritesApi = {
       );
 
       const data = response.data;
+      
       if (API_CONFIG.DEBUG) {
         console.log("✅ Favourites loaded:", {
           total: data.pagination?.total,
@@ -102,6 +102,7 @@ export const favouritesApi = {
           page: data.pagination?.page,
         });
       }
+      
       return data;
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {

@@ -1,13 +1,15 @@
 {
+  "title": "Favorieten",
+  "addRunner": "Alle Lopers",
   "message": {
-    "follow": "Je volgt deze deelnemer nu. Succesvol toegevoegd aan favorieten",
-    "unfollow": "Je volgt deze deelnemer niet meer. Verwijderd uit favorieten",
+    "follow": "Gevolgd! Succesvol toegevoegd aan favorieten",
+    "unfollow": "Ontvolgt! Verwijderd uit favorieten",
     "nofavourite": "Nog geen favorieten",
-    "favouritemsg": "Begin met het volgen van deelnemers om ze hier te zien"
+    "favouritemsg": "Begin met het volgen van lopers om ze hier te zien"
   },
   "status": {
     "in_progress": "Bezig",
-    "finished": "Voltooid",
-    "not_started": "Niet gestart"
+    "finished": "Gefinished",
+    "not_started": "Niet Gestart"
   }
 }
