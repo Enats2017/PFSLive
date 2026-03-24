@@ -27,7 +27,11 @@ export default ({ config }) => {
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "Livio - Live tracking & Results app",
         NSLocationAlwaysAndWhenInUseUsageDescription: "Livio - Live tracking & Results app",
-        NSLocationAlwaysUsageDescription: "Livio - Live tracking & Results app"
+        NSLocationAlwaysUsageDescription: "Livio - Live tracking & Results app",
+        UIBackgroundModes: ["remote-notification", "location"] // ✅ ADDED for iOS notifications
+      },
+      entitlements: {
+        "aps-environment": "development" // Change to "production" for App Store
       }
     },
     android: {
@@ -36,12 +40,14 @@ export default ({ config }) => {
       //   backgroundColor: "#ffffff"
       // },
       package: "com.pfs.livio",
-       googleServicesFile: "./google-services.json",
+      googleServicesFile: "./google-services.json",
       permissions: [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION"
-      ]
+        "ACCESS_BACKGROUND_LOCATION",
+        "POST_NOTIFICATIONS" // ✅ ADDED for Android 13+ notifications
+      ],
+      useNextNotificationsApi: true // ✅ ADDED for better notification handling
     },
     web: {
       // favicon: "./assets/favicon.png"
@@ -63,8 +69,24 @@ export default ({ config }) => {
         }
       ],
       "expo-localization",
-      "@react-native-community/datetimepicker"  
+      "@react-native-community/datetimepicker",
+      // ✅ ADDED: Expo Notifications Plugin
+      [
+        "expo-notifications",
+        {
+          //icon: "./assets/notification-icon.png", // Optional: custom notification icon
+          color: "#3B82F6", // Optional: notification color (your primary color)
+          defaultChannel: "default",
+          sounds: [], // Optional: custom notification sounds
+          mode: "development" // or "development"
+        }
+      ]
     ],
-   
+    // ✅ ADDED: Extra configuration for notifications
+    extra: {
+      eas: {
+        projectId: "" // Your Expo project ID
+      }
+    }
   };
 };

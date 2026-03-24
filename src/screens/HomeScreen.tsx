@@ -27,13 +27,14 @@ import { locationQueueService } from '../services/locationQueueService';
 import { tokenService } from '../services/tokenService';
 import { versionService } from '../services/versionService';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { useNotifications } from '../hooks/useNotifications';
 
 // Styles
 import { colors, spacing, typography, commonStyles } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
-import { useNotifications } from '../hooks/useNotifications';
 
-// Types
+// ==================== TYPES ====================
+
 interface StandardApiResponse<T = any> {
   success: boolean;
   data: T;
@@ -62,8 +63,13 @@ interface HomeData {
   timezone?: string;
 }
 
+// ==================== COMPONENT ====================
+
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['home', 'common']);
+
+  // ✅ Notifications hook
+  const { expoPushToken, lastNotification, clearLastNotification, isRegistering } = useNotifications();
 
   // Core states
   const [homeData, setHomeData] = useState<HomeData | null>(null);
@@ -95,30 +101,45 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const isGPSActiveRef = useRef<boolean>(false);
   const serverTimeOffsetRef = useRef<number>(0);
 
-    const { expoPushToken, lastNotification, clearLastNotification } =
-      useNotifications();
-  
-    useEffect(() => {
-      if (__DEV__ && expoPushToken) {
-        console.log('📲 Push token ready:', expoPushToken);
-      }
-    }, [expoPushToken]);
-  
-     useEffect(() => {
-      if (!lastNotification) return;
-  
-      const { title, body } = lastNotification.request.content;
-  
-      if (__DEV__) {
-        console.log('📬 Foreground notification:', title, body);
-      }
-  
-      clearLastNotification();
-    }, [lastNotification, clearLastNotification]);
-
   // Derived values
   const participantId = homeData?.next_race_participant_app_id || null;
   const eventId = homeData?.next_race_id || null;
+
+  // ==================== NOTIFICATION HANDLERS ====================
+
+  // ✅ Log push token when ready (DEBUG only)
+  useEffect(() => {
+    if (API_CONFIG.DEBUG && expoPushToken) {
+      console.log('📲 Expo push token ready:', expoPushToken);
+    }
+  }, [expoPushToken]);
+
+  // ✅ Handle foreground notifications
+  useEffect(() => {
+    if (!lastNotification) return;
+
+    const { title, body, data } = lastNotification.request.content;
+
+    if (API_CONFIG.DEBUG) {
+      console.log('📬 Foreground notification received:', { title, body, data });
+    }
+
+    // TODO: Add custom handling based on notification data
+    // Example: Navigate to specific screen based on data
+    // if (data?.screen === 'ResultDetails') {
+    //   navigation.navigate('ResultDetails', data.params);
+    // }
+
+    // Clear notification after handling
+    clearLastNotification();
+  }, [lastNotification, clearLastNotification, navigation]);
+
+  // ✅ Show notification registration status (DEBUG only)
+  useEffect(() => {
+    if (API_CONFIG.DEBUG && isRegistering) {
+      console.log('🔄 Registering device for push notifications...');
+    }
+  }, [isRegistering]);
 
   // ==================== UTILITIES ====================
 
@@ -267,7 +288,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         console.log('📡 Home API response:', response.data);
       }
 
-      // ✅ CHECK FOR UNAUTHORIZED ACTION (NO ERROR THROWN)
+      // ✅ Check for unauthorized action
       if (response.data.success && response.data.data?.action === 'unauthorized') {
         if (API_CONFIG.DEBUG) {
           console.log('🔐 Token invalid/expired - clearing session silently');
@@ -280,7 +301,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         return;
       }
 
-      // ✅ NORMAL SUCCESS FLOW
+      // ✅ Normal success flow
       if (response.data.success && response.data.data) {
         setHomeData(response.data.data);
 
@@ -310,7 +331,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         console.error('❌ Error fetching home data:', error.message);
       }
 
-      // ✅ HANDLE 401 STATUS (IF API STILL RETURNS IT)
+      // ✅ Handle 401 status
       if (error?.response?.status === 401) {
         if (API_CONFIG.DEBUG) {
           console.log('🚨 401 Unauthorized - clearing session silently');
@@ -319,13 +340,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         await tokenService.removeToken();
         setHasToken(false);
         setHomeData(null);
-        
-        // ✅ DON'T SHOW ERROR OR NAVIGATE
         return;
       }
 
-      // ✅ FOR OTHER ERRORS, ALSO HANDLE SILENTLY (OPTIONAL)
-      // You can show errors for network issues if needed, but for auth just clear
+      // ✅ Handle other errors silently
       if (API_CONFIG.DEBUG) {
         console.log('⚠️ Network error - keeping current state');
       }
@@ -894,7 +912,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           >
             <Text style={homeStyles.buttonText}>{t('home:button.Participant')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={homeStyles.button}onPress={() => navigation.navigate('FollowerEvent')}>
+          <TouchableOpacity 
+            style={homeStyles.button}
+            onPress={() => navigation.navigate('FollowerEvent')}
+          >
             <Text style={homeStyles.buttonText}>{t('home:button.Fan')}</Text>
           </TouchableOpacity>
         </View>
