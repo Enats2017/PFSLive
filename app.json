@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "PFSLive",
-    "slug": "PFSLive",
+    "name": "Livio",
+    "slug": "livio",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,28 +12,29 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pfs.livio"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "package": "com.pfs.livio",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-asset"
-    ],
+    "plugins": ["expo-asset"],
     "extra": {
       "eas": {
         "projectId": "8d5b3a21-b354-4647-9840-ad0ed16eb2d8"
       }
     },
-    "owner": "amanyadav2001"
+    "owner": "livio-app"
   }
 }

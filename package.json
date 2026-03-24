@@ -6,8 +6,9 @@
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "prebuild": "expo prebuild --clean",
-    "clean": "rm -rf node_modules android ios .expo && rm -f package-lock.json"
+    "clean": "rm -rf node_modules android ios .expo && rm -f package-lock.json",
+    "generate-assets": "node generate-assets.js",
+    "prebuild": "npm run generate-assets && npx expo prebuild --clean"
   },
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.1",
@@ -56,6 +57,7 @@
     "@types/geojson": "^7946.0.14",
     "@types/react": "~19.1.0",
     "babel-preset-expo": "~54.0.10",
+    "sharp": "^0.34.5",
     "typescript": "^5.3.3"
   },
   "private": true
