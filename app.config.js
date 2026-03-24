@@ -33,7 +33,9 @@ export default ({ config }) => {
         UIBackgroundModes: ["remote-notification", "location"]
       },
       entitlements: {
-        "aps-environment": "development" // Change to "production" for App Store
+        "aps-environment": process.env.EXPO_PUBLIC_ENV === "production" 
+          ? "production" 
+          : "development"
       }
     },
 
@@ -98,16 +100,16 @@ export default ({ config }) => {
     // ✅ Extra Configuration
     extra: {
       eas: {
-        projectId: "8d5b3a21-b354-4647-9840-ad0ed16eb2d8"
+        projectId: "e72144dd-72cd-47f1-8409-125734130233"
       }
     },
 
     // ✅ Organization Owner
-    owner: "livio-app", // ✅ Your organization slug
+    owner: "livio_app", // ✅ Your organization slug
 
     // ✅ Updates Configuration
     updates: {
-      url: "https://u.expo.dev/8d5b3a21-b354-4647-9840-ad0ed16eb2d8"
+      url: "https://u.expo.dev/e72144dd-72cd-47f1-8409-125734130233"
     },
     runtimeVersion: {
       policy: "appVersion"
