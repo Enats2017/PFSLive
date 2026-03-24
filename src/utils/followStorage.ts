@@ -4,7 +4,7 @@ import { apiClient } from '../services/api';
 
 const STORAGE_KEY = 'followed_users';
 const STORAGE_KEY_BIBS = 'followed_bibs_by_product';
-const FOLLOWER_ID_KEY = 'follower_app_id';
+const FOLLOWER_ID_KEY = 'FOLLOWER_ID';
 const DEVICE_ID_KEY = 'device_id';
 
 let cache: Set<number> | null = null;
