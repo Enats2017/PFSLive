@@ -12,20 +12,21 @@ import { getImageUrl } from '../../constants/config';
 interface FanEventCardProps {
     item: ParticipantItem;
     isFollowed: boolean;
-    isFollowLoading: boolean;
+    isLoading: boolean;
     onToggleFollow: () => void;
+    password_protected?: 0 | 1;
 }
 
 const FanEventCard: React.FC<FanEventCardProps> = ({
     item,
     isFollowed,
-    isFollowLoading,
+    isLoading,
     onToggleFollow,
 }) => {
     const { t } = useTranslation(['follower', 'common']);
     const navigation = useNavigation<any>();
 
-    const fullName = useMemo(() => 
+    const fullName = useMemo(() =>
         `${item.firstname} ${item.lastname}`.trim(),
         [item.firstname, item.lastname]
     );
@@ -121,22 +122,24 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                 <TouchableOpacity
                     style={[
                         commonStyles.livetracking,
-                        { 
+                        {
                             borderRadius: 0,
-                            opacity: isFollowLoading ? 0.6 : 1,
+                            opacity: isLoading ? 0.6 : 1,
                         },
                     ]}
                     onPress={onToggleFollow}
-                    disabled={isFollowLoading}
+                    disabled={isLoading}
                     activeOpacity={0.8}
                 >
-                    {isFollowLoading ? (
+                    {isLoading ? (
                         <ActivityIndicator size="small" color="#ffffff" />
                     ) : (
                         <Text style={commonStyles.primaryButtonText}>
                             {isFollowed
                                 ? t('follower:button.unfollow')
-                                : t('follower:button.follower')}
+                                : item?.password_protected === 1
+                                    ? `🔒 ${t('follower:button.follower')}`
+                                    : t('follower:button.follower')}
                         </Text>
                     )}
                 </TouchableOpacity>

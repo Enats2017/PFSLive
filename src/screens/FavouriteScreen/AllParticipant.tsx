@@ -18,13 +18,24 @@ import { API_CONFIG } from '../../constants/config';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import AllParticipantCard from './AllParticipantCard';
 import { AllParticipantpops } from '../../types/navigation';
+import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 
 const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => {
     const { product_app_id } = route.params;
     const { t } = useTranslation(['details', 'follower']);
     const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
-    const { isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t, productId);
-    
+    const {
+        isFollowed,
+        isLoading,
+        refreshFollowedUsers,
+        handleFollowPress,
+        passwordModalVisible,
+        isVerifying,
+        passwordError,
+        handlePasswordSubmit,
+        handlePasswordModalClose,
+    } = useFollowManager(t, productId);
+
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -148,7 +159,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
 
         fetchParticipants(page + 1, searchText);
     }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
- 
+
     const renderParticipant = useCallback(
         ({ item }: { item: Participant }) => {
             const bib = item.bib || item.bib_number || '';
@@ -159,11 +170,18 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
                     product_app_id={productId}
                     isFollowed={isFollowed(productId, bib, item.customer_app_id)}
                     isLoading={isLoading(productId, bib, item.customer_app_id)}
-                    onToggleFollow={() => toggleFollow(productId, bib, item.customer_app_id)}
+                    onToggleFollow={() => {
+                        console.log('🔍 item.password_protected from API:', item.password_protected);
+                        handleFollowPress({
+                            customer_app_id: item.customer_app_id,
+                            password_protected: item.password_protected ?? 0,
+                            bib_number: bib,
+                        });
+                    }}
                 />
             );
         },
-        [productId, isFollowed, isLoading, toggleFollow]
+        [productId, isFollowed, isLoading, handleFollowPress]
     );
 
     const renderFooter = useCallback(() => {
@@ -231,7 +249,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
                         <Ionicons name="chevron-back" size={32} color={colors.gray900} />
                     </TouchableOpacity>
                     <Text style={commonStyles.title}>{t('favourite:addRunner')}</Text>
-                </View>  
+                </View>
                 <SearchInput
                     ref={searchInputRef}
                     placeholder={t('details:participant.search')}
@@ -268,6 +286,14 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
                 removeClippedSubviews={false}
                 ListFooterComponent={renderFooter}
                 ListEmptyComponent={!loading ? renderEmpty : null}
+            />
+
+            <TrackingPasswordModal
+                visible={passwordModalVisible}
+                isVerifying={isVerifying}
+                passwordError={passwordError}
+                onSubmit={handlePasswordSubmit}
+                onClose={handlePasswordModalClose}
             />
         </SafeAreaView>
     );

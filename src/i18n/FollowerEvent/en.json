@@ -29,7 +29,11 @@
     "failed": "Failed to load events",
     "retry": "Retry",
     "title": "Error",
-    "message": "Something went wrong. Please try again."
+    "message": "Something went wrong. Please try again.",
+    "wrongPassword": "Incorrect password. Please try again.",
+    "passwordRequired": "Please enter the password.",
+    "passwordNotConfigured": "This profile has no password set.",
+    "generic": "Something went wrong. Please try again."
   },
   "button": {
     "viewprofile": "VIEW",

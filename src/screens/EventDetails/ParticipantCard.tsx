@@ -14,14 +14,15 @@ interface ParticipantCardProps {
   isFollowed: boolean;
   isLoading: boolean;
   onToggleFollow: () => void;
+  password_protected?: 0 | 1;
 }
 
-const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({ 
-  item, 
+const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
+  item,
   product_app_id, // ✅ ADDED
-  isFollowed, 
-  isLoading, 
-  onToggleFollow 
+  isFollowed,
+  isLoading,
+  onToggleFollow
 }) => {
   const { t } = useTranslation(['details', 'follower']);
 
@@ -49,7 +50,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
 
   const hasBibNumber = item.bib_number && item.bib_number.trim() !== '';
   const isLiveTracking = item.live_tracking_activated === 1;
-  
+
   // ✅ REMOVED: canFollow check - show button for ALL participants
 
   return (
@@ -126,7 +127,9 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
           <Text style={commonStyles.primaryButtonText}>
             {isFollowed
               ? t('follower:button.unfollow')
-              : t('follower:button.follower')}
+              : item?.password_protected === 1
+                ? `🔒 ${t('follower:button.follower')}`
+                : t('follower:button.follower')}
           </Text>
         )}
       </TouchableOpacity>
@@ -139,7 +142,8 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     prevProps.item.profile_picture === nextProps.item.profile_picture &&
     prevProps.item.bib_number === nextProps.item.bib_number &&
     prevProps.isFollowed === nextProps.isFollowed &&
-    prevProps.isLoading === nextProps.isLoading
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.password_protected === nextProps.password_protected
   );
 });
 

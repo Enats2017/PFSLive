@@ -16,6 +16,7 @@ import SearchInput from '../../components/SearchInput';
 import FanEventCard from './FollowerCard';
 import { FollowerEventpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
+import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
@@ -24,10 +25,20 @@ const TAB_CONTENT_HEIGHT = height * 0.39;
 
 const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const { t } = useTranslation(['follower', 'common']);
-    
+
     // ✅ USE FOLLOW MANAGER (NO PRODUCT_APP_ID NEEDED FOR CUSTOMER-ONLY)
-    const { followedUsers, isFollowed, isLoading: isFollowLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
-    
+    const {
+        isFollowed,
+        isLoading,
+        refreshFollowedUsers,
+        handleFollowPress,
+        passwordModalVisible,
+        isVerifying,
+        passwordError,
+        handlePasswordSubmit,
+        handlePasswordModalClose,
+    } = useFollowManager(t);
+
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [loading, setLoading] = useState(true);
     const [searchResults, setSearchResults] = useState<ParticipantItem[]>([]);
@@ -48,7 +59,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         upcoming: { page: 1, total_pages: 1 },
         participants: { page: 1, total_pages: 1 },
     });
-    
+
     const flatListRef = useRef<FlatList>(null);
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
@@ -62,14 +73,14 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             }
             return;
         }
-        
+
         try {
             isFetching.current = true;
-            
+
             if (isInitialMount.current) {
                 setLoading(true);
             }
-            
+
             setError(null);
 
             if (API_CONFIG.DEBUG) {
@@ -93,21 +104,21 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
 
             if (result.pagination) {
                 setPaginationInfo({
-                    past: { 
-                        page: result.pagination.past.page, 
-                        total_pages: result.pagination.past.total_pages 
+                    past: {
+                        page: result.pagination.past.page,
+                        total_pages: result.pagination.past.total_pages
                     },
-                    live: { 
-                        page: result.pagination.live.page, 
-                        total_pages: result.pagination.live.total_pages 
+                    live: {
+                        page: result.pagination.live.page,
+                        total_pages: result.pagination.live.total_pages
                     },
-                    upcoming: { 
-                        page: result.pagination.upcoming.page, 
-                        total_pages: result.pagination.upcoming.total_pages 
+                    upcoming: {
+                        page: result.pagination.upcoming.page,
+                        total_pages: result.pagination.upcoming.total_pages
                     },
-                    participants: { 
-                        page: result.pagination?.participants?.page ?? 1, 
-                        total_pages: result.pagination?.participants?.total_pages ?? 1 
+                    participants: {
+                        page: result.pagination?.participants?.page ?? 1,
+                        total_pages: result.pagination?.participants?.total_pages ?? 1
                     },
                 });
             }
@@ -174,15 +185,15 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) {
             return;
         }
-        
+
         try {
             setLoadingMorePast(true);
             const nextPage = paginationInfo.past.page + 1;
-            
+
             if (API_CONFIG.DEBUG) {
                 console.log(`📡 Past: Loading page ${nextPage}`);
             }
-            
+
             const result = await eventService.getEvents({
                 page_past: nextPage,
             });
@@ -194,10 +205,10 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 if (API_CONFIG.DEBUG) {
                     console.log(`➕ Past: Adding ${newItems.length} new events`);
                 }
-                
+
                 return [...prev, ...newItems];
             });
-            
+
             if (result.pagination?.past) {
                 setPaginationInfo((prev) => ({
                     ...prev,
@@ -221,27 +232,27 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) {
             return;
         }
-        
+
         try {
             setLoadingMoreLive(true);
             const nextPage = paginationInfo.live.page + 1;
-            
+
             if (API_CONFIG.DEBUG) {
                 console.log(`📡 Live: Loading page ${nextPage}`);
             }
-            
+
             const result = await eventService.getEvents({
                 page_live: nextPage,
             });
-            
+
             setLiveEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
                 const newItems = result.tabs.live.filter((item) => !existingIds.has(item.product_app_id));
-                
+
                 if (API_CONFIG.DEBUG) {
                     console.log(`➕ Live: Adding ${newItems.length} new events`);
                 }
-                
+
                 return [...prev, ...newItems];
             });
 
@@ -268,7 +279,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
             return;
         }
-        
+
         try {
             setLoadingMoreUpcoming(true);
             const nextPage = paginationInfo.upcoming.page + 1;
@@ -276,11 +287,11 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             if (API_CONFIG.DEBUG) {
                 console.log(`📡 Upcoming: Loading page ${nextPage}`);
             }
-            
+
             const result = await eventService.getEvents({
                 page_upcoming: nextPage,
             });
-            
+
             setUpcomingEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
                 const newItems = result.tabs.upcoming.filter((item) => !existingIds.has(item.product_app_id));
@@ -319,28 +330,28 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         try {
             setLoadingMoreParticipant(true);
             const nextPage = paginationInfo.participants.page + 1;
-            
+
             if (API_CONFIG.DEBUG) {
                 console.log(`📡 Participants: Loading page ${nextPage}`);
             }
-            
+
             const result = await eventService.getEvents({
                 is_participant: '1',
                 page_participant: nextPage,
                 filter_name_participant: searchText,
             });
-            
+
             setParticipants(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
                 const newItems = (result.participants || []).filter(i => !ids.has(i.customer_app_id));
-                
+
                 if (API_CONFIG.DEBUG) {
                     console.log(`➕ Participants: Adding ${newItems.length} new items`);
                 }
-                
+
                 return [...prev, ...newItems];
             });
-            
+
             setPaginationInfo(prev => ({
                 ...prev,
                 participants: {
@@ -376,7 +387,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         if (debounceTimer.current) {
             clearTimeout(debounceTimer.current);
         }
-        
+
         if (searchText.trim().length === 0) {
             setSearchResults([]);
             return;
@@ -385,19 +396,19 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         debounceTimer.current = setTimeout(async () => {
             try {
                 setSearching(true);
-                
+
                 if (API_CONFIG.DEBUG) {
                     console.log('🔍 Searching participants:', searchText);
                 }
-                
+
                 const result = await eventService.getEvents({
                     is_participant: '1',
                     page_participant: 1,
                     filter_name_participant: searchText,
                 });
-                
+
                 setSearchResults(result.participants || []);
-                
+
                 if (API_CONFIG.DEBUG) {
                     console.log('✅ Search results:', (result.participants || []).length);
                 }
@@ -422,7 +433,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     // ✅ HANDLE LOAD MORE PARTICIPANTS
     const handleLoadMoreParticipant = useCallback(() => {
         if (searchText.trim().length > 0) return;
-        
+
         if (API_CONFIG.DEBUG) {
             console.log('🔍 Participant onEndReached:', {
                 hasMore: paginationInfo.participants.page < paginationInfo.participants.total_pages,
@@ -430,7 +441,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 participantsCount: participants.length,
             });
         }
-        
+
         if (paginationInfo.participants.page < paginationInfo.participants.total_pages && !loadingMoreParticipant) {
             if (API_CONFIG.DEBUG) {
                 console.log('✅ Calling loadMoreParticipant');
@@ -445,11 +456,16 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             <FanEventCard
                 item={item}
                 isFollowed={isFollowed(item.customer_app_id)}
-                isFollowLoading={isFollowLoading(item.customer_app_id)}
-                onToggleFollow={() => toggleFollow(item.customer_app_id)}
+                isLoading={isLoading(item.customer_app_id)}
+                onToggleFollow={() => {
+                    handleFollowPress({
+                        customer_app_id: item.customer_app_id,
+                        password_protected: item.password_protected ?? 0,
+                    });
+                }}
             />
         ),
-        [isFollowed, isFollowLoading, toggleFollow]
+        [isFollowed, isLoading, handleFollowPress]
     );
 
     // ✅ LOADING STATE
@@ -491,7 +507,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
-            
+
             <View style={{ flex: 1 }}>
                 {/* SECTION TITLE */}
                 <View style={eventStyles.section}>
@@ -508,7 +524,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                             activeOpacity={0.7}
                         >
                             <Text style={[
-                                commonStyles.subtitle, 
+                                commonStyles.subtitle,
                                 activeTab === tab && eventStyles.activeTabText
                             ]}>
                                 {t(`follower:live.${tab}`)}
@@ -618,13 +634,21 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                     }
                     ListFooterComponent={
                         loadingMoreParticipant ? (
-                            <ActivityIndicator 
-                                size="small" 
-                                color={colors.primary} 
-                                style={{ marginVertical: spacing.md }} 
+                            <ActivityIndicator
+                                size="small"
+                                color={colors.primary}
+                                style={{ marginVertical: spacing.md }}
                             />
                         ) : null
                     }
+                />
+
+                <TrackingPasswordModal
+                    visible={passwordModalVisible}
+                    isVerifying={isVerifying}
+                    passwordError={passwordError}
+                    onSubmit={handlePasswordSubmit}
+                    onClose={handlePasswordModalClose}
                 />
             </View>
         </SafeAreaView>

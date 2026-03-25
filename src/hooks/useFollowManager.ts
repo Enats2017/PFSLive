@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useState, useCallback, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getFollowedUsers,
   getFollowedBibs,
@@ -9,8 +9,9 @@ import {
   clearCache,
   followUser,
   unfollowUser,
-} from '../utils/followStorage';
-import { toastSuccess, toastError } from '../../utils/toast';
+} from "../utils/followStorage";
+import { toastSuccess, toastError } from "../../utils/toast";
+import { followService } from "../services/followService";
 
 interface UseFollowManagerResult {
   followedUsers: Set<number>;
@@ -26,15 +27,45 @@ interface UseFollowManagerResult {
   };
   toggleFollow: {
     (customerId: number | null | undefined): Promise<void>;
-    (productAppId: number, bib: string, customerAppId?: number | null): Promise<void>;
+    (
+      productAppId: number,
+      bib: string,
+      customerAppId?: number | null,
+    ): Promise<void>;
   };
   refreshFollowedUsers: () => Promise<void>;
+  passwordModalVisible: boolean;
+  isVerifying: boolean;
+  passwordError: string;
+  handleFollowPress: (participant: {
+    customer_app_id: number | null | undefined;
+    password_protected: 0 | 1;
+    bib_number?: number | string | null;
+  }) => void;
+  handlePasswordSubmit: (password: string) => Promise<void>;
+  handlePasswordModalClose: () => void;
 }
 
-export function useFollowManager(t: any, productAppId?: number): UseFollowManagerResult {
+export function useFollowManager(
+  t: any,
+  productAppId?: number,
+): UseFollowManagerResult {
   const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set());
-  const [followedBibs, setFollowedBibs] = useState<Map<number, Set<string>>>(new Map());
-  const [followingInProgress, setFollowingInProgress] = useState<Set<string>>(new Set());
+  const [followedBibs, setFollowedBibs] = useState<Map<number, Set<string>>>(
+    new Map(),
+  );
+  const [followingInProgress, setFollowingInProgress] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [pendingFollow, setPendingFollow] = useState<{
+    customerAppId: number;
+    productAppId?: number;
+    bib?: string;
+  } | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   const loadFollowedData = useCallback(async () => {
     try {
@@ -42,14 +73,22 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
       setFollowedUsers(new Set(customers));
 
       const bibMap = new Map<number, Set<string>>();
-      
-      const allBibsRaw = await AsyncStorage.getItem('followed_bibs_by_product');
+
+      const allBibsRaw = await AsyncStorage.getItem("followed_bibs_by_product");
       if (allBibsRaw) {
-        const allBibsParsed = JSON.parse(allBibsRaw) as Record<string, string[]>;
-        
+        const allBibsParsed = JSON.parse(allBibsRaw) as Record<
+          string,
+          string[]
+        >;
+
         Object.entries(allBibsParsed).forEach(([prodId, bibs]) => {
           const numProdId = Number(prodId);
-          if (!isNaN(numProdId) && numProdId > 0 && Array.isArray(bibs) && bibs.length > 0) {
+          if (
+            !isNaN(numProdId) &&
+            numProdId > 0 &&
+            Array.isArray(bibs) &&
+            bibs.length > 0
+          ) {
             bibMap.set(numProdId, new Set(bibs));
           }
         });
@@ -57,7 +96,7 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
 
       setFollowedBibs(bibMap);
     } catch (error) {
-      console.error('Failed to load follow data:', error);
+      console.error("Failed to load follow data:", error);
     }
   }, [productAppId]);
 
@@ -75,19 +114,27 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
     (
       productIdOrCustomerId: number | null | undefined,
       bib?: string,
-      customerAppId?: number | null
+      customerAppId?: number | null,
     ): boolean => {
       if (bib === undefined && customerAppId === undefined) {
         const customerId = productIdOrCustomerId;
-        if (customerId === null || customerId === undefined || customerId <= 0) {
+        if (
+          customerId === null ||
+          customerId === undefined ||
+          customerId <= 0
+        ) {
           return false;
         }
         return followedUsers.has(Number(customerId));
       }
 
       const productId = productIdOrCustomerId as number;
-      
-      if (customerAppId !== null && customerAppId !== undefined && customerAppId > 0) {
+
+      if (
+        customerAppId !== null &&
+        customerAppId !== undefined &&
+        customerAppId > 0
+      ) {
         const customerFollowed = followedUsers.has(Number(customerAppId));
         if (customerFollowed) {
           return true;
@@ -101,18 +148,22 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
 
       return false;
     },
-    [followedUsers, followedBibs]
+    [followedUsers, followedBibs],
   );
 
   const isLoading = useCallback(
     (
       productIdOrCustomerId: number | null | undefined,
       bib?: string,
-      customerAppId?: number | null
+      customerAppId?: number | null,
     ): boolean => {
       if (bib === undefined && customerAppId === undefined) {
         const customerId = productIdOrCustomerId;
-        if (customerId === null || customerId === undefined || customerId <= 0) {
+        if (
+          customerId === null ||
+          customerId === undefined ||
+          customerId <= 0
+        ) {
           return false;
         }
         const key = `customer:${customerId}`;
@@ -121,7 +172,8 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
 
       const productId = productIdOrCustomerId as number;
       const customerKey = customerAppId ? `customer:${customerAppId}` : null;
-      const bibKey = bib && productId ? `product:${productId}:bib:${bib}` : null;
+      const bibKey =
+        bib && productId ? `product:${productId}:bib:${bib}` : null;
 
       return (
         (customerKey && followingInProgress.has(customerKey)) ||
@@ -129,20 +181,23 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
         false
       );
     },
-    [followingInProgress]
+    [followingInProgress],
   );
 
   const toggleFollow = useCallback(
     async (
       productIdOrCustomerId: number | null | undefined,
       bib?: string,
-      customerAppId?: number | null
+      customerAppId?: number | null,
     ) => {
       // Customer-only mode
       if (bib === undefined && customerAppId === undefined) {
         const customerId = productIdOrCustomerId;
-        
-        if (customerId === null || customerId === undefined || customerId <= 0) {
+        if (
+          customerId === null ||
+          customerId === undefined ||
+          customerId <= 0
+        ) {
           return;
         }
 
@@ -172,21 +227,21 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
           if (willFollow) {
             await followUser(numericId);
             toastSuccess(
-              t('follower:success.followTitle'),
-              t('follower:success.followMessage')
+              t("follower:success.followTitle"),
+              t("follower:success.followMessage"),
             );
           } else {
             await unfollowUser(numericId);
             toastSuccess(
-              t('follower:success.unfollowTitle'),
-              t('follower:success.unfollowMessage')
+              t("follower:success.unfollowTitle"),
+              t("follower:success.unfollowMessage"),
             );
           }
 
           const updatedUsers = await getFollowedUsers();
           setFollowedUsers(new Set(updatedUsers));
         } catch (error) {
-          console.error('Toggle follow error:', error);
+          console.error("Toggle follow error:", error);
 
           setFollowedUsers((prev) => {
             const next = new Set(prev);
@@ -198,7 +253,7 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
             return next;
           });
 
-          toastError(t('follower:error.title'), t('follower:error.message'));
+          toastError(t("follower:error.title"), t("follower:error.message"));
         } finally {
           setFollowingInProgress((prev) => {
             const next = new Set(prev);
@@ -212,13 +267,13 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
 
       // Dual mode
       const productId = productIdOrCustomerId as number;
-      
+
       if (!bib || !productId) {
         return;
       }
 
-      const operationKey = customerAppId 
-        ? `customer:${customerAppId}` 
+      const operationKey = customerAppId
+        ? `customer:${customerAppId}`
         : `product:${productId}:bib:${bib}`;
 
       if (followingInProgress.has(operationKey)) {
@@ -231,7 +286,11 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
       setFollowingInProgress((prev) => new Set(prev).add(operationKey));
 
       if (willFollow) {
-        if (customerAppId !== null && customerAppId !== undefined && customerAppId > 0) {
+        if (
+          customerAppId !== null &&
+          customerAppId !== undefined &&
+          customerAppId > 0
+        ) {
           setFollowedUsers((prev) => new Set(prev).add(Number(customerAppId)));
         } else {
           setFollowedBibs((prev) => {
@@ -243,13 +302,13 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
           });
         }
       } else {
-        if (status.followType === 'customer' && customerAppId) {
+        if (status.followType === "customer" && customerAppId) {
           setFollowedUsers((prev) => {
             const next = new Set(prev);
             next.delete(Number(customerAppId));
             return next;
           });
-        } else if (status.followType === 'bib') {
+        } else if (status.followType === "bib") {
           setFollowedBibs((prev) => {
             const next = new Map(prev);
             const bibSet = next.get(productId);
@@ -268,20 +327,20 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
         if (willFollow) {
           await smartFollow(productId, bib, customerAppId);
           toastSuccess(
-            t('follower:success.followTitle'),
-            t('follower:success.followMessage')
+            t("follower:success.followTitle"),
+            t("follower:success.followMessage"),
           );
         } else {
           await smartUnfollow(productId, bib, customerAppId);
           toastSuccess(
-            t('follower:success.unfollowTitle'),
-            t('follower:success.unfollowMessage')
+            t("follower:success.unfollowTitle"),
+            t("follower:success.unfollowMessage"),
           );
         }
 
         const updatedUsers = await getFollowedUsers();
         setFollowedUsers(new Set(updatedUsers));
-        
+
         let updatedBibs: string[] = [];
         if (productId) {
           updatedBibs = await getFollowedBibs(productId);
@@ -296,10 +355,14 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
           });
         }
       } catch (error) {
-        console.error('Toggle follow error:', error);
+        console.error("Toggle follow error:", error);
 
         if (willFollow) {
-          if (customerAppId !== null && customerAppId !== undefined && customerAppId > 0) {
+          if (
+            customerAppId !== null &&
+            customerAppId !== undefined &&
+            customerAppId > 0
+          ) {
             setFollowedUsers((prev) => {
               const next = new Set(prev);
               next.delete(Number(customerAppId));
@@ -319,9 +382,11 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
             });
           }
         } else {
-          if (status.followType === 'customer' && customerAppId) {
-            setFollowedUsers((prev) => new Set(prev).add(Number(customerAppId)));
-          } else if (status.followType === 'bib') {
+          if (status.followType === "customer" && customerAppId) {
+            setFollowedUsers((prev) =>
+              new Set(prev).add(Number(customerAppId)),
+            );
+          } else if (status.followType === "bib") {
             setFollowedBibs((prev) => {
               const next = new Map(prev);
               const bibSet = next.get(productId) || new Set();
@@ -332,7 +397,7 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
           }
         }
 
-        toastError(t('follower:error.title'), t('follower:error.message'));
+        toastError(t("follower:error.title"), t("follower:error.message"));
       } finally {
         setFollowingInProgress((prev) => {
           const next = new Set(prev);
@@ -341,8 +406,135 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
         });
       }
     },
-    [followedUsers, followedBibs, followingInProgress, t]
+    [followedUsers, followedBibs, followingInProgress, t],
   );
+
+  const handleFollowPress = useCallback(
+    (participant: {
+      customer_app_id: number | null | undefined;
+      password_protected: 0 | 1;
+      bib_number?: number | string | null;
+    }) => {
+      const { customer_app_id, password_protected, bib_number } = participant;
+
+      const hasCustomer =
+        customer_app_id !== null &&
+        customer_app_id !== undefined &&
+        customer_app_id > 0;
+
+      const hasBib =
+        bib_number !== null &&
+        bib_number !== undefined &&
+        bib_number !== "" &&
+        productAppId !== undefined &&
+        productAppId !== null;
+
+      if (!hasCustomer && !hasBib) return;
+
+      const bib = hasBib ? String(bib_number) : undefined;
+
+      const operationKey =
+        hasBib && productAppId && bib
+          ? `product:${productAppId}:bib:${bib}`
+          : `customer:${customer_app_id}`;
+
+      if (followingInProgress.has(operationKey)) return;
+
+      const executeToggle = () => {
+        if (hasBib && productAppId && bib) {
+          return toggleFollow(productAppId, bib, customer_app_id);
+        }
+        if (hasCustomer) {
+          return toggleFollow(customer_app_id);
+        }
+      };
+
+      const alreadyFollowed =
+        hasBib && productAppId && bib
+          ? isFollowed(productAppId, bib, customer_app_id)
+          : hasCustomer
+            ? isFollowed(customer_app_id)
+            : false;
+
+      // 🔁 UNFOLLOW
+      if (alreadyFollowed) {
+        executeToggle();
+        return;
+      }
+
+      // 🔒 PASSWORD (only customer)
+      if (hasCustomer && password_protected === 1) {
+        setPendingFollow({
+          customerAppId: customer_app_id,
+          productAppId: hasBib ? productAppId : undefined,
+          bib,
+        });
+        setPasswordError("");
+        setPasswordModalVisible(true);
+        return;
+      }
+
+      // ✅ FOLLOW
+      executeToggle();
+    },
+    [isFollowed, toggleFollow, productAppId, followingInProgress],
+  );
+
+  const handlePasswordSubmit = useCallback(
+    async (password: string) => {
+      if (!password.trim()) {
+        setPasswordError(t("follower:error.passwordRequired"));
+        return;
+      }
+      if (!pendingFollow?.customerAppId) return;
+
+      try {
+        setIsVerifying(true);
+        setPasswordError("");
+
+        const verified = await followService.verifyTrackingPassword(
+          pendingFollow.customerAppId,
+          password.trim(),
+        );
+
+        if (verified) {
+          setPasswordModalVisible(false);
+          setPendingFollow(null);
+
+          if (pendingFollow.bib && pendingFollow.productAppId) {
+            await toggleFollow(
+              pendingFollow.productAppId,
+              pendingFollow.bib,
+              pendingFollow.customerAppId,
+            );
+          } else {
+            await toggleFollow(pendingFollow.customerAppId);
+          }
+        } else {
+          setPasswordError(t("follower:error.wrongPassword"));
+        }
+      } catch (error: any) {
+        const code = error?.message;
+        if (code === "wrong_password") {
+          setPasswordError(t("follower:error.wrongPassword"));
+        } else if (code === "password_not_configured") {
+          setPasswordModalVisible(false);
+          toastError(t("follower:error.passwordNotConfigured"));
+        } else {
+          setPasswordError(t("follower:error.generic"));
+        }
+      } finally {
+        setIsVerifying(false);
+      }
+    },
+    [pendingFollow, toggleFollow, t],
+  );
+
+  const handlePasswordModalClose = useCallback(() => {
+    setPasswordModalVisible(false);
+    setPendingFollow(null);
+    setPasswordError("");
+  }, []);
 
   return {
     followedUsers,
@@ -352,5 +544,11 @@ export function useFollowManager(t: any, productAppId?: number): UseFollowManage
     isLoading: isLoading as any,
     toggleFollow: toggleFollow as any,
     refreshFollowedUsers,
+    passwordModalVisible,
+    isVerifying,
+    passwordError,
+    handleFollowPress,
+    handlePasswordSubmit,
+    handlePasswordModalClose,
   };
 }
