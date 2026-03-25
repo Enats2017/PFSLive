@@ -29,14 +29,7 @@
     "toastErrorSave": "Failed to save settings.",
     "chars": "characters"
   },
-    "error": {
-        "title": "Error",
-        "message": "Something went wrong. Please try again.",
-        "wrongPassword": "Incorrect password. Please try again.",
-        "passwordRequired": "Please enter the password.",
-        "passwordNotConfigured": "This profile has no password set.",
-        "generic": "Something went wrong. Please try again."
-    },
+
     "passwordModal": {
         "title": "🔒 Private Profile",
         "subtitle": "This profile is password protected. Enter the password to follow.",

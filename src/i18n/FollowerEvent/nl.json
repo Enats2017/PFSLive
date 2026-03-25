@@ -26,10 +26,14 @@
     "unfollowMessage": "Je bent gestopt met het volgen van deze atleet."
   },
   "error": {
-    "failed": "Kan evenementen niet laden",
+    "failed": "Kan gebeurtenissen niet laden",
     "retry": "Opnieuw proberen",
     "title": "Fout",
-    "message": "Er is iets misgegaan. Probeer het opnieuw."
+    "message": "Er is iets misgegaan. Probeer het opnieuw.",
+    "wrongPassword": "Onjuist wachtwoord. Probeer het opnieuw.",
+    "passwordRequired": "Voer het wachtwoord in.",
+    "passwordNotConfigured": "Dit profiel heeft geen wachtwoord ingesteld.",
+    "generic": "Er is iets misgegaan. Probeer het opnieuw."
   },
   "button": {
     "viewprofile": "BEKIJK",

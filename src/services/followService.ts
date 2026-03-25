@@ -47,10 +47,8 @@ class FollowService {
       }
 
       if (__DEV__) {
-        console.log("🔍 FULL RESPONSE:", json);
+        console.log("FULL RESPONSE:", json);
       }
-
-      // ✅ Backend-driven error handling
       if (!json?.success) {
         throw new Error(
           (json?.error as VerifyPasswordError) || "unknown_error",

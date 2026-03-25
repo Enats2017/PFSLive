@@ -455,14 +455,10 @@ export function useFollowManager(
           : hasCustomer
             ? isFollowed(customer_app_id)
             : false;
-
-      // 🔁 UNFOLLOW
       if (alreadyFollowed) {
         executeToggle();
         return;
       }
-
-      // 🔒 PASSWORD (only customer)
       if (hasCustomer && password_protected === 1) {
         setPendingFollow({
           customerAppId: customer_app_id,
@@ -473,8 +469,6 @@ export function useFollowManager(
         setPasswordModalVisible(true);
         return;
       }
-
-      // ✅ FOLLOW
       executeToggle();
     },
     [isFollowed, toggleFollow, productAppId, followingInProgress],
@@ -491,7 +485,7 @@ export function useFollowManager(
 
       if (!pendingFollow?.customerAppId) return;
 
-      const currentFollow = pendingFollow; // ✅ snapshot
+      const currentFollow = pendingFollow; 
 
       try {
         setIsVerifying(true);
@@ -506,8 +500,6 @@ export function useFollowManager(
           setPasswordError(t("follower:error.wrongPassword"));
           return;
         }
-
-        // ✅ execute follow safely
         const executeToggle = async () => {
           if (currentFollow.bib && currentFollow.productAppId) {
             return toggleFollow(
@@ -520,13 +512,10 @@ export function useFollowManager(
         };
 
         await executeToggle();
-
-        // ✅ close AFTER success
         setPasswordModalVisible(false);
         setPendingFollow(null);
       } catch (error: any) {
         const code = error?.message;
-
         if (code === "wrong_password") {
           setPasswordError(t("follower:error.wrongPassword"));
         } else if (code === "password_not_configured") {

@@ -25,11 +25,15 @@
     "unfollowTitle": "Ne Plus Suivre Réussi",
     "unfollowMessage": "Vous ne suivez plus cet athlète."
   },
-  "error": {
+    "error": {
     "failed": "Échec du chargement des événements",
     "retry": "Réessayer",
     "title": "Erreur",
-    "message": "Une erreur s'est produite. Veuillez réessayer."
+    "message": "Une erreur s'est produite. Veuillez réessayer.",
+    "wrongPassword": "Mot de passe incorrect. Veuillez réessayer.",
+    "passwordRequired": "Veuillez entrer le mot de passe.",
+    "passwordNotConfigured": "Ce profil n'a pas de mot de passe défini.",
+    "generic": "Une erreur s'est produite. Veuillez réessayer."
   },
   "button": {
     "viewprofile": "VOIR",
