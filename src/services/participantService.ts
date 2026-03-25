@@ -14,7 +14,7 @@ export interface Participant {
   live_tracking_activated: number;
   source?: string;
   profile_picture?: string;
-   password_protected: 0 | 1;
+  password_protected: 0 | 1;
 }
 
 export interface ParticipantPagination {
