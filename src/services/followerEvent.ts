@@ -45,6 +45,8 @@ export interface ParticipantItem {
   country: string;
   profile_picture?: string; // ✅ NEW FIELD
   flag_url?: string | null;
+  password_protected: 0|1;
+
 }
 
 export interface EventResponse {

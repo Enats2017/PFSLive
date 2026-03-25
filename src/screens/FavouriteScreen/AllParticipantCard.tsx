@@ -12,6 +12,7 @@ interface AllParticipantCardProps {
     isFollowed: boolean;
     isLoading: boolean;
     onToggleFollow: () => void;
+    password_protected?: 0 | 1;
 }
 
 const AllParticipantCard: React.FC<AllParticipantCardProps> = React.memo(({
@@ -63,7 +64,8 @@ const AllParticipantCard: React.FC<AllParticipantCardProps> = React.memo(({
         prevProps.item.participant_app_id === nextProps.item.participant_app_id &&
         prevProps.item.bib_number === nextProps.item.bib_number &&
         prevProps.isFollowed === nextProps.isFollowed &&
-        prevProps.isLoading === nextProps.isLoading
+        prevProps.isLoading === nextProps.isLoading &&
+        prevProps.password_protected === nextProps.password_protected
     );
 });
 

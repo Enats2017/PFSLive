@@ -14,6 +14,7 @@ import { participantService, Participant } from '../../services/participantServi
 import { API_CONFIG } from '../../constants/config';
 import ParticipantCard from './ParticipantCard';
 import { useFollowManager } from '../../hooks/useFollowManager';
+import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 
 interface ParticipantTabProps {
   product_app_id: string | number;
@@ -24,7 +25,17 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
 
   // ✅ PASS product_app_id TO HOOK
   const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
-  const { isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t, productId);
+  const {
+    isFollowed,
+    isLoading,
+    refreshFollowedUsers,
+    handleFollowPress,
+    passwordModalVisible,
+    isVerifying,
+    passwordError,
+    handlePasswordSubmit,
+    handlePasswordModalClose,
+  } = useFollowManager(t, productId);
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,8 +86,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
 
             if (API_CONFIG.DEBUG) {
               console.log(
-                `✅ Added ${newItems.length} new participants (Total: ${
-                  prev.length + newItems.length
+                `✅ Added ${newItems.length} new participants (Total: ${prev.length + newItems.length
                 })`
               );
             }
@@ -160,18 +170,25 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     ({ item }: { item: Participant }) => {
       // Use bib_number as fallback if bib doesn't exist
       const bib = item.bib || item.bib_number || '';
-      
+
       return (
         <ParticipantCard
           item={item}
           product_app_id={productId}
           isFollowed={isFollowed(productId, bib, item.customer_app_id)}
           isLoading={isLoading(productId, bib, item.customer_app_id)}
-          onToggleFollow={() => toggleFollow(productId, bib, item.customer_app_id)}
+          onToggleFollow={() => {
+            console.log('🔍 item.password_protected from API:', bib);
+            handleFollowPress({
+              customer_app_id: item.customer_app_id,
+              password_protected: item.password_protected ?? 0,
+              bib_number: bib,
+            });
+          }}
         />
       );
     },
-    [productId, isFollowed, isLoading, toggleFollow]
+    [productId, isFollowed, isLoading, handleFollowPress]
   );
 
   const renderFooter = useCallback(() => {
@@ -280,6 +297,14 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
           ListFooterComponent={renderFooter}
         />
       )}
+
+       <TrackingPasswordModal
+            visible={passwordModalVisible}
+            isVerifying={isVerifying}
+            passwordError={passwordError}
+            onSubmit={handlePasswordSubmit}
+            onClose={handlePasswordModalClose}
+        />
     </>
   );
 };
