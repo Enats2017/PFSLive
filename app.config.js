@@ -1,8 +1,8 @@
 export default ({ config }) => {
-  const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+  const mapboxDownloadToken = process.env.RNMAPBOX_MAPS_DOWNLOAD_TOKEN;
 
-  if (!mapboxToken) {
-    console.warn('⚠️ EXPO_PUBLIC_MAPBOX_TOKEN not found in .env file!');
+  if (!mapboxDownloadToken) {
+    console.warn('⚠️ RNMAPBOX_MAPS_DOWNLOAD_TOKEN not found in .env file!');
   }
 
   return {
@@ -30,7 +30,10 @@ export default ({ config }) => {
         NSLocationWhenInUseUsageDescription: "Livio uses your location to track your race progress in real-time.",
         NSLocationAlwaysAndWhenInUseUsageDescription: "Livio needs background location access to track your race even when the app is minimized.",
         NSLocationAlwaysUsageDescription: "Livio requires continuous location access to provide accurate race tracking.",
-        UIBackgroundModes: ["remote-notification", "location"]
+        UIBackgroundModes: ["remote-notification", "location"],
+        NSAppTransportSecurity: {
+          NSAllowsArbitraryLoads: true   // allows HTTP for local testing remove during production
+        }
       },
       entitlements: {
         "aps-environment": process.env.EXPO_PUBLIC_ENV === "production" 
@@ -47,7 +50,8 @@ export default ({ config }) => {
       },
       package: "com.pfs.livio",
       versionCode: 1,
-      googleServicesFile: "./google-services.json",
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
+      allowBackup: true,
       permissions: [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -56,7 +60,6 @@ export default ({ config }) => {
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION"
       ],
-      useNextNotificationsApi: true,
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false
     },
@@ -69,9 +72,17 @@ export default ({ config }) => {
     // ✅ Plugins
     plugins: [
       [
+        "expo-build-properties",
+        {
+          android: {
+            usesCleartextTraffic: true  // allows HTTP for local testing remove during production
+          }
+        }
+      ],
+      [
         "@rnmapbox/maps",
         {
-          RNMapboxMapsDownloadToken: mapboxToken
+          RNMAPBOX_MAPS_DOWNLOAD_TOKEN: mapboxDownloadToken
         }
       ],
       "expo-asset",

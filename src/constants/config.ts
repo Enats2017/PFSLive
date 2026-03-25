@@ -46,7 +46,7 @@ const getApiUrl = (): string => {
   }
 
   console.warn("⚠️ EXPO_PUBLIC_API_URL not found in .env, using fallback");
-  return "http://192.168.1.199/larssie/api";
+  return "http://192.168.1.209/larssie/api";
 };
 
 const getImageBaseUrl = (): string => {
@@ -198,11 +198,11 @@ export const getLocalApiUrl = (): string => {
   const Platform = require("react-native").Platform;
 
   if (Platform.OS === "android" && __DEV__) {
-    return "http://10.0.2.2/larssie/api";
+    return "http://192.168.1.209/larssie/api";
   }
 
   if (Platform.OS === "ios" && __DEV__) {
-    return "http://localhost/larssie/api";
+    return "http://192.168.1.209/larssie/api";
   }
 
   return getApiUrl();
@@ -211,5 +211,6 @@ export const getLocalApiUrl = (): string => {
 export const getImageUrl = (url?: string | null): string | null => {
   if (!url) return null;
 
-  return url.replace("http://localhost/larssie", getImageBaseUrl());
+  return url;
+  //return url.replace("http://192.168.1.209/larssie", getImageBaseUrl());
 };
