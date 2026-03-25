@@ -1,13 +1,12 @@
-// components/TrackingPasswordModal.tsx
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Modal,
     View,
     Text,
     TouchableOpacity,
     Animated,
-    KeyboardAvoidingView,
+    Keyboard,
+    KeyboardEvent,
     Platform,
     ActivityIndicator,
     StyleSheet,
@@ -35,12 +34,22 @@ export const TrackingPasswordModal: React.FC<Props> = ({
     const { t } = useTranslation(['setting']);
     const insets = useSafeAreaInsets();
     const [password, setPassword] = useState('');
-    const slideAnim = useRef(new Animated.Value(400)).current;
 
-    // Animate in
-    React.useEffect(() => {
+    // slideAnim     — sheet entrance/exit (400=off-screen, 0=resting)
+    // keyboardOffset — additional upward lift when keyboard is visible
+    // Same pattern as LiveTrackingSettingsScreen: both values run on
+    // the native thread via useNativeDriver:true, so they stay in sync
+    // with each other and the system keyboard animation.
+    // KeyboardAvoidingView is removed — it can't cooperate with
+    // useNativeDriver:true animations.
+    const slideAnim      = useRef(new Animated.Value(400)).current;
+    const keyboardOffset = useRef(new Animated.Value(0)).current;
+
+    // ── Sheet entrance / exit ─────────────────────────────────────
+    useEffect(() => {
         if (visible) {
             setPassword('');
+            keyboardOffset.setValue(0);
             Animated.spring(slideAnim, {
                 toValue: 0,
                 useNativeDriver: true,
@@ -56,39 +65,86 @@ export const TrackingPasswordModal: React.FC<Props> = ({
         }
     }, [visible]);
 
-    const handleSubmit = () => onSubmit(password);
+    // ── Keyboard listeners ────────────────────────────────────────
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const onShow = (e: KeyboardEvent) => {
+            Animated.timing(keyboardOffset, {
+                toValue: e.endCoordinates.height,
+                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
+                useNativeDriver: true,
+            }).start();
+        };
+
+        const onHide = (e: KeyboardEvent) => {
+            Animated.timing(keyboardOffset, {
+                toValue: 0,
+                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
+                useNativeDriver: true,
+            }).start();
+        };
+
+        const showSub = Keyboard.addListener(showEvent, onShow);
+        const hideSub = Keyboard.addListener(hideEvent, onHide);
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, [keyboardOffset]);
+
+    // ── Handlers ──────────────────────────────────────────────────
+    const handleSubmit = () => {
+        if (!password.trim()) return; // guard against empty submit
+        onSubmit(password);
+    };
+
+    const handleClose = () => {
+        Keyboard.dismiss(); // always dismiss keyboard on close
+        onClose();
+    };
 
     return (
         <Modal
             transparent
             visible={visible}
             animationType="none"
-            onRequestClose={onClose}
+            onRequestClose={handleClose}
         >
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                style={styles.overlay}
-            >
-                <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
+            <View style={styles.overlay}>
+                {/* Backdrop outside the animated sheet so it never
+                    interferes with the translateY calculation */}
+                <TouchableOpacity
+                    style={styles.backdrop}
+                    onPress={handleClose}
+                    activeOpacity={1}
+                />
 
+                {/* Sheet position = slideAnim - keyboardOffset.
+                    Subtracting keyboardOffset lifts the sheet up by
+                    exactly the keyboard height, animated on the native
+                    thread so it's smooth and jank-free. */}
                 <Animated.View style={[
                     styles.sheet,
                     { paddingBottom: insets.bottom + 24 },
-                    { transform: [{ translateY: slideAnim }] },
+                    {
+                        transform: [{
+                            translateY: Animated.subtract(slideAnim, keyboardOffset),
+                        }],
+                    },
                 ]}>
-                    {/* Handle */}
                     <View style={styles.handle} />
 
-                    {/* Close */}
                     <TouchableOpacity
                         style={styles.closeBtn}
-                        onPress={onClose}
+                        onPress={handleClose}
                         hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
                     >
                         <Text style={styles.closeBtnText}>✕</Text>
                     </TouchableOpacity>
 
-                    {/* Header */}
                     <Text style={commonStyles.title}>
                         {t('setting:passwordModal.title')}
                     </Text>
@@ -98,7 +154,6 @@ export const TrackingPasswordModal: React.FC<Props> = ({
 
                     <View style={styles.divider} />
 
-                    {/* Password Input */}
                     <FloatingLabelInput
                         label={t('setting:passwordModal.placeholder')}
                         value={password}
@@ -108,14 +163,16 @@ export const TrackingPasswordModal: React.FC<Props> = ({
                         required
                     />
 
-                    {/* Error */}
                     {!!passwordError && (
                         <Text style={styles.errorText}>{passwordError}</Text>
                     )}
 
-                    {/* Submit */}
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, { marginTop: 12 }, isVerifying && { opacity: 0.7 }]}
+                        style={[
+                            commonStyles.primaryButton,
+                            { marginTop: 12 },
+                            isVerifying && { opacity: 0.7 },
+                        ]}
                         onPress={handleSubmit}
                         disabled={isVerifying}
                         activeOpacity={0.85}
@@ -124,11 +181,11 @@ export const TrackingPasswordModal: React.FC<Props> = ({
                             ? <ActivityIndicator size="small" color="#fff" />
                             : <Text style={commonStyles.primaryButtonText}>
                                 {t('setting:passwordModal.submit')}
-                            </Text>
+                              </Text>
                         }
                     </TouchableOpacity>
                 </Animated.View>
-            </KeyboardAvoidingView>
+            </View>
         </Modal>
     );
 };
