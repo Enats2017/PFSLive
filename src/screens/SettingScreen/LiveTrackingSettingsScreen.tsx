@@ -6,8 +6,9 @@ import {
     Animated,
     Modal,
     ScrollView,
-    KeyboardAvoidingView,
     Platform,
+    Keyboard,
+    KeyboardEvent,
     StatusBar,
     ActivityIndicator,
 } from 'react-native';
@@ -40,7 +41,7 @@ const generateStrongPassword = (): string => {
 
 export const LiveTrackingSettingsScreen: React.FC = () => {
     const insets = useSafeAreaInsets();
-    const { t } = useTranslation(['setting']);  // ✅ i18n hook
+    const { t } = useTranslation(['setting']);
 
     const [visibility,    setVisibility]    = useState<Visibility>('public');
     const [password,      setPassword]      = useState('');
@@ -49,12 +50,48 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
     const [isLoading,     setIsLoading]     = useState(true);
     const [isUpdating,    setIsUpdating]    = useState(false);
 
-    const slideAnim = useRef(new Animated.Value(400)).current;
-    const cardScale = useRef(new Animated.Value(1)).current;
+    // slideAnim      sheet entrance/exit: 400=off-screen, 0=resting
+    // keyboardOffset additional lift when keyboard is visible
+    const slideAnim      = useRef(new Animated.Value(400)).current;
+    const keyboardOffset = useRef(new Animated.Value(0)).current;
+    const cardScale      = useRef(new Animated.Value(1)).current;
 
     useEffect(() => { loadSettings(); }, []);
 
-    // ── Sync state from API response ──────────────────────────────
+    // WHY we listen manually instead of using KeyboardAvoidingView:
+    // slideAnim uses useNativeDriver:true so it runs on the UI thread.
+    // KAV works via JS-side layout changes — the two can't cooperate and
+    // KAV simply has no effect. Instead we animate keyboardOffset on the
+    // same native thread and subtract it from the sheet's translateY.
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const onShow = (e: KeyboardEvent) => {
+            Animated.timing(keyboardOffset, {
+                toValue: e.endCoordinates.height,
+                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
+                useNativeDriver: true,
+            }).start();
+        };
+
+        const onHide = (e: KeyboardEvent) => {
+            Animated.timing(keyboardOffset, {
+                toValue: 0,
+                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
+                useNativeDriver: true,
+            }).start();
+        };
+
+        const showSub = Keyboard.addListener(showEvent, onShow);
+        const hideSub = Keyboard.addListener(hideEvent, onHide);
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, [keyboardOffset]);
+
     const syncState = (settings: Settings) => {
         setVisibility(settings.live_tracking_visibility);
         setPassword(
@@ -64,7 +101,6 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
         );
     };
 
-    // ── GET ───────────────────────────────────────────────────────
     const loadSettings = async () => {
         try {
             setIsLoading(true);
@@ -78,7 +114,6 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
         }
     };
 
-    // ── UPDATE ────────────────────────────────────────────────────
     const saveSettings = async (vis: Visibility, pwd: string): Promise<boolean> => {
         try {
             setIsUpdating(true);
@@ -87,7 +122,7 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
                 live_tracking_password: pwd,
             });
             syncState(settings);
-            toastSuccess(t('liveTrackingSettings.toastSuccess'));
+            toastSuccess(t('setting:liveTrackingSettings.toastSuccess'));
             return true;
         } catch (e: any) {
             console.error('❌ [Settings] Save error:', e?.message);
@@ -98,7 +133,6 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
         }
     };
 
-    // ── Single save handler ───────────────────────────────────────
     const handleSaveSettings = async (vis: Visibility) => {
         if (vis === 'private' && !password.trim()) {
             setPasswordError(t('setting:liveTrackingSettings.passwordRequired'));
@@ -109,7 +143,6 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
         if (ok && vis === 'private') closeModal();
     };
 
-    // ── Tab switch ────────────────────────────────────────────────
     const handleTabSwitch = (val: Visibility) => {
         if (val === visibility || isUpdating) return;
         setPasswordError('');
@@ -121,32 +154,39 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
         if (val === 'private') openModal();
     };
 
-    // ── Modal ─────────────────────────────────────────────────────
     const openModal = () => {
+        keyboardOffset.setValue(0);
         setModalVisible(true);
-        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
+        Animated.spring(slideAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 65,
+            friction: 11,
+        }).start();
     };
 
     const closeModal = () => {
-        Animated.timing(slideAnim, { toValue: 500, duration: 280, useNativeDriver: true })
-            .start(() => setModalVisible(false));
+        Keyboard.dismiss();
+        Animated.timing(slideAnim, {
+            toValue: 500,
+            duration: 280,
+            useNativeDriver: true,
+        }).start(() => setModalVisible(false));
     };
 
-    // ── Password strength ─────────────────────────────────────────
     const getStrengthLabel = (len: number): string => {
         if (len < 6) return t('setting:liveTrackingSettings.strengthWeak');
         if (len < 8) return t('setting:liveTrackingSettings.strengthModerate');
         return t('setting:liveTrackingSettings.strengthStrong');
     };
 
-    // ── Loading ───────────────────────────────────────────────────
     if (isLoading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-                <AppHeader title={t('liveTrackingSettings.header')} showLogo={true} />
+                <AppHeader title={t('setting:liveTrackingSettings.header')} showLogo={true} />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={commonStyles.loadingText}>{t('liveTrackingSettings.loadingText')}</Text>
+                    <Text style={commonStyles.loadingText}>{t('setting:liveTrackingSettings.loadingText')}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -158,19 +198,16 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
             <AppHeader title={t('setting:liveTrackingSettings.header')} showLogo={true} />
 
             <ScrollView
-                contentContainerStyle={{flexGrow:1, padding:15}}
+                contentContainerStyle={{ flexGrow: 1, padding: 15 }}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-                {/* ── Page Title ──────────────────────────────── */}
                 <View style={styles.pageTitleRow}>
                     <Text style={commonStyles.title}>{t('setting:liveTrackingSettings.pageTitle')}</Text>
                     <Text style={commonStyles.subtitle}>{t('setting:liveTrackingSettings.pageSubtitle')}</Text>
                 </View>
 
-                {/* ── Settings Card ───────────────────────────── */}
                 <Animated.View style={[commonStyles.card, { transform: [{ scale: cardScale }] }]}>
-
                     <View style={styles.cardHeader}>
                         <View style={styles.cardIconWrap}>
                             <Text style={commonStyles.title}>📍</Text>
@@ -185,7 +222,6 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
 
                     <Text style={commonStyles.subtitle}>{t('setting:liveTrackingSettings.visibilityLabel')}</Text>
 
-                    {/* Segmented Control */}
                     <View style={styles.segmentedControl}>
                         {(['public', 'private'] as Visibility[]).map((val) => (
                             <TouchableOpacity
@@ -205,25 +241,6 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
                         ))}
                     </View>
 
-                    {/* Status Row */}
-                    {/* <View style={styles.statusRow}>
-                        {isUpdating
-                            ? <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
-                            : <View style={[styles.statusDot, visibility === 'public' ? styles.dotGreen : styles.dotOrange]} />
-                        }
-                        <Text style={commonStyles.subtitle}>
-                            {isUpdating
-                                ? t('setting:liveTrackingSettings.saving')
-                                : visibility === 'public'
-                                    ? t('setting:liveTrackingSettings.statusPublic')
-                                    : `${t('setting:liveTrackingSettings.statusPrivate')}${password
-                                        ? ` · ${password.length} ${t('setting:liveTrackingSettings.chars')}`
-                                        : ` · ${t('setting:liveTrackingSettings.statusNotSet')}`}`
-                            }
-                        </Text>
-                    </View> */}
-
-                    {/* Action Button */}
                     {visibility === 'public' ? (
                         <TouchableOpacity
                             style={[commonStyles.primaryButton, isUpdating && { opacity: 0.7 }]}
@@ -249,23 +266,30 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
                 </Animated.View>
             </ScrollView>
 
-            {/* ── Bottom Sheet Modal ───────────────────────────── */}
             <Modal
                 transparent
                 visible={modalVisible}
                 animationType="none"
                 onRequestClose={closeModal}
             >
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                    style={styles.modalOverlay}
-                >
-                    <TouchableOpacity style={styles.modalBackdrop} onPress={closeModal} activeOpacity={1} />
+                <View style={styles.modalOverlay}>
+                    <TouchableOpacity
+                        style={styles.modalBackdrop}
+                        onPress={closeModal}
+                        activeOpacity={1}
+                    />
 
+                    {/* Sheet position = slideAnim - keyboardOffset.
+                        Both run on the native thread — smooth and in
+                        sync with the system keyboard animation. */}
                     <Animated.View style={[
                         styles.bottomSheet,
                         { paddingBottom: insets.bottom + 24 },
-                        { transform: [{ translateY: slideAnim }] },
+                        {
+                            transform: [{
+                                translateY: Animated.subtract(slideAnim, keyboardOffset),
+                            }],
+                        },
                     ]}>
                         <View style={styles.sheetHandle} />
 
@@ -323,7 +347,7 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
                             }
                         </TouchableOpacity>
                     </Animated.View>
-                </KeyboardAvoidingView>
+                </View>
             </Modal>
         </SafeAreaView>
     );

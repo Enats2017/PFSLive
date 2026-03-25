@@ -30,9 +30,9 @@
     "chars": "caractères"
   },
   "passwordModal": {
-  "title": "🔒 Profil privé",
-  "subtitle": "Ce profil est protégé par un mot de passe. Entrez le mot de passe pour suivre.",
-  "placeholder": "Entrez le mot de passe d'accès",
-  "submit": "Vérifier et suivre"
-}
+    "title": "🔒 Profil privé",
+    "subtitle": "Ce profil est protégé par un mot de passe. Entrez le mot de passe pour suivre.",
+    "placeholder": "Entrez le mot de passe d'accès",
+    "submit": "Vérifier et suivre"
+  }
 }

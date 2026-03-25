@@ -29,13 +29,10 @@
     "toastErrorSave": "Failed to save settings.",
     "chars": "characters"
   },
-
-    "passwordModal": {
-        "title": "🔒 Private Profile",
-        "subtitle": "This profile is password protected. Enter the password to follow.",
-        "placeholder": "Enter access password",
-        "submit": "Verify & Follow"
-    }
-
-
+  "passwordModal": {
+      "title": "🔒 Private Profile",
+      "subtitle": "This profile is password protected. Enter the password to follow.",
+      "placeholder": "Enter access password",
+      "submit": "Verify & Follow"
+  }
 }

@@ -30,9 +30,9 @@
     "chars": "tekens"
   },
   "passwordModal": {
-  "title": "🔒 Privéprofiel",
-  "subtitle": "Dit profiel is beveiligd met een wachtwoord. Voer het wachtwoord in om te volgen.",
-  "placeholder": "Voer toegangswachtwoord in",
-  "submit": "Verifiëren en volgen"
-}
+    "title": "🔒 Privéprofiel",
+    "subtitle": "Dit profiel is beveiligd met een wachtwoord. Voer het wachtwoord in om te volgen.",
+    "placeholder": "Voer toegangswachtwoord in",
+    "submit": "Verifiëren en volgen"
+  }
 }
