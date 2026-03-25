@@ -482,39 +482,51 @@ export function useFollowManager(
 
   const handlePasswordSubmit = useCallback(
     async (password: string) => {
-      if (!password.trim()) {
+      const trimmedPassword = password.trim();
+
+      if (!trimmedPassword) {
         setPasswordError(t("follower:error.passwordRequired"));
         return;
       }
+
       if (!pendingFollow?.customerAppId) return;
+
+      const currentFollow = pendingFollow; // ✅ snapshot
 
       try {
         setIsVerifying(true);
         setPasswordError("");
 
         const verified = await followService.verifyTrackingPassword(
-          pendingFollow.customerAppId,
-          password.trim(),
+          currentFollow.customerAppId,
+          trimmedPassword,
         );
 
-        if (verified) {
-          setPasswordModalVisible(false);
-          setPendingFollow(null);
-
-          if (pendingFollow.bib && pendingFollow.productAppId) {
-            await toggleFollow(
-              pendingFollow.productAppId,
-              pendingFollow.bib,
-              pendingFollow.customerAppId,
-            );
-          } else {
-            await toggleFollow(pendingFollow.customerAppId);
-          }
-        } else {
+        if (!verified) {
           setPasswordError(t("follower:error.wrongPassword"));
+          return;
         }
+
+        // ✅ execute follow safely
+        const executeToggle = async () => {
+          if (currentFollow.bib && currentFollow.productAppId) {
+            return toggleFollow(
+              currentFollow.productAppId,
+              currentFollow.bib,
+              currentFollow.customerAppId,
+            );
+          }
+          return toggleFollow(currentFollow.customerAppId);
+        };
+
+        await executeToggle();
+
+        // ✅ close AFTER success
+        setPasswordModalVisible(false);
+        setPendingFollow(null);
       } catch (error: any) {
         const code = error?.message;
+
         if (code === "wrong_password") {
           setPasswordError(t("follower:error.wrongPassword"));
         } else if (code === "password_not_configured") {
@@ -527,7 +539,14 @@ export function useFollowManager(
         setIsVerifying(false);
       }
     },
-    [pendingFollow, toggleFollow, t],
+    [
+      pendingFollow,
+      toggleFollow,
+      t,
+      setIsVerifying,
+      setPasswordError,
+      setPasswordModalVisible,
+    ],
   );
 
   const handlePasswordModalClose = useCallback(() => {
