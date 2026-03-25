@@ -11,9 +11,9 @@
     "finished": "TERMINÉ",
     "startsIn": "Commence dans",
     "startingSoon": "Commence Bientôt",
-    "days": "Jours",
-    "hours": "Heures",
-    "minutes": "Minutes"
+    "days": "J",
+    "hours": "H",
+    "minutes": "M"
   },
   "distance": {
     "empty": "Aucune distance disponible"
