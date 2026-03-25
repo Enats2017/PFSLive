@@ -11,9 +11,9 @@
     "finished": "FINISHED",
     "startsIn": "Starts in",
     "startingSoon": "Starting Soon",
-    "days": "Days",
-    "hours": "Hours",
-    "minutes": "Minutes"
+    "days": "D",
+    "hours": "H",
+    "minutes": "M"
   },
   "distance": {
     "empty": "No distances available"

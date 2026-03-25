@@ -11,9 +11,9 @@
     "finished": "AFGELOPEN",
     "startsIn": "Begint over",
     "startingSoon": "Begint Binnenkort",
-    "days": "Dagen",
-    "hours": "Uur",
-    "minutes": "Minuten"
+    "days": "D",
+    "hours": "U",
+    "minutes": "M"
   },
   "distance": {
     "empty": "Geen afstanden beschikbaar"
