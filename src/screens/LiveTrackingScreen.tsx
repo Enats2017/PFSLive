@@ -134,7 +134,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         };
     }, [hasLoadedInitialData.current, loading, selectedDistance, followedUsers]);
 
-    const loadLiveTrackingData = async (autoRefresh: boolean) => {
+    const loadLiveTrackingData = async (autoRefresh: boolean, overrideDistance?: DistanceOption | null) => {
         try {
             if (!autoRefresh) {
                 setLoading(true);
@@ -148,10 +148,12 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             console.log('👥 Followed users:', customerAppIds);
 
             // ✅ Determine which product_option_value_app_id to use
+            const activeDistance = overrideDistance !== undefined ? overrideDistance : selectedDistance;
+
             let optionValueId: number | undefined;
             
-            if (selectedDistance) {
-                optionValueId = selectedDistance.product_option_value_app_id;
+            if (activeDistance) {
+                optionValueId = activeDistance.product_option_value_app_id;
             } else if (product_option_value_app_id && product_option_value_app_id > 0) {
                 optionValueId = product_option_value_app_id;
             }
@@ -170,7 +172,6 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             );
 
             console.log('✅ Live tracking data received:', {
-                auto_refresh: response.data.auto_refresh,
                 participants: response.data.participants.length,
                 distances: response.data.distances?.length || 0,
                 selected_distance: response.data.selected_distance || 'N/A',
@@ -215,14 +216,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             setParticipants(response.data.participants);
 
             // ✅ Only update distances and GPX on initial load (not auto-refresh)
-            if (!autoRefresh || response.data.auto_refresh === 0) {
+            if (!autoRefresh) {
                 console.log('📋 Processing full response (distances + GPX)');
 
                 if (response.data.distances && response.data.distances.length > 0) {
                     setDistances(response.data.distances);
 
                     // ✅ Set selected distance from API response (only on initial load)
-                    if (!selectedDistance && response.data.selected_distance) {
+                    if (!activeDistance && response.data.selected_distance) {
                         const apiSelectedDistance = response.data.distances.find(
                             d => d.product_option_value_app_id === response.data.selected_distance.product_option_value_app_id
                         );
@@ -326,7 +327,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         setSelectedDistance(distance);
         setLoading(true);
         setLoadedGpxUrl(null);
-        await loadLiveTrackingData(false);
+        await loadLiveTrackingData(false, distance);
     };
 
     const handleParticipantPress = (participant: ParticipantMapMarker) => {
