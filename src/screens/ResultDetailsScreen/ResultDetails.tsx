@@ -16,6 +16,7 @@ import { useFollowManager } from '../../hooks/useFollowManager';
 import LiveTimingPoint from './LiveTimingPoint';
 import { useResultDetail } from '../../hooks/useResultDetail';
 import UpcomingRace from './UpcomingRace';
+import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 
 type TabKey = 'raceInfo' | 'timingPoint' | 'runnerInfo';
 const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo'];
@@ -39,8 +40,18 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         from_live ?? 0,
     );
 
-    const { isFollowed, isLoading, toggleFollow } = useFollowManager(t, product_app_id);
-    
+    const {
+        isFollowed,
+        isLoading,
+        refreshFollowedUsers,
+        handleFollowPress,
+        passwordModalVisible,
+        isVerifying,
+        passwordError,
+        handlePasswordSubmit,
+        handlePasswordModalClose,
+    } = useFollowManager(t, product_app_id);
+
     const [activeTab, setActiveTab] = useState<TabKey>('raceInfo');
     const flatListRef = useRef<FlatList<TabKey>>(null);
     const tabScrollRef = useRef<ScrollView>(null);
@@ -66,12 +77,11 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
 
     const handleFollow = () => {
         if (!canFollow) return;
-        
-        toggleFollow(
-            product_app_id,
-            data?.race_info?.bib ?? '',
-            data?.race_info?.customer_app_id
-        );
+        handleFollowPress({
+            customer_app_id: data?.race_info?.customer_app_id,
+            password_protected: data?.race_info?.password_protected ?? 0,
+            bib_number: data?.race_info?.bib ?? '',
+        });
     };
 
     const handleTabPress = useCallback((tab: TabKey) => {
@@ -145,14 +155,14 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                 </View>
 
                 {canFollow && (
-                    <TouchableOpacity 
-                        onPress={handleFollow} 
+                    <TouchableOpacity
+                        onPress={handleFollow}
                         disabled={Loading}
                     >
-                        <Entypo 
-                            name={Followed ? "heart" : "heart-outlined"} 
-                            size={30} 
-                            color="black" 
+                        <Entypo
+                            name={Followed ? "heart" : "heart-outlined"}
+                            size={30}
+                            color="black"
                         />
                     </TouchableOpacity>
                 )}
@@ -209,6 +219,14 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     index,
                 })}
                 style={s.pageList}
+            />
+
+            <TrackingPasswordModal
+                visible={passwordModalVisible}
+                isVerifying={isVerifying}
+                passwordError={passwordError}
+                onSubmit={handlePasswordSubmit}
+                onClose={handlePasswordModalClose}
             />
         </SafeAreaView>
     );

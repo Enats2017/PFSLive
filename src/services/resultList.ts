@@ -22,6 +22,7 @@ export interface RaceResult {
   checkpoints: Checkpoint[];
   utmb_index?: string; // ✅ UTMB Index field
   finish_rank_agegroup?: number | null;
+  password_protected: 0|1,
 }
 
 export interface Checkpoint {

@@ -24,19 +24,25 @@ import { useFollowManager } from '../../hooks/useFollowManager';
 import { useFocusEffect } from '@react-navigation/native';
 import ResultCardLive from './ResultCardLive';
 import ResultCardBeforeRace from './ResultCardBeforeRace';
+import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
     const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab } = route.params;
 
     // ✅ GET FOLLOW DATA
-    const { 
-        isFollowed, 
-        isLoading, 
-        toggleFollow, 
+    const {
+        isFollowed,
+        isLoading,
         refreshFollowedUsers,
         followedUsers,
         followedBibs,
+        handleFollowPress,
+        passwordModalVisible,
+        isVerifying,
+        passwordError,
+        handlePasswordSubmit,
+        handlePasswordModalClose,
     } = useFollowManager(t, product_app_id);
 
     const initialType = sourceTab === 'live'
@@ -62,8 +68,8 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         raceStatus, currentPovId,
         showUtmbIndex,
     } = useResultList(
-        product_app_id, 
-        product_option_value_app_id, 
+        product_app_id,
+        product_option_value_app_id,
         followedUsers,
         initialType,
         followedBibs
@@ -75,7 +81,11 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             product_app_id,
             isFollowed: isFollowed(product_app_id, item.bib, item.customer_app_id),
             isLoading: isLoading(product_app_id, item.bib, item.customer_app_id),
-            onToggleFollow: () => toggleFollow(product_app_id, item.bib, item.customer_app_id),
+            onToggleFollow: () => handleFollowPress({
+                customer_app_id: item.customer_app_id,
+                password_protected: item.password_protected ?? 0,  // ✅
+                bib_number: item.bib,
+            }),
         };
 
         if (raceStatus === 'not_started') {
@@ -111,7 +121,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     }, [
         isFollowed,
         isLoading,
-        toggleFollow,
+        handleFollowPress,
         raceStatus,
         sourceTab,
         fromLive,
@@ -246,6 +256,14 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     sourceScreen={sourceScreen}
                 />
             )}
+
+            <TrackingPasswordModal
+                visible={passwordModalVisible}
+                isVerifying={isVerifying}
+                passwordError={passwordError}
+                onSubmit={handlePasswordSubmit}
+                onClose={handlePasswordModalClose}
+            />
         </SafeAreaView>
     );
 };

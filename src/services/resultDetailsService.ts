@@ -74,6 +74,7 @@ export interface RaceInfo {
     live_tracking_activated: number;
     participant_app_id: number | null;
     customer_app_id: number | null;
+    password_protected: 0 | 1;
 }
 
 export interface RunnerInfo {

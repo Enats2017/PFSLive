@@ -16,10 +16,12 @@ interface ProfileCardProps {
     isFollowed: boolean;
     isFollowLoading: boolean;
     onToggleFollow: () => void;
+    password_protected?: 0 | 1;
 }
 
 const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
     profile,
+    password_protected,
     fetchError,
     customer_app_id,
     isFollowed,
@@ -128,7 +130,11 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                                 style={{ marginRight: 6 }}
                             />
                             <Text style={commonStyles.primaryButtonText}>
-                                {isFollowed ? t('follower:button.unfollow') : t('follower:button.follower')}
+                                {isFollowed
+                                    ? t('follower:button.unfollow')
+                                    : password_protected === 1
+                                        ? `🔒 ${t('follower:button.follower')}`
+                                        : t('follower:button.follower')}
                             </Text>
                         </>
                     )}
@@ -146,7 +152,8 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
         prevProps.profile?.lastname === nextProps.profile?.lastname &&
         prevProps.profile?.profile_picture === nextProps.profile?.profile_picture &&
         prevProps.profile?.is_own_profile === nextProps.profile?.is_own_profile &&
-        prevProps.fetchError === nextProps.fetchError
+        prevProps.fetchError === nextProps.fetchError &&
+    prevProps.password_protected    === nextProps.password_protected 
     );
 });
 

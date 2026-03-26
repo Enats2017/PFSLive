@@ -8,6 +8,7 @@ export interface AthleteProfile {
   lastname: string;
   profile_picture: string;
   is_own_profile: number;
+  password_protected: 0 | 1; 
 }
 
 export interface AthleteEvent {
@@ -156,6 +157,8 @@ export const eventService = {
               lastname: "",
               profile_picture: "",
               is_own_profile: 0,
+              password_protected: 0 ,
+              
             },
             tabs: {
               past: eventsData.past || [],

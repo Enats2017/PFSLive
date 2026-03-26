@@ -22,6 +22,7 @@ import { eventService, AthleteEvent, AthleteProfile } from '../../services/athle
 import { API_CONFIG } from '../../constants/config';
 import { ProfileScreenprops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
+import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 
 const { width, height } = Dimensions.get('window');
 
@@ -43,17 +44,27 @@ const INITIAL_PAGINATION: PaginationState = {
 const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const { t } = useTranslation(['profile', 'common', 'follower']);
     const flatListRef = useRef<FlatList>(null);
-    
+
     // ✅ USE FOLLOW MANAGER (CUSTOMER-ONLY MODE)
-    const { isFollowed, isLoading, toggleFollow, refreshFollowedUsers } = useFollowManager(t);
-    
+    const {
+        isFollowed,
+        isLoading,
+        refreshFollowedUsers,
+        handleFollowPress,
+        passwordModalVisible,
+        isVerifying,
+        passwordError,
+        handlePasswordSubmit,
+        handlePasswordModalClose,
+    } = useFollowManager(t);
+
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
-    
+
     // ✅ SAFELY EXTRACT targetId WITH DEFAULT
     const targetId = route.params?.customer_app_id ?? 0;
     const fromEdit = route.params?.fromEdit;
-    
+
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [profile, setProfile] = useState<AthleteProfile | null>(null);
     const [liveEvents, setLiveEvents] = useState<AthleteEvent[]>([]);
@@ -362,7 +373,14 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                 customer_app_id={targetId}
                 isFollowed={isFollowed(targetId)}
                 isFollowLoading={isLoading(targetId)}
-                onToggleFollow={() => toggleFollow(targetId)}
+                password_protected={profile?.password_protected ?? 0}  // ✅ add
+                onToggleFollow={() => {
+                    handleFollowPress({
+                        customer_app_id: targetId,
+                        password_protected: profile?.password_protected ?? 0,  // ✅ add
+                        bib_number: null,  // ✅ no bib on profile screen
+                    });
+                }}
             />
 
             {/* TAB BAR */}
@@ -410,6 +428,14 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                         index,
                     })}
                     renderItem={renderTabContent}
+                />
+
+                <TrackingPasswordModal
+                    visible={passwordModalVisible}
+                    isVerifying={isVerifying}
+                    passwordError={passwordError}
+                    onSubmit={handlePasswordSubmit}
+                    onClose={handlePasswordModalClose}
                 />
             </View>
         </SafeAreaView>
