@@ -60,6 +60,8 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
 
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
+    const fromEditFetched = useRef(false);
+    const activeTabRef = useRef<Tab>('Live');
 
     // ✅ SAFELY EXTRACT targetId WITH DEFAULT
     const targetId = route.params?.customer_app_id ?? 0;
@@ -166,7 +168,9 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                 // ✅ Refresh follow state first
                 await refreshFollowedUsers();
 
-                if (fromEdit) {
+                // ✅ REPLACE WITH
+                if (fromEdit && !fromEditFetched.current) {
+                    fromEditFetched.current = true;                 // gate: runs exactly once
                     if (API_CONFIG.DEBUG) {
                         console.log('🔄 Coming from edit screen - busting cache');
                     }
@@ -178,7 +182,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                     if (API_CONFIG.DEBUG) {
                         console.log('🔄 Returning to screen - syncing scroll only');
                     }
-                    const index = TABS.indexOf(activeTab);
+                    const index = TABS.indexOf(activeTabRef.current); // ← ref (not state)
                     setTimeout(() => {
                         flatListRef.current?.scrollToIndex({ index, animated: false });
                     }, 50);
@@ -190,7 +194,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             return () => {
                 isFetching.current = false;
             };
-        }, [fetchProfile, activeTab, fromEdit, targetId, refreshFollowedUsers])
+        }, [fetchProfile, fromEdit, targetId, refreshFollowedUsers])
     );
 
     // ✅ LOAD MORE LIVE
@@ -286,9 +290,11 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     }, [loadingMorePast, pagination.past.page, pagination.past.total_pages, targetId]);
 
     // ✅ TAB HANDLERS
+    // ✅ REPLACE WITH
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
         setActiveTab(tab);
+        activeTabRef.current = tab;                     // ✅ keep ref in sync
         flatListRef.current?.scrollToIndex({ index, animated: true });
     }, []);
 
@@ -296,6 +302,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         const index = Math.round(e.nativeEvent.contentOffset.x / width);
         if (TABS[index] && TABS[index] !== activeTab) {
             setActiveTab(TABS[index]);
+            activeTabRef.current = TABS[index];         // ✅ keep ref in sync
         }
     }, [activeTab]);
 

@@ -49,7 +49,7 @@ const getApiUrl = (): string => {
   return "http://192.168.1.209/larssie/api";
 };
 
-const getImageBaseUrl = (): string => {
+ export const getImageBaseUrl = (): string => {
   const envUrl = process.env.EXPO_PUBLIC_IMAGE_URL;
 
   if (envUrl) {
@@ -58,6 +58,8 @@ const getImageBaseUrl = (): string => {
 
   return "http://192.168.0.199/larssie";
 };
+
+
 
 // Hardcoded fallback token (used until login is integrated)
 const FALLBACK_TOKEN = "";
@@ -212,6 +214,8 @@ export const getLocalApiUrl = (): string => {
 export const getImageUrl = (url?: string | null): string | null => {
   if (!url) return null;
 
-  return url;
-  //return url.replace("http://192.168.1.209/larssie", getImageBaseUrl());
+  const baseUrl = process.env.EXPO_PUBLIC_IMAGE_URL;
+
+  // Replace localhost with your actual IP
+  return url.replace("http://localhost/larssie", baseUrl!);
 };

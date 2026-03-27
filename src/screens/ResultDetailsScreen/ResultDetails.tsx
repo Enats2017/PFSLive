@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StatusBar, Dimensions, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StatusBar, Dimensions, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,7 +7,6 @@ import { Ionicons, Entypo } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ResultDetailspops } from '../../types/navigation';
 import RaceInfoTab from './RaceInfoTab';
-import TimingPointTab from './TimingPointTab';
 import RunnerInfoTab from './RunnerInfoTab';
 import { resultInfoStyles as s } from '../../styles/resultDetails.styles';
 import { colors, commonStyles } from '../../styles/common.styles';
@@ -137,6 +136,60 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         </View>
     ), [data, raceStatus]);
 
+    if (loading) {
+        return (
+            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+                <StatusBar barStyle="dark-content" />
+                {/* Keep header visible with back button during load */}
+                <View style={s.header}>
+                    <TouchableOpacity
+                        style={s.headerBackBtn}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Ionicons name="chevron-back" size={32} color={colors.gray900} />
+                    </TouchableOpacity>
+                    <View style={s.headerCenter}>
+                        <Text style={commonStyles.title}>...</Text>
+                    </View>
+                </View>
+                <View style={commonStyles.centerContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (error) {
+        return (
+            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+                <StatusBar barStyle="dark-content" />
+                <View style={s.header}>
+                    <TouchableOpacity
+                        style={s.headerBackBtn}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Ionicons name="chevron-back" size={32} color={colors.gray900} />
+                    </TouchableOpacity>
+                </View>
+                <View style={commonStyles.centerContainer}>
+                    <Text style={commonStyles.errorText}>{error}</Text>
+                    <TouchableOpacity
+                        style={[commonStyles.primaryButton, { marginTop: 16 }]}
+                        onPress={retry}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={commonStyles.primaryButtonText}>
+                            {t('retry')}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+            </SafeAreaView>
+        );
+    }
+    
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
