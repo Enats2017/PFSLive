@@ -76,5 +76,9 @@
     "time": "00:00:00",
     "elevation": "0",
     "empty": "—"
-  }
+  },
+  "errors": {
+    "participant_not_found": "Participant not found.",
+    "generic": "Something went wrong. Please try again."
+}
 }

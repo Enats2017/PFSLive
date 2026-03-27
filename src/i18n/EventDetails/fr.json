@@ -60,7 +60,8 @@
     "eventFinishedTitle": "Événement Terminé",
     "eventFinishedMessage": "Cet événement est déjà terminé. L'inscription n'est plus disponible.",
     "validationErrorTitle": "Erreur de Validation",
-    "validationErrorMessage": "Les informations fournies sont invalides. Veuillez vérifier et réessayer."
+    "validationErrorMessage": "Les informations fournies sont invalides. Veuillez vérifier et réessayer.",
+    "participant_not_found": "Participant introuvable."
   },
   "registrationModal": {
     "registered": {

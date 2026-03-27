@@ -60,7 +60,8 @@
     "eventFinishedTitle": "Evenement Is Afgelopen",
     "eventFinishedMessage": "Dit evenement is al afgelopen. Registratie is niet meer mogelijk.",
     "validationErrorTitle": "Validatiefout",
-    "validationErrorMessage": "De verstrekte informatie is ongeldig. Controleer en probeer opnieuw."
+    "validationErrorMessage": "De verstrekte informatie is ongeldig. Controleer en probeer opnieuw.",
+    "participant_not_found": "Deelnemer niet gevonden."
   },
   "registrationModal": {
     "registered": {

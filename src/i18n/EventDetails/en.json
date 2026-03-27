@@ -61,7 +61,8 @@
     "eventFinishedTitle": "Event Has Ended",
     "eventFinishedMessage": "This event has already finished. Registration is no longer available.",
     "validationErrorTitle": "Validation Error",
-    "validationErrorMessage": "The information provided is invalid. Please check and try again."
+    "validationErrorMessage": "The information provided is invalid. Please check and try again.",
+    "participant_not_found": "Participant not found."
   },
   "registrationModal": {
     "registered": {

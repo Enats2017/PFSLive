@@ -23,7 +23,7 @@ const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo'];
 const { width } = Dimensions.get('window');
 
 const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
-    const { t } = useTranslation('resultdetails');
+    const { t } = useTranslation(['resultdetails','common']);
     const {
         raceStatus,
         product_app_id,
@@ -67,7 +67,6 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         data?.race_info?.customer_app_id
     );
 
-    // ✅ FIX: Call isLoading as a function
     const Loading = isLoading(
         product_app_id,
         data?.race_info?.bib ?? '',
@@ -174,7 +173,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     </TouchableOpacity>
                 </View>
                 <View style={commonStyles.centerContainer}>
-                    <Text style={commonStyles.errorText}>{error}</Text>
+                    <Text style={commonStyles.errorText}>{t(`errors.${error}`)}</Text>
                     <TouchableOpacity
                         style={[commonStyles.primaryButton, { marginTop: 16 }]}
                         onPress={retry}
@@ -189,7 +188,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
             </SafeAreaView>
         );
     }
-    
+
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
