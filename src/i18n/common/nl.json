@@ -11,7 +11,8 @@
     "edit": "Bewerken",
     "close": "Sluiten",
     "retry": "Opnieuw proberen",
-    "refresh": "Vernieuwen"
+    "refresh": "Vernieuwen",
+    "view": "Bekijken"
   },
   "nav": {
     "home": "Home",
@@ -56,5 +57,5 @@
   },
   "retry": "Retry",
   "ok": "OK",
-  "cancel": "Cancel",
+  "cancel": "Cancel"
 }

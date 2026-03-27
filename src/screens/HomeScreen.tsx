@@ -11,9 +11,11 @@ import {
   AppState,
   ActivityIndicator,
   BackHandler,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 
 // Local imports
@@ -27,7 +29,7 @@ import { locationQueueService } from '../services/locationQueueService';
 import { tokenService } from '../services/tokenService';
 import { versionService } from '../services/versionService';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
-import { useNotifications } from '../hooks/useNotifications';
+import { useNotifications, NotificationData } from '../hooks/useNotifications';
 
 // Styles
 import { colors, spacing, typography, commonStyles } from '../styles/common.styles';
@@ -69,7 +71,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['home', 'common']);
 
   // ✅ Notifications hook
-  const { expoPushToken, lastNotification, clearLastNotification, isRegistering } = useNotifications();
+  const {
+    expoPushToken,
+    lastNotification,
+    clearLastNotification,
+    isRegistering,
+    setOnNotificationTap,
+  } = useNotifications();
 
   // Core states
   const [homeData, setHomeData] = useState<HomeData | null>(null);
@@ -92,6 +100,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
 
+  // ✅ Notification popup state
+  const [notificationPopup, setNotificationPopup] = useState<{
+    visible: boolean;
+    title: string;
+    body: string;
+    data: NotificationData | null;
+  }>({ visible: false, title: '', body: '', data: null });
+
   // Refs
   const gpsWatchRef = useRef<{ remove: () => void } | null>(null);
   const queueProcessorRef = useRef<NodeJS.Timeout | null>(null);
@@ -105,6 +121,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const participantId = homeData?.next_race_participant_app_id || null;
   const eventId = homeData?.next_race_id || null;
 
+  // ==================== NOTIFICATION HELPERS ====================
+
+  const navigateToResultDetails = useCallback((data: NotificationData) => {
+    // navigation.navigate('LiveTracking', {
+    //   product_app_id: Number(data.race_id),
+    //   product_option_value_app_id: Number(data.product_option_value_app_id),
+    //   event_name: data.event_name,
+    //   sourceScreen: 'FollowerDistanceScreen',
+    //   sectionType: 'follower',
+    //   sourceTab: 'live'
+    // });
+    navigation.navigate('ResultDetails', {
+      product_app_id: Number(data.race_id),
+      product_option_value_app_id: Number(data.product_option_value_app_id),
+      bib: String(data.bib),
+      from_live: 0,
+      raceStatus: (data.race_status as any) ?? undefined,
+    });
+  }, [navigation]);
+
+  const closeNotificationPopup = useCallback(() => {
+    setNotificationPopup(p => ({ ...p, visible: false }));
+  }, []);
+
   // ==================== NOTIFICATION HANDLERS ====================
 
   // ✅ Log push token when ready (DEBUG only)
@@ -114,7 +154,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   }, [expoPushToken]);
 
-  // ✅ Handle foreground notifications
+  // ✅ Foreground notification — show popup instead of navigating directly
   useEffect(() => {
     if (!lastNotification) return;
 
@@ -124,15 +164,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       console.log('📬 Foreground notification received:', { title, body, data });
     }
 
-    // TODO: Add custom handling based on notification data
-    // Example: Navigate to specific screen based on data
-    // if (data?.screen === 'ResultDetails') {
-    //   navigation.navigate('ResultDetails', data.params);
-    // }
+    if (data?.product_option_value_app_id && data?.bib) {
+      setNotificationPopup({
+        visible: true,
+        title: title ?? '',
+        body: body ?? '',
+        data: data as NotificationData,
+      });
+    }
 
-    // Clear notification after handling
     clearLastNotification();
-  }, [lastNotification, clearLastNotification, navigation]);
+  }, [lastNotification, clearLastNotification]);
+
+  // ✅ Background/killed tap — register handler so hook can navigate immediately
+  useEffect(() => {
+    setOnNotificationTap((data: NotificationData) => {
+      navigateToResultDetails(data);
+    });
+
+    return () => setOnNotificationTap(null);
+  }, [navigateToResultDetails, setOnNotificationTap]);
 
   // ✅ Show notification registration status (DEBUG only)
   useEffect(() => {
@@ -293,7 +344,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         if (API_CONFIG.DEBUG) {
           console.log('🔐 Token invalid/expired - clearing session silently');
         }
-        
+
         await tokenService.removeToken();
         setHasToken(false);
         setHomeData(null);
@@ -336,7 +387,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         if (API_CONFIG.DEBUG) {
           console.log('🚨 401 Unauthorized - clearing session silently');
         }
-        
+
         await tokenService.removeToken();
         setHasToken(false);
         setHomeData(null);
@@ -761,6 +812,71 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         />
       )}
 
+      {/* ✅ Foreground notification popup */}
+      <Modal
+        transparent
+        visible={notificationPopup.visible}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={closeNotificationPopup}
+      >
+        {/* Backdrop */}
+        <View style={homeStyles.notifBackdrop}>
+          <TouchableOpacity
+            style={homeStyles.notifBackdrop}
+            activeOpacity={1}
+            onPress={closeNotificationPopup}
+          />
+        </View>
+
+        {/* Card */}
+        <View style={homeStyles.notifWrapper}>
+          <View style={homeStyles.notifCard}>
+            {/* Close button — top right, matching SuccessCelebrationModal */}
+            <TouchableOpacity
+              style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}
+              onPress={closeNotificationPopup}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={20} color="#64748b" />
+            </TouchableOpacity>
+
+            {/* Icon */}
+            <View style={homeStyles.notifIconWrapper}>
+              <Ionicons name="notifications" size={36} color={colors.primary} />
+            </View>
+
+            {/* Title */}
+            <Text style={homeStyles.notifTitle}>{notificationPopup.title}</Text>
+
+            {/* Body */}
+            <Text style={homeStyles.notifBody}>{notificationPopup.body}</Text>
+
+            {/* Buttons */}
+            <View style={homeStyles.notifButtonContainer}>
+              <TouchableOpacity
+                style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                onPress={() => {
+                  closeNotificationPopup();
+                  if (notificationPopup.data) navigateToResultDetails(notificationPopup.data);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={commonStyles.primaryButtonText}>{t('common:buttons.view')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={commonStyles.secondaryButton}
+                onPress={closeNotificationPopup}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.secondaryButtonText}>{t('common:buttons.close')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ScrollView
         style={homeStyles.scrollView}
         contentContainerStyle={homeStyles.scrollContent}
@@ -912,7 +1028,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           >
             <Text style={homeStyles.buttonText}>{t('home:button.Participant')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={homeStyles.button}
             onPress={() => navigation.navigate('FollowerEvent')}
           >

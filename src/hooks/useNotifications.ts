@@ -17,14 +17,13 @@ try {
   Notifications = require("expo-notifications");
   Device = require("expo-device");
   isNotificationsAvailable = true;
-  
+
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true, // ✅ iOS badge support
       shouldShowBanner: true,
       shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
     }),
   });
 } catch (error) {
@@ -58,7 +57,7 @@ async function setupAndroidChannel(): Promise<void> {
   }
 }
 
-// ✅ Setup iOS notification categories (Optional)
+// ✅ Setup iOS notification categories
 async function setupiOSNotificationCategories(): Promise<void> {
   if (Platform.OS !== "ios" || !Notifications) return;
 
@@ -67,9 +66,7 @@ async function setupiOSNotificationCategories(): Promise<void> {
       {
         identifier: "view",
         buttonTitle: "View",
-        options: {
-          opensAppToForeground: true,
-        },
+        options: { opensAppToForeground: true },
       },
     ]);
 
@@ -100,19 +97,15 @@ async function registerForPushNotifications(): Promise<string | null> {
   }
 
   try {
-    // Platform-specific setup
     if (Platform.OS === "android") {
       await setupAndroidChannel();
     } else if (Platform.OS === "ios") {
       await setupiOSNotificationCategories();
     }
 
-    // Check current permission status
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    
     let finalStatus = existingStatus;
 
-    // Request permission if not granted
     if (existingStatus !== "granted") {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
@@ -129,11 +122,6 @@ async function registerForPushNotifications(): Promise<string | null> {
       return null;
     }
 
-    if (API_CONFIG.DEBUG) {
-      console.log(`✅ ${Platform.OS} push notification permission granted`);
-    }
-
-    // Get Expo push token
     const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId: "e72144dd-72cd-47f1-8409-125734130233",
     });
@@ -144,7 +132,6 @@ async function registerForPushNotifications(): Promise<string | null> {
       console.log(`✅ ${Platform.OS} Expo push token obtained:`, token);
     }
 
-    // Register with backend
     await sendTokenToBackend(token);
 
     return token;
@@ -166,10 +153,6 @@ async function sendTokenToBackend(token: string): Promise<void> {
         console.log("ℹ️ Expo token unchanged — skipping backend registration");
       }
       return;
-    }
-
-    if (API_CONFIG.DEBUG) {
-      console.log("📤 Registering new token with backend...");
     }
 
     const result = await followerApi.registerFollower(token);
@@ -196,6 +179,18 @@ async function sendTokenToBackend(token: string): Promise<void> {
   }
 }
 
+// ✅ Parsed notification data shape matching the PHP payload
+export interface NotificationData {
+  type: 'checkpoint' | 'finish';
+  participant_app_id: string | number;
+  race_id: string | number;
+  product_option_value_app_id: string | number;
+  event_name: string;
+  checkpoint_key: string;
+  bib: string | number;
+  race_status: string;
+}
+
 // ✅ Hook interface
 interface UseNotificationsReturn {
   expoPushToken: string | null;
@@ -203,46 +198,55 @@ interface UseNotificationsReturn {
   clearLastNotification: () => void;
   isRegistering: boolean;
   isAvailable: boolean;
+  // Register a handler for background/killed-state notification taps
+  setOnNotificationTap: (handler: ((data: NotificationData) => void) | null) => void;
 }
 
 // ✅ Main hook
 export function useNotifications(): UseNotificationsReturn {
-  const [expoPushToken, setExpoPushToken] = useState<string | null>(null);
+  const [expoPushToken, setExpoPushToken]       = useState<string | null>(null);
   const [lastNotification, setLastNotification] = useState<any | null>(null);
-  const [isRegistering, setIsRegistering] = useState(false);
+  const [isRegistering, setIsRegistering]       = useState(false);
 
-  const notificationListener = useRef<any>(null);
-  const responseListener = useRef<any>(null);
+  const notificationListener  = useRef<any>(null);
+  const responseListener      = useRef<any>(null);
 
-  const handleNotificationReceived = useCallback(
-    (notification: any) => {
-      if (!isNotificationsAvailable) return;
+  // ✅ Use a ref to store the tap handler — useState cannot store functions
+  // directly because React treats a function argument as an initializer.
+  const onNotificationTapRef = useRef<((data: NotificationData) => void) | null>(null);
 
+  const setOnNotificationTap = useCallback((
+    handler: ((data: NotificationData) => void) | null
+  ) => {
+    onNotificationTapRef.current = handler;
+  }, []);
+
+  // Foreground — store notification so the screen can show a popup
+  const handleNotificationReceived = useCallback((notification: any) => {
+    if (!isNotificationsAvailable) return;
+
+    if (API_CONFIG.DEBUG) {
       const { title, body } = notification.request.content;
+      console.log(`📬 ${Platform.OS} notification received (foreground):`, { title, body });
+    }
 
-      if (API_CONFIG.DEBUG) {
-        console.log(`📬 ${Platform.OS} notification received (foreground):`, { title, body });
-      }
+    setLastNotification(notification);
+  }, []);
 
-      setLastNotification(notification);
-    },
-    []
-  );
+  // Background/killed tap — fire the registered handler immediately
+  const handleNotificationResponse = useCallback((response: any) => {
+    if (!isNotificationsAvailable) return;
 
-  const handleNotificationResponse = useCallback(
-    (response: any) => {
-      if (!isNotificationsAvailable) return;
+    const { data, title } = response.notification.request.content;
 
-      const { title, data } = response.notification.request.content;
+    if (API_CONFIG.DEBUG) {
+      console.log(`👆 ${Platform.OS} notification tapped:`, { title, data });
+    }
 
-      if (API_CONFIG.DEBUG) {
-        console.log(`👆 ${Platform.OS} notification tapped:`, { title, data });
-      }
-
-      // TODO: Add navigation logic based on data
-    },
-    []
-  );
+    if (data?.product_option_value_app_id && data?.bib && onNotificationTapRef.current) {
+      onNotificationTapRef.current(data as NotificationData);
+    }
+  }, []);
 
   const clearLastNotification = useCallback(() => {
     setLastNotification(null);
@@ -260,23 +264,17 @@ export function useNotifications(): UseNotificationsReturn {
 
     const initialize = async () => {
       if (!isMounted) return;
-
       setIsRegistering(true);
 
       try {
         const token = await registerForPushNotifications();
-        
-        if (isMounted && token) {
-          setExpoPushToken(token);
-        }
+        if (isMounted && token) setExpoPushToken(token);
       } catch (error) {
         if (API_CONFIG.DEBUG) {
           console.error(`❌ ${Platform.OS} notification initialization failed:`, error);
         }
       } finally {
-        if (isMounted) {
-          setIsRegistering(false);
-        }
+        if (isMounted) setIsRegistering(false);
       }
     };
 
@@ -286,7 +284,6 @@ export function useNotifications(): UseNotificationsReturn {
       notificationListener.current = Notifications.addNotificationReceivedListener(
         handleNotificationReceived
       );
-
       responseListener.current = Notifications.addNotificationResponseReceivedListener(
         handleNotificationResponse
       );
@@ -305,5 +302,6 @@ export function useNotifications(): UseNotificationsReturn {
     clearLastNotification,
     isRegistering,
     isAvailable: isNotificationsAvailable,
+    setOnNotificationTap,
   };
 }

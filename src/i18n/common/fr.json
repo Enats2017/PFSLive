@@ -11,7 +11,8 @@
     "edit": "Modifier",
     "close": "Fermer",
     "retry": "Réessayer",
-    "refresh": "Actualiser"
+    "refresh": "Actualiser",
+    "view": "Voir"
   },
   "nav": {
     "home": "Accueil",
@@ -56,5 +57,5 @@
   },
   "retry": "Retry",
   "ok": "OK",
-  "cancel": "Cancel",
+  "cancel": "Cancel"
 }
