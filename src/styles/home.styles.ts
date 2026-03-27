@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { colors, spacing, typography } from './common.styles';
 
 export const homeStyles = StyleSheet.create({
@@ -13,8 +13,8 @@ export const homeStyles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
   },
-  
-  // Logo section - Side by side AND centered
+
+  // Logo section
   cardscetion: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -38,7 +38,7 @@ export const homeStyles = StyleSheet.create({
     color: colors.black,
     textAlign: 'center',
   },
-  
+
   // Subtitle
   subtitle: {
     fontSize: typography.sizes.md,
@@ -47,15 +47,15 @@ export const homeStyles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 1,
     marginTop: spacing.xs,
-    marginBottom: spacing.xxxl, // ✅ Space between subtitle and textContainer
+    marginBottom: spacing.xxxl,
   },
-  
+
   // Event info section
   textContainer: {
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.xxxl, // ✅ Space between textContainer and buttons
+    marginBottom: spacing.xxxl,
   },
-  
+
   // Event Name
   eventInfo: {
     marginBottom: spacing.md,
@@ -80,7 +80,7 @@ export const homeStyles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     color: colors.black,
   },
-  
+
   smallText: {
     fontSize: typography.sizes.md,
     color: colors.black,
@@ -89,7 +89,7 @@ export const homeStyles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     paddingLeft: spacing.md,
   },
-  
+
   centeredText: {
     fontSize: typography.sizes.md,
     color: colors.black,
@@ -98,7 +98,7 @@ export const homeStyles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     paddingHorizontal: spacing.sm,
   },
-  
+
   heading: {
     fontSize: typography.sizes.md,
     color: colors.black,
@@ -108,7 +108,7 @@ export const homeStyles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     paddingHorizontal: spacing.sm,
   },
-  
+
   tagline: {
     fontSize: typography.sizes.lg,
     color: colors.black,
@@ -118,7 +118,7 @@ export const homeStyles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     lineHeight: 24,
   },
-  
+
   // Tracking Status
   trackingStatus: {
     flexDirection: 'row',
@@ -155,7 +155,7 @@ export const homeStyles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     marginTop: 2,
   },
-  
+
   permissionWarning: {
     backgroundColor: colors.warning + '20',
     paddingVertical: spacing.md,
@@ -171,7 +171,7 @@ export const homeStyles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
     textAlign: 'center',
   },
-  
+
   // Buttons
   button: {
     backgroundColor: colors.primary,
@@ -193,13 +193,13 @@ export const homeStyles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  
+
   buttonContainer: {
     paddingHorizontal: spacing.md,
-    marginTop: 0, // ✅ No extra margin - textContainer handles spacing
+    marginTop: 0,
     gap: spacing.md,
   },
-  
+
   footer: {
     paddingVertical: spacing.xl,
     alignItems: 'center',
@@ -209,5 +209,65 @@ export const homeStyles = StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.gray400,
     fontWeight: typography.weights.medium,
+  },
+
+  // ✅ Notification popup — consistent with SuccessCelebrationModal & UndoConfirmModal
+  notifBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  notifWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  notifCard: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.xxxl,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: { elevation: 8 },
+    }),
+  },
+  notifIconWrapper: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  notifTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: '#0f172a',
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  notifBody: {
+    fontSize: typography.sizes.sm,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: spacing.xxl,
+  },
+  notifButtonContainer: {
+    width: '100%',
+    gap: spacing.md,
+  },
+  notifViewButton: {
+    backgroundColor: colors.primary,
   },
 });
