@@ -94,7 +94,7 @@ export const locationService = {
 
       // Extract from standard backend response format
       const success = apiResponse.success === true;
-      const data = apiResponse.data || {};
+      const data: any = apiResponse.data || {};
       const error = apiResponse.error;
 
       // Normalize response
