@@ -50,11 +50,13 @@
     "finished": "VOLTOOID"
   },
   "empty": {
-    "no_live_events": "Geen live evenementen op dit moment"
+    "no_live_events": "Geen live evenementen op dit moment",
+    "no_live_events_msg": "Er zijn momenteel geen lopende evenementen.\nKom later nog eens terug."
   },
   "past": {
     "view_results": "BEKIJK RESULTATEN",
-    "no_events": "Geen eerdere evenementen gevonden"
+    "no_events": "Geen eerdere evenementen gevonden",
+    "no_events_msg": "Je hebt nog niet deelgenomen aan evenementen.\nJe eerdere evenementen verschijnen hier."
   },
   "labels": {
     "first_name": "Voornaam",

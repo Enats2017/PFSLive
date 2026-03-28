@@ -9,6 +9,7 @@ import { EventItem, eventService } from '../../services/eventService';
 import { formatEventDate } from '../../utils/dateFormatter';
 import SearchInput from '../../components/SearchInput';
 import { API_CONFIG } from '../../constants/config';
+import ErrorScreen from '../../components/ErrorScreen';
 
 interface PastTabProps {
     events: EventItem[];
@@ -20,7 +21,7 @@ interface PastTabProps {
 const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['event', 'common']);
-    
+
     // ✅ SEARCH STATE
     const [searchText, setSearchText] = useState('');
     const [searchResults, setSearchResults] = useState<EventItem[]>([]);
@@ -142,18 +143,20 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
     const ListEmptyComponent = useCallback(
         () => (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing.xxl }}>
-                <Ionicons name="time-outline" size={48} color={colors.gray300} />
-                <Text style={commonStyles.errorText}>
-                    {searchText.trim().length > 0
+            <ErrorScreen
+                type="empty"
+                title={
+                    searchText.trim().length > 0
                         ? t('event:empty.searchNoResults')
-                        : t('event:empty.past')}
-                </Text>
-            </View>
+                        : t('event:empty.past')
+                }
+                message="" // ← empty string hides message, or add a subtitle if you want
+                onRetry={() => { }}
+            />
         ),
         [t, searchText]
     );
-
+    
     return (
         <>
             {/* ✅ SEARCH BAR */}

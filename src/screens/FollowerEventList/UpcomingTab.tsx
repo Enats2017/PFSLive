@@ -9,6 +9,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { API_CONFIG } from '../../constants/config';
+import ErrorScreen from '../../components/ErrorScreen';
 
 interface UpcomingTabProps {
     events: EventItem[];
@@ -20,26 +21,26 @@ interface UpcomingTabProps {
 const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { t } = useTranslation(['follower', 'common']);
-     const handleLoadMore = useCallback(() => {
+    const handleLoadMore = useCallback(() => {
+        if (API_CONFIG.DEBUG) {
+            console.log('🔍 Upcoming onEndReached:', {
+                hasMore,
+                loadingMore,
+                eventsCount: events.length,
+            });
+        }
+
+        if (hasMore && !loadingMore) {
             if (API_CONFIG.DEBUG) {
-                console.log('🔍 Upcoming onEndReached:', {
-                    hasMore,
-                    loadingMore,
-                    eventsCount: events.length,
-                });
+                console.log('✅ Calling onLoadMore');
             }
-    
-            if (hasMore && !loadingMore) {
-                if (API_CONFIG.DEBUG) {
-                    console.log('✅ Calling onLoadMore');
-                }
-                onLoadMore();
-            } else {
-                if (API_CONFIG.DEBUG) {
-                    console.log('⏸️ Skipped - hasMore:', hasMore, 'loadingMore:', loadingMore);
-                }
+            onLoadMore();
+        } else {
+            if (API_CONFIG.DEBUG) {
+                console.log('⏸️ Skipped - hasMore:', hasMore, 'loadingMore:', loadingMore);
             }
-        }, [hasMore, loadingMore, onLoadMore, events.length]);
+        }
+    }, [hasMore, loadingMore, onLoadMore, events.length]);
 
     const renderItem = useCallback(({ item }: { item: EventItem }) => (
         <View style={[
@@ -61,10 +62,10 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
             </View>
             <TouchableOpacity
                 style={[commonStyles.primaryButton, { borderRadius: 0 }]}
-                 onPress={() => navigation.navigate('FollowDetails', {
+                onPress={() => navigation.navigate('FollowDetails', {
                     product_app_id: Number(item.product_app_id),
                     event_name: item.name,
-                    sourceTab: 'upcoming',         
+                    sourceTab: 'upcoming',
                 })}
                 activeOpacity={0.8}
             >
@@ -91,13 +92,18 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
         );
     }, [loadingMore]);
 
-    const ListEmptyComponent = useCallback(() => (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing.xxl }}>
-            <Text style={commonStyles.errorText}>
-                {t('event:empty.upcoming')}
-            </Text>
-        </View>
-    ), [t]);
+    const ListEmptyComponent = useCallback(
+        () => (
+            <ErrorScreen
+                type="empty"
+                title={t('event:empty.upcoming')}
+                message=""
+                onRetry={() => { }}
+            />
+        ),
+        [t]
+    );
+
 
     return (
         <FlatList

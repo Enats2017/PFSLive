@@ -10,6 +10,7 @@ import { eventStyles } from '../../styles/event';
 import { EventItem } from '../../services/eventService';
 import { formatEventDate } from '../../utils/dateFormatter';
 import { API_CONFIG } from '../../constants/config';
+import ErrorScreen from '../../components/ErrorScreen';
 
 interface LiveTabProps {
     events: EventItem[];
@@ -99,10 +100,12 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
     const ListEmptyComponent = useCallback(
         () => (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing.xxl }}>
-                <Ionicons name="radio-outline" size={48} color={colors.gray300} />
-                <Text style={commonStyles.errorText}>{t('event:empty.live')}</Text>
-            </View>
+            <ErrorScreen
+                type="empty"
+                title={t('event:empty.live')}
+                message=""
+                onRetry={() => { }}
+            />
         ),
         [t]
     );

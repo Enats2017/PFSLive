@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
   View, Text, FlatList, ActivityIndicator,
   TouchableOpacity,
+  StatusBar,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +10,9 @@ import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
 import { useNavigation } from '@react-navigation/native';
+import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface DistanceTabProps {
   product_app_id: number;
@@ -21,16 +25,17 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name}: Distance
   const { t } = useTranslation(['result', 'details', 'common']);
   const [results, setResults] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  //const [error, setError] = useState<string | null>(null);
+  const { error, hasError, handleApiError, clearError } = useScreenError();
 
   const fetchResults = useCallback(async () => {
     try {
       setLoading(true);
-      setError(null);
+      clearError();
       const result = await eventDetailService.getEventDetails(product_app_id);
       setResults(result.distances);
     } catch (err: any) {
-      setError(err?.message ?? t('common:errors.generic'));
+      handleApiError(err);
     } finally {
       setLoading(false);
     }
@@ -148,17 +153,17 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name}: Distance
     );
   }
 
-  if (error) {
+  if (hasError && !loading) {
     return (
-      <View style={commonStyles.centerContainer}>
-        <Text style={commonStyles.errorText}>{error}</Text>
-        <TouchableOpacity
-          style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-          onPress={fetchResults}
-        >
-          <Text style={commonStyles.primaryButtonText}>{t('common:buttons.retry')}</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={commonStyles.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" />
+        <ErrorScreen
+          type={error!.type}
+          title={error!.title}
+          message={error!.message}
+          onRetry={() => { clearError(); fetchResults(); }}
+        />
+      </SafeAreaView>
     );
   }
 

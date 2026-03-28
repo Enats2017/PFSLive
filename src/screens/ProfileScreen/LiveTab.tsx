@@ -7,19 +7,20 @@ import { profileStyles } from '../../styles/Profile.styles';
 import { AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { EventCard } from './EventCardLive';
 import { API_CONFIG } from '../../constants/config';
+import ErrorScreen from '../../components/ErrorScreen';
 
 interface LiveTabProps {
     events: AthleteEvent[];
     onLoadMore: () => void;
     loadingMore: boolean;
     hasMore: boolean;
-    profile?:    AthleteProfile
+    profile?: AthleteProfile
 }
 
-const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasMore,profile }) => {
+const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasMore, profile }) => {
     const { t } = useTranslation(['profile']);
-    console.log("111",profile);
-    
+    console.log("111", profile);
+
 
     // ✅ SIMPLIFIED: Just check hasMore and loadingMore
     const handleLoadMore = useCallback(() => {
@@ -44,14 +45,14 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
     }, [hasMore, loadingMore, onLoadMore, events.length]);
 
     const renderItem = useCallback(
-    ({ item }: { item: AthleteEvent }) => (
-        <EventCard 
-            item={item} 
-            isOwnProfile={profile?.is_own_profile === 1}
-        />
-    ),
-    [profile]  // ← add profile to dependencies
-);
+        ({ item }: { item: AthleteEvent }) => (
+            <EventCard
+                item={item}
+                isOwnProfile={profile?.is_own_profile === 1}
+            />
+        ),
+        [profile]  // ← add profile to dependencies
+    );
 
     const keyExtractor = useCallback(
         (item: AthleteEvent, index: number) => `${item.id}-${index}`,
@@ -71,12 +72,12 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
     const ListEmptyComponent = useCallback(
         () => (
-            <View style={profileStyles.empty}>
-                <Ionicons name="radio-outline" size={48} color={colors.gray300} />
-                <Text style={commonStyles.errorText}>
-                    {t('profile:empty.no_live_events')}
-                </Text>
-            </View>
+            <ErrorScreen
+                type="empty"
+                title={t('profile:empty.no_live_events')}
+                message={t('profile:empty.no_live_events_msg')}
+                onRetry={() => { }}
+            />
         ),
         [t]
     );

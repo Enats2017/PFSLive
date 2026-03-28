@@ -1,6 +1,8 @@
 // hooks/useResultDetail.ts
 import { useState, useCallback, useEffect } from 'react';
 import { resultDetail, ResultDetailResponse } from '../services/resultDetailsService';
+import { AppError, ErrorType } from "../services/api";
+import { useScreenError, ScreenError } from "../hooks/useApiError";
 
 export const useResultDetail = (
     product_app_id: number,
@@ -10,12 +12,12 @@ export const useResultDetail = (
 ) => {
     const [data, setData] = useState<ResultDetailResponse | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { error, hasError, handleApiError, clearError } = useScreenError();
 
     const fetchDetail = useCallback(async () => {
         try {
             setLoading(true);
-            setError(null);
+           clearError();
             const result = await resultDetail.getResultDetail({
                 product_app_id,
                 product_option_value_app_id,
@@ -24,7 +26,8 @@ export const useResultDetail = (
             });
             setData(result);
         } catch (e: any) {
-            setError(e?.message ?? 'Failed to load');
+            handleApiError(e);
+            
         } finally {
             setLoading(false);
         }
@@ -34,5 +37,5 @@ export const useResultDetail = (
         fetchDetail();
     }, [fetchDetail]);
 
-    return { data, loading, error, retry: fetchDetail };
+    return { data, loading,  hasError, error, clearError, retry: fetchDetail, };
 };

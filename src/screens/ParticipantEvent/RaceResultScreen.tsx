@@ -17,6 +17,8 @@ import { detailsStyles } from '../../styles/details.styles';
 import { RaceResultScreenprops } from '../../types/navigation';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
 import { API_CONFIG } from '../../constants/config';
+import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
 
 const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }) => {
   const { product_app_id, event_name } = route.params;
@@ -24,14 +26,15 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
 
   const [results, setResults] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  //const [error, setError] = useState<string | null>(null);
+  const { error, hasError, handleApiError, clearError } = useScreenError();
 
   // ✅ FETCH FINISHED DISTANCES WITH CACHE BUSTING
   const fetchResults = useCallback(
     async (bustCache: boolean = false) => {
       try {
         setLoading(true);
-        setError(null);
+        clearError();
 
         if (API_CONFIG.DEBUG) {
           console.log('📡 Fetching race results for:', product_app_id, {
@@ -58,7 +61,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         if (API_CONFIG.DEBUG) {
           console.error('❌ Error fetching race results:', err);
         }
-        setError(err?.message ?? t('common:errors.generic'));
+         handleApiError(err);
       } finally {
         setLoading(false);
       }
@@ -239,24 +242,17 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   }
 
   // ✅ ERROR STATE
-  if (error) {
+ if (hasError && !loading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={commonStyles.container} edges={['top']}>
         <StatusBar barStyle="dark-content" />
-        <AppHeader showLogo={false} />
-        <View style={commonStyles.centerContainer}>
-          <Text style={commonStyles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-            onPress={() => fetchResults(true)}
-            activeOpacity={0.8}
-          >
-            <Text style={commonStyles.primaryButtonText}>
-              {t('result:error.retry')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <BottomNavigation 
+        <ErrorScreen
+          type={error!.type}
+          title={error!.title}
+          message={error!.message}
+          onRetry={() => { clearError(); fetchResults(); }}
+        />
+         <BottomNavigation 
           activeTab="Home" 
           product_app_id={product_app_id}
           event_name={event_name}

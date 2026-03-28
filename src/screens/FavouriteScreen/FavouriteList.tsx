@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { FlatList, ActivityIndicator, View, Text, TouchableOpacity } from 'react-native';
+import { FlatList, ActivityIndicator, View, Text, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -13,28 +13,32 @@ import { favouritesApi, FavouriteItem } from '../../services/favourites';
 import { API_CONFIG } from '../../constants/config';
 import { FavouriteListpops } from '../../types/navigation';
 import { favstyle } from '../../styles/favourite.style';
+import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
 
 const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
-    const { 
-        product_app_id, 
-        event_name, 
-        sectionType, 
-        sourceScreen, 
-        sourceTab, 
-        product_option_value_app_id 
+    const {
+        product_app_id,
+        event_name,
+        sectionType,
+        sourceScreen,
+        sourceTab,
+        product_option_value_app_id
     } = route.params;
 
     const { t } = useTranslation(['favourite', 'common']);
     const [favourites, setFavourites] = useState<FavouriteItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    //const [error, setError] = useState<string | null>(null);
     const [paginationInfo, setPaginationInfo] = useState({
         page: 1,
         total_pages: 1,
     });
     const isFetching = useRef(false);
     const isInitialMount = useRef(true);
+
+    const { error, hasError, handleApiError, clearError } = useScreenError();
 
     const fetchFavourites = useCallback(async () => {
         if (isFetching.current) {
@@ -51,7 +55,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                 setLoading(true);
             }
 
-            setError(null);
+            clearError();
 
             const result = await favouritesApi.getFavourites({
                 product_app_id,
@@ -74,7 +78,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             if (API_CONFIG.DEBUG) {
                 console.error('❌ Favourites fetch failed:', err);
             }
-            setError(err.message || 'Failed to load favourites');
+            handleApiError(error);
         } finally {
             setLoading(false);
             isFetching.current = false;
@@ -153,8 +157,8 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         []);
 
     const renderItem = useCallback(({ item }: { item: FavouriteItem }) => (
-        <FavouriteCard 
-            item={item} 
+        <FavouriteCard
+            item={item}
             product_app_id={product_app_id}
         />
     ), [product_app_id]);
@@ -200,27 +204,17 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         );
     }
 
-    if (error) {
+    if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-                <AppHeader title={t('favourite:title')} />
-                <View style={commonStyles.centerContainer}>
-                    <Text style={commonStyles.errorText}>{error}</Text>
-                    <TouchableOpacity
-                        style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-                        onPress={fetchFavourites}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={commonStyles.primaryButtonText}>
-                            {t('common:buttons.retry')}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-                {sectionType === 'follower' ? (
-                    <BottomNavigationFollower activeTab='Favorites' />
-                ) : (
-                    <BottomNavigation activeTab="Results" />
-                )}
+            <SafeAreaView style={commonStyles.container} edges={['top']}>
+                <StatusBar barStyle="dark-content" />
+                <AppHeader />
+                <ErrorScreen
+                    type={error!.type}
+                    title={error!.title}
+                    message={error!.message}
+                    onRetry={() => { clearError(); fetchFavourites() }}
+                />
             </SafeAreaView>
         );
     }
@@ -228,7 +222,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <AppHeader title={t('favourite:title')} />
-            
+
             <FlatList
                 data={favourites}
                 keyExtractor={keyExtractor}
@@ -257,7 +251,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             </View>
 
             {sectionType === 'follower' ? (
-                <BottomNavigationFollower 
+                <BottomNavigationFollower
                     activeTab='Favorites'
                     product_app_id={product_app_id}
                     event_name={event_name}

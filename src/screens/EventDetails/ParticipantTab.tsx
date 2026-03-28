@@ -15,6 +15,8 @@ import { API_CONFIG } from '../../constants/config';
 import ParticipantCard from './ParticipantCard';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
+import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
 
 interface ParticipantTabProps {
   product_app_id: string | number;
@@ -43,17 +45,18 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
   const [searchText, setSearchText] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [error, setError] = useState<string | null>(null);
+  //const [error, setError] = useState<string | null>(null);
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<any>(null);
+  const { error, hasError, handleApiError, clearError } = useScreenError();
 
   const fetchParticipants = useCallback(
     async (pageNum: number, search: string) => {
       try {
         if (pageNum === 1 && search.length === 0) {
           setLoading(true);
-          setError(null);
+          clearError();
         } else if (pageNum > 1) {
           setLoadingMore(true);
         }
@@ -109,7 +112,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         }
 
         if (pageNum === 1) {
-          setError(error.message || t('details:error.title'));
+          handleApiError(error);
         }
       } finally {
         setLoading(false);
@@ -226,20 +229,14 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     );
   }
 
-  if (error && searchText.length === 0) {
+  if (hasError && !loading && searchText.length === 0) {
     return (
-      <View style={commonStyles.centerContainer}>
-        <Text style={commonStyles.errorText}>{error}</Text>
-        <TouchableOpacity
-          style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-          onPress={() => fetchParticipants(1, searchText)}
-          activeOpacity={0.8}
-        >
-          <Text style={commonStyles.primaryButtonText}>
-            {t('details:error.retry')}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <ErrorScreen
+        type={error!.type}
+        title={error!.title}
+        message={error!.message}
+        onRetry={() => { clearError(); fetchParticipants(1, searchText); }}
+      />
     );
   }
 
@@ -298,13 +295,13 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         />
       )}
 
-       <TrackingPasswordModal
-            visible={passwordModalVisible}
-            isVerifying={isVerifying}
-            passwordError={passwordError}
-            onSubmit={handlePasswordSubmit}
-            onClose={handlePasswordModalClose}
-        />
+      <TrackingPasswordModal
+        visible={passwordModalVisible}
+        isVerifying={isVerifying}
+        passwordError={passwordError}
+        onSubmit={handlePasswordSubmit}
+        onClose={handlePasswordModalClose}
+      />
     </>
   );
 };

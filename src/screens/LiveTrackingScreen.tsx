@@ -20,6 +20,8 @@ import { useFollowManager } from '../hooks/useFollowManager';
 import { commonStyles, colors } from '../styles/common.styles';
 import { liveTrackingStyles } from '../styles/liveTracking.styles';
 import { ChartDataPoint } from '../types';
+import ErrorScreen from '../components/ErrorScreen';
+import { useScreenError } from '../hooks/useApiError';
 
 const safeParseFloat = (value: any): number => {
     if (value === null || value === undefined) return 0;
@@ -40,13 +42,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [selectedDistance, setSelectedDistance] = useState<DistanceOption | null>(null);
     const [apiCheckpoints, setApiCheckpoints] = useState<CheckpointData[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    //const [error, setError] = useState<string | null>(null);
     const [popupState, setPopupState] = useState<PopupState>({ type: null, data: null });
     const [profileCollapsed, setProfileCollapsed] = useState(false);
     const [participantsLoading, setParticipantsLoading] = useState(false);
     const [loadedGpxUrl, setLoadedGpxUrl] = useState<string | null>(null);
     
     const hasLoadedInitialData = useRef(false);
+    const { error, hasError, handleApiError, clearError } = useScreenError();
 
     const participantMarkers: ParticipantMapMarker[] = useMemo(() => {
         return participants.map(p => {
@@ -138,7 +141,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         try {
             if (!autoRefresh) {
                 setLoading(true);
-                setError(null);
+                clearError();
             }
 
             setParticipantsLoading(true);
@@ -259,7 +262,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
         } catch (err) {
             console.error('❌ Error loading live tracking data:', err);
-            setError(err instanceof Error ? err.message : 'Failed to load tracking data');
+             handleApiError(err);
             setLoading(false);
             setParticipantsLoading(false);
             
@@ -351,23 +354,35 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         );
     }
 
-    if (error || !routeData || !selectedDistance) {
-        return (
-            <View style={commonStyles.centerContainer}>
-                <Text style={commonStyles.errorText}>
-                    {error || t('livetracking:errorLoadingData')}
-                </Text>
-                <TouchableOpacity
-                    style={commonStyles.primaryButton}
-                    onPress={() => loadLiveTrackingData(false)}
-                >
-                    <Text style={commonStyles.primaryButtonText}>
-                        {t('common:buttons.retry')}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-        );
-    }
+   if (hasError && !loading) {
+  return (
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" />
+      <AppHeader title={event_name} showLogo={true} />
+      <ErrorScreen
+        type={error!.type}
+        title={error!.title}
+        message={error!.message}
+        onRetry={() => { clearError(); loadLiveTrackingData(false); }}
+      />
+    </SafeAreaView>
+  );
+}
+
+// Handle no data separately — no error object needed
+if (!routeData || !selectedDistance) {
+  return (
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" />
+      <AppHeader title={event_name} showLogo={true} />
+      <ErrorScreen
+        type="empty"
+        onRetry={() => loadLiveTrackingData(false)}
+      />
+    </SafeAreaView>
+  );
+}
+
 
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>

@@ -23,6 +23,8 @@ import { eventDetailService, RaceResultData } from '../../services/eventDetailSe
 import { API_CONFIG } from '../../constants/config';
 import { clearPendingRegistration } from '../../hooks/usePendingRegistration';
 import { getCurrentLanguageId } from '../../i18n';
+import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
 
 // ✅ TYPES
 interface ParticipantResultRouteParams {
@@ -53,7 +55,7 @@ const ParticipantResult = () => {
   const [searchText, setSearchText] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [error, setError] = useState<string | null>(null);
+  //const [error, setError] = useState<string | null>(null);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registeringId, setRegisteringId] = useState<string | null>(null);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
@@ -67,6 +69,8 @@ const ParticipantResult = () => {
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<any>(null);
+
+  const { error, hasError, handleApiError, clearError } = useScreenError();
 
   React.useEffect(() => {
     if (!product_app_id || !product_option_value_app_id) {
@@ -119,7 +123,7 @@ const ParticipantResult = () => {
       try {
         if (pageNum === 1 && search.length === 0) {
           setLoading(true);
-          setError(null);
+          clearError();
         } else if (pageNum > 1) {
           setLoadingMore(true);
         }
@@ -173,7 +177,7 @@ const ParticipantResult = () => {
           console.error('❌ Error fetching participants:', err?.message);
         }
         if (pageNum === 1) {
-          setError(err?.message ?? t('details:error.title'));
+          handleApiError(err);
         }
       } finally {
         setLoading(false);
@@ -569,23 +573,14 @@ const ParticipantResult = () => {
     );
   }
 
-  if (error && searchText.length === 0) {
+   if (hasError && !loading && searchText.length === 0) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <AppHeader showLogo={true} />
-        <View style={commonStyles.centerContainer}>
-          <Text style={commonStyles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-            onPress={() => fetchParticipants(1, searchText)}
-            activeOpacity={0.8}
-          >
-            <Text style={commonStyles.primaryButtonText}>
-              {t('details:error.retry')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <ErrorScreen
+        type={error!.type}
+        title={error!.title}
+        message={error!.message}
+        onRetry={() => { clearError(); fetchParticipants(1, searchText); }}
+      />
     );
   }
 

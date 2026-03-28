@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +21,10 @@ import useRegistrationHandler from '../../services/useRegistrationHandler';
 import { useNavigation } from '@react-navigation/native';
 import { API_CONFIG } from '../../constants/config';
 import { toastSuccess } from '../../../utils/toast';
+import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppHeader } from '../../components/common/AppHeader';
 
 interface DistanceTabProps {
   product_app_id: string | number;
@@ -40,18 +45,19 @@ const DistanceTab = ({
   const [distances, setDistances] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
   const [serverTime, setServerTime] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
+  //const [error, setError] = useState<string | null>(null);
   const [successVisible, setSuccessVisible] = useState(false);
   const [undoModalVisible, setUndoModalVisible] = useState(false);
   const [selectedUndoItem, setSelectedUndoItem] = useState<Distance | null>(null);
   const [pendingRefresh, setPendingRefresh] = useState(false);
 
-  // ✅ FETCH DISTANCES WITH CACHE BUSTING
+  const { error, hasError, handleApiError, clearError } = useScreenError();
+
   const fetchDistances = useCallback(
     async (bustCache: boolean = false) => {
       try {
         setLoading(true);
-        setError(null);
+        clearError();
 
         if (API_CONFIG.DEBUG) {
           console.log('📡 Fetching distances for product:', product_app_id, {
@@ -74,7 +80,7 @@ const DistanceTab = ({
         if (API_CONFIG.DEBUG) {
           console.error('❌ Error fetching distances:', err);
         }
-        setError(err?.message ?? t('details:error.title'));
+        handleApiError(err);
       } finally {
         setLoading(false);
       }
@@ -409,23 +415,19 @@ const DistanceTab = ({
     );
   }
 
-  if (error) {
+ if (hasError && !loading) {
     return (
-      <View style={commonStyles.centerContainer}>
-        <Text style={commonStyles.errorText}>{error}</Text>
-        <TouchableOpacity
-          style={[commonStyles.primaryButton, { marginTop: 16 }]}
-          onPress={() => fetchDistances(true)}
-          activeOpacity={0.8}
-        >
-          <Text style={commonStyles.primaryButtonText}>
-            {t('details:error.retry')}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={commonStyles.container} edges={['top']}>
+        <StatusBar barStyle="dark-content" />
+        <ErrorScreen
+          type={error!.type}
+          title={error!.title}
+          message={error!.message}
+          onRetry={() => { clearError(); fetchDistances(); }}
+        />
+      </SafeAreaView>
     );
   }
-
   if (distances.length === 0) {
     return (
       <View style={{ marginTop: 40, alignItems: 'center' }}>

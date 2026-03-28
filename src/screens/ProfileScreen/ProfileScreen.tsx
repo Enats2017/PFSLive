@@ -23,6 +23,8 @@ import { API_CONFIG } from '../../constants/config';
 import { ProfileScreenprops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
+import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
 
 const { width, height } = Dimensions.get('window');
 
@@ -72,18 +74,20 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const [liveEvents, setLiveEvents] = useState<AthleteEvent[]>([]);
     const [pastEvents, setPastEvents] = useState<AthleteEvent[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    //const [error, setError] = useState<string | null>(null);
     const [loadingMoreLive, setLoadingMoreLive] = useState(false);
     const [loadingMorePast, setLoadingMorePast] = useState(false);
     const [pagination, setPagination] = useState<PaginationState>(INITIAL_PAGINATION);
 
+    const { error, hasError, handleApiError, clearError } = useScreenError();
     // ✅ VALIDATE targetId ON MOUNT
     React.useEffect(() => {
         if (!targetId || targetId === 0) {
-            setError(t('profile:errors.invalid_user_id'));
+            handleApiError(t('profile:errors.invalid_user_id'));
             setLoading(false);
         }
     }, [targetId, t]);
+
 
     // ✅ FETCH PROFILE (with optional cache busting)
     const fetchProfile = useCallback(async (bustCache: boolean = false) => {
@@ -104,7 +108,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         try {
             isFetching.current = true;
             setLoading(true);
-            setError(null);
+            clearError();
 
             if (API_CONFIG.DEBUG) {
                 console.log('📡 Fetching profile:', { targetId, bustCache });
@@ -143,7 +147,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             if (API_CONFIG.DEBUG) {
                 console.error('❌ Profile fetch failed:', err);
             }
-            setError(err?.message || t('profile:errors.load_profile_failed'));
+            handleApiError(err);
         } finally {
             setLoading(false);
             isFetching.current = false;
@@ -347,26 +351,21 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     }
 
     // ✅ ERROR STATE
-    if (error) {
+     if (hasError && !loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} />
-                <View style={commonStyles.centerContainer}>
-                    <Text style={commonStyles.errorText}>{error}</Text>
-                    <TouchableOpacity
-                        style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-                        onPress={() => fetchProfile(true)}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={commonStyles.primaryButtonText}>
-                            {t('common:buttons.retry')}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                <AppHeader />
+                <ErrorScreen
+                    type={error!.type}
+                    title={error!.title}
+                    message={error!.message}
+                    onRetry={() => { clearError(); fetchProfile(true); }}
+                />
             </SafeAreaView>
         );
     }
+
 
     return (
         <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -376,7 +375,6 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             {/* ✅ PROFILE CARD - CUSTOMER-ONLY FOLLOW */}
             <ProfileCard
                 profile={profile}
-                fetchError={error ?? ''}
                 customer_app_id={targetId}
                 isFollowed={isFollowed(targetId)}
                 isFollowLoading={isLoading(targetId)}

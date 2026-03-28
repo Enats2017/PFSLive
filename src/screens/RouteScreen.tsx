@@ -30,6 +30,8 @@ import { RouteScreenProps } from '../types/navigation';
 import { commonStyles } from '../styles/common.styles';
 import { routeStyles } from '../styles/route.styles';
 import { BottomNavigationFollower } from '../components/common/BottomNavigationFollower';
+import ErrorScreen from '../components/ErrorScreen';
+import { useScreenError } from '../hooks/useApiError';
 
 const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
   const { t } = useTranslation(['route', 'common']);
@@ -39,9 +41,11 @@ const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [participantPosition, setParticipantPosition] = useState<ParticipantPosition | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  //const [error, setError] = useState<string | null>(null);
   const [followMode, setFollowMode] = useState(false);
   const [selectedDistance, setSelectedDistance] = useState(100);
+
+  const { error, hasError, handleApiError, clearError } = useScreenError();
 
   // Swipe animation value
   const swipeAnimation = new Animated.Value(0);
@@ -98,7 +102,7 @@ const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
   const loadGPX = async () => {
     try {
       setLoading(true);
-      setError(null);
+      clearError();
 
       console.log('📂 Loading GPX file...');
 
@@ -156,7 +160,7 @@ const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
       setLoading(false);
     } catch (err) {
       console.error('❌ Error loading GPX:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load route');
+      handleApiError(err);
       setLoading(false);
       Alert.alert(t('common:errors.generic'), t('route:error_loading_route'));
     }
@@ -171,18 +175,20 @@ const RouteScreen: React.FC<RouteScreenProps> = ({ route, navigation }) => {
     );
   }
 
-  if (error || !routeData) {
-    return (
-      <View style={commonStyles.centerContainer}>
-        <Text style={commonStyles.errorText}>
-          {error || t('route:error_loading_route')}
-        </Text>
-        <TouchableOpacity style={commonStyles.primaryButton} onPress={loadGPX}>
-          <Text style={commonStyles.primaryButtonText}>{t('common:buttons.retry')}</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  if (hasError && !loading || !routeData) {
+  return (
+    <SafeAreaView style={commonStyles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" />
+      <AppHeader />
+      <ErrorScreen
+        type={error!.type}
+        title={error!.title}
+        message={error!.message}
+        onRetry={() => { clearError(); loadGPX(); }}
+      />
+    </SafeAreaView>
+  );
+}
 
   return (
     <Animated.View

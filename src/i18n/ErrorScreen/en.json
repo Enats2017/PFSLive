@@ -1,0 +1,62 @@
+{
+  "network": {
+    "title": "No Internet Connection",
+    "message": "Your device isn't connected to the internet.\nCheck your Wi-Fi or mobile data and try again.",
+    "button": "Try Again"
+  },
+  "server": {
+    "title": "Something Went Wrong",
+    "message": "Our servers ran into an issue.\nPlease try again in a moment.",
+    "button": "Try Again"
+  },
+    "empty": {
+    "title": "No Data Found",
+    "message": "We couldn’t find anything here.\nTry again later."
+ },
+  "codes": {
+    "distance_not_found": {
+      "title": "No Distance Available",
+      "message": "The distance information for this event is currently not available.\nCheck back later for updates.."
+    },
+    "participant_not_found":{
+        "title": "Participant Not Available For This Event",
+        "message": "We couldn't find this participant in the event right now.\nThey may not have registered or data isn't available yet."
+    },
+    "not_found_in_race_result": {
+      "title": "No Race Results",
+      "message": "No results were recorded for this event."
+    },
+    "no_data": {
+      "title": "Nothing Here Yet",
+      "message": "There's no data to show right now.\nTry again later."
+    },
+    "record_not_found": {
+      "title": "Not Found",
+      "message": "We couldn't find what you're looking for."
+    },
+    "payment_failed": {
+      "title": "Payment Failed",
+      "message": "Your payment could not be processed.\nPlease try again."
+    },
+    "event_not_found": {
+      "title": "Event Not Found",
+      "message": "This event no longer exists."
+    },
+    "registration_closed": {
+      "title": "Registration Closed",
+      "message": "Registration for this event has closed."
+    },
+    "session_expired": {
+      "title": "Session Expired",
+      "message": "Please log in again to continue."
+    },
+    "permission_denied": {
+      "title": "Access Denied",
+      "message": "You don't have permission to view this."
+    },
+    "maintenance": {
+      "title": "Under Maintenance",
+      "message": "We're improving things.\nCheck back shortly."
+    }
+  }
+}

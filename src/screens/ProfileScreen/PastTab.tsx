@@ -7,13 +7,14 @@ import { profileStyles } from '../../styles/Profile.styles';
 import { AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import EventCardPast from './EventCardPast';
 import { API_CONFIG } from '../../constants/config';
+import ErrorScreen from '../../components/ErrorScreen';
 
 interface PastTabProps {
     events: AthleteEvent[];
     onLoadMore: () => void;
     loadingMore: boolean;
     hasMore: boolean;
-     profile?:AthleteProfile 
+    profile?: AthleteProfile
 }
 
 const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasMore, profile }) => {
@@ -42,7 +43,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
     }, [hasMore, loadingMore, onLoadMore, events.length]);
 
     const renderItem = useCallback(
-        ({ item }: { item: AthleteEvent }) => <EventCardPast 
+        ({ item }: { item: AthleteEvent }) => <EventCardPast
             item={item}
             isOwnProfile={profile?.is_own_profile === 1}  // ← add
         />,
@@ -67,12 +68,12 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
     const ListEmptyComponent = useCallback(
         () => (
-            <View style={profileStyles.empty}>
-                <Ionicons name="time-outline" size={48} color={colors.gray300} />
-                <Text style={commonStyles.errorText}>
-                    {t('profile:past.no_events')}
-                </Text>
-            </View>
+            <ErrorScreen
+                type="empty"
+                title={t('profile:past.no_events')}
+                message={t('profile:past.no_events_msg')}
+                onRetry={() => { }}
+            />
         ),
         [t]
     );

@@ -10,6 +10,7 @@ import { eventStyles } from '../../styles/event';
 import { EventItem } from '../../services/eventService';
 import { formatEventDate } from '../../utils/dateFormatter';
 import { API_CONFIG } from '../../constants/config';
+import ErrorScreen from '../../components/ErrorScreen';
 
 interface UpcomingTabProps {
     events: EventItem[];
@@ -99,10 +100,12 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
 
     const ListEmptyComponent = useCallback(
         () => (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing.xxl }}>
-                <Ionicons name="calendar-outline" size={48} color={colors.gray300} />
-                <Text style={commonStyles.errorText}>{t('event:empty.upcoming')}</Text>
-            </View>
+            <ErrorScreen
+                type="empty"
+                title={t('event:empty.upcoming')}
+                message=""
+                onRetry={() => { }}
+            />
         ),
         [t]
     );

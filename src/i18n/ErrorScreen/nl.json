@@ -1,0 +1,59 @@
+{
+  "network": {
+    "title": "Geen internetverbinding",
+    "message": "Uw apparaat is niet verbonden met internet.\nControleer uw wifi of mobiele data en probeer opnieuw.",
+    "button": "Opnieuw proberen"
+  },
+  "server": {
+    "title": "Er is iets misgegaan",
+    "message": "Onze servers hebben een probleem ondervonden.\nProbeer het later opnieuw.",
+    "button": "Opnieuw proberen"
+  },
+  "empty": {
+    "title": "Geen gegevens gevonden",
+    "message": "We konden hier niets vinden.\nProbeer te verversen of kom later terug.",
+    "button": "Vernieuwen"
+  },
+  "codes": {
+    "results_not_available": {
+      "title": "Resultaten niet beschikbaar",
+      "message": "De resultaten zijn nog niet beschikbaar.\nKom later terug na het evenement."
+    },
+    "not_found_in_race_result": {
+      "title": "Geen resultaten",
+      "message": "Er zijn geen resultaten geregistreerd voor dit evenement."
+    },
+    "no_data": {
+      "title": "Nog niets beschikbaar",
+      "message": "Er is momenteel geen data beschikbaar.\nProbeer later opnieuw."
+    },
+    "record_not_found": {
+      "title": "Niet gevonden",
+      "message": "We konden niet vinden wat u zocht."
+    },
+    "payment_failed": {
+      "title": "Betaling mislukt",
+      "message": "Uw betaling kon niet worden verwerkt.\nProbeer opnieuw."
+    },
+    "event_not_found": {
+      "title": "Evenement niet gevonden",
+      "message": "Dit evenement bestaat niet meer."
+    },
+    "registration_closed": {
+      "title": "Registratie gesloten",
+      "message": "De registratie voor dit evenement is gesloten."
+    },
+    "session_expired": {
+      "title": "Sessie verlopen",
+      "message": "Log opnieuw in om verder te gaan."
+    },
+    "permission_denied": {
+      "title": "Toegang geweigerd",
+      "message": "U heeft geen toestemming om dit te bekijken."
+    },
+    "maintenance": {
+      "title": "Onderhoud bezig",
+      "message": "We zijn bezig met verbeteringen.\nKom binnenkort terug."
+    }
+  }
+}

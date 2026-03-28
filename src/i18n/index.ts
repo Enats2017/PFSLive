@@ -98,6 +98,10 @@ import SettingScreenEN from "./SettingScreen/en.json";
 import SettingScreenFR from "./SettingScreen/fr.json";
 import SettingScreenNL from "./SettingScreen/nl.json";
 
+import ErrorScreenEN from "./ErrorScreen/en.json";
+import ErrorScreenFR from "./ErrorScreen/fr.json";
+import ErrorScreenNL from "./ErrorScreen/nl.json";
+
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
 export const LANGUAGES = {
@@ -224,7 +228,7 @@ const getInitialLanguage = (): LanguageCode => {
   try {
     return getDeviceLanguage();
   } catch (error) {
-    console.error('❌ Error getting initial language:', error);
+    console.error('Error getting initial language:', error);
     return 'en';
   }
 };
@@ -256,7 +260,7 @@ i18n.use(initReactI18next).init({
       forget:ForgetEN,
       favourite:FavouriteEN,
       setting:SettingScreenEN,
-      
+      errorScreen:ErrorScreenEN, 
     },
     fr: {
       common: commonFR,
@@ -280,6 +284,7 @@ i18n.use(initReactI18next).init({
       forget:ForgetFR,
       favourite:FavouriteFR,
       setting:SettingScreenFR,
+      errorScreen:ErrorScreenFR,
     },
     nl: {
       common: commonNL,
@@ -303,6 +308,7 @@ i18n.use(initReactI18next).init({
       forget:ForgetNL,
       favourite:FavouriteNL,
       setting:SettingScreenNL,
+      errorScreen:ErrorScreenNL,
     },
   },
   lng: initialLanguage,
@@ -328,7 +334,8 @@ i18n.use(initReactI18next).init({
     'result',
     'forget',
     'favourite',
-    'setting'
+    'setting',
+    'errorScreen'
   ],
   interpolation: {
     escapeValue: false,

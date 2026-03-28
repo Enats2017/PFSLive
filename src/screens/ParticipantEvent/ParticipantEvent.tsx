@@ -24,6 +24,10 @@ import { eventService, EventItem } from '../../services/eventService';
 import { ParticipantEventProps } from '../../types/navigation';
 import { API_CONFIG } from '../../constants/config';
 import { tokenService } from '../../services/tokenService';
+import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
+import FanEventCard from '../FollowerEventList/FollowerCard';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,13 +38,12 @@ const TAB_CONTENT_HEIGHT = height * 0.5;
 const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     const { t } = useTranslation(['event', 'common']);
     const flatListRef = useRef<FlatList>(null);
-    
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [pastEvents, setPastEvents] = useState<EventItem[]>([]);
     const [liveEvents, setLiveEvents] = useState<EventItem[]>([]);
     const [upcomingEvents, setUpcomingEvents] = useState<EventItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    //const [error, setError] = useState<string | null>(null);
 
     const [loadingMorePast, setLoadingMorePast] = useState(false);
     const [loadingMoreLive, setLoadingMoreLive] = useState(false);
@@ -56,6 +59,8 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
 
+    const { error, hasError, handleApiError, clearError } = useScreenError();
+
     // ✅ FETCH DATA AND SYNC SCROLL
     useFocusEffect(
         useCallback(() => {
@@ -70,7 +75,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             // ✅ FETCH DATA (BOTH INITIAL AND ON RETURN)
             const fetchAndSync = async () => {
                 await fetchEvents();
-                
+
                 // ✅ AFTER FETCH, SYNC SCROLL TO ACTIVE TAB
                 if (!isInitialMount.current) {
                     if (API_CONFIG.DEBUG) {
@@ -106,13 +111,13 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
 
         try {
             isFetching.current = true;
-            
+
             // ✅ ONLY SHOW LOADING ON INITIAL MOUNT
             if (isInitialMount.current) {
                 setLoading(true);
             }
-            
-            setError(null);
+
+            clearError();
 
             if (API_CONFIG.DEBUG) {
                 console.log('📡 Fetching events');
@@ -154,7 +159,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             }
         } catch (error: any) {
             console.log('❌ Failed to fetch events:', error);
-            setError(error.message || t('event:error.failed'));
+            handleApiError(error);
         } finally {
             setLoading(false);
             isFetching.current = false;
@@ -182,11 +187,11 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             setPastEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
                 const newItems = result.tabs.past.filter((item) => !existingIds.has(item.product_app_id));
-                
+
                 if (API_CONFIG.DEBUG) {
                     console.log(`➕ Past: Adding ${newItems.length} new events`);
                 }
-                
+
                 return [...prev, ...newItems];
             });
 
@@ -227,11 +232,11 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             setLiveEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
                 const newItems = result.tabs.live.filter((item) => !existingIds.has(item.product_app_id));
-                
+
                 if (API_CONFIG.DEBUG) {
                     console.log(`➕ Live: Adding ${newItems.length} new events`);
                 }
-                
+
                 return [...prev, ...newItems];
             });
 
@@ -252,6 +257,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     }, [loadingMoreLive, paginationInfo.live.page, paginationInfo.live.total_pages]);
 
     // ✅ LOAD MORE UPCOMING
+    
     const loadMoreUpcoming = useCallback(async () => {
         if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
             return;
@@ -272,11 +278,11 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             setUpcomingEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
                 const newItems = result.tabs.upcoming.filter((item) => !existingIds.has(item.product_app_id));
-                
+
                 if (API_CONFIG.DEBUG) {
                     console.log(`➕ Upcoming: Adding ${newItems.length} new events`);
                 }
-                
+
                 return [...prev, ...newItems];
             });
 
@@ -338,23 +344,17 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     }
 
     // ✅ ERROR STATE
-    if (error) {
+    if (hasError && !loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} />
-                <View style={commonStyles.centerContainer}>
-                    <Text style={commonStyles.errorText}>{error}</Text>
-                    <TouchableOpacity
-                        style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-                        onPress={fetchEvents}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={commonStyles.primaryButtonText}>
-                            {t('event:error.retry')}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                <AppHeader />
+                <ErrorScreen
+                    type={error!.type}
+                    title={error!.title}
+                    message={error!.message}
+                    onRetry={() => { clearError(); fetchEvents(); }}
+                />
             </SafeAreaView>
         );
     }

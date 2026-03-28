@@ -49,12 +49,14 @@
     "soon": "SOON",
     "finished": "FINISHED"
   },
-  "empty": {
-    "no_live_events": "No live events right now"
+ "empty": {
+    "no_live_events": "No live events right now",
+    "no_live_events_msg": "There are no ongoing events at the moment.\nPlease check back later."
   },
   "past": {
     "view_results": "VIEW RESULTS",
-    "no_events": "No past events found"
+    "no_events": "No past events found",
+    "no_events_msg": "You haven’t participated in any events yet.\nYour past events will appear here."
   },
   "labels": {
     "first_name": "First Name",

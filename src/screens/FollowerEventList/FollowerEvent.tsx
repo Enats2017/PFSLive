@@ -17,6 +17,8 @@ import FanEventCard from './FollowerCard';
 import { FollowerEventpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
+import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
@@ -43,7 +45,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const [loading, setLoading] = useState(true);
     const [searchResults, setSearchResults] = useState<ParticipantItem[]>([]);
     const [searching, setSearching] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    //const [error, setError] = useState<string | null>(null);
     const [pastEvents, setPastEvents] = useState<EventItem[]>([]);
     const [liveEvents, setLiveEvents] = useState<EventItem[]>([]);
     const [upcomingEvents, setUpcomingEvents] = useState<EventItem[]>([]);
@@ -65,6 +67,8 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const isFetching = useRef(false);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
+    const { error, hasError, handleApiError, clearError } = useScreenError();
+
     // ✅ FETCH EVENTS
     const fetchEvents = useCallback(async (search: string) => {
         if (isFetching.current) {
@@ -81,7 +85,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 setLoading(true);
             }
 
-            setError(null);
+            clearError();
 
             if (API_CONFIG.DEBUG) {
                 console.log('📡 Fetching events');
@@ -135,7 +139,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             if (API_CONFIG.DEBUG) {
                 console.error('❌ Fetch events failed:', err);
             }
-            setError(err.message || t('follower:error.failed'));
+            handleApiError(err);
         } finally {
             setLoading(false);
             isFetching.current = false;
@@ -482,23 +486,17 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     }
 
     // ✅ ERROR STATE
-    if (error) {
+    if (hasError && !loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} />
-                <View style={commonStyles.centerContainer}>
-                    <Text style={commonStyles.errorText}>{error}</Text>
-                    <TouchableOpacity
-                        style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-                        onPress={() => fetchEvents('')}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={commonStyles.primaryButtonText}>
-                            {t('follower:error.retry')}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                <AppHeader />
+                <ErrorScreen
+                    type={error!.type}
+                    title={error!.title}
+                    message={error!.message}
+                    onRetry={() => { clearError(); fetchEvents('') }}
+                />
             </SafeAreaView>
         );
     }

@@ -19,6 +19,9 @@ import { useFollowManager } from '../../hooks/useFollowManager';
 import AllParticipantCard from './AllParticipantCard';
 import { AllParticipantpops } from '../../types/navigation';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
+import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
+import { AppHeader } from '../../components/common/AppHeader';
 
 const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => {
     const { product_app_id } = route.params;
@@ -42,16 +45,18 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
     const [searchText, setSearchText] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [error, setError] = useState<string | null>(null);
+    //const [error, setError] = useState<string | null>(null);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const searchInputRef = useRef<any>(null);
+
+    const { error, hasError, handleApiError, clearError } = useScreenError();
 
     const fetchParticipants = useCallback(
         async (pageNum: number, search: string) => {
             try {
                 if (pageNum === 1 && search.length === 0) {
                     setLoading(true);
-                    setError(null);
+                    clearError();
                 } else if (pageNum > 1) {
                     setLoadingMore(true);
                 }
@@ -106,7 +111,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
                 }
 
                 if (pageNum === 1) {
-                    setError(error.message || t('details:error.title'));
+                    handleApiError(error);               
                 }
             } finally {
                 setLoading(false);
@@ -216,21 +221,17 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
         );
     }
 
-    if (error && searchText.length === 0) {
+    if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-                <View style={commonStyles.centerContainer}>
-                    <Text style={commonStyles.errorText}>{error}</Text>
-                    <TouchableOpacity
-                        style={[commonStyles.primaryButton, { marginTop: spacing.lg }]}
-                        onPress={() => fetchParticipants(1, searchText)}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={commonStyles.primaryButtonText}>
-                            {t('details:error.retry')}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+            <SafeAreaView style={commonStyles.container} edges={['top']}>
+                <StatusBar barStyle="dark-content" />
+                <AppHeader />
+                <ErrorScreen
+                    type={error!.type}
+                    title={error!.title}
+                    message={error!.message}
+                    onRetry={() => { clearError(); fetchParticipants(1, searchText) }}
+                />
             </SafeAreaView>
         );
     }

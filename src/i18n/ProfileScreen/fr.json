@@ -49,12 +49,14 @@
     "soon": "BIENTÔT",
     "finished": "TERMINÉ"
   },
-  "empty": {
-    "no_live_events": "Aucun événement en direct pour le moment"
+   "empty": {
+    "no_live_events": "Aucun événement en direct pour le moment",
+    "no_live_events_msg": "Il n'y a actuellement aucun événement en cours.\nVeuillez revenir plus tard."
   },
   "past": {
     "view_results": "VOIR LES RÉSULTATS",
-    "no_events": "Aucun événement passé trouvé"
+    "no_events": "Aucun événement passé trouvé",
+    "no_events_msg": "Vous n'avez encore participé à aucun événement.\nVos événements passés apparaîtront ici."
   },
   "labels": {
     "first_name": "Prénom",

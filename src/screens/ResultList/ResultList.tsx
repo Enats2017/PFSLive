@@ -25,6 +25,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import ResultCardLive from './ResultCardLive';
 import ResultCardBeforeRace from './ResultCardBeforeRace';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
+import ErrorScreen from '../../components/ErrorScreen';
+
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
@@ -43,6 +45,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         passwordError,
         handlePasswordSubmit,
         handlePasswordModalClose,
+
     } = useFollowManager(t, product_app_id);
 
     const initialType = sourceTab === 'live'
@@ -66,7 +69,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         distanceOptions, categoryOptions,
         selectedDistanceLabel, selectedCategoryLabel,
         raceStatus, currentPovId,
-        showUtmbIndex,
+        showUtmbIndex, hasError, clearError,
     } = useResultList(
         product_app_id,
         product_option_value_app_id,
@@ -178,19 +181,13 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                         {t('common:loading.loading')}
                     </Text>
                 </View>
-            ) : error ? (
-                <View style={resultListStyle.center}>
-                    <Text style={resultListStyle.errorText}>{error}</Text>
-                    <TouchableOpacity
-                        style={resultListStyle.retryBtn}
-                        onPress={retry}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={resultListStyle.retryText}>
-                            {t('common:buttons.retry')}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+            ) : hasError ? (
+                <ErrorScreen
+                    type={error!.type}
+                    title={error!.title}
+                    message={error!.message}
+                    onRetry={() => { clearError(); retry(); }}
+                />
             ) : isFavTab && displayResults.length === 0 ? (
                 <View style={resultListStyle.center}>
                     <Text style={{ fontSize: 48 }}>☆</Text>

@@ -8,6 +8,9 @@ import {
   FilterOption,
 } from "../services/resultList";
 import { API_CONFIG } from "../constants/config";
+// ADD these two imports
+import { AppError, ErrorType } from "../services/api";
+import { useScreenError, ScreenError } from "../hooks/useApiError";
 
 export const TYPE_OPTIONS: FilterOption[] = [
   { label: "allrace:filter.results", value: "0" },
@@ -61,9 +64,10 @@ export const useResultList = (
   const [filterLoad, setFilterLoad] = useState(false);
   const [pageLoad, setPageLoad] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [raceStatus, setRaceStatus] = useState<string>("");
   const [showUtmbIndex, setShowUtmbIndex] = useState(false);
+
+  const { error, hasError, handleApiError, clearError } = useScreenError();
 
   const currentPage = useRef(1);
 
@@ -94,7 +98,7 @@ export const useResultList = (
         if (mode === "paginate") setPageLoad(true);
         if (mode === "refresh") setRefreshing(true);
 
-        setError(null);
+        clearError();
 
         if (API_CONFIG.DEBUG) {
           console.log("📡 Fetching results:", {
@@ -119,17 +123,20 @@ export const useResultList = (
 
         if (data.event?.race_status) {
           setRaceStatus(data.event.race_status);
-          
+
           if (API_CONFIG.DEBUG) {
-            console.log('✅ Race Status:', data.event.race_status);
+            console.log("✅ Race Status:", data.event.race_status);
           }
         }
 
         if (data.event?.show_utmb_index !== undefined) {
           setShowUtmbIndex(data.event.show_utmb_index === 1);
-          
+
           if (API_CONFIG.DEBUG) {
-            console.log('✅ Show UTMB Index:', data.event.show_utmb_index === 1);
+            console.log(
+              "✅ Show UTMB Index:",
+              data.event.show_utmb_index === 1,
+            );
           }
         }
 
@@ -173,7 +180,7 @@ export const useResultList = (
           console.error("❌ Fetch results error:", e);
         }
 
-        setError(e?.message ?? "Failed to load. Tap to retry.");
+        handleApiError(e);
       } finally {
         if (!isMounted.current) return;
 
@@ -372,12 +379,16 @@ export const useResultList = (
   const currentPovId = useMemo(() => {
     const unique = distances.filter(
       (d, index, self) =>
-        index === self.findIndex(
-          x => x.product_option_value_app_id === d.product_option_value_app_id
-        )
+        index ===
+        self.findIndex(
+          (x) =>
+            x.product_option_value_app_id === d.product_option_value_app_id,
+        ),
     );
-    return unique.find(d => d.is_selected === 1)?.product_option_value_app_id 
-      ?? unique[0]?.product_option_value_app_id;
+    return (
+      unique.find((d) => d.is_selected === 1)?.product_option_value_app_id ??
+      unique[0]?.product_option_value_app_id
+    );
   }, [distances]);
 
   const selectedCategoryLabel = useMemo(
@@ -398,7 +409,10 @@ export const useResultList = (
     // ✅ Filter by BOTH customer_app_id AND BIB
     const filtered = results.filter((result) => {
       // Check customer-based follow
-      if (result.customer_app_id && followedUsers?.has(Number(result.customer_app_id))) {
+      if (
+        result.customer_app_id &&
+        followedUsers?.has(Number(result.customer_app_id))
+      ) {
         return true;
       }
 
@@ -448,5 +462,7 @@ export const useResultList = (
     selectedCategoryLabel,
     currentPovId,
     showUtmbIndex,
+    hasError, 
+    clearError,
   };
 };

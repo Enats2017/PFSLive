@@ -11,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 
 interface ProfileCardProps {
     profile: AthleteProfile | null;
-    fetchError: string;
     customer_app_id: number;
     isFollowed: boolean;
     isFollowLoading: boolean;
@@ -22,7 +21,7 @@ interface ProfileCardProps {
 const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
     profile,
     password_protected,
-    fetchError,
+
     customer_app_id,
     isFollowed,
     isFollowLoading,
@@ -48,20 +47,10 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
 
     return (
         <View style={profileStyles.profileCard}>
-            {/* ✅ ERROR MESSAGE */}
-            {!!fetchError && (
-                <View style={profileStyles.errorRow}>
-                    <Ionicons name="warning-outline" size={16} color="#e8341a" />
-                    <Text style={commonStyles.errorText}>{fetchError}</Text>
-                </View>
-            )}
-
-            {/* ✅ NAME */}
             <Text style={[commonStyles.title, { marginBottom: spacing.sm }]}>
                 {fullName || '—'}
             </Text>
 
-            {/* ✅ AVATAR */}
             <View style={profileStyles.avatarWrapper}>
                 <View style={profileStyles.avatar}>
                     {profile?.profile_picture ? (
@@ -152,8 +141,7 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
         prevProps.profile?.lastname === nextProps.profile?.lastname &&
         prevProps.profile?.profile_picture === nextProps.profile?.profile_picture &&
         prevProps.profile?.is_own_profile === nextProps.profile?.is_own_profile &&
-        prevProps.fetchError === nextProps.fetchError &&
-    prevProps.password_protected    === nextProps.password_protected 
+        prevProps.password_protected === nextProps.password_protected
     );
 });
 

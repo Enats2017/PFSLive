@@ -16,6 +16,8 @@ import LiveTimingPoint from './LiveTimingPoint';
 import { useResultDetail } from '../../hooks/useResultDetail';
 import UpcomingRace from './UpcomingRace';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
+import ErrorScreen from '../../components/ErrorScreen';
+import { AppHeader } from '../../components/common/AppHeader';
 
 type TabKey = 'raceInfo' | 'timingPoint' | 'runnerInfo';
 const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo'];
@@ -32,7 +34,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         from_live,
     } = route.params;
 
-    const { data, loading, error, retry } = useResultDetail(
+    const { data, loading, hasError, error, clearError, retry } = useResultDetail(
         product_app_id,
         product_option_value_app_id,
         bib,
@@ -159,32 +161,17 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         );
     }
 
-    if (error) {
+   if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <View style={s.header}>
-                    <TouchableOpacity
-                        style={s.headerBackBtn}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Ionicons name="chevron-back" size={32} color={colors.gray900} />
-                    </TouchableOpacity>
-                </View>
-                <View style={commonStyles.centerContainer}>
-                    <Text style={commonStyles.errorText}>{t(`errors.${error}`)}</Text>
-                    <TouchableOpacity
-                        style={[commonStyles.primaryButton, { marginTop: 16 }]}
-                        onPress={retry}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={commonStyles.primaryButtonText}>
-                            {t('retry')}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-
+                <AppHeader/>
+                <ErrorScreen
+                    type={error!.type}
+                    title={error!.title}
+                    message={error!.message}
+                    onRetry={() => { clearError(); retry(); }}
+                />
             </SafeAreaView>
         );
     }
