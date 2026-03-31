@@ -6,7 +6,7 @@ import { colors, commonStyles } from '../../styles/common.styles';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
 import { favstyle } from '../../styles/favourite.style';
 import { FavouriteItem } from '../../services/favourites';
-import { getImageUrl } from '../../constants/config';
+
 
 const getStatusColors = (status: string) => {
     switch (status) {
@@ -45,7 +45,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({ item, product_app_id }) =
 
     const profileImageUri = useMemo(() =>
         item.profile_picture && item.profile_picture.trim() !== ''
-            ? getImageUrl(item.profile_picture)
+            ?(item.profile_picture)
             : null,
         [item.profile_picture]
     );

@@ -23,14 +23,23 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
         if (isOwnProfile) {
             // own profile → results screen
             console.log("hiii");
-            navigation.navigate('ResultList', {
+           navigation.navigate('LiveTracking', {
                 product_app_id: item.id,
-                product_option_value_app_id: item.product_option_value_app_id,
+                event_name: item.name,
+                event_source: item.event_source,
+                sourceScreen: 'ProfileScreen',
+                sectionType: 'follower',
+                
             });
+            return;
         } else {
-            navigation.navigate('ResultList', {
+           navigation.navigate('LiveTracking', {
                 product_app_id: item.id,
-                product_option_value_app_id:item.product_option_value_app_id,
+                event_name: item.name,
+                event_source: item.event_source,
+                sourceScreen: 'ProfileScreen',
+                sectionType: 'follower',
+                
             });
 
         }

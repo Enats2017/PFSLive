@@ -9,11 +9,13 @@ import { colors } from '../../styles/common.styles';
 interface ParticipantPopupProps {
     participant: ParticipantMapMarker;
     onClose: () => void;
+    event_source?: string;
 }
 
 export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
     participant,
     onClose,
+    event_source,
 }) => {
     const { t } = useTranslation(['livetracking', 'common']);
 
@@ -27,7 +29,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
 
     const formatLastUpdate = (timestamp: string | null | undefined): string => {
         if (!timestamp) return t('livetracking:justNow');
-        
+
         try {
             const date = new Date(timestamp);
             const now = new Date();
@@ -36,7 +38,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
 
             if (diffMins < 1) return t('livetracking:justNow');
             if (diffMins < 60) return t('livetracking:minutesAgo', { count: diffMins });
-            
+
             const diffHours = Math.floor(diffMins / 60);
             return t('livetracking:hoursAgo', { count: diffHours });
         } catch (error) {
@@ -71,9 +73,11 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                         <Text style={liveTrackingStyles.participantName}>
                             {participant.name || 'Unknown'}
                         </Text>
-                        <Text style={liveTrackingStyles.participantBib}>
-                            {t('livetracking:bibNumber')} {participant.bib || '—'}
-                        </Text>
+                        {event_source !== 'custom' && (
+                            <Text style={liveTrackingStyles.participantBib}>
+                                {t('livetracking:bibNumber')} {participant.bib || '—'}
+                            </Text>
+                        )}
                     </View>
                 </View>
 

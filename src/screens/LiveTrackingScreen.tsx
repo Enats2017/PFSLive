@@ -31,7 +31,9 @@ const safeParseFloat = (value: any): number => {
 
 const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigation }) => {
     const { t } = useTranslation(['livetracking', 'common']);
-    const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab } = route.params;
+    const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab, event_source } = route.params;
+
+    const isCustomEvent = event_source === 'custom';
 
     const { followedUsers } = useFollowManager(t);
 
@@ -47,7 +49,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [profileCollapsed, setProfileCollapsed] = useState(false);
     const [participantsLoading, setParticipantsLoading] = useState(false);
     const [loadedGpxUrl, setLoadedGpxUrl] = useState<string | null>(null);
-    
+
     const hasLoadedInitialData = useRef(false);
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -55,9 +57,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         return participants.map(p => {
             const firstInitial = p.firstname?.charAt(0).toUpperCase() || '';
             const lastInitial = p.lastname?.charAt(0).toUpperCase() || '';
-            const initials = p.source === 'partner_event' 
-                ? p.bib_number.toString() 
-                : `${firstInitial}${lastInitial}`;
+            const initials = event_source === 'custom'
+                ? `${firstInitial}${lastInitial}`         // ✅ partner → bib number
+                : String(p.bib_number);
 
             return {
                 id: p.participant_app_id,
@@ -65,6 +67,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 bib: p.bib_number,
                 name: `${p.firstname || ''} ${p.lastname || ''}`.trim() || 'Unknown',
                 initials,
+                source: p.source,
                 lat: safeParseFloat(p.latitude),
                 lon: safeParseFloat(p.longitude),
                 ele: safeParseFloat(p.altitude),
@@ -81,7 +84,6 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 distance_to_next_cp: p.distance_to_next_cp !== null ? safeParseFloat(p.distance_to_next_cp) : null,
                 last_update: p.last_update || new Date().toISOString(),
                 profile_picture: p.profile_picture,
-                source: p.source,
             };
         });
     }, [participants]);
@@ -104,7 +106,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         const immediateTimer = setTimeout(checkAndLoad, 50);
         const timer1 = setTimeout(checkAndLoad, 150);
         const timer2 = setTimeout(checkAndLoad, 300);
-        
+
         const finalTimer = setTimeout(() => {
             if (!hasLoadedInitialData.current) {
                 console.log('⏱️ Timeout reached, loading anyway');
@@ -154,7 +156,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             const activeDistance = overrideDistance !== undefined ? overrideDistance : selectedDistance;
 
             let optionValueId: number | undefined;
-            
+
             if (activeDistance) {
                 optionValueId = activeDistance.product_option_value_app_id;
             } else if (product_option_value_app_id && product_option_value_app_id > 0) {
@@ -165,13 +167,15 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 product_app_id,
                 product_option_value_app_id: optionValueId,
                 auto_refresh: autoRefresh,
+                event_source
             });
 
             const response = await liveTrackingService.getLiveTrackingData(
                 product_app_id,
                 customerAppIds,
                 optionValueId,
-                autoRefresh
+                autoRefresh,
+                event_source
             );
 
             console.log('✅ Live tracking data received:', {
@@ -203,13 +207,13 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         is_start: cp.is_start,
                         is_finish: cp.is_finish,
                     }));
-                    
-                    console.log('📍 API Checkpoints:', checkpoints.map(c => ({ 
-                        name: c.name, 
+
+                    console.log('📍 API Checkpoints:', checkpoints.map(c => ({
+                        name: c.name,
                         distance: c.distance,
-                        segment: c.segment_distance 
+                        segment: c.segment_distance
                     })));
-                    
+
                     setApiCheckpoints(checkpoints);
                 }
             } else {
@@ -230,7 +234,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         const apiSelectedDistance = response.data.distances.find(
                             d => d.product_option_value_app_id === response.data.selected_distance.product_option_value_app_id
                         );
-                        
+
                         if (apiSelectedDistance) {
                             console.log('✅ Setting selected distance:', apiSelectedDistance.distance_name);
                             setSelectedDistance(apiSelectedDistance);
@@ -254,7 +258,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             }
 
             setLoading(false);
-            
+
             setTimeout(() => {
                 console.log('✅ Participants rendering complete');
                 setParticipantsLoading(false);
@@ -262,10 +266,10 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
         } catch (err) {
             console.error('❌ Error loading live tracking data:', err);
-             handleApiError(err);
+            handleApiError(err);
             setLoading(false);
             setParticipantsLoading(false);
-            
+
             if (!autoRefresh) {
                 Alert.alert(
                     t('common:errors.generic'),
@@ -345,6 +349,28 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         setPopupState({ type: null, data: null });
     };
 
+    const hasGpx = !!routeData;
+    const hasValidCoords = participantMarkers.some(p => p.lat !== 0 && p.lon !== 0);
+    const showDistanceDropdown = !isCustomEvent;
+    const showRouteLine = hasGpx;
+    const showCheckpoints = !isCustomEvent || (hasGpx && hasValidCoords && apiCheckpoints.length > 0);
+    const showElevationProfile = !isCustomEvent || (hasGpx && hasValidCoords && apiCheckpoints.length > 0);
+    const showBottomNav = !isCustomEvent
+
+    console.log('DEBUG:', {
+        isCustomEvent,
+        hasGpx,
+        hasValidCoords,
+        participants: participantMarkers.length
+    });
+
+    console.log('🔍 Map props:', {
+        showCheckpoints,
+        aidStationsLength: routeData?.aidStations?.length ?? 0,
+        apiCheckpointsLength: apiCheckpoints.length,
+        trackPointsLength: routeData?.trackPoints?.length ?? 0,
+    });
+
     if (loading) {
         return (
             <View style={commonStyles.centerContainer}>
@@ -354,34 +380,34 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         );
     }
 
-   if (hasError && !loading) {
-  return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader title={event_name} showLogo={true} />
-      <ErrorScreen
-        type={error!.type}
-        title={error!.title}
-        message={error!.message}
-        onRetry={() => { clearError(); loadLiveTrackingData(false); }}
-      />
-    </SafeAreaView>
-  );
-}
+    if (hasError && !loading) {
+        return (
+            <SafeAreaView style={commonStyles.container} edges={['top']}>
+                <StatusBar barStyle="dark-content" />
+                <AppHeader title={event_name} showLogo={true} />
+                <ErrorScreen
+                    type={error!.type}
+                    title={error!.title}
+                    message={error!.message}
+                    onRetry={() => { clearError(); loadLiveTrackingData(false); }}
+                />
+            </SafeAreaView>
+        );
+    }
 
-// Handle no data separately — no error object needed
-if (!routeData || !selectedDistance) {
-  return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader title={event_name} showLogo={true} />
-      <ErrorScreen
-        type="empty"
-        onRetry={() => loadLiveTrackingData(false)}
-      />
-    </SafeAreaView>
-  );
-}
+    // Handle no data separately — no error object needed
+    if (!isCustomEvent && (!routeData || !selectedDistance)) {
+        return (
+            <SafeAreaView style={commonStyles.container} edges={['top']}>
+                <StatusBar barStyle="dark-content" />
+                <AppHeader title={event_name} showLogo={true} />
+                <ErrorScreen
+                    type="empty"
+                    onRetry={() => loadLiveTrackingData(false)}
+                />
+            </SafeAreaView>
+        );
+    }
 
 
     return (
@@ -390,53 +416,58 @@ if (!routeData || !selectedDistance) {
 
             <AppHeader title={event_name} showLogo={true} />
 
-            <DistanceDropdown
-                distances={distances}
-                selectedDistance={selectedDistance}
-                onSelect={handleDistanceChange}
-            />
+            {showDistanceDropdown && selectedDistance && (
+                <DistanceDropdown
+                    distances={distances}
+                    selectedDistance={selectedDistance}
+                    onSelect={handleDistanceChange}
+                />
+            )}
 
             <View style={liveTrackingStyles.mapContainer}>
                 <LiveRouteMap
-                    trackPoints={routeData.trackPoints}
-                    aidStations={routeData.aidStations}
+                    trackPoints={showRouteLine ? (routeData?.trackPoints ?? []) : []}
+                    aidStations={showCheckpoints ? (routeData?.aidStations ?? []) : []}
                     participants={participantMarkers}
-                    apiCheckpoints={apiCheckpoints}
+                    apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
                     onAidStationPress={handleAidStationPress}
                     onParticipantPress={handleParticipantPress}
                     isLoadingParticipants={participantsLoading}
                 />
             </View>
 
-            {!profileCollapsed && (
+            {showElevationProfile && !profileCollapsed && (
                 <View style={liveTrackingStyles.chartContainer}>
                     <LiveElevationProfile
                         chartData={chartData}
-                        aidStations={routeData.aidStations}
-                        apiCheckpoints={apiCheckpoints}
+                        aidStations={routeData?.aidStations ?? []}
+                        apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
                         participants={participantMarkers}
-                        totalDistance={routeData.totalDistance}
-                        minElevation={routeData.minElevation}
-                        maxElevation={routeData.maxElevation}
+                        totalDistance={routeData?.totalDistance ?? 0}
+                        minElevation={routeData?.minElevation ?? 0}
+                        maxElevation={routeData?.maxElevation ?? 0}
                         onAidStationPress={handleAidStationPress}
                     />
                 </View>
             )}
 
-            <TouchableOpacity
-                style={liveTrackingStyles.collapseBtn}
-                onPress={() => setProfileCollapsed(!profileCollapsed)}
-            >
-                <Ionicons
-                    name={profileCollapsed ? 'chevron-up' : 'chevron-down'}
-                    size={24}
-                    color={colors.gray900}
-                />
-            </TouchableOpacity>
+            {showElevationProfile && (
+                <TouchableOpacity
+                    style={liveTrackingStyles.collapseBtn}
+                    onPress={() => setProfileCollapsed(!profileCollapsed)}
+                >
+                    <Ionicons
+                        name={profileCollapsed ? 'chevron-up' : 'chevron-down'}
+                        size={24}
+                        color={colors.gray900}
+                    />
+                </TouchableOpacity>
+            )}
 
             {popupState.type === 'participant' && popupState.data && (
                 <ParticipantPopup
                     participant={popupState.data as ParticipantMapMarker}
+                    event_source={event_source}
                     onClose={handleClosePopup}
                 />
             )}
@@ -448,22 +479,24 @@ if (!routeData || !selectedDistance) {
                 />
             )}
 
-            {sectionType === 'follower' ? (
-                <BottomNavigationFollower
-                    activeTab="Map"
-                    product_app_id={product_app_id}
-                    event_name={event_name}
-                    product_option_value_app_id={product_option_value_app_id}
-                    sourceTab={sourceTab}
-                />
-            ) : (
-                <BottomNavigation
-                    activeTab="Map"
-                    product_app_id={product_app_id}
-                    event_name={event_name}
-                    product_option_value_app_id={product_option_value_app_id}
-                    sourceScreen={sourceScreen}
-                />
+            {showBottomNav && (
+                sectionType === 'follower' ? (
+                    <BottomNavigationFollower
+                        activeTab="Map"
+                        product_app_id={product_app_id}
+                        event_name={event_name}
+                        product_option_value_app_id={product_option_value_app_id}
+                        sourceTab={sourceTab}
+                    />
+                ) : (
+                    <BottomNavigation
+                        activeTab="Map"
+                        product_app_id={product_app_id}
+                        event_name={event_name}
+                        product_option_value_app_id={product_option_value_app_id}
+                        sourceScreen={sourceScreen}
+                    />
+                )
             )}
         </SafeAreaView>
     );
