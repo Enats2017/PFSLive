@@ -892,7 +892,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </View>
 
         {/* Subtitle */}
-        <Text style={homeStyles.subtitle}>{t('home:subtitle')}</Text>
+        <Text style={homeStyles.subtitle}>
+          {/* {t('home:subtitle')} */}
+        </Text>
 
         {/* Main Content */}
         <View style={homeStyles.textContainer}>
