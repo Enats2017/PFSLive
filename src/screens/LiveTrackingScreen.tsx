@@ -350,18 +350,17 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     };
 
     const hasGpx = !!routeData;
-    const hasValidCoords = participantMarkers.some(p => p.lat !== 0 && p.lon !== 0);
-    const showDistanceDropdown = !isCustomEvent;
+    const hasCheckpoints = apiCheckpoints != null && apiCheckpoints.length > 0;
     const showRouteLine = hasGpx;
-    const showCheckpoints = !isCustomEvent || (hasGpx && hasValidCoords && apiCheckpoints.length > 0);
-    const showElevationProfile = !isCustomEvent || (hasGpx && hasValidCoords && apiCheckpoints.length > 0);
-    const showBottomNav = !isCustomEvent
+    const showCheckpoints = hasGpx && hasCheckpoints;
+    const showElevationProfile = isCustomEvent ? (hasGpx && hasCheckpoints) : hasGpx;
+    const showParticipants = isCustomEvent ? hasGpx : true;
+     const showDistanceDropdown = !isCustomEvent;
+    const showBottomNav = !isCustomEvent;
 
-    console.log('DEBUG:', {
-        isCustomEvent,
-        hasGpx,
-        hasValidCoords,
-        participants: participantMarkers.length
+    console.log('🔍 Visibility flags:', {
+        isCustomEvent, hasGpx, hasCheckpoints,
+        showRouteLine, showCheckpoints, showElevationProfile, showParticipants,
     });
 
     console.log('🔍 Map props:', {
@@ -396,7 +395,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     }
 
     // Handle no data separately — no error object needed
-    if (!isCustomEvent && (!routeData || !selectedDistance)) {
+    if  (!isCustomEvent && (!routeData || !selectedDistance)) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
@@ -428,7 +427,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 <LiveRouteMap
                     trackPoints={showRouteLine ? (routeData?.trackPoints ?? []) : []}
                     aidStations={showCheckpoints ? (routeData?.aidStations ?? []) : []}
-                    participants={participantMarkers}
+                    participants={showParticipants ? participantMarkers : []}
                     apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
                     onAidStationPress={handleAidStationPress}
                     onParticipantPress={handleParticipantPress}
@@ -440,9 +439,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 <View style={liveTrackingStyles.chartContainer}>
                     <LiveElevationProfile
                         chartData={chartData}
-                        aidStations={routeData?.aidStations ?? []}
-                        apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
-                        participants={participantMarkers}
+                        aidStations={showCheckpoints ? (routeData?.aidStations ?? []) : []}
+            apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
+            participants={showParticipants ? participantMarkers : []}
                         totalDistance={routeData?.totalDistance ?? 0}
                         minElevation={routeData?.minElevation ?? 0}
                         maxElevation={routeData?.maxElevation ?? 0}
