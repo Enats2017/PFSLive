@@ -1,4 +1,4 @@
-// generate-assets.js - COMPLETE FIXED VERSION
+// generate-assets.js
 const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
@@ -6,9 +6,10 @@ const path = require('path');
 const SOURCE = 'assets/livio_logo.png';
 const ASSETS_DIR = 'assets';
 
-const ORANGE_BG = { r: 255, g: 87, b: 34, alpha: 1 };
-const WHITE_BG = { r: 255, g: 255, b: 255, alpha: 1 };
-const TRANSPARENT = { r: 0, g: 0, b: 0, alpha: 0 };
+// ✅ Updated to match new navy logo background (sampled from image corners)
+const NAVY_BG    = { r: 15,  g: 41,  b: 64,  alpha: 1 };
+const WHITE_BG   = { r: 255, g: 255, b: 255, alpha: 1 };
+const TRANSPARENT = { r: 0,  g: 0,   b: 0,   alpha: 0 };
 
 if (!fs.existsSync(ASSETS_DIR)) {
   fs.mkdirSync(ASSETS_DIR);
@@ -22,7 +23,7 @@ async function generateAssets() {
     // 1. Icon
     console.log('📱 Generating icon.png...');
     await sharp(SOURCE)
-      .resize(1024, 1024, { fit: 'contain', background: ORANGE_BG })
+      .resize(1024, 1024, { fit: 'contain', background: NAVY_BG })
       .png()
       .toFile(path.join(ASSETS_DIR, 'icon.png'));
     console.log('   ✅ Done\n');
@@ -32,7 +33,7 @@ async function generateAssets() {
     const adaptive = await sharp(SOURCE)
       .resize(768, 768, { fit: 'contain', background: TRANSPARENT })
       .toBuffer();
-    
+
     await sharp({
       create: { width: 1024, height: 1024, channels: 4, background: TRANSPARENT }
     })
@@ -41,26 +42,26 @@ async function generateAssets() {
       .toFile(path.join(ASSETS_DIR, 'adaptive-icon.png'));
     console.log('   ✅ Done\n');
 
-    // 3. Splash - Orange
+    // 3. Splash - Navy
     console.log('💦 Generating splash-icon.png...');
-    const splashOrange = await sharp(SOURCE)
+    const splashNavy = await sharp(SOURCE)
       .resize(800, 800, { fit: 'contain', background: TRANSPARENT })
       .toBuffer();
-    
+
     await sharp({
-      create: { width: 1242, height: 2436, channels: 4, background: ORANGE_BG }
+      create: { width: 1242, height: 2436, channels: 4, background: NAVY_BG }
     })
-      .composite([{ input: splashOrange, gravity: 'center' }])
+      .composite([{ input: splashNavy, gravity: 'center' }])
       .png()
       .toFile(path.join(ASSETS_DIR, 'splash-icon.png'));
-    console.log('   ✅ Done (orange background)\n');
+    console.log('   ✅ Done (navy background)\n');
 
     // 4. Splash - White
     console.log('💦 Generating splash-icon-white.png...');
     const splashWhite = await sharp(SOURCE)
       .resize(700, 700, { fit: 'contain', background: TRANSPARENT })
       .toBuffer();
-    
+
     await sharp({
       create: { width: 1242, height: 2436, channels: 4, background: WHITE_BG }
     })
@@ -72,7 +73,7 @@ async function generateAssets() {
     // 5. Favicon
     console.log('🌐 Generating favicon.png...');
     await sharp(SOURCE)
-      .resize(48, 48, { fit: 'contain', background: ORANGE_BG })
+      .resize(48, 48, { fit: 'contain', background: NAVY_BG })
       .png()
       .toFile(path.join(ASSETS_DIR, 'favicon.png'));
     console.log('   ✅ Done\n');
@@ -80,14 +81,14 @@ async function generateAssets() {
     // Summary
     console.log('✨ All assets generated!\n');
     console.log('Generated files:');
-    
+
     const files = [
       'icon.png',
       'adaptive-icon.png',
       'splash-icon.png',
       'splash-icon-white.png',
       'favicon.png',
-      'notification-icon.png'
+      'notification-icon.png',
     ];
 
     files.forEach(file => {

@@ -889,9 +889,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             style={homeStyles.logo}
             resizeMode="contain"
           />
-          <View style={homeStyles.textSection}>
-            <Text style={homeStyles.title}>{t('common:app_name')}</Text>
-          </View>
         </View>
 
         {/* Subtitle */}

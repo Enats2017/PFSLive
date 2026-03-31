@@ -3,9 +3,9 @@ import { StyleSheet } from 'react-native';
 // Colors
 export const colors = {
   // Primary colors
-  primary: '#FF5722', // Orange color
+  primary: '#0f2a3f', // Orange color
   primaryDark: '#E64A19',
-  primaryLight: '#FF5722',
+  primaryLight: '#0f2a3f',
   
   // Accent colors
   accent: '#4A9EFF',
@@ -33,7 +33,7 @@ export const colors = {
   
   // Map colors
   routeColor: '#4A9EFF',
-  stationColor: '#FF5722',
+  stationColor: '#0f2a3f',
   participantColor: '#DC143C',
 };
 

@@ -50,7 +50,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           activeOpacity={0.7}
         >
           <Image
-            source={require('../../../assets/livio_logo.png')}
+            source={require('../../../assets/header-logo.png')}
             style={headerStyles.logoImage}
             resizeMode="contain"
           />

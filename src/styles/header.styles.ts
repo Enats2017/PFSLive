@@ -44,6 +44,7 @@ export const headerStyles = StyleSheet.create({
   logoImage: {
     width: 40,
     height: 40,
+    borderRadius: 20,
   },
   
   logoIcon: {
