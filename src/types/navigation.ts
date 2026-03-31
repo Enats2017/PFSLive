@@ -5,13 +5,12 @@ export type RootStackParamList = {
   HomeScreen: undefined;
   LiveTracking: {
     product_app_id: number;
-    product_option_value_app_id: number;
+    product_option_value_app_id?: number;
     event_name: string;
     sourceScreen?: string;
     sectionType?: string;
     sourceTab?: "past" | "live" | "upcoming";
-    event_source?: 'partner' | 'custom'; 
-
+    event_source?: string,
   };
   ParticipantEvent: undefined;
   PersonalEvent: undefined;
