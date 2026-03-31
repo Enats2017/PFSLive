@@ -27,22 +27,20 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
         return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const formatLastUpdate = (timestamp: string | null | undefined): string => {
-        if (!timestamp) return t('livetracking:justNow');
+    const formatLastUpdate = (time: number | null | undefined, type: string | null | undefined): string => {
+        console.log('time');
+        console.log(time);
 
-        try {
-            const date = new Date(timestamp);
-            const now = new Date();
-            const diffMs = now.getTime() - date.getTime();
-            const diffMins = Math.floor(diffMs / 60000);
+        console.log('type');
+        console.log(type);
+        
+        if (!time || !type) return t('livetracking:justNow');
 
-            if (diffMins < 1) return t('livetracking:justNow');
-            if (diffMins < 60) return t('livetracking:minutesAgo', { count: diffMins });
-
-            const diffHours = Math.floor(diffMins / 60);
-            return t('livetracking:hoursAgo', { count: diffHours });
-        } catch (error) {
-            return t('livetracking:justNow');
+        switch (type) {
+            case 's': return t('livetracking:secondsAgo', { count: time });
+            case 'm': return t('livetracking:minutesAgo', { count: time });
+            case 'h': return t('livetracking:hoursAgo',   { count: time });
+            default:  return t('livetracking:justNow');
         }
     };
 
@@ -157,7 +155,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                 <View style={liveTrackingStyles.popupFooter}>
                     <Ionicons name="time-outline" size={14} color={colors.gray500} />
                     <Text style={liveTrackingStyles.lastUpdateText}>
-                        {t('livetracking:lastUpdate')}: {formatLastUpdate(participant.last_update)}
+                        {t('livetracking:lastUpdate')}: {formatLastUpdate(participant.last_update_time, participant.last_update_type)}
                     </Text>
                 </View>
             </View>

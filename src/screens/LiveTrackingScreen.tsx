@@ -84,6 +84,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 distance_to_next_cp: p.distance_to_next_cp !== null ? safeParseFloat(p.distance_to_next_cp) : null,
                 last_update: p.last_update || new Date().toISOString(),
                 profile_picture: p.profile_picture,
+                last_update_time: p.last_update_time,
+                last_update_type: p.last_update_type,
             };
         });
     }, [participants]);
@@ -232,7 +234,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     // ✅ Set selected distance from API response (only on initial load)
                     if (!activeDistance && response.data.selected_distance) {
                         const apiSelectedDistance = response.data.distances.find(
-                            d => d.product_option_value_app_id === response.data.selected_distance.product_option_value_app_id
+                            d => d.product_option_value_app_id === response.data.selected_distance!.product_option_value_app_id
                         );
 
                         if (apiSelectedDistance) {

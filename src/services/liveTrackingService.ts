@@ -52,6 +52,8 @@ export interface LiveTrackingParticipant {
     altitude: number;
     speed: number | null;
     last_update: string;
+    last_update_time: number;
+    last_update_type: string;
     location_source: string;
     checkpoints: LiveTrackingCheckpoint[];
 }
