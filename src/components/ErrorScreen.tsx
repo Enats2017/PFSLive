@@ -48,11 +48,9 @@ const ErrorScreen: React.FC<ErrorScreenProps> = ({
   const breatheAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-
     fadeAnim.setValue(0);
     slideAnim.setValue(30);
     scaleAnim.setValue(0.9);
-
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
       Animated.spring(slideAnim, { toValue: 0, tension: 55, friction: 9, useNativeDriver: true }),

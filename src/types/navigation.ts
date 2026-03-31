@@ -10,6 +10,8 @@ export type RootStackParamList = {
     sourceScreen?: string;
     sectionType?: string;
     sourceTab?: "past" | "live" | "upcoming";
+    event_source?: 'partner' | 'custom'; 
+
   };
   ParticipantEvent: undefined;
   PersonalEvent: undefined;

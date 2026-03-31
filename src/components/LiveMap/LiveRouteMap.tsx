@@ -107,7 +107,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
 
     // ✅ Use API checkpoints if available, otherwise fall back to GPX aid stations
     const aidStationsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
-        if (apiCheckpoints.length > 0) {
+        if (apiCheckpoints.length  >  0) {
             // ✅ Filter out START and FINISH from map display
             const visibleCheckpoints = apiCheckpoints.filter(cp => !cp.is_start && !cp.is_finish);
             
@@ -153,6 +153,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     }, [aidStations, apiCheckpoints]);
 
     const handleParticipantPress = (event: any) => {
+            console.log('👆 Participant tapped:', event.features?.length);
         const feature = event.features[0];
         if (feature && feature.properties) {
             const props = feature.properties;
@@ -289,7 +290,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                             id="participant-bibs"
                             minZoomLevel={13}
                             style={{
-                                textField: ['get', 'bib'],
+                                textField: ['get', 'initials'],
                                 textSize: 12,
                                 textColor: '#22C55E',
                                 textHaloColor: '#FFFFFF',

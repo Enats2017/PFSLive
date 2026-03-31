@@ -72,7 +72,7 @@ export interface LiveTrackingResponse {
     data: {
         source: string;
         auto_refresh: number;
-        selected_distance: SelectedDistance;
+        selected_distance: SelectedDistance | null ;
         distances: DistanceOption[];
         participants: LiveTrackingParticipant[];
     };
@@ -84,7 +84,8 @@ class LiveTrackingService {
         productAppId: number,
         customerAppIds: number[],
         productOptionValueAppId?: number,
-        autoRefresh: boolean = false
+        autoRefresh: boolean = false,
+         eventSource?: string,
     ): Promise<LiveTrackingResponse> {
         try {
             const token = await tokenService.getToken();
@@ -96,6 +97,7 @@ class LiveTrackingService {
                 product_app_id: productAppId.toString(),
                 customer_app_ids: customerAppIds.join(','),
                 auto_refresh: autoRefresh ? 1 : 0,
+                event_source: eventSource ?? 'partner',
             };
 
             // ✅ Only add product_option_value_app_id if it's valid (not 0 or undefined)

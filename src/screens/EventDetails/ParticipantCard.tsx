@@ -6,7 +6,7 @@ import { detailsStyles } from '../../styles/details.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { getImageUrl } from '../../constants/config';
+
 
 interface ParticipantCardProps {
   item: Participant;
@@ -43,7 +43,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
 
   const profileImageUri = useMemo(() =>
     item.profile_picture && item.profile_picture.trim() !== ''
-      ? getImageUrl(item.profile_picture)
+      ?(item.profile_picture)
       : null,
     [item.profile_picture]
   );

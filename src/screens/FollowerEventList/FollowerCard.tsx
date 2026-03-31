@@ -7,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { getImageUrl } from '../../constants/config';
 
 interface FanEventCardProps {
     item: ParticipantItem;
@@ -41,14 +40,14 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
 
     const profileImageUri = useMemo(() =>
         item.profile_picture && item.profile_picture.trim() !== ''
-            ? getImageUrl(item.profile_picture)
+            ?(item.profile_picture)
             : null,
         [item.profile_picture]
     );
 
     const flagImageUri = useMemo(() =>
         item.flag_url && item.flag_url.trim() !== ''
-            ? getImageUrl(item.flag_url)
+            ?(item.flag_url)
             : null,
         [item.flag_url]
     );

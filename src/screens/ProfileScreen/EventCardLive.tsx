@@ -16,12 +16,17 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
 }) => {
     const { t } = useTranslation(['profile']);
     const navigation = useNavigation<NavigationProp>();
+    console.log("1111EventSource", item.event_source);
 
     const handlePress = useCallback(() => {
         if (!isOwnProfile) {
-            navigation.navigate('FollowDetails', {
+            navigation.navigate('LiveTracking', {
                 product_app_id: item.id,
                 event_name: item.name,
+                event_source: item.event_source,
+                sourceScreen: 'ProfileScreen',
+                sectionType: 'follower',
+                
             });
             return;
         }
@@ -49,7 +54,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
             if (item.race_status === 'finished') {
                 return t('profile:buttons.live_tracking_ended');
             }
-            
+
         }
         if (item.event_source === 'custom') {
             return t('profile:buttons.edit_personal_event');

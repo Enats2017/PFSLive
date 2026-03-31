@@ -21,6 +21,9 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
     const { t } = useTranslation(['profile']);
     console.log("111", profile);
 
+    console.log(profile?.profile_picture);
+    
+
 
     // ✅ SIMPLIFIED: Just check hasMore and loadingMore
     const handleLoadMore = useCallback(() => {

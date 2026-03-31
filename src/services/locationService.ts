@@ -41,6 +41,7 @@ export const locationService = {
   ): Promise<SendLocationResponse> {
     // Check network connection
     const hasNetwork = await locationQueueService.hasNetwork();
+    
 
     if (!hasNetwork) {
       if (queueIfOffline) {
@@ -75,6 +76,8 @@ export const locationService = {
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.PARTICIPANT_LOCATION);
       const headers = await API_CONFIG.getHeaders();
 
+      
+
       const requestBody = {
         participantId,
         eventId,
@@ -90,7 +93,14 @@ export const locationService = {
         is_mock: location.isMock || false,
       };
 
+      console.log("🚀 API REQUEST BODY:", requestBody);
+console.log("📍 participantId:", participantId);
+console.log("🏁 eventId:", eventId);
+console.log("🌍 location object:", location);
+
       const apiResponse = await apiClient.post<StandardApiResponse>(url, requestBody, { headers });
+
+      console.log("📥 API RAW RESPONSE:", apiResponse);
 
       // Extract from standard backend response format
       const success = apiResponse.success === true;

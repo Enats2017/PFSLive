@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { commonStyles, spacing } from '../styles/common.styles';
 import { AthleteProfile } from '../services/athleteProfileService';
 import { profileStyles } from '../styles/Profile.styles';
-import { getImageUrl, API_CONFIG } from '../constants/config';
+import { API_CONFIG } from '../constants/config';
 import { useTranslation } from 'react-i18next';
 
 interface ProfileCardProps {
@@ -21,7 +21,6 @@ interface ProfileCardProps {
 const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
     profile,
     password_protected,
-
     customer_app_id,
     isFollowed,
     isFollowLoading,
@@ -55,7 +54,7 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                 <View style={profileStyles.avatar}>
                     {profile?.profile_picture ? (
                         <Image
-                            source={{ uri: getImageUrl(profile.profile_picture) || undefined }}
+                            source={{ uri:(profile.profile_picture) || undefined }}
                             style={profileStyles.avatar}
                         />
                     ) : (

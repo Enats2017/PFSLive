@@ -211,11 +211,11 @@ export const getLocalApiUrl = (): string => {
   return getApiUrl();
 };
 
-export const getImageUrl = (url?: string | null): string | null => {
-  if (!url) return null;
+// export const getImageUrl = (url?: string | null): string | null => {
+//   if (!url) return null;
 
-  const baseUrl = process.env.EXPO_PUBLIC_IMAGE_URL;
+//   const baseUrl = process.env.EXPO_PUBLIC_IMAGE_URL;
 
-  // Replace localhost with your actual IP
-  return url.replace("http://localhost/larssie", baseUrl!);
-};
+//   // Replace localhost with your actual IP
+//   return url.replace("http://localhost/larssie", baseUrl!);
+// };

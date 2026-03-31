@@ -16,7 +16,7 @@ import { tokenService } from '../../services/tokenService'
 import { AppHeader } from '../../components/common/AppHeader'
 import { profileStyles } from '../../styles/Profile.styles'
 import { toastSuccess, toastError } from '../../../utils/toast'
-import { getImageUrl, API_CONFIG } from '../../constants/config'
+import { API_CONFIG } from '../../constants/config'
 import { useNavigation } from '@react-navigation/native'
 
 const GENDER_VALUES = [
@@ -181,7 +181,7 @@ const EditProfileScreen = () => {
     const avatarUri: string | null = picture
         ? picture.uri
         : (profile?.profile_picture && !removePicture)
-            ? getImageUrl(profile.profile_picture)
+            ?(profile.profile_picture)
             : null
 
     const avatarInitials = [form.firstname[0], form.lastname[0]]
