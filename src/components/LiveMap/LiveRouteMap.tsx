@@ -93,6 +93,8 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     last_checkpoint_name: p.last_checkpoint_name,
                     distance_to_next_cp: p.distance_to_next_cp,
                     last_update: p.last_update,
+                    last_update_time: p.last_update_time,
+                    last_update_type: p.last_update_type,
                     profile_picture: p.profile_picture,
                     source: p.source,
                     initials: p.initials,
@@ -178,6 +180,8 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 last_checkpoint_name: props.last_checkpoint_name,
                 distance_to_next_cp: props.distance_to_next_cp,
                 last_update: props.last_update,
+                last_update_time: props.last_update_time,
+                last_update_type: props.last_update_type,
                 profile_picture: props.profile_picture,
                 source: props.source,
             };

@@ -19,6 +19,8 @@ export interface ParticipantMapMarker {
     last_checkpoint_name: string;
     distance_to_next_cp: number | null;
     last_update: string;
+    last_update_time: number;
+    last_update_type: string;
     profile_picture: string | null;
     source: string;
 }
