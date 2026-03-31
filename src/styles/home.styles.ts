@@ -24,8 +24,8 @@ export const homeStyles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 150,
+    height: 100,
     marginRight: spacing.sm,
   },
   textSection: {
