@@ -4,8 +4,8 @@ import { StyleSheet } from 'react-native';
 export const colors = {
   // Primary colors
   primary: '#0f2a3f', // Orange color
-  primaryDark: '#E64A19',
-  primaryLight: '#0f2a3f',
+  primaryDark: '#081d2c',
+  primaryLight: '#1a4a6e',
   
   // Accent colors
   accent: '#4A9EFF',
