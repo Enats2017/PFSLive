@@ -184,11 +184,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   style={loginStyles.logo}
                   resizeMode="contain"
                 />
-                <View style={loginStyles.textSection}>
+                {/* <View style={loginStyles.textSection}>
                   <Text style={commonStyles.title}>
                     {t('common:app_name')}
                   </Text>
-                </View>
+                </View> */}
               </View>
               <Text style={loginStyles.title}>{t('login:title')}</Text>
               <Text style={loginStyles.subtitle}>{t('login:subtitle')}</Text>

@@ -19,10 +19,12 @@ export const homeStyles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: 0,
   },
+  
   logo: {
     width: '100%',
     height: 250,
   },
+
   textSection: {
     alignItems: 'center',
     justifyContent: 'center',
