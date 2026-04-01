@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import { AppHeader } from '../../components/common/AppHeader';
-import { commonStyles } from '../../styles/common.styles';
+import { commonStyles, colors } from '../../styles/common.styles';
 import { optStyles } from '../../styles/OtpScreen.styles';
 import { OTPVerificationScreenProps } from '../../types/navigation';
 import { tokenService } from '../../services/tokenService';
@@ -291,7 +291,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
           {/* Header Section */}
           <View style={optStyles.headerSection}>
             <View style={optStyles.iconCircle}>
-              <Ionicons name="mail-outline" size={40} color="#FF5722" />
+              <Ionicons name="mail-outline" size={40} color="{colors.primary}" />
             </View>
             <Text style={optStyles.title}>{t('otp:title')}</Text>
             <Text style={optStyles.subtitle}>{t('otp:subtitle')}</Text>

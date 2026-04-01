@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../styles/common.styles';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 // ✅ TYPES
@@ -40,15 +41,15 @@ interface FloatingLabelInputProps extends Omit<TextInputProps, 'onChangeText'> {
 
 // ✅ CONSTANTS
 const COLORS = {
-  ERROR: '#DC143C',
-  PRIMARY: '#FF5722',
-  GRAY_LIGHT: '#d1d5db',
-  GRAY_MED: '#9ca3af',
-  GRAY_DARK: '#111827',
-  WHITE: '#ffffff',
-  BORDER_LIGHT: '#e5e7eb',
-  BG_SELECTED: '#fff5f5',
-  BG_ITEM: '#f3f4f6',
+  ERROR:        colors.error,        // #DC143C
+  PRIMARY:      colors.primary,      // #0f2a3f
+  GRAY_LIGHT:   colors.inputBorder,  // #d1d5db
+  GRAY_MED:     colors.gray400,      // #9ca3af
+  GRAY_DARK:    colors.gray900,      // #111827
+  WHITE:        colors.white,        // #ffffff
+  BORDER_LIGHT: colors.inputBorderFocus, // #e5e7eb
+  BG_SELECTED:  colors.inputBgSelected,  // #fff5f5
+  BG_ITEM:      colors.inputBgItem,      // #f3f4f6
 } as const;
 
 const ANIMATION_DURATION = 200;
