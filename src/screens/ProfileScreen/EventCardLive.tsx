@@ -24,8 +24,9 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
                 product_app_id: item.id,
                 event_name: item.name,
                 event_source: item.event_source,
-                sourceScreen: 'ProfileScreen',
-                sectionType: 'follower' 
+                sourceScreen: 'FollowerDistanceScreen',
+                sectionType: 'follower',
+                sourceTab: 'live' 
             });
             return;
         }
