@@ -34,6 +34,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab, event_source } = route.params;
 
     const isCustomEvent = event_source === 'custom';
+    console.log("11111", isCustomEvent);
+
 
     const { followedUsers } = useFollowManager(t);
 
@@ -245,8 +247,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 }
 
                 // ✅ Load GPX only if URL is present and changed
+                console.log('🔍 GPX URL check:', {
+                    gpx_url: response.data.selected_distance?.gpx_url,
+                    loadedGpxUrl,
+                    willLoad: response.data.selected_distance?.gpx_url && loadedGpxUrl !== response.data.selected_distance?.gpx_url
+                })
                 if (response.data.selected_distance?.gpx_url) {
                     const newGpxUrl = response.data.selected_distance.gpx_url;
+                    console.log('✅ Using cached GPX data', newGpxUrl);
                     if (loadedGpxUrl !== newGpxUrl) {
                         console.log('📂 GPX URL changed, loading new GPX');
                         await loadGPX(newGpxUrl);
@@ -351,13 +359,15 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         setPopupState({ type: null, data: null });
     };
 
+
     const hasGpx = !!routeData;
     const hasCheckpoints = apiCheckpoints != null && apiCheckpoints.length > 0;
     const showRouteLine = hasGpx;
     const showCheckpoints = hasGpx && hasCheckpoints;
     const showElevationProfile = isCustomEvent ? (hasGpx && hasCheckpoints) : hasGpx;
-    const showParticipants = isCustomEvent ? hasGpx : true;
-     const showDistanceDropdown = !isCustomEvent;
+    const hasValidCoords = participantMarkers.some(p => p.lat !== 0 && p.lon !== 0);
+     const showParticipants = isCustomEvent ? (hasGpx || hasValidCoords) : true;
+    const showDistanceDropdown = !isCustomEvent;
     const showBottomNav = !isCustomEvent;
 
     console.log('🔍 Visibility flags:', {
@@ -397,7 +407,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     }
 
     // Handle no data separately — no error object needed
-    if  (!isCustomEvent && (!routeData || !selectedDistance)) {
+    if (!isCustomEvent && (!routeData || !selectedDistance)) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
@@ -442,8 +452,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     <LiveElevationProfile
                         chartData={chartData}
                         aidStations={showCheckpoints ? (routeData?.aidStations ?? []) : []}
-            apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
-            participants={showParticipants ? participantMarkers : []}
+                        apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
+                        participants={showParticipants ? participantMarkers : []}
                         totalDistance={routeData?.totalDistance ?? 0}
                         minElevation={routeData?.minElevation ?? 0}
                         maxElevation={routeData?.maxElevation ?? 0}

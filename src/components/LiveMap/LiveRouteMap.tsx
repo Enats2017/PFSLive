@@ -27,6 +27,15 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
 }) => {
     const cameraRef = useRef<Mapbox.Camera>(null);
     const [mapReady, setMapReady] = useState(false);
+    const mapReadyRef = useRef(false);
+
+    console.log('👥 Map received participants:', {
+        count: participants.length,
+        firstParticipant: participants[0] ? {
+            lat: participants[0].lat,
+            lon: participants[0].lon,
+        } : null,
+    });
 
     const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = React.useMemo(() => ({
         type: 'Feature',
@@ -47,28 +56,67 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     }, [trackPoints]);
 
     const bounds = React.useMemo(() => {
-        if (trackPoints.length === 0) return null;
-        const lons = trackPoints.map(pt => pt.lon);
-        const lats = trackPoints.map(pt => pt.lat);
-        return {
-            ne: [Math.max(...lons), Math.max(...lats)] as [number, number],
-            sw: [Math.min(...lons), Math.min(...lats)] as [number, number],
-        };
-    }, [trackPoints]);
+        // Priority 1: fit to GPX track points
+        if (trackPoints.length > 0) {
+            const lons = trackPoints.map(pt => pt.lon);
+            const lats = trackPoints.map(pt => pt.lat);
+            return {
+                ne: [Math.max(...lons), Math.max(...lats)] as [number, number],
+                sw: [Math.min(...lons), Math.min(...lats)] as [number, number],
+            };
+        }
+
+        // Priority 2: no GPX — fit to participant coordinates
+        const validParticipants = participants.filter(p => p.lat !== 0 && p.lon !== 0);
+        if (validParticipants.length > 0) {
+            const lons = validParticipants.map(p => p.lon);
+            const lats = validParticipants.map(p => p.lat);
+            return {
+                ne: [Math.max(...lons), Math.max(...lats)] as [number, number],
+                sw: [Math.min(...lons), Math.min(...lats)] as [number, number],
+            };
+        }
+
+        return null;
+    }, [trackPoints, participants]);
+
+    console.log('🗺️ Bounds check:', {
+        hasTrackPoints: trackPoints.length > 0,
+        hasValidParticipants: participants.filter(p => p.lat !== 0 && p.lon !== 0).length,
+        boundsSource: trackPoints.length > 0 ? 'GPX' : participants.filter(p => p.lat !== 0 && p.lon !== 0).length > 0 ? 'participants' : 'none',
+        bounds,
+    });
 
     useEffect(() => {
-        if (bounds && cameraRef.current && mapReady) {
-            setTimeout(() => {
-                console.log('📍 Fitting map to bounds');
-                cameraRef.current?.fitBounds(
-                    bounds.ne,
-                    bounds.sw,
-                    [50, 50, 50, 50],
-                    1000
-                );
-            }, 300);
-        }
-    }, [bounds, mapReady]);
+        if (!bounds) return;
+
+        const tryFocus = () => {
+            if (!cameraRef.current) {
+                console.log('❌ cameraRef null, retrying...');
+                setTimeout(tryFocus, 300);
+                return;
+            }
+
+            const isSinglePoint = bounds.ne[0] === bounds.sw[0] && bounds.ne[1] === bounds.sw[1];
+            console.log('📍 Focusing map | isSinglePoint:', isSinglePoint, '| coords:', bounds.ne);
+
+            if (isSinglePoint) {
+                cameraRef.current.setCamera({
+                    centerCoordinate: bounds.ne,
+                    zoomLevel: 15,
+                    animationDuration: 1000,
+                    animationMode: 'flyTo',
+                });
+            } else {
+                cameraRef.current.fitBounds(bounds.ne, bounds.sw, [50, 50, 50, 50], 1000);
+            }
+        };
+
+        const timer = setTimeout(tryFocus, 800);
+        return () => clearTimeout(timer);
+    }, [bounds]); // ← removed mapReady from deps
+
+
 
     const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
         console.log('🗺️ Creating participants GeoJSON with', participants.length, 'participants');
@@ -109,12 +157,12 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
 
     // ✅ Use API checkpoints if available, otherwise fall back to GPX aid stations
     const aidStationsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
-        if (apiCheckpoints.length  >  0) {
+        if (apiCheckpoints.length > 0) {
             // ✅ Filter out START and FINISH from map display
             const visibleCheckpoints = apiCheckpoints.filter(cp => !cp.is_start && !cp.is_finish);
-            
+
             console.log('🗺️ Using API checkpoints for map:', visibleCheckpoints.map(c => c.name));
-            
+
             return {
                 type: 'FeatureCollection',
                 features: visibleCheckpoints.map((checkpoint, idx) => ({
@@ -155,7 +203,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     }, [aidStations, apiCheckpoints]);
 
     const handleParticipantPress = (event: any) => {
-            console.log('👆 Participant tapped:', event.features?.length);
+        console.log('👆 Participant tapped:', event.features?.length);
         const feature = event.features[0];
         if (feature && feature.properties) {
             const props = feature.properties;
@@ -217,6 +265,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 attributionEnabled={false}
                 onDidFinishLoadingMap={() => {
                     console.log('🗺️ Map finished loading');
+                    mapReadyRef.current = true;
                     setMapReady(true);
                 }}
             >
