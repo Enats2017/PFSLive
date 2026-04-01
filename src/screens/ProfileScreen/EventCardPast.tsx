@@ -22,26 +22,24 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
     const handlePress = useCallback(() => {
         if (isOwnProfile) {
             // own profile → results screen
-            console.log("hiii");
-           navigation.navigate('LiveTracking', {
+            navigation.navigate('LiveTracking', {
                 product_app_id: item.id,
                 event_name: item.name,
                 event_source: item.event_source,
-                sourceScreen: 'ProfileScreen',
+                sourceScreen: 'FollowerDistanceScreen',
                 sectionType: 'follower',
-                
+                sourceTab: 'past'
             });
             return;
         } else {
-           navigation.navigate('LiveTracking', {
+            navigation.navigate('LiveTracking', {
                 product_app_id: item.id,
                 event_name: item.name,
                 event_source: item.event_source,
-                sourceScreen: 'ProfileScreen',
+                sourceScreen: 'FollowerDistanceScreen',
                 sectionType: 'follower',
-                
+                sourceTab: 'past'
             });
-
         }
     }, [item, isOwnProfile, navigation]);
 
