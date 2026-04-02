@@ -18,7 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { AppHeader } from '../../components/common/AppHeader';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
 import CountrySelector from '../../components/CountrySelector';
-import { commonStyles } from '../../styles/common.styles';
+import { commonStyles, colors } from '../../styles/common.styles';
 import { registerStyles } from '../../styles/Register.styles';
 import { RegisterProps } from '../../types/navigation';
 import { authService } from '../../services/authService';
@@ -282,7 +282,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
                         onPress={removeImage}
                         activeOpacity={0.8}
                       >
-                        <Ionicons name="close" size={14} color="#FF5722" />
+                        <Ionicons name="close" size={14} color="{colors.primary}" />
                       </TouchableOpacity>
                     </>
                   ) : (

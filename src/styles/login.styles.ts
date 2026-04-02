@@ -12,22 +12,16 @@ export const loginStyles = StyleSheet.create({
   // ✅ HEADER
   headerSection: {
     alignItems: 'center',
-    marginBottom: spacing.xxxl,
+    marginBottom: spacing.sm,
   },
 
   cardscetion: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
+    alignSelf: 'stretch',
   },
 
   logo: {
-    width: 80,
-    height: 80,
-    marginRight: spacing.sm,
+    width: '100%',
+    height: 250,
   },
 
   textSection: {

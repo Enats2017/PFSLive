@@ -243,7 +243,7 @@ export const resultInfoStyles = StyleSheet.create({
   segmentDistanceText: {
     fontSize: 15,
     fontWeight: typography.weights.bold,
-    color: "#FF6B35",     // ✅ ORANGE
+    color: colors.primaryLight,     // ✅ ORANGE
     letterSpacing: 0.3,
     transform: [{ rotate: "-90deg" }],
     textAlign: "center",
@@ -264,7 +264,7 @@ export const resultInfoStyles = StyleSheet.create({
   segmentElevationText: {
     fontSize: 13,
     fontWeight: typography.weights.bold,
-    color: "#FF6B35",     // ✅ ORANGE (same as distance)
+    color: colors.primaryLight,     // ✅ ORANGE (same as distance)
     letterSpacing: 0.3,
     transform: [{ rotate: "-90deg" }],
     textAlign: "center",

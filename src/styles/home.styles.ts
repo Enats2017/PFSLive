@@ -16,18 +16,15 @@ export const homeStyles = StyleSheet.create({
 
   // Logo section
   cardscetion: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginTop: spacing.lg,
     marginBottom: 0,
-    paddingHorizontal: spacing.md,
   },
+  
   logo: {
-    width: 150,
-    height: 100,
-    marginRight: spacing.sm,
+    width: '100%',
+    height: 250,
   },
+
   textSection: {
     alignItems: 'center',
     justifyContent: 'center',

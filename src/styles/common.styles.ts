@@ -4,8 +4,8 @@ import { StyleSheet } from 'react-native';
 export const colors = {
   // Primary colors
   primary: '#0f2a3f', // Orange color
-  primaryDark: '#E64A19',
-  primaryLight: '#0f2a3f',
+  primaryDark: '#081d2c',
+  primaryLight: '#1a4a6e',
   
   // Accent colors
   accent: '#4A9EFF',
@@ -35,6 +35,11 @@ export const colors = {
   routeColor: '#4A9EFF',
   stationColor: '#0f2a3f',
   participantColor: '#DC143C',
+
+  inputBorder: '#d1d5db',      // GRAY_LIGHT
+  inputBorderFocus: '#e5e7eb', // BORDER_LIGHT  
+  inputBgSelected: '#fff5f5',  // BG_SELECTED
+  inputBgItem: '#f3f4f6',      // BG_ITEM
 };
 
 // Spacing
