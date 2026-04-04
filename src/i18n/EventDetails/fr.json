@@ -79,6 +79,11 @@
       "title": "Votre Accès Premium A Expiré",
       "description": "Vous avez atteint votre limite annuelle de {{limit}} sessions de suivi. Votre abonnement actuel ne permet pas d'activations supplémentaires. Gérez votre abonnement via notre site web."
     },
+    "membership_upcoming": {
+      "icon": "⏳",
+      "title": "Abonnement Pas Encore Actif",
+      "description": "Votre abonnement commence le {{date}}. Vous pourrez vous inscrire au suivi en direct une fois votre abonnement activé."
+    },
     "unavailable": {
       "icon": "⊘",
       "title": "Non Disponible",

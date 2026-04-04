@@ -79,6 +79,11 @@
       "title": "Uw Premium Toegang Is Verlopen",
       "description": "U heeft uw jaarlijkse limiet van {{limit}} tracking sessies bereikt. Uw huidige abonnement staat geen extra activaties toe. Beheer uw abonnement via onze website."
     },
+    "membership_upcoming": {
+      "icon": "⏳",
+      "title": "Lidmaatschap Nog Niet Actief",
+      "description": "Uw lidmaatschap start op {{date}}. U kunt zich registreren voor live tracking zodra uw lidmaatschap actief wordt."
+    },
     "unavailable": {
       "icon": "⊘",
       "title": "Niet Beschikbaar",

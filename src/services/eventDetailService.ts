@@ -6,6 +6,7 @@ export interface Distance {
   product_option_value_app_id: number;
   distance_name: string;
   membership_limit?: number;
+  membership_start_date?: string;   // ✅ for membership_upcoming
   race_date: string;
   race_date_formatted: string;
   race_time: string;
@@ -15,7 +16,7 @@ export interface Distance {
     hours: number;
     minutes: number;
   };
-  registration_status: 'available' | 'registered' | 'membership_required' | 'limit_reached' | 'unavailable';
+  registration_status: 'available' | 'registered' | 'membership_required' | 'limit_reached' | 'membership_upcoming' | 'unavailable';
   participant_app_id?: number;
 }
 
@@ -39,6 +40,7 @@ export interface RegisterParticipantResponse {
   is_first_tracking?: number;
   race_result_data?: RaceResultData;
   membership_limit?: number;
+  membership_start_date?: string;   // ✅ for membership_upcoming
   participant?: {
     participant_app_id: number;
     race_id: number;
@@ -180,9 +182,7 @@ export const eventDetailService = {
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.DELETE_PARTICIPANT);
       const headers = await API_CONFIG.getHeaders();
 
-      const requestBody = {
-        participant_app_id,
-      };
+      const requestBody = { participant_app_id };
 
       const response = await apiClient.post<any>(url, requestBody, { headers });
 

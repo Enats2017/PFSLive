@@ -26,6 +26,7 @@ export interface PersonalEventResponse {
   error?: string;
   is_first_tracking?: number;
   membership_limit?: number;
+  membership_start_date?: string;   // ✅ NEW: for membership_upcoming
   event?: any;
 }
 
@@ -63,17 +64,17 @@ export const isValidFileSize = (size: number, maxSize: number): boolean => {
 // ✅ UTILITY FUNCTIONS
 export const formatTimeHHMM = (time: string): string => {
   if (!time) return '';
-  
+
   const parts = time.split(':');
-  
+
   if (parts.length === 2 && time.length === 5) {
     return time;
   }
-  
+
   if (parts.length === 3) {
     return `${parts[0]}:${parts[1]}`;
   }
-  
+
   return time;
 };
 
@@ -113,41 +114,41 @@ export const getTimezoneOffsetString = (): string => {
   const hours = Math.floor(Math.abs(offset) / 60);
   const minutes = Math.abs(offset) % 60;
   const sign = offset >= 0 ? '+' : '-';
-  
+
   return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
 // ✅ BUILD FORM DATA
 const buildFormData = (payload: PersonalEventPayload): FormData => {
   const { name, eventTypeId, date, startTime, timezone, selectedFile } = payload;
-  
+
   const formData = new FormData();
-  
+
   // ✅ REQUIRED FIELDS
   formData.append('name', name.trim());
   formData.append('race_date', date);
-  
+
   // ✅ OPTIONAL: EVENT TYPE
   if (eventTypeId !== null && eventTypeId !== undefined) {
     formData.append('event_type', String(eventTypeId));
   }
-  
+
   // ✅ OPTIONAL: START TIME
   if (startTime?.trim()) {
     const formattedTime = formatTimeHHMM(startTime);
     formData.append('start_hour', formattedTime);
   }
-  
+
   // ✅ OPTIONAL: TIMEZONE
   if (timezone) {
     formData.append('timezone', timezone);
-    
+
     if (API_CONFIG.DEBUG) {
       console.log('🌍 Timezone:', timezone);
       console.log('🕐 Offset:', getTimezoneOffsetString());
     }
   }
-  
+
   // ✅ OPTIONAL: GPX FILE
   if (selectedFile) {
     const fileData: any = {
@@ -155,9 +156,9 @@ const buildFormData = (payload: PersonalEventPayload): FormData => {
       name: selectedFile.name,
       type: selectedFile.mimeType || DEFAULT_MIME_TYPE,
     };
-    
+
     formData.append('gpx_file', fileData);
-    
+
     if (API_CONFIG.DEBUG) {
       console.log('📎 GPX file:', {
         name: selectedFile.name,
@@ -166,34 +167,34 @@ const buildFormData = (payload: PersonalEventPayload): FormData => {
       });
     }
   }
-  
+
   return formData;
 };
 
 // ✅ VALIDATE PAYLOAD
 const validatePayload = (payload: PersonalEventPayload): void => {
   const { name, eventTypeId, date, startTime } = payload;
-  
+
   if (!name?.trim()) {
     throw new Error('VALIDATION_ERROR: Event name is required');
   }
-  
+
   if (!isValidEventType(eventTypeId)) {
     throw new Error('VALIDATION_ERROR: Event type is required');
   }
-  
+
   if (!date?.trim()) {
     throw new Error('VALIDATION_ERROR: Event date is required');
   }
-  
+
   if (!isValidDate(date)) {
     throw new Error('VALIDATION_ERROR: Invalid date format');
   }
-  
+
   if (!startTime?.trim()) {
     throw new Error('VALIDATION_ERROR: Start time is required');
   }
-  
+
   if (!isValidTime(startTime)) {
     throw new Error('VALIDATION_ERROR: Invalid start time format');
   }
@@ -214,13 +215,13 @@ export const createPersonalEvent = async (
         hasFile: !!payload.selectedFile,
       });
     }
-    
+
     // ✅ VALIDATE BEFORE SENDING
     validatePayload(payload);
-    
+
     const formData = buildFormData(payload);
     const headers = await API_CONFIG.getMutiForm();
-    
+
     // ✅ USE CONSISTENT apiClient
     const response = await apiClient.post<PersonalEventResponse>(
       getApiEndpoint(API_CONFIG.ENDPOINTS.Personal_Event),
@@ -230,14 +231,14 @@ export const createPersonalEvent = async (
         timeout: API_CONFIG.TIMEOUT,
       }
     );
-    
+
     if (API_CONFIG.DEBUG) {
       console.log('📡 Full API Response:', response.data);
     }
-    
+
     // ✅ API RETURNS FLAT STRUCTURE - USE DIRECTLY
     const data = response.data;
-    
+
     if (API_CONFIG.DEBUG) {
       console.log('✅ Response Data:', {
         action: data.action,
@@ -245,34 +246,35 @@ export const createPersonalEvent = async (
         event: data.event,
       });
     }
-    
+
     // ✅ RETURN RESPONSE AS-IS (ALREADY FLAT)
     return {
-      success: true, // ✅ Assume success if no error thrown
+      success: true,
       action: data.action,
       event: data.event,
       is_first_tracking: data.is_first_tracking,
       membership_limit: data.membership_limit,
+      membership_start_date: data.membership_start_date,   // ✅ NEW
       data: data,
     };
   } catch (error: any) {
     if (API_CONFIG.DEBUG) {
       console.error('❌ Error creating personal event:', error);
     }
-    
+
     // ✅ PRESERVE VALIDATION ERRORS
     if (error.message?.startsWith('VALIDATION_ERROR:')) {
       throw error;
     }
-    
+
     // ✅ HANDLE API ERRORS
     if (error.response?.data) {
       const errorData = error.response.data;
-      
+
       if (API_CONFIG.DEBUG) {
         console.log('❌ API Error Response:', errorData);
       }
-      
+
       // ✅ RETURN ERROR AS RESPONSE
       return {
         success: false,
@@ -281,7 +283,7 @@ export const createPersonalEvent = async (
         error: errorData.error,
       };
     }
-    
+
     throw new Error('API_ERROR');
   }
 };

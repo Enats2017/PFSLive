@@ -15,6 +15,7 @@ type RegistrationStatus =
   | 'registered'
   | 'membership_required'
   | 'limit_reached'
+  | 'membership_upcoming'  // ✅ NEW
   | 'unavailable'
   | 'available';
 
@@ -23,6 +24,7 @@ interface RegistrationModalProps {
   status: RegistrationStatus | null;
   distanceName: string;
   membershipLimit?: number;
+  membershipStartDate?: string;  // ✅ NEW
   onClose: () => void;
 }
 
@@ -38,10 +40,11 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   status,
   distanceName,
   membershipLimit,
+  membershipStartDate,  // ✅ NEW
   onClose,
 }) => {
   const { t } = useTranslation(['details']);
-  
+
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const cardTranslateY = useRef(new Animated.Value(80)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
@@ -50,19 +53,23 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   // ✅ GET MODAL CONFIG FROM i18n
   const getModalConfig = (status: RegistrationStatus): ModalConfig => {
     const baseKey = `details:registrationModal.${status}`;
-    
+
     const accentColors: Record<RegistrationStatus, string> = {
-      registered: colors.primaryLight,
-      membership_required: colors.primary,
-      limit_reached: colors.primary,
-      unavailable: '#6b7280',
-      available: '#f4a100',
+      registered:           colors.primaryLight,
+      membership_required:  colors.primary,
+      limit_reached:        colors.primary,
+      membership_upcoming:  colors.warning,   // ✅ NEW — orange/amber for "future"
+      unavailable:          '#6b7280',
+      available:            '#f4a100',
     };
 
     return {
-      icon: t(`${baseKey}.icon`),
-      title: t(`${baseKey}.title`),
-      description: t(`${baseKey}.description`, { limit: membershipLimit ?? 3 }),
+      icon:        t(`${baseKey}.icon`),
+      title:       t(`${baseKey}.title`),
+      description: t(`${baseKey}.description`, {
+        limit: membershipLimit ?? 3,
+        date:  membershipStartDate ?? '',
+      }),
       accentColor: accentColors[status],
     };
   };

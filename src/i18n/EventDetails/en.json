@@ -31,7 +31,7 @@
     "bib": "Bib"
   },
   "success": {
-    "label":"Registration Successful!",
+    "label": "Registration Successful!",
     "message": "Thank you for signing up for the live tracking of this event. Tell your family and friends to follow you here and don't forget to activate your live tracking from 1 hour before the start of your race in this app!"
   },
   "unregister": {
@@ -79,6 +79,11 @@
       "icon": "↑",
       "title": "Your Premium Access Has Expired",
       "description": "You've reached your yearly limit of {{limit}} tracking sessions. Your current plan does not allow additional activations. Manage your subscription via our website."
+    },
+    "membership_upcoming": {
+      "icon": "⏳",
+      "title": "Membership Not Yet Active",
+      "description": "Your membership starts on {{date}}. You will be able to register for live tracking once your membership becomes active."
     },
     "unavailable": {
       "icon": "⊘",

@@ -45,7 +45,6 @@ const DistanceTab = ({
   const [distances, setDistances] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
   const [serverTime, setServerTime] = useState<string>('');
-  //const [error, setError] = useState<string | null>(null);
   const [successVisible, setSuccessVisible] = useState(false);
   const [undoModalVisible, setUndoModalVisible] = useState(false);
   const [selectedUndoItem, setSelectedUndoItem] = useState<Distance | null>(null);
@@ -60,16 +59,11 @@ const DistanceTab = ({
         clearError();
 
         if (API_CONFIG.DEBUG) {
-          console.log('📡 Fetching distances for product:', product_app_id, {
-            bustCache,
-          });
+          console.log('📡 Fetching distances for product:', product_app_id, { bustCache });
         }
 
-        const result = await eventDetailService.getEventDetails(
-          product_app_id,
-          bustCache
-        );
-        
+        const result = await eventDetailService.getEventDetails(product_app_id, bustCache);
+
         setDistances(result.distances);
         setServerTime(result.server_datetime);
 
@@ -101,8 +95,7 @@ const DistanceTab = ({
             ? {
                 ...d,
                 registration_status: newStatus,
-                participant_app_id:
-                  participant_app_id ?? d.participant_app_id,
+                participant_app_id: participant_app_id ?? d.participant_app_id,
               }
             : d
         )
@@ -120,20 +113,12 @@ const DistanceTab = ({
 
   // ✅ SUCCESS CALLBACK
   const handleSuccess = useCallback(
-    async (
-      product_option_value_app_id: number,
-      participant_app_id?: number
-    ) => {
+    async (product_option_value_app_id: number, participant_app_id?: number) => {
       if (API_CONFIG.DEBUG) {
         console.log('🎉 Registration successful');
       }
 
-      updateDistanceStatus(
-        product_option_value_app_id,
-        'registered',
-        participant_app_id
-      );
-
+      updateDistanceStatus(product_option_value_app_id, 'registered', participant_app_id);
       setSuccessVisible(true);
       setPendingRefresh(true);
     },
@@ -273,58 +258,39 @@ const DistanceTab = ({
 
       switch (status) {
         case 'in_progress':
-          return {
-            label: t('details:countdown.live'),
-            color: colors.success,
-          };
-        
+          return { label: t('details:countdown.live'), color: colors.success };
+
         case 'finished':
-          return {
-            label: t('details:countdown.finished'),
-            color: colors.gray500,
-          };
-        
+          return { label: t('details:countdown.finished'), color: colors.gray500 };
+
         case 'not_started': {
-          // ✅ SMART DISPLAY LOGIC
           const parts: string[] = [];
           let color = colors.gray500;
 
-          // ✅ PRIORITY 1: If days exist, show ONLY days
           if (days > 0) {
             parts.push(`${days} ${t('details:countdown.days')}`);
-            color = colors.info; // Blue for days
-          }
-          // ✅ PRIORITY 2: If no days but hours exist, show hours and minutes
-          else if (hours > 0) {
+            color = colors.info;
+          } else if (hours > 0) {
             parts.push(`${hours} ${t('details:countdown.hours')}`);
             if (minutes > 0) {
               parts.push(`${minutes} ${t('details:countdown.minutes')}`);
             }
-            color = colors.success; // Green for hours
-          }
-          // ✅ PRIORITY 3: If only minutes exist, show only minutes
-          else if (minutes > 0) {
+            color = colors.success;
+          } else if (minutes > 0) {
             parts.push(`${minutes} ${t('details:countdown.minutes')}`);
-            color = colors.warning; // Orange for minutes only
+            color = colors.warning;
           }
 
-          // ✅ IF ALL ARE ZERO
           if (parts.length === 0) {
-            return {
-              label: t('details:countdown.startingSoon'),
-              color: colors.warning,
-            };
+            return { label: t('details:countdown.startingSoon'), color: colors.warning };
           }
-
-          // ✅ JOIN PARTS
-          const countdownText = parts.join(' ');
 
           return {
-            label: `${t('details:countdown.startsIn')} ${countdownText}`,
+            label: `${t('details:countdown.startsIn')} ${parts.join(' ')}`,
             color,
           };
         }
-        
+
         default:
           return { label: '', color: colors.gray500 };
       }
@@ -337,18 +303,11 @@ const DistanceTab = ({
       const badge = getCountdownBadge(item);
       const isRegistering =
         registerLoading &&
-        (confirmItem?.product_option_value_app_id ===
-          item.product_option_value_app_id ||
-          selectedItem?.product_option_value_app_id ===
-            item.product_option_value_app_id);
+        (confirmItem?.product_option_value_app_id === item.product_option_value_app_id ||
+          selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
 
       return (
-        <View
-          style={[
-            commonStyles.card,
-            { padding: 0, overflow: 'hidden', marginBottom: 16 },
-          ]}
-        >
+        <View style={[commonStyles.card, { padding: 0, overflow: 'hidden', marginBottom: 16 }]}>
           <View style={detailsStyles.distance}>
             <View style={{ flex: 1 }}>
               <Text style={[commonStyles.title, { marginBottom: 4 }]}>
@@ -359,9 +318,7 @@ const DistanceTab = ({
             </View>
             {badge.label ? (
               <View style={[detailsStyles.count, { backgroundColor: badge.color }]}>
-                <Text
-                  style={[commonStyles.text, { color: '#fff', fontWeight: '600' }]}
-                >
+                <Text style={[commonStyles.text, { color: '#fff', fontWeight: '600' }]}>
                   {badge.label}
                 </Text>
               </View>
@@ -369,10 +326,7 @@ const DistanceTab = ({
           </View>
 
           <TouchableOpacity
-            style={[
-              commonStyles.primaryButton,
-              { borderRadius: 0, opacity: isRegistering ? 0.7 : 1 },
-            ]}
+            style={[commonStyles.primaryButton, { borderRadius: 0, opacity: isRegistering ? 0.7 : 1 }]}
             onPress={() =>
               item.registration_status === 'registered'
                 ? handleUndoClick(item)
@@ -394,28 +348,16 @@ const DistanceTab = ({
         </View>
       );
     },
-    [
-      getCountdownBadge,
-      handleRegister,
-      handleUndoClick,
-      registerLoading,
-      confirmItem,
-      selectedItem,
-      t,
-    ]
+    [getCountdownBadge, handleRegister, handleUndoClick, registerLoading, confirmItem, selectedItem, t]
   );
 
   if (loading) {
     return (
-      <ActivityIndicator
-        size="large"
-        color={colors.primary}
-        style={{ marginTop: 40 }}
-      />
+      <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
     );
   }
 
- if (hasError && !loading) {
+  if (hasError && !loading) {
     return (
       <SafeAreaView style={commonStyles.container} edges={['top']}>
         <StatusBar barStyle="dark-content" />
@@ -428,6 +370,7 @@ const DistanceTab = ({
       </SafeAreaView>
     );
   }
+
   if (distances.length === 0) {
     return (
       <View style={{ marginTop: 40, alignItems: 'center' }}>
@@ -440,9 +383,7 @@ const DistanceTab = ({
     <>
       <FlatList
         data={distances}
-        keyExtractor={(item, index) =>
-          `${item.product_option_value_app_id}-${index}`
-        }
+        keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 50, paddingTop: spacing.md }}
         renderItem={renderItem}
@@ -453,6 +394,7 @@ const DistanceTab = ({
         status={selectedItem?.registration_status ?? null}
         distanceName={selectedItem?.distance_name ?? ''}
         membershipLimit={selectedItem?.membership_limit}
+        membershipStartDate={selectedItem?.membership_start_date}
         onClose={handleModalClose}
       />
 

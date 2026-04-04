@@ -20,8 +20,8 @@ import { personalStyles } from '../../styles/personalEvent.styles';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import RegistrationModal from '../../components/RegistrationModal';
 import ErrorModal from '../../components/ErrorModal';
-import { 
-  createPersonalEvent, 
+import {
+  createPersonalEvent,
   formatFileSize,
   getDeviceTimezone,
 } from '../../services/personalEventService';
@@ -31,7 +31,8 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-type RegistrationStatus = 'membership_required' | 'limit_reached' | null;
+// ✅ Added membership_upcoming to the union type
+type RegistrationStatus = 'membership_required' | 'limit_reached' | 'membership_upcoming' | null;
 
 const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
   const { t } = useTranslation(['personal', 'common', 'details']);
@@ -70,6 +71,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
   const [registrationModalVisible, setRegistrationModalVisible] = useState(false);
   const [registrationStatus, setRegistrationStatus] = useState<RegistrationStatus>(null);
   const [membershipLimit, setMembershipLimit] = useState<number | undefined>(undefined);
+  const [membershipStartDate, setMembershipStartDate] = useState<string | undefined>(undefined); // ✅ NEW
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorTitleKey, setErrorTitleKey] = useState('');
   const [errorMessageKey, setErrorMessageKey] = useState('');
@@ -79,6 +81,14 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     setErrorTitleKey(titleKey);
     setErrorMessageKey(messageKey);
     setErrorModalVisible(true);
+  }, []);
+
+  // ✅ CLOSE REGISTRATION MODAL HELPER
+  const closeRegistrationModal = useCallback(() => {
+    setRegistrationModalVisible(false);
+    setRegistrationStatus(null);
+    setMembershipLimit(undefined);
+    setMembershipStartDate(undefined);
   }, []);
 
   // ✅ FORM SUBMISSION WITH ACTION HANDLING
@@ -144,6 +154,13 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
           case 'limit_reached':
             setRegistrationStatus('limit_reached');
             setMembershipLimit(response.membership_limit);
+            setRegistrationModalVisible(true);
+            break;
+
+          // ✅ NEW: MEMBERSHIP UPCOMING
+          case 'membership_upcoming':
+            setRegistrationStatus('membership_upcoming');
+            setMembershipStartDate(response.membership_start_date);
             setRegistrationModalVisible(true);
             break;
 
@@ -419,10 +436,8 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         status={registrationStatus}
         distanceName={formData.name || t('personal:title')}
         membershipLimit={membershipLimit}
-        onClose={() => {
-          setRegistrationModalVisible(false);
-          setRegistrationStatus(null);
-        }}
+        membershipStartDate={membershipStartDate}
+        onClose={closeRegistrationModal}
       />
 
       {/* ✅ ERROR MODAL */}

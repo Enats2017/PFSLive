@@ -96,20 +96,17 @@ const useRegistrationHandler = (
         console.log('🗑️ Invalidating event detail cache for:', product_app_id);
       }
 
-      // ✅ FETCH WITH BUST CACHE TO FORCE REFRESH
       await eventDetailService.getEventDetails(product_app_id, true);
 
       if (API_CONFIG.DEBUG) {
         console.log('✅ Event detail cache invalidated and refreshed');
       }
 
-      // ✅ CALL onRefresh TO UPDATE UI
       onRefresh?.();
     } catch (error) {
       if (API_CONFIG.DEBUG) {
         console.error('⚠️ Failed to invalidate cache (non-critical):', error);
       }
-      // ✅ STILL CALL onRefresh EVEN IF CACHE INVALIDATION FAILS
       onRefresh?.();
     }
   }, [product_app_id, onRefresh]);
@@ -174,6 +171,16 @@ const useRegistrationHandler = (
               setModalVisible(true);
               break;
 
+            // ✅ NEW: MEMBERSHIP UPCOMING
+            case 'membership_upcoming':
+              setSelectedItem({
+                ...item,
+                registration_status: 'membership_upcoming',
+                membership_start_date: result.membership_start_date,
+              });
+              setModalVisible(true);
+              break;
+
             case 'not_found_in_race_result':
               await clearPendingRegistration();
               navigation.navigate('ParticipantResult', {
@@ -196,7 +203,6 @@ const useRegistrationHandler = (
               setModalVisible(true);
               break;
 
-            // ✅ NEW: EVENT FINISHED ERROR
             case 'event_finished':
               showErrorModal(
                 'details:error.eventFinishedTitle',
@@ -257,10 +263,9 @@ const useRegistrationHandler = (
             setSelectedItem({ ...item, registration_status: 'registered' });
             setModalVisible(true);
             await clearPendingRegistration();
-            
-            // ✅ INVALIDATE CACHE AND REFRESH
+
             await invalidateEventCache();
-            
+
             onSuccess?.(
               item.product_option_value_app_id,
               result.participant?.participant_app_id
@@ -343,7 +348,6 @@ const useRegistrationHandler = (
           }
 
           switch (action) {
-            // ✅ TRACKING ALREADY STARTED ERROR
             case 'tracking_already_started':
               showErrorModal(
                 'details:error.trackingAlreadyStartedTitle',
@@ -351,7 +355,6 @@ const useRegistrationHandler = (
               );
               break;
 
-            // ✅ NEW: EVENT IN PROGRESS ERROR
             case 'event_in_progress':
               showErrorModal(
                 'details:error.eventInProgressTitle',
@@ -367,7 +370,6 @@ const useRegistrationHandler = (
 
             case 'participant_not_found':
             case 'already_deleted':
-              // ✅ INVALIDATE CACHE EVEN IF ALREADY DELETED
               await invalidateEventCache();
               onDeleteSuccess?.(item.product_option_value_app_id);
               break;
@@ -387,7 +389,6 @@ const useRegistrationHandler = (
           console.log('✅ Delete successful');
         }
 
-        // ✅ INVALIDATE CACHE AND REFRESH
         await invalidateEventCache();
         onDeleteSuccess?.(item.product_option_value_app_id);
       } catch (error: any) {
@@ -469,16 +470,15 @@ const useRegistrationHandler = (
         if (API_CONFIG.DEBUG) {
           console.log('✅ Confirmation successful');
         }
-        
+
         setConfirmModalVisible(false);
         setConfirmData(null);
         setConfirmItem(null);
         setIsFirstTracking(0);
         await clearPendingRegistration();
-        
-        // ✅ INVALIDATE CACHE AND REFRESH
+
         await invalidateEventCache();
-        
+
         onSuccess?.(
           confirmItem.product_option_value_app_id,
           result.participant?.participant_app_id
@@ -535,6 +535,7 @@ const useRegistrationHandler = (
           return;
         case 'membership_required':
         case 'limit_reached':
+        case 'membership_upcoming': // ✅ NEW
         case 'unavailable':
           setSelectedItem(item);
           setModalVisible(true);
