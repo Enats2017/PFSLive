@@ -22,6 +22,7 @@ interface RegistrationModalProps {
   visible: boolean;
   status: RegistrationStatus | null;
   distanceName: string;
+  membershipLimit?: number;
   onClose: () => void;
 }
 
@@ -36,6 +37,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   visible,
   status,
   distanceName,
+  membershipLimit,
   onClose,
 }) => {
   const { t } = useTranslation(['details']);
@@ -60,7 +62,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
     return {
       icon: t(`${baseKey}.icon`),
       title: t(`${baseKey}.title`),
-      description: t(`${baseKey}.description`),
+      description: t(`${baseKey}.description`, { limit: membershipLimit ?? 3 }),
       accentColor: accentColors[status],
     };
   };

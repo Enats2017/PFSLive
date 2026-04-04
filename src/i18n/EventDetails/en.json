@@ -78,7 +78,7 @@
     "limit_reached": {
       "icon": "↑",
       "title": "Your Premium Access Has Expired",
-      "description": "You've reached your yearly limit of 3 tracking sessions. Your current plan does not allow additional activations. Manage your subscription via our website."
+      "description": "You've reached your yearly limit of {{limit}} tracking sessions. Your current plan does not allow additional activations. Manage your subscription via our website."
     },
     "unavailable": {
       "icon": "⊘",

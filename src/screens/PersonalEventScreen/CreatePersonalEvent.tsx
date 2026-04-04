@@ -69,6 +69,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
   // ✅ MODAL STATES
   const [registrationModalVisible, setRegistrationModalVisible] = useState(false);
   const [registrationStatus, setRegistrationStatus] = useState<RegistrationStatus>(null);
+  const [membershipLimit, setMembershipLimit] = useState<number | undefined>(undefined);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorTitleKey, setErrorTitleKey] = useState('');
   const [errorMessageKey, setErrorMessageKey] = useState('');
@@ -142,6 +143,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
 
           case 'limit_reached':
             setRegistrationStatus('limit_reached');
+            setMembershipLimit(response.membership_limit);
             setRegistrationModalVisible(true);
             break;
 
@@ -416,6 +418,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         visible={registrationModalVisible}
         status={registrationStatus}
         distanceName={formData.name || t('personal:title')}
+        membershipLimit={membershipLimit}
         onClose={() => {
           setRegistrationModalVisible(false);
           setRegistrationStatus(null);

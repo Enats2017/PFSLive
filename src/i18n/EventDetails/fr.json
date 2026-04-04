@@ -76,8 +76,8 @@
     },
     "limit_reached": {
       "icon": "↑",
-      "title": "Votre Accès Premium a Expiré",
-      "description": "Vous avez atteint votre limite annuelle de 3 sessions de suivi. Votre forfait actuel ne permet pas d'activations supplémentaires. Gérez votre abonnement via notre site Web."
+      "title": "Votre Accès Premium A Expiré",
+      "description": "Vous avez atteint votre limite annuelle de {{limit}} sessions de suivi. Votre abonnement actuel ne permet pas d'activations supplémentaires. Gérez votre abonnement via notre site web."
     },
     "unavailable": {
       "icon": "⊘",

@@ -452,6 +452,7 @@ const DistanceTab = ({
         visible={modalVisible}
         status={selectedItem?.registration_status ?? null}
         distanceName={selectedItem?.distance_name ?? ''}
+        membershipLimit={selectedItem?.membership_limit}
         onClose={handleModalClose}
       />
 

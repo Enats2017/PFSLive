@@ -169,6 +169,7 @@ const useRegistrationHandler = (
               setSelectedItem({
                 ...item,
                 registration_status: 'limit_reached',
+                membership_limit: result.membership_limit,
               });
               setModalVisible(true);
               break;

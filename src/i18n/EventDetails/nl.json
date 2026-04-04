@@ -76,8 +76,8 @@
     },
     "limit_reached": {
       "icon": "↑",
-      "title": "Je Premium Toegang Is Verlopen",
-      "description": "Je hebt je jaarlijkse limiet van 3 tracking sessies bereikt. Je huidige abonnement staat geen extra activeringen toe. Beheer je abonnement via onze website."
+      "title": "Uw Premium Toegang Is Verlopen",
+      "description": "U heeft uw jaarlijkse limiet van {{limit}} tracking sessies bereikt. Uw huidige abonnement staat geen extra activaties toe. Beheer uw abonnement via onze website."
     },
     "unavailable": {
       "icon": "⊘",

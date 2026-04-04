@@ -5,6 +5,7 @@ import { getCurrentLanguageId } from '../i18n';
 export interface Distance {
   product_option_value_app_id: number;
   distance_name: string;
+  membership_limit?: number;
   race_date: string;
   race_date_formatted: string;
   race_time: string;
@@ -37,6 +38,7 @@ export interface RegisterParticipantResponse {
   action: string;
   is_first_tracking?: number;
   race_result_data?: RaceResultData;
+  membership_limit?: number;
   participant?: {
     participant_app_id: number;
     race_id: number;
@@ -65,24 +67,6 @@ export interface EventDetail {
   server_datetime: string;
 }
 
-interface RegisterParticipantApiResponse {
-  success: boolean;
-  data: RegisterParticipantResponse;
-  error: string | null;
-}
-
-interface DeleteParticipantApiResponse {
-  success: boolean;
-  data: DeleteParticipantResponse;
-  error: string | null;
-}
-
-interface EventDetailApiResponse {
-  success: boolean;
-  data: EventDetail;
-  error: string | null;
-}
-
 export const eventDetailService = {
   /**
    * Get event details
@@ -93,9 +77,7 @@ export const eventDetailService = {
   ): Promise<EventDetail> {
     try {
       if (API_CONFIG.DEBUG) {
-        console.log('📡 Fetching event details for:', product_app_id, {
-          bustCache,
-        });
+        console.log('📡 Fetching event details for:', product_app_id, { bustCache });
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.EVENT_DETAIL);
@@ -108,24 +90,20 @@ export const eventDetailService = {
 
       if (bustCache) {
         requestBody._t = Date.now();
-        
+
         if (API_CONFIG.DEBUG) {
           console.log('🔥 Cache busting with timestamp:', requestBody._t);
         }
       }
 
-      const response = await apiClient.post<EventDetailApiResponse>(
-        url,
-        requestBody,
-        { headers }
-      );
+      const response = await apiClient.post<any>(url, requestBody, { headers });
 
       if (response.success && response.data) {
         if (API_CONFIG.DEBUG) {
           console.log('✅ Event details loaded:', response.data.name);
         }
 
-        return response.data;
+        return response.data as EventDetail;
       }
 
       throw new Error(response.error || 'Failed to fetch event details');
@@ -169,11 +147,7 @@ export const eventDetailService = {
         requestBody.show_confirm_popup = show_confirm_popup ? 1 : 0;
       }
 
-      const response = await apiClient.post<RegisterParticipantApiResponse>(
-        url,
-        requestBody,
-        { headers }
-      );
+      const response = await apiClient.post<any>(url, requestBody, { headers });
 
       if (API_CONFIG.DEBUG) {
         console.log('✅ Register response:', {
@@ -183,7 +157,7 @@ export const eventDetailService = {
       }
 
       if (response.success && response.data) {
-        return response.data;
+        return response.data as RegisterParticipantResponse;
       }
 
       throw new Error(response.error || 'Registration failed');
@@ -210,11 +184,7 @@ export const eventDetailService = {
         participant_app_id,
       };
 
-      const response = await apiClient.post<DeleteParticipantApiResponse>(
-        url,
-        requestBody,
-        { headers }
-      );
+      const response = await apiClient.post<any>(url, requestBody, { headers });
 
       if (API_CONFIG.DEBUG) {
         console.log('✅ Delete response:', {
@@ -224,7 +194,7 @@ export const eventDetailService = {
       }
 
       if (response.success && response.data) {
-        return response.data;
+        return response.data as DeleteParticipantResponse;
       }
 
       throw new Error(response.error || 'Delete failed');

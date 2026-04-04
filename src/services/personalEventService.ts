@@ -25,6 +25,7 @@ export interface PersonalEventResponse {
   data?: any;
   error?: string;
   is_first_tracking?: number;
+  membership_limit?: number;
   event?: any;
 }
 
@@ -251,6 +252,7 @@ export const createPersonalEvent = async (
       action: data.action,
       event: data.event,
       is_first_tracking: data.is_first_tracking,
+      membership_limit: data.membership_limit,
       data: data,
     };
   } catch (error: any) {
