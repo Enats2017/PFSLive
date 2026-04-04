@@ -47,7 +47,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     }), [trackPoints]);
 
     const mapCenter = React.useMemo(() => {
-        if (trackPoints.length === 0) return [0, 0];
+        if (trackPoints.length === 0) return [4.4699, 50.5039];
         const lons = trackPoints.map(pt => pt.lon);
         const lats = trackPoints.map(pt => pt.lat);
         const centerLon = (Math.max(...lons) + Math.min(...lons)) / 2;
@@ -55,8 +55,9 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         return [centerLon, centerLat];
     }, [trackPoints]);
 
+
+
     const bounds = React.useMemo(() => {
-        // Priority 1: fit to GPX track points
         if (trackPoints.length > 0) {
             const lons = trackPoints.map(pt => pt.lon);
             const lats = trackPoints.map(pt => pt.lat);
@@ -96,27 +97,22 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 setTimeout(tryFocus, 300);
                 return;
             }
-
             const isSinglePoint = bounds.ne[0] === bounds.sw[0] && bounds.ne[1] === bounds.sw[1];
             console.log('📍 Focusing map | isSinglePoint:', isSinglePoint, '| coords:', bounds.ne);
-
             if (isSinglePoint) {
                 cameraRef.current.setCamera({
                     centerCoordinate: bounds.ne,
                     zoomLevel: 15,
-                    animationDuration: 1000,
+                    animationDuration: 100,
                     animationMode: 'flyTo',
                 });
             } else {
                 cameraRef.current.fitBounds(bounds.ne, bounds.sw, [50, 50, 50, 50], 1000);
             }
         };
-
-        const timer = setTimeout(tryFocus, 800);
+        const timer = setTimeout(tryFocus, 300);
         return () => clearTimeout(timer);
     }, [bounds]); // ← removed mapReady from deps
-
-
 
     const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
         console.log('🗺️ Creating participants GeoJSON with', participants.length, 'participants');
