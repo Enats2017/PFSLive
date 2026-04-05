@@ -14,11 +14,13 @@ export default ({ config }) => {
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,
+
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
       backgroundColor: "#ffffff"
     },
+
     assetBundlePatterns: ["**/*"],
 
     // ✅ iOS Configuration
@@ -32,12 +34,12 @@ export default ({ config }) => {
         NSLocationAlwaysUsageDescription: "Livio requires continuous location access to provide accurate race tracking.",
         UIBackgroundModes: ["remote-notification", "location"],
         NSAppTransportSecurity: {
-          NSAllowsArbitraryLoads: true   // allows HTTP for local testing remove during production
+          NSAllowsArbitraryLoads: true  // ⚠️ Remove before production
         }
       },
       entitlements: {
-        "aps-environment": process.env.EXPO_PUBLIC_ENV === "production" 
-          ? "production" 
+        "aps-environment": process.env.EXPO_PUBLIC_ENV === "production"
+          ? "production"
           : "development"
       }
     },
@@ -61,7 +63,8 @@ export default ({ config }) => {
         "FOREGROUND_SERVICE_LOCATION"
       ],
       edgeToEdgeEnabled: true,
-      predictiveBackGestureEnabled: false
+      predictiveBackGestureEnabled: false,
+      jsEngine: "hermes"
     },
 
     // ✅ Web Configuration
@@ -75,7 +78,9 @@ export default ({ config }) => {
         "expo-build-properties",
         {
           android: {
-            usesCleartextTraffic: true  // allows HTTP for local testing remove during production
+            usesCleartextTraffic: true,  // ⚠️ Remove before production
+            enableProguardInReleaseBuilds: true,
+            enableShrinkResourcesInReleaseBuilds: true,
           }
         }
       ],
@@ -116,7 +121,7 @@ export default ({ config }) => {
     },
 
     // ✅ Organization Owner
-    owner: "livio_app", // ✅ Your organization slug
+    owner: "livio_app",
 
     // ✅ Updates Configuration
     updates: {
