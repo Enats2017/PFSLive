@@ -81,6 +81,8 @@ export default ({ config }) => {
             usesCleartextTraffic: true,  // ⚠️ Remove before production
             enableProguardInReleaseBuilds: true,
             enableShrinkResourcesInReleaseBuilds: true,
+            enableSeparateBuildPerCPUArchitecture: true,
+            useLegacyPackaging: true,
           }
         }
       ],
