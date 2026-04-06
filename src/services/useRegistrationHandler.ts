@@ -119,6 +119,9 @@ const useRegistrationHandler = (
   const handleUnauthorized = useCallback(async () => {
     await tokenService.removeToken();
     logout();
+    setTimeout(() => {
+      navigation.reset({ index: 0, routes: [{ name: 'LoginScreen' }] });
+    }, 50);
   }, [logout]);
 
   const callRegisterAPI = useCallback(
