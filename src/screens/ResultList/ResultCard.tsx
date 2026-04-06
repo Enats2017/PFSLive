@@ -133,7 +133,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                                 {item.nation_flag && (
                                     <SvgUri width={28} height={20} uri={item.nation_flag} />
                                 )}
-                                <Text style={resultListStyle.statVal} numberOfLines={1}>
+                                <Text style={resultListStyle.statVal} numberOfLines={2}>
                                     {item.nation || '—'}
                                 </Text>
                             </View>

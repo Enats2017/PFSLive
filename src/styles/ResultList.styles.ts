@@ -235,6 +235,8 @@ export const resultListStyle = StyleSheet.create({
   statFlagMid: {
     borderLeftWidth: 1,
     borderColor: colors.gray400,
+    alignItems: "center",   // ← center the flagRow horizontally within the column
+    justifyContent: "center",
   },
   
   statLabel: {
@@ -353,8 +355,18 @@ export const resultListStyle = StyleSheet.create({
   },
   
   flagRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+    flexDirection: "column",  // ← stack flag on top, text below
+    alignItems: "center",     // ← center both within the column
+    justifyContent: "center",
+    gap: 4,
+  },
+
+  // ADD this to resultListStyle
+  statValSmall: {
+    fontSize: typography.sizes.sm,  // smaller font
+    fontWeight: typography.weights.bold,
+    color: colors.gray900,
+    flexShrink: 1,                  // allows text to shrink
+    flexWrap: 'wrap',               // allows wrapping
   },
 });

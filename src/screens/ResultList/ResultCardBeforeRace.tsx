@@ -147,7 +147,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                             )}
                             <Text
                                 style={resultListStyle.statVal}
-                                numberOfLines={1}
+                                numberOfLines={2}
                             >
                                 {item.nation || '—'}
                             </Text>
