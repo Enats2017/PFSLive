@@ -74,6 +74,11 @@ export type RootStackParamList = {
   AllParticipant:{
     product_app_id:number 
   },
+  SearchParticipant:{
+    product_app_id:number ,
+    product_option_value_app_id?: number | null;  // ✅
+      raceStatus?: 'finished' | 'in_progress' | 'not_started' ; 
+  },
 
   LiveTrackingSettings:undefined
 
@@ -164,6 +169,11 @@ export type FavouriteListpops = NativeStackScreenProps<
 export type AllParticipantpops = NativeStackScreenProps<
   RootStackParamList,
   "AllParticipant"
+>;
+
+export type SearchParticipantpops = NativeStackScreenProps<
+  RootStackParamList,
+  "SearchParticipant"
 >;
 
 export type LiveTrackingSettingspops = NativeStackScreenProps<

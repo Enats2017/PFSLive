@@ -104,7 +104,7 @@ export const favstyle = StyleSheet.create({
     color: colors.gray700,
   },
 
-  // ✅ Finish time style
+
   finishTime: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
@@ -161,6 +161,14 @@ export const favstyle = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 5,
+  },
+
+  righticon: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+   
   },
 
   addBtnActive: {

@@ -7,11 +7,20 @@ import { tokenService } from '../../services/tokenService';
 interface AppHeaderProps {
   title?: string;
   showLogo?: boolean;
+  showSearch?: boolean
+  product_app_id?: number,
+  product_option_value_app_id?: number | null;  // ✅
+  raceStatus?: 'finished' | 'in_progress' | 'not_started';
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
   title,
   showLogo = true,
+  showSearch = false,
+  product_app_id,
+  product_option_value_app_id,  // ✅
+  raceStatus,
+
 }) => {
   const navigation = useNavigation<any>();
 
@@ -31,20 +40,28 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     }
   };
 
-    const handleSettingPress = async () => {
+  const handleSettingPress = async () => {
     const isValid = await tokenService.isTokenValid();
     if (isValid) {
-     navigation.navigate('LiveTrackingSettings')
+      navigation.navigate('LiveTrackingSettings')
     } else {
       navigation.navigate('LoginScreen');
     }
+  };
+
+  const handleSearchPress = () => {
+    navigation.navigate('SearchParticipant', {
+      product_app_id,
+      product_option_value_app_id,  
+      raceStatus,                   
+    });
   };
 
   return (
     <View style={headerStyles.container}>
       {/* Left Side - Logo Image (Clickable) */}
       <View style={headerStyles.leftSection}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={headerStyles.logo}
           onPress={handleLogoPress}
           activeOpacity={0.7}
@@ -68,13 +85,22 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       {/* Right Side - Settings and Profile Icons */}
       <View style={headerStyles.rightSection}>
+        {showSearch && (
+          <TouchableOpacity
+            style={headerStyles.searchButton}
+            onPress={handleSearchPress}
+            activeOpacity={0.7}
+          >
+            <Text style={headerStyles.Searchicon}>🔍</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={headerStyles.iconButton}
           onPress={handleSettingPress}
         >
           <Text style={headerStyles.icon}>⚙️</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={headerStyles.iconButton}
           onPress={handleProfilePress}

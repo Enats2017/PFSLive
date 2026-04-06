@@ -32,6 +32,9 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
     const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab } = route.params;
 
+    console.log("11111",product_option_value_app_id);
+    
+
     // ✅ GET FOLLOW DATA
     const {
         isFollowed,
@@ -147,7 +150,11 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={false} />
+            <AppHeader showLogo={true} showSearch={true}
+                product_app_id={product_app_id}
+                product_option_value_app_id={product_option_value_app_id}  // ✅ from useResultList hook
+                raceStatus={raceStatus as 'finished' | 'in_progress' | 'not_started'}
+            />
 
             <View style={resultListStyle.filterRow1}>
                 <Dropdown

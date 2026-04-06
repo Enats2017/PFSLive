@@ -67,8 +67,19 @@ export const headerStyles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 20,
   },
+  searchButton:{
+    width: 35,
+    height: 35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 20,
+
+  },
   
   icon: {
     fontSize: 20,
   },
+  Searchicon:{
+    fontSize:25
+  }
 });

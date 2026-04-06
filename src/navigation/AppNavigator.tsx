@@ -30,6 +30,7 @@ import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
 import EditProfileScreen from '../screens/AuthScreens/EditProfileScreen';
 import EditPersonalEvent from '../screens/PersonalEventScreen/EditPersonalEvent';
 import LiveTrackingSettings from '../screens/SettingScreen/LiveTrackingSettingsScreen';
+import SearchParticipant from '../screens/ResultList/SearchParticipant';
 
 // ✅ SERVICES & CONTEXT
 import { tokenService } from '../services/tokenService';
@@ -89,6 +90,8 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen name="FollowDetails"     component={FollowDetails}     options={noGesture} />
           <Stack.Screen name="FavouriteList"     component={FavouriteList}     options={noGesture} />
           <Stack.Screen name="AllParticipant"    component={AllParticipant}    options={noGesture} />
+          <Stack.Screen name="SearchParticipant" component={SearchParticipant}    options={noGesture} />
+
           <Stack.Screen
             name="LiveTracking"
             component={LiveTrackingScreen}
