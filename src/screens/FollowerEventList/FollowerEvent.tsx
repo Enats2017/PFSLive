@@ -1,5 +1,17 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StatusBar, Dimensions, ActivityIndicator } from 'react-native';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    FlatList,
+    StatusBar,
+    Dimensions,
+    ActivityIndicator,
+    Keyboard,
+    KeyboardEvent,
+    Platform,
+    Animated,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
@@ -28,7 +40,6 @@ const TAB_CONTENT_HEIGHT = height * 0.39;
 const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const { t } = useTranslation(['follower', 'common']);
 
-    // ✅ USE FOLLOW MANAGER (NO PRODUCT_APP_ID NEEDED FOR CUSTOMER-ONLY)
     const {
         isFollowed,
         isLoading,
@@ -45,7 +56,6 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const [loading, setLoading] = useState(true);
     const [searchResults, setSearchResults] = useState<ParticipantItem[]>([]);
     const [searching, setSearching] = useState(false);
-    //const [error, setError] = useState<string | null>(null);
     const [pastEvents, setPastEvents] = useState<EventItem[]>([]);
     const [liveEvents, setLiveEvents] = useState<EventItem[]>([]);
     const [upcomingEvents, setUpcomingEvents] = useState<EventItem[]>([]);
@@ -67,29 +77,56 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const isFetching = useRef(false);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
+    // ✅ Same keyboard pattern as TrackingPasswordModal —
+    // keyboardOffset animates on the native thread so it stays
+    // perfectly in sync with the system keyboard animation.
+    const keyboardOffset = useRef(new Animated.Value(0)).current;
+
     const { error, hasError, handleApiError, clearError } = useScreenError();
+
+    // ✅ KEYBOARD LISTENERS — identical pattern to TrackingPasswordModal
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const onShow = (e: KeyboardEvent) => {
+            Animated.timing(keyboardOffset, {
+                toValue: e.endCoordinates.height,
+                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
+                useNativeDriver: true,
+            }).start();
+        };
+
+        const onHide = (e: KeyboardEvent) => {
+            Animated.timing(keyboardOffset, {
+                toValue: 0,
+                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
+                useNativeDriver: true,
+            }).start();
+        };
+
+        const showSub = Keyboard.addListener(showEvent, onShow);
+        const hideSub = Keyboard.addListener(hideEvent, onHide);
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, [keyboardOffset]);
 
     // ✅ FETCH EVENTS
     const fetchEvents = useCallback(async (search: string) => {
         if (isFetching.current) {
-            if (API_CONFIG.DEBUG) {
-                console.log('⏸️ Fetch already in progress');
-            }
+            if (API_CONFIG.DEBUG) console.log('⏸️ Fetch already in progress');
             return;
         }
 
         try {
             isFetching.current = true;
-
-            if (isInitialMount.current) {
-                setLoading(true);
-            }
-
+            if (isInitialMount.current) setLoading(true);
             clearError();
 
-            if (API_CONFIG.DEBUG) {
-                console.log('📡 Fetching events');
-            }
+            if (API_CONFIG.DEBUG) console.log('📡 Fetching events');
 
             const result = await eventService.getEvents({
                 page_past: 1,
@@ -110,19 +147,19 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 setPaginationInfo({
                     past: {
                         page: result.pagination.past.page,
-                        total_pages: result.pagination.past.total_pages
+                        total_pages: result.pagination.past.total_pages,
                     },
                     live: {
                         page: result.pagination.live.page,
-                        total_pages: result.pagination.live.total_pages
+                        total_pages: result.pagination.live.total_pages,
                     },
                     upcoming: {
                         page: result.pagination.upcoming.page,
-                        total_pages: result.pagination.upcoming.total_pages
+                        total_pages: result.pagination.upcoming.total_pages,
                     },
                     participants: {
                         page: result.pagination?.participants?.page ?? 1,
-                        total_pages: result.pagination?.participants?.total_pages ?? 1
+                        total_pages: result.pagination?.participants?.total_pages ?? 1,
                     },
                 });
             }
@@ -136,9 +173,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 });
             }
         } catch (err: any) {
-            if (API_CONFIG.DEBUG) {
-                console.error('❌ Fetch events failed:', err);
-            }
+            if (API_CONFIG.DEBUG) console.error('❌ Fetch events failed:', err);
             handleApiError(err);
         } finally {
             setLoading(false);
@@ -150,21 +185,16 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     useFocusEffect(
         useCallback(() => {
             if (isFetching.current) {
-                if (API_CONFIG.DEBUG) {
-                    console.log('⏸️ Already fetching, skipping duplicate call');
-                }
+                if (API_CONFIG.DEBUG) console.log('⏸️ Already fetching, skipping duplicate call');
                 return;
             }
 
             const fetchAndSync = async () => {
-                await refreshFollowedUsers(); // ✅ Refresh follow state first
+                await refreshFollowedUsers();
                 await fetchEvents('');
 
-                // ✅ SYNC SCROLL TO ACTIVE TAB AFTER FETCH
                 if (!isInitialMount.current) {
-                    if (API_CONFIG.DEBUG) {
-                        console.log('🔄 Syncing scroll to:', activeTab);
-                    }
+                    if (API_CONFIG.DEBUG) console.log('🔄 Syncing scroll to:', activeTab);
                     const index = TABS.indexOf(activeTab);
                     setTimeout(() => {
                         flatListRef.current?.scrollToIndex({ index, animated: false });
@@ -174,58 +204,38 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
 
             fetchAndSync();
 
-            if (isInitialMount.current) {
-                isInitialMount.current = false;
-            }
+            if (isInitialMount.current) isInitialMount.current = false;
 
-            return () => {
-                isFetching.current = false;
-            };
+            return () => { isFetching.current = false; };
         }, [fetchEvents, activeTab, refreshFollowedUsers])
     );
 
     // ✅ LOAD MORE PAST
     const loadMorePast = useCallback(async () => {
-        if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) {
-            return;
-        }
+        if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) return;
 
         try {
             setLoadingMorePast(true);
             const nextPage = paginationInfo.past.page + 1;
+            if (API_CONFIG.DEBUG) console.log(`📡 Past: Loading page ${nextPage}`);
 
-            if (API_CONFIG.DEBUG) {
-                console.log(`📡 Past: Loading page ${nextPage}`);
-            }
-
-            const result = await eventService.getEvents({
-                page_past: nextPage,
-            });
+            const result = await eventService.getEvents({ page_past: nextPage });
 
             setPastEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
                 const newItems = result.tabs.past.filter((item) => !existingIds.has(item.product_app_id));
-
-                if (API_CONFIG.DEBUG) {
-                    console.log(`➕ Past: Adding ${newItems.length} new events`);
-                }
-
+                if (API_CONFIG.DEBUG) console.log(`➕ Past: Adding ${newItems.length} new events`);
                 return [...prev, ...newItems];
             });
 
             if (result.pagination?.past) {
                 setPaginationInfo((prev) => ({
                     ...prev,
-                    past: {
-                        page: nextPage,
-                        total_pages: result.pagination.past.total_pages,
-                    },
+                    past: { page: nextPage, total_pages: result.pagination.past.total_pages },
                 }));
             }
         } catch (error) {
-            if (API_CONFIG.DEBUG) {
-                console.error('❌ Past: Load more failed:', error);
-            }
+            if (API_CONFIG.DEBUG) console.error('❌ Past: Load more failed:', error);
         } finally {
             setLoadingMorePast(false);
         }
@@ -233,46 +243,30 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
 
     // ✅ LOAD MORE LIVE
     const loadMoreLive = useCallback(async () => {
-        if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) {
-            return;
-        }
+        if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) return;
 
         try {
             setLoadingMoreLive(true);
             const nextPage = paginationInfo.live.page + 1;
+            if (API_CONFIG.DEBUG) console.log(`📡 Live: Loading page ${nextPage}`);
 
-            if (API_CONFIG.DEBUG) {
-                console.log(`📡 Live: Loading page ${nextPage}`);
-            }
-
-            const result = await eventService.getEvents({
-                page_live: nextPage,
-            });
+            const result = await eventService.getEvents({ page_live: nextPage });
 
             setLiveEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
                 const newItems = result.tabs.live.filter((item) => !existingIds.has(item.product_app_id));
-
-                if (API_CONFIG.DEBUG) {
-                    console.log(`➕ Live: Adding ${newItems.length} new events`);
-                }
-
+                if (API_CONFIG.DEBUG) console.log(`➕ Live: Adding ${newItems.length} new events`);
                 return [...prev, ...newItems];
             });
 
             if (result.pagination?.live) {
                 setPaginationInfo((prev) => ({
                     ...prev,
-                    live: {
-                        page: nextPage,
-                        total_pages: result.pagination.live.total_pages,
-                    },
+                    live: { page: nextPage, total_pages: result.pagination.live.total_pages },
                 }));
             }
         } catch (error) {
-            if (API_CONFIG.DEBUG) {
-                console.error('❌ Live: Load more failed:', error);
-            }
+            if (API_CONFIG.DEBUG) console.error('❌ Live: Load more failed:', error);
         } finally {
             setLoadingMoreLive(false);
         }
@@ -280,46 +274,30 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
 
     // ✅ LOAD MORE UPCOMING
     const loadMoreUpcoming = useCallback(async () => {
-        if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
-            return;
-        }
+        if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) return;
 
         try {
             setLoadingMoreUpcoming(true);
             const nextPage = paginationInfo.upcoming.page + 1;
+            if (API_CONFIG.DEBUG) console.log(`📡 Upcoming: Loading page ${nextPage}`);
 
-            if (API_CONFIG.DEBUG) {
-                console.log(`📡 Upcoming: Loading page ${nextPage}`);
-            }
-
-            const result = await eventService.getEvents({
-                page_upcoming: nextPage,
-            });
+            const result = await eventService.getEvents({ page_upcoming: nextPage });
 
             setUpcomingEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
                 const newItems = result.tabs.upcoming.filter((item) => !existingIds.has(item.product_app_id));
-
-                if (API_CONFIG.DEBUG) {
-                    console.log(`➕ Upcoming: Adding ${newItems.length} new events`);
-                }
-
+                if (API_CONFIG.DEBUG) console.log(`➕ Upcoming: Adding ${newItems.length} new events`);
                 return [...prev, ...newItems];
             });
 
             if (result.pagination?.upcoming) {
                 setPaginationInfo((prev) => ({
                     ...prev,
-                    upcoming: {
-                        page: nextPage,
-                        total_pages: result.pagination.upcoming.total_pages,
-                    },
+                    upcoming: { page: nextPage, total_pages: result.pagination.upcoming.total_pages },
                 }));
             }
         } catch (error) {
-            if (API_CONFIG.DEBUG) {
-                console.error('❌ Upcoming: Load more failed:', error);
-            }
+            if (API_CONFIG.DEBUG) console.error('❌ Upcoming: Load more failed:', error);
         } finally {
             setLoadingMoreUpcoming(false);
         }
@@ -327,17 +305,12 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
 
     // ✅ LOAD MORE PARTICIPANTS
     const loadMoreParticipant = useCallback(async () => {
-        if (loadingMoreParticipant || paginationInfo.participants.page >= paginationInfo.participants.total_pages) {
-            return;
-        }
+        if (loadingMoreParticipant || paginationInfo.participants.page >= paginationInfo.participants.total_pages) return;
 
         try {
             setLoadingMoreParticipant(true);
             const nextPage = paginationInfo.participants.page + 1;
-
-            if (API_CONFIG.DEBUG) {
-                console.log(`📡 Participants: Loading page ${nextPage}`);
-            }
+            if (API_CONFIG.DEBUG) console.log(`📡 Participants: Loading page ${nextPage}`);
 
             const result = await eventService.getEvents({
                 is_participant: '1',
@@ -348,11 +321,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             setParticipants(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
                 const newItems = (result.participants || []).filter(i => !ids.has(i.customer_app_id));
-
-                if (API_CONFIG.DEBUG) {
-                    console.log(`➕ Participants: Adding ${newItems.length} new items`);
-                }
-
+                if (API_CONFIG.DEBUG) console.log(`➕ Participants: Adding ${newItems.length} new items`);
                 return [...prev, ...newItems];
             });
 
@@ -364,9 +333,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 },
             }));
         } catch (err) {
-            if (API_CONFIG.DEBUG) {
-                console.error('❌ Participant: Load more failed:', err);
-            }
+            if (API_CONFIG.DEBUG) console.error('❌ Participant: Load more failed:', err);
         } finally {
             setLoadingMoreParticipant(false);
         }
@@ -381,16 +348,12 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
 
     const handleSwipe = useCallback((e: any) => {
         const index = Math.round(e.nativeEvent.contentOffset.x / width);
-        if (TABS[index] && TABS[index] !== activeTab) {
-            setActiveTab(TABS[index]);
-        }
+        if (TABS[index] && TABS[index] !== activeTab) setActiveTab(TABS[index]);
     }, [activeTab]);
 
     // ✅ DEBOUNCED SEARCH
     useEffect(() => {
-        if (debounceTimer.current) {
-            clearTimeout(debounceTimer.current);
-        }
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
         if (searchText.trim().length === 0) {
             setSearchResults([]);
@@ -400,10 +363,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         debounceTimer.current = setTimeout(async () => {
             try {
                 setSearching(true);
-
-                if (API_CONFIG.DEBUG) {
-                    console.log('🔍 Searching participants:', searchText);
-                }
+                if (API_CONFIG.DEBUG) console.log('🔍 Searching participants:', searchText);
 
                 const result = await eventService.getEvents({
                     is_participant: '1',
@@ -412,24 +372,15 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 });
 
                 setSearchResults(result.participants || []);
-
-                if (API_CONFIG.DEBUG) {
-                    console.log('✅ Search results:', (result.participants || []).length);
-                }
+                if (API_CONFIG.DEBUG) console.log('✅ Search results:', (result.participants || []).length);
             } catch (error) {
-                if (API_CONFIG.DEBUG) {
-                    console.error('❌ Search failed:', error);
-                }
+                if (API_CONFIG.DEBUG) console.error('❌ Search failed:', error);
             } finally {
                 setSearching(false);
             }
         }, 500);
 
-        return () => {
-            if (debounceTimer.current) {
-                clearTimeout(debounceTimer.current);
-            }
-        };
+        return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
     }, [searchText]);
 
     const displayEvents = searchText.trim().length > 0 ? searchResults : participants;
@@ -447,14 +398,12 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         }
 
         if (paginationInfo.participants.page < paginationInfo.participants.total_pages && !loadingMoreParticipant) {
-            if (API_CONFIG.DEBUG) {
-                console.log('✅ Calling loadMoreParticipant');
-            }
+            if (API_CONFIG.DEBUG) console.log('✅ Calling loadMoreParticipant');
             loadMoreParticipant();
         }
     }, [paginationInfo.participants, loadingMoreParticipant, loadMoreParticipant, participants.length, searchText]);
 
-    // ✅ RENDER PARTICIPANT CARD (CUSTOMER-ONLY FOLLOW)
+    // ✅ RENDER PARTICIPANT CARD
     const renderParticipantCard = useCallback(
         ({ item }: { item: ParticipantItem }) => (
             <FanEventCard
@@ -495,7 +444,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                     type={error!.type}
                     title={error!.title}
                     message={error!.message}
-                    onRetry={() => { clearError(); fetchEvents('') }}
+                    onRetry={() => { clearError(); fetchEvents(''); }}
                 />
             </SafeAreaView>
         );
@@ -506,7 +455,15 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
 
-            <View style={{ flex: 1 }}>
+            {/* ✅ Outer Animated.View moves the entire participants section up
+                by keyboardOffset — same pattern as TrackingPasswordModal.
+                translateY: -keyboardOffset pushes content upward. */}
+            <Animated.View
+                style={{
+                    flex: 1,
+                    transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }],
+                }}
+            >
                 {/* SECTION TITLE */}
                 <View style={eventStyles.section}>
                     <Text style={commonStyles.title}>{t('follower:official.title')}</Text>
@@ -523,7 +480,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                         >
                             <Text style={[
                                 commonStyles.subtitle,
-                                activeTab === tab && eventStyles.activeTabText
+                                activeTab === tab && eventStyles.activeTabText,
                             ]}>
                                 {t(`follower:live.${tab}`)}
                             </Text>
@@ -587,68 +544,70 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                     />
                 </View>
 
-                {/* PARTICIPANTS SECTION */}
+                {/* PARTICIPANTS SECTION TITLE */}
                 <View style={[eventStyles.section, { marginBottom: spacing.md, marginTop: spacing.sm }]}>
                     <Text style={commonStyles.title}>{t('follower:personal.title')}</Text>
                 </View>
 
                 {/* PARTICIPANTS LIST */}
-                <FlatList
-                    data={displayEvents}
-                    keyExtractor={(item, index) => `${item.customer_app_id}_${index}`}
-                    renderItem={renderParticipantCard}
-                    onEndReached={handleLoadMoreParticipant}
-                    onEndReachedThreshold={0.5}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{
-                        paddingHorizontal: spacing.md,
-                        paddingBottom: spacing.xxxl,
-                    }}
-                    keyboardShouldPersistTaps="handled"
-                    removeClippedSubviews={false}
-                    ListHeaderComponent={
-                        <>
-                            <SearchInput
-                                placeholder={t('details:participant.search')}
-                                value={searchText}
-                                onChangeText={setSearchText}
-                                icon="search"
-                            />
-                            {searching && (
-                                <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-                                    <ActivityIndicator size="small" color={colors.primary} />
-                                </View>
-                            )}
-                        </>
-                    }
-                    ListEmptyComponent={
-                        <View style={{ marginTop: 40, alignItems: 'center' }}>
-                            <Text style={commonStyles.errorText}>
-                                {searchText.trim().length > 0
-                                    ? t('follower:empty.searchNoResults')
-                                    : t('details:participant.empty')}
-                            </Text>
-                        </View>
-                    }
-                    ListFooterComponent={
-                        loadingMoreParticipant ? (
-                            <ActivityIndicator
-                                size="small"
-                                color={colors.primary}
-                                style={{ marginVertical: spacing.md }}
-                            />
-                        ) : null
-                    }
-                />
+                <View style={{ flex: 1 }}>
+                    <FlatList
+                        data={displayEvents}
+                        keyExtractor={(item, index) => `${item.customer_app_id}_${index}`}
+                        renderItem={renderParticipantCard}
+                        onEndReached={handleLoadMoreParticipant}
+                        onEndReachedThreshold={0.5}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{
+                            paddingHorizontal: spacing.md,
+                            paddingBottom: spacing.xxxl,
+                        }}
+                        keyboardShouldPersistTaps="handled"
+                        removeClippedSubviews={false}
+                        ListHeaderComponent={
+                            <>
+                                <SearchInput
+                                    placeholder={t('details:participant.search')}
+                                    value={searchText}
+                                    onChangeText={setSearchText}
+                                    icon="search"
+                                />
+                                {searching && (
+                                    <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
+                                        <ActivityIndicator size="small" color={colors.primary} />
+                                    </View>
+                                )}
+                            </>
+                        }
+                        ListEmptyComponent={
+                            <View style={{ marginTop: 40, alignItems: 'center' }}>
+                                <Text style={commonStyles.errorText}>
+                                    {searchText.trim().length > 0
+                                        ? t('follower:empty.searchNoResults')
+                                        : t('details:participant.empty')}
+                                </Text>
+                            </View>
+                        }
+                        ListFooterComponent={
+                            loadingMoreParticipant ? (
+                                <ActivityIndicator
+                                    size="small"
+                                    color={colors.primary}
+                                    style={{ marginVertical: spacing.md }}
+                                />
+                            ) : null
+                        }
+                    />
+                </View>
+            </Animated.View>
 
-                <TrackingPasswordModal
-                    visible={passwordModalVisible}
-                    isVerifying={isVerifying}
-                    passwordError={passwordError}
-                    onSubmit={handlePasswordSubmit}
-                    onClose={handlePasswordModalClose}
-                />
-            </View>
+            <TrackingPasswordModal
+                visible={passwordModalVisible}
+                isVerifying={isVerifying}
+                passwordError={passwordError}
+                onSubmit={handlePasswordSubmit}
+                onClose={handlePasswordModalClose}
+            />
         </SafeAreaView>
     );
 };
