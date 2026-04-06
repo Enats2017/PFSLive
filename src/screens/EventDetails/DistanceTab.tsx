@@ -269,6 +269,9 @@ const DistanceTab = ({
 
           if (days > 0) {
             parts.push(`${days} ${t('details:countdown.days')}`);
+            if (hours > 0) {
+              parts.push(`${hours} ${t('details:countdown.hours')}`);
+            }
             color = colors.info;
           } else if (hours > 0) {
             parts.push(`${hours} ${t('details:countdown.hours')}`);
