@@ -62,7 +62,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         break;
         
       case 'Map':
-        if (product_app_id && product_option_value_app_id) {
+        if (product_app_id) {
           navigation.navigate('LiveTracking', {
             product_app_id,
             product_option_value_app_id: product_option_value_app_id || 0,
