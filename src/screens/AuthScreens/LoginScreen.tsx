@@ -22,6 +22,7 @@ import { LoginScreenProps } from '../../types/navigation';
 import { toastSuccess, toastError } from '../../../utils/toast';
 import { useAuthForm } from '../../hooks/useAuthForm';
 import { usePendingRegistration } from '../../hooks/usePendingRegistration';
+import { useAuth } from '../../context/AuthContext';
 
 const INITIAL_FORM_DATA = {
   email: '',
@@ -30,6 +31,7 @@ const INITIAL_FORM_DATA = {
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['login', 'common']);
+  const { login } = useAuth(); // ✅ get login() from context
 
   const { formData, errors, setField, setErrors, clearAllErrors } =
     useAuthForm(INITIAL_FORM_DATA);
@@ -37,27 +39,18 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const [loading, setLoading] = useState(false);
 
-  // ✅ HANDLE LOGIN WITH TOAST ERRORS
   const handleLogin = useCallback(async () => {
     clearAllErrors();
 
-    // Validate form
     const validationErrors = validateLoginForm(
-      {
-        email: formData.email,
-        password: formData.password,
-      },
+      { email: formData.email, password: formData.password },
       t
     );
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      
-      // ✅ SHOW FIRST VALIDATION ERROR AS TOAST
       const firstError = Object.values(validationErrors)[0];
-      if (firstError) {
-        toastError(t('login:errors.validationFailed'), firstError);
-      }
+      if (firstError) toastError(t('login:errors.validationFailed'), firstError);
       return;
     }
 
@@ -71,93 +64,54 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
       if (response.success) {
         toastSuccess(t('login:success'), t('login:welcomeBack'));
+        login(); // ✅ flip isLoggedIn → auth screens unmount, protected screens mount
         await handleAfterAuth();
       }
     } catch (error: any) {
       const data = error.response?.data;
       const errorCode = data?.error || 'unknown_error';
 
-      // ✅ HANDLE ALL ERROR CASES WITH TOAST
       switch (errorCode) {
         case 'email_invalid':
           setErrors({ email: t('login:errors.emailInvalid') });
-          toastError(
-            t('login:errors.emailInvalidTitle'),
-            t('login:errors.emailInvalid')
-          );
+          toastError(t('login:errors.emailInvalidTitle'), t('login:errors.emailInvalid'));
           break;
-
         case 'password_required':
           setErrors({ password: t('login:errors.passwordRequired') });
-          toastError(
-            t('login:errors.passwordRequiredTitle'),
-            t('login:errors.passwordRequired')
-          );
+          toastError(t('login:errors.passwordRequiredTitle'), t('login:errors.passwordRequired'));
           break;
-
         case 'invalid_credentials':
           setErrors({ password: t('login:errors.invalidCredentials') });
-          toastError(
-            t('login:errors.invalidCredentialsTitle'),
-            t('login:errors.invalidCredentials')
-          );
+          toastError(t('login:errors.invalidCredentialsTitle'), t('login:errors.invalidCredentials'));
           break;
-
         case 'email_not_verified':
-          toastError(
-            t('login:errors.emailNotVerifiedTitle'),
-            t('login:errors.emailNotVerified')
-          );
+          toastError(t('login:errors.emailNotVerifiedTitle'), t('login:errors.emailNotVerified'));
           break;
-
         case 'account_disabled':
-          toastError(
-            t('login:errors.accountDisabledTitle'),
-            t('login:errors.accountDisabled')
-          );
+          toastError(t('login:errors.accountDisabledTitle'), t('login:errors.accountDisabled'));
           break;
-
         case 'device_not_allowed':
-          toastError(
-            t('login:errors.deviceNotAllowedTitle'),
-            t('login:errors.deviceNotAllowed')
-          );
+          toastError(t('login:errors.deviceNotAllowedTitle'), t('login:errors.deviceNotAllowed'));
           break;
-
         case 'token_failed':
-          toastError(
-            t('login:errors.tokenFailedTitle'),
-            t('login:errors.tokenFailed')
-          );
+          toastError(t('login:errors.tokenFailedTitle'), t('login:errors.tokenFailed'));
           break;
-
         case 'account_not_found':
           setErrors({ email: t('login:errors.accountNotFound') });
-          toastError(
-            t('login:errors.accountNotFoundTitle'),
-            t('login:errors.accountNotFound')
-          );
+          toastError(t('login:errors.accountNotFoundTitle'), t('login:errors.accountNotFound'));
           break;
-
         default:
-          // ✅ NETWORK ERROR OR UNKNOWN ERROR
           if (error.request && !error.response) {
-            toastError(
-              t('login:errors.noConnectionTitle'),
-              t('login:errors.noConnection')
-            );
+            toastError(t('login:errors.noConnectionTitle'), t('login:errors.noConnection'));
           } else {
-            toastError(
-              t('login:errors.genericErrorTitle'),
-              t('login:errors.genericError')
-            );
+            toastError(t('login:errors.genericErrorTitle'), t('login:errors.genericError'));
           }
           break;
       }
     } finally {
       setLoading(false);
     }
-  }, [formData, clearAllErrors, setErrors, handleAfterAuth, t]);
+  }, [formData, clearAllErrors, setErrors, handleAfterAuth, login, t]);
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -176,7 +130,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={loginStyles.inner}>
-            {/* Header Section */}
             <View style={loginStyles.headerSection}>
               <View style={loginStyles.cardscetion}>
                 <Image
@@ -184,17 +137,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                   style={loginStyles.logo}
                   resizeMode="contain"
                 />
-                {/* <View style={loginStyles.textSection}>
-                  <Text style={commonStyles.title}>
-                    {t('common:app_name')}
-                  </Text>
-                </View> */}
               </View>
               <Text style={loginStyles.title}>{t('login:title')}</Text>
               <Text style={loginStyles.subtitle}>{t('login:subtitle')}</Text>
             </View>
 
-            {/* Form Section */}
             <View style={loginStyles.formSection}>
               <FloatingLabelInput
                 label={t('login:email')}
@@ -221,21 +168,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 errorMessage={errors.password}
               />
 
-              {/* Forgot Password */}
               <TouchableOpacity
                 style={loginStyles.forgotButton}
                 activeOpacity={0.7}
-                onPress={() =>
-                  navigation.navigate('ForgotPassword')
-                }
+                onPress={() => navigation.navigate('ForgotPassword')}
                 disabled={loading}
               >
-                <Text style={loginStyles.forgotText}>
-                  {t('login:forgotPassword')}
-                </Text>
+                <Text style={loginStyles.forgotText}>{t('login:forgotPassword')}</Text>
               </TouchableOpacity>
 
-              {/* Login Button */}
               <TouchableOpacity
                 style={[commonStyles.primaryButton, loading && { opacity: 0.7 }]}
                 onPress={handleLogin}
@@ -245,20 +186,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 {loading ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={commonStyles.primaryButtonText}>
-                    {t('login:loginButton')}
-                  </Text>
+                  <Text style={commonStyles.primaryButtonText}>{t('login:loginButton')}</Text>
                 )}
               </TouchableOpacity>
 
-              {/* Divider */}
               <View style={loginStyles.divider}>
                 <View style={loginStyles.dividerLine} />
                 <Text style={loginStyles.dividerText}>{t('login:or')}</Text>
                 <View style={loginStyles.dividerLine} />
               </View>
 
-              {/* Register Link */}
               <TouchableOpacity
                 style={loginStyles.registerButton}
                 onPress={() => navigation.navigate('RegisterScreen')}
@@ -267,9 +204,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               >
                 <Text style={loginStyles.registerText}>
                   {t('login:noAccount')}{' '}
-                  <Text style={loginStyles.registerLink}>
-                    {t('login:registerNow')}
-                  </Text>
+                  <Text style={loginStyles.registerLink}>{t('login:registerNow')}</Text>
                 </Text>
               </TouchableOpacity>
             </View>

@@ -170,3 +170,10 @@ export type LiveTrackingSettingspops = NativeStackScreenProps<
   RootStackParamList,
   "LiveTrackingSettings"
 >;
+
+export type AuthStackParamList = {
+  LoginScreen: undefined;
+  RegisterScreen: undefined;
+  OTPVerificationScreen: { email: string }; // adjust params as needed
+  ForgotPassword: undefined;
+};

@@ -12,6 +12,7 @@ import {
   savePendingRegistration,
   clearPendingRegistration,
 } from '../hooks/usePendingRegistration';
+import { useAuth } from '../context/AuthContext'; // ✅ NEW
 
 interface UseRegistrationHandlerReturn {
   modalVisible: boolean;
@@ -48,6 +49,7 @@ const useRegistrationHandler = (
   onDeleteSuccess?: (product_option_value_app_id: number) => void
 ): UseRegistrationHandlerReturn => {
   const navigation = useNavigation<any>();
+  const { logout } = useAuth(); // ✅ NEW
 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Distance | null>(null);
@@ -111,6 +113,14 @@ const useRegistrationHandler = (
     }
   }, [product_app_id, onRefresh]);
 
+  // ✅ NEW: HANDLE UNAUTHORIZED — clears token and swaps navigator cleanly
+  // Replaces all navigation.navigate('LoginScreen') calls.
+  // logout() unmounts auth-required screens and mounts auth screens — no history.
+  const handleUnauthorized = useCallback(async () => {
+    await tokenService.removeToken();
+    logout();
+  }, [logout]);
+
   const callRegisterAPI = useCallback(
     async (item: Distance, showConfirmPopup?: boolean) => {
       if (registerLoading) return;
@@ -171,7 +181,6 @@ const useRegistrationHandler = (
               setModalVisible(true);
               break;
 
-            // ✅ NEW: MEMBERSHIP UPCOMING
             case 'membership_upcoming':
               setSelectedItem({
                 ...item,
@@ -230,7 +239,7 @@ const useRegistrationHandler = (
                 item.product_option_value_app_id,
                 event_name
               );
-              navigation.navigate('LoginScreen');
+              await handleUnauthorized(); // ✅ replaces navigation.navigate('LoginScreen')
               break;
 
             default:
@@ -263,9 +272,7 @@ const useRegistrationHandler = (
             setSelectedItem({ ...item, registration_status: 'registered' });
             setModalVisible(true);
             await clearPendingRegistration();
-
             await invalidateEventCache();
-
             onSuccess?.(
               item.product_option_value_app_id,
               result.participant?.participant_app_id
@@ -304,6 +311,7 @@ const useRegistrationHandler = (
       onSuccess,
       showErrorModal,
       invalidateEventCache,
+      handleUnauthorized, // ✅ NEW
     ]
   );
 
@@ -365,7 +373,7 @@ const useRegistrationHandler = (
             case 'unauthorized':
             case 'token_invalid':
             case 'token_expired':
-              navigation.navigate('LoginScreen');
+              await handleUnauthorized(); // ✅ replaces navigation.navigate('LoginScreen')
               break;
 
             case 'participant_not_found':
@@ -404,7 +412,13 @@ const useRegistrationHandler = (
         setRegisterLoading(false);
       }
     },
-    [registerLoading, navigation, onDeleteSuccess, showErrorModal, invalidateEventCache]
+    [
+      registerLoading,
+      onDeleteSuccess,
+      showErrorModal,
+      invalidateEventCache,
+      handleUnauthorized, // ✅ NEW
+    ]
   );
 
   const handleConfirmRegister = useCallback(async () => {
@@ -452,7 +466,7 @@ const useRegistrationHandler = (
           case 'unauthorized':
           case 'token_invalid':
           case 'token_expired':
-            navigation.navigate('LoginScreen');
+            await handleUnauthorized(); // ✅ replaces navigation.navigate('LoginScreen')
             break;
 
           default:
@@ -476,9 +490,7 @@ const useRegistrationHandler = (
         setConfirmItem(null);
         setIsFirstTracking(0);
         await clearPendingRegistration();
-
         await invalidateEventCache();
-
         onSuccess?.(
           confirmItem.product_option_value_app_id,
           result.participant?.participant_app_id
@@ -502,7 +514,14 @@ const useRegistrationHandler = (
     } finally {
       setRegisterLoading(false);
     }
-  }, [confirmItem, confirmData, navigation, onSuccess, showErrorModal, invalidateEventCache]);
+  }, [
+    confirmItem,
+    confirmData,
+    onSuccess,
+    showErrorModal,
+    invalidateEventCache,
+    handleUnauthorized, // ✅ NEW
+  ]);
 
   const handleRegister = useCallback(
     async (item: Distance, showConfirmPopup?: boolean) => {
@@ -519,7 +538,7 @@ const useRegistrationHandler = (
           event_name
         );
 
-        navigation.navigate('LoginScreen');
+        await handleUnauthorized(); // ✅ replaces navigation.navigate('LoginScreen')
         return;
       }
 
@@ -535,7 +554,7 @@ const useRegistrationHandler = (
           return;
         case 'membership_required':
         case 'limit_reached':
-        case 'membership_upcoming': // ✅ NEW
+        case 'membership_upcoming':
         case 'unavailable':
           setSelectedItem(item);
           setModalVisible(true);
@@ -544,7 +563,7 @@ const useRegistrationHandler = (
           return;
       }
     },
-    [navigation, callRegisterAPI, product_app_id, event_name]
+    [callRegisterAPI, product_app_id, event_name, handleUnauthorized] // ✅ removed navigation
   );
 
   const handleModalClose = useCallback(() => {
