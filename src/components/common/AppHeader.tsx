@@ -16,7 +16,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const navigation = useNavigation<any>();
 
   const handleLogoPress = () => {
-    navigation.navigate('HomeScreen');
+    navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' }] });
   };
 
   const handleProfilePress = async () => {
