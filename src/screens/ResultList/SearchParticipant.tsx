@@ -16,20 +16,19 @@ import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
 import { API_CONFIG } from '../../constants/config';
 import ParticipantCard from './ParticipantCard';
-import {  SearchParticipantpops } from '../../types/navigation';
+import { SearchParticipantpops } from '../../types/navigation';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { AppHeader } from '../../components/common/AppHeader';
 
 const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation }) => {
-     const { 
-        product_app_id, 
-        product_option_value_app_id,  // ✅
-        raceStatus                    // ✅
+    const {
+        product_app_id,
+        product_option_value_app_id,  
+        raceStatus                    
     } = route.params;
     const { t } = useTranslation(['details', 'follower']);
     const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
-   
 
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [loading, setLoading] = useState(true);
@@ -62,6 +61,7 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
 
                 const result = await participantService.getParticipants({
                     product_app_id: productId,
+                    product_option_value_app_id: product_option_value_app_id,
                     page: pageNum,
                     filter_name: search,
                 });
@@ -103,7 +103,7 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
                 }
 
                 if (pageNum === 1) {
-                    handleApiError(error);               
+                    handleApiError(error);
                 }
             } finally {
                 setLoading(false);
@@ -115,7 +115,7 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
 
     useFocusEffect(
         useCallback(() => {
-            
+
             fetchParticipants(1, '');
         }, [fetchParticipants])
     );
@@ -158,20 +158,16 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
     }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
     const renderParticipant = useCallback(
-    ({ item }: { item: Participant }) => (
-        <ParticipantCard
-            item={item}
-            product_app_id={productId}
-            product_option_value_app_id={product_option_value_app_id ?? 0}
-            raceStatus={raceStatus}  // ✅
-        />
-    ),
-    [productId, product_option_value_app_id, raceStatus]  // ✅ add raceStatus
-);
-
-
-
-
+        ({ item }: { item: Participant }) => (
+            <ParticipantCard
+                item={item}
+                product_app_id={productId}
+                product_option_value_app_id={product_option_value_app_id ?? 0}
+                raceStatus={raceStatus}  
+            />
+        ),
+        [productId, product_option_value_app_id, raceStatus]  
+    );
 
     const renderFooter = useCallback(() => {
         if (loadingMore) {
@@ -273,7 +269,6 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
                 ListEmptyComponent={!loading ? renderEmpty : null}
             />
 
-            
         </SafeAreaView>
     );
 };

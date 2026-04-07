@@ -26,7 +26,6 @@ const ParticipantCard: React.FC<SearchParticipantpops> = React.memo(({
 }) => {
     const { t } = useTranslation(['details', 'follower']);
       const navigation = useNavigation<any>();
-
     const fullName = useMemo(() =>
         `${item.firstname ?? ''} ${item.lastname ?? ''}`.trim() ||
         t('details:participant.unknownName'),
