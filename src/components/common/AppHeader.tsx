@@ -9,7 +9,7 @@ interface AppHeaderProps {
   showLogo?: boolean;
   showSearch?: boolean
   product_app_id?: number,
-  product_option_value_app_id?: number | null;  // ✅
+  product_option_value_app_id?: number | null; 
   raceStatus?: 'finished' | 'in_progress' | 'not_started';
 }
 
@@ -18,7 +18,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   showLogo = true,
   showSearch = false,
   product_app_id,
-  product_option_value_app_id,  // ✅
+  product_option_value_app_id,  
   raceStatus,
 
 }) => {
