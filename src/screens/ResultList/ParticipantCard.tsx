@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Participant } from '../../services/participantService';
 import { colors, commonStyles } from '../../styles/common.styles';
@@ -8,37 +7,35 @@ import { favstyle } from '../../styles/favourite.style';
 import Entypo from '@expo/vector-icons/Entypo';
 import { useNavigation } from '@react-navigation/native';
 
-
-interface SearchParticipantpops {
+interface ParticipantCardProps {
     item: Participant;
     product_app_id: number;
-     product_option_value_app_id?: number; 
-     raceStatus?: 'finished' | 'in_progress' | 'not_started' ;
-
+    product_option_value_app_id: number; // ✅ required — callers pass ?? 0
+    raceStatus?: 'finished' | 'in_progress' | 'not_started';
 }
 
-const ParticipantCard: React.FC<SearchParticipantpops> = React.memo(({
+const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     item,
     product_app_id,
-    product_option_value_app_id, 
-    raceStatus,   
-
+    product_option_value_app_id,
+    raceStatus,
 }) => {
-    const { t } = useTranslation(['details', 'follower']);
-      const navigation = useNavigation<any>();
+    const { t } = useTranslation(['details']);
+    const navigation = useNavigation<any>();
+
     const fullName = useMemo(() =>
         `${item.firstname ?? ''} ${item.lastname ?? ''}`.trim() ||
         t('details:participant.unknownName'),
         [item.firstname, item.lastname, t]
     );
 
-     const handlePress = () => {
+    const handlePress = () => {
         navigation.navigate('ResultDetails', {
-            raceStatus,
             product_app_id,
             product_option_value_app_id,
             bib: item.bib_number,
             from_live: 0,
+            raceStatus,
         });
     };
 
@@ -53,24 +50,16 @@ const ParticipantCard: React.FC<SearchParticipantpops> = React.memo(({
                 </Text>
                 <Text style={commonStyles.subtitle}>{item.race_distance}</Text>
             </View>
-            <TouchableOpacity
-                style={[
-                    favstyle.righticon,
-
-                ]}
-                activeOpacity={0.8}
-            >
+            {/* ✅ View not TouchableOpacity — chevron is non-interactive */}
+            <View style={favstyle.righticon}>
                 <Entypo name="chevron-right" size={30} color={colors.gray500} />
-            </TouchableOpacity>
+            </View>
         </TouchableOpacity>
     );
-}, (prevProps, nextProps) => {
-    return (
-        prevProps.item.participant_app_id === nextProps.item.participant_app_id &&
-        prevProps.item.bib_number === nextProps.item.bib_number
-
-    );
-});
+}, (prevProps, nextProps) =>
+    prevProps.item.participant_app_id === nextProps.item.participant_app_id &&
+    prevProps.item.bib_number === nextProps.item.bib_number
+);
 
 ParticipantCard.displayName = 'ParticipantCard';
 

@@ -7,9 +7,9 @@ import { tokenService } from '../../services/tokenService';
 interface AppHeaderProps {
   title?: string;
   showLogo?: boolean;
-  showSearch?: boolean
-  product_app_id?: number,
-  product_option_value_app_id?: number | null; 
+  showSearch?: boolean;
+  product_app_id?: number;
+  product_option_value_app_id?: number | null;
   raceStatus?: 'finished' | 'in_progress' | 'not_started';
 }
 
@@ -18,12 +18,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   showLogo = true,
   showSearch = false,
   product_app_id,
-  product_option_value_app_id,  
+  product_option_value_app_id,
   raceStatus,
-
 }) => {
   const navigation = useNavigation<any>();
 
+  // ✅ Clears entire stack — no back history
   const handleLogoPress = () => {
     navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' }] });
   };
@@ -32,9 +32,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     const isValid = await tokenService.isTokenValid();
     if (isValid) {
       const customer_app_id = await tokenService.getCustomerId();
-      navigation.navigate('ProfileScreen', {
-        customer_app_id: customer_app_id,
-      });
+      navigation.navigate('ProfileScreen', { customer_app_id });
     } else {
       navigation.navigate('LoginScreen');
     }
@@ -43,23 +41,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const handleSettingPress = async () => {
     const isValid = await tokenService.isTokenValid();
     if (isValid) {
-      navigation.navigate('LiveTrackingSettings')
+      navigation.navigate('LiveTrackingSettings');
     } else {
       navigation.navigate('LoginScreen');
     }
   };
 
+  // ✅ Guard: only navigate if product_app_id is defined
   const handleSearchPress = () => {
+    if (!product_app_id) return;
     navigation.navigate('SearchParticipant', {
       product_app_id,
-      product_option_value_app_id,  
-      raceStatus,                   
+      product_option_value_app_id: product_option_value_app_id ?? undefined,
+      raceStatus,
     });
   };
 
   return (
     <View style={headerStyles.container}>
-      {/* Left Side - Logo Image (Clickable) */}
+      {/* Left — Logo */}
       <View style={headerStyles.leftSection}>
         <TouchableOpacity
           style={headerStyles.logo}
@@ -74,7 +74,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* Center - Title (only if provided) */}
+      {/* Center — Title */}
       {title && (
         <View style={headerStyles.centerSection}>
           <Text style={headerStyles.title} numberOfLines={1}>
@@ -83,7 +83,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </View>
       )}
 
-      {/* Right Side - Settings and Profile Icons */}
+      {/* Right — Actions */}
       <View style={headerStyles.rightSection}>
         {showSearch && (
           <TouchableOpacity
@@ -100,7 +100,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         >
           <Text style={headerStyles.icon}>⚙️</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={headerStyles.iconButton}
           onPress={handleProfilePress}

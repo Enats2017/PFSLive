@@ -2,10 +2,9 @@ import React, { useCallback } from 'react';
 import {
     View,
     Text,
-    TouchableOpacity,
     FlatList,
-    StatusBar,
     ActivityIndicator,
+    StatusBar,
     RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,15 +26,17 @@ import ResultCardBeforeRace from './ResultCardBeforeRace';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 
-
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
-    const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab } = route.params;
+    const {
+        product_app_id,
+        product_option_value_app_id,
+        event_name,
+        sourceScreen,
+        sectionType,
+        sourceTab,
+    } = route.params;
 
-    console.log("11111",product_option_value_app_id);
-    
-
-    // ✅ GET FOLLOW DATA
     const {
         isFollowed,
         isLoading,
@@ -48,12 +49,9 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         passwordError,
         handlePasswordSubmit,
         handlePasswordModalClose,
-
     } = useFollowManager(t, product_app_id);
 
-    const initialType = sourceTab === 'live'
-        ? TYPE_OPTIONS[1]
-        : TYPE_OPTIONS[0];
+    const initialType = sourceTab === 'live' ? TYPE_OPTIONS[1] : TYPE_OPTIONS[0];
 
     useFocusEffect(
         useCallback(() => {
@@ -61,18 +59,33 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         }, [refreshFollowedUsers])
     );
 
-    // ✅ PASS FOLLOW DATA TO HOOK
     const {
-        displayResults, pagination,
-        selectedPovId, selectedType, selectedCategory,
-        fromLive, isFavTab, favBibs,
-        initialLoad, filterLoad, pageLoad, refreshing, error,
-        toggleFav, onDistanceSelect, onTypeSelect,
-        onCategorySelect, onEndReached, onRefresh, retry,
-        distanceOptions, categoryOptions,
-        selectedDistanceLabel, selectedCategoryLabel,
-        raceStatus, currentPovId,
-        showUtmbIndex, hasError, clearError,
+        displayResults,
+        selectedPovId,
+        selectedType,
+        selectedCategory,
+        fromLive,
+        isFavTab,
+        initialLoad,
+        filterLoad,
+        pageLoad,
+        refreshing,
+        error,
+        onDistanceSelect,
+        onTypeSelect,
+        onCategorySelect,
+        onEndReached,
+        onRefresh,
+        retry,
+        distanceOptions,
+        categoryOptions,
+        selectedDistanceLabel,
+        selectedCategoryLabel,
+        raceStatus,
+        currentPovId,  // ✅ use currentPovId — reflects selected distance for search
+        showUtmbIndex,
+        hasError,
+        clearError,
     } = useResultList(
         product_app_id,
         product_option_value_app_id,
@@ -89,7 +102,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             isLoading: isLoading(product_app_id, item.bib, item.customer_app_id),
             onToggleFollow: () => handleFollowPress({
                 customer_app_id: item.customer_app_id,
-                password_protected: item.password_protected ?? 0,  // ✅
+                password_protected: item.password_protected ?? 0,
                 bib_number: item.bib,
             }),
         };
@@ -125,22 +138,16 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             />
         );
     }, [
-        isFollowed,
-        isLoading,
-        handleFollowPress,
-        raceStatus,
-        sourceTab,
-        fromLive,
-        product_app_id,
-        currentPovId,
-        showUtmbIndex,
+        isFollowed, isLoading, handleFollowPress,
+        raceStatus, sourceTab, fromLive,
+        product_app_id, currentPovId, showUtmbIndex,
     ]);
 
     const ListFooter = useCallback(() =>
         pageLoad
             ? <ActivityIndicator size="small" color={colors.primary} style={{ paddingVertical: 16 }} />
             : null
-        , [pageLoad]);
+    , [pageLoad]);
 
     const keyExtractor = useCallback(
         (item: RaceResult, index: number) => `${item.bib}_${item.position}_${index}`,
@@ -150,9 +157,13 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} showSearch={true}
+
+            {/* ✅ currentPovId — the resolved selected distance id, not the raw route param */}
+            <AppHeader
+                showLogo={true}
+                showSearch={true}
                 product_app_id={product_app_id}
-                product_option_value_app_id={selectedPovId}  // ✅ from useResultList hook
+                product_option_value_app_id={currentPovId}
                 raceStatus={raceStatus as 'finished' | 'in_progress' | 'not_started'}
             />
 
@@ -172,7 +183,6 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     selected={selectedType}
                     onSelect={onTypeSelect}
                 />
-
                 <Dropdown
                     label={selectedCategoryLabel}
                     options={categoryOptions}
@@ -233,10 +243,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                         updateCellsBatchingPeriod={50}
                     />
                     {filterLoad && (
-                        <View
-                            style={resultListStyle.filterOverlay}
-                            pointerEvents="none"
-                        >
+                        <View style={resultListStyle.filterOverlay} pointerEvents="none">
                             <ActivityIndicator size="large" color={colors.success} />
                         </View>
                     )}

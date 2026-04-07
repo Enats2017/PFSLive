@@ -75,17 +75,12 @@ export type RootStackParamList = {
     product_app_id:number 
   },
   SearchParticipant:{
-    product_app_id:number ,
-    product_option_value_app_id?: number | null;  // ✅
-      raceStatus?: 'finished' | 'in_progress' | 'not_started' ; 
+    product_app_id:number,
+    product_option_value_app_id: number;
+    raceStatus?: 'finished' | 'in_progress' | 'not_started' ; 
   },
-
   LiveTrackingSettings:undefined
-
-
-
 };
-
 
 export type HomeScreenProps = NativeStackScreenProps<
   RootStackParamList,
