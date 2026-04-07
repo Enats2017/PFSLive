@@ -7,10 +7,12 @@ interface SearchInputProps {
   value: string;
   onChangeText: (text: string) => void;
   icon?: keyof typeof Ionicons.glyphMap;
+  onFocus?: () => void;  // ← add this
+  onBlur?: () => void;
 }
 
 const SearchInput = forwardRef<TextInput, SearchInputProps>(
-  ({ placeholder, value, onChangeText, icon = 'search' }, ref) => {
+  ({ placeholder, value, onChangeText, icon = 'search', onFocus, onBlur }, ref) => {
     return (
       <View style={styles.container}>
         <Ionicons name={icon} size={20} color="#999" style={styles.icon} />
@@ -23,6 +25,8 @@ const SearchInput = forwardRef<TextInput, SearchInputProps>(
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="search"
+          onFocus={onFocus}   // ← add this
+          onBlur={onBlur}
         />
       </View>
     );

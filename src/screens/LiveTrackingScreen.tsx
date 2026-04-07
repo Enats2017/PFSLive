@@ -33,11 +33,6 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const { t } = useTranslation(['livetracking', 'common']);
     const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab, event_source } = route.params;
 
-    console.log("11111", product_app_id);
-    console.log("11111production_option_value_app", product_option_value_app_id);
-
-
-
     const isCustomEvent = event_source === 'custom';
     console.log("11111", isCustomEvent);
     const { followedUsers } = useFollowManager(t);
@@ -188,47 +183,45 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 participants: response.data.participants.length,
                 distances: response.data.distances?.length || 0,
                 selected_distance: response.data.selected_distance || 'N/A',
+                separate_checkpoints: response.data.checkpoints?.length || 0,
             });
+            if (response.data.participants.length > 0 && response.data.participants[0].checkpoints?.length > 0) {
+                console.log('📍 Getting checkpoints from participant');
+                const checkpoints: CheckpointData[] = response.data.participants[0].checkpoints.map(cp => ({
+                    name: cp.name,
+                    distance: safeParseFloat(cp.distance),
+                    segment_distance: safeParseFloat(cp.segment_distance),
+                    elevation: safeParseFloat(cp.elevation),
+                    latitude: cp.latitude,
+                    longitude: cp.longitude,
+                    accessible_by_car: cp.accessible_by_car,
+                    is_start: cp.is_start,
+                    is_finish: cp.is_finish,
+                }));
+                console.log('📍 Checkpoints from participant:', checkpoints.length);
+                setApiCheckpoints(checkpoints);
 
-            // ✅ Update participants data (always present)
-            if (response.data.participants.length > 0) {
-                console.log('👤 First participant:', {
-                    bib: response.data.participants[0].bib_number,
-                    name: `${response.data.participants[0].firstname} ${response.data.participants[0].lastname}`,
-                    lat: response.data.participants[0].latitude,
-                    lon: response.data.participants[0].longitude,
-                    checkpoints: response.data.participants[0].checkpoints?.length || 0,
-                });
+            } else if (response.data.checkpoints && response.data.checkpoints.length > 0) {
+                console.log('📍 Getting checkpoints from separate array (no participants)');
+                const checkpoints: CheckpointData[] = response.data.checkpoints.map(cp => ({
+                    name: cp.name,
+                    distance: safeParseFloat(cp.distance),
+                    segment_distance: safeParseFloat(cp.segment_distance),
+                    elevation: safeParseFloat(cp.elevation),
+                    latitude: cp.latitude,
+                    longitude: cp.longitude,
+                    accessible_by_car: cp.accessible_by_car,
+                    is_start: cp.is_start,
+                    is_finish: cp.is_finish,
+                }));
+                console.log('📍 Checkpoints from separate array:', checkpoints.length);
+                setApiCheckpoints(checkpoints);
 
-                // ✅ Extract checkpoint data from first participant
-                if (response.data.participants[0].checkpoints) {
-                    const checkpoints: CheckpointData[] = response.data.participants[0].checkpoints.map(cp => ({
-                        name: cp.name,
-                        distance: safeParseFloat(cp.distance),
-                        segment_distance: safeParseFloat(cp.segment_distance),
-                        elevation: safeParseFloat(cp.elevation),
-                        latitude: cp.latitude,
-                        longitude: cp.longitude,
-                        accessible_by_car: cp.accessible_by_car,
-                        is_start: cp.is_start,
-                        is_finish: cp.is_finish,
-                    }));
-
-                    console.log('📍 API Checkpoints:', checkpoints.map(c => ({
-                        name: c.name,
-                        distance: c.distance,
-                        segment: c.segment_distance
-                    })));
-
-                    setApiCheckpoints(checkpoints);
-                }
             } else {
-                console.log('⚠️ No participants in response');
+                console.log('⚠️ No checkpoints found anywhere');
             }
-
             setParticipants(response.data.participants);
 
-            // ✅ Only update distances and GPX on initial load (not auto-refresh)
             if (!autoRefresh) {
                 console.log('📋 Processing full response (distances + GPX)');
 
@@ -248,7 +241,6 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     }
                 }
 
-                // ✅ Load GPX only if URL is present and changed
                 console.log('🔍 GPX URL check:', {
                     gpx_url: response.data.selected_distance?.gpx_url,
                     loadedGpxUrl,

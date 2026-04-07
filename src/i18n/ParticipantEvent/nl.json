@@ -26,5 +26,6 @@
   "error": {
     "failed": "Kan evenementen niet laden",
     "retry": "Opnieuw proberen"
-  }
+  },
+  "search": "Zoek evenement op naam"
 }

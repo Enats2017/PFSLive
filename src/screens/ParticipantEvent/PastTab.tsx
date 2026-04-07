@@ -162,7 +162,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
             {/* ✅ SEARCH BAR */}
             <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm }}>
                 <SearchInput
-                    placeholder={t('details:participant.search')}
+                    placeholder={t('event:search')}
                     value={searchText}
                     onChangeText={setSearchText}
                     icon="search"

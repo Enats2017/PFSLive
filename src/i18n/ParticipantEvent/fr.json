@@ -26,5 +26,6 @@
   "error": {
     "failed": "Échec du chargement des événements",
     "retry": "Réessayer"
-  }
+  },
+  "search": "Rechercher un événement par nom"
 }

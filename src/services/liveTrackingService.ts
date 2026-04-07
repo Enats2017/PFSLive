@@ -58,6 +58,8 @@ export interface LiveTrackingParticipant {
     checkpoints: LiveTrackingCheckpoint[];
 }
 
+
+
 export interface DistanceOption {
     product_option_value_app_id: number;
     distance_name: string;
@@ -77,6 +79,7 @@ export interface LiveTrackingResponse {
         selected_distance: SelectedDistance | null ;
         distances: DistanceOption[];
         participants: LiveTrackingParticipant[];
+        checkpoints: LiveTrackingCheckpoint[];
     };
     error: string | null;
 }
@@ -87,13 +90,12 @@ class LiveTrackingService {
         customerAppIds: number[],
         productOptionValueAppId?: number,
         autoRefresh: boolean = false,
-         eventSource?: string,
+        eventSource?: string,
     ): Promise<LiveTrackingResponse> {
         try {
             const token = await tokenService.getToken();
             const languageId = getCurrentLanguageId();
             
-            // ✅ Build request body
             const requestBody: any = {
                 language_id: languageId,
                 product_app_id: productAppId.toString(),
@@ -102,7 +104,6 @@ class LiveTrackingService {
                 event_source: eventSource ?? 'partner',
             };
 
-            // ✅ Only add product_option_value_app_id if it's valid (not 0 or undefined)
             if (productOptionValueAppId && productOptionValueAppId > 0) {
                 requestBody.product_option_value_app_id = productOptionValueAppId.toString();
             }

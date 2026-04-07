@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { colors } from '../styles/common.styles';
 
 // ─── Types ───────────────────────────────────────────────────────
 export interface Country {
@@ -43,6 +44,18 @@ const getFlagEmoji = (isoCode2: string): string => {
     return '🏳️';
   }
 };
+
+const COLORS = {
+  ERROR:        colors.error,        // #DC143C
+  PRIMARY:      colors.primary,      // #0f2a3f
+  GRAY_LIGHT:   colors.inputBorder,  // #d1d5db
+  GRAY_MED:     colors.gray400,      // #9ca3af
+  GRAY_DARK:    colors.gray900,      // #111827
+  WHITE:        colors.white,        // #ffffff
+  BORDER_LIGHT: colors.inputBorderFocus, // #e5e7eb
+  BG_SELECTED:  colors.inputBgSelected,  // #fff5f5
+  BG_ITEM:      colors.inputBgItem,      // #f3f4f6
+} as const;
 
 // ════════════════════════════════════════════════════════════════
 //  CountrySelector
@@ -80,9 +93,9 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
     fontSize: animatedValue.interpolate({ inputRange: [0, 1], outputRange: [15, 11] }),
     color: animatedValue.interpolate({
       inputRange: [0, 1],
-      outputRange: ['#9ca3af', error ? '#ef4444' : '#ef4444'],
+      outputRange: [COLORS.GRAY_MED, error ? COLORS.ERROR : COLORS.PRIMARY],
     }),
-    backgroundColor: '#ffffff',
+    backgroundColor: COLORS.WHITE,
     paddingHorizontal: 4,
     zIndex: 1,
     fontWeight: '500' as const,
@@ -146,8 +159,8 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
     onSelect({ country_id: '', name: '', iso_code_2: '', iso_code_3: '' });
   };
 
-  const borderColor = error ? '#ef4444' : showModal ? '#ef4444' : '#d1d5db';
-  const iconColor = error ? '#ef4444' : showModal ? '#ef4444' : '#9ca3af';
+  const borderColor = error ? COLORS.ERROR : showModal ? COLORS.PRIMARY : '#d1d5db';
+  const iconColor = error ? COLORS.ERROR : showModal ? COLORS.PRIMARY : '#d1d5db';
 
   return (
     <View style={styles.wrapper}>
@@ -226,7 +239,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Country</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Ionicons name="close-circle-outline" size={26} color="#6366f1" />
+                <Ionicons name="close-circle-outline" size={26} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
@@ -271,7 +284,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
             )}
 
             {loading ? (
-              <ActivityIndicator size="large" color="#6366f1" style={{ marginTop: 40 }} />
+              <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
             ) : fetchError ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="wifi-outline" size={40} color="#d1d5db" />
@@ -316,7 +329,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                       </View>
 
                       {value === item.name && (
-                        <Ionicons name="checkmark-circle" size={20} color="#6366f1" />
+                        <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                       )}
                     </TouchableOpacity>
                   );
@@ -404,7 +417,7 @@ const styles = StyleSheet.create({
     borderColor: '#e0e7ff',
   },
   selectedBannerFlag: { fontSize: 28, marginRight: 12 },
-  selectedBannerLabel: { fontSize: 11, color: '#6366f1', fontWeight: '600', marginBottom: 2 },
+  selectedBannerLabel: { fontSize: 11, color: colors.primary, fontWeight: '600', marginBottom: 2 },
   selectedBannerName: { fontSize: 15, color: '#111827', fontWeight: '600' },
   clearButton: {
     paddingHorizontal: 14,
@@ -447,8 +460,8 @@ const styles = StyleSheet.create({
   },
   countryItemSelected: { backgroundColor: '#fafafe' },
   flag: { fontSize: 26, marginRight: 14, width: 36, textAlign: 'center' },
-  countryName: { fontSize: 15, color: '#111827', fontWeight: '400' },
-  countryNameSelected: { color: '#6366f1', fontWeight: '600' },
+  countryName: { fontSize: 15, color: colors.primary, fontWeight: '400' },
+  countryNameSelected: { color: colors.primary, fontWeight: '600' },
   isoCode: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
   separator: { height: 1, backgroundColor: '#f3f4f6', marginLeft: 70 },
   selectedBadge: {

@@ -76,20 +76,17 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-
-    // ✅ Same keyboard pattern as TrackingPasswordModal —
-    // keyboardOffset animates on the native thread so it stays
-    // perfectly in sync with the system keyboard animation.
+    const participantSearchFocused = useRef(false);
     const keyboardOffset = useRef(new Animated.Value(0)).current;
 
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
-    // ✅ KEYBOARD LISTENERS — identical pattern to TrackingPasswordModal
     useEffect(() => {
         const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
         const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
         const onShow = (e: KeyboardEvent) => {
+            if (!participantSearchFocused.current) return; // ← add this line
             Animated.timing(keyboardOffset, {
                 toValue: e.endCoordinates.height,
                 duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
@@ -104,10 +101,8 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 useNativeDriver: true,
             }).start();
         };
-
         const showSub = Keyboard.addListener(showEvent, onShow);
         const hideSub = Keyboard.addListener(hideEvent, onHide);
-
         return () => {
             showSub.remove();
             hideSub.remove();
@@ -454,10 +449,6 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
-
-            {/* ✅ Outer Animated.View moves the entire participants section up
-                by keyboardOffset — same pattern as TrackingPasswordModal.
-                translateY: -keyboardOffset pushes content upward. */}
             <Animated.View
                 style={{
                     flex: 1,
@@ -544,12 +535,10 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                     />
                 </View>
 
-                {/* PARTICIPANTS SECTION TITLE */}
                 <View style={[eventStyles.section, { marginBottom: spacing.md, marginTop: spacing.sm }]}>
                     <Text style={commonStyles.title}>{t('follower:personal.title')}</Text>
                 </View>
 
-                {/* PARTICIPANTS LIST */}
                 <View style={{ flex: 1 }}>
                     <FlatList
                         data={displayEvents}
@@ -571,6 +560,8 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                                     value={searchText}
                                     onChangeText={setSearchText}
                                     icon="search"
+                                    onFocus={() => { participantSearchFocused.current = true; }}
+                                    onBlur={() => { participantSearchFocused.current = false; }}
                                 />
                                 {searching && (
                                     <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
@@ -600,7 +591,6 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                     />
                 </View>
             </Animated.View>
-
             <TrackingPasswordModal
                 visible={passwordModalVisible}
                 isVerifying={isVerifying}

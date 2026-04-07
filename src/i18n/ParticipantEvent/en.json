@@ -26,5 +26,7 @@
   "error": {
     "failed": "Failed to load events",
     "retry": "Retry"
-  }
+  },
+
+  "search":"Search Event By Name"
 }
