@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Platform, View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { RootStackParamList } from '../types/navigation';
 
 // ✅ APP SCREENS
@@ -18,6 +18,7 @@ import FollowerEvent from '../screens/FollowerEventList/FollowerEvent';
 import FollowDetails from '../screens/FollowerDetailsList/FollowerDetails';
 import FavouriteList from '../screens/FavouriteScreen/FavouriteList';
 import AllParticipant from '../screens/FavouriteScreen/AllParticipant';
+import SearchParticipant from '../screens/ResultList/SearchParticipant';
 
 // ✅ AUTH SCREENS
 import RegisterScreen from '../screens/AuthScreens/RegisterScreen';
@@ -30,7 +31,6 @@ import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
 import EditProfileScreen from '../screens/AuthScreens/EditProfileScreen';
 import EditPersonalEvent from '../screens/PersonalEventScreen/EditPersonalEvent';
 import LiveTrackingSettings from '../screens/SettingScreen/LiveTrackingSettingsScreen';
-import SearchParticipant from '../screens/ResultList/SearchParticipant';
 
 // ✅ SERVICES & CONTEXT
 import { tokenService } from '../services/tokenService';
@@ -42,7 +42,6 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const noGesture = { gestureEnabled: false } as const;
 
 export const AppNavigator: React.FC = () => {
-  // null = checking token (splash), true = logged in, false = logged out
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -52,7 +51,6 @@ export const AppNavigator: React.FC = () => {
   const login  = useCallback(() => setIsLoggedIn(true),  []);
   const logout = useCallback(() => setIsLoggedIn(false), []);
 
-  // ✅ Show spinner while checking stored token on app launch
   if (isLoggedIn === null) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -65,7 +63,6 @@ export const AppNavigator: React.FC = () => {
     <AuthContext.Provider value={{ isLoggedIn, login, logout }}>
       <NavigationContainer>
         <Stack.Navigator
-          // ✅ Always start at HomeScreen regardless of login state
           initialRouteName="HomeScreen"
           screenOptions={{
             headerShown: false,
@@ -73,11 +70,11 @@ export const AppNavigator: React.FC = () => {
             gestureEnabled: true,
             gestureDirection: 'horizontal',
             fullScreenGestureEnabled: true,
-            customAnimationOnGesture: true,
+            // ✅ REMOVED: customAnimationOnGesture — not a valid NativeStack option
             animationTypeForReplace: 'push',
           }}
         >
-          {/* ── Public screens — always accessible, always first ─────── */}
+          {/* ── Public screens ───────────────────────────────────────── */}
           <Stack.Screen name="HomeScreen"        component={HomeScreen}        options={noGesture} />
           <Stack.Screen name="ParticipantEvent"  component={ParticipantEvent}  options={noGesture} />
           <Stack.Screen name="PersonalEvent"     component={PersonalEvent}     options={noGesture} />
@@ -90,7 +87,7 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen name="FollowDetails"     component={FollowDetails}     options={noGesture} />
           <Stack.Screen name="FavouriteList"     component={FavouriteList}     options={noGesture} />
           <Stack.Screen name="AllParticipant"    component={AllParticipant}    options={noGesture} />
-          <Stack.Screen name="SearchParticipant" component={SearchParticipant}    options={noGesture} />
+          <Stack.Screen name="SearchParticipant" component={SearchParticipant} options={noGesture} />
 
           <Stack.Screen
             name="LiveTracking"
@@ -98,13 +95,12 @@ export const AppNavigator: React.FC = () => {
             options={{
               gestureEnabled: true,
               fullScreenGestureEnabled: true,
-              gestureResponseDistance: Platform.OS === 'android' ? 150 : 50,
+              // ✅ FIXED: gestureResponseDistance expects an object not a number
+              gestureResponseDistance: { start: 50 },
             }}
           />
 
-          {/* ── Auth screens — only exist when NOT logged in ──────────────
-              Once login() is called these screens are unmounted.
-              The user can never press back to reach them after login. */}
+          {/* ── Auth screens — only when NOT logged in ───────────────── */}
           {!isLoggedIn && (
             <>
               <Stack.Screen name="LoginScreen"           component={LoginScreen}           options={noGesture} />
@@ -114,16 +110,13 @@ export const AppNavigator: React.FC = () => {
             </>
           )}
 
-          {/* ── Login-required screens — only exist when logged in ────────
-              If not logged in these are unmounted — React Navigation
-              automatically falls back to HomeScreen. No token check
-              needed inside each screen. */}
+          {/* ── Login-required screens — only when logged in ─────────── */}
           {isLoggedIn && (
             <>
-              <Stack.Screen name="ProfileScreen"         component={ProfileScreen}         options={noGesture} />
-              <Stack.Screen name="EditProfileScreen"     component={EditProfileScreen}     options={noGesture} />
-              <Stack.Screen name="EditPersonalEvent"     component={EditPersonalEvent}     options={noGesture} />
-              <Stack.Screen name="LiveTrackingSettings"  component={LiveTrackingSettings}  options={noGesture} />
+              <Stack.Screen name="ProfileScreen"        component={ProfileScreen}        options={noGesture} />
+              <Stack.Screen name="EditProfileScreen"    component={EditProfileScreen}    options={noGesture} />
+              <Stack.Screen name="EditPersonalEvent"    component={EditPersonalEvent}    options={noGesture} />
+              <Stack.Screen name="LiveTrackingSettings" component={LiveTrackingSettings} options={noGesture} />
             </>
           )}
         </Stack.Navigator>
