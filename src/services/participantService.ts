@@ -33,7 +33,7 @@ interface GetParticipantsParams {
   product_app_id: string | number;
   page?: number;
   filter_name?: string;
-  product_option_value_app_id?: string | number;
+  product_option_value_app_id?: string | number|null;
 }
 
 export const participantService = {

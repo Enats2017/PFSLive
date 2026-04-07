@@ -152,7 +152,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} showSearch={true}
                 product_app_id={product_app_id}
-                product_option_value_app_id={product_option_value_app_id}  // ✅ from useResultList hook
+                product_option_value_app_id={selectedPovId}  // ✅ from useResultList hook
                 raceStatus={raceStatus as 'finished' | 'in_progress' | 'not_started'}
             />
 
