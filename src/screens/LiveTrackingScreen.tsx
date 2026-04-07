@@ -34,7 +34,6 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab, event_source } = route.params;
 
     const isCustomEvent = event_source === 'custom';
-    console.log("11111", isCustomEvent);
     const { followedUsers } = useFollowManager(t);
     const [routeData, setRouteData] = useState<GPXRouteData | null>(null);
     const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
