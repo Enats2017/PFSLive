@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
     View,
     Text,
@@ -22,13 +22,12 @@ import { useScreenError } from '../../hooks/useApiError';
 import { AppHeader } from '../../components/common/AppHeader';
 
 const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation }) => {
-    const {
-        product_app_id,
-        product_option_value_app_id,  
-        raceStatus                    
-    } = route.params;
+    const { product_app_id, product_option_value_app_id, raceStatus } = route.params;
     const { t } = useTranslation(['details', 'follower']);
-    const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
+
+    const productId = typeof product_app_id === 'string'
+        ? parseInt(product_app_id, 10)
+        : product_app_id;
 
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [loading, setLoading] = useState(true);
@@ -36,19 +35,22 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
     const [searchText, setSearchText] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    //const [error, setError] = useState<string | null>(null);
+
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const searchInputRef = useRef<any>(null);
+    // ✅ Prevents double fetch — useFocusEffect and debounce useEffect both
+    // run on mount. This ref ensures only useFocusEffect fires the first time.
+    const isInitialLoad = useRef(true);
 
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
     const fetchParticipants = useCallback(
         async (pageNum: number, search: string) => {
             try {
-                if (pageNum === 1 && search.length === 0) {
+                if (pageNum === 1) {
                     setLoading(true);
                     clearError();
-                } else if (pageNum > 1) {
+                } else {
                     setLoadingMore(true);
                 }
 
@@ -61,84 +63,74 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
 
                 const result = await participantService.getParticipants({
                     product_app_id: productId,
-                    product_option_value_app_id: product_option_value_app_id,
+                    product_option_value_app_id,
                     page: pageNum,
                     filter_name: search,
                 });
 
-                setParticipants((prev) => {
-                    if (pageNum === 1) {
-                        return result.participants;
-                    } else {
-                        const existingIds = new Set(
-                            prev.map((p) => participantService.getParticipantId(p))
-                        );
+                setParticipants(prev => {
+                    if (pageNum === 1) return result.participants;
 
-                        const newItems = result.participants.filter((p) => {
-                            const participantId = participantService.getParticipantId(p);
-                            return !existingIds.has(participantId);
-                        });
+                    const existingIds = new Set(
+                        prev.map(p => participantService.getParticipantId(p))
+                    );
+                    const newItems = result.participants.filter(
+                        p => !existingIds.has(participantService.getParticipantId(p))
+                    );
 
-                        if (API_CONFIG.DEBUG) {
-                            console.log(
-                                `✅ Added ${newItems.length} new participants (Total: ${prev.length + newItems.length})`
-                            );
-                        }
-
-                        return [...prev, ...newItems];
+                    if (API_CONFIG.DEBUG) {
+                        console.log(`✅ Added ${newItems.length} new participants (Total: ${prev.length + newItems.length})`);
                     }
+
+                    return [...prev, ...newItems];
                 });
 
                 setPage(pageNum);
                 setTotalPages(result.pagination.total_pages);
 
                 if (API_CONFIG.DEBUG) {
-                    console.log(
-                        `📄 Page ${pageNum}/${result.pagination.total_pages} | Total: ${result.pagination.total}`
-                    );
+                    console.log(`📄 Page ${pageNum}/${result.pagination.total_pages} | Total: ${result.pagination.total}`);
                 }
-            } catch (error: any) {
+            } catch (err: any) {
                 if (API_CONFIG.DEBUG) {
-                    console.error('❌ Error fetching participants:', error.message);
+                    console.error('❌ Error fetching participants:', err.message);
                 }
-
-                if (pageNum === 1) {
-                    handleApiError(error);
-                }
+                if (pageNum === 1) handleApiError(err);
             } finally {
                 setLoading(false);
                 setLoadingMore(false);
             }
         },
-        [productId, t]
+        [productId, product_option_value_app_id] // ✅ removed `t` (stable), added product_option_value_app_id
     );
 
+    // ✅ Initial fetch on screen focus
     useFocusEffect(
         useCallback(() => {
-
+            isInitialLoad.current = true;
             fetchParticipants(1, '');
         }, [fetchParticipants])
     );
 
-    React.useEffect(() => {
-        if (debounceTimer.current) {
-            clearTimeout(debounceTimer.current);
+    // ✅ Debounced search — skips the very first render handled by useFocusEffect
+    useEffect(() => {
+        if (isInitialLoad.current) {
+            isInitialLoad.current = false;
+            return;
         }
+
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
         debounceTimer.current = setTimeout(() => {
             fetchParticipants(1, searchText);
         }, 500);
 
         return () => {
-            if (debounceTimer.current) {
-                clearTimeout(debounceTimer.current);
-            }
+            if (debounceTimer.current) clearTimeout(debounceTimer.current);
         };
     }, [searchText, fetchParticipants]);
 
-    const hasMorePages = useCallback((): boolean => {
-        return page < totalPages;
-    }, [page, totalPages]);
+    const hasMorePages = useCallback(() => page < totalPages, [page, totalPages]);
 
     const handleLoadMore = useCallback(() => {
         if (API_CONFIG.DEBUG) {
@@ -150,10 +142,7 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
             });
         }
 
-        if (!hasMorePages() || loadingMore) {
-            return;
-        }
-
+        if (!hasMorePages() || loadingMore) return;
         fetchParticipants(page + 1, searchText);
     }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
@@ -163,23 +152,19 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
                 item={item}
                 product_app_id={productId}
                 product_option_value_app_id={product_option_value_app_id ?? 0}
-                raceStatus={raceStatus}  
+                raceStatus={raceStatus}
             />
         ),
-        [productId, product_option_value_app_id, raceStatus]  
+        [productId, product_option_value_app_id, raceStatus]
     );
 
-    const renderFooter = useCallback(() => {
-        if (loadingMore) {
-            return (
-                <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                </View>
-            );
-        }
-
-        return null;
-    }, [loadingMore]);
+    const renderFooter = useCallback(() =>
+        loadingMore ? (
+            <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+        ) : null
+    , [loadingMore]);
 
     const renderEmpty = useCallback(() => (
         <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
@@ -210,7 +195,7 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
                     type={error!.type}
                     title={error!.title}
                     message={error!.message}
-                    onRetry={() => { clearError(); fetchParticipants(1, searchText) }}
+                    onRetry={() => { clearError(); fetchParticipants(1, searchText); }}
                 />
             </SafeAreaView>
         );
@@ -268,7 +253,6 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
                 ListFooterComponent={renderFooter}
                 ListEmptyComponent={!loading ? renderEmpty : null}
             />
-
         </SafeAreaView>
     );
 };
