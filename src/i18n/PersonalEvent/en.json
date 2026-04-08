@@ -36,7 +36,11 @@
     "networkErrorTitle": "Network Error",
     "networkErrorMessage": "Unable to connect to the server. Please check your internet connection and try again.",
     "loadFailed": "Failed to load event details",
-    "updateFailed": "Failed to update event"
+    "updateFailed": "Failed to update event",
+    "nameInvalid": "Event name is required",
+    "eventTypeInvalid": "Event type is required",
+    "dateInvalid": "Invalid date format",
+    "startTimeInvalid": "Invalid start time format. Please use HH:MM"
   },
   "file": {
     "uploadTitle": "Tap to Upload GPX File",

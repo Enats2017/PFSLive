@@ -31,13 +31,11 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-// ✅ Added membership_upcoming to the union type
 type RegistrationStatus = 'membership_required' | 'limit_reached' | 'membership_upcoming' | null;
 
 const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
-  const { t } = useTranslation(['personal', 'common', 'details']);
+  const { t } = useTranslation(['personal', 'common']);
 
-  // ✅ MEMOIZED EVENT TYPE OPTIONS
   const EVENT_TYPE_OPTIONS = useMemo(
     () => [
       { label: t('personal:eventTypes.organizedWithResults'), value: 1 },
@@ -47,7 +45,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     [t]
   );
 
-  // ✅ FORM MANAGEMENT
   const {
     formData,
     errors,
@@ -58,32 +55,26 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     resetForm,
   } = usePersonalEventForm();
 
-  // ✅ FILE UPLOAD MANAGEMENT
   const { selectedFile, pickFile, viewFile, removeFile, clearFile } = useFileUpload(
     MAX_FILE_SIZE,
     (message) => setFieldError('file', message)
   );
 
-  // ✅ SUBMISSION STATE
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // ✅ MODAL STATES
   const [registrationModalVisible, setRegistrationModalVisible] = useState(false);
   const [registrationStatus, setRegistrationStatus] = useState<RegistrationStatus>(null);
   const [membershipLimit, setMembershipLimit] = useState<number | undefined>(undefined);
-  const [membershipStartDate, setMembershipStartDate] = useState<string | undefined>(undefined); // ✅ NEW
+  const [membershipStartDate, setMembershipStartDate] = useState<string | undefined>(undefined);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorTitleKey, setErrorTitleKey] = useState('');
   const [errorMessageKey, setErrorMessageKey] = useState('');
 
-  // ✅ SHOW ERROR MODAL HELPER
   const showErrorModal = useCallback((titleKey: string, messageKey: string) => {
     setErrorTitleKey(titleKey);
     setErrorMessageKey(messageKey);
     setErrorModalVisible(true);
   }, []);
 
-  // ✅ CLOSE REGISTRATION MODAL HELPER
   const closeRegistrationModal = useCallback(() => {
     setRegistrationModalVisible(false);
     setRegistrationStatus(null);
@@ -91,14 +82,12 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     setMembershipStartDate(undefined);
   }, []);
 
-  // ✅ FORM SUBMISSION WITH ACTION HANDLING
   const handleSubmit = useCallback(async () => {
     clearAllErrors();
 
+    // ✅ All validation messages come from the hook which uses t() — no hardcoded strings
     if (!validateForm()) {
-      if (API_CONFIG.DEBUG) {
-        console.log('❌ Form validation failed');
-      }
+      if (API_CONFIG.DEBUG) console.log('❌ Form validation failed');
       return;
     }
 
@@ -114,7 +103,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
           name: formData.name,
           eventTypeId: formData.selectedEventType?.value,
           date: formData.date,
-          startTime: formData.startTime,
+          startTime: formData.startTime || '(not set)',
           timezone: deviceTimezone,
           hasFile: !!selectedFile,
         });
@@ -136,114 +125,65 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         });
       }
 
-      // ✅ CHECK ACTION FIELD
       const action = response.action || 'unknown_error';
 
-      // ✅ HANDLE NON-SUCCESS ACTIONS
       if (action !== 'registered' && action !== 'success') {
-        if (API_CONFIG.DEBUG) {
-          console.log('⚠️ Non-success action received:', action);
-        }
+        if (API_CONFIG.DEBUG) console.log('⚠️ Non-success action received:', action);
 
         switch (action) {
           case 'membership_required':
             setRegistrationStatus('membership_required');
             setRegistrationModalVisible(true);
             break;
-
           case 'limit_reached':
             setRegistrationStatus('limit_reached');
             setMembershipLimit(response.membership_limit);
             setRegistrationModalVisible(true);
             break;
-
-          // ✅ NEW: MEMBERSHIP UPCOMING
           case 'membership_upcoming':
             setRegistrationStatus('membership_upcoming');
             setMembershipStartDate(response.membership_start_date);
             setRegistrationModalVisible(true);
             break;
-
           case 'customer_invalid':
-            showErrorModal(
-              'personal:errors.customerInvalidTitle',
-              'personal:errors.customerInvalidMessage'
-            );
+            showErrorModal('personal:errors.customerInvalidTitle', 'personal:errors.customerInvalidMessage');
             break;
-
           case 'validation_error':
           case 'missing_parameters':
-            showErrorModal(
-              'personal:errors.validationErrorTitle',
-              'personal:errors.validationErrorMessage'
-            );
+            showErrorModal('personal:errors.validationErrorTitle', 'personal:errors.validationErrorMessage');
             break;
-
           case 'unauthorized':
           case 'token_invalid':
           case 'token_expired':
             navigation.navigate('LoginScreen');
             break;
-
           default:
-            showErrorModal(
-              'personal:errors.createFailedTitle',
-              'personal:errors.createFailedMessage'
-            );
+            showErrorModal('personal:errors.createFailedTitle', 'personal:errors.createFailedMessage');
             break;
         }
         return;
       }
 
-      // ✅ SUCCESS CASE
       if (response.success) {
-        toastSuccess(
-          t('personal:success.title'),
-          response.message || t('personal:success.message')
-        );
-
-        // ✅ RESET FORM AND FILE
+        toastSuccess(t('personal:success.title'), response.message || t('personal:success.message'));
         resetForm();
         clearFile();
-
-        // ✅ GO BACK
         navigation.goBack();
       } else {
         throw new Error(response.message || 'API_ERROR');
       }
     } catch (error: any) {
-      if (API_CONFIG.DEBUG) {
-        console.error('❌ Submit error:', error);
-      }
-
-      // ✅ HANDLE VALIDATION ERRORS
-      if (error.message?.startsWith('VALIDATION_ERROR:')) {
-        const validationMessage = error.message.replace('VALIDATION_ERROR: ', '');
-        toastError(t('common:errors.validation'), validationMessage);
-        return;
-      }
-
-      // ✅ HANDLE API ERRORS
-      const message =
-        error.message === 'API_ERROR'
-          ? t('personal:errors.createFailed')
-          : error.message;
-
+      if (API_CONFIG.DEBUG) console.error('❌ Submit error:', error);
+      const message = error.message === 'API_ERROR'
+        ? t('personal:errors.createFailed')
+        : error.message;
       toastError(t('common:errors.generic'), message);
     } finally {
       setIsSubmitting(false);
     }
   }, [
-    clearAllErrors,
-    validateForm,
-    isSubmitting,
-    formData,
-    selectedFile,
-    resetForm,
-    clearFile,
-    navigation,
-    showErrorModal,
-    t,
+    clearAllErrors, validateForm, isSubmitting, formData,
+    selectedFile, resetForm, clearFile, navigation, showErrorModal, t,
   ]);
 
   return (
@@ -278,9 +218,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
                 editable={!isSubmitting}
                 error={!!errors.name}
               />
-              {errors.name && (
-                <Text style={personalStyles.errorText}>{errors.name}</Text>
-              )}
+              {errors.name && <Text style={personalStyles.errorText}>{errors.name}</Text>}
             </View>
 
             {/* Event Type */}
@@ -296,9 +234,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
                 editable={!isSubmitting}
                 error={!!errors.eventType}
               />
-              {errors.eventType && (
-                <Text style={personalStyles.errorText}>{errors.eventType}</Text>
-              )}
+              {errors.eventType && <Text style={personalStyles.errorText}>{errors.eventType}</Text>}
             </View>
 
             {/* Date */}
@@ -313,71 +249,62 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
                 editable={!isSubmitting}
                 error={!!errors.date}
               />
-              {errors.date && (
-                <Text style={personalStyles.errorText}>{errors.date}</Text>
-              )}
+              {errors.date && <Text style={personalStyles.errorText}>{errors.date}</Text>}
             </View>
 
-            {/* Start Time */}
+            {/* Start Time — optional */}
             <View style={personalStyles.fieldWrapper}>
-              <FloatingLabelInput
-                label={t('personal:startTime')}
-                value={formData.startTime}
-                onChangeText={handlers.handleStartTimeChange}
-                iconName="time-outline"
-                isTimePicker
-                required
-                editable={!isSubmitting}
-                error={!!errors.startTime}
-              />
-              {errors.startTime && (
-                <Text style={personalStyles.errorText}>{errors.startTime}</Text>
-              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <FloatingLabelInput
+                    label={t('personal:startTime')}
+                    value={formData.startTime}
+                    onChangeText={handlers.handleStartTimeChange}
+                    iconName="time-outline"
+                    isTimePicker
+                    editable={!isSubmitting}
+                    error={!!errors.startTime}
+                  />
+                </View>
+                {/* Clear button — only shown when a time is set */}
+                {formData.startTime ? (
+                  <TouchableOpacity
+                    onPress={handlers.handleClearStartTime}
+                    disabled={isSubmitting}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={{ marginLeft: 8, marginBottom: 8 }}
+                  >
+                    <Ionicons name="close-circle" size={22} color={colors.gray500} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              {errors.startTime && <Text style={personalStyles.errorText}>{errors.startTime}</Text>}
             </View>
 
             {/* GPX File Upload */}
             <View style={{ marginTop: spacing.md }}>
               {!selectedFile ? (
                 <TouchableOpacity
-                  style={[
-                    personalStyles.uploadBox,
-                    errors.file && personalStyles.uploadBoxError,
-                  ]}
+                  style={[personalStyles.uploadBox, errors.file && personalStyles.uploadBoxError]}
                   onPress={pickFile}
                   activeOpacity={0.8}
                   disabled={isSubmitting}
                 >
-                  <Ionicons
-                    name="cloud-upload-outline"
-                    size={40}
-                    color={colors.primary}
-                  />
-                  <Text style={personalStyles.uploadTitle}>
-                    {t('personal:file.uploadTitle')}
-                  </Text>
+                  <Ionicons name="cloud-upload-outline" size={40} color={colors.primary} />
+                  <Text style={personalStyles.uploadTitle}>{t('personal:file.uploadTitle')}</Text>
                   <Text style={personalStyles.uploadSubtitle}>
-                    {t('personal:file.uploadSubtitle', {
-                      size: MAX_FILE_SIZE / (1024 * 1024),
-                    })}
+                    {t('personal:file.uploadSubtitle', { size: MAX_FILE_SIZE / (1024 * 1024) })}
                   </Text>
                 </TouchableOpacity>
               ) : (
                 <View style={personalStyles.fileCard}>
                   <View style={personalStyles.fileLeft}>
                     <View style={personalStyles.fileIconContainer}>
-                      <Ionicons
-                        name="document-outline"
-                        size={28}
-                        color={colors.primary}
-                      />
+                      <Ionicons name="document-outline" size={28} color={colors.primary} />
                     </View>
                     <View style={personalStyles.fileDetails}>
-                      <Text numberOfLines={1} style={personalStyles.fileName}>
-                        {selectedFile.name}
-                      </Text>
-                      <Text style={personalStyles.fileSize}>
-                        {formatFileSize(selectedFile.size)}
-                      </Text>
+                      <Text numberOfLines={1} style={personalStyles.fileName}>{selectedFile.name}</Text>
+                      <Text style={personalStyles.fileSize}>{formatFileSize(selectedFile.size)}</Text>
                     </View>
                   </View>
                   <View style={personalStyles.actions}>
@@ -400,9 +327,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
                   </View>
                 </View>
               )}
-              {errors.file && (
-                <Text style={personalStyles.errorText}>{errors.file}</Text>
-              )}
+              {errors.file && <Text style={personalStyles.errorText}>{errors.file}</Text>}
             </View>
 
             <Text style={personalStyles.subtitle}>{t('personal:fileInfo')}</Text>
@@ -421,16 +346,13 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
               {isSubmitting ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <Text style={commonStyles.primaryButtonText}>
-                  {t('personal:button.save')}
-                </Text>
+                <Text style={commonStyles.primaryButtonText}>{t('personal:button.save')}</Text>
               )}
             </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ✅ REGISTRATION MODAL */}
       <RegistrationModal
         visible={registrationModalVisible}
         status={registrationStatus}
@@ -440,7 +362,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         onClose={closeRegistrationModal}
       />
 
-      {/* ✅ ERROR MODAL */}
       <ErrorModal
         visible={errorModalVisible}
         titleKey={errorTitleKey}

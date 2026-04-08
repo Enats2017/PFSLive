@@ -31,8 +31,10 @@ const matchEventType = (raw: string, options: EventTypeOption[]): EventTypeOptio
 };
 
 const INITIAL_FORM: EditFormData = { name: '', selectedEventType: null, date: '', startTime: '' };
+
 export const useEditPersonalEventForm = () => {
   const { t } = useTranslation(['personal']);
+
   const eventTypeOptions: EventTypeOption[] = useMemo(
     () => [
       { label: t('personal:eventTypes.organizedWithResults'), value: 1 },
@@ -47,7 +49,6 @@ export const useEditPersonalEventForm = () => {
 
   const initFormFromEvent = useCallback(
     (event: PersonalEvent) => {
-       
       setFormData({
         name: event.name ?? '',
         selectedEventType: matchEventType(event.event_type, eventTypeOptions),
@@ -66,9 +67,7 @@ export const useEditPersonalEventForm = () => {
       });
 
       const errorKey: keyof EditFormErrors =
-        field === 'selectedEventType'
-          ? 'eventType'
-          : (field as keyof EditFormErrors);
+        field === 'selectedEventType' ? 'eventType' : (field as keyof EditFormErrors);
 
       setErrors((prev) => {
         if (!prev[errorKey]) return prev;
@@ -78,13 +77,20 @@ export const useEditPersonalEventForm = () => {
     [],
   );
 
-  // ─── Named handlers (keeps FloatingLabelInput props clean) ───────────────
   const handlers = useMemo(
     () => ({
       handleNameChange:      (v: string) => setField('name', v),
       handleEventTypeChange: (v: EventTypeOption) => setField('selectedEventType', v),
       handleDateChange:      (v: string) => setField('date', v),
       handleStartTimeChange: (v: string) => setField('startTime', v),
+      // ✅ Clears start time — exposed so UI can show a clear button
+      handleClearStartTime:  () => {
+        setFormData((prev) => ({ ...prev, startTime: '' }));
+        setErrors((prev) => {
+          if (!prev.startTime) return prev;
+          return { ...prev, startTime: undefined };
+        });
+      },
     }),
     [setField],
   );
@@ -97,8 +103,9 @@ export const useEditPersonalEventForm = () => {
 
   const clearAllErrors = useCallback(() => setErrors({}), []);
 
- const validateForm = useCallback((): boolean => {
+  const validateForm = useCallback((): boolean => {
     const e: EditFormErrors = {};
+
     if (!formData.name.trim()) {
       e.name = t('personal:errors.nameRequired');
     }
@@ -108,9 +115,11 @@ export const useEditPersonalEventForm = () => {
     if (!formData.date) {
       e.date = t('personal:errors.dateRequired');
     }
-    if (!formData.startTime) {
-      e.startTime = t('personal:errors.startTimeRequired');
+    // ✅ startTime optional — only validate format if provided
+    if (formData.startTime.trim() && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]/.test(formData.startTime)) {
+      e.startTime = t('personal:errors.invalidStartTime');
     }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   }, [formData, t]);
