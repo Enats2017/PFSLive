@@ -55,8 +55,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         return [centerLon, centerLat];
     }, [trackPoints]);
 
-
-
     const bounds = React.useMemo(() => {
         if (trackPoints.length > 0) {
             const lons = trackPoints.map(pt => pt.lon);
@@ -67,7 +65,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             };
         }
 
-        // Priority 2: no GPX — fit to participant coordinates
         const validParticipants = participants.filter(p => p.lat !== 0 && p.lon !== 0);
         if (validParticipants.length > 0) {
             const lons = validParticipants.map(p => p.lon);
@@ -112,10 +109,10 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         };
         const timer = setTimeout(tryFocus, 300);
         return () => clearTimeout(timer);
-    }, [bounds]); // ← removed mapReady from deps
+    }, [bounds]);
 
     const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
-        console.log('🗺️ Creating participants GeoJSON with', participants.length, 'participants');
+        console.log('Creating participants GeoJSON with', participants.length, 'participants');
         return {
             type: 'FeatureCollection',
             features: participants.map(p => ({
@@ -151,11 +148,16 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         };
     }, [participants]);
 
-    // ✅ Use API checkpoints if available, otherwise fall back to GPX aid stations
     const aidStationsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
         if (apiCheckpoints.length > 0) {
-            // ✅ Filter out START and FINISH from map display
-            const visibleCheckpoints = apiCheckpoints.filter(cp => !cp.is_start && !cp.is_finish);
+            const visibleCheckpoints = apiCheckpoints;
+            console.log('🗺️ All checkpoints coords:', apiCheckpoints.map(cp => ({
+                name: cp.name,
+                lat: cp.latitude,
+                lon: cp.longitude,
+                is_start: cp.is_start,
+                is_finish: cp.is_finish,
+            })));
 
             console.log('🗺️ Using API checkpoints for map:', visibleCheckpoints.map(c => c.name));
 
@@ -169,6 +171,11 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         distance_km: checkpoint.distance,
                         ele: checkpoint.elevation,
                         accessible_by_car: checkpoint.accessible_by_car,
+                        circleColor: checkpoint.is_start
+                            ? '#22C55E'
+                            : checkpoint.is_finish
+                                ? '#EF4444'
+                                : '#000000',
                     },
                     geometry: {
                         type: 'Point',
@@ -178,7 +185,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             };
         }
 
-        // Fallback to GPX aid stations
         return {
             type: 'FeatureCollection',
             features: aidStations.map((station, idx) => ({
@@ -260,7 +266,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 logoEnabled={false}
                 attributionEnabled={false}
                 onDidFinishLoadingMap={() => {
-                    console.log('🗺️ Map finished loading');
+                    console.log(' Map finished loading');
                     mapReadyRef.current = true;
                     setMapReady(true);
                 }}
@@ -295,7 +301,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     <Mapbox.CircleLayer
                         id="aidstation-circles"
                         style={{
-                            circleColor: '#000000',
+                            circleColor: ['get', 'circleColor'],
                             circleRadius: 12,
                             circleStrokeWidth: 3,
                             circleStrokeColor: '#FFFFFF',
@@ -326,7 +332,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         <Mapbox.CircleLayer
                             id="participant-dots"
                             style={{
-                                circleColor: '#22C55E',
+                                circleColor: '#3B82F6',
                                 circleRadius: 10,
                                 circleStrokeWidth: 3,
                                 circleStrokeColor: '#FFFFFF',

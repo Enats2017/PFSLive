@@ -42,7 +42,8 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     const checkpointChartPoints = React.useMemo(() => {
         if (apiCheckpoints.length > 0) {
             // Filter out START and FINISH
-            const visible = apiCheckpoints.filter(cp => !cp.is_start && !cp.is_finish);
+            //const visible = apiCheckpoints.filter(cp => !cp.is_start && !cp.is_finish);
+            const visible = apiCheckpoints;
             
             console.log('📊 Using API checkpoints for elevation:', visible.map(c => ({
                 name: c.name,
