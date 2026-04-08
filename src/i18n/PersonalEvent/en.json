@@ -40,7 +40,11 @@
     "nameInvalid": "Event name is required",
     "eventTypeInvalid": "Event type is required",
     "dateInvalid": "Invalid date format",
-    "startTimeInvalid": "Invalid start time format. Please use HH:MM"
+    "startTimeInvalid": "Invalid start time format. Please use HH:MM",
+    "participantInsertFailed": "Event was created but registration failed. Please try again.",
+    "eventNotFound": "Event not found. It may have been deleted.",
+    "noChanges": "No changes were made to the event.",
+    "invalidEventId": "Invalid event. Please go back and try again."
   },
   "file": {
     "uploadTitle": "Tap to Upload GPX File",

@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { API_CONFIG } from "../constants/config";
 
 export type ErrorType = "network" | "server" | "empty";
@@ -27,7 +27,7 @@ const EMPTY_CODES = new Set([
   "registration_closed",
   "session_expired",
   "permission_denied",
-  "maintenance", // ← was missing, your backend sends this
+  "maintenance",
 ]);
 
 export interface ApiResponse<T> {
@@ -108,6 +108,47 @@ class ApiClient {
     }
   }
 
+  // ✅ postRaw — like post() but returns the full AxiosResponse including
+  // status and data on error responses (4xx). Use this when you need to
+  // inspect error.response.data.fields for field-level validation errors
+  // instead of having them swallowed by handleError().
+  async postRaw<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+  ): Promise<AxiosResponse<T>> {
+    try {
+      return await this.client.post<T>(url, data, config);
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        if (API_CONFIG.DEBUG) {
+          console.log(
+            "❌ Full backend response:",
+            JSON.stringify(error.response?.data, null, 2),
+          );
+          console.log("❌ Status code:", error.response?.status);
+        }
+
+        // Network error — no response at all
+        if (
+          !error.response ||
+          error.code === "ERR_NETWORK" ||
+          error.code === "ECONNABORTED" ||
+          error.code === "ETIMEDOUT"
+        ) {
+          throw new AppError("network", "network_error");
+        }
+
+        // ✅ Return the error response as-is so callers can read
+        // response.data.fields, response.data.error, etc.
+        if (error.response) {
+          return error.response as AxiosResponse<T>;
+        }
+      }
+      throw new AppError("server", "unknown");
+    }
+  }
+
   async put<T>(
     url: string,
     data?: any,
@@ -147,7 +188,7 @@ class ApiClient {
       const code = (
         error.response?.data?.error ||
         error.response?.data?.message ||
-        error.response?.data?.code || // ← add more field names your backend might use
+        error.response?.data?.code ||
         error.response?.data?.err ||
         error.code ||
         "unknown"
@@ -155,7 +196,6 @@ class ApiClient {
         .toString()
         .toLowerCase();
 
-      // Network — no response at all
       if (
         !error.response ||
         error.code === "ERR_NETWORK" ||
@@ -174,7 +214,6 @@ class ApiClient {
       if (status && status >= 400) return new AppError("empty", code);
     }
 
-    // Unknown
     return new AppError("server", "unknown");
   }
 }

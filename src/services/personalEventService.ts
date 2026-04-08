@@ -23,6 +23,7 @@ export interface PersonalEventResponse {
   message?: string;
   data?: any;
   error?: string;
+  fields?: string[]; // ✅ API validation field errors e.g. ['name_required', 'race_date_invalid']
   is_first_tracking?: number;
   membership_limit?: number;
   membership_start_date?: string;
@@ -34,7 +35,6 @@ const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_MIME_TYPE = 'application/gpx+xml';
 const VALID_EVENT_TYPES = [1, 2, 3] as const;
 
-// ── Pure validation helpers (no i18n — used by both service and hook) ────────
 export const isValidDate = (date: string): boolean => {
   if (!date || !DATE_REGEX.test(date)) return false;
   return !isNaN(new Date(date).getTime());
@@ -56,7 +56,6 @@ export const isValidGPXFile = (fileName: string): boolean => {
 export const isValidFileSize = (size: number, maxSize: number): boolean =>
   size > 0 && size <= maxSize;
 
-// ── Utilities ────────────────────────────────────────────────────────────────
 export const formatTimeHHMM = (time: string): string => {
   if (!time) return '';
   const parts = time.split(':');
@@ -89,7 +88,6 @@ export const getTimezoneOffsetString = (): string => {
   return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
-// ── FormData builder ─────────────────────────────────────────────────────────
 const buildFormData = (payload: PersonalEventPayload): FormData => {
   const { name, eventTypeId, date, startTime, timezone, selectedFile } = payload;
   const formData = new FormData();
@@ -101,7 +99,6 @@ const buildFormData = (payload: PersonalEventPayload): FormData => {
     formData.append('event_type', String(eventTypeId));
   }
 
-  // startTime optional — only append if non-empty
   if (startTime?.trim()) {
     formData.append('start_hour', formatTimeHHMM(startTime));
   }
@@ -132,7 +129,6 @@ const buildFormData = (payload: PersonalEventPayload): FormData => {
   return formData;
 };
 
-// ── API ──────────────────────────────────────────────────────────────────────
 export const createPersonalEvent = async (
   payload: PersonalEventPayload
 ): Promise<PersonalEventResponse> => {
@@ -151,7 +147,9 @@ export const createPersonalEvent = async (
     const formData = buildFormData(payload);
     const headers = await API_CONFIG.getMutiForm();
 
-    const response = await apiClient.post<PersonalEventResponse>(
+    // ✅ Use postRaw so 4xx responses are returned (not swallowed by handleError)
+    // This lets us read response.data.fields for field-level validation errors
+    const response = await apiClient.postRaw<PersonalEventResponse>(
       getApiEndpoint(API_CONFIG.ENDPOINTS.Personal_Event),
       formData,
       { headers, timeout: API_CONFIG.TIMEOUT }
@@ -159,7 +157,22 @@ export const createPersonalEvent = async (
 
     if (API_CONFIG.DEBUG) console.log('📡 Full API Response:', response.data);
 
-    const data = response.data;
+    const responseData = response.data as any;
+
+    // ✅ Handle non-2xx — PHP returns { success: false, error: "...", fields: [...] }
+    if (response.status !== 200 && response.status !== 201) {
+      if (API_CONFIG.DEBUG) console.log('❌ API Error Response:', responseData);
+      return {
+        success: false,
+        action: responseData.error || 'error',
+        message: responseData.message || responseData.error,
+        error: responseData.error,
+        fields: Array.isArray(responseData.fields) ? responseData.fields : [],
+      };
+    }
+
+    // ✅ API wraps payload in a 'data' key: { success: true, data: { action, event, ... } }
+    const data = responseData.data ?? responseData;
 
     if (API_CONFIG.DEBUG) {
       console.log('✅ Response Data:', {
@@ -180,18 +193,6 @@ export const createPersonalEvent = async (
     };
   } catch (error: any) {
     if (API_CONFIG.DEBUG) console.error('❌ Error creating personal event:', error);
-
-    if (error.response?.data) {
-      const errorData = error.response.data;
-      if (API_CONFIG.DEBUG) console.log('❌ API Error Response:', errorData);
-      return {
-        success: false,
-        action: errorData.action || 'error',
-        message: errorData.message || errorData.error,
-        error: errorData.error,
-      };
-    }
-
     throw new Error('API_ERROR');
   }
 };

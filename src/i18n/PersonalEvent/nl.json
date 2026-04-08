@@ -40,7 +40,11 @@
     "nameInvalid": "Naam van het evenement is vereist",
     "eventTypeInvalid": "Type evenement is vereist",
     "dateInvalid": "Ongeldig datumformaat",
-    "startTimeInvalid": "Ongeldig tijdformaat. Gebruik UU:MM"
+    "startTimeInvalid": "Ongeldig tijdformaat. Gebruik UU:MM",
+    "participantInsertFailed": "Evenement aangemaakt maar registratie mislukt. Probeer opnieuw.",
+    "eventNotFound": "Evenement niet gevonden. Het is mogelijk verwijderd.",
+    "noChanges": "Er zijn geen wijzigingen aangebracht.",
+    "invalidEventId": "Ongeldig evenement. Ga terug en probeer opnieuw."
   },
   "file": {
     "uploadTitle": "Tik om GPX-bestand te uploaden",

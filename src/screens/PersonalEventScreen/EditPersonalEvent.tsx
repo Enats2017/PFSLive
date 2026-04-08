@@ -72,18 +72,14 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     const loadEvent = async () => {
       try {
         if (API_CONFIG.DEBUG) console.log('📡 Loading personal event:', eventId);
-
         const event = await getPersonalEvent(eventId);
         if (cancelled) return;
-
         if (API_CONFIG.DEBUG) console.log('✅ Event loaded:', event);
-
         initFormFromEvent(event);
         if (event.gpx_path) initExistingFile(event.gpx_path);
       } catch (err: any) {
         if (cancelled) return;
         if (API_CONFIG.DEBUG) console.error('❌ Load event failed:', err?.message);
-        // ✅ Error message from language file
         toastError(t('common:errors.generic'), t('personal:errors.loadFailed'));
         navigation.goBack();
       } finally {
@@ -95,10 +91,46 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     return () => { cancelled = true; };
   }, [eventId, initFormFromEvent, initExistingFile, navigation, t]);
 
+  // ✅ Map API field error codes → form field errors using language keys
+  // PHP edit API returns identical field codes to the create API
+  const applyApiFieldErrors = useCallback((fields: string[]) => {
+    fields.forEach((code) => {
+      switch (code) {
+        case 'name_required':
+          setFieldError('name', t('personal:errors.nameRequired'));
+          break;
+        case 'event_type_required':
+          setFieldError('eventType', t('personal:errors.eventTypeRequired'));
+          break;
+        case 'race_date_required':
+          setFieldError('date', t('personal:errors.dateRequired'));
+          break;
+        case 'race_date_invalid':
+          setFieldError('date', t('personal:errors.invalidDate'));
+          break;
+        case 'start_hour_invalid':
+          setFieldError('startTime', t('personal:errors.invalidStartTime'));
+          break;
+        case 'gpx_too_large':
+          setFieldError('file', t('personal:errors.fileTooLarge', { size: MAX_FILE_SIZE / (1024 * 1024) }));
+          break;
+        case 'gpx_invalid_type':
+        case 'gpx_invalid_content':
+          setFieldError('file', t('personal:errors.invalidFileType'));
+          break;
+        case 'gpx_upload_failed':
+        case 'gpx_save_failed':
+          setFieldError('file', t('personal:errors.filePickFailed'));
+          break;
+        default:
+          if (API_CONFIG.DEBUG) console.log('⚠️ Unhandled API field error:', code);
+          break;
+      }
+    });
+  }, [setFieldError, t]);
+
   const handleSubmit = useCallback(async () => {
     clearAllErrors();
-
-    // ✅ All validation messages from the hook which uses t() — no hardcoded strings
     if (!validateForm() || isSubmitting) return;
 
     setIsSubmitting(true);
@@ -106,7 +138,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     try {
       if (API_CONFIG.DEBUG) console.log('📤 Updating personal event:', eventId);
 
-      await updatePersonalEvent({
+      const response = await updatePersonalEvent({
         eventId,
         name: formData.name.trim(),
         eventTypeId: formData.selectedEventType?.value ?? null,
@@ -117,7 +149,32 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
         removeGpx: shouldRemoveGpx,
       });
 
-      if (API_CONFIG.DEBUG) console.log('✅ Event updated successfully');
+      if (API_CONFIG.DEBUG) console.log('✅ Update response:', response);
+
+      // ✅ Handle API field-level validation errors — map to inline form errors
+      if (!response.success && response.fields && response.fields.length > 0) {
+        applyApiFieldErrors(response.fields);
+        return;
+      }
+
+      // ✅ Handle top-level API error codes using language keys
+      if (!response.success) {
+        switch (response.message) {
+          case 'event_not_found':
+            toastError(t('common:errors.generic'), t('personal:errors.eventNotFound'));
+            break;
+          case 'no_changes':
+            toastError(t('common:errors.generic'), t('personal:errors.noChanges'));
+            break;
+          case 'product_custom_app_id_invalid':
+            toastError(t('common:errors.generic'), t('personal:errors.invalidEventId'));
+            break;
+          default:
+            toastError(t('common:errors.generic'), t('personal:errors.updateFailed'));
+            break;
+        }
+        return;
+      }
 
       toastSuccess(t('personal:success.title'), t('personal:success.editMessage'));
 
@@ -130,7 +187,6 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
       });
     } catch (err: any) {
       if (API_CONFIG.DEBUG) console.error('❌ Update event failed:', err?.message);
-      // ✅ Error message from language file
       toastError(
         t('common:errors.generic'),
         err.message === 'API_ERROR' ? t('personal:errors.updateFailed') : err.message
@@ -140,7 +196,8 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     }
   }, [
     clearAllErrors, validateForm, isSubmitting, eventId,
-    formData, selectedFile, shouldRemoveGpx, navigation, t,
+    formData, selectedFile, shouldRemoveGpx, navigation,
+    applyApiFieldErrors, t,
   ]);
 
   const showNewFile = !!selectedFile;

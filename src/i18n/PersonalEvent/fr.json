@@ -40,7 +40,11 @@
     "nameInvalid": "Le nom de l'événement est requis",
     "eventTypeInvalid": "Le type d'événement est requis",
     "dateInvalid": "Format de date invalide",
-    "startTimeInvalid": "Format d'heure invalide. Veuillez utiliser HH:MM"
+    "startTimeInvalid": "Format d'heure invalide. Veuillez utiliser HH:MM",
+    "participantInsertFailed": "Événement créé mais l'inscription a échoué. Veuillez réessayer.",
+    "eventNotFound": "Événement introuvable. Il a peut-être été supprimé.",
+    "noChanges": "Aucune modification n'a été apportée à l'événement.",
+    "invalidEventId": "Événement invalide. Veuillez revenir en arrière et réessayer."
   },
   "file": {
     "uploadTitle": "Appuyez pour télécharger le fichier GPX",

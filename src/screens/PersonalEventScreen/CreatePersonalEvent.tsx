@@ -82,10 +82,49 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     setMembershipStartDate(undefined);
   }, []);
 
+  // ✅ Map API field error codes → form field errors using language keys
+  // PHP returns e.g. ['name_required', 'race_date_invalid', 'start_hour_invalid']
+  const applyApiFieldErrors = useCallback((fields: string[]) => {
+    fields.forEach((code) => {
+      switch (code) {
+        case 'name_required':
+          setFieldError('name', t('personal:errors.nameRequired'));
+          break;
+        case 'event_type_required':
+          setFieldError('eventType', t('personal:errors.eventTypeRequired'));
+          break;
+        case 'race_date_required':
+          setFieldError('date', t('personal:errors.dateRequired'));
+          break;
+        case 'race_date_invalid':
+          setFieldError('date', t('personal:errors.invalidDate'));
+          break;
+        case 'start_hour_invalid':
+          setFieldError('startTime', t('personal:errors.invalidStartTime'));
+          break;
+        case 'gpx_too_large':
+          setFieldError('file', t('personal:errors.fileTooLarge', { size: MAX_FILE_SIZE / (1024 * 1024) }));
+          break;
+        case 'gpx_invalid_type':
+        case 'gpx_invalid_content':
+          setFieldError('file', t('personal:errors.invalidFileType'));
+          break;
+        case 'gpx_upload_failed':
+        case 'gpx_save_failed':
+        case 'gpx_read_failed':
+          setFieldError('file', t('personal:errors.filePickFailed'));
+          break;
+        // timezone errors are device-generated — silently ignore, show generic modal
+        default:
+          if (API_CONFIG.DEBUG) console.log('⚠️ Unhandled API field error:', code);
+          break;
+      }
+    });
+  }, [setFieldError, t]);
+
   const handleSubmit = useCallback(async () => {
     clearAllErrors();
 
-    // ✅ All validation messages come from the hook which uses t() — no hardcoded strings
     if (!validateForm()) {
       if (API_CONFIG.DEBUG) console.log('❌ Form validation failed');
       return;
@@ -122,6 +161,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         console.log('✅ Create Personal Event Response:', {
           success: response.success,
           action: response.action,
+          fields: response.fields,
         });
       }
 
@@ -147,6 +187,17 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
             break;
           case 'customer_invalid':
             showErrorModal('personal:errors.customerInvalidTitle', 'personal:errors.customerInvalidMessage');
+            break;
+          case 'participant_insert_failed':
+            showErrorModal('personal:errors.createFailedTitle', 'personal:errors.participantInsertFailed');
+            break;
+          // ✅ API field validation errors — map to inline form errors
+          case 'validation_failed':
+            if (response.fields && response.fields.length > 0) {
+              applyApiFieldErrors(response.fields);
+            } else {
+              showErrorModal('personal:errors.validationErrorTitle', 'personal:errors.validationErrorMessage');
+            }
             break;
           case 'validation_error':
           case 'missing_parameters':
@@ -183,7 +234,8 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     }
   }, [
     clearAllErrors, validateForm, isSubmitting, formData,
-    selectedFile, resetForm, clearFile, navigation, showErrorModal, t,
+    selectedFile, resetForm, clearFile, navigation,
+    showErrorModal, applyApiFieldErrors, t,
   ]);
 
   return (
@@ -266,7 +318,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
                     error={!!errors.startTime}
                   />
                 </View>
-                {/* Clear button — only shown when a time is set */}
                 {formData.startTime ? (
                   <TouchableOpacity
                     onPress={handlers.handleClearStartTime}

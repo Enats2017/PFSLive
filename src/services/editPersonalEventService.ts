@@ -41,6 +41,13 @@ interface UpdateEventResponse {
   event: PersonalEvent;
 }
 
+// ✅ UPDATE RESPONSE — includes optional fields array for API validation errors
+export interface UpdateEventResult {
+  success: boolean;
+  message: string;
+  fields?: string[]; // ✅ e.g. ['name_required', 'race_date_invalid']
+}
+
 // ✅ GET PERSONAL EVENT
 export const getPersonalEvent = async (eventId: number): Promise<PersonalEvent> => {
   try {
@@ -56,28 +63,19 @@ export const getPersonalEvent = async (eventId: number): Promise<PersonalEvent> 
     const { data } = await apiClient.post<GetEventResponse>(
       getApiEndpoint(API_CONFIG.ENDPOINTS.GET_CUSTOM_EVENT),
       { product_custom_app_id: eventId },
-      {
-        headers,
-        timeout: API_CONFIG.TIMEOUT,
-      }
+      { headers, timeout: API_CONFIG.TIMEOUT }
     );
 
-    if (API_CONFIG.DEBUG) {
-      console.log('✅ GET Personal Event Response:', data);
-    }
+    if (API_CONFIG.DEBUG) console.log('✅ GET Personal Event Response:', data);
 
     if (!data?.event) {
-      if (API_CONFIG.DEBUG) {
-        console.error('❌ Unexpected response shape:', data);
-      }
+      if (API_CONFIG.DEBUG) console.error('❌ Unexpected response shape:', data);
       throw new Error('EVENT_DATA_MISSING');
     }
 
     return data.event;
   } catch (error: any) {
-    if (API_CONFIG.DEBUG) {
-      console.error('❌ Get Personal Event Error:', error);
-    }
+    if (API_CONFIG.DEBUG) console.error('❌ Get Personal Event Error:', error);
     throw error;
   }
 };
@@ -85,24 +83,25 @@ export const getPersonalEvent = async (eventId: number): Promise<PersonalEvent> 
 // ✅ UPDATE PERSONAL EVENT
 export const updatePersonalEvent = async (
   params: UpdatePersonalEventParams
-): Promise<{ success: boolean; message: string }> => {
+): Promise<UpdateEventResult> => {
   try {
     const headers = await API_CONFIG.getMutiForm();
     const body = new FormData();
 
-    // ✅ REQUIRED FIELDS
     body.append('product_custom_app_id', String(params.eventId));
     body.append('name', params.name.trim());
     body.append('race_date', params.date);
-    body.append('start_hour', params.startTime);
     body.append('timezone', params.timezone);
 
-    // ✅ OPTIONAL: EVENT TYPE
+    // ✅ startTime optional — only append if non-empty
+    if (params.startTime?.trim()) {
+      body.append('start_hour', params.startTime);
+    }
+
     if (params.eventTypeId !== null && params.eventTypeId !== undefined) {
       body.append('event_type', String(params.eventTypeId));
     }
 
-    // ✅ FILE HANDLING
     if (params.selectedFile) {
       const fileData: any = {
         uri: params.selectedFile.uri,
@@ -110,7 +109,6 @@ export const updatePersonalEvent = async (
         type: params.selectedFile.mimeType || 'application/gpx+xml',
       };
       body.append('gpx_file', fileData);
-
       if (API_CONFIG.DEBUG) {
         console.log('📎 Uploading new GPX file:', {
           name: params.selectedFile.name,
@@ -119,10 +117,7 @@ export const updatePersonalEvent = async (
       }
     } else if (params.removeGpx) {
       body.append('remove_gpx', '1');
-
-      if (API_CONFIG.DEBUG) {
-        console.log('🗑️ Removing existing GPX file');
-      }
+      if (API_CONFIG.DEBUG) console.log('🗑️ Removing existing GPX file');
     }
 
     if (API_CONFIG.DEBUG) {
@@ -131,46 +126,53 @@ export const updatePersonalEvent = async (
         name: params.name,
         eventTypeId: params.eventTypeId,
         date: params.date,
-        startTime: params.startTime,
+        startTime: params.startTime || '(not set)',
         hasFile: !!params.selectedFile,
         removeGpx: params.removeGpx,
       });
     }
 
-    const { data } = await apiClient.post<UpdateEventResponse>(
+    // ✅ Use postRaw so 4xx responses are returned (not swallowed by handleError)
+    const response = await apiClient.postRaw<UpdateEventResponse>(
       getApiEndpoint(API_CONFIG.ENDPOINTS.UPDATE_CUSTOM_EVENT),
       body,
-      {
-        headers,
-        timeout: API_CONFIG.TIMEOUT,
-      }
+      { headers, timeout: API_CONFIG.TIMEOUT }
     );
 
-    if (API_CONFIG.DEBUG) {
-      console.log('✅ UPDATE Personal Event Response:', data);
+    if (API_CONFIG.DEBUG) console.log('✅ UPDATE Personal Event Response:', response.data);
+
+    const responseData = response.data as any;
+
+    // ✅ Handle non-2xx — PHP returns { success: false, error: "...", fields: [...] }
+    if (response.status !== 200 && response.status !== 201) {
+      if (API_CONFIG.DEBUG) console.log('❌ API Error Response:', responseData);
+
+      // Field-level validation errors
+      if (Array.isArray(responseData.fields) && responseData.fields.length > 0) {
+        return {
+          success: false,
+          message: responseData.error ?? 'validation_failed',
+          fields: responseData.fields,
+        };
+      }
+
+      // Top-level error code
+      return {
+        success: false,
+        message: responseData.error ?? 'API_ERROR',
+        fields: [],
+      };
     }
 
-    if (!data.message) {
-      if (API_CONFIG.DEBUG) {
-        console.error('❌ Unexpected response shape:', data);
-      }
-      throw new Error('UPDATE_FAILED');
-    }
+    // ✅ API wraps payload in a 'data' key: { success: true, data: { message, event, ... } }
+    const data = responseData.data ?? responseData;
 
     return {
-      success: data.success ?? true,
-      message: data.message,
+      success: data.success ?? responseData.success ?? true,
+      message: data.message ?? responseData.message ?? '',
     };
   } catch (error: any) {
-    if (API_CONFIG.DEBUG) {
-      console.error('❌ Update Personal Event Error:', error);
-    }
-
-    // ✅ HANDLE VALIDATION ERRORS
-    if (error.response?.data?.message) {
-      throw new Error(error.response.data.message);
-    }
-
+    if (API_CONFIG.DEBUG) console.error('❌ Update Personal Event Error:', error);
     throw new Error('API_ERROR');
   }
 };
