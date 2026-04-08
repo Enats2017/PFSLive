@@ -17,12 +17,15 @@ export const locationQueueService = {
   async hasNetwork(): Promise<boolean> {
     try {
       const state = await NetInfo.fetch();
-      return state.isConnected === true && state.isInternetReachable === true;
+      // ✅ isInternetReachable can be null on Android while still determining.
+      // Treat null as true (optimistic) — better to attempt a send and fail
+      // than to queue unnecessarily when connectivity is likely fine.
+      return state.isConnected === true && state.isInternetReachable !== false;
     } catch (error) {
       if (API_CONFIG.DEBUG) {
         console.error('❌ Error checking network:', error);
       }
-      return false;
+      return true; // optimistic fallback
     }
   },
 

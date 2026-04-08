@@ -116,6 +116,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const raceStartTimeRef = useRef<Date | null>(null);
   const isGPSActiveRef = useRef<boolean>(false);
   const serverTimeOffsetRef = useRef<number>(0);
+  // ✅ Ref so GPS callback always reads current value without stale closure
+  const isSendingDataRef = useRef<boolean>(false);
 
   // Derived values
   const participantId = homeData?.next_race_participant_app_id || null;
@@ -441,6 +443,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (queueProcessorRef.current || !participantId || !eventId) return;
 
     queueProcessorRef.current = setInterval(async () => {
+      // ✅ Check queue size before loading full queue — avoids unnecessary reads
+      const queueSize = await locationQueueService.getQueueSize();
+      if (queueSize === 0) return;
+
       try {
         const sentCount = await locationService.processQueue(participantId, eventId);
         if (sentCount > 0) {
@@ -464,7 +470,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (raceStartCheckRef.current) return;
 
     raceStartCheckRef.current = setInterval(() => {
-      if (hasRaceStarted() && !isSendingData) {
+      // ✅ Use ref — not state — so callback reads current value not stale closure
+      if (hasRaceStarted() && !isSendingDataRef.current) {
+        isSendingDataRef.current = true;
         setIsSendingData(true);
 
         if (API_CONFIG.DEBUG) {
@@ -472,7 +480,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
       }
     }, 30000);
-  }, [hasRaceStarted, isSendingData, t]);
+  }, [hasRaceStarted, t]);
 
   const startGPSTracking = useCallback(async () => {
     try {
@@ -537,7 +545,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       });
 
       const raceAlreadyStarted = hasRaceStarted();
-      if (raceAlreadyStarted) setIsSendingData(true);
+      if (raceAlreadyStarted) {
+        isSendingDataRef.current = true;
+        setIsSendingData(true);
+      }
 
       const gpsWatch = await gpsService.startWatchingPosition(
         async (gpsPosition) => {
@@ -554,7 +565,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           const shouldSend = hasRaceStarted();
 
           if (shouldSend) {
-            if (!isSendingData) {
+            // ✅ Use ref — not state — to avoid stale closure in async callback
+            if (!isSendingDataRef.current) {
+              isSendingDataRef.current = true;
               setIsSendingData(true);
               if (API_CONFIG.DEBUG) {
                 toastSuccess(t('home:tracking.raceStarted'), t('home:tracking.nowSending'));
@@ -625,7 +638,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     fetchHomeData,
     getServerTime,
     hasRaceStarted,
-    isSendingData,
     loadQueueSize,
     startQueueProcessor,
     startRaceStartChecker,
@@ -650,6 +662,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     setIsGPSActive(false);
     isGPSActiveRef.current = false;
+    isSendingDataRef.current = false;
     setIsSendingData(false);
     setCurrentLocation(null);
 
@@ -673,6 +686,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         {
           text: t('home:alerts.startNow'),
           onPress: () => {
+            isSendingDataRef.current = true;
             setIsSendingData(true);
             toastSuccess(t('home:tracking.manualStart'), t('home:tracking.manualStartMessage'));
           },
