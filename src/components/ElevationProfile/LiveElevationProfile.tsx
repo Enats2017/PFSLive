@@ -281,7 +281,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                 size={7}
                                 style={{
                                     data: {
-                                        fill: '#22C55E',
+                                        fill: '#F97316',
                                         stroke: colors.white,
                                         strokeWidth: 2.5,
                                     },

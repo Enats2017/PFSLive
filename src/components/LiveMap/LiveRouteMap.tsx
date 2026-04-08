@@ -6,6 +6,15 @@ import { ParticipantMapMarker, AidStationMapMarker, CheckpointData } from '../..
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
 import { colors } from '../../styles/common.styles';
 
+// ── Map marker colors ────────────────────────────────────────────────────────
+// Each marker type has a distinct color so they're easy to tell apart at a glance.
+const MARKER_COLORS = {
+    start:       '#22C55E', // green  — universally understood as start
+    finish:      '#EF4444', // red    — universally understood as finish
+    checkpoint:  '#1a1a2e', // dark — intermediate checkpoints (with fork & knife icon)
+    participant: '#F97316', // blue   — tracked athletes (distinct from start green)
+} as const;
+
 interface LiveRouteMapProps {
     trackPoints: GPXTrackPoint[];
     aidStations: GPXAidStation[];
@@ -31,10 +40,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
 
     console.log('👥 Map received participants:', {
         count: participants.length,
-        firstParticipant: participants[0] ? {
-            lat: participants[0].lat,
-            lon: participants[0].lon,
-        } : null,
+        firstParticipant: participants[0] ? { lat: participants[0].lat, lon: participants[0].lon } : null,
     });
 
     const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = React.useMemo(() => ({
@@ -50,14 +56,11 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         if (trackPoints.length === 0) return [4.4699, 50.5039];
         const lons = trackPoints.map(pt => pt.lon);
         const lats = trackPoints.map(pt => pt.lat);
-        const centerLon = (Math.max(...lons) + Math.min(...lons)) / 2;
-        const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
-        return [centerLon, centerLat];
+        return [(Math.max(...lons) + Math.min(...lons)) / 2, (Math.max(...lats) + Math.min(...lats)) / 2];
     }, [trackPoints]);
 
-
-
     const bounds = React.useMemo(() => {
+        // Priority 1: GPX track
         if (trackPoints.length > 0) {
             const lons = trackPoints.map(pt => pt.lon);
             const lats = trackPoints.map(pt => pt.lat);
@@ -67,7 +70,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             };
         }
 
-        // Priority 2: no GPX — fit to participant coordinates
+        // Priority 2: participant positions
         const validParticipants = participants.filter(p => p.lat !== 0 && p.lon !== 0);
         if (validParticipants.length > 0) {
             const lons = validParticipants.map(p => p.lon);
@@ -78,13 +81,29 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             };
         }
 
-        return null;
-    }, [trackPoints, participants]);
+        // Priority 3: API checkpoints
+        const validCheckpoints = apiCheckpoints.filter(cp => {
+            const lat = parseFloat(String(cp.latitude));
+            const lon = parseFloat(String(cp.longitude));
+            return !isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0;
+        });
+        if (validCheckpoints.length > 0) {
+            const lons = validCheckpoints.map(cp => parseFloat(String(cp.longitude)));
+            const lats = validCheckpoints.map(cp => parseFloat(String(cp.latitude)));
+            console.log('📍 Bounds from checkpoints:', { lons, lats });
+            return {
+                ne: [Math.max(...lons), Math.max(...lats)] as [number, number],
+                sw: [Math.min(...lons), Math.min(...lats)] as [number, number],
+            };
+        }
 
-    console.log('🗺️ Bounds check:', {
+        return null;
+    }, [trackPoints, participants, apiCheckpoints]);
+
+    console.log('🗺️ Bounds source:', {
         hasTrackPoints: trackPoints.length > 0,
         hasValidParticipants: participants.filter(p => p.lat !== 0 && p.lon !== 0).length,
-        boundsSource: trackPoints.length > 0 ? 'GPX' : participants.filter(p => p.lat !== 0 && p.lon !== 0).length > 0 ? 'participants' : 'none',
+        hasValidCheckpoints: apiCheckpoints.filter(cp => cp.latitude && cp.longitude).length,
         bounds,
     });
 
@@ -112,7 +131,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         };
         const timer = setTimeout(tryFocus, 300);
         return () => clearTimeout(timer);
-    }, [bounds]); // ← removed mapReady from deps
+    }, [bounds]);
 
     const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
         console.log('🗺️ Creating participants GeoJSON with', participants.length, 'participants');
@@ -151,30 +170,47 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         };
     }, [participants]);
 
-    // ✅ Use API checkpoints if available, otherwise fall back to GPX aid stations
     const aidStationsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
         if (apiCheckpoints.length > 0) {
-            // ✅ Filter out START and FINISH from map display
-            const visibleCheckpoints = apiCheckpoints.filter(cp => !cp.is_start && !cp.is_finish);
+            const validCheckpoints = apiCheckpoints.filter(cp => {
+                const lat = parseFloat(String(cp.latitude));
+                const lon = parseFloat(String(cp.longitude));
+                const valid = !isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0;
+                if (!valid) {
+                    console.log(`⚠️ Skipping checkpoint "${cp.name}" — invalid coords:`, cp.latitude, cp.longitude);
+                }
+                return valid;
+            });
 
-            console.log('🗺️ Using API checkpoints for map:', visibleCheckpoints.map(c => c.name));
+            console.log(`🗺️ Checkpoints: ${apiCheckpoints.length} total, ${validCheckpoints.length} with valid coords`);
 
             return {
                 type: 'FeatureCollection',
-                features: visibleCheckpoints.map((checkpoint, idx) => ({
-                    type: 'Feature',
-                    properties: {
-                        id: `checkpoint-${idx}`,
-                        name: checkpoint.name,
-                        distance_km: checkpoint.distance,
-                        ele: checkpoint.elevation,
-                        accessible_by_car: checkpoint.accessible_by_car,
-                    },
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [checkpoint.longitude, checkpoint.latitude],
-                    },
-                })),
+                features: validCheckpoints.map((checkpoint, idx) => {
+                    const lat = parseFloat(String(checkpoint.latitude));
+                    const lon = parseFloat(String(checkpoint.longitude));
+
+                    // ✅ Offset FIN slightly so it doesn't fully overlap START
+                    const offsetLon = checkpoint.is_finish ? lon + 0.0003 : lon;
+                    const offsetLat = checkpoint.is_finish ? lat + 0.0003 : lat;
+
+                    return {
+                        type: 'Feature' as const,
+                        properties: {
+                            id: `checkpoint-${idx}`,
+                            name: checkpoint.name,
+                            distance_km: checkpoint.distance,
+                            ele: checkpoint.elevation,
+                            accessible_by_car: checkpoint.accessible_by_car,
+                            is_start: checkpoint.is_start,
+                            is_finish: checkpoint.is_finish,
+                        },
+                        geometry: {
+                            type: 'Point' as const,
+                            coordinates: [offsetLon, offsetLat],
+                        },
+                    };
+                }),
             };
         }
 
@@ -182,16 +218,18 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         return {
             type: 'FeatureCollection',
             features: aidStations.map((station, idx) => ({
-                type: 'Feature',
+                type: 'Feature' as const,
                 properties: {
                     id: `aid-${idx}`,
                     name: station.name,
                     distance_km: station.distance || 0,
                     ele: station.ele,
                     accessible_by_car: station.accessible_by_car,
+                    is_start: false,
+                    is_finish: false,
                 },
                 geometry: {
-                    type: 'Point',
+                    type: 'Point' as const,
                     coordinates: [station.lon, station.lat],
                 },
             })),
@@ -273,7 +311,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     animationDuration={1000}
                 />
 
-                {/* Route LineString - BLUE */}
+                {/* Route */}
                 <Mapbox.ShapeSource id="route-source" shape={routeGeoJSON}>
                     <Mapbox.LineLayer
                         id="route-line"
@@ -286,7 +324,11 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     />
                 </Mapbox.ShapeSource>
 
-                {/* Aid Stations / Checkpoints */}
+                {/* ── Checkpoints / Aid Stations ───────────────────────────
+                    green  = START
+                    red    = FINISH
+                    orange = intermediate checkpoints (with fork & knife icon)
+                    Two filtered SymbolLayers to avoid mixing textField + iconImage. */}
                 <Mapbox.ShapeSource
                     id="aidstations-source"
                     shape={aidStationsGeoJSON}
@@ -295,8 +337,13 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     <Mapbox.CircleLayer
                         id="aidstation-circles"
                         style={{
-                            circleColor: '#000000',
-                            circleRadius: 12,
+                            circleColor: [
+                                'case',
+                                ['==', ['get', 'is_start'], true],  MARKER_COLORS.start,
+                                ['==', ['get', 'is_finish'], true], MARKER_COLORS.finish,
+                                MARKER_COLORS.checkpoint,
+                            ] as any,
+                            circleRadius: 14,
                             circleStrokeWidth: 3,
                             circleStrokeColor: '#FFFFFF',
                             circlePitchAlignment: 'map',
@@ -304,19 +351,48 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         }}
                     />
 
+                    {/* Fork & knife icon for intermediate checkpoints */}
                     <Mapbox.SymbolLayer
-                        id="aidstation-icons"
+                        id="aidstation-fork-icons"
+                        filter={['all',
+                            ['!=', ['get', 'is_start'], true],
+                            ['!=', ['get', 'is_finish'], true],
+                        ] as any}
                         style={{
-                            textField: '🍴',
-                            textSize: 16,
+                            iconImage: 'restaurant-15',
+                            iconSize: 1.2,
+                            iconColor: '#FFFFFF',
+                            iconAllowOverlap: true,
+                            iconIgnorePlacement: true,
+                        }}
+                    />
+
+                    {/* S / F text for start & finish */}
+                    <Mapbox.SymbolLayer
+                        id="aidstation-sf-labels"
+                        filter={['any',
+                            ['==', ['get', 'is_start'], true],
+                            ['==', ['get', 'is_finish'], true],
+                        ] as any}
+                        style={{
+                            textField: ['case',
+                                ['==', ['get', 'is_start'], true], 'S',
+                                'F',
+                            ] as any,
+                            textSize: 14,
+                            textColor: '#FFFFFF',
+                            textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
                             textAllowOverlap: true,
                             iconAllowOverlap: true,
                             textIgnorePlacement: true,
                         }}
                     />
+
+
                 </Mapbox.ShapeSource>
 
-                {/* Participants */}
+                {/* ── Participants ─────────────────────────────────────────
+                    Blue circles — distinct from green START marker. */}
                 {participants.length > 0 && (
                     <Mapbox.ShapeSource
                         id="participants-source"
@@ -326,7 +402,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         <Mapbox.CircleLayer
                             id="participant-dots"
                             style={{
-                                circleColor: '#22C55E',
+                                circleColor: MARKER_COLORS.participant, // blue
                                 circleRadius: 10,
                                 circleStrokeWidth: 3,
                                 circleStrokeColor: '#FFFFFF',
@@ -334,14 +410,13 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                 circleOpacity: 1,
                             }}
                         />
-
                         <Mapbox.SymbolLayer
                             id="participant-bibs"
                             minZoomLevel={13}
                             style={{
                                 textField: ['get', 'initials'],
                                 textSize: 12,
-                                textColor: '#22C55E',
+                                textColor: MARKER_COLORS.participant,
                                 textHaloColor: '#FFFFFF',
                                 textHaloWidth: 2,
                                 textOffset: [0, 1.8],
