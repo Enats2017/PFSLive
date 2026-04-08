@@ -103,10 +103,13 @@ export const loginStyles = StyleSheet.create({
   registerText: {
     fontSize: typography.sizes.md,
     color: colors.gray600,
+    textAlign:"center",
+   
   },
 
   registerLink: {
     color: colors.primary,
     fontWeight: typography.weights.bold,
+    
   },
 });

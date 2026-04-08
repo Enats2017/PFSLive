@@ -70,7 +70,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             };
         }
 
-        // Priority 2: participant positions
+
         const validParticipants = participants.filter(p => p.lat !== 0 && p.lon !== 0);
         if (validParticipants.length > 0) {
             const lons = validParticipants.map(p => p.lon);
@@ -134,7 +134,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     }, [bounds]);
 
     const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
-        console.log('🗺️ Creating participants GeoJSON with', participants.length, 'participants');
+        console.log('Creating participants GeoJSON with', participants.length, 'participants');
         return {
             type: 'FeatureCollection',
             features: participants.map(p => ({
@@ -182,6 +182,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 return valid;
             });
 
+
             console.log(`🗺️ Checkpoints: ${apiCheckpoints.length} total, ${validCheckpoints.length} with valid coords`);
 
             return {
@@ -211,10 +212,10 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         },
                     };
                 }),
+
             };
         }
 
-        // Fallback to GPX aid stations
         return {
             type: 'FeatureCollection',
             features: aidStations.map((station, idx) => ({
@@ -298,7 +299,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 logoEnabled={false}
                 attributionEnabled={false}
                 onDidFinishLoadingMap={() => {
-                    console.log('🗺️ Map finished loading');
+                    console.log(' Map finished loading');
                     mapReadyRef.current = true;
                     setMapReady(true);
                 }}
@@ -367,7 +368,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         }}
                     />
 
-                    {/* S / F text for start & finish */}
                     <Mapbox.SymbolLayer
                         id="aidstation-sf-labels"
                         filter={['any',
@@ -402,6 +402,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         <Mapbox.CircleLayer
                             id="participant-dots"
                             style={{
+
                                 circleColor: MARKER_COLORS.participant, // blue
                                 circleRadius: 10,
                                 circleStrokeWidth: 3,
