@@ -26,7 +26,7 @@ import { EditPersonalEventpops } from '../../types/navigation';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { FileCard } from '../../components/FileCard';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MB = MAX_FILE_SIZE / 1_048_576;
 
 const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation }) => {
@@ -63,7 +63,6 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasFetched = useRef(false);
 
-  // ✅ LOAD EVENT
   useEffect(() => {
     if (hasFetched.current) return;
     hasFetched.current = true;
@@ -72,60 +71,42 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
 
     const loadEvent = async () => {
       try {
-        if (API_CONFIG.DEBUG) {
-          console.log('📡 Loading personal event:', eventId);
-        }
+        if (API_CONFIG.DEBUG) console.log('📡 Loading personal event:', eventId);
 
         const event = await getPersonalEvent(eventId);
-        
         if (cancelled) return;
 
-        if (API_CONFIG.DEBUG) {
-          console.log('✅ Event loaded:', event);
-        }
+        if (API_CONFIG.DEBUG) console.log('✅ Event loaded:', event);
 
         initFormFromEvent(event);
-        
-        if (event.gpx_path) {
-          initExistingFile(event.gpx_path);
-        }
+        if (event.gpx_path) initExistingFile(event.gpx_path);
       } catch (err: any) {
         if (cancelled) return;
-
-        if (API_CONFIG.DEBUG) {
-          console.error('❌ Load event failed:', err?.message);
-        }
-
+        if (API_CONFIG.DEBUG) console.error('❌ Load event failed:', err?.message);
+        // ✅ Error message from language file
         toastError(t('common:errors.generic'), t('personal:errors.loadFailed'));
         navigation.goBack();
       } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     loadEvent();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [eventId, initFormFromEvent, initExistingFile, navigation, t]);
 
-  // ✅ SUBMIT WITH PROPER NAVIGATION
   const handleSubmit = useCallback(async () => {
     clearAllErrors();
-    
+
+    // ✅ All validation messages from the hook which uses t() — no hardcoded strings
     if (!validateForm() || isSubmitting) return;
 
     setIsSubmitting(true);
-    
-    try {
-      if (API_CONFIG.DEBUG) {
-        console.log('📤 Updating personal event:', eventId);
-      }
 
-      const response = await updatePersonalEvent({
+    try {
+      if (API_CONFIG.DEBUG) console.log('📤 Updating personal event:', eventId);
+
+      await updatePersonalEvent({
         eventId,
         name: formData.name.trim(),
         eventTypeId: formData.selectedEventType?.value ?? null,
@@ -136,59 +117,36 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
         removeGpx: shouldRemoveGpx,
       });
 
-      if (API_CONFIG.DEBUG) {
-        console.log('✅ Event updated successfully');
-      }
+      if (API_CONFIG.DEBUG) console.log('✅ Event updated successfully');
 
-      toastSuccess(
-        t('personal:success.title'),
-        t('personal:success.editMessage')
-      );
+      toastSuccess(t('personal:success.title'), t('personal:success.editMessage'));
 
-      // ✅ GET CUSTOMER_APP_ID FROM TOKEN SERVICE
       const customer_app_id = await tokenService.getCustomerId();
+      if (API_CONFIG.DEBUG) console.log('🔑 Customer ID from storage:', customer_app_id);
 
-      if (API_CONFIG.DEBUG) {
-        console.log('🔑 Customer ID from storage:', customer_app_id);
-      }
-
-      // ✅ NAVIGATE TO PROFILESCREEN WITH CORRECT CUSTOMER_APP_ID
       navigation.navigate('ProfileScreen', {
         customer_app_id: customer_app_id || 0,
         fromEdit: true,
       });
     } catch (err: any) {
-      if (API_CONFIG.DEBUG) {
-        console.error('❌ Update event failed:', err?.message);
-      }
-
+      if (API_CONFIG.DEBUG) console.error('❌ Update event failed:', err?.message);
+      // ✅ Error message from language file
       toastError(
         t('common:errors.generic'),
-        err.message === 'API_ERROR'
-          ? t('personal:errors.updateFailed')
-          : err.message
+        err.message === 'API_ERROR' ? t('personal:errors.updateFailed') : err.message
       );
     } finally {
       setIsSubmitting(false);
     }
   }, [
-    clearAllErrors,
-    validateForm,
-    isSubmitting,
-    eventId,
-    formData,
-    selectedFile,
-    shouldRemoveGpx,
-    navigation,
-    t,
+    clearAllErrors, validateForm, isSubmitting, eventId,
+    formData, selectedFile, shouldRemoveGpx, navigation, t,
   ]);
 
-  // ✅ DERIVED UI STATE
   const showNewFile = !!selectedFile;
   const showExistingFile = !selectedFile && !!existingFile && !existingFile.removed;
   const showUploadBox = !selectedFile && (!existingFile || existingFile.removed);
 
-  // ✅ LOADING STATE
   if (isLoading) {
     return (
       <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -201,7 +159,6 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     );
   }
 
-  // ✅ RENDER
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" />
@@ -249,9 +206,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                 editable={!isSubmitting}
                 error={!!errors.eventType}
               />
-              {errors.eventType && (
-                <Text style={personalStyles.errorText}>{errors.eventType}</Text>
-              )}
+              {errors.eventType && <Text style={personalStyles.errorText}>{errors.eventType}</Text>}
             </View>
 
             {/* Date */}
@@ -269,26 +224,36 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
               {errors.date && <Text style={personalStyles.errorText}>{errors.date}</Text>}
             </View>
 
-            {/* Start Time */}
+            {/* Start Time — optional */}
             <View style={personalStyles.fieldWrapper}>
-              <FloatingLabelInput
-                label={t('personal:startTime')}
-                value={formData.startTime}
-                onChangeText={handlers.handleStartTimeChange}
-                iconName="time-outline"
-                isTimePicker
-                required
-                editable={!isSubmitting}
-                error={!!errors.startTime}
-              />
-              {errors.startTime && (
-                <Text style={personalStyles.errorText}>{errors.startTime}</Text>
-              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <FloatingLabelInput
+                    label={t('personal:startTime')}
+                    value={formData.startTime}
+                    onChangeText={handlers.handleStartTimeChange}
+                    iconName="time-outline"
+                    isTimePicker
+                    editable={!isSubmitting}
+                    error={!!errors.startTime}
+                  />
+                </View>
+                {formData.startTime ? (
+                  <TouchableOpacity
+                    onPress={handlers.handleClearStartTime}
+                    disabled={isSubmitting}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={{ marginLeft: 8, marginBottom: 8 }}
+                  >
+                    <Ionicons name="close-circle" size={22} color={colors.gray500} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              {errors.startTime && <Text style={personalStyles.errorText}>{errors.startTime}</Text>}
             </View>
 
             {/* GPX File */}
             <View style={personalStyles.fileSection}>
-              {/* Upload Box */}
               {showUploadBox && (
                 <>
                   {existingFile?.removed && (
@@ -297,24 +262,17 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                       disabled={isSubmitting}
                       style={personalStyles.undoBtn}
                     >
-                      <Text style={personalStyles.undoText}>
-                        {t('personal:file.undoRemove')}
-                      </Text>
+                      <Text style={personalStyles.undoText}>{t('personal:file.undoRemove')}</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
-                    style={[
-                      personalStyles.uploadBox,
-                      errors.file && personalStyles.uploadBoxError,
-                    ]}
+                    style={[personalStyles.uploadBox, errors.file && personalStyles.uploadBoxError]}
                     onPress={pickFile}
                     activeOpacity={0.8}
                     disabled={isSubmitting}
                   >
                     <Ionicons name="cloud-upload-outline" size={40} color={colors.primary} />
-                    <Text style={personalStyles.uploadTitle}>
-                      {t('personal:file.uploadTitle')}
-                    </Text>
+                    <Text style={personalStyles.uploadTitle}>{t('personal:file.uploadTitle')}</Text>
                     <Text style={personalStyles.uploadSubtitle}>
                       {t('personal:file.uploadSubtitle', { size: MB })}
                     </Text>
@@ -322,7 +280,6 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                 </>
               )}
 
-              {/* Existing Server File */}
               {showExistingFile && (
                 <FileCard
                   fileName={existingFile!.name}
@@ -334,7 +291,6 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                 />
               )}
 
-              {/* Newly Picked File */}
               {showNewFile && (
                 <FileCard
                   fileName={selectedFile!.name}
@@ -351,7 +307,6 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
 
             <Text style={personalStyles.subtitle}>{t('personal:fileInfo')}</Text>
 
-            {/* Submit Button */}
             <TouchableOpacity
               style={[
                 commonStyles.primaryButton,
@@ -365,9 +320,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
               {isSubmitting ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <Text style={commonStyles.primaryButtonText}>
-                  {t('personal:button.save')}
-                </Text>
+                <Text style={commonStyles.primaryButtonText}>{t('personal:button.save')}</Text>
               )}
             </TouchableOpacity>
           </View>

@@ -7,7 +7,7 @@
   "startTime": "Heure de départ",
   "fileInfo": "Le téléchargement d'un fichier GPX est facultatif mais fortement recommandé pour un suivi précis",
   "button": {
-    "gpx": "Télécharger un fichier GPX",
+    "gpx": "Télécharger le fichier GPX",
     "save": "SOUMETTRE L'ÉVÉNEMENT"
   },
   "success": {
@@ -20,10 +20,10 @@
     "eventTypeRequired": "Veuillez sélectionner un type d'événement",
     "dateRequired": "Veuillez sélectionner une date",
     "invalidDate": "Format de date invalide. Veuillez utiliser une date valide",
-    "pastDateNotAllowed": "Impossible de sélectionner des dates passées. Veuillez choisir aujourd'hui ou une date future",
+    "pastDateNotAllowed": "Les dates passées ne sont pas autorisées. Veuillez choisir aujourd'hui ou une date future",
     "startTimeRequired": "Veuillez sélectionner une heure de départ",
     "invalidStartTime": "Format d'heure invalide. Veuillez utiliser HH:MM",
-    "fileTooLarge": "La taille du fichier doit être inférieure à {{size}}MB",
+    "fileTooLarge": "La taille du fichier doit être inférieure à {{size}}Mo",
     "invalidFileType": "Veuillez sélectionner un fichier GPX valide (.gpx ou .xml)",
     "filePickFailed": "Échec de la sélection du fichier. Veuillez réessayer",
     "createFailed": "Échec de la création de l'événement. Veuillez réessayer",
@@ -34,15 +34,19 @@
     "validationErrorTitle": "Données invalides",
     "validationErrorMessage": "Certains champs contiennent des données invalides. Veuillez vérifier et réessayer.",
     "networkErrorTitle": "Erreur réseau",
-    "networkErrorMessage": "Impossible de se connecter au serveur. Veuillez vérifier votre connexion Internet et réessayer.",
+    "networkErrorMessage": "Impossible de se connecter au serveur. Veuillez vérifier votre connexion internet et réessayer.",
     "loadFailed": "Échec du chargement des détails de l'événement",
-    "updateFailed": "Échec de la mise à jour de l'événement"
+    "updateFailed": "Échec de la mise à jour de l'événement",
+    "nameInvalid": "Le nom de l'événement est requis",
+    "eventTypeInvalid": "Le type d'événement est requis",
+    "dateInvalid": "Format de date invalide",
+    "startTimeInvalid": "Format d'heure invalide. Veuillez utiliser HH:MM"
   },
   "file": {
-    "uploadTitle": "Appuyez pour télécharger un fichier GPX",
-    "uploadSubtitle": "Format pris en charge : .gpx (Max {{size}}MB)",
+    "uploadTitle": "Appuyez pour télécharger le fichier GPX",
+    "uploadSubtitle": "Format supporté : .gpx (Max {{size}}Mo)",
     "infoTitle": "Informations sur le fichier",
-    "infoMessage": "Nom : {{name}}\nTaille : {{size}} KB",
+    "infoMessage": "Nom : {{name}}\nTaille : {{size}} Ko",
     "removeTitle": "Supprimer le fichier",
     "removeMessage": "Êtes-vous sûr de vouloir supprimer ce fichier ?",
     "removeButton": "Supprimer",
@@ -51,8 +55,8 @@
     "undoRemove": "Annuler la suppression"
   },
   "eventTypes": {
-    "organizedWithResults": "Événement organisé avec classement/résultats",
-    "organizedWithoutResults": "Événement organisé sans classement/résultats",
-    "training": "Séance d'entraînement"
+    "organizedWithResults": "Événement organisé avec classement / résultats",
+    "organizedWithoutResults": "Événement organisé sans classement / résultats",
+    "training": "Session d'entraînement"
   }
 }

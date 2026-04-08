@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   isValidDate,
@@ -19,7 +19,6 @@ interface EventType {
   value: number;
 }
 
-// ✅ HELPER FUNCTIONS
 const getTodayDate = (): string => {
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -28,56 +27,43 @@ const getTodayDate = (): string => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-const getCurrentTime = (): string => {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-};
-
 const isPastDate = (dateString: string): boolean => {
   if (!dateString) return false;
-  
   const inputDate = new Date(dateString);
   const today = new Date();
-  
-  // Set time to start of day for accurate comparison
   today.setHours(0, 0, 0, 0);
   inputDate.setHours(0, 0, 0, 0);
-  
   return inputDate < today;
 };
 
 export const usePersonalEventForm = () => {
+  // ✅ All validation messages come from the language file via t()
   const { t } = useTranslation(['personal']);
 
-  // ✅ CONSOLIDATED STATE WITH DEFAULTS
   const [formData, setFormData] = useState({
     name: '',
     selectedEventType: null as EventType | null,
-    date: getTodayDate(), // ✅ Default to today
-    startTime: getCurrentTime(), // ✅ Default to current time
+    date: getTodayDate(),
+    startTime: '', // optional — empty by default
   });
 
   const [errors, setErrors] = useState<FieldErrors>({});
 
-  // ✅ GENERIC FIELD HANDLER
   const handleFieldChange = useCallback(
     <K extends keyof typeof formData>(field: K, errorKey: keyof FieldErrors) =>
       (value: typeof formData[K]) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
         if (errors[errorKey]) {
           setErrors((prev) => {
-            const newErrors = { ...prev };
-            delete newErrors[errorKey];
-            return newErrors;
+            const next = { ...prev };
+            delete next[errorKey];
+            return next;
           });
         }
       },
     [errors]
   );
 
-  // ✅ SPECIFIC HANDLERS
   const handleNameChange = useCallback(
     (value: string) => handleFieldChange('name', 'name')(value),
     [handleFieldChange]
@@ -90,7 +76,6 @@ export const usePersonalEventForm = () => {
 
   const handleDateChange = useCallback(
     (value: string) => {
-      // ✅ PREVENT PAST DATES
       if (isPastDate(value)) {
         setErrors((prev) => ({
           ...prev,
@@ -108,16 +93,22 @@ export const usePersonalEventForm = () => {
     [handleFieldChange]
   );
 
-  // ✅ ERROR HANDLERS
+  const handleClearStartTime = useCallback(() => {
+    setFormData((prev) => ({ ...prev, startTime: '' }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.startTime;
+      return next;
+    });
+  }, []);
+
   const setFieldError = useCallback((field: keyof FieldErrors, message: string) => {
     setErrors((prev) => ({ ...prev, [field]: message }));
   }, []);
 
-  const clearAllErrors = useCallback(() => {
-    setErrors({});
-  }, []);
+  const clearAllErrors = useCallback(() => setErrors({}), []);
 
-  // ✅ VALIDATION
+  // ✅ All error messages from personal:errors.* language keys — no hardcoded strings
   const validateForm = useCallback((): boolean => {
     const newErrors: FieldErrors = {};
     const { name, selectedEventType, date, startTime } = formData;
@@ -126,7 +117,7 @@ export const usePersonalEventForm = () => {
       newErrors.name = t('personal:errors.nameRequired');
     }
 
-    if (!selectedEventType) {
+    if (!isValidEventType(selectedEventType?.value ?? null)) {
       newErrors.eventType = t('personal:errors.eventTypeRequired');
     }
 
@@ -135,13 +126,11 @@ export const usePersonalEventForm = () => {
     } else if (!isValidDate(date)) {
       newErrors.date = t('personal:errors.invalidDate');
     } else if (isPastDate(date)) {
-      // ✅ VALIDATE PAST DATE
       newErrors.date = t('personal:errors.pastDateNotAllowed');
     }
 
-    if (!startTime.trim()) {
-      newErrors.startTime = t('personal:errors.startTimeRequired');
-    } else if (!isValidTime(startTime)) {
+    // startTime optional — only validate format if provided
+    if (startTime.trim() && !isValidTime(startTime)) {
       newErrors.startTime = t('personal:errors.invalidStartTime');
     }
 
@@ -149,13 +138,12 @@ export const usePersonalEventForm = () => {
     return Object.keys(newErrors).length === 0;
   }, [formData, t]);
 
-  // ✅ RESET FORM (WITH DEFAULTS)
   const resetForm = useCallback(() => {
     setFormData({
       name: '',
       selectedEventType: null,
-      date: getTodayDate(), // ✅ Reset to today
-      startTime: getCurrentTime(), // ✅ Reset to current time
+      date: getTodayDate(),
+      startTime: '',
     });
     setErrors({});
   }, []);
@@ -168,6 +156,7 @@ export const usePersonalEventForm = () => {
       handleEventTypeChange,
       handleDateChange,
       handleStartTimeChange,
+      handleClearStartTime,
     },
     setFieldError,
     clearAllErrors,

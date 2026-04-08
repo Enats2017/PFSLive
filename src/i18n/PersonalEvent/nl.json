@@ -1,9 +1,9 @@
 {
   "title": "Nieuw evenement aanmaken",
-  "editTitle": "Werk je evenement bij",
-  "name": "Evenementnaam",
-  "type": "Evenementtype",
-  "date": "Evenementdatum",
+  "editTitle": "Jouw evenement bijwerken",
+  "name": "Naam evenement",
+  "type": "Type evenement",
+  "date": "Datum evenement",
   "startTime": "Starttijd",
   "fileInfo": "Het uploaden van een GPX-bestand is optioneel maar sterk aanbevolen voor nauwkeurige tracking",
   "button": {
@@ -12,31 +12,35 @@
   },
   "success": {
     "title": "Gelukt!",
-    "message": "Je evenement is succesvol aangemaakt",
-    "editMessage": "Je evenement is succesvol bijgewerkt"
+    "message": "Jouw evenement is succesvol aangemaakt",
+    "editMessage": "Jouw evenement is succesvol bijgewerkt"
   },
   "errors": {
-    "nameRequired": "Voer een evenementnaam in",
-    "eventTypeRequired": "Selecteer een evenementtype",
+    "nameRequired": "Voer een naam in voor het evenement",
+    "eventTypeRequired": "Selecteer een type evenement",
     "dateRequired": "Selecteer een datum",
-    "invalidDate": "Ongeldige datumnotatie. Gebruik een geldige datum",
-    "pastDateNotAllowed": "Kan geen datum in het verleden selecteren. Kies vandaag of een toekomstige datum",
+    "invalidDate": "Ongeldig datumformaat. Gebruik een geldige datum",
+    "pastDateNotAllowed": "Verleden datums zijn niet toegestaan. Kies vandaag of een toekomstige datum",
     "startTimeRequired": "Selecteer een starttijd",
-    "invalidStartTime": "Ongeldige tijdnotatie. Gebruik UU:MM",
-    "fileTooLarge": "Bestandsgrootte moet kleiner zijn dan {{size}}MB",
+    "invalidStartTime": "Ongeldig tijdformaat. Gebruik UU:MM",
+    "fileTooLarge": "Bestandsgrootte moet minder zijn dan {{size}}MB",
     "invalidFileType": "Selecteer een geldig GPX-bestand (.gpx of .xml)",
-    "filePickFailed": "Kan bestand niet selecteren. Probeer het opnieuw",
-    "createFailed": "Kan evenement niet aanmaken. Probeer het opnieuw",
+    "filePickFailed": "Bestand selecteren mislukt. Probeer opnieuw",
+    "createFailed": "Aanmaken van evenement mislukt. Probeer opnieuw",
     "createFailedTitle": "Aanmaken mislukt",
-    "createFailedMessage": "Kan je evenement niet aanmaken. Probeer het later opnieuw.",
+    "createFailedMessage": "Jouw evenement kon niet worden aangemaakt. Probeer het later opnieuw.",
     "customerInvalidTitle": "Accountprobleem",
-    "customerInvalidMessage": "Je account is niet correct geconfigureerd. Neem contact op met support.",
+    "customerInvalidMessage": "Jouw account is niet correct geconfigureerd. Neem contact op met de ondersteuning.",
     "validationErrorTitle": "Ongeldige gegevens",
     "validationErrorMessage": "Sommige velden bevatten ongeldige gegevens. Controleer en probeer opnieuw.",
     "networkErrorTitle": "Netwerkfout",
-    "networkErrorMessage": "Kan geen verbinding maken met de server. Controleer je internetverbinding en probeer opnieuw.",
-    "loadFailed": "Kan evenementdetails niet laden",
-    "updateFailed": "Kan evenement niet bijwerken"
+    "networkErrorMessage": "Kan geen verbinding maken met de server. Controleer jouw internetverbinding en probeer opnieuw.",
+    "loadFailed": "Laden van evenementgegevens mislukt",
+    "updateFailed": "Bijwerken van evenement mislukt",
+    "nameInvalid": "Naam van het evenement is vereist",
+    "eventTypeInvalid": "Type evenement is vereist",
+    "dateInvalid": "Ongeldig datumformaat",
+    "startTimeInvalid": "Ongeldig tijdformaat. Gebruik UU:MM"
   },
   "file": {
     "uploadTitle": "Tik om GPX-bestand te uploaden",
@@ -51,8 +55,8 @@
     "undoRemove": "Verwijderen ongedaan maken"
   },
   "eventTypes": {
-    "organizedWithResults": "Georganiseerd evenement met ranking/resultaten",
-    "organizedWithoutResults": "Georganiseerd evenement zonder ranking/resultaten",
+    "organizedWithResults": "Georganiseerd evenement met rangschikking / resultaten",
+    "organizedWithoutResults": "Georganiseerd evenement zonder rangschikking / resultaten",
     "training": "Trainingssessie"
   }
 }
