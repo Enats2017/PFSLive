@@ -103,11 +103,21 @@ export const commonStyles = StyleSheet.create({
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.black,
+    
+  },
+
+   textCenter: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.black,
+    textAlign:"center"
+    
   },
   subtitle: {
     fontSize: typography.sizes.md,
     color: colors.gray500,
     fontWeight: typography.weights.medium,
+     
   },
   
   // Loading

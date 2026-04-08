@@ -319,7 +319,8 @@ export const resultListStyle = StyleSheet.create({
   loadingText: { 
     color: colors.gray600, 
     fontSize: 14, 
-    marginTop: 8 
+    marginTop: 8 ,
+    textAlign:"center",
   },
   
   errorText: { 

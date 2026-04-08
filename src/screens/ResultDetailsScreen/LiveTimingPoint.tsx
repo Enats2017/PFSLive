@@ -45,12 +45,12 @@ const StatRow = memo(({
 }) => (
     <View style={resultInfoStyles.twoColRow}>
         <View style={resultInfoStyles.twoColLeft}>
-            <Text style={commonStyles.subtitle}>{leftLabel}</Text>
+            <Text style={[commonStyles.subtitle,{textAlign:"center"}]}>{leftLabel}</Text>
             <Text style={commonStyles.title}>{leftVal}</Text>
         </View>
         <View style={resultInfoStyles.verticalDivider} />
         <View style={resultInfoStyles.twoColRight}>
-            <Text style={commonStyles.subtitle}>{rightLabel}</Text>
+            <Text style={[commonStyles.subtitle,{textAlign:"center"}]}>{rightLabel}</Text>
             <Text style={commonStyles.title}>{rightVal}</Text>
         </View>
     </View>

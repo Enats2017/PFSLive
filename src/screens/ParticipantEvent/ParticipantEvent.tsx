@@ -371,7 +371,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             >
                 <View style={{ flex: 1 }}>
                     <View style={eventStyles.section}>
-                        <Text style={commonStyles.title}>{t('event:official.title')}</Text>
+                        <Text style={commonStyles.textCenter}>{t('event:official.title')}</Text>
                     </View>
 
                     {/* TAB BAR */}

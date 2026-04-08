@@ -169,7 +169,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             <Text style={commonStyles.title}>
                 {t('favourite:message.nofavourite')}
             </Text>
-            <Text style={commonStyles.subtitle}>
+            <Text style={[commonStyles.subtitle,{textAlign:"center",marginTop:5}]}>
                 {t('favourite:message.favouritemsg')}
             </Text>
         </View>

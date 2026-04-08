@@ -89,7 +89,7 @@ const ErrorScreen: React.FC<ErrorScreenProps> = ({
           </View>
         </Animated.View>
         <View style={{alignItems:"center",}}>
-        <Text style={commonStyles.title}>
+        <Text style={commonStyles.textCenter}>
           {title ?? t(`${type}.title`)}
         </Text>
         <Text style={[commonStyles.subtitle, {textAlign:"center", marginTop:5}]}>
