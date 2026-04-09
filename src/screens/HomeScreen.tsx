@@ -24,7 +24,8 @@ import { AppHeader } from '../components/common/AppHeader';
 import { UpdateRequiredModal } from '../components/UpdateRequiredModal';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
-import { gpsService } from '../services/gpsService';
+import { gpsService, BACKGROUND_SENT_COUNT_KEY } from '../services/gpsService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
 import { tokenService } from '../services/tokenService';
 import { versionService } from '../services/versionService';
@@ -562,44 +563,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             lon: gpsPosition.longitude,
           });
 
+          // ✅ Background task handles the actual API send.
+          // Foreground callback only updates UI state (position dot, sending indicator).
           const shouldSend = hasRaceStarted();
 
-          if (shouldSend) {
-            // ✅ Use ref — not state — to avoid stale closure in async callback
-            if (!isSendingDataRef.current) {
-              isSendingDataRef.current = true;
-              setIsSendingData(true);
-              if (API_CONFIG.DEBUG) {
-                toastSuccess(t('home:tracking.raceStarted'), t('home:tracking.nowSending'));
-              }
-            }
-
-            const locationData = gpsService.convertToLocationData(gpsPosition);
-
-            if (!participantId || !eventId) return;
-
-            try {
-              const response = await locationService.sendLocation(
-                participantId,
-                eventId,
-                locationData,
-                true
-              );
-
-              if (response.success) {
-                setLocationUpdateCount(prev => prev + 1);
-              }
-
-              await loadQueueSize();
-            } catch (error) {
-              await loadQueueSize();
+          if (shouldSend && !isSendingDataRef.current) {
+            isSendingDataRef.current = true;
+            setIsSendingData(true);
+            if (API_CONFIG.DEBUG) {
+              toastSuccess(t('home:tracking.raceStarted'), t('home:tracking.nowSending'));
             }
           }
         },
         () => {
           toastError(t('home:errors.gpsError'), t('home:errors.gpsErrorDescription'));
         },
-        intervalValue
+        intervalValue,
+        participantId,  // ✅ passed to background task via AsyncStorage
+        eventId,        // ✅ passed to background task via AsyncStorage
+        t('home:tracking.backgroundNotificationTitle'),  // ✅ from language file
+        t('home:tracking.backgroundNotificationBody'),   // ✅ from language file
       );
 
       gpsWatchRef.current = gpsWatch;
@@ -638,7 +621,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     fetchHomeData,
     getServerTime,
     hasRaceStarted,
-    loadQueueSize,
     startQueueProcessor,
     startRaceStartChecker,
     t,
@@ -665,6 +647,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     isSendingDataRef.current = false;
     setIsSendingData(false);
     setCurrentLocation(null);
+    // ✅ Reset background sent counter
+    AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => {});
 
     toastSuccess(
       t('home:tracking.gpsStopped'),
@@ -703,10 +687,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     initializeScreen();
   }, [checkAppVersion, initializeScreen]);
 
-  // Countdown timer
+  // Countdown timer + background sent count sync
   useEffect(() => {
-    if (isGPSActive && raceStartTimeRef.current) {
-      const interval = setInterval(calculateTimeUntilRace, 1000);
+    if (isGPSActive) {
+      const interval = setInterval(async () => {
+        calculateTimeUntilRace();
+
+        // ✅ Sync locationUpdateCount from background task's AsyncStorage counter
+        try {
+          const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+          if (countStr) {
+            setLocationUpdateCount(parseInt(countStr));
+          }
+        } catch {
+          // silent
+        }
+      }, 1000);
       return () => clearInterval(interval);
     }
   }, [isGPSActive, homeData?.manual_start, calculateTimeUntilRace]);

@@ -23,6 +23,7 @@
     "queued": "Queued",
     "interval": "Interval",
     "waitingForData": "Waiting for event data...",
+    "loading": "Loading...",
     "manualStartEnabled": "Manual Start Enabled",
     "manualStartDescription": "Data transmission is controlled manually",
     "manualStartReady": "Ready to send (manual mode)"
@@ -40,7 +41,9 @@
     "gpsStopped": "GPS Stopped",
     "trackingStopped": "Tracking stopped. Sent: {{sent}}, Queued: {{queued}}",
     "queueProcessed": "Queue Processed",
-    "queuedSent": "{{count}} queued location(s) sent successfully"
+    "queuedSent": "{{count}} queued location(s) sent successfully",
+    "backgroundNotificationTitle": "Live Tracking Active",
+    "backgroundNotificationBody": "Your location is being tracked for the race."
   },
   "alerts": {
     "overrideTitle": "Manual Override",

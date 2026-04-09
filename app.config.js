@@ -35,7 +35,8 @@ export default ({ config }) => {
         UIBackgroundModes: ["remote-notification", "location"],
         NSAppTransportSecurity: {
           NSAllowsArbitraryLoads: true  // ⚠️ Remove before production
-        }
+        },
+        "UIBackgroundModes": ["location"]
       },
       entitlements: {
         "aps-environment": process.env.EXPO_PUBLIC_ENV === "production"

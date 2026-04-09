@@ -12,6 +12,7 @@ import { useLanguageStore } from './src/store/useLanguageStore';
 import Toast from "react-native-toast-message";
 import { toastConfig } from "./utils/toastConfig";
 import { useNotifications } from './src/hooks/useNotifications';
+import './src/services/gpsService';
 
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 

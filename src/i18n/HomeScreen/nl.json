@@ -10,52 +10,54 @@
     "Fan": "IK BEN EEN FAN"
   },
   "Event": {
-    "title": "Evenement Naam",
+    "title": "Naam evenement",
     "Date": "Datum",
-    "description": "Je kunt je live tracking 1 uur voor de start beginnen. Zorg ervoor dat je deze app de hele tijd open houdt en sluit hem niet!",
+    "description": "Je kunt je live tracking starten vanaf 1 uur voor je start. Zorg ervoor dat je deze app altijd open houdt en niet sluit!",
     "buttonText": "START TRACKING",
     "button": "STOP TRACKING"
   },
   "status": {
-    "gpsActive": "GPS Actief - Wachten op race start",
-    "sendingData": "Locatiegegevens Verzenden",
+    "gpsActive": "GPS Actief - Wachten op start race",
+    "sendingData": "Locatiegegevens verzenden",
     "sent": "Verzonden",
-    "queued": "In Wachtrij",
+    "queued": "In wachtrij",
     "interval": "Interval",
     "waitingForData": "Wachten op evenementgegevens...",
-    "manualStartEnabled": "Handmatige Start Ingeschakeld",
-    "manualStartDescription": "Gegevensoverdracht wordt handmatig beheerd",
-    "manualStartReady": "Klaar om te verzenden (handmatige modus)",
-    "loading": "Laden..."
+    "loading": "Laden...",
+    "manualStartEnabled": "Handmatige start ingeschakeld",
+    "manualStartDescription": "Gegevensverzending wordt handmatig beheerd",
+    "manualStartReady": "Klaar om te verzenden (handmatige modus)"
   },
   "tracking": {
     "gpsActivated": "GPS Geactiveerd",
-    "manualStartEnabled": "Handmatige startmodus ingeschakeld. Je kunt op elk moment gegevens beginnen te verzenden.",
+    "manualStartEnabled": "Handmatige startmodus ingeschakeld. Je kunt op elk moment beginnen met het verzenden van gegevens.",
     "raceStarted": "Race Gestart!",
-    "nowSending": "Nu locatiegegevens verzenden.",
+    "nowSending": "Locatiegegevens worden nu verzonden.",
     "waitingForRace": "GPS geactiveerd. Gegevens worden verzonden wanneer de race begint.",
     "waitingForRaceNoTime": "GPS geactiveerd. Wachten op race-informatie.",
-    "dataSendingStarted": "GPS geactiveerd. Gegevensoverdracht gestart.",
-    "manualStart": "Handmatige Override",
-    "manualStartMessage": "Gegevensoverdracht handmatig gestart",
+    "dataSendingStarted": "GPS geactiveerd. Gegevensverzending gestart.",
+    "manualStart": "Handmatige overschrijving",
+    "manualStartMessage": "Gegevensverzending handmatig gestart",
     "gpsStopped": "GPS Gestopt",
     "trackingStopped": "Tracking gestopt. Verzonden: {{sent}}, In wachtrij: {{queued}}",
-    "queueProcessed": "Wachtrij Verwerkt",
-    "queuedSent": "{{count}} locatie(s) in wachtrij succesvol verzonden"
+    "queueProcessed": "Wachtrij verwerkt",
+    "queuedSent": "{{count}} locatie(s) uit wachtrij succesvol verzonden",
+    "backgroundNotificationTitle": "Live Tracking Actief",
+    "backgroundNotificationBody": "Je locatie wordt bijgehouden voor de race."
   },
   "alerts": {
-    "overrideTitle": "Handmatige Override",
-    "overrideMessage": "Locatiegegevens onmiddellijk verzenden, zonder race starttijd?",
+    "overrideTitle": "Handmatige overschrijving",
+    "overrideMessage": "Locatiegegevens nu verzenden, waarbij de starttijd van de race wordt omzeild?",
     "cancel": "Annuleren",
-    "startNow": "Nu Starten"
+    "startNow": "Nu starten"
   },
   "errors": {
-    "missingInfo": "Ontbrekende Informatie",
+    "missingInfo": "Informatie ontbreekt",
     "missingInfoDescription": "Deelnemer- of evenementinformatie niet beschikbaar",
-    "permissionRequired": "Toestemming Vereist",
-    "permissionDescription": "Locatietoestemming is vereist om je voortgang te volgen",
-    "gpsError": "GPS Fout",
-    "gpsErrorDescription": "Kan je locatie niet ophalen. Controleer je GPS-instellingen.",
-    "trackingFailed": "Kan tracking niet starten"
+    "permissionRequired": "Toestemming vereist",
+    "permissionDescription": "Locatietoestemming is vereist om je voortgang bij te houden",
+    "gpsError": "GPS-fout",
+    "gpsErrorDescription": "Kan je locatie niet bepalen. Controleer je GPS-instellingen.",
+    "trackingFailed": "Starten van tracking mislukt"
   }
 }
