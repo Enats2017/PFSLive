@@ -27,9 +27,9 @@ const LAST_POSITION_KEY = '@PFSLive:lastPosition';
 // ✅ Movement thresholds per sport category.
 // Used to skip sends when participant is standing still.
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 0,  // Walking  — 10m (slow pace ~1-2 km/h)
-  59: 0,  // Running  — 25m (moderate pace ~8-12 km/h)
-  60: 0,  // Cycling  — 50m (fast pace ~20-30 km/h)
+  64: 10,  // Walking  — 10m (slow pace ~1-2 km/h)
+  59: 25,  // Running  — 25m (moderate pace ~8-12 km/h)
+  60: 50,  // Cycling  — 50m (fast pace ~20-30 km/h)
 };
 const DEFAULT_MOVEMENT_METRES = 15; // safe default for unknown category
 
@@ -91,9 +91,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
 
     // ✅ Parse to number — API returns category_id as string e.g. "59"
     // ✅ In DEBUG mode skip movement check — allows testing while stationary
-    const minMovementMetres = API_CONFIG.DEBUG
-      ? 0
-      : (MOVEMENT_THRESHOLD[Number(categoryId)] ?? DEFAULT_MOVEMENT_METRES);
+    const minMovementMetres = (MOVEMENT_THRESHOLD[Number(categoryId)] ?? DEFAULT_MOVEMENT_METRES);
 
     // ✅ THROTTLE — write LAST_SENT_KEY BEFORE the send to block any concurrent
     // task invocations immediately. Android can fire the task multiple times
@@ -323,7 +321,7 @@ export const gpsService = {
         // updates freely, causing 2-3min gaps. The distance trigger acts as
         // a keep-alive that prevents Doze batching. The throttle inside the
         // task ensures we never actually send more than once per intervalSeconds.
-        distanceInterval: 0,
+        distanceInterval: 50,
         // ✅ Show foreground service notification on Android (required for background).
         // Strings passed from HomeScreen so they come from the language file.
         foregroundService: {
