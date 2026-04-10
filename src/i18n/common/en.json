@@ -67,5 +67,21 @@
   },
   "retry": "Retry",
   "ok": "OK",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "countrySelector": {
+    "title": "Select Country",
+    "searchPlaceholder": "Search country...",
+    "resultOne": "{{count}} country found",
+    "resultMany": "{{count}} countries found",
+    "retry": "Retry",
+    "errorLoad": "Failed to load countries.",
+    "errorNetwork": "Cannot reach server. Check your connection.",
+    "emptyResult": "No countries found for \"{{search}}\""
+  },
+  "datePicker": {
+    "placeholder": "DD-MM-YYYY"
+  },
+  "timePicker": {
+    "placeholder": "HH:MM"
+  }
 }

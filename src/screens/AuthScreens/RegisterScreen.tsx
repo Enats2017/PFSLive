@@ -37,9 +37,33 @@ const INITIAL_FORM_DATA = {
   countryName: '',
   city: '',
   dob: '',
-  gender: '',
+  gender: '',        // ✅ API key — 'male' | 'female' | 'other' (English, always)
+  genderLabel: '',   // ✅ Display value — translated label shown in the input
   profileImage: '',
   acceptedTerms: false,
+};
+
+// ✅ STABLE GENDER KEYS — sent to API regardless of language
+export const GENDER_KEYS = ['male', 'female', 'other'] as const;
+export type GenderKey = typeof GENDER_KEYS[number];
+
+// ✅ Map API field error codes → form field keys + language key
+// Used to apply server-side validation errors back onto form fields
+const FIELD_ERROR_MAP: Record<string, { field: string; i18nKey: string }> = {
+  firstname_required:  { field: 'firstname', i18nKey: 'register:errors.firstnameRequired' },
+  lastname_required:   { field: 'lastname',  i18nKey: 'register:errors.lastnameRequired' },
+  email_invalid:       { field: 'email',     i18nKey: 'register:errors.emailInvalid' },
+  email_too_long:      { field: 'email',     i18nKey: 'register:errors.emailInvalid' },
+  city_required:       { field: 'city',      i18nKey: 'register:errors.cityRequired' },
+  country_invalid:     { field: 'country',   i18nKey: 'register:errors.countryRequired' },
+  dob_required:        { field: 'dob',       i18nKey: 'register:errors.dobRequired' },
+  dob_invalid_format:  { field: 'dob',       i18nKey: 'register:errors.dobInvalid' },
+  dob_underage:        { field: 'dob',       i18nKey: 'register:errors.dobUnderage' },
+  dob_invalid:         { field: 'dob',       i18nKey: 'register:errors.dobInvalid' },
+  gender_required:     { field: 'gender',    i18nKey: 'register:errors.genderRequired' },
+  password_too_short:  { field: 'password',  i18nKey: 'register:errors.passwordShort' },
+  password_too_long:   { field: 'password',  i18nKey: 'register:errors.passwordLong' },
+  agree_required:      { field: 'terms',     i18nKey: 'register:errors.termsRequired' },
 };
 
 const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
@@ -51,15 +75,61 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
 
   const [loading, setLoading] = useState(false);
 
-  // ✅ MEMOIZED GENDER OPTIONS
+  // ✅ GENDER OPTIONS — labels in user's language, values are stable English keys
   const GENDER_OPTIONS = useMemo(
-    () => [
-      t('register:Gender.male'),
-      t('register:Gender.female'),
-      t('register:Gender.other'),
-    ],
+    () => GENDER_KEYS.map(key => ({
+      label: t(`register:Gender.${key}`),  // shown to user in their language
+      value: key,                           // sent to API in English
+    })),
     [t]
   );
+
+  // ✅ Labels array for FloatingLabelInput display
+  const GENDER_LABELS = useMemo(
+    () => GENDER_OPTIONS.map(o => o.label),
+    [GENDER_OPTIONS]
+  );
+
+  // ✅ Handle gender selection — store key for API, label for display
+  const handleGenderSelect = useCallback(
+    (selectedLabel: string) => {
+      const option = GENDER_OPTIONS.find(o => o.label === selectedLabel);
+      if (option) {
+        setField('gender', option.value);       // 'male' / 'female' / 'other' → API
+        setField('genderLabel', option.label);  // translated label → display
+      }
+    },
+    [GENDER_OPTIONS, setField]
+  );
+
+  // ✅ Apply API field errors back onto form fields
+  const applyApiFieldErrors = useCallback((fields: string[]) => {
+    const newErrors: Record<string, string> = {};
+    let hasUnmapped = false;
+
+    fields.forEach(code => {
+      if (code === 'device_id_required') {
+        // Device issue — not a user-fixable form field, show toast
+        toastError(t('register:alerts.genericError'), t('register:errors.deviceIdRequired'));
+        return;
+      }
+      const mapping = FIELD_ERROR_MAP[code];
+      if (mapping) {
+        // Only set first error per field
+        if (!newErrors[mapping.field]) {
+          newErrors[mapping.field] = t(mapping.i18nKey);
+        }
+      } else {
+        hasUnmapped = true;
+      }
+    });
+
+    setErrors(newErrors);
+
+    if (hasUnmapped) {
+      toastError(t('register:alerts.genericError'), t('register:alerts.genericErrorMessage'));
+    }
+  }, [setErrors, t]);
 
   // ✅ SHOW IMAGE SOURCE PICKER
   const showImageSourcePicker = useCallback(() => {
@@ -169,7 +239,6 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
   const handleSubmit = useCallback(async () => {
     clearAllErrors();
 
-    // Validate form
     const validationErrors = validateRegisterForm(
       {
         firstname: formData.firstname,
@@ -201,7 +270,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
         country_id: formData.countryId,
         city: formData.city,
         dob: formData.dob,
-        gender: formData.gender,
+        gender: formData.gender,  // ✅ always English key: 'male'/'female'/'other'
         profileImage: formData.profileImage || undefined,
       });
 
@@ -219,33 +288,57 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
       }
     } catch (error: any) {
       const data = error.response?.data;
+      const errorCode = data?.error;
+      const fields: string[] = data?.fields ?? [];
 
-      if (data?.error === 'email_exists') {
-        setErrors({ email: t('register:alerts.email_exists') });
-      } else if (data?.error === 'device_already_registered') {
-        setErrors({
-          device: t('register:errors.deviceAlreadyRegistered'),
-        });
-      } else if (data?.error === 'device_not_allowed') {
-        toastError(
-          t('register:alerts.deviceNotAllowed'),
-          t('register:alerts.deviceNotAllowedMessage')
-        );
-      } else if (error.request) {
-        toastError(
-          t('register:alerts.noConnection'),
-          t('register:alerts.noConnectionMessage')
-        );
-      } else {
-        toastError(
-          t('register:alerts.genericError'),
-          t('register:alerts.genericErrorMessage')
-        );
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Register error:', errorCode, fields);
+      }
+
+      // ✅ Field-level validation errors from API — map back onto form fields
+      if (errorCode === 'validation_failed' && fields.length > 0) {
+        applyApiFieldErrors(fields);
+        return;
+      }
+
+      // ✅ Top-level error codes
+      switch (errorCode) {
+        case 'email_exists':
+          setErrors({ email: t('register:alerts.email_exists') });
+          break;
+        case 'device_already_registered':
+          setErrors({ device: t('register:errors.deviceAlreadyRegistered') });
+          break;
+        case 'country_not_found':
+          setErrors({ country: t('register:errors.countryRequired') });
+          break;
+        case 'profile_picture_too_large':
+          setErrors({ profileImage: t('register:errors.profilePictureTooLarge') });
+          break;
+        case 'profile_picture_invalid_type':
+        case 'profile_picture_invalid':
+          setErrors({ profileImage: t('register:errors.profilePictureInvalid') });
+          break;
+        case 'profile_picture_partial':
+        case 'profile_picture_server_error':
+        case 'profile_picture_failed':
+        case 'profile_picture_save_failed':
+          setErrors({ profileImage: t('register:errors.profilePictureFailed') });
+          break;
+        case 'registration_failed':
+          toastError(t('register:alerts.genericError'), t('register:errors.registrationFailed'));
+          break;
+        default:
+          if (error.request) {
+            toastError(t('register:alerts.noConnection'), t('register:alerts.noConnectionMessage'));
+          } else {
+            toastError(t('register:alerts.genericError'), t('register:alerts.genericErrorMessage'));
+          }
       }
     } finally {
       setLoading(false);
     }
-  }, [formData, clearAllErrors, setErrors, navigation, t]);
+  }, [formData, clearAllErrors, setErrors, applyApiFieldErrors, navigation, t]);
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -267,7 +360,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={{ paddingHorizontal: 15 }}>
-            {/* ✅ PROFILE IMAGE SECTION - NOW WITH CAMERA & GALLERY OPTIONS */}
+            {/* ✅ PROFILE IMAGE SECTION */}
             <View style={registerStyles.imagesection}>
               <TouchableOpacity onPress={showImageSourcePicker} activeOpacity={0.8}>
                 <View style={registerStyles.imageWrapper}>
@@ -300,6 +393,10 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               <Text style={registerStyles.uploadPhotoText}>
                 {t('register:uploadPhoto')}
               </Text>
+              {/* ✅ Profile image error */}
+              {errors.profileImage && (
+                <Text style={registerStyles.errorText}>{errors.profileImage}</Text>
+              )}
             </View>
 
             {/* Form Fields */}
@@ -356,6 +453,16 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               onSelect={handleCountrySelect}
               required
               error={errors.country}
+              i18n={{
+                title:             t('common:countrySelector.title'),
+                searchPlaceholder: t('common:countrySelector.searchPlaceholder'),
+                resultOne:         t('common:countrySelector.resultOne'),
+                resultMany:        t('common:countrySelector.resultMany'),
+                retry:             t('common:countrySelector.retry'),
+                errorLoad:         t('common:countrySelector.errorLoad'),
+                errorNetwork:      t('common:countrySelector.errorNetwork'),
+                emptyResult:       t('common:countrySelector.emptyResult'),
+              }}
             />
 
             <FloatingLabelInput
@@ -374,19 +481,21 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               onChangeText={(value) => setField('dob', value)}
               iconName="calendar-outline"
               isDatePicker
+              datePickerPlaceholder={t('common:datePicker.placeholder')}
               required
               editable={!loading}
               error={!!errors.dob}
               errorMessage={errors.dob}
             />
 
+            {/* ✅ Gender — displays translated label, stores English key for API */}
             <FloatingLabelInput
               label={t('register:Gender.gender')}
-              value={formData.gender}
-              onChangeText={(value) => setField('gender', value)}
+              value={formData.genderLabel}
+              onChangeText={handleGenderSelect}
               iconName="people-outline"
               isDropdown
-              options={GENDER_OPTIONS}
+              options={GENDER_LABELS}
               editable={!loading}
               error={!!errors.gender}
               errorMessage={errors.gender}

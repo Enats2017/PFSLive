@@ -24,7 +24,7 @@
   "errors": {
     "generic": "Une erreur s'est produite. Veuillez réessayer.",
     "network": "Erreur réseau. Vérifiez votre connexion.",
-    "timeout": "Délai d'attente dépassé. Veuillez réessayer.",
+    "timeout": "La requête a expiré. Veuillez réessayer.",
     "not_found": "Ressource introuvable.",
     "unauthorized": "Vous n'êtes pas autorisé à effectuer cette action.",
     "server_error": "Erreur serveur. Veuillez réessayer plus tard."
@@ -32,30 +32,55 @@
   "loading": {
     "please_wait": "Veuillez patienter...",
     "loading": "Chargement...",
-    "processing": "Traitement..."
+    "processing": "Traitement en cours..."
   },
   "months": {
-    "january": "janvier",
-    "february": "février",
-    "march": "mars",
-    "april": "avril",
-    "may": "mai",
-    "june": "juin",
-    "july": "juillet",
-    "august": "août",
-    "september": "septembre",
-    "october": "octobre",
-    "november": "novembre",
-    "december": "décembre"
+    "january": "Janvier",
+    "february": "Février",
+    "march": "Mars",
+    "april": "Avril",
+    "may": "Mai",
+    "june": "Juin",
+    "july": "Juillet",
+    "august": "Août",
+    "september": "Septembre",
+    "october": "Octobre",
+    "november": "Novembre",
+    "december": "Décembre"
+  },
+  "week": {
+    "mon": "Lu",
+    "tue": "Ma",
+    "wed": "Me",
+    "thu": "Je",
+    "fri": "Ve",
+    "sat": "Sa",
+    "sun": "Di"
   },
   "update": {
-    "currentVersion": "Version Actuelle",
-    "latestVersion": "Dernière Version",
+    "currentVersion": "Version actuelle",
+    "latestVersion": "Dernière version",
     "updateNow": "METTRE À JOUR",
-    "later": "Plus Tard",
+    "later": "Plus tard",
     "forcedMessage": "Vous devez mettre à jour pour continuer à utiliser l'application"
   },
-  "retry": "Retry",
+  "retry": "Réessayer",
   "ok": "OK",
-  "cancel": "Cancel"
+  "cancel": "Annuler",
+  "countrySelector": {
+    "title": "Sélectionner un pays",
+    "searchPlaceholder": "Rechercher un pays...",
+    "resultOne": "{{count}} pays trouvé",
+    "resultMany": "{{count}} pays trouvés",
+    "retry": "Réessayer",
+    "errorLoad": "Impossible de charger les pays.",
+    "errorNetwork": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+    "emptyResult": "Aucun pays trouvé pour \"{{search}}\""
+  },
+  "datePicker": {
+    "placeholder": "JJ-MM-AAAA"
+  },
+  "timePicker": {
+    "placeholder": "HH:MM"
+  }
 }

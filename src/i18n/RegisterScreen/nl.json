@@ -28,26 +28,33 @@
     "countryRequired": "Selecteer een land",
     "cityRequired": "Stad moet minimaal 2 tekens bevatten",
     "dobRequired": "Selecteer uw geboortedatum",
+    "dobInvalid": "Voer een geldige geboortedatum in",
+    "dobUnderage": "U moet minimaal 13 jaar oud zijn om u te registreren",
     "genderRequired": "Selecteer uw geslacht",
     "termsRequired": "U moet akkoord gaan met de algemene voorwaarden",
-    "deviceAlreadyRegistered": "Dit apparaat is al gekoppeld aan een account. Log in."
+    "deviceAlreadyRegistered": "Dit apparaat is al gekoppeld aan een account. Log in.",
+    "deviceIdRequired": "Apparaatidentificatie mislukt. Start de app opnieuw.",
+    "registrationFailed": "Registratie mislukt. Probeer het opnieuw.",
+    "profilePictureTooLarge": "Profielfoto moet kleiner zijn dan 5MB",
+    "profilePictureInvalid": "Selecteer een geldige afbeelding (JPG, PNG of WebP)",
+    "profilePictureFailed": "Profielfoto uploaden mislukt. Probeer het opnieuw."
   },
   "imageSource": {
-    "title": "Choose Photo Source",
-    "message": "Select where you want to pick your profile photo from",
-    "camera": "Take Photo",
-    "gallery": "Choose from Gallery"
+    "title": "Fotobron kiezen",
+    "message": "Selecteer waar u uw profielfoto wilt kiezen",
+    "camera": "Foto nemen",
+    "gallery": "Kiezen uit Galerij"
   },
   "alerts": {
-    "permissionRequired": "Permission Required",
-    "cameraPermission": "Camera permission is required to take photos",
-    "galleryPermission": "Gallery permission is required to select photos",
-    "deviceNotAllowed": "Device Not Allowed",
-    "deviceNotAllowedMessage": "This device is not authorized for registration",
-    "noConnection": "No Connection",
-    "noConnectionMessage": "Please check your internet connection",
-    "genericError": "Error",
-    "genericErrorMessage": "Something went wrong. Please try again.",
-    "email_exists": "This email is already registered"
+    "permissionRequired": "Toestemming vereist",
+    "cameraPermission": "Cameratoegang is vereist om foto's te maken",
+    "galleryPermission": "Galerijtoestemming is vereist om foto's te selecteren",
+    "deviceNotAllowed": "Apparaat niet toegestaan",
+    "deviceNotAllowedMessage": "Dit apparaat is niet gemachtigd voor registratie",
+    "noConnection": "Geen verbinding",
+    "noConnectionMessage": "Controleer uw internetverbinding",
+    "genericError": "Fout",
+    "genericErrorMessage": "Er is iets misgegaan. Probeer het opnieuw.",
+    "email_exists": "Dit e-mailadres is al geregistreerd"
   }
 }

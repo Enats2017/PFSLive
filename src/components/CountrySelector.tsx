@@ -23,6 +23,31 @@ export interface Country {
   iso_code_3: string;
 }
 
+// ✅ All UI strings passed from parent so CountrySelector works in any language
+// without coupling the component to i18n directly.
+export interface CountrySelectorI18n {
+  title: string;            // 'Select Country'
+  searchPlaceholder: string; // 'Search country...'
+  resultOne: string;        // '{{count}} country found'
+  resultMany: string;       // '{{count}} countries found'
+  retry: string;            // 'Retry'
+  errorLoad: string;        // 'Failed to load countries.'
+  errorNetwork: string;     // 'Cannot reach server. Check your connection.'
+  emptyResult: string;      // 'No countries found for "{{search}}"'
+}
+
+// ✅ Default English strings — used when no i18n prop is passed
+const DEFAULT_I18N: CountrySelectorI18n = {
+  title: 'Select Country',
+  searchPlaceholder: 'Search country...',
+  resultOne: '{{count}} country found',
+  resultMany: '{{count}} countries found',
+  retry: 'Retry',
+  errorLoad: 'Failed to load countries.',
+  errorNetwork: 'Cannot reach server. Check your connection.',
+  emptyResult: 'No countries found for "{{search}}"',
+};
+
 interface CountrySelectorProps {
   label?: string;
   value: string;           // country name to display
@@ -30,6 +55,7 @@ interface CountrySelectorProps {
   error?: string;
   required?: boolean;
   isoCode?: string;
+  i18n?: CountrySelectorI18n;  // ✅ translatable strings from parent
 }
 
 // ─── Flag emoji from iso_code_2 ──────────────────────────────────
@@ -67,6 +93,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   error,
   required = false,
   isoCode,
+  i18n = DEFAULT_I18N,
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [countries, setCountries] = useState<Country[]>([]);
@@ -118,10 +145,10 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
         setCountries(list);
         setFiltered(list);
       } else {
-        setFetchError('Failed to load countries.');
+        setFetchError(i18n.errorLoad);
       }
     } catch {
-      setFetchError('Cannot reach server. Check your connection.');
+      setFetchError(i18n.errorNetwork);
     } finally {
       setLoading(false);
     }
@@ -159,6 +186,14 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
     onSelect({ country_id: '', name: '', iso_code_2: '', iso_code_3: '' });
   };
 
+  // ✅ Build result count string using i18n template
+  const resultCountText = filtered.length === 1
+    ? i18n.resultOne.replace('{{count}}', String(filtered.length))
+    : i18n.resultMany.replace('{{count}}', String(filtered.length));
+
+  // ✅ Build empty result string using i18n template
+  const emptyResultText = i18n.emptyResult.replace('{{search}}', search);
+
   const borderColor = error ? COLORS.ERROR : showModal ? COLORS.PRIMARY : '#d1d5db';
   const iconColor = error ? COLORS.ERROR : showModal ? COLORS.PRIMARY : '#d1d5db';
 
@@ -175,7 +210,6 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
           showModal && styles.containerFocused,
         ]}
       >
-        {/* Left: globe icon OR flag when selected */}
         {/* Left: globe icon OR flag when selected */}
         <View style={styles.iconLeft}>
           {(selectedCountry || isoCode) ? (
@@ -237,33 +271,18 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
 
             {/* Header */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Country</Text>
+              <Text style={styles.modalTitle}>{i18n.title}</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <Ionicons name="close-circle-outline" size={26} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
-            {/* Selected banner — shows which country is currently chosen */}
-            {/* {selectedCountry && (
-              <View style={styles.selectedBanner}>
-                <Text style={styles.selectedBannerFlag}>
-                  {getFlagEmoji(selectedCountry.iso_code_2)}
-                </Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.selectedBannerLabel}>Currently Selected</Text>
-                  <Text style={styles.selectedBannerName}>{selectedCountry.name}</Text>
-                </View>
-                <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-                  <Text style={styles.clearButtonText}>Clear</Text>
-                </TouchableOpacity>
-              </View>
-            )} */}
-
+            {/* Search */}
             <View style={styles.searchContainer}>
               <Ionicons name="search-outline" size={18} color="#9ca3af" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search country..."
+                placeholder={i18n.searchPlaceholder}
                 placeholderTextColor="#9ca3af"
                 value={search}
                 onChangeText={handleSearch}
@@ -278,9 +297,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
 
             {/* Result count */}
             {!loading && !fetchError && (
-              <Text style={styles.resultCount}>
-                {filtered.length} {filtered.length === 1 ? 'country' : 'countries'} found
-              </Text>
+              <Text style={styles.resultCount}>{resultCountText}</Text>
             )}
 
             {loading ? (
@@ -290,13 +307,13 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                 <Ionicons name="wifi-outline" size={40} color="#d1d5db" />
                 <Text style={styles.emptyText}>{fetchError}</Text>
                 <TouchableOpacity style={styles.retryButton} onPress={fetchCountries}>
-                  <Text style={styles.retryText}>Retry</Text>
+                  <Text style={styles.retryText}>{i18n.retry}</Text>
                 </TouchableOpacity>
               </View>
             ) : filtered.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="search-outline" size={40} color="#d1d5db" />
-                <Text style={styles.emptyText}>No countries found for "{search}"</Text>
+                <Text style={styles.emptyText}>{emptyResultText}</Text>
               </View>
             ) : (
               <FlatList
@@ -428,8 +445,6 @@ const styles = StyleSheet.create({
     borderColor: '#d1d5db',
   },
   clearButtonText: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
-
-  // ── Search ───────────────────────────────────────────────────
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -451,7 +466,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 8,
   },
-
   countryItem: {
     flexDirection: 'row',
     alignItems: 'center',

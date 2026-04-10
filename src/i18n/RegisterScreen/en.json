@@ -28,9 +28,16 @@
     "countryRequired": "Please select a country",
     "cityRequired": "City must be at least 2 characters",
     "dobRequired": "Please select your date of birth",
+    "dobInvalid": "Please enter a valid date of birth",
+    "dobUnderage": "You must be at least 13 years old to register",
     "genderRequired": "Please select your gender",
     "termsRequired": "You must accept the terms and conditions",
-    "deviceAlreadyRegistered": "This device is already linked to an account. Please login instead."
+    "deviceAlreadyRegistered": "This device is already linked to an account. Please login instead.",
+    "deviceIdRequired": "Device identification failed. Please restart the app.",
+    "registrationFailed": "Registration failed. Please try again.",
+    "profilePictureTooLarge": "Profile photo must be smaller than 5MB",
+    "profilePictureInvalid": "Please select a valid image (JPG, PNG or WebP)",
+    "profilePictureFailed": "Failed to upload profile photo. Please try again."
   },
   "imageSource": {
     "title": "Choose Photo Source",

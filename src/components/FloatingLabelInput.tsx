@@ -37,6 +37,8 @@ interface FloatingLabelInputProps extends Omit<TextInputProps, 'onChangeText'> {
   showClearButton?: boolean;
   options?: (string | DropdownOption)[];
   onSelect?: (item: DropdownOption) => void;
+  datePickerPlaceholder?: string;  // ✅ translatable e.g. t('common:datePicker.placeholder')
+  timePickerPlaceholder?: string;  // ✅ translatable e.g. t('common:timePicker.placeholder')
 }
 
 // ✅ CONSTANTS
@@ -71,6 +73,8 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   options = [],
   onSelect,
   editable = true,
+  datePickerPlaceholder = 'DD-MM-YYYY',
+  timePickerPlaceholder = 'HH:MM',
   ...props
 }) => {
   // ✅ STATE
@@ -314,7 +318,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
               },
             ]}
           >
-            {value || 'HH:MM'}
+            {value || timePickerPlaceholder}
           </Text>
 
           <View style={styles.iconRight}>
@@ -388,7 +392,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
               },
             ]}
           >
-            {displayValue || 'DD-MM-YYYY'}
+            {displayValue || datePickerPlaceholder}
           </Text>
 
           <View style={styles.iconRight}>

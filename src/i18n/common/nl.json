@@ -15,7 +15,7 @@
     "view": "Bekijken"
   },
   "nav": {
-    "home": "Home",
+    "home": "Startpagina",
     "favorites": "Favorieten",
     "results": "Resultaten",
     "map": "Kaart",
@@ -30,32 +30,57 @@
     "server_error": "Serverfout. Probeer het later opnieuw."
   },
   "loading": {
-    "please_wait": "Een moment geduld...",
+    "please_wait": "Even geduld...",
     "loading": "Laden...",
     "processing": "Verwerken..."
   },
   "months": {
-    "january": "januari",
-    "february": "februari",
-    "march": "maart",
-    "april": "april",
-    "may": "mei",
-    "june": "juni",
-    "july": "juli",
-    "august": "augustus",
-    "september": "september",
-    "october": "oktober",
-    "november": "november",
-    "december": "december"
+    "january": "Januari",
+    "february": "Februari",
+    "march": "Maart",
+    "april": "April",
+    "may": "Mei",
+    "june": "Juni",
+    "july": "Juli",
+    "august": "Augustus",
+    "september": "September",
+    "october": "Oktober",
+    "november": "November",
+    "december": "December"
+  },
+  "week": {
+    "mon": "Ma",
+    "tue": "Di",
+    "wed": "Wo",
+    "thu": "Do",
+    "fri": "Vr",
+    "sat": "Za",
+    "sun": "Zo"
   },
   "update": {
-    "currentVersion": "Huidige Versie",
-    "latestVersion": "Nieuwste Versie",
-    "updateNow": "NU UPDATEN",
+    "currentVersion": "Huidige versie",
+    "latestVersion": "Nieuwste versie",
+    "updateNow": "NU BIJWERKEN",
     "later": "Later",
-    "forcedMessage": "U moet updaten om de app te blijven gebruiken"
+    "forcedMessage": "U moet bijwerken om de app te blijven gebruiken"
   },
-  "retry": "Retry",
+  "retry": "Opnieuw proberen",
   "ok": "OK",
-  "cancel": "Cancel"
+  "cancel": "Annuleren",
+  "countrySelector": {
+    "title": "Selecteer land",
+    "searchPlaceholder": "Land zoeken...",
+    "resultOne": "{{count}} land gevonden",
+    "resultMany": "{{count}} landen gevonden",
+    "retry": "Opnieuw proberen",
+    "errorLoad": "Landen laden mislukt.",
+    "errorNetwork": "Kan server niet bereiken. Controleer uw verbinding.",
+    "emptyResult": "Geen landen gevonden voor \"{{search}}\""
+  },
+  "datePicker": {
+    "placeholder": "DD-MM-JJJJ"
+  },
+  "timePicker": {
+    "placeholder": "UU:MM"
+  }
 }
