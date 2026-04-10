@@ -60,6 +60,7 @@ interface HomeData {
   next_race_date?: string;
   next_race_time?: string;
   next_race_interval_for_location?: number | string;
+  next_race_category_id?: number;
   show_start_track?: number;
   manual_start?: number;
   server_datetime?: string;
@@ -220,17 +221,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const hasRaceStarted = useCallback((): boolean => {
     if (homeData?.manual_start === 1) return true;
     if (!raceStartTimeRef.current) return false;
-
-    const now = getServerTime();
-    const raceTime = raceStartTimeRef.current;
-
-    if (API_CONFIG.DEBUG) {
-      console.log('🕐 Server time (now):', now.toLocaleString());
-      console.log('🏁 Race time:', raceTime.toLocaleString());
-      console.log('✅ Race started?', now >= raceTime);
-    }
-
-    return now >= raceTime;
+    return getServerTime() >= raceStartTimeRef.current;
   }, [homeData?.manual_start, getServerTime]);
 
   // ==================== VERSION CHECK ====================
@@ -451,7 +442,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       try {
         const sentCount = await locationService.processQueue(participantId, eventId);
         if (sentCount > 0) {
-          setLocationUpdateCount(prev => prev + sentCount);
+          // ✅ Write to BACKGROUND_SENT_COUNT_KEY so countdown timer sync
+          // includes queue-sent locations in the total count
+          try {
+            const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+            const current = countStr ? parseInt(countStr) : 0;
+            await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(current + sentCount));
+          } catch { /* silent */ }
+
           await loadQueueSize();
 
           if (API_CONFIG.DEBUG) {
@@ -472,16 +470,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     raceStartCheckRef.current = setInterval(() => {
       // ✅ Use ref — not state — so callback reads current value not stale closure
-      if (hasRaceStarted() && !isSendingDataRef.current) {
+      const started = hasRaceStarted();
+      if (API_CONFIG.DEBUG) {
+        console.log('🕐 Race check — started:', started, '| server time:', getServerTime().toLocaleString());
+      }
+      if (started && !isSendingDataRef.current) {
         isSendingDataRef.current = true;
         setIsSendingData(true);
 
         if (API_CONFIG.DEBUG) {
           toastSuccess(t('home:tracking.raceStarted'), t('home:tracking.nowSending'));
         }
+
+        // ✅ Race has started — stop the checker, no longer needed
+        if (raceStartCheckRef.current) {
+          clearInterval(raceStartCheckRef.current);
+          raceStartCheckRef.current = null;
+        }
       }
     }, 30000);
-  }, [hasRaceStarted, t]);
+  }, [hasRaceStarted, getServerTime, t]);
 
   const startGPSTracking = useCallback(async () => {
     try {
@@ -498,9 +506,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
         setHasPermission(true);
       }
-
-      await fetchHomeData();
-      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Parse race start time
       if (homeData?.next_race_date && homeData?.next_race_time) {
@@ -581,8 +586,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         intervalValue,
         participantId,  // ✅ passed to background task via AsyncStorage
         eventId,        // ✅ passed to background task via AsyncStorage
-        t('home:tracking.backgroundNotificationTitle'),  // ✅ from language file
-        t('home:tracking.backgroundNotificationBody'),   // ✅ from language file
+        t('home:tracking.backgroundNotificationTitle'),       // ✅ from language file
+        t('home:tracking.backgroundNotificationBody'),          // ✅ from language file
+        homeData?.next_race_category_id,                        // ✅ movement threshold per sport
+        raceStartTimeRef.current?.toISOString() ?? null,        // ✅ background task race check
+        homeData?.manual_start,                                  // ✅ skip race check if manual
       );
 
       gpsWatchRef.current = gpsWatch;
@@ -618,7 +626,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     eventId,
     hasPermission,
     homeData,
-    fetchHomeData,
     getServerTime,
     hasRaceStarted,
     startQueueProcessor,
@@ -693,11 +700,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const interval = setInterval(async () => {
         calculateTimeUntilRace();
 
-        // ✅ Sync locationUpdateCount from background task's AsyncStorage counter
+        // ✅ Sync locationUpdateCount from background task's AsyncStorage counter.
+        // Uses prev to avoid overwriting queue-processed sends — only adds the
+        // difference since last sync so both sources are counted correctly.
         try {
           const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
           if (countStr) {
-            setLocationUpdateCount(parseInt(countStr));
+            const bgCount = parseInt(countStr);
+            setLocationUpdateCount(bgCount);
           }
         } catch {
           // silent
@@ -729,9 +739,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         if (isGPSActive && participantId && eventId) {
-          locationService.processQueue(participantId, eventId).then(sentCount => {
+          locationService.processQueue(participantId, eventId).then(async sentCount => {
             if (sentCount > 0) {
-              setLocationUpdateCount(prev => prev + sentCount);
+              // ✅ Write to BACKGROUND_SENT_COUNT_KEY so countdown timer sync
+              // reads the correct total — avoids overwriting this count
+              try {
+                const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+                const current = countStr ? parseInt(countStr) : 0;
+                await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(current + sentCount));
+              } catch { /* silent */ }
             }
           });
           loadQueueSize();

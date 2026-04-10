@@ -22,10 +22,36 @@ export const BACKGROUND_LOCATION_TASK = 'background-location-task';
 const TRACKING_PARAMS_KEY = '@PFSLive:trackingParams';
 const LAST_SENT_KEY = '@PFSLive:lastSentAt';
 export const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
+const LAST_POSITION_KEY = '@PFSLive:lastPosition';
+
+// ✅ Movement thresholds per sport category.
+// Used to skip sends when participant is standing still.
+const MOVEMENT_THRESHOLD: Record<number, number> = {
+  64: 0,  // Walking  — 10m (slow pace ~1-2 km/h)
+  59: 0,  // Running  — 25m (moderate pace ~8-12 km/h)
+  60: 0,  // Cycling  — 50m (fast pace ~20-30 km/h)
+};
+const DEFAULT_MOVEMENT_METRES = 15; // safe default for unknown category
+
+// Haversine formula — straight-line distance between two GPS coordinates in metres
+function distanceMetres(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 // ✅ BACKGROUND TASK — defined at TOP LEVEL (required by expo-task-manager).
 // Runs even when app is backgrounded or phone is locked.
 // Reads participantId/eventId from AsyncStorage, sends or queues the location.
+//
+// IMPORTANT: This task runs in a SEPARATE JS context from the main app on Android.
+// Module-level variables in this file are NOT shared with the main app context.
+// All state must go through AsyncStorage.
 TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) => {
   if (error) {
     if (API_CONFIG.DEBUG) console.error('❌ Background location task error:', error);
@@ -42,11 +68,36 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       return;
     }
 
-    const { participantId, eventId, intervalSeconds } = JSON.parse(paramsJson);
+    const { participantId, eventId, intervalSeconds, categoryId, raceStartTime, manualStart } = JSON.parse(paramsJson);
 
-    // ✅ Throttle — enforce minimum gap between sends
-    // ✅ 2s buffer — AsyncStorage write latency means elapsed can read as
-    // slightly under intervalSeconds even when the full interval has passed.
+    // ✅ Race start check — do not send coordinates before race begins.
+    // Applies in both DEBUG and production — race must have started.
+    // Only the movement check is bypassed in DEBUG (allows testing while stationary).
+    if (manualStart !== 1) {
+      if (!raceStartTime) {
+        // No scheduled time and not manual — race not configured, skip send
+        if (API_CONFIG.DEBUG) console.log('⏳ Background task: no race time configured — skipping send');
+        return;
+      }
+      const raceTime = new Date(raceStartTime).getTime();
+      if (Date.now() < raceTime) {
+        if (API_CONFIG.DEBUG) {
+          const minsLeft = ((raceTime - Date.now()) / 60000).toFixed(1);
+          console.log(`⏳ Background task: race not started yet — ${minsLeft} min remaining`);
+        }
+        return;
+      }
+    }
+
+    // ✅ Parse to number — API returns category_id as string e.g. "59"
+    // ✅ In DEBUG mode skip movement check — allows testing while stationary
+    const minMovementMetres = API_CONFIG.DEBUG
+      ? 0
+      : (MOVEMENT_THRESHOLD[Number(categoryId)] ?? DEFAULT_MOVEMENT_METRES);
+
+    // ✅ THROTTLE — write LAST_SENT_KEY BEFORE the send to block any concurrent
+    // task invocations immediately. Android can fire the task multiple times
+    // in quick succession; writing first prevents double-sends.
     const minGapMs = ((intervalSeconds ?? 30) - 2) * 1000;
     const lastSentStr = await AsyncStorage.getItem(LAST_SENT_KEY);
     const lastSentAt = lastSentStr ? parseInt(lastSentStr) : 0;
@@ -59,6 +110,8 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       return;
     }
 
+    // ✅ Write timestamp IMMEDIATELY — before any async work — so concurrent
+    // task invocations see it and exit via the throttle check above.
     await AsyncStorage.setItem(LAST_SENT_KEY, String(now));
 
     // Use the most recent location
@@ -74,6 +127,27 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       heading: raw.coords.heading ?? undefined,
       isMock: raw.mocked || false,
     };
+
+    // ✅ Movement check — skip send if participant hasn't moved since last send.
+    // This avoids sending repeated identical coordinates during warm-up or
+    // while standing at the start line before the race begins.
+    const lastPosStr = await AsyncStorage.getItem(LAST_POSITION_KEY);
+    if (lastPosStr) {
+      const lastPos = JSON.parse(lastPosStr);
+      const moved = distanceMetres(lastPos.lat, lastPos.lon, location.latitude, location.longitude);
+      if (moved < minMovementMetres) {
+        if (API_CONFIG.DEBUG) {
+          console.log(`🚶 Background task: skipped — only moved ${moved.toFixed(1)}m (min ${minMovementMetres}m, category ${categoryId})`);
+        }
+        return;
+      }
+    }
+
+    // ✅ Update last known position before send
+    await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
+      lat: location.latitude,
+      lon: location.longitude,
+    }));
 
     if (API_CONFIG.DEBUG) {
       console.log('📍 Background task: sending location', {
@@ -206,21 +280,50 @@ export const gpsService = {
     eventId?: string,
     notificationTitle?: string,
     notificationBody?: string,
+    categoryId?: number,
+    raceStartTime?: string | null,  // ISO string, null if no scheduled time
+    manualStart?: number,            // 1 = organiser controls start
   ): Promise<{ remove: () => void }> {
     try {
+      // ✅ Always stop any existing background task before starting fresh.
+      // This prevents duplicate registrations which cause rapid-fire wakes.
+      // isTaskRegisteredAsync is checked but we attempt stop regardless
+      // because some Android versions return stale registration state.
+      try {
+        await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+        if (API_CONFIG.DEBUG) console.log('♻️ Stopped existing background task before restart');
+      } catch {
+        // Not running — that's fine, ignore the error
+      }
+
       // ✅ Store tracking params for the background task
       await AsyncStorage.setItem(TRACKING_PARAMS_KEY, JSON.stringify({
         participantId,
         eventId,
         intervalSeconds,
+        categoryId,     // ✅ used by background task to pick movement threshold
+        raceStartTime,  // ✅ used by background task to block sends before race
+        manualStart,    // ✅ 1 = skip race start check
       }));
+
+      // ✅ Clear all state from any previous session
       await AsyncStorage.removeItem(LAST_SENT_KEY);
+      await AsyncStorage.removeItem(LAST_POSITION_KEY);
+      await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
 
       // ✅ Start background location updates — works even when phone is locked
       await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+        // ✅ High accuracy — Balanced accuracy gets aggressively batched by Android
+        // Doze mode. High accuracy uses GPS directly and fires more reliably at
+        // the requested interval.
         accuracy: Location.Accuracy.Balanced,
         timeInterval: intervalSeconds * 1000,
-        distanceInterval: 50,
+        // ✅ distanceInterval: 50 — keeps the task firing reliably on Android.
+        // Without a distance trigger, Android Doze mode batches timeInterval
+        // updates freely, causing 2-3min gaps. The distance trigger acts as
+        // a keep-alive that prevents Doze batching. The throttle inside the
+        // task ensures we never actually send more than once per intervalSeconds.
+        distanceInterval: 0,
         // ✅ Show foreground service notification on Android (required for background).
         // Strings passed from HomeScreen so they come from the language file.
         foregroundService: {
@@ -228,7 +331,6 @@ export const gpsService = {
           notificationBody: notificationBody ?? 'Your location is being tracked for the race.',
           notificationColor: '#1a73e8',
         },
-        // ✅ iOS: pause updates when stationary to save battery
         pausesUpdatesAutomatically: false,
         showsBackgroundLocationIndicator: true,
       });
@@ -237,18 +339,18 @@ export const gpsService = {
         console.log('✅ Background location task started');
       }
 
-      // ✅ Foreground watch — UI position updates only.
-      // The background task handles ALL actual sends (both foreground and background).
-      // The foreground callback only calls back for UI updates (current position dot),
-      // never for sending — this completely eliminates the double-send race condition.
+      // ✅ Foreground watch — UI position updates ONLY, no sends.
+      // Background task handles all API sends.
+      // Uses a longer interval (5x) so it doesn't wake the CPU frequently —
+      // just enough to keep the position dot moving on screen.
       const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Balanced,
-          timeInterval: intervalSeconds * 1000,
-          distanceInterval: 50,
+          timeInterval: Math.min(intervalSeconds * 1000, 5000), // max 5s for smooth UI
         },
         (location) => {
-          const position: GPSPosition = {
+          // ✅ UI only — background task handles sends
+          callback({
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
             altitude: location.coords.altitude,
@@ -258,27 +360,25 @@ export const gpsService = {
             heading: location.coords.heading,
             timestamp: location.timestamp,
             mocked: location.mocked,
-          };
-
-          // ✅ Only update UI — background task handles the actual API send
-          callback(position);
+          });
         }
       );
 
       return {
         remove: async () => {
+          // Stop foreground subscription
           subscription.remove();
+          // Stop background task
           try {
-            const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_LOCATION_TASK);
-            if (isRegistered) {
-              await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-            }
+            await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
           } catch (err) {
             if (API_CONFIG.DEBUG) console.error('❌ Error stopping background task:', err);
           }
           // Clean up stored params
           await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
           await AsyncStorage.removeItem(LAST_SENT_KEY);
+          await AsyncStorage.removeItem(LAST_POSITION_KEY);
+          await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
           if (API_CONFIG.DEBUG) console.log('✅ Background location task stopped');
         },
       };

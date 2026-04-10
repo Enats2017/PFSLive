@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG } from '../constants/config';
 
 const TOKEN_STORAGE_KEY = '@PFSLive:authToken';
 const CUSTOMER_KEY = '@PFSLive:customer_app_id';
@@ -19,7 +20,7 @@ export const tokenService = {
   async getToken(): Promise<string | null> {
     try {
       const token = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
-      console.log('🔑 Token from storage:', token);
+      if (__DEV__) console.log('🔑 Token from storage:', token);
       return token;
     } catch (error) {
       console.error('❌ Error loading token:', error);
