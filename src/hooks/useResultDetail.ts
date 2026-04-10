@@ -1,8 +1,9 @@
 // hooks/useResultDetail.ts
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { resultDetail, ResultDetailResponse } from '../services/resultDetailsService';
-import { AppError, ErrorType } from "../services/api";
-import { useScreenError, ScreenError } from "../hooks/useApiError";
+import { useScreenError } from "../hooks/useApiError";
+
+const POLL_INTERVAL_MS = 60_000; // 1 minute
 
 export const useResultDetail = (
     product_app_id: number,
@@ -13,11 +14,12 @@ export const useResultDetail = (
     const [data, setData] = useState<ResultDetailResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const { error, hasError, handleApiError, clearError } = useScreenError();
+    const pollRef = useRef<NodeJS.Timeout | null>(null);
 
-    const fetchDetail = useCallback(async () => {
+    const fetchDetail = useCallback(async (silent = false) => {
         try {
-            setLoading(true);
-           clearError();
+            if (!silent) setLoading(true);
+            clearError();
             const result = await resultDetail.getResultDetail({
                 product_app_id,
                 product_option_value_app_id,
@@ -26,16 +28,35 @@ export const useResultDetail = (
             });
             setData(result);
         } catch (e: any) {
-            handleApiError(e);
-            
+            // ✅ Silent poll failures don't show error screen — keep showing stale data
+            if (!silent) handleApiError(e);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [product_app_id, product_option_value_app_id, bib, from_live]);
 
+    // ✅ Initial load
     useEffect(() => {
         fetchDetail();
     }, [fetchDetail]);
 
-    return { data, loading,  hasError, error, clearError, retry: fetchDetail, };
+    // ✅ Poll every minute when race is in progress
+    useEffect(() => {
+        const isLive = data?.event?.race_status === 'in_progress';
+
+        if (isLive) {
+            pollRef.current = setInterval(() => {
+                fetchDetail(true); // silent — no loading spinner
+            }, POLL_INTERVAL_MS);
+        }
+
+        return () => {
+            if (pollRef.current) {
+                clearInterval(pollRef.current);
+                pollRef.current = null;
+            }
+        };
+    }, [data?.event?.race_status, fetchDetail]);
+
+    return { data, loading, hasError, error, clearError, retry: fetchDetail };
 };
