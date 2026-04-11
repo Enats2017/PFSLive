@@ -82,6 +82,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         selectedDistanceLabel,
         selectedCategoryLabel,
         raceStatus,
+        raceProgressStatus,
         currentPovId,  // ✅ use currentPovId — reflects selected distance for search
         showUtmbIndex,
         hasError,
@@ -107,7 +108,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             }),
         };
 
-        if (raceStatus === 'not_started') {
+        if (raceStatus === 'not_started' || (raceStatus === 'in_progress' && raceProgressStatus === 'not_started')) {
             return (
                 <ResultCardBeforeRace
                     {...commonProps}
@@ -139,7 +140,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         );
     }, [
         isFollowed, isLoading, handleFollowPress,
-        raceStatus, sourceTab, fromLive,
+        raceStatus, raceProgressStatus, sourceTab, fromLive,
         product_app_id, currentPovId, showUtmbIndex,
     ]);
 

@@ -20,7 +20,7 @@ export interface RaceResult {
   participant_app_id: number | null;
   customer_app_id: number | null;
   checkpoints: Checkpoint[];
-  utmb_index?: string; // ✅ UTMB Index field
+  utmb_index?: string;
   finish_rank_agegroup?: number | null;
   password_protected: 0|1,
 }
@@ -85,7 +85,8 @@ export interface EventRankingResponse {
     product_option_value_app_id: number;
     from_live: 0 | 1;
     race_status: string;
-    show_utmb_index?: number; // ✅ NEW: 0 = hide, 1 = show
+    race_progress_status?: string;  // ✅ 'not_started' | 'in_progress' | 'finished'
+    show_utmb_index?: number;
   };
 }
 

@@ -65,6 +65,7 @@ export const useResultList = (
   const [pageLoad, setPageLoad] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [raceStatus, setRaceStatus] = useState<string>("");
+  const [raceProgressStatus, setRaceProgressStatus] = useState<string>("");
   const [showUtmbIndex, setShowUtmbIndex] = useState(false);
 
   const { error, hasError, handleApiError, clearError } = useScreenError();
@@ -123,9 +124,11 @@ export const useResultList = (
 
         if (data.event?.race_status) {
           setRaceStatus(data.event.race_status);
+          setRaceProgressStatus(data.event.race_progress_status ?? "");
 
           if (API_CONFIG.DEBUG) {
             console.log("✅ Race Status:", data.event.race_status);
+            console.log("✅ Race Progress Status:", data.event.race_progress_status);
           }
         }
 
@@ -436,6 +439,7 @@ export const useResultList = (
   return {
     results,
     raceStatus,
+    raceProgressStatus,
     displayResults,
     pagination,
     selectedPovId,
@@ -462,7 +466,7 @@ export const useResultList = (
     selectedCategoryLabel,
     currentPovId,
     showUtmbIndex,
-    hasError, 
+    hasError,
     clearError,
   };
 };

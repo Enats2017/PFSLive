@@ -260,7 +260,7 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
                                 <View style={resultInfoStyles.lineBottom} />
                                 
                                 {/* ✅ Distance at TOP of line (blue) */}
-                                {item.is_crossed && checkpoints[index + 1]?.segment_distance && (
+                                {checkpoints[index + 1]?.segment_distance && (
                                     <View style={resultInfoStyles.segmentDistanceLabel}>
                                         <Text style={resultInfoStyles.segmentDistanceText}>
                                             {checkpoints[index + 1].segment_distance} {t('units.km')}
@@ -269,7 +269,7 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
                                 )}
 
                                 {/* ✅ Elevation at BOTTOM of line (green) */}
-                                {item.is_crossed && checkpoints[index + 1]?.segment_elevation_gain && (
+                                {checkpoints[index + 1]?.segment_elevation_gain && (
                                     <View style={resultInfoStyles.segmentElevationLabel}>
                                         <Text style={resultInfoStyles.segmentElevationText}>
                                             {checkpoints[index + 1].segment_elevation_gain} {t('units.meterPlus')}
