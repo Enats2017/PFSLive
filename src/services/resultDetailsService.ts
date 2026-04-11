@@ -61,6 +61,7 @@ export interface RaceInfo {
     time: string;
     diff: string;
     position: string;
+    participant_status: string;
     category_name: string;
     category_rank: string;
     gender_ranking: string;

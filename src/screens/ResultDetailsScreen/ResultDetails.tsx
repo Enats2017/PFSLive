@@ -106,36 +106,40 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         }
     }, []);
 
-    const renderTabPage = useCallback(({ item }: { item: TabKey }) => (
-        <View style={s.page}>
-            {item === 'raceInfo' && (
-                raceStatus === 'in_progress' ? (
-                    <RaceLive
-                        raceInfo={data?.race_info}
-                        event={data?.event}
-                        checkpoints={data?.checkpoints}
-                    />
-                ) : raceStatus === 'finished' ? (
-                    <RaceInfoTab
-                        raceInfo={data?.race_info}
-                        event={data?.event}
-                        checkpoints={data?.checkpoints}
-                    />
-                ) : raceStatus === 'not_started' ? (
-                    <UpcomingRace
-                        raceInfo={data?.race_info}
-                        event={data?.event}
-                    />
-                ) : null
-            )}
-            {item === 'timingPoint' && (
-                <LiveTimingPoint checkpoints={data?.checkpoints} raceStatus={data?.event?.race_status} />
-            )}
-            {item === 'runnerInfo' && (
-                <RunnerInfoTab runnerInfo={data?.runner_info} />
-            )}
-        </View>
-    ), [data, raceStatus]);
+    const renderTabPage = useCallback(({ item }: { item: TabKey }) => {
+        const participantStatus = data?.race_info?.participant_status;
+
+        return (
+            <View style={s.page}>
+                {item === 'raceInfo' && (
+                    raceStatus === 'in_progress' && participantStatus === 'in_progress' ? (
+                        <RaceLive
+                            raceInfo={data?.race_info}
+                            event={data?.event}
+                            checkpoints={data?.checkpoints}
+                        />
+                    ) : raceStatus === 'finished' || (raceStatus === 'in_progress' && participantStatus !== 'not_started' && participantStatus !== 'in_progress') ? (
+                        <RaceInfoTab
+                            raceInfo={data?.race_info}
+                            event={data?.event}
+                            checkpoints={data?.checkpoints}
+                        />
+                    ) : raceStatus === 'not_started' ? (
+                        <UpcomingRace
+                            raceInfo={data?.race_info}
+                            event={data?.event}
+                        />
+                    ) : null
+                )}
+                {item === 'timingPoint' && (
+                    <LiveTimingPoint checkpoints={data?.checkpoints} raceStatus={data?.event?.race_status} />
+                )}
+                {item === 'runnerInfo' && (
+                    <RunnerInfoTab runnerInfo={data?.runner_info} />
+                )}
+            </View>
+        )
+    }, [data, raceStatus]);
 
     if (loading) {
         return (
