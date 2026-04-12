@@ -124,7 +124,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                             event={data?.event}
                             checkpoints={data?.checkpoints}
                         />
-                    ) : raceStatus === 'not_started' ? (
+                    ) : raceStatus === 'not_started' || participantStatus === 'not_started' ? (
                         <UpcomingRace
                             raceInfo={data?.race_info}
                             event={data?.event}
