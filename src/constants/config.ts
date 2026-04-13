@@ -30,6 +30,7 @@ export const getDeviceId = async (): Promise<string> => {
 
   } catch (error) {
     console.log('❌ Device ID error:', error);
+     return 'unknown_device';
     
   }
 };
