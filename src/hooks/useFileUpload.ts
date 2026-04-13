@@ -20,7 +20,7 @@ export const useFileUpload = (
   const pickFile = useCallback(async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/gpx+xml', 'application/xml', 'text/xml'],
+        type: ['text/xml', 'application/xml', 'application/gpx+xml', '*/*'],
         copyToCacheDirectory: true,
         multiple: false,
       });

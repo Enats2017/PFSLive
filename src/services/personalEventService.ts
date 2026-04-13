@@ -5,7 +5,7 @@ export interface PersonalEventFile {
   uri: string;
   name: string;
   mimeType?: string;
-  size: number;
+  size: number | undefined;
 }
 
 export interface PersonalEventPayload {
@@ -53,8 +53,10 @@ export const isValidGPXFile = (fileName: string): boolean => {
   return lower.endsWith('.gpx') || lower.endsWith('.xml');
 };
 
-export const isValidFileSize = (size: number, maxSize: number): boolean =>
-  size > 0 && size <= maxSize;
+export const isValidFileSize = (size: number | undefined, maxSize: number): boolean => {
+   if (size === undefined) return true;
+   return size <= maxSize;
+}
 
 export const formatTimeHHMM = (time: string): string => {
   if (!time) return '';
@@ -64,7 +66,8 @@ export const formatTimeHHMM = (time: string): string => {
   return time;
 };
 
-export const formatFileSize = (bytes: number): string => {
+export const formatFileSize = (bytes: number | undefined): string => {
+  if (bytes === undefined) return '';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1_048_576) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1_048_576).toFixed(1)} MB`;
