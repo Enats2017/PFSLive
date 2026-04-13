@@ -95,7 +95,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name}: Distance
     const badge = getCountdownBadge(item);
 
     return (
-      <View style={[commonStyles.card, { padding: 0, overflow: 'hidden', marginBottom: spacing.sm }]}>
+      <View style={[commonStyles.card, { padding: 0, marginBottom: spacing.sm }]}>
         <View style={detailsStyles.distance}>
           <View style={{ flex: 1 }}>
             <Text style={[commonStyles.title, { marginBottom: 4 }]}>
@@ -129,7 +129,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name}: Distance
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[commonStyles.livetracking, { borderRadius: 0 }]}
+            style={[commonStyles.livetracking, { borderRadius: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12,  }]}
             onPress={() => navigation.navigate('LiveTracking', {
               product_app_id,
               product_option_value_app_id: item.product_option_value_app_id || '',

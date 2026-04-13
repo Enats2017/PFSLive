@@ -57,7 +57,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     <View
       style={[
         commonStyles.card,
-        { padding: 0, overflow: 'hidden', marginBottom: spacing.lg },
+        { padding: 0,  marginBottom: spacing.lg },
       ]}
     >
       <View style={detailsStyles.topRow}>
@@ -115,7 +115,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
       <TouchableOpacity
         style={[
           commonStyles.primaryButton,
-          { borderRadius: 0, opacity: isLoading ? 0.6 : 1 },
+          { borderRadius: 0, opacity: isLoading ? 0.6 : 1,  borderBottomLeftRadius: 12, borderBottomRightRadius: 12,  },
         ]}
         activeOpacity={0.8}
         onPress={onToggleFollow}

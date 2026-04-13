@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { View, TextInput, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../styles/common.styles';
 
 interface SearchInputProps {
   placeholder: string;
@@ -37,10 +38,10 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.gray200,
     borderRadius: 8,
     paddingHorizontal: 12,
-    marginBottom: 16,
+    
   },
   icon: {
     marginRight: 8,

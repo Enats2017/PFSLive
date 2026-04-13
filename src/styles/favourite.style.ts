@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { colors, typography } from "../styles/common.styles";
 
 export const favstyle = StyleSheet.create({
@@ -9,13 +9,19 @@ export const favstyle = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: 10,
-    overflow: "hidden",
     borderWidth: 0.5,
     borderColor: "rgba(0,0,0,0.08)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
+    shadowOpacity: 0.01,
+       ...Platform.select({
+        ios: {
+          shadowOpacity: 0.15,
+          shadowRadius: 5,
+        },
+       
+      }),
+    shadowRadius: 10,
     elevation: 4,
     paddingBottom: 10,
   },

@@ -47,7 +47,7 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
             {
                 paddingTop: spacing.xs,
                 padding: 0,
-                overflow: 'hidden',
+                
                 marginBottom: spacing.md // ✅ Consistent spacing
             }
         ]}>
@@ -60,7 +60,7 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                 </Text>
             </View>
             <TouchableOpacity
-                style={[commonStyles.primaryButton, { borderRadius: 0 }]}
+                style={[commonStyles.primaryButton, { borderRadius: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12,}]}
                  onPress={() => navigation.navigate('FollowDetails', {
                     product_app_id: Number(item.product_app_id),
                     event_name: item.name,

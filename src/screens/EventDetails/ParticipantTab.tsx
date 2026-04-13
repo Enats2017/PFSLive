@@ -288,6 +288,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
             paddingHorizontal: spacing.lg,
             paddingBottom: spacing.xxxl,
             flexGrow: 1,
+            paddingTop:spacing.sm,
           }}
           keyboardShouldPersistTaps="handled"
           removeClippedSubviews={false}

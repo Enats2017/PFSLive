@@ -74,7 +74,7 @@ export const resultInfoStyles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
-    overflow: "hidden",
+   
   },
 
   headerBar: {
@@ -87,6 +87,7 @@ export const resultInfoStyles = StyleSheet.create({
     alignItems: "center",
     width: CARD_WIDTH * 0.42,
     height: CARD_WIDTH * 0.1,
+    borderTopLeftRadius:10,
   },
   diagLeft: {
     width: 0,
@@ -100,6 +101,7 @@ export const resultInfoStyles = StyleSheet.create({
     borderRightColor: "transparent",
     borderBottomColor: "transparent",
     borderLeftColor: "transparent",
+    
   },
   diagRight: {
     width: 0,
@@ -124,6 +126,7 @@ export const resultInfoStyles = StyleSheet.create({
     alignItems: "center",
     width: CARD_WIDTH * 0.42,
     height: CARD_WIDTH * 0.1,
+    borderTopRightRadius:10,
   },
 
   bibCard: {
@@ -277,7 +280,7 @@ export const resultInfoStyles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 14,
     marginBottom: 5,
-    overflow: "hidden",
+   
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.07,

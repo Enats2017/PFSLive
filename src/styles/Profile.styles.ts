@@ -11,9 +11,9 @@ export const profileStyles = StyleSheet.create({
   },
   eventCard: { 
     marginBottom: spacing.md, 
-    overflow: "hidden",
+   
     padding: 0,
-    paddingTop: spacing.xs,
+    paddingTop: spacing.sm,
   },
   badge: {
     flexDirection: "row",

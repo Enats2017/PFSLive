@@ -3,37 +3,34 @@
  * Uses environment variables for flexibility across environments
  */
 import * as Application from "expo-application";
+import * as SecureStore from 'expo-secure-store';
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { tokenService } from "../services/tokenService";
 
+const DEVICE_ID_KEY = 'secure_device_id';
+
 export const getDeviceId = async (): Promise<string> => {
   try {
-    // Check if already stored
-    const stored = await AsyncStorage.getItem("device_id");
+    if (Platform.OS === 'android') {
+      // Android - hardware ID, always stable
+      const androidId = Application.getAndroidId();
+      if (androidId) return androidId;
+    }
+
+    // iOS - use Keychain (survives uninstall/reinstall/clear data)
+    const stored = await SecureStore.getItemAsync(DEVICE_ID_KEY);
     if (stored) return stored;
 
-    // Get from device
-    let deviceId = "";
-    if (Platform.OS === "android") {
-      deviceId = Application.getAndroidId() ?? "";
-    } else {
-      deviceId = (await Application.getIosIdForVendorAsync()) ?? "";
-    }
+    // First time - get vendor ID and save to Keychain
+    const vendorId = await Application.getIosIdForVendorAsync()?? '';
+    await SecureStore.setItemAsync(DEVICE_ID_KEY, vendorId);
+    return vendorId;
 
-    // Fallback if empty
-    if (!deviceId) {
-      deviceId = `fallback_${Date.now()}`;
-    }
-
-    // Save for future use
-    await AsyncStorage.setItem("device_id", deviceId);
-    console.log("📱 Device ID:", deviceId);
-    return deviceId;
   } catch (error) {
-    console.log("❌ Device ID error:", error);
-    return "unknown_device";
+    console.log('❌ Device ID error:', error);
+    
   }
 };
 

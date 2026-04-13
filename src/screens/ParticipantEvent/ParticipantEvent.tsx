@@ -257,7 +257,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     }, [loadingMoreLive, paginationInfo.live.page, paginationInfo.live.total_pages]);
 
     // ✅ LOAD MORE UPCOMING
-    
+
     const loadMoreUpcoming = useCallback(async () => {
         if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
             return;
@@ -452,7 +452,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                     </View>
 
                     {/* PERSONAL EVENT SECTION */}
-                    <View style={[eventStyles.section, { marginBottom: 0, marginTop: spacing.sm }]}>
+                    <View style={[eventStyles.section, { marginBottom: spacing.sm, marginTop: spacing.sm }]}>
                         <Text style={commonStyles.title}>{t('event:personal.title')}</Text>
                     </View>
                     <View
@@ -461,7 +461,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                             {
                                 marginHorizontal: spacing.md,
                                 padding: 0,
-                                overflow: 'hidden',
+
                                 marginBottom: spacing.xl,
                             },
                         ]}
@@ -472,7 +472,10 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                             </Text>
                         </View>
                         <TouchableOpacity
-                            style={[commonStyles.primaryButton, { borderRadius: 0 }]}
+                            style={[commonStyles.primaryButton, {
+                                borderRadius: 0, borderBottomLeftRadius: 12,
+                                borderBottomRightRadius: 12,
+                            }]}
                             onPress={handlePersonalEventPress}
                             activeOpacity={0.8}
                         >
@@ -481,7 +484,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                     </View>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </SafeAreaView> 
     );
 };
 

@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 // Colors
 export const colors = {
@@ -140,10 +140,11 @@ export const commonStyles = StyleSheet.create({
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
-    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 120,
+     borderRadius: 8,
+   
   },
   primaryButtonText: {
     color: colors.white,
@@ -175,8 +176,16 @@ export const commonStyles = StyleSheet.create({
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 10,
     elevation: 3,
+     ...Platform.select({
+    ios: {
+      shadowOpacity: 0.15,
+      shadowRadius: 5,
+    },
+   
+  }),
+
   },
   
   // Shadow

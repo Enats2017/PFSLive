@@ -466,7 +466,7 @@ const ParticipantResult = () => {
         <View
           style={[
             commonStyles.card,
-            { padding: 0, overflow: 'hidden', marginBottom: spacing.lg },
+            { padding: 0, marginBottom: spacing.lg },
           ]}
         >
           <View style={detailsStyles.topRow}>
@@ -515,7 +515,7 @@ const ParticipantResult = () => {
           <TouchableOpacity
             style={[
               commonStyles.primaryButton,
-              { borderRadius: 0, opacity: isThisRegistering ? 0.7 : 1 },
+              { borderRadius: 0, opacity: isThisRegistering ? 0.7 : 1, borderBottomLeftRadius: 12, borderBottomRightRadius: 12,  },
             ]}
             onPress={() => handleThisIsMe(participant)}
             disabled={registerLoading}

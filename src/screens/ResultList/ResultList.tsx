@@ -194,7 +194,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
 
             {initialLoad ? (
                 <View style={resultListStyle.center}>
-                    <ActivityIndicator size="large" color={colors.success} />
+                    <ActivityIndicator size="large" color={colors.primary} />
                     <Text style={resultListStyle.loadingText}>
                         {t('common:loading.loading')}
                     </Text>

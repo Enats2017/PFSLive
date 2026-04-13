@@ -155,7 +155,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         <View
           style={[
             commonStyles.card,
-            { padding: 0, overflow: 'hidden', marginBottom: spacing.md },
+            { padding: 0,  marginBottom: spacing.md },
           ]}
         >
           <View style={detailsStyles.distance}>

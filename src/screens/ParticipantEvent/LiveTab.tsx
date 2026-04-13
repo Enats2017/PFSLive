@@ -53,7 +53,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     {
                         paddingTop: spacing.xs,
                         padding: 0,
-                        overflow: 'hidden',
+                        
                         marginBottom: spacing.md,
                     },
                 ]}
@@ -65,7 +65,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     <Text style={commonStyles.subtitle}>{formatEventDate(item.race_date, t)}</Text>
                 </View>
                 <TouchableOpacity
-                    style={[commonStyles.primaryButton, { borderRadius: 0 }]}
+                    style={[commonStyles.primaryButton, { borderRadius: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12,}]}
                     onPress={() =>
                         navigation.navigate('EventDetails', {
                             product_app_id: item.product_app_id,

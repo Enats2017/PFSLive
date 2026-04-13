@@ -56,7 +56,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
         <View
             style={[
                 commonStyles.card,
-                { padding: 0, overflow: 'hidden', marginBottom: spacing.lg },
+                { padding: 0, marginBottom: spacing.lg, marginTop:spacing.sm },
             ]}
         >
             <View style={detailsStyles.topRow}>

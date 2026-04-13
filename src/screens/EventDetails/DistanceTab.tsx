@@ -93,10 +93,10 @@ const DistanceTab = ({
         prev.map((d) =>
           d.product_option_value_app_id === product_option_value_app_id
             ? {
-                ...d,
-                registration_status: newStatus,
-                participant_app_id: participant_app_id ?? d.participant_app_id,
-              }
+              ...d,
+              registration_status: newStatus,
+              participant_app_id: participant_app_id ?? d.participant_app_id,
+            }
             : d
         )
       );
@@ -310,7 +310,7 @@ const DistanceTab = ({
           selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
 
       return (
-        <View style={[commonStyles.card, { padding: 0, overflow: 'hidden', marginBottom: 16 }]}>
+        <View style={[commonStyles.card, { padding: 0, marginBottom: 16 }]}>
           <View style={detailsStyles.distance}>
             <View style={{ flex: 1 }}>
               <Text style={[commonStyles.title, { marginBottom: 4 }]}>
@@ -329,7 +329,10 @@ const DistanceTab = ({
           </View>
 
           <TouchableOpacity
-            style={[commonStyles.primaryButton, { borderRadius: 0, opacity: isRegistering ? 0.7 : 1 }]}
+            style={[commonStyles.primaryButton, {
+              borderRadius: 0, opacity: isRegistering ? 0.7 : 1, borderBottomLeftRadius: 12,
+              borderBottomRightRadius: 12,
+            }]}
             onPress={() =>
               item.registration_status === 'registered'
                 ? handleUndoClick(item)
