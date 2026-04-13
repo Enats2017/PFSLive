@@ -118,7 +118,11 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                 )}
 
                 <View style={resultListStyle.statsRow}>
-                    <View style={resultListStyle.statCol}>
+                    {/* ✅ Time column — full width + left-aligned when fromLive=1 and no checkpoints */}
+                    <View style={[
+                        resultListStyle.statCol,
+                        fromLive === 1 && activeCheckpoints.length === 0 && { alignItems: 'flex-start' },
+                    ]}>
                         <Text style={resultListStyle.statLabel}>
                             {t('allrace:race.time')}
                         </Text>
@@ -143,7 +147,11 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     ) : (
                         <>
                             {activeCheckpoints[0] && (
-                                <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
+                                <View style={[
+                                    resultListStyle.statCol,
+                                    // ✅ only add borders when cp[1] also exists
+                                    activeCheckpoints[1] ? resultListStyle.statColMid : resultListStyle.statColLeft,
+                                ]}>
                                     <Text style={resultListStyle.statLabel} numberOfLines={1}>
                                         {truncateCheckpointName(activeCheckpoints[0].name)}
                                     </Text>
@@ -158,7 +166,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     </Text>
                                 </View>
                             )}
-                            
+
                             {activeCheckpoints[1] && (
                                 <View style={resultListStyle.statCol}>
                                     <Text style={resultListStyle.statLabel} numberOfLines={1}>

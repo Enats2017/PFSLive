@@ -231,6 +231,11 @@ export const resultListStyle = StyleSheet.create({
     borderRightWidth: 1,
     borderColor: colors.gray400,
   },
+
+  statColLeft: {
+    borderLeftWidth: 1,
+    borderColor: colors.gray400,
+  },
   
   statFlagMid: {
     borderLeftWidth: 1,
