@@ -242,6 +242,7 @@ export const resultListStyle = StyleSheet.create({
     borderColor: colors.gray400,
     alignItems: "center",   // ← center the flagRow horizontally within the column
     justifyContent: "center",
+    paddingLeft:8,
   },
   
   statLabel: {
@@ -258,6 +259,7 @@ export const resultListStyle = StyleSheet.create({
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: colors.gray900,
+    textAlign:"center"
   },
 
   // ✅ UTMB Badge Styles (Before Race Card)
@@ -285,7 +287,7 @@ export const resultListStyle = StyleSheet.create({
 
   utmbBadgeTextTop: {
     color: colors.white,
-    fontSize: 12,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 0.5,
   },

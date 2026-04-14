@@ -94,6 +94,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         initialType,
         followedBibs
     );
+    
 
     const renderItem = useCallback(({ item }: { item: RaceResult }) => {
         const commonProps = {
@@ -115,6 +116,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     showUtmbIndex={showUtmbIndex}
                     raceStatus={raceStatus}
                     currentPovId={currentPovId}
+                    isWomen={selectedCategory === 'women'}
                 />
             );
         }
@@ -126,6 +128,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     fromLive={fromLive}
                     raceStatus={raceStatus}
                     currentPovId={currentPovId}
+                    isWomen={selectedCategory === 'women'}
                 />
             );
         }
@@ -136,12 +139,14 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 fromLive={fromLive}
                 raceStatus={raceStatus}
                 currentPovId={currentPovId}
+                isWomen={selectedCategory === 'women'}
+                showUtmbIndex={showUtmbIndex}
             />
         );
     }, [
         isFollowed, isLoading, handleFollowPress,
         raceStatus, raceProgressStatus, sourceTab, fromLive,
-        product_app_id, currentPovId, showUtmbIndex,
+        product_app_id, currentPovId, showUtmbIndex,selectedCategory,
     ]);
 
     const ListFooter = useCallback(() =>

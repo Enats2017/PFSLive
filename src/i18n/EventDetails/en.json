@@ -13,11 +13,13 @@
     "startingSoon": "Starting Soon",
     "days": "D",
     "hours": "H",
-    "minutes": "M"
+    "minutes": "M",
+    "seconds": "S" 
   },
   "distance": {
     "empty": "No distances available"
   },
+  "athletes": "Athletes",
   "participant": {
     "empty": "No participants yet",
     "search": "Search participants by name, bib number",

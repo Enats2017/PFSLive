@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
+import { colors } from '../../styles/common.styles';
 
 interface ResultCardLiveProps {
     item: RaceResult;
@@ -16,6 +17,8 @@ interface ResultCardLiveProps {
     raceStatus: string;
     currentPovId: number;
     onToggleFollow: () => void;
+    isWomen?: boolean;
+    showUtmbIndex?: boolean;
 }
 
 const getActiveCheckpoints = (checkpoints: RaceResult['checkpoints']) => {
@@ -38,7 +41,9 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     onToggleFollow,
     raceStatus,
     currentPovId,
-    product_app_id
+    product_app_id,
+    isWomen,
+    showUtmbIndex,
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
@@ -62,7 +67,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     }, [isLoading, onToggleFollow]);
 
     return (
-        <View style={resultListStyle.cardWithLeftBorder}>
+        <View style={[resultListStyle.cardWithLeftBorder , isWomen && {borderLeftColor:colors.pinkcolor}]}>
             {/* Star Zone - Absolute Positioned */}
             <View 
                 style={{
@@ -74,7 +79,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     zIndex: 999,
                 }}
             >
-                <View style={resultListStyle.cornerTriangle} pointerEvents="none" />
+                <View style={[resultListStyle.cornerTriangle , isWomen && { borderTopColor: colors.pinkcolor }]} pointerEvents="none" />
                 <Text style={resultListStyle.cornerNum} pointerEvents="none">
                     {item.position.replace('.', '')}
                 </Text>
@@ -183,6 +188,8 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     </Text>
                                 </View>
                             )}
+
+                            
                         </>
                     )}
                 </View>

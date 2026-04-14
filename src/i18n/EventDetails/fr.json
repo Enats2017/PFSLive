@@ -13,8 +13,10 @@
     "startingSoon": "Commence Bientôt",
     "days": "J",
     "hours": "H",
-    "minutes": "M"
+    "minutes": "M",
+    "seconds": "S" 
   },
+  "athletes": "Athlètes",
   "distance": {
     "empty": "Aucune distance disponible"
   },

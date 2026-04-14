@@ -6,16 +6,19 @@ import { useNavigation } from '@react-navigation/native';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
+import { colors } from '../../styles/common.styles';
 
 interface ResultCardProps {
     item: RaceResult;
     isLoading: boolean;
     fromLive: 0 | 1;
-    raceStatus:string,
+    raceStatus: string,
     isFollowed: boolean;
     onToggleFollow: () => void;
     product_app_id: number;
     currentPovId: number;
+    isWomen?: boolean;
+    showUtmbIndex: boolean;
 }
 
 const ResultCard: React.FC<ResultCardProps> = memo(({
@@ -23,13 +26,23 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     fromLive,
     isFollowed,
     isLoading,
-     raceStatus,
+    raceStatus,
     currentPovId,
     product_app_id,
-    onToggleFollow
+    onToggleFollow,
+    isWomen,
+    showUtmbIndex
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
+    console.log("iswomen", isWomen);
+
+    const hasUtmbIndex = showUtmbIndex &&
+        item.utmb_index &&
+        item.utmb_index.trim() !== '' &&
+        item.utmb_index !== '0' &&
+        Number(item.utmb_index) !== 0;
+
 
     const isLive = item.live_tracking_activated === 1;
 
@@ -49,9 +62,9 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     }, [isLoading, onToggleFollow]);
 
     return (
-        <View style={resultListStyle.cardWithLeftBorder}>
+        <View style={[resultListStyle.cardWithLeftBorder , isWomen && {borderLeftColor:colors.pinkcolor}]}>
             {/* Star Zone - Absolute Positioned */}
-            <View 
+            <View
                 style={{
                     position: 'absolute',
                     top: 0,
@@ -61,11 +74,11 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                     zIndex: 999,
                 }}
             >
-                <View style={resultListStyle.cornerTriangle} pointerEvents="none" />
+                <View style={[resultListStyle.cornerTriangle, isWomen && { borderTopColor: colors.pinkcolor }]} pointerEvents="none" />
                 <Text style={resultListStyle.cornerNum} pointerEvents="none">
                     {item.position.replace('.', '')}
                 </Text>
-                
+
                 <TouchableOpacity
                     style={resultListStyle.cornerStarBtn}
                     onPress={handleStarPress}
@@ -128,16 +141,52 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                             </View>
                         </>
                     ) : (
-                        <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
-                            <View style={resultListStyle.flagRow}>
-                                {item.nation_flag && (
-                                    <SvgUri width={28} height={20} uri={item.nation_flag} />
-                                )}
-                                <Text style={resultListStyle.statVal} numberOfLines={2}>
-                                    {item.nation || '—'}
-                                </Text>
+                        <>
+                            <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
+                                <View style={resultListStyle.flagRow}>
+                                    {item.nation_flag && (
+                                        <SvgUri width={28} height={20} uri={item.nation_flag} />
+                                    )}
+                                    <Text style={resultListStyle.statVal} numberOfLines={2}>
+                                        {item.nation || '—'}
+                                    </Text>
+                                </View>
                             </View>
-                        </View>
+
+                            <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
+                                {hasUtmbIndex ? (
+                                    <View style={resultListStyle.beforeRaceLeftHalf}>
+                                        <View style={resultListStyle.utmbSection}>
+                                            <View style={resultListStyle.utmbBadge}>
+                                                <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
+                                                <Text style={resultListStyle.utmbBadgeTextBottom}>
+                                                    {t('allrace:race.utmbIndex')}
+                                                </Text>
+                                            </View>
+                                            <Text style={resultListStyle.statVal}>
+                                                {item.utmb_index}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                ) : (
+                                    <View style={resultListStyle.beforeRaceLeftHalf}>
+                                        <View style={resultListStyle.utmbSection}>
+                                            <View style={resultListStyle.utmbBadge}>
+                                                <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
+                                                <Text style={resultListStyle.utmbBadgeTextBottom}>
+                                                    {t('allrace:race.utmbIndex')}
+                                                </Text>
+                                            </View>
+                                            <Text style={resultListStyle.statLabel}>-</Text>
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+
+                        </>
+
+
+
                     )}
                 </View>
             </TouchableOpacity>

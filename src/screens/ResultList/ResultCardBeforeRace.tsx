@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
 import { useNavigation } from '@react-navigation/native';
+import { colors } from '../../styles/common.styles';
 
 interface ResultCardBeforeRaceProps {
     item: RaceResult;
@@ -15,6 +16,7 @@ interface ResultCardBeforeRaceProps {
     showUtmbIndex: boolean;
     raceStatus: string;
     currentPovId: number;
+    isWomen?: boolean;
 }
 
 const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
@@ -25,7 +27,8 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
     onToggleFollow,
     showUtmbIndex,
     raceStatus,
-    currentPovId
+    currentPovId,
+    isWomen
 }) => {
 
     const { t } = useTranslation(['allrace', 'common']);
@@ -55,12 +58,12 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
 
     return (
         <TouchableOpacity
-            style={resultListStyle.cardWithLeftBorder}
+            style={[resultListStyle.cardWithLeftBorder , isWomen && {borderLeftColor:colors.pinkcolor}]}
             onPress={handlePress}
         >
             {/* Corner Star */}
             <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
-                <View style={resultListStyle.cornerTriangle} pointerEvents="none" />
+                <View style={[resultListStyle.cornerTriangle , isWomen && { borderTopColor: colors.pinkcolor }]} pointerEvents="none" />
 
                 <Text style={resultListStyle.cornerNum} pointerEvents="none">
                     {/* optional rank */}
@@ -104,7 +107,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                 </Text>
 
                 <View style={resultListStyle.statsRow}>
-                    {/* ✅ UTMB Index Section - Always visible */}
+                    
                     <View style={resultListStyle.statCol}>
                         {hasUtmbIndex ? (
                             <View style={resultListStyle.beforeRaceLeftHalf}>

@@ -13,8 +13,10 @@
     "startingSoon": "Begint Binnenkort",
     "days": "D",
     "hours": "U",
-    "minutes": "M"
+    "minutes": "M",
+    "seconds": "S" 
   },
+   "athletes": "Atleten",
   "distance": {
     "empty": "Geen afstanden beschikbaar"
   },

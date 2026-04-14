@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import CountdownBadge from '../../components/CountdownBadge';
 
 interface DistanceTabProps {
   product_app_id: number;
@@ -20,7 +21,7 @@ interface DistanceTabProps {
   event_name: string;
 }
 
-const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name}: DistanceTabProps) => {
+const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: DistanceTabProps) => {
   const navigation = useNavigation<any>();
   const { t } = useTranslation(['result', 'details', 'common']);
   const [results, setResults] = useState<Distance[]>([]);
@@ -43,57 +44,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name}: Distance
 
   useFocusEffect(useCallback(() => { fetchResults(); }, [fetchResults]));
 
-  const getCountdownBadge = useCallback(
-    (item: Distance) => {
-      const { status, days, hours, minutes } = item.countdown;
-
-      if (status === 'in_progress') {
-        return { label: t('details:countdown.live'), color: colors.success };
-      }
-
-      if (status === 'finished') {
-        return { label: t('details:countdown.finished'), color: colors.gray500 };
-      }
-
-      if (status === 'not_started') {
-        const parts: string[] = [];
-        let color = colors.gray500;
-
-        if (days > 0) {
-          parts.push(`${days} ${t('details:countdown.days')}`);
-          if (hours > 0) {
-            parts.push(`${hours} ${t('details:countdown.hours')}`);
-          }
-          color = colors.info;
-        } else if (hours > 0) {
-          parts.push(`${hours} ${t('details:countdown.hours')}`);
-          if (minutes > 0) {
-            parts.push(`${minutes} ${t('details:countdown.minutes')}`);
-          }
-          color = colors.success;
-        } else if (minutes > 0) {
-          parts.push(`${minutes} ${t('details:countdown.minutes')}`);
-          color = colors.warning;
-        }
-
-        if (parts.length === 0) {
-          return { label: t('details:countdown.startingSoon'), color: colors.warning };
-        }
-
-        return {
-          label: `${t('details:countdown.startsIn')} ${parts.join(' ')}`,
-          color,
-        };
-      }
-
-      return { label: '', color: colors.gray500 };
-    },
-    [t]
-  );
-
-  const renderItem = useCallback(({ item }: { item: Distance }) => {
-    const badge = getCountdownBadge(item);
-
+  const renderItem = useCallback(({ item }: { item: Distance }) => {    
     return (
       <View style={[commonStyles.card, { padding: 0, marginBottom: spacing.sm }]}>
         <View style={detailsStyles.distance}>
@@ -103,12 +54,16 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name}: Distance
             </Text>
             <Text style={commonStyles.subtitle}>{item.race_date_formatted}</Text>
             <Text style={commonStyles.subtitle}>{item.race_time}</Text>
-          </View>
-          <View style={[detailsStyles.count, { backgroundColor: badge.color }]}>
-            <Text style={[commonStyles.text, { color: '#fff', fontWeight: '600' }]}>
-              {badge.label}
+            <Text style={commonStyles.subtitle}>
+              {item.participant_count} {t('details:athletes')}
             </Text>
           </View>
+          <CountdownBadge
+            days={item.countdown.days}
+            hours={item.countdown.hours}
+            minutes={item.countdown.minutes}
+            status={item.countdown.status}
+          />
         </View>
 
         <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -129,7 +84,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name}: Distance
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[commonStyles.livetracking, { borderRadius: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12,  }]}
+            style={[commonStyles.livetracking, { borderRadius: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, }]}
             onPress={() => navigation.navigate('LiveTracking', {
               product_app_id,
               product_option_value_app_id: item.product_option_value_app_id || '',
@@ -146,7 +101,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name}: Distance
         </View>
       </View>
     );
-  }, [navigation, product_app_id, sourceTab, getCountdownBadge, t]);
+  }, [navigation, product_app_id, sourceTab, CountdownBadge, t]);
 
   if (loading) {
     return (

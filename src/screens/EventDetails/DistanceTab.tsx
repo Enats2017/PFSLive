@@ -25,6 +25,7 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/common/AppHeader';
+import CountdownBadge from '../../components/CountdownBadge';
 
 interface DistanceTabProps {
   product_app_id: string | number;
@@ -41,7 +42,6 @@ const DistanceTab = ({
 }: DistanceTabProps) => {
   const { t } = useTranslation(['details']);
   const navigation = useNavigation<any>();
-
   const [distances, setDistances] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
   const [serverTime, setServerTime] = useState<string>('');
@@ -248,62 +248,10 @@ const DistanceTab = ({
   }, [selectedUndoItem, handleDelete]);
 
   // ✅ GET COUNTDOWN BADGE (SMART UNIT DISPLAY)
-  const getCountdownBadge = useCallback(
-    (item: Distance) => {
-      const { status, days, hours, minutes } = item.countdown;
 
-      if (API_CONFIG.DEBUG) {
-        console.log('⏱️ Countdown:', { status, days, hours, minutes });
-      }
-
-      switch (status) {
-        case 'in_progress':
-          return { label: t('details:countdown.live'), color: colors.success };
-
-        case 'finished':
-          return { label: t('details:countdown.finished'), color: colors.gray500 };
-
-        case 'not_started': {
-          const parts: string[] = [];
-          let color = colors.gray500;
-
-          if (days > 0) {
-            parts.push(`${days} ${t('details:countdown.days')}`);
-            if (hours > 0) {
-              parts.push(`${hours} ${t('details:countdown.hours')}`);
-            }
-            color = colors.info;
-          } else if (hours > 0) {
-            parts.push(`${hours} ${t('details:countdown.hours')}`);
-            if (minutes > 0) {
-              parts.push(`${minutes} ${t('details:countdown.minutes')}`);
-            }
-            color = colors.success;
-          } else if (minutes > 0) {
-            parts.push(`${minutes} ${t('details:countdown.minutes')}`);
-            color = colors.warning;
-          }
-
-          if (parts.length === 0) {
-            return { label: t('details:countdown.startingSoon'), color: colors.warning };
-          }
-
-          return {
-            label: `${t('details:countdown.startsIn')} ${parts.join(' ')}`,
-            color,
-          };
-        }
-
-        default:
-          return { label: '', color: colors.gray500 };
-      }
-    },
-    [t]
-  );
 
   const renderItem = useCallback(
     ({ item }: { item: Distance }) => {
-      const badge = getCountdownBadge(item);
       const isRegistering =
         registerLoading &&
         (confirmItem?.product_option_value_app_id === item.product_option_value_app_id ||
@@ -318,16 +266,17 @@ const DistanceTab = ({
               </Text>
               <Text style={commonStyles.subtitle}>{item.race_date_formatted}</Text>
               <Text style={commonStyles.subtitle}>{item.race_time}</Text>
+              <Text style={commonStyles.subtitle}>
+                {item.participant_count} {t('details:athletes')}
+              </Text>
             </View>
-            {badge.label ? (
-              <View style={[detailsStyles.count, { backgroundColor: badge.color }]}>
-                <Text style={[commonStyles.text, { color: '#fff', fontWeight: '600' }]}>
-                  {badge.label}
-                </Text>
-              </View>
-            ) : null}
+            <CountdownBadge
+              days={item.countdown.days}
+              hours={item.countdown.hours}
+              minutes={item.countdown.minutes}
+              status={item.countdown.status}
+            />
           </View>
-
           <TouchableOpacity
             style={[commonStyles.primaryButton, {
               borderRadius: 0, opacity: isRegistering ? 0.7 : 1, borderBottomLeftRadius: 12,
@@ -354,7 +303,7 @@ const DistanceTab = ({
         </View>
       );
     },
-    [getCountdownBadge, handleRegister, handleUndoClick, registerLoading, confirmItem, selectedItem, t]
+    [CountdownBadge, handleRegister, handleUndoClick, registerLoading, confirmItem, selectedItem, t]
   );
 
   if (loading) {
