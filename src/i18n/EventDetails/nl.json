@@ -9,7 +9,7 @@
   "countdown": {
     "live": "LIVE",
     "finished": "AFGELOPEN",
-    "startsIn": "Begint over",
+    "startsIn": "Start over",
     "startingSoon": "Begint Binnenkort",
     "days": "D",
     "hours": "U",

@@ -65,7 +65,7 @@ const CountdownBadge: React.FC<CountdownBadgeProps> = ({ days, hours, minutes, s
         }
         return (
             <View style={[detailsStyles.count, { backgroundColor: color }]}>
-                <Text style={[commonStyles.text, { color: '#fff', fontWeight: '600' }]}>
+                <Text style={[commonStyles.text, { color: '#fff', fontWeight: '600', flexShrink: 1 }]} numberOfLines={2}>
                     {t('details:countdown.startsIn')} {label}
                 </Text>
             </View>
