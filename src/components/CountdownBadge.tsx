@@ -54,7 +54,7 @@ const CountdownBadge: React.FC<CountdownBadgeProps> = ({ days, hours, minutes, s
             label = `${d}${t('details:countdown.days')} ${h}${t('details:countdown.hours')} ${m}${t('details:countdown.minutes')} `;
             color = colors.info;
         } else if (h > 0) {
-            label = `${h}${t('details:countdown.hours')} ${m}${t('details:countdown.minutes')}`;
+            label = `${h}${t('details:countdown.hours')} ${m}${t('details:countdown.minutes')} ${s}${t('details:countdown.seconds')}`;
             color = colors.success;
         } else if (m > 0) {
             label = `${m}${t('details:countdown.minutes')} ${s}${t('details:countdown.seconds')}`;

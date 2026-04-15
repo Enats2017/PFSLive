@@ -116,7 +116,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     showUtmbIndex={showUtmbIndex}
                     raceStatus={raceStatus}
                     currentPovId={currentPovId}
-                    isWomen={selectedCategory === 'women'}
+                    isWomen={selectedCategory === 'women' || item.gender === 'female'}
                 />
             );
         }
@@ -128,7 +128,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     fromLive={fromLive}
                     raceStatus={raceStatus}
                     currentPovId={currentPovId}
-                    isWomen={selectedCategory === 'women'}
+                    isWomen={selectedCategory === 'women' || item.gender === 'female'}
                 />
             );
         }
@@ -139,7 +139,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 fromLive={fromLive}
                 raceStatus={raceStatus}
                 currentPovId={currentPovId}
-                isWomen={selectedCategory === 'women'}
+                isWomen={selectedCategory === 'women' || item.gender === 'female'}
                 showUtmbIndex={showUtmbIndex}
             />
         );
