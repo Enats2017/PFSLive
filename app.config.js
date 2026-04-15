@@ -103,6 +103,7 @@ export default ({ config }) => {
         }
       ],
       "expo-localization",
+      "expo-secure-store",
       "@react-native-community/datetimepicker",
       [
         "expo-notifications",
