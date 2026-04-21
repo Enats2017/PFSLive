@@ -35,7 +35,6 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
-    console.log("iswomen", isWomen);
 
     const hasUtmbIndex = showUtmbIndex &&
         item.utmb_index &&
