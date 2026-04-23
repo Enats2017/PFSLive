@@ -31,6 +31,10 @@
       "title": "Introuvable",
       "message": "Nous n'avons pas trouvé ce que vous cherchez."
     },
+    "distance_not_found": {
+      "title": "Aucune distance disponible",
+      "message": "Les informations sur la distance pour cet événement ne sont pas disponibles actuellement.\nRevenez plus tard pour les mises à jour."
+    },
     "payment_failed": {
       "title": "Paiement échoué",
       "message": "Votre paiement n'a pas pu être traité.\nVeuillez réessayer."
@@ -54,6 +58,10 @@
     "maintenance": {
       "title": "Maintenance en cours",
       "message": "Nous améliorons le service.\nRevenez bientôt."
+    },
+    "participant_not_found": {
+      "title": "Participant non disponible pour cet événement",
+      "message": "Nous n'avons pas trouvé ce participant dans l'événement pour le moment.\nIl n'est peut-être pas inscrit ou les données ne sont pas encore disponibles."
     }
   }
 }

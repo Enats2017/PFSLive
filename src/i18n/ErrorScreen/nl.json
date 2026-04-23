@@ -31,6 +31,10 @@
       "title": "Niet gevonden",
       "message": "We konden niet vinden wat u zocht."
     },
+    "distance_not_found": {
+      "title": "Geen afstand beschikbaar",
+      "message": "De afstandsinformatie voor dit evenement is momenteel niet beschikbaar.\nKom later terug voor updates."
+    },
     "payment_failed": {
       "title": "Betaling mislukt",
       "message": "Uw betaling kon niet worden verwerkt.\nProbeer opnieuw."
@@ -54,6 +58,10 @@
     "maintenance": {
       "title": "Onderhoud bezig",
       "message": "We zijn bezig met verbeteringen.\nKom binnenkort terug."
+    },
+    "participant_not_found": {
+      "title": "Deelnemer niet beschikbaar voor dit evenement",
+      "message": "We konden deze deelnemer momenteel niet vinden in het evenement.\nMogelijk is hij/zij niet geregistreerd of zijn de gegevens nog niet beschikbaar."
     }
   }
 }
