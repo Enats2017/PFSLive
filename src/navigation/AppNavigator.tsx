@@ -88,6 +88,7 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen name="FavouriteList"     component={FavouriteList}     options={noGesture} />
           <Stack.Screen name="AllParticipant"    component={AllParticipant}    options={noGesture} />
           <Stack.Screen name="SearchParticipant" component={SearchParticipant} options={noGesture} />
+          <Stack.Screen name="ProfileScreen" component={ProfileScreen} options={noGesture} />
 
           <Stack.Screen
             name="LiveTracking"
@@ -113,7 +114,6 @@ export const AppNavigator: React.FC = () => {
           {/* ── Login-required screens — only when logged in ─────────── */}
           {isLoggedIn && (
             <>
-              <Stack.Screen name="ProfileScreen"        component={ProfileScreen}        options={noGesture} />
               <Stack.Screen name="EditProfileScreen"    component={EditProfileScreen}    options={noGesture} />
               <Stack.Screen name="EditPersonalEvent"    component={EditPersonalEvent}    options={noGesture} />
               <Stack.Screen name="LiveTrackingSettings" component={LiveTrackingSettings} options={noGesture} />
