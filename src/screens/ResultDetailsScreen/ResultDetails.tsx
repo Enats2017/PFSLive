@@ -112,7 +112,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         return (
             <View style={s.page}>
                 {item === 'raceInfo' && (
-                    raceStatus === 'in_progress' && participantStatus === 'in_progress' ? (
+                    raceStatus === 'in_progress' && (participantStatus === 'in_progress' || participantStatus === 'not_started') ? (
                         <RaceLive
                             raceInfo={data?.race_info}
                             event={data?.event}
