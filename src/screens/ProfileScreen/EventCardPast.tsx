@@ -21,25 +21,30 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
 
     const handlePress = useCallback(() => {
         if (isOwnProfile) {
-            // own profile → results screen
-            navigation.navigate('LiveTracking', {
-                product_app_id: item.id,
-                event_name: item.name,
-                event_source: item.event_source,
-                sourceScreen: 'FollowerDistanceScreen',
-                sectionType: 'follower',
-                sourceTab: 'past'
+            navigation.navigate('ResultDetails', {
+                product_app_id: Number(item.product_app_id),
+                product_option_value_app_id: Number(item.product_option_value_app_id),
+                bib: (item.bib_number),
+                raceStatus: 'finished',
+                from_live: 0,
             });
             return;
         } else {
-            navigation.navigate('LiveTracking', {
-                product_app_id: item.id,
-                event_name: item.name,
-                event_source: item.event_source,
-                sourceScreen: 'FollowerDistanceScreen',
-                sectionType: 'follower',
-                sourceTab: 'past'
+            navigation.navigate('ResultDetails', {
+                product_app_id: Number(item.product_app_id),
+                product_option_value_app_id: Number(item.product_option_value_app_id),
+                bib: item.bib_number,
+                raceStatus: 'finished',
+                from_live: 0,
             });
+            // navigation.navigate('LiveTracking', {
+            //     product_app_id: item.id,
+            //     event_name: item.name,
+            //     event_source: item.event_source,
+            //     sourceScreen: 'FollowerDistanceScreen',
+            //     sectionType: 'follower',
+            //     sourceTab: 'past'
+            // });
         }
     }, [item, isOwnProfile, navigation]);
 

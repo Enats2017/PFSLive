@@ -15,6 +15,8 @@ export interface AthleteEvent {
   participant_app_id: number;
   product_option_value_app_id: number;
   id: number;
+  bib_number: string;
+  product_app_id: number;
   name: string;
   race_date_formatted: string;
   race_time: string;
