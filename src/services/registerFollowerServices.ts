@@ -20,6 +20,12 @@ export interface RegisterFollowerResponse {
   follower_id: number;
 }
 
+export interface GetFollowerDataResponse {
+  follower_id: number;
+  followed_customers: number[];
+  followed_bibs: Record<string, string[]>;
+}
+
 // ✅ Helper functions
 const getDevicePlatform = (): "ios" | "android" | "" => {
   if (Platform.OS === "ios") return "ios";
@@ -88,6 +94,39 @@ export const followerApi = {
         error?.message ??
         "Failed to register follower"
       );
+    }
+  },
+
+  getFollowerData: async (
+    expoToken: string,
+  ): Promise<GetFollowerDataResponse> => {
+    try {
+      const headers = await API_CONFIG.getHeaders();
+      const device_id = await getDeviceId();
+
+      if (API_CONFIG.DEBUG) {
+        console.log('📡 Getting follower data from server');
+      }
+
+      const response = await apiClient.post<GetFollowerDataResponse>(
+        getApiEndpoint(API_CONFIG.ENDPOINTS.GET_FOLLOWER_DATA),
+        { expo_token: expoToken, device_id },
+        { headers, timeout: API_CONFIG.TIMEOUT }
+      );
+
+      if (API_CONFIG.DEBUG) {
+        console.log('✅ Follower data received:', {
+          customers: response.data.followed_customers?.length ?? 0,
+          products: Object.keys(response.data.followed_bibs ?? {}).length,
+        });
+      }
+
+      return response.data;
+    } catch (error: any) {
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Get follower data error:', error?.response?.data || error?.message);
+      }
+      throw error;
     }
   },
 };

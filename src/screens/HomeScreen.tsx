@@ -31,7 +31,8 @@ import { tokenService } from '../services/tokenService';
 import { versionService } from '../services/versionService';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { useNotifications, NotificationData } from '../hooks/useNotifications';
-
+import { followerApi } from '../services/registerFollowerServices';
+import { syncFollowDataFromAPI } from '../utils/followStorage';
 // Styles
 import { colors, spacing, typography, commonStyles } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
@@ -195,6 +196,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       console.log('🔄 Registering device for push notifications...');
     }
   }, [isRegistering]);
+
+  useEffect(() => {
+    if (!expoPushToken) return;
+
+    const syncFromServer = async () => {
+      try {
+        const data = await followerApi.getFollowerData(expoPushToken);
+        
+        console.log('data');
+        console.log(data);
+        
+        await syncFollowDataFromAPI(
+          data.followed_customers ?? [],
+          data.followed_bibs ?? {},
+        );
+      } catch {
+        // Silent — local data stays as fallback if server unreachable
+      }
+    };
+
+    syncFromServer();
+  }, [expoPushToken]);
 
   // ==================== UTILITIES ====================
 

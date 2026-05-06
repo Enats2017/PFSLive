@@ -387,3 +387,43 @@ export async function smartUnfollow(
 
 // ✅ Export sync function for manual triggers if needed
 export { syncFollowDataToAPI };
+
+export async function syncFollowDataFromAPI(
+  followed_customers: number[],
+  followed_bibs: Record<string, string[]>,
+): Promise<void> {
+  try {
+    const customerSet = new Set(
+      followed_customers
+        .map(toValidId)
+        .filter((id): id is number => id !== null)
+    );
+    cache = customerSet;
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([...customerSet]));
+
+    const bibMap = new Map<number, Set<string>>();
+    Object.entries(followed_bibs).forEach(([productId, bibs]) => {
+      const validProductId = toValidId(productId);
+      if (validProductId !== null && Array.isArray(bibs) && bibs.length > 0) {
+        const bibSet = new Set(
+          bibs.map(toValidBib).filter((b): b is string => b !== null)
+        );
+        if (bibSet.size > 0) {
+          bibMap.set(validProductId, bibSet);
+        }
+      }
+    });
+    bibCache = bibMap;
+    await persistBibCache(bibMap);
+
+    if (API_CONFIG.DEBUG) {
+      console.log('✅ Follow data synced from API:', {
+        customers: customerSet.size,
+        products: bibMap.size,
+      });
+    }
+  } catch (error) {
+    console.error('❌ Failed to sync follow data from API:', error);
+    throw error;
+  }
+}
