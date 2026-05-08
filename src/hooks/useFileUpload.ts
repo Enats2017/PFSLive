@@ -105,6 +105,7 @@ export const useFileUpload = (
 
   return {
     selectedFile,
+    setSelectedFile,
     pickFile,
     viewFile,
     removeFile,

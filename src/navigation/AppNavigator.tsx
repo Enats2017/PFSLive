@@ -36,6 +36,7 @@ import LiveTrackingSettings from '../screens/SettingScreen/LiveTrackingSettingsS
 import { tokenService } from '../services/tokenService';
 import { colors } from '../styles/common.styles';
 import { AuthContext } from '../context/AuthContext';
+import { navigationRef } from './navigationRef';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -61,7 +62,7 @@ export const AppNavigator: React.FC = () => {
 
   return (
     <AuthContext.Provider value={{ isLoggedIn, login, logout }}>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator
           initialRouteName="HomeScreen"
           screenOptions={{

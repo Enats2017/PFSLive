@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   KeyboardAvoidingView,
   ScrollView,
@@ -24,6 +24,7 @@ import {
   createPersonalEvent,
   formatFileSize,
   getDeviceTimezone,
+  isValidGPXFile,
 } from '../../services/personalEventService';
 import { API_CONFIG } from '../../constants/config';
 import { usePersonalEventForm } from '../../hooks/usePersonalEventForm';
@@ -33,8 +34,12 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 type RegistrationStatus = 'membership_required' | 'limit_reached' | 'membership_upcoming' | null;
 
-const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
+const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }) => {
   const { t } = useTranslation(['personal', 'common']);
+
+  // ✅ GPX file URI and filename passed from share intent (may be undefined)
+  const sharedFileUri = route?.params?.sharedFileUri;
+  const sharedFileName = route?.params?.sharedFileName;
 
   const EVENT_TYPE_OPTIONS = useMemo(
     () => [
@@ -55,7 +60,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     resetForm,
   } = usePersonalEventForm();
 
-  const { selectedFile, pickFile, viewFile, removeFile, clearFile } = useFileUpload(
+  const { selectedFile, setSelectedFile, pickFile, viewFile, removeFile, clearFile } = useFileUpload(
     MAX_FILE_SIZE,
     (message) => setFieldError('file', message)
   );
@@ -68,6 +73,23 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorTitleKey, setErrorTitleKey] = useState('');
   const [errorMessageKey, setErrorMessageKey] = useState('');
+
+  // ✅ Pre-select GPX file when opened via share intent
+  // fileName resolved by MainActivity at intent time so it's always correct
+  useEffect(() => {
+    if (!sharedFileUri) return;
+
+    const name = sharedFileName
+      ?? sharedFileUri.split('/').pop()?.split('?')[0]
+      ?? 'shared.gpx';
+
+    setSelectedFile({
+      uri: sharedFileUri,
+      name: name.toLowerCase().endsWith('.gpx') ? name : 'shared.gpx',
+      mimeType: 'application/gpx+xml',
+      size: undefined,
+    });
+  }, [sharedFileUri, sharedFileName]);
 
   const showErrorModal = useCallback((titleKey: string, messageKey: string) => {
     setErrorTitleKey(titleKey);
@@ -82,8 +104,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
     setMembershipStartDate(undefined);
   }, []);
 
-  // ✅ Map API field error codes → form field errors using language keys
-  // PHP returns e.g. ['name_required', 'race_date_invalid', 'start_hour_invalid']
   const applyApiFieldErrors = useCallback((fields: string[]) => {
     fields.forEach((code) => {
       switch (code) {
@@ -114,7 +134,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         case 'gpx_read_failed':
           setFieldError('file', t('personal:errors.filePickFailed'));
           break;
-        // timezone errors are device-generated — silently ignore, show generic modal
         default:
           if (API_CONFIG.DEBUG) console.log('⚠️ Unhandled API field error:', code);
           break;
@@ -125,28 +144,13 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
   const handleSubmit = useCallback(async () => {
     clearAllErrors();
 
-    if (!validateForm()) {
-      if (API_CONFIG.DEBUG) console.log('❌ Form validation failed');
-      return;
-    }
-
+    if (!validateForm()) return;
     if (isSubmitting) return;
 
     try {
       setIsSubmitting(true);
 
       const deviceTimezone = getDeviceTimezone();
-
-      if (API_CONFIG.DEBUG) {
-        console.log('📤 Submitting personal event:', {
-          name: formData.name,
-          eventTypeId: formData.selectedEventType?.value,
-          date: formData.date,
-          startTime: formData.startTime || '(not set)',
-          timezone: deviceTimezone,
-          hasFile: !!selectedFile,
-        });
-      }
 
       const response = await createPersonalEvent({
         name: formData.name.trim(),
@@ -157,19 +161,9 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         selectedFile: selectedFile || undefined,
       });
 
-      if (API_CONFIG.DEBUG) {
-        console.log('✅ Create Personal Event Response:', {
-          success: response.success,
-          action: response.action,
-          fields: response.fields,
-        });
-      }
-
       const action = response.action || 'unknown_error';
 
       if (action !== 'registered' && action !== 'success') {
-        if (API_CONFIG.DEBUG) console.log('⚠️ Non-success action received:', action);
-
         switch (action) {
           case 'membership_required':
             setRegistrationStatus('membership_required');
@@ -191,7 +185,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
           case 'participant_insert_failed':
             showErrorModal('personal:errors.createFailedTitle', 'personal:errors.participantInsertFailed');
             break;
-          // ✅ API field validation errors — map to inline form errors
           case 'validation_failed':
             if (response.fields && response.fields.length > 0) {
               applyApiFieldErrors(response.fields);
@@ -224,7 +217,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation }) => {
         throw new Error(response.message || 'API_ERROR');
       }
     } catch (error: any) {
-      if (API_CONFIG.DEBUG) console.error('❌ Submit error:', error);
       const message = error.message === 'API_ERROR'
         ? t('personal:errors.createFailed')
         : error.message;

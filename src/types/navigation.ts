@@ -13,7 +13,7 @@ export type RootStackParamList = {
     event_source?: string,
   };
   ParticipantEvent: undefined;
-  PersonalEvent: undefined;
+  PersonalEvent: { sharedFileUri?: string; sharedFileName?: string } | undefined;
   EventDetails: {
     product_app_id: string | number;
     event_name: string;

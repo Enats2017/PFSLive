@@ -9,6 +9,7 @@ export default ({ config }) => {
     ...config,
     name: "Livio",
     slug: "livio",
+    scheme: "livio",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -36,7 +37,29 @@ export default ({ config }) => {
         NSAppTransportSecurity: {
           NSAllowsArbitraryLoads: true  // ⚠️ Remove before production
         },
-        "UIBackgroundModes": ["location"]
+        // ✅ Register GPX file type handler for iOS share extension
+        CFBundleDocumentTypes: [
+          {
+            CFBundleTypeName: "GPX File",
+            CFBundleTypeRole: "Viewer",
+            LSHandlerRank: "Alternate",
+            LSItemContentTypes: [
+              "com.topografix.gpx",
+              "public.xml"
+            ]
+          }
+        ],
+        UTImportedTypeDeclarations: [
+          {
+            UTTypeIdentifier: "com.topografix.gpx",
+            UTTypeDescription: "GPX File",
+            UTTypeConformsTo: ["public.xml", "public.text"],
+            UTTypeTagSpecification: {
+              "public.filename-extension": ["gpx"],
+              "public.mime-type": "application/gpx+xml"
+            }
+          }
+        ]
       },
       entitlements: {
         "aps-environment": process.env.EXPO_PUBLIC_ENV === "production"
@@ -63,6 +86,27 @@ export default ({ config }) => {
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION"
       ],
+      // ✅ GPX intent filters — withGpxShareIntent plugin handles native wiring
+      intentFilters: [
+        {
+          action: "VIEW",
+          category: ["BROWSABLE", "DEFAULT"],
+          data: [
+            { mimeType: "application/gpx+xml" },
+            { mimeType: "text/xml" },
+            { mimeType: "application/xml" },
+          ]
+        },
+        {
+          action: "SEND",
+          category: ["DEFAULT"],
+          data: [
+            { mimeType: "application/gpx+xml" },
+            { mimeType: "text/xml" },
+            { mimeType: "application/xml" },
+          ]
+        }
+      ],
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       jsEngine: "hermes"
@@ -75,6 +119,8 @@ export default ({ config }) => {
 
     // ✅ Plugins
     plugins: [
+      // ✅ Custom plugin — handles GPX share/view intent wiring for Android
+      "./plugins/withGpxShareIntent",
       [
         "expo-build-properties",
         {
