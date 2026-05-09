@@ -243,7 +243,7 @@ export function useNotifications(): UseNotificationsReturn {
       console.log(`👆 ${Platform.OS} notification tapped:`, { title, data });
     }
 
-    if (data?.product_option_value_app_id && data?.bib && onNotificationTapRef.current) {
+    if (data?.race_id && data?.event_name && onNotificationTapRef.current) {
       onNotificationTapRef.current(data as NotificationData);
     }
   }, []);

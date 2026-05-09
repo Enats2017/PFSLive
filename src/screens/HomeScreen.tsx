@@ -137,13 +137,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     //   sectionType: 'follower',
     //   sourceTab: 'live'
     // });
-    navigation.navigate('ResultDetails', {
-      product_app_id: Number(data.race_id),
-      product_option_value_app_id: Number(data.product_option_value_app_id),
-      bib: String(data.bib),
-      from_live: 0,
-      raceStatus: (data.race_status as any) ?? undefined,
-    });
+    if(data.product_option_value_app_id == 0) {
+      navigation.navigate('LiveTracking', {
+        product_app_id: Number(data.race_id),
+        product_option_value_app_id: Number(data.product_option_value_app_id),
+        event_name: data.event_name,
+        sourceScreen: 'FollowerDistanceScreen',
+        sectionType: 'follower',
+        sourceTab: 'live',
+        event_source: 'custom',
+      });
+    } else {
+      navigation.navigate('ResultDetails', {
+        product_app_id: Number(data.race_id),
+        product_option_value_app_id: Number(data.product_option_value_app_id),
+        bib: String(data.bib),
+        from_live: 0,
+        raceStatus: (data.race_status as any) ?? undefined,
+      });
+    }
+    
   }, [navigation]);
 
   const closeNotificationPopup = useCallback(() => {
@@ -169,7 +182,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       console.log('📬 Foreground notification received:', { title, body, data });
     }
 
-    if (data?.product_option_value_app_id && data?.bib) {
+    if (data?.race_id && data?.event_name) {
       setNotificationPopup({
         visible: true,
         title: title ?? '',
