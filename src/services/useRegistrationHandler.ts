@@ -551,11 +551,11 @@ const useRegistrationHandler = (
 
       switch (item.registration_status) {
         case 'available':
+        case 'membership_required':
           await callRegisterAPI(item, showConfirmPopup);
           return;
         case 'registered':
           return;
-        case 'membership_required':
         case 'limit_reached':
         case 'membership_upcoming':
         case 'unavailable':
