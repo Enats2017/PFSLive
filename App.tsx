@@ -82,29 +82,6 @@ export default function App() {
     initializeApp();
   }, []);
 
-  // ✅ Handle GPX share intent — checks on startup and when app returns to foreground
-  useEffect(() => {
-    if (!isReady) return;
-
-    const checkGpxIntent = async () => {
-      try {
-        const result = await NativeModules.GpxShare?.getIntent?.();
-        if (!result) return;
-        navigateToPersonalEvent(result.uri, result.fileName);
-      } catch (err) {
-        if (API_CONFIG.DEBUG) console.log('❌ GpxShare.getIntent error:', err);
-      }
-    };
-
-    checkGpxIntent();
-
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') checkGpxIntent();
-    });
-
-    return () => subscription.remove();
-  }, [isReady]);
-
   // ✅ Handle deep link from email verification — livio://registration-confirmed
   useEffect(() => {
     const handleDeepLink = ({ url }: { url: string }) => {
@@ -138,6 +115,29 @@ export default function App() {
 
     return () => subscription.remove();
   }, []);
+
+  // ✅ Handle GPX share intent — checks on startup and when app returns to foreground
+  useEffect(() => {
+    if (!isReady) return;
+
+    const checkGpxIntent = async () => {
+      try {
+        const result = await NativeModules.GpxShare?.getIntent?.();
+        if (!result) return;
+        navigateToPersonalEvent(result.uri, result.fileName);
+      } catch (err) {
+        if (API_CONFIG.DEBUG) console.log('❌ GpxShare.getIntent error:', err);
+      }
+    };
+
+    checkGpxIntent();
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') checkGpxIntent();
+    });
+
+    return () => subscription.remove();
+  }, [isReady]);
 
   if (!isReady) {
     return (

@@ -13,7 +13,6 @@ import {
   BackHandler,
   Modal,
   Platform,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -73,13 +72,15 @@ interface HomeData {
 
 // ==================== CONSTANTS ====================
 
+// ✅ Stored permanently — never cleared after first prompt
 const BATTERY_PROMPTED_KEY = '@PFSLive:batteryOptimizationPrompted';
 
 // ==================== BATTERY OPTIMIZATION ====================
 
 /**
  * Open system dialog to exempt app from battery optimization.
- * One-time user action — permanent fix for Android Doze killing background GPS.
+ * HomeScreen provides the visual background behind the system dialog.
+ * Called once on first install — permanent, zero cost on non-event days.
  */
 const requestBatteryOptimizationExemption = async (): Promise<void> => {
   if (Platform.OS !== 'android') return;
@@ -127,9 +128,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [timeUntilRace, setTimeUntilRace] = useState<string>('');
   const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
 
-  // ✅ Battery optimization modal states
+  // ✅ Battery explanation modal — shown once before system dialog
   const [showBatteryModal, setShowBatteryModal] = useState(false);
-  const [showBatteryRevertModal, setShowBatteryRevertModal] = useState(false);
 
   // Version check states
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -295,9 +295,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ==================== BATTERY OPTIMIZATION ====================
 
   /**
-   * Show battery explanation modal once before system dialog.
-   * Only on Android — shown once per tracking session via AsyncStorage flag.
-   * ✅ Flag is cleared on stop tracking so prompt appears again next session.
+   * Show battery explanation modal once on first install.
+   * HomeScreen is mounted so user sees the app behind the system dialog.
+   * Key is NEVER cleared — user is only asked once, ever.
    */
   const checkAndPromptBatteryOptimization = useCallback(async (): Promise<void> => {
     if (Platform.OS !== 'android') return;
@@ -305,12 +305,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const alreadyPrompted = await AsyncStorage.getItem(BATTERY_PROMPTED_KEY);
       if (alreadyPrompted) return;
       setShowBatteryModal(true);
-    } catch {
-      // Silent — non-critical
-    }
+    } catch { /* silent */ }
   }, []);
 
-  // ✅ User taps "Allow" — mark prompted, open system dialog
+  // ✅ User taps "Allow" — mark permanently, open system dialog
   const handleBatteryAllow = useCallback(async (): Promise<void> => {
     setShowBatteryModal(false);
     try {
@@ -319,23 +317,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     await requestBatteryOptimizationExemption();
   }, []);
 
-  // ✅ User taps "Skip" — mark prompted, do not open system dialog
+  // ✅ User taps "Skip" — mark permanently, never ask again
   const handleBatterySkip = useCallback(async (): Promise<void> => {
     setShowBatteryModal(false);
     try {
       await AsyncStorage.setItem(BATTERY_PROMPTED_KEY, '1');
     } catch { /* silent */ }
-  }, []);
-
-  // ✅ User taps "Open Settings" in revert modal
-  const handleBatteryRevertSettings = useCallback(() => {
-    setShowBatteryRevertModal(false);
-    Linking.openSettings();
-  }, []);
-
-  // ✅ User taps "Later" in revert modal
-  const handleBatteryRevertLater = useCallback(() => {
-    setShowBatteryRevertModal(false);
   }, []);
 
   // ==================== VERSION CHECK ====================
@@ -621,9 +608,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setHasPermission(true);
       }
 
-      // ✅ Prompt battery optimization exemption — Android only, shown once per session
-      await checkAndPromptBatteryOptimization();
-
       // Parse race start time
       if (homeData?.next_race_date && homeData?.next_race_time) {
         try {
@@ -704,10 +688,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         participantId,  // ✅ passed to background task via AsyncStorage
         eventId,        // ✅ passed to background task via AsyncStorage
         t('home:tracking.backgroundNotificationTitle'),       // ✅ from language file
-        t('home:tracking.backgroundNotificationBody'),          // ✅ from language file
-        homeData?.next_race_category_id,                        // ✅ movement threshold per sport
-        raceStartTimeRef.current?.toISOString() ?? null,        // ✅ background task race check
-        homeData?.manual_start,                                  // ✅ skip race check if manual
+        t('home:tracking.backgroundNotificationBody'),        // ✅ from language file
+        homeData?.next_race_category_id,                      // ✅ movement threshold per sport
+        raceStartTimeRef.current?.toISOString() ?? null,      // ✅ background task race check
+        homeData?.manual_start,                               // ✅ skip race check if manual
       );
 
       gpsWatchRef.current = gpsWatch;
@@ -745,13 +729,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     homeData,
     getServerTime,
     hasRaceStarted,
-    checkAndPromptBatteryOptimization,
     startQueueProcessor,
     startRaceStartChecker,
     t,
   ]);
 
-  const stopGPSTracking = useCallback(async () => {
+  const stopGPSTracking = useCallback(() => {
     if (gpsWatchRef.current) {
       gpsWatchRef.current.remove();
       gpsWatchRef.current = null;
@@ -784,19 +767,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
 
     setLocationUpdateCount(0);
-
-    // ✅ Android only: clear battery session flag + show revert modal if was prompted
-    if (Platform.OS === 'android') {
-      try {
-        const wasPrompted = await AsyncStorage.getItem(BATTERY_PROMPTED_KEY);
-        // ✅ Clear session flag so prompt appears again on next tracking start
-        await AsyncStorage.removeItem(BATTERY_PROMPTED_KEY);
-        // ✅ Show revert modal only if user saw the battery prompt this session
-        if (wasPrompted) {
-          setShowBatteryRevertModal(true);
-        }
-      } catch { /* silent */ }
-    }
   }, [locationUpdateCount, queuedCount, t]);
 
   const manualStartSending = useCallback(() => {
@@ -825,6 +795,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     initializeScreen();
   }, [checkAppVersion, initializeScreen]);
 
+  // ✅ Battery optimization — prompt once on first install when HomeScreen is visible
+  // HomeScreen provides the background behind the system dialog — better UX than App.tsx
+  useEffect(() => {
+    checkAndPromptBatteryOptimization();
+  }, [checkAndPromptBatteryOptimization]);
+
   // Countdown timer + background sent count sync
   useEffect(() => {
     if (isGPSActive) {
@@ -832,8 +808,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         calculateTimeUntilRace();
 
         // ✅ Sync locationUpdateCount from background task's AsyncStorage counter.
-        // Uses prev to avoid overwriting queue-processed sends — only adds the
-        // difference since last sync so both sources are counted correctly.
         try {
           const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
           if (countStr) {
@@ -872,8 +846,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         if (isGPSActive && participantId && eventId) {
           locationService.processQueue(participantId, eventId).then(async sentCount => {
             if (sentCount > 0) {
-              // ✅ Write to BACKGROUND_SENT_COUNT_KEY so countdown timer sync
-              // reads the correct total — avoids overwriting this count
               try {
                 const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
                 const current = countStr ? parseInt(countStr) : 0;
@@ -969,7 +941,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         />
       )}
 
-      {/* ✅ Battery optimization explanation modal — Android only, shown once per session */}
+      {/* ✅ Battery optimization explanation modal — Android only, shown once on first install */}
       {Platform.OS === 'android' && (
         <Modal
           transparent
@@ -1008,45 +980,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </Modal>
       )}
 
-      {/* ✅ Battery revert modal — shown on stop tracking if user was prompted */}
-      {Platform.OS === 'android' && (
-        <Modal
-          transparent
-          visible={showBatteryRevertModal}
-          animationType="fade"
-          statusBarTranslucent
-          onRequestClose={handleBatteryRevertLater}
-        >
-          <View style={homeStyles.notifBackdrop}>
-            <View style={homeStyles.notifWrapper}>
-              <View style={homeStyles.notifCard}>
-                <View style={homeStyles.notifIconWrapper}>
-                  <Ionicons name="battery-half" size={36} color={colors.primary} />
-                </View>
-                <Text style={homeStyles.notifTitle}>{t('home:battery.revertTitle')}</Text>
-                <Text style={homeStyles.notifBody}>{t('home:battery.revertMessage')}</Text>
-                <View style={homeStyles.notifButtonContainer}>
-                  <TouchableOpacity
-                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
-                    onPress={handleBatteryRevertSettings}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={commonStyles.primaryButtonText}>{t('home:battery.revertSettings')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={commonStyles.secondaryButton}
-                    onPress={handleBatteryRevertLater}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={commonStyles.secondaryButtonText}>{t('home:battery.revertLater')}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-
       {/* ✅ Foreground notification popup */}
       <Modal
         transparent
@@ -1067,7 +1000,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         {/* Card */}
         <View style={homeStyles.notifWrapper}>
           <View style={homeStyles.notifCard}>
-            {/* Close button — top right, matching SuccessCelebrationModal */}
+            {/* Close button */}
             <TouchableOpacity
               style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}
               onPress={closeNotificationPopup}
