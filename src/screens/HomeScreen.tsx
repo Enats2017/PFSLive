@@ -612,7 +612,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       if (homeData?.next_race_date && homeData?.next_race_time) {
         try {
           const dateTimeString = `${homeData.next_race_date}T${homeData.next_race_time}`;
-          const raceTime = new Date(dateTimeString);
+          const raceLocal = new Date(`${homeData.next_race_date}T${homeData.next_race_time}`);
+          const raceTime  = new Date(raceLocal.getTime() - serverTimeOffsetRef.current);
 
           if (!isNaN(raceTime.getTime())) {
             setRaceStartTime(raceTime);

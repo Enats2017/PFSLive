@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
+import * as Battery from 'expo-battery';
 import { LocationData } from './locationService';
 import { API_CONFIG } from '../constants/config';
 
@@ -24,6 +25,7 @@ const TRACKING_PARAMS_KEY = '@PFSLive:trackingParams';
 const LAST_SENT_KEY = '@PFSLive:lastSentAt';
 export const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
 const LAST_POSITION_KEY = '@PFSLive:lastPosition';
+const LAST_ALTITUDE_KEY = '@PFSLive:lastAltitude';
 
 // ✅ Movement thresholds per sport category.
 // Used to skip sends when participant is standing still.
@@ -71,18 +73,20 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
 
     const { participantId, eventId, intervalSeconds, categoryId, raceStartTime, manualStart } = JSON.parse(paramsJson);
 
+    if (API_CONFIG.DEBUG) {
+      console.log('📍 BG task | manualStart:', manualStart, '| raceStartTime:', raceStartTime, '| now:', new Date().toISOString());
+    }
+
     // ✅ Race start check — do not send coordinates before race begins.
     // manualStart === 1 means organiser controls start — skip time check entirely.
     // Otherwise raceStartTime must be set AND in the past before any send.
     if (manualStart !== 1) {
       if (!raceStartTime) {
-        // No scheduled time and not manual — race not configured, block all sends
         if (API_CONFIG.DEBUG) console.log('⏳ Background task: no race time configured — skipping send');
         return;
       }
       const raceTimeMs = new Date(raceStartTime).getTime();
       if (isNaN(raceTimeMs) || Date.now() < raceTimeMs) {
-        // ✅ Race is in the future (or invalid) — block send regardless of DEBUG mode
         if (API_CONFIG.DEBUG) {
           const minsLeft = isNaN(raceTimeMs) ? '?' : ((raceTimeMs - Date.now()) / 60000).toFixed(1);
           console.log(`⏳ Background task: race not started yet — ${minsLeft} min remaining`);
@@ -115,16 +119,50 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
 
     // Use the most recent location
     const raw = data.locations[data.locations.length - 1];
+
+    // ✅ Calculate elevation gain from last known altitude
+    let elevationGain: number | undefined;
+    const currentAltitude = raw.coords.altitude ?? null;
+    if (currentAltitude !== null) {
+      const lastAltStr = await AsyncStorage.getItem(LAST_ALTITUDE_KEY);
+      if (lastAltStr) {
+        const lastAlt = parseFloat(lastAltStr);
+        if (!isNaN(lastAlt) && currentAltitude > lastAlt) {
+          elevationGain = parseFloat((currentAltitude - lastAlt).toFixed(1));
+        }
+      }
+      await AsyncStorage.setItem(LAST_ALTITUDE_KEY, String(currentAltitude));
+    }
+
+    // ✅ Read battery info
+    let batteryLevel: number | undefined;
+    let batteryCharging: boolean | undefined;
+    try {
+      const level = await Battery.getBatteryLevelAsync();
+      const state = await Battery.getBatteryStateAsync();
+      batteryLevel = Math.round(level * 100);
+      batteryCharging = state === Battery.BatteryState.CHARGING ||
+                        state === Battery.BatteryState.FULL;
+    } catch { /* silent */ }
+
+    // ✅ Determine is_moving from speed
+    const speed = raw.coords.speed ?? null;
+    const isMoving = speed !== null ? speed > 0.5 : undefined;
+
     const location: LocationData = {
       latitude: raw.coords.latitude,
       longitude: raw.coords.longitude,
-      altitude: raw.coords.altitude ?? undefined,
+      altitude: currentAltitude ?? undefined,
       accuracy: raw.coords.accuracy ?? undefined,
       altitudeAccuracy: raw.coords.altitudeAccuracy ?? undefined,
       timestamp: new Date(raw.timestamp).toISOString(),
-      speed: raw.coords.speed ?? undefined,
+      speed: speed ?? undefined,
       heading: raw.coords.heading ?? undefined,
       isMock: raw.mocked || false,
+      elevationGain,
+      batteryLevel,
+      batteryCharging,
+      isMoving,
     };
 
     // ✅ Movement check — skip send if participant hasn't moved since last send.
@@ -308,6 +346,7 @@ export const gpsService = {
       }
 
       // ✅ Always stop any existing background task before starting fresh.
+      // This prevents duplicate registrations which cause rapid-fire wakes.
       try {
         await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
         if (API_CONFIG.DEBUG) console.log('♻️ Stopped existing background task before restart');
@@ -325,19 +364,25 @@ export const gpsService = {
         manualStart,    // ✅ 1 = skip race start check
       }));
 
-      // ✅ Clear position from previous session
+      // ✅ Clear position + elevation from previous session
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
+      await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
       await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
 
-      // ✅ Set LAST_SENT_KEY to now — throttles the very first background task
-      // invocation which Android fires immediately on startLocationUpdatesAsync.
-      // Without this, first invocation sees lastSentAt=0 → passes throttle →
-      // sends one coordinate even if race hasn't started yet.
-      // The task will send normally after intervalSeconds has elapsed.
-      await AsyncStorage.setItem(LAST_SENT_KEY, String(Date.now()));
+      // ✅ Set LAST_SENT_KEY based on race state:
+      // - Race not started yet → set to now → throttles first invocation so no
+      //   coordinate leaks before race begins (race check in task handles rest)
+      // - Race already started → set to 0 → first invocation sends immediately
+      const raceAlreadyStarted = manualStart === 1 ||
+        (raceStartTime !== null && raceStartTime !== undefined &&
+         Date.now() >= new Date(raceStartTime).getTime());
+      await AsyncStorage.setItem(LAST_SENT_KEY, raceAlreadyStarted ? '0' : String(Date.now()));
 
       // ✅ Start background location updates — works even when phone is locked
       await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+        // ✅ High accuracy — Balanced accuracy gets aggressively batched by Android
+        // Doze mode. High accuracy uses GPS directly and fires more reliably at
+        // the requested interval.
         accuracy: Location.Accuracy.Balanced,
         timeInterval: intervalSeconds * 1000,
         // ✅ distanceInterval: 50 — keeps the task firing reliably on Android.
@@ -363,6 +408,8 @@ export const gpsService = {
 
       // ✅ Foreground watch — UI position updates ONLY, no sends.
       // Background task handles all API sends.
+      // Uses a longer interval (5x) so it doesn't wake the CPU frequently —
+      // just enough to keep the position dot moving on screen.
       const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Balanced,
@@ -398,6 +445,7 @@ export const gpsService = {
           await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
           await AsyncStorage.removeItem(LAST_SENT_KEY);
           await AsyncStorage.removeItem(LAST_POSITION_KEY);
+          await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
           await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
           if (API_CONFIG.DEBUG) console.log('✅ Background location task stopped');
         },

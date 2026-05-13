@@ -14,6 +14,10 @@ export interface LocationData {
   speedAccuracy?: number;
   isMock?: boolean;
   elevation?: number;
+  elevationGain?: number;
+  batteryLevel?: number;
+  batteryCharging?: boolean;
+  isMoving?: boolean;
 }
 
 export interface SendLocationResponse {
@@ -88,6 +92,10 @@ export const locationService = {
         heading: location.heading,
         speed_accuracy: location.speedAccuracy,
         is_mock: location.isMock || false,
+        elevation_gain: location.elevationGain,
+        battery_level: location.batteryLevel,
+        battery_charging: location.batteryCharging,
+        is_moving: location.isMoving,
       };
 
       if (API_CONFIG.DEBUG) {
@@ -185,6 +193,10 @@ export const locationService = {
             timestamp: queuedLocation.timestamp,
             speed: queuedLocation.speed,
             heading: queuedLocation.heading,
+            elevationGain: queuedLocation.elevationGain,
+            batteryLevel: queuedLocation.batteryLevel,
+            batteryCharging: queuedLocation.batteryCharging,
+            isMoving: queuedLocation.isMoving,
           },
           false
         );
