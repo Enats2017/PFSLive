@@ -18,6 +18,8 @@ import { profileStyles } from '../../styles/Profile.styles'
 import { toastSuccess, toastError } from '../../../utils/toast'
 import { API_CONFIG } from '../../constants/config'
 import { useNavigation } from '@react-navigation/native'
+import { saveLanguage, getLanguageCodeFromId } from '../../i18n';
+import { useLanguageStore } from '../../store/useLanguageStore';
 
 const GENDER_VALUES = [
     'male',
@@ -31,9 +33,16 @@ const EditProfileScreen = () => {
     const [profileLoading, setProfileLoading] = useState(true)
     const [profileError, setProfileError] = useState('')
     const [profile, setProfile] = useState<Awaited<ReturnType<typeof fetchProfileApi>> | null>(null)
-    
+
+    // ✅ Language options — id matches API expectation
+    const LANGUAGE_OPTIONS = [
+        { label: t('profile:languages.english'), value: 1 },
+        { label: t('profile:languages.dutch'),   value: 2 },
+        { label: t('profile:languages.french'),  value: 3 },
+    ]
+
     const navigation = useNavigation<any>()
-    
+
     const genderOptions = GENDER_VALUES.map((value) => ({
         label: t(`profile:gender.${value}`),
         value
@@ -58,6 +67,9 @@ const EditProfileScreen = () => {
 
     const genderDisplayValue =
         genderOptions.find(g => g.value === form.gender)?.label || ''
+
+    const languageDisplayValue =
+        LANGUAGE_OPTIONS.find(l => l.value === form.language_id)?.label || ''
 
     // ✅ SHOW IMAGE SOURCE PICKER
     const showImageSourcePicker = useCallback(() => {
@@ -136,7 +148,7 @@ const EditProfileScreen = () => {
             }
 
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                mediaTypes: 'images',
                 allowsEditing: true,
                 aspect: [1, 1],
                 quality: 0.8,
@@ -163,25 +175,31 @@ const EditProfileScreen = () => {
         }
     }, [setPicture, setRemovePicture, t])
 
-    /* ── submit ── */
+    const { changeLanguage } = useLanguageStore();
+
     const handleSave = useCallback(async () => {
         const ok = await submit()
         if (ok) {
             toastSuccess(t('profile:messages.success_profile_updated'))
-            
+
+            const langCode = getLanguageCodeFromId(form.language_id)
+            if (langCode) {
+                await saveLanguage(langCode)
+                await changeLanguage(langCode)
+            }
+
             const customer_app_id = await tokenService.getCustomerId()
-            
             navigation.navigate('ProfileScreen', {
                 customer_app_id: customer_app_id || 0,
                 fromEdit: true,
             })
         }
-    }, [submit, navigation, t])
+    }, [submit, navigation, t, form.language_id, changeLanguage])
 
     const avatarUri: string | null = picture
         ? picture.uri
         : (profile?.profile_picture && !removePicture)
-            ?(profile.profile_picture)
+            ? (profile.profile_picture)
             : null
 
     const avatarInitials = [form.firstname[0], form.lastname[0]]
@@ -227,10 +245,9 @@ const EditProfileScreen = () => {
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={profileStyles.profileCard}>
-                        {/* ✅ UPDATED: Now shows camera/gallery options */}
-                        <TouchableOpacity 
-                            style={profileStyles.avatarWrapper} 
-                            onPress={showImageSourcePicker} 
+                        <TouchableOpacity
+                            style={profileStyles.avatarWrapper}
+                            onPress={showImageSourcePicker}
                             activeOpacity={0.8}
                         >
                             {avatarUri ? (
@@ -340,9 +357,24 @@ const EditProfileScreen = () => {
                         errorMessage={errors.gender}
                     />
 
-                    <SectionHeader 
-                        title={t('profile:sections.change_password')} 
-                        subtitle={t('profile:sections.password_hint')} 
+                    {/* ✅ Language Selector */}
+                    <FloatingLabelInput
+                        label={t('profile:labels.language')}
+                        value={languageDisplayValue}
+                        onChangeText={(label) => {
+                            const selected = LANGUAGE_OPTIONS.find(l => l.label === label)
+                            if (selected) setField('language_id', selected.value)
+                        }}
+                        iconName="language-outline"
+                        isDropdown
+                        options={LANGUAGE_OPTIONS.map(l => l.label)}
+                        editable={!loading}
+                        error={false}
+                    />
+
+                    <SectionHeader
+                        title={t('profile:sections.change_password')}
+                        subtitle={t('profile:sections.password_hint')}
                     />
 
                     <FloatingLabelInput
@@ -369,7 +401,7 @@ const EditProfileScreen = () => {
 
                     <TouchableOpacity
                         style={[
-                            commonStyles.primaryButton, 
+                            commonStyles.primaryButton,
                             loading && profileStyles.saveBtnDisabled
                         ]}
                         onPress={handleSave}

@@ -173,7 +173,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     if (isDatePicker && value) {
       return new Date(value);
     }
-    return new Date(2000, 0, 1);
+    return new Date();
   }, [isDatePicker, value]);
 
   const selectedTime = useMemo(() => {

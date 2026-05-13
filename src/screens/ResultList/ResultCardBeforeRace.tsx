@@ -30,11 +30,9 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
     currentPovId,
     isWomen
 }) => {
-
     const { t } = useTranslation(['allrace', 'common']);
     const navigation = useNavigation<any>();
 
-    // ✅ Check if UTMB index exists and is not 0
     const hasUtmbIndex = showUtmbIndex &&
         item.utmb_index &&
         item.utmb_index.trim() !== '' &&
@@ -51,51 +49,33 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
     };
 
     const handleStarPress = useCallback(() => {
-        if (!isLoading) {
-            onToggleFollow();
-        }
+        if (!isLoading) onToggleFollow();
     }, [isLoading, onToggleFollow]);
 
     return (
         <TouchableOpacity
-            style={[resultListStyle.cardWithLeftBorder , isWomen && {borderLeftColor:colors.pinkcolor}]}
+            style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: colors.pinkcolor }]}
             onPress={handlePress}
         >
-            {/* Corner Star */}
-            <View style={resultListStyle.cornerWrap} pointerEvents="box-none">
-                <View style={[resultListStyle.cornerTriangle , isWomen && { borderTopColor: colors.pinkcolor }]} pointerEvents="none" />
-
-                <Text style={resultListStyle.cornerNum} pointerEvents="none">
-                    {/* optional rank */}
+            {/* ✅ Badge: star only — no position before race */}
+            <TouchableOpacity
+                style={[resultListStyle.cornerBadge, isWomen && { backgroundColor: colors.pinkcolor }]}
+                onPress={handleStarPress}
+                activeOpacity={0.8}
+                disabled={isLoading}
+            >
+                <Text style={isFollowed ? resultListStyle.cornerStar : resultListStyle.cornerStarUnfilled}>
+                    ★
                 </Text>
-
-                <TouchableOpacity
-                    style={resultListStyle.cornerStarBtn}
-                    onPress={handleStarPress}
-                    activeOpacity={0.7}
-                    disabled={isLoading}
-                >
-                    <Text
-                        style={
-                            isFollowed
-                                ? resultListStyle.cornerStar
-                                : resultListStyle.cornerStarUnfilled
-                        }
-                    >
-                        {isFollowed ? '★' : '☆'}
-                    </Text>
-                </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
 
             {/* Card Content */}
             <View>
                 <View style={resultListStyle.cardTop}>
                     <View style={resultListStyle.cardTopLeft}>
-                        <Text style={resultListStyle.cardName}>
-                            {item.name}
-                        </Text>
+                        <Text style={resultListStyle.cardName}>{item.name}</Text>
                     </View>
-                    <View style={{ width: 72 }} />
+                    <View style={{ width: 60 }} />
                 </View>
 
                 <Text style={resultListStyle.bibText}>
@@ -107,7 +87,6 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                 </Text>
 
                 <View style={resultListStyle.statsRow}>
-                    
                     <View style={resultListStyle.statCol}>
                         {hasUtmbIndex ? (
                             <View style={resultListStyle.beforeRaceLeftHalf}>
@@ -118,9 +97,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                                             {t('allrace:race.utmbIndex')}
                                         </Text>
                                     </View>
-                                    <Text style={resultListStyle.utmbValue}>
-                                        {item.utmb_index}
-                                    </Text>
+                                    <Text style={resultListStyle.utmbValue}>{item.utmb_index}</Text>
                                 </View>
                             </View>
                         ) : (
@@ -138,20 +115,12 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                         )}
                     </View>
 
-                    {/* Flag Section */}
                     <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
                         <View style={resultListStyle.flagRow}>
                             {item.nation_flag && (
-                                <SvgUri
-                                    width={28}
-                                    height={20}
-                                    uri={item.nation_flag}
-                                />
+                                <SvgUri width={28} height={20} uri={item.nation_flag} />
                             )}
-                            <Text
-                                style={resultListStyle.statVal}
-                                numberOfLines={2}
-                            >
+                            <Text style={resultListStyle.statVal} numberOfLines={2}>
                                 {item.nation || '—'}
                             </Text>
                         </View>
@@ -172,5 +141,4 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
 );
 
 ResultCardBeforeRace.displayName = 'ResultCardBeforeRace';
-
 export default ResultCardBeforeRace;

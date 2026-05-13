@@ -50,6 +50,12 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
 
     const isLive = item.live_tracking_activated === 1;
     const activeCheckpoints = getActiveCheckpoints(item.checkpoints);
+    const isFemale = item.gender === 'female';
+
+    // ✅ Gender rank only for female
+    const genderRank = isFemale && item.finish_rank_gender
+        ? `F ${item.finish_rank_gender}`
+        : null;
 
     const handleCardPress = useCallback(() => {
         navigation.navigate('ResultDetails', {
@@ -61,51 +67,39 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     }, [navigation, product_app_id, currentPovId, item.bib, raceStatus]);
 
     const handleStarPress = useCallback(() => {
-        if (!isLoading) {
-            onToggleFollow();
-        }
+        if (!isLoading) onToggleFollow();
     }, [isLoading, onToggleFollow]);
 
     return (
-        <View style={[resultListStyle.cardWithLeftBorder , isWomen && {borderLeftColor:colors.pinkcolor}]}>
-            {/* Star Zone - Absolute Positioned */}
-            <View 
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    width: 72,
-                    height: 72,
-                    zIndex: 999,
-                }}
+        <View style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: colors.pinkcolor }]}>
+
+            {/* ✅ Badge: star left | overall rank top + gender rank bottom */}
+            <TouchableOpacity
+                style={[resultListStyle.cornerBadge, isWomen && { backgroundColor: colors.pinkcolor }]}
+                onPress={handleStarPress}
+                activeOpacity={0.8}
+                disabled={isLoading}
             >
-                <View style={[resultListStyle.cornerTriangle , isWomen && { borderTopColor: colors.pinkcolor }]} pointerEvents="none" />
-                <Text style={resultListStyle.cornerNum} pointerEvents="none">
-                    {item.position.replace('.', '')}
+                <Text style={isFollowed ? resultListStyle.cornerStar : resultListStyle.cornerStarUnfilled}>
+                    ★
                 </Text>
-                
-                <TouchableOpacity
-                    style={resultListStyle.cornerStarBtn}
-                    onPress={handleStarPress}
-                    activeOpacity={0.7}
-                    disabled={isLoading}
-                >
-                    <Text style={isFollowed ? resultListStyle.cornerStar : resultListStyle.cornerStarUnfilled}>
-                        {isFollowed ? '★' : '☆'}
+                <View style={resultListStyle.cornerBadgeRight}>
+                    <Text style={resultListStyle.cornerNum}>
+                        {item.position.replace('.', '')}
                     </Text>
-                </TouchableOpacity>
-            </View>
+                    {genderRank && (
+                        <Text style={resultListStyle.cornerGenderRank}>{genderRank}</Text>
+                    )}
+                </View>
+            </TouchableOpacity>
 
             {/* Card Content */}
-            <TouchableOpacity
-                onPress={handleCardPress}
-                activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={handleCardPress} activeOpacity={0.7}>
                 <View style={resultListStyle.cardTop}>
                     <View style={resultListStyle.cardTopLeft}>
                         <Text style={resultListStyle.cardName}>{item.name}</Text>
                     </View>
-                    <View style={{ width: 72 }} />
+                    <View style={{ width: 100 }} />
                 </View>
 
                 <Text style={resultListStyle.bibText}>
@@ -123,23 +117,18 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                 )}
 
                 <View style={resultListStyle.statsRow}>
-                    {/* ✅ Time column — full width + left-aligned when fromLive=1 and no checkpoints */}
                     <View style={[
                         resultListStyle.statCol,
                         fromLive === 1 && activeCheckpoints.length === 0 && { alignItems: 'flex-start' },
                     ]}>
-                        <Text style={resultListStyle.statLabel}>
-                            {t('allrace:race.time')}
-                        </Text>
+                        <Text style={resultListStyle.statLabel}>{t('allrace:race.time')}</Text>
                         <Text style={resultListStyle.statVal}>{item.time}</Text>
                     </View>
 
                     {fromLive === 0 ? (
                         <>
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
-                                <Text style={resultListStyle.statLabel}>
-                                    {t('allrace:race.diffFirst')}
-                                </Text>
+                                <Text style={resultListStyle.statLabel}>{t('allrace:race.diffFirst')}</Text>
                                 <Text style={resultListStyle.statVal}>{item.diff}</Text>
                             </View>
                             <View style={resultListStyle.statCol}>
@@ -154,7 +143,6 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             {activeCheckpoints[0] && (
                                 <View style={[
                                     resultListStyle.statCol,
-                                    // ✅ only add borders when cp[1] also exists
                                     activeCheckpoints[1] ? resultListStyle.statColMid : resultListStyle.statColLeft,
                                 ]}>
                                     <Text style={resultListStyle.statLabel} numberOfLines={1}>
@@ -163,15 +151,13 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     <Text style={resultListStyle.statVal}>
                                         {activeCheckpoints[0].day_name
                                             ? t(`common:week.${activeCheckpoints[0].day_name.toLowerCase()}`)
-                                            : '-'
-                                        }
+                                            : '-'}
                                     </Text>
                                     <Text style={resultListStyle.statVal}>
                                         {activeCheckpoints[0].actual_time || '-'}
                                     </Text>
                                 </View>
                             )}
-
                             {activeCheckpoints[1] && (
                                 <View style={resultListStyle.statCol}>
                                     <Text style={resultListStyle.statLabel} numberOfLines={1}>
@@ -180,16 +166,13 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     <Text style={resultListStyle.statVal}>
                                         {activeCheckpoints[1].day_name
                                             ? t(`common:week.${activeCheckpoints[1].day_name.toLowerCase()}`)
-                                            : '-'
-                                        }
+                                            : '-'}
                                     </Text>
                                     <Text style={resultListStyle.statVal}>
                                         {activeCheckpoints[1].actual_time || '-'}
                                     </Text>
                                 </View>
                             )}
-
-                            
                         </>
                     )}
                 </View>
@@ -206,5 +189,4 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
 );
 
 ResultCardLive.displayName = 'ResultCardLive';
-
 export default ResultCardLive;

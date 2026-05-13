@@ -67,7 +67,8 @@
     "gender": "Gender",
     "country": "Country",
     "new_password": "New Password",
-    "confirm_password": "Confirm Password"
+    "confirm_password": "Confirm Password",
+    "language": "Language"
   },
   "gender": {
     "male": "Male",
@@ -94,5 +95,10 @@
     "personal_info": "PERSONAL INFO",
     "change_password": "CHANGE PASSWORD",
     "password_hint": "Leave blank to keep current"
+  },
+  "languages": {
+    "english": "English",
+    "dutch": "Dutch",
+    "french": "French"
   }
 }

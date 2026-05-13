@@ -106,7 +106,64 @@ export const resultListStyle = StyleSheet.create({
     borderLeftColor: colors.primary,
   },
 
-  // ── Corner Star Styles ────────────────────────────────────
+  // ✅ Badge — row: star left | rank+gender right stacked
+  cornerBadge: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: 12,
+    borderTopRightRadius: 10,
+    paddingVertical: 10,
+    paddingLeft: 16,
+    paddingRight: 18,
+    zIndex: 20,
+    gap: 10,
+  },
+
+  // ✅ Star icon
+  cornerStar: {
+    fontSize: 26,
+    color: '#FFD700',
+  },
+
+  cornerStarUnfilled: {
+    fontSize: 26,
+    color: '#FFFFFF',
+  },
+
+  // ✅ Right side — rank on top, gender below
+  cornerBadgeRight: {
+    alignItems: "flex-start",
+    justifyContent: "center",
+    gap: 2,
+  },
+
+  cornerNum: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 20,
+    fontWeight: "600",
+    lineHeight: 16,
+  },
+
+  cornerGenderRank: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "900",
+    lineHeight: 24,
+  },
+
+  // Keep for backward compat
+  cornerWrap: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 120,
+    height: 120,
+    zIndex: 20,
+  },
   cornerOverlay: {
     position: "absolute",
     top: 0,
@@ -116,17 +173,6 @@ export const resultListStyle = StyleSheet.create({
     zIndex: 15,
     backgroundColor: 'transparent',
   },
-
-  cornerWrap: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    width: 72,
-    height: 72,
-    zIndex: 10,
-    overflow: 'visible',
-  },
-
   cornerTriangle: {
     position: "absolute",
     top: 0,
@@ -138,48 +184,20 @@ export const resultListStyle = StyleSheet.create({
     borderTopColor: colors.primary,
     borderLeftColor: "transparent",
   },
-
-  cornerNum: {
-    position: "absolute",
-    top: 6,
-    right: 8,
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "900",
-  },
-
   cornerStarBtn: {
     position: "absolute",
-    top: 0,
-    right: 0,
-    width: 72,
-    height: 72,
-    justifyContent: 'flex-end',
-    alignItems: 'flex-end',
-    paddingBottom: 2,
-    paddingRight: 2,
+    top: 15,
+    left: -25,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 20,
     backgroundColor: 'transparent',
   },
-
-  cornerStar: {
-    fontSize: 50,
-    lineHeight: 50,
-    color: '#FFD700',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-
-  cornerStarUnfilled: {
-    fontSize: 50,
-    lineHeight: 50,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+  cornerStarIcon: {
+    width: 50,
+    height: 50,
   },
 
   // ── Card Content ──────────────────────────────────────────
@@ -202,16 +220,16 @@ export const resultListStyle = StyleSheet.create({
     color: colors.gray900,
   },
 
-  bibText: { 
-    fontSize: 12, 
-    color: colors.gray500, 
-    marginTop: 2 
+  bibText: {
+    fontSize: 12,
+    color: colors.gray500,
+    marginTop: 2,
   },
-  
-  teamText: { 
-    fontSize: 12, 
-    color: colors.gray500, 
-    marginBottom: 10 
+
+  teamText: {
+    fontSize: 12,
+    color: colors.gray500,
+    marginBottom: 10,
   },
 
   // ── Stats Row ─────────────────────────────────────────────
@@ -219,13 +237,13 @@ export const resultListStyle = StyleSheet.create({
     flexDirection: "row",
     padding: 12,
   },
-  
-  statCol: { 
-    flex: 1, 
-    alignItems: "center", 
-    justifyContent: "center" 
+
+  statCol: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  
+
   statColMid: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
@@ -236,15 +254,15 @@ export const resultListStyle = StyleSheet.create({
     borderLeftWidth: 1,
     borderColor: colors.gray400,
   },
-  
+
   statFlagMid: {
     borderLeftWidth: 1,
     borderColor: colors.gray400,
-    alignItems: "center",   // ← center the flagRow horizontally within the column
+    alignItems: "center",
     justifyContent: "center",
-    paddingLeft:8,
+    paddingLeft: 8,
   },
-  
+
   statLabel: {
     fontSize: 10,
     fontWeight: "600",
@@ -254,15 +272,14 @@ export const resultListStyle = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 4,
   },
-  
+
   statVal: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
     color: colors.gray900,
-    textAlign:"center"
+    textAlign: "center",
   },
 
-  // ✅ UTMB Badge Styles (Before Race Card)
   beforeRaceLeftHalf: {
     flex: 1,
     alignItems: "center",
@@ -309,10 +326,9 @@ export const resultListStyle = StyleSheet.create({
     color: colors.gray900,
   },
 
-  // ── List & Loading States ─────────────────────────────────
-  list: { 
-    paddingTop: 10, 
-    paddingBottom: 24 
+  list: {
+    paddingTop: 10,
+    paddingBottom: 24,
   },
 
   center: {
@@ -322,20 +338,20 @@ export const resultListStyle = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 24,
   },
-  
-  loadingText: { 
-    color: colors.gray600, 
-    fontSize: 14, 
-    marginTop: 8 ,
-    textAlign:"center",
+
+  loadingText: {
+    color: colors.gray600,
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
   },
-  
-  errorText: { 
-    color: "#555", 
-    fontSize: 14, 
-    textAlign: "center" 
+
+  errorText: {
+    color: "#555",
+    fontSize: 14,
+    textAlign: "center",
   },
-  
+
   retryBtn: {
     marginTop: 4,
     paddingHorizontal: 28,
@@ -343,11 +359,11 @@ export const resultListStyle = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 8,
   },
-  
-  retryText: { 
-    color: "#fff", 
-    fontWeight: "700", 
-    fontSize: 14 
+
+  retryText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
   },
 
   filterOverlay: {
@@ -361,20 +377,19 @@ export const resultListStyle = StyleSheet.create({
     justifyContent: "center",
     zIndex: 99,
   },
-  
+
   flagRow: {
-    flexDirection: "column",  // ← stack flag on top, text below
-    alignItems: "center",     // ← center both within the column
+    flexDirection: "column",
+    alignItems: "center",
     justifyContent: "center",
     gap: 4,
   },
 
-  // ADD this to resultListStyle
   statValSmall: {
-    fontSize: typography.sizes.sm,  // smaller font
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
     color: colors.gray900,
-    flexShrink: 1,                  // allows text to shrink
-    flexWrap: 'wrap',               // allows wrapping
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
 });

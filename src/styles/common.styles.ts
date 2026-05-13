@@ -41,6 +41,8 @@ export const colors = {
   inputBorderFocus: '#e5e7eb', // BORDER_LIGHT  
   inputBgSelected: '#fff5f5',  // BG_SELECTED
   inputBgItem: '#f3f4f6',      // BG_ITEM
+
+  themeiColor: '#d5d92c',
 };
 
 // Spacing

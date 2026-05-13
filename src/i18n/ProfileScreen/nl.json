@@ -67,7 +67,8 @@
     "gender": "Geslacht",
     "country": "Land",
     "new_password": "Nieuw wachtwoord",
-    "confirm_password": "Bevestig wachtwoord"
+    "confirm_password": "Bevestig wachtwoord",
+    "language": "Taal"
   },
   "gender": {
     "male": "Man",
@@ -94,5 +95,10 @@
     "personal_info": "PERSOONLIJKE INFORMATIE",
     "change_password": "WACHTWOORD WIJZIGEN",
     "password_hint": "Laat leeg om huidig te behouden"
+  },
+  "languages": {
+    "english": "Engels",
+    "dutch": "Nederlands",
+    "french": "Frans"
   }
 }

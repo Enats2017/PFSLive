@@ -16,6 +16,7 @@ export interface RaceResult {
   diff: string;
   category_name: string;
   category_rank: string;
+  finish_rank_gender: string;
   live_tracking_activated: number;
   participant_app_id: number | null;
   customer_app_id: number | null;

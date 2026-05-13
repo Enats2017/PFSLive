@@ -38,4 +38,13 @@ export const bottomNavStyles = StyleSheet.create({
     color: colors.accent,
     fontWeight: typography.weights.semibold,
   },
+  iconImage: {
+    width: 45,
+    height: 45,
+    marginBottom: 0,
+    opacity: 0.5,  // inactive — dimmed
+  },
+  iconImageActive: {
+    opacity: 1,    // active — full opacity
+  },
 });

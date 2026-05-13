@@ -10,7 +10,6 @@ import {
 import { getCurrentLanguageId } from '../i18n'
 import { Country } from '../components/CountrySelector'
 
-
 export interface EditProfileForm {
     firstname: string
     lastname: string
@@ -23,10 +22,10 @@ export interface EditProfileForm {
     country_iso: string
     password: string
     confirmPassword: string
+    language_id: number  // ✅ 1=English, 2=Dutch, 3=French
 }
 
 export type FormErrors = Partial<Record<keyof EditProfileForm, string>>
-
 
 const fieldErrorMap: Partial<Record<FieldError, keyof EditProfileForm>> = {
     firstname_invalid: 'firstname',
@@ -43,7 +42,6 @@ const fieldErrorMap: Partial<Record<FieldError, keyof EditProfileForm>> = {
     password_too_long: 'password',
 }
 
-
 const initialFormState: EditProfileForm = {
     firstname: '',
     lastname: '',
@@ -56,10 +54,11 @@ const initialFormState: EditProfileForm = {
     country_iso: '',
     password: '',
     confirmPassword: '',
+    language_id: getCurrentLanguageId() ?? 1,  // ✅ Default from current app language
 }
 
 export const useEditProfile = (initialProfile: Profile | null) => {
-    const { t } = useTranslation(['profile']) // ✅ ADD i18n HOOK
+    const { t } = useTranslation(['profile'])
 
     const [form, setForm] = useState<EditProfileForm>(initialFormState)
     const [errors, setErrors] = useState<FormErrors>({})
@@ -87,9 +86,11 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             gender: initialProfile.gender ?? '',
             countryName: initialProfile.country ?? '',
             country_id: String(initialProfile.country_id ?? ''),
-            country_iso: initialProfile.iso_code_2 ?? '', 
+            country_iso: initialProfile.iso_code_2 ?? '',
             password: '',
             confirmPassword: '',
+            // ✅ Use profile language_id if available, fall back to current app language
+            language_id: initialProfile.language_id ?? getCurrentLanguageId() ?? 1,
         })
     }, [initialProfile])
 
@@ -101,7 +102,6 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         []
     )
 
-
     const handleCountrySelect = useCallback((country: Country) => {
         setForm(prev => ({
             ...prev,
@@ -109,12 +109,9 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             country_id: country.country_id,
             country_iso: country.iso_code_2,
         }))
-
         setErrors(prev => ({ ...prev, countryName: undefined }))
     }, [])
 
-
-    // ✅ VALIDATION WITH i18n TRANSLATIONS
     const validate = (): boolean => {
         const newErrors: FormErrors = {}
 
@@ -137,7 +134,6 @@ export const useEditProfile = (initialProfile: Profile | null) => {
                     (Date.now() - dobDate.getTime()) /
                     (365.25 * 24 * 60 * 60 * 1000)
                 )
-
                 if (age < 13) newErrors.dob = t('profile:validation.dob_underage')
                 if (age > 120) newErrors.dob = t('profile:validation.dob_invalid')
             }
@@ -150,16 +146,10 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             newErrors.confirmPassword = t('profile:validation.passwords_do_not_match')
 
         setErrors(newErrors)
-
         return Object.keys(newErrors).length === 0
     }
 
-    /* ============================
-       SUBMIT
-    ============================ */
-
     const submit = useCallback(async (): Promise<boolean> => {
-
         if (!validate()) return false
 
         setLoading(true)
@@ -172,20 +162,17 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             dob: form.dob || undefined,
             gender: form.gender || undefined,
             country_id: form.country_id ? Number(form.country_id) : undefined,
-            language_id: getCurrentLanguageId(),
+            // ✅ Use language selected in form instead of getCurrentLanguageId()
+            language_id: form.language_id,
             ...(form.password && { password: form.password }),
             ...(removePicture && { remove_profile_picture: '1' as '1' }),
         }
 
         try {
-
             const result = await editProfileApi(payload, picture ?? undefined)
 
             setSuccess(true)
-
-            setEmailChanged(
-                result.message === 'profile_updated_verify_email'
-            )
+            setEmailChanged(result.message === 'profile_updated_verify_email')
 
             setForm(prev => ({
                 ...prev,
@@ -197,30 +184,21 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             setRemovePicture(false)
 
             return true
-
         } catch (err) {
-
             if (err instanceof ValidationError) {
-
                 const newErrors: FormErrors = {}
-
-                // ✅ MAP SERVER ERRORS TO TRANSLATED MESSAGES
                 err.fields.forEach((fieldError) => {
                     const key = fieldErrorMap[fieldError]
                     if (key) {
                         newErrors[key] = t(`profile:validation.${fieldError}`)
                     }
                 })
-
                 setErrors(newErrors)
             }
-
             return false
-
         } finally {
             setLoading(false)
         }
-
     }, [form, picture, removePicture, t])
 
     return {

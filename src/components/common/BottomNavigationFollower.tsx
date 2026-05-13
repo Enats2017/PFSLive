@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Text } from 'react-native';
+import { View, TouchableOpacity, Text, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { bottomNavStyles } from '../../styles/bottomNav.styles';
@@ -14,31 +14,33 @@ interface BottomNavigationFollowerProps {
   sourceTab?: 'past' | 'live' | 'upcoming';
 }
 
+// ✅ Custom icon assets from assets folder
+const TAB_ICONS: Record<TabName, any> = {
+  Home:      require('../../../assets/home.png'),
+  Favorites: require('../../../assets/favourites.png'),
+  Results:   require('../../../assets/results.png'),
+  Map:       require('../../../assets/map.png'),
+};
+
 export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> = ({
   activeTab = 'Home',
   product_app_id,
   event_name,
   product_option_value_app_id,
-  sourceTab
+  sourceTab,
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute();
   const { t } = useTranslation('common');
 
-  const tabs = [
-    { name: 'Home' as TabName, icon: '🏠', label: t('nav.home') },
-    { name: 'Favorites' as TabName, icon: '⭐', label: t('nav.favorites') },
-    { name: 'Results' as TabName, icon: '📊', label: t('nav.results') },
-    { name: 'Map' as TabName, icon: '🗺️', label: t('nav.map') },
+  const tabs: { name: TabName; label: string }[] = [
+    { name: 'Home',      label: t('nav.home') },
+    { name: 'Favorites', label: t('nav.favorites') },
+    { name: 'Results',   label: t('nav.results') },
+    { name: 'Map',       label: t('nav.map') },
   ];
 
   const handleTabPress = (tabName: TabName) => {
-    console.log('Tab pressed:', tabName, {
-      currentRoute: route.name,
-      product_app_id,
-      product_option_value_app_id,
-    });
-
     switch (tabName) {
       case 'Home':
         handleHomeNavigation();
@@ -52,10 +54,8 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
             event_name: event_name || '',
             sourceScreen: route.name,
             sectionType: 'follower',
-            sourceTab: sourceTab,
+            sourceTab,
           });
-        } else {
-          console.log('Results: Missing product_app_id');
         }
         break;
 
@@ -67,10 +67,8 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
             event_name: event_name || '',
             sourceScreen: route.name,
             sectionType: 'follower',
-            sourceTab: sourceTab,
+            sourceTab,
           });
-        } else {
-          console.log('Map: Missing required parameters');
         }
         break;
 
@@ -81,7 +79,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
             event_name: event_name || '',
             sectionType: 'follower',
             sourceScreen: route.name,
-            sourceTab: sourceTab,
+            sourceTab,
             product_option_value_app_id: product_option_value_app_id || 0,
           });
         }
@@ -92,25 +90,16 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
   const handleHomeNavigation = () => {
     const currentRoute = route.name;
 
-    console.log('🏠 Follower Home navigation:', {
-      currentRoute,
-      product_app_id,
-      event_name: event_name || '',
-    });
-
     if (currentRoute === 'FollowDetails') {
-      console.log('📍 Already on FollowerList - staying');
-    }
-    else {
+      // Already on the right screen — do nothing
+    } else {
       if (product_app_id) {
-        console.log('📍 Default → FollowerList');
         navigation.navigate('FollowDetails', {
           product_app_id,
           event_name: event_name || '',
-          sourceTab: sourceTab,
+          sourceTab,
         });
       } else {
-        console.log('📍 Default → Home');
         navigation.navigate('HomeScreen');
       }
     }
@@ -127,9 +116,14 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
             onPress={() => handleTabPress(tab.name)}
             activeOpacity={0.7}
           >
-            <Text style={[bottomNavStyles.icon, isActive && bottomNavStyles.iconActive]}>
-              {tab.icon}
-            </Text>
+            <Image
+              source={TAB_ICONS[tab.name]}
+              style={[
+                bottomNavStyles.iconImage,
+                isActive && bottomNavStyles.iconImageActive,
+              ]}
+              resizeMode="contain"
+            />
             <Text style={[bottomNavStyles.label, isActive && bottomNavStyles.labelActive]}>
               {tab.label}
             </Text>

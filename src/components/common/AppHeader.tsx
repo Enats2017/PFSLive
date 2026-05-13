@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { headerStyles } from '../../styles/header.styles';
 import { useNavigation } from '@react-navigation/native';
 import { tokenService } from '../../services/tokenService';
+import { colors } from '../../styles/common.styles';
 
 interface AppHeaderProps {
   title?: string;
@@ -59,17 +61,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <View style={headerStyles.container}>
-      {/* Left — Logo */}
+      {/* Left — Home Icon */}
       <View style={headerStyles.leftSection}>
         <TouchableOpacity
           style={headerStyles.logo}
           onPress={handleLogoPress}
           activeOpacity={0.7}
         >
-          <Image
-            source={require('../../../assets/header-logo.png')}
-            style={headerStyles.logoImage}
-            resizeMode="contain"
+          <MaterialCommunityIcons
+            name="home-variant"
+            size={32}
+            color={colors.primary}
           />
         </TouchableOpacity>
       </View>

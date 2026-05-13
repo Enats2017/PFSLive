@@ -101,7 +101,9 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     const lastSentAt = lastSentStr ? parseInt(lastSentStr) : 0;
     const now = Date.now();
 
-    if (now - lastSentAt < minGapMs) {
+    if (isNaN(lastSentAt) || lastSentAt > now) {
+      await AsyncStorage.setItem(LAST_SENT_KEY, '0');
+    } else if (now - lastSentAt < minGapMs) {
       if (API_CONFIG.DEBUG) {
         console.log(`⏭️ Background task throttled — ${((now - lastSentAt) / 1000).toFixed(1)}s since last send`);
       }
