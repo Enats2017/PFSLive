@@ -2,7 +2,7 @@
 import 'react-native-gesture-handler';
 
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, LogBox, NativeModules, AppState } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, LogBox, NativeModules, AppState, Linking } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Mapbox from '@rnmapbox/maps';
@@ -105,6 +105,40 @@ export default function App() {
     return () => subscription.remove();
   }, [isReady]);
 
+  // ✅ Handle deep link from email verification — livio://registration-confirmed
+  useEffect(() => {
+    const handleDeepLink = ({ url }: { url: string }) => {
+      if (url?.startsWith('livio://registration-confirmed')) {
+        if (API_CONFIG.DEBUG) console.log('✅ Deep link: registration confirmed', url);
+          // Parse query params from deep link URL
+          const queryString = url.split('?')[1] ?? '';
+          const params = Object.fromEntries(
+          queryString.split('&').filter(Boolean).map(p => {
+            const [key, value] = p.split('=');
+            return [key, decodeURIComponent(value ?? '')];
+          })
+        );
+        const product_app_id = params.product_app_id ? Number(params.product_app_id) : null;
+        const event_name = params.event_name ?? '';
+        if (product_app_id && event_name) {
+          navigationRef.current?.navigate('EventDetails', { product_app_id, event_name, auto_register_id: null });
+        } else {
+          navigationRef.current?.navigate('ParticipantEvent');
+        }
+      }
+    };
+
+    // App already open — handle incoming deep link
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // App was closed — check if launched via deep link
+    Linking.getInitialURL().then(url => {
+      if (url) handleDeepLink({ url });
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   if (!isReady) {
     return (
       <View style={styles.loading}>
@@ -112,7 +146,7 @@ export default function App() {
       </View>
     );
   }
-
+  
   return (
     <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
