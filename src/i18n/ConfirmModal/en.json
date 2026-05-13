@@ -15,6 +15,7 @@
   },
   "buttons": {
     "confirm": "Confirm & Register",
+    "confirmOnly": "Confirm",
     "cancel": "Cancel"
   },
   "error": {

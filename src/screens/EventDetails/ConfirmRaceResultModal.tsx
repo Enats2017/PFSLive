@@ -18,6 +18,8 @@ interface ConfirmRaceResultModalProps {
   data: RaceResultData | null;
   distanceName: string;
   registerLoading: boolean;
+  // ✅ When true: button says "Confirm" and sends verification email instead of registering
+  emailVerificationMode?: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -27,12 +29,22 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
   data,
   distanceName,
   registerLoading,
+  emailVerificationMode = false,
   onConfirm,
   onClose,
 }) => {
-  const { t } = useTranslation(['confirmModal']); // ✅ ADD i18n
+  const { t } = useTranslation(['confirmModal']);
 
   if (!data) return null;
+
+  const maskEmail = (email: string): string => {
+    if (!email) return '';
+    const [local, domain] = email.split('@');
+    if (!domain) return email;
+    const visible = local.length > 2 ? 2 : 1;
+    const masked = local.substring(0, visible) + '***';
+    return `${masked}@${domain}`;
+  };
 
   return (
     <Modal
@@ -95,38 +107,22 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
             style={styles.dataContainer}
             showsVerticalScrollIndicator={false}
           >
-            <Row
-              label={t('confirmModal:fields.bibNumber')}
-              value={data.bib_number}
-              highlight
-            />
-            <Row
-              label={t('confirmModal:fields.firstName')}
-              value={data.firstname}
-            />
-            <Row
-              label={t('confirmModal:fields.lastName')}
-              value={data.lastname}
-            />
+            <Row label={t('confirmModal:fields.bibNumber')} value={data.bib_number} highlight />
+            <Row label={t('confirmModal:fields.firstName')} value={data.firstname} />
+            <Row label={t('confirmModal:fields.lastName')} value={data.lastname} />
             <Row label={t('confirmModal:fields.dob')} value={data.dob} />
             <Row label={t('confirmModal:fields.gender')} value={data.gender} />
             <Row label={t('confirmModal:fields.city')} value={data.city} />
-            <Row
-              label={t('confirmModal:fields.country')}
-              value={data.country}
-            />
+            <Row label={t('confirmModal:fields.country')} value={data.country} />
             <Row label={t('confirmModal:fields.nation')} value={data.nation} />
-            <Row
-              label={t('confirmModal:fields.distance')}
-              value={data.distance_name}
-            />
-            <Row label={t('confirmModal:fields.email')} value={data.email} />
+            <Row label={t('confirmModal:fields.distance')} value={data.distance_name} />
+            <Row label={t('confirmModal:fields.email')} value={maskEmail(data.email)} />
           </ScrollView>
 
           {/* Divider */}
           <View style={styles.divider} />
 
-          {/* Confirm button */}
+          {/* ✅ Confirm button — label changes based on mode */}
           <TouchableOpacity
             style={[
               commonStyles.primaryButton,
@@ -138,10 +134,12 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
             activeOpacity={0.82}
           >
             {registerLoading ? (
-              <ActivityIndicator color="#000" size="small" />
+              <ActivityIndicator color="#fff" size="small" />
             ) : (
               <Text style={commonStyles.primaryButtonText}>
-                {t('confirmModal:buttons.confirm')}
+                {emailVerificationMode
+                  ? t('confirmModal:buttons.confirmOnly')
+                  : t('confirmModal:buttons.confirm')}
               </Text>
             )}
           </TouchableOpacity>
@@ -162,8 +160,7 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
   );
 };
 
-// ─── Row component ─────────────────────────────────────────────────────────
-
+// ─── Row component ────────────────────────────────────────────────────────────
 const Row = ({
   label,
   value,
@@ -185,7 +182,6 @@ const Row = ({
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -194,7 +190,6 @@ const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
     justifyContent: 'flex-end',
-    paddingHorizontal: 0,
   },
   card: {
     backgroundColor: '#ffffff',

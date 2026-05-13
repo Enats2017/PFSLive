@@ -5,7 +5,7 @@ export const detailsStyles = StyleSheet.create({
   section: {
     alignItems: "center",
     padding: 6,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.themeiColor,
     marginVertical: spacing.sm,
   },
   tabBar: {

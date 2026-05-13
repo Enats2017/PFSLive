@@ -6,7 +6,7 @@ export interface Distance {
   product_option_value_app_id: number;
   distance_name: string;
   membership_limit?: number;
-  membership_start_date?: string;   // ✅ for membership_upcoming
+  membership_start_date?: string;
   race_date: string;
   race_date_formatted: string;
   race_time: string;
@@ -18,7 +18,7 @@ export interface Distance {
   };
   registration_status: 'available' | 'registered' | 'membership_required' | 'limit_reached' | 'membership_upcoming' | 'unavailable';
   participant_app_id?: number;
-  participant_count:number;
+  participant_count: number;
 }
 
 export interface RaceResultData {
@@ -41,7 +41,7 @@ export interface RegisterParticipantResponse {
   is_first_tracking?: number;
   race_result_data?: RaceResultData;
   membership_limit?: number;
-  membership_start_date?: string;   // ✅ for membership_upcoming
+  membership_start_date?: string;
   participant?: {
     participant_app_id: number;
     race_id: number;
@@ -71,9 +71,7 @@ export interface EventDetail {
 }
 
 export const eventDetailService = {
-  /**
-   * Get event details
-   */
+
   async getEventDetails(
     product_app_id: string | number,
     bustCache: boolean = false
@@ -93,19 +91,11 @@ export const eventDetailService = {
 
       if (bustCache) {
         requestBody._t = Date.now();
-
-        if (API_CONFIG.DEBUG) {
-          console.log('🔥 Cache busting with timestamp:', requestBody._t);
-        }
       }
 
       const response = await apiClient.post<any>(url, requestBody, { headers });
 
       if (response.success && response.data) {
-        if (API_CONFIG.DEBUG) {
-          console.log('✅ Event details loaded:', response.data.name);
-        }
-
         return response.data as EventDetail;
       }
 
@@ -122,7 +112,9 @@ export const eventDetailService = {
     product_option_value_app_id: number,
     bib_number?: string,
     language_id?: number,
-    show_confirm_popup?: boolean
+    show_confirm_popup?: boolean,
+    // ✅ New flag — when true, API sends verification email instead of inserting
+    send_verification_email?: boolean
   ): Promise<RegisterParticipantResponse> {
     try {
       if (API_CONFIG.DEBUG) {
@@ -131,6 +123,7 @@ export const eventDetailService = {
           bib_number: bib_number || '(none)',
           language_id: language_id || '(default)',
           show_confirm_popup: show_confirm_popup || false,
+          send_verification_email: send_verification_email || false,
         });
       }
 
@@ -148,6 +141,11 @@ export const eventDetailService = {
 
       if (show_confirm_popup !== undefined) {
         requestBody.show_confirm_popup = show_confirm_popup ? 1 : 0;
+      }
+
+      // ✅ Send verification email flag — PHP handles email + returns verification_email_sent
+      if (send_verification_email) {
+        requestBody.send_verification_email = 1;
       }
 
       const response = await apiClient.post<any>(url, requestBody, { headers });

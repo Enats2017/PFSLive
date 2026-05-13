@@ -8,6 +8,11 @@
   },
   "loadingMore": "Loading more... ({{page}}/{{totalPages}})",
   "scrollForMore": "Scroll for more ({{count}} loaded)",
+  "mailSent": {
+    "title": "Verification Email Sent!",
+    "message": "We've sent a confirmation email to your registered address. Please click the link in the email to complete your registration.",
+    "button": "Got it"
+  },
   "error": {
     "missingParamsTitle": "Missing Information",
     "missingParamsMessage": "Unable to load participants. Required information is missing.",

@@ -18,7 +18,7 @@ export const eventStyles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.themeiColor,
     marginVertical: spacing.sm,
   },
   header: {
