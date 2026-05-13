@@ -72,18 +72,19 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     const { participantId, eventId, intervalSeconds, categoryId, raceStartTime, manualStart } = JSON.parse(paramsJson);
 
     // ✅ Race start check — do not send coordinates before race begins.
-    // Applies in both DEBUG and production — race must have started.
-    // Only the movement check is bypassed in DEBUG (allows testing while stationary).
+    // manualStart === 1 means organiser controls start — skip time check entirely.
+    // Otherwise raceStartTime must be set AND in the past before any send.
     if (manualStart !== 1) {
       if (!raceStartTime) {
-        // No scheduled time and not manual — race not configured, skip send
+        // No scheduled time and not manual — race not configured, block all sends
         if (API_CONFIG.DEBUG) console.log('⏳ Background task: no race time configured — skipping send');
         return;
       }
-      const raceTime = new Date(raceStartTime).getTime();
-      if (Date.now() < raceTime) {
+      const raceTimeMs = new Date(raceStartTime).getTime();
+      if (isNaN(raceTimeMs) || Date.now() < raceTimeMs) {
+        // ✅ Race is in the future (or invalid) — block send regardless of DEBUG mode
         if (API_CONFIG.DEBUG) {
-          const minsLeft = ((raceTime - Date.now()) / 60000).toFixed(1);
+          const minsLeft = isNaN(raceTimeMs) ? '?' : ((raceTimeMs - Date.now()) / 60000).toFixed(1);
           console.log(`⏳ Background task: race not started yet — ${minsLeft} min remaining`);
         }
         return;
@@ -307,7 +308,6 @@ export const gpsService = {
       }
 
       // ✅ Always stop any existing background task before starting fresh.
-      // This prevents duplicate registrations which cause rapid-fire wakes.
       try {
         await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
         if (API_CONFIG.DEBUG) console.log('♻️ Stopped existing background task before restart');
@@ -325,10 +325,16 @@ export const gpsService = {
         manualStart,    // ✅ 1 = skip race start check
       }));
 
-      // ✅ Clear all state from any previous session
-      await AsyncStorage.removeItem(LAST_SENT_KEY);
+      // ✅ Clear position from previous session
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
       await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
+
+      // ✅ Set LAST_SENT_KEY to now — throttles the very first background task
+      // invocation which Android fires immediately on startLocationUpdatesAsync.
+      // Without this, first invocation sees lastSentAt=0 → passes throttle →
+      // sends one coordinate even if race hasn't started yet.
+      // The task will send normally after intervalSeconds has elapsed.
+      await AsyncStorage.setItem(LAST_SENT_KEY, String(Date.now()));
 
       // ✅ Start background location updates — works even when phone is locked
       await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
