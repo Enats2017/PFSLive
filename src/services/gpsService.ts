@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState } from 'react-native';
 import { LocationData } from './locationService';
 import { API_CONFIG } from '../constants/config';
 
@@ -90,17 +91,14 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     }
 
     // ✅ Parse to number — API returns category_id as string e.g. "59"
-    // ✅ In DEBUG mode skip movement check — allows testing while stationary
     const minMovementMetres = (MOVEMENT_THRESHOLD[Number(categoryId)] ?? DEFAULT_MOVEMENT_METRES);
 
-    // ✅ THROTTLE — write LAST_SENT_KEY BEFORE the send to block any concurrent
-    // task invocations immediately. Android can fire the task multiple times
-    // in quick succession; writing first prevents double-sends.
     const minGapMs = ((intervalSeconds ?? 30) - 2) * 1000;
     const lastSentStr = await AsyncStorage.getItem(LAST_SENT_KEY);
     const lastSentAt = lastSentStr ? parseInt(lastSentStr) : 0;
     const now = Date.now();
 
+    // ✅ Guard against clock jumps (Samsung) or corrupted timestamp
     if (isNaN(lastSentAt) || lastSentAt > now) {
       await AsyncStorage.setItem(LAST_SENT_KEY, '0');
     } else if (now - lastSentAt < minGapMs) {
@@ -129,8 +127,6 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     };
 
     // ✅ Movement check — skip send if participant hasn't moved since last send.
-    // This avoids sending repeated identical coordinates during warm-up or
-    // while standing at the start line before the race begins.
     const lastPosStr = await AsyncStorage.getItem(LAST_POSITION_KEY);
     if (lastPosStr) {
       const lastPos = JSON.parse(lastPosStr);
@@ -285,10 +281,33 @@ export const gpsService = {
     manualStart?: number,            // 1 = organiser controls start
   ): Promise<{ remove: () => void }> {
     try {
+      // ✅ Guard: foreground service cannot start when app is in background.
+      // Wait up to 3s for app to come to foreground before throwing.
+      // This handles the race condition where user taps "Start" just as the
+      // app transitions to background (e.g. battery dialog closing).
+      const appCurrentState = AppState.currentState;
+      if (appCurrentState !== 'active') {
+        if (API_CONFIG.DEBUG) {
+          console.log(`⚠️ App state is '${appCurrentState}' — waiting for foreground...`);
+        }
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            subscription.remove();
+            reject(new Error('App did not return to foreground in time'));
+          }, 3000);
+
+          const subscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') {
+              clearTimeout(timeout);
+              subscription.remove();
+              resolve();
+            }
+          });
+        });
+      }
+
       // ✅ Always stop any existing background task before starting fresh.
       // This prevents duplicate registrations which cause rapid-fire wakes.
-      // isTaskRegisteredAsync is checked but we attempt stop regardless
-      // because some Android versions return stale registration state.
       try {
         await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
         if (API_CONFIG.DEBUG) console.log('♻️ Stopped existing background task before restart');
@@ -313,9 +332,6 @@ export const gpsService = {
 
       // ✅ Start background location updates — works even when phone is locked
       await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-        // ✅ High accuracy — Balanced accuracy gets aggressively batched by Android
-        // Doze mode. High accuracy uses GPS directly and fires more reliably at
-        // the requested interval.
         accuracy: Location.Accuracy.Balanced,
         timeInterval: intervalSeconds * 1000,
         // ✅ distanceInterval: 50 — keeps the task firing reliably on Android.
@@ -341,8 +357,6 @@ export const gpsService = {
 
       // ✅ Foreground watch — UI position updates ONLY, no sends.
       // Background task handles all API sends.
-      // Uses a longer interval (5x) so it doesn't wake the CPU frequently —
-      // just enough to keep the position dot moving on screen.
       const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Balanced,

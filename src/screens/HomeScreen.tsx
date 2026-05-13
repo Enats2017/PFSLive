@@ -12,11 +12,14 @@ import {
   ActivityIndicator,
   BackHandler,
   Modal,
+  Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
+import * as IntentLauncher from 'expo-intent-launcher';
 
 // Local imports
 import { HomeScreenProps } from '../types/navigation';
@@ -68,6 +71,31 @@ interface HomeData {
   timezone?: string;
 }
 
+// ==================== CONSTANTS ====================
+
+const BATTERY_PROMPTED_KEY = '@PFSLive:batteryOptimizationPrompted';
+
+// ==================== BATTERY OPTIMIZATION ====================
+
+/**
+ * Open system dialog to exempt app from battery optimization.
+ * One-time user action — permanent fix for Android Doze killing background GPS.
+ */
+const requestBatteryOptimizationExemption = async (): Promise<void> => {
+  if (Platform.OS !== 'android') return;
+  try {
+    await IntentLauncher.startActivityAsync(
+      IntentLauncher.ActivityAction.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+      { data: 'package:com.pfs.livio' }
+    );
+  } catch {
+    // Fallback — open battery optimization list directly
+    await IntentLauncher.startActivityAsync(
+      'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS'
+    );
+  }
+};
+
 // ==================== COMPONENT ====================
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
@@ -98,6 +126,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [sendingInterval, setSendingInterval] = useState(30);
   const [timeUntilRace, setTimeUntilRace] = useState<string>('');
   const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
+
+  // ✅ Battery optimization modal states
+  const [showBatteryModal, setShowBatteryModal] = useState(false);
+  const [showBatteryRevertModal, setShowBatteryRevertModal] = useState(false);
 
   // Version check states
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -259,6 +291,52 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (!raceStartTimeRef.current) return false;
     return getServerTime() >= raceStartTimeRef.current;
   }, [homeData?.manual_start, getServerTime]);
+
+  // ==================== BATTERY OPTIMIZATION ====================
+
+  /**
+   * Show battery explanation modal once before system dialog.
+   * Only on Android — shown once per tracking session via AsyncStorage flag.
+   * ✅ Flag is cleared on stop tracking so prompt appears again next session.
+   */
+  const checkAndPromptBatteryOptimization = useCallback(async (): Promise<void> => {
+    if (Platform.OS !== 'android') return;
+    try {
+      const alreadyPrompted = await AsyncStorage.getItem(BATTERY_PROMPTED_KEY);
+      if (alreadyPrompted) return;
+      setShowBatteryModal(true);
+    } catch {
+      // Silent — non-critical
+    }
+  }, []);
+
+  // ✅ User taps "Allow" — mark prompted, open system dialog
+  const handleBatteryAllow = useCallback(async (): Promise<void> => {
+    setShowBatteryModal(false);
+    try {
+      await AsyncStorage.setItem(BATTERY_PROMPTED_KEY, '1');
+    } catch { /* silent */ }
+    await requestBatteryOptimizationExemption();
+  }, []);
+
+  // ✅ User taps "Skip" — mark prompted, do not open system dialog
+  const handleBatterySkip = useCallback(async (): Promise<void> => {
+    setShowBatteryModal(false);
+    try {
+      await AsyncStorage.setItem(BATTERY_PROMPTED_KEY, '1');
+    } catch { /* silent */ }
+  }, []);
+
+  // ✅ User taps "Open Settings" in revert modal
+  const handleBatteryRevertSettings = useCallback(() => {
+    setShowBatteryRevertModal(false);
+    Linking.openSettings();
+  }, []);
+
+  // ✅ User taps "Later" in revert modal
+  const handleBatteryRevertLater = useCallback(() => {
+    setShowBatteryRevertModal(false);
+  }, []);
 
   // ==================== VERSION CHECK ====================
 
@@ -543,6 +621,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setHasPermission(true);
       }
 
+      // ✅ Prompt battery optimization exemption — Android only, shown once per session
+      await checkAndPromptBatteryOptimization();
+
       // Parse race start time
       if (homeData?.next_race_date && homeData?.next_race_time) {
         try {
@@ -664,12 +745,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     homeData,
     getServerTime,
     hasRaceStarted,
+    checkAndPromptBatteryOptimization,
     startQueueProcessor,
     startRaceStartChecker,
     t,
   ]);
 
-  const stopGPSTracking = useCallback(() => {
+  const stopGPSTracking = useCallback(async () => {
     if (gpsWatchRef.current) {
       gpsWatchRef.current.remove();
       gpsWatchRef.current = null;
@@ -702,6 +784,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
 
     setLocationUpdateCount(0);
+
+    // ✅ Android only: clear battery session flag + show revert modal if was prompted
+    if (Platform.OS === 'android') {
+      try {
+        const wasPrompted = await AsyncStorage.getItem(BATTERY_PROMPTED_KEY);
+        // ✅ Clear session flag so prompt appears again on next tracking start
+        await AsyncStorage.removeItem(BATTERY_PROMPTED_KEY);
+        // ✅ Show revert modal only if user saw the battery prompt this session
+        if (wasPrompted) {
+          setShowBatteryRevertModal(true);
+        }
+      } catch { /* silent */ }
+    }
   }, [locationUpdateCount, queuedCount, t]);
 
   const manualStartSending = useCallback(() => {
@@ -872,6 +967,84 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           onUpdate={handleUpdate}
           onLater={updateInfo.isForced ? undefined : handleLater}
         />
+      )}
+
+      {/* ✅ Battery optimization explanation modal — Android only, shown once per session */}
+      {Platform.OS === 'android' && (
+        <Modal
+          transparent
+          visible={showBatteryModal}
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={handleBatterySkip}
+        >
+          <View style={homeStyles.notifBackdrop}>
+            <View style={homeStyles.notifWrapper}>
+              <View style={homeStyles.notifCard}>
+                <View style={homeStyles.notifIconWrapper}>
+                  <Ionicons name="battery-charging" size={36} color={colors.primary} />
+                </View>
+                <Text style={homeStyles.notifTitle}>{t('home:battery.title')}</Text>
+                <Text style={homeStyles.notifBody}>{t('home:battery.message')}</Text>
+                <View style={homeStyles.notifButtonContainer}>
+                  <TouchableOpacity
+                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                    onPress={handleBatteryAllow}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={commonStyles.primaryButtonText}>{t('home:battery.allow')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={commonStyles.secondaryButton}
+                    onPress={handleBatterySkip}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={commonStyles.secondaryButtonText}>{t('home:battery.skip')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* ✅ Battery revert modal — shown on stop tracking if user was prompted */}
+      {Platform.OS === 'android' && (
+        <Modal
+          transparent
+          visible={showBatteryRevertModal}
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={handleBatteryRevertLater}
+        >
+          <View style={homeStyles.notifBackdrop}>
+            <View style={homeStyles.notifWrapper}>
+              <View style={homeStyles.notifCard}>
+                <View style={homeStyles.notifIconWrapper}>
+                  <Ionicons name="battery-half" size={36} color={colors.primary} />
+                </View>
+                <Text style={homeStyles.notifTitle}>{t('home:battery.revertTitle')}</Text>
+                <Text style={homeStyles.notifBody}>{t('home:battery.revertMessage')}</Text>
+                <View style={homeStyles.notifButtonContainer}>
+                  <TouchableOpacity
+                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                    onPress={handleBatteryRevertSettings}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={commonStyles.primaryButtonText}>{t('home:battery.revertSettings')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={commonStyles.secondaryButton}
+                    onPress={handleBatteryRevertLater}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={commonStyles.secondaryButtonText}>{t('home:battery.revertLater')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
       )}
 
       {/* ✅ Foreground notification popup */}

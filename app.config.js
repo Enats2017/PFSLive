@@ -84,7 +84,8 @@ export default ({ config }) => {
         "ACCESS_BACKGROUND_LOCATION",
         "POST_NOTIFICATIONS",
         "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION"
+        "FOREGROUND_SERVICE_LOCATION",
+        "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
       ],
       // ✅ GPX intent filters — withGpxShareIntent plugin handles native wiring
       intentFilters: [

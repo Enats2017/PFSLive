@@ -45,6 +45,16 @@
     "backgroundNotificationTitle": "Suivi en direct actif",
     "backgroundNotificationBody": "Votre position est suivie pour la course."
   },
+  "battery": {
+    "title": "Activer le suivi en arrière-plan",
+    "message": "Pour un suivi GPS fiable pendant votre course, autorisez une utilisation illimitée de la batterie. Cela empêche Android de suspendre les mises à jour de localisation lorsque l'écran est éteint.",
+    "allow": "Autoriser",
+    "skip": "Ignorer",
+    "revertTitle": "Paramètre de batterie",
+    "revertMessage": "Vous pouvez remettre l'utilisation de la batterie sur Optimisé via Paramètres → Applications → Livio → Batterie.",
+    "revertSettings": "Ouvrir les paramètres",
+    "revertLater": "Plus tard"
+  },
   "alerts": {
     "overrideTitle": "Dérogation manuelle",
     "overrideMessage": "Commencer à envoyer les données de localisation immédiatement, en contournant l'heure de départ de la course ?",

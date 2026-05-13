@@ -45,6 +45,16 @@
     "backgroundNotificationTitle": "Live Tracking Actief",
     "backgroundNotificationBody": "Je locatie wordt bijgehouden voor de race."
   },
+  "battery": {
+    "title": "Achtergrondtracking inschakelen",
+    "message": "Voor betrouwbare GPS-tracking tijdens je race, sta onbeperkt batterijgebruik toe. Dit voorkomt dat Android locatie-updates pauzeert als het scherm uit is.",
+    "allow": "Toestaan",
+    "skip": "Overslaan",
+    "revertTitle": "Batterij-instelling",
+    "revertMessage": "Je kunt het batterijgebruik terugzetten naar Geoptimaliseerd via Instellingen → Apps → Livio → Batterij.",
+    "revertSettings": "Instellingen openen",
+    "revertLater": "Later"
+  },
   "alerts": {
     "overrideTitle": "Handmatige overschrijving",
     "overrideMessage": "Locatiegegevens nu verzenden, waarbij de starttijd van de race wordt omzeild?",
