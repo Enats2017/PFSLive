@@ -68,12 +68,16 @@ interface HomeData {
   manual_start?: number;
   server_datetime?: string;
   timezone?: string;
+  next_race_in_hours?: number;
 }
 
 // ==================== CONSTANTS ====================
 
 // ✅ Stored permanently — never cleared after first prompt
 const BATTERY_PROMPTED_KEY = '@PFSLive:batteryOptimizationPrompted';
+
+// ✅ Hours threshold — show early tracking warning if race is more than this far away
+const EARLY_TRACKING_WARNING_HOURS = 24;
 
 // ==================== BATTERY OPTIMIZATION ====================
 
@@ -130,6 +134,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // ✅ Battery explanation modal — shown once before system dialog
   const [showBatteryModal, setShowBatteryModal] = useState(false);
+
+  // ✅ Early tracking warning modal — shown when race is more than 24h away
+  const [showEarlyTrackingModal, setShowEarlyTrackingModal] = useState(false);
 
   // Version check states
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -592,13 +599,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }, 30000);
   }, [hasRaceStarted, getServerTime, t]);
 
-  const startGPSTracking = useCallback(async () => {
+  /**
+   * Core GPS tracking logic — called after all confirmations passed.
+   */
+  const doStartGPSTracking = useCallback(async () => {
     try {
-      if (!participantId || !eventId) {
-        toastError(t('home:errors.missingInfo'), t('home:errors.missingInfoDescription'));
-        return;
-      }
-
       if (!hasPermission) {
         const granted = await gpsService.requestPermissions();
         if (!granted) {
@@ -611,7 +616,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // Parse race start time
       if (homeData?.next_race_date && homeData?.next_race_time) {
         try {
-          const dateTimeString = `${homeData.next_race_date}T${homeData.next_race_time}`;
+          // ✅ Race time stored in event timezone. Subtract serverTimeOffset to
+          // convert device-local parse to correct UTC regardless of device timezone.
           const raceLocal = new Date(`${homeData.next_race_date}T${homeData.next_race_time}`);
           const raceTime  = new Date(raceLocal.getTime() - serverTimeOffsetRef.current);
 
@@ -686,8 +692,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           toastError(t('home:errors.gpsError'), t('home:errors.gpsErrorDescription'));
         },
         intervalValue,
-        participantId,  // ✅ passed to background task via AsyncStorage
-        eventId,        // ✅ passed to background task via AsyncStorage
+        participantId!,  // ✅ passed to background task via AsyncStorage
+        eventId!,        // ✅ passed to background task via AsyncStorage
         t('home:tracking.backgroundNotificationTitle'),       // ✅ from language file
         t('home:tracking.backgroundNotificationBody'),        // ✅ from language file
         homeData?.next_race_category_id,                      // ✅ movement threshold per sport
@@ -724,16 +730,46 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       isGPSActiveRef.current = false;
     }
   }, [
-    participantId,
-    eventId,
     hasPermission,
     homeData,
+    participantId,
+    eventId,
     getServerTime,
     hasRaceStarted,
     startQueueProcessor,
     startRaceStartChecker,
     t,
   ]);
+
+  const startGPSTracking = useCallback(async () => {
+    if (!participantId || !eventId) {
+      toastError(t('home:errors.missingInfo'), t('home:errors.missingInfoDescription'));
+      return;
+    }
+
+    // ✅ If race is more than 24h away, warn user before enabling background location
+    const hoursUntilRace = homeData?.next_race_in_hours ?? 0;
+    if (
+      homeData?.manual_start !== 1 &&
+      hoursUntilRace > EARLY_TRACKING_WARNING_HOURS
+    ) {
+      setShowEarlyTrackingModal(true);
+      return;
+    }
+
+    await doStartGPSTracking();
+  }, [participantId, eventId, homeData, doStartGPSTracking, t]);
+
+  // ✅ User confirms early tracking — proceed anyway
+  const handleEarlyTrackingConfirm = useCallback(async () => {
+    setShowEarlyTrackingModal(false);
+    await doStartGPSTracking();
+  }, [doStartGPSTracking]);
+
+  // ✅ User cancels early tracking — do nothing
+  const handleEarlyTrackingCancel = useCallback(() => {
+    setShowEarlyTrackingModal(false);
+  }, []);
 
   const stopGPSTracking = useCallback(() => {
     if (gpsWatchRef.current) {
@@ -923,6 +959,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
   }
 
+  // ✅ Format hours for early tracking modal message
+  const hoursUntilRace = homeData?.next_race_in_hours ?? 0;
+  const hoursDisplay = hoursUntilRace >= 24
+    ? `${Math.floor(hoursUntilRace / 24)}d ${Math.round(hoursUntilRace % 24)}h`
+    : `${Math.round(hoursUntilRace)}h`;
+
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -980,6 +1022,45 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
         </Modal>
       )}
+
+      {/* ✅ Early tracking warning modal — shown when race is more than 24h away */}
+      <Modal
+        transparent
+        visible={showEarlyTrackingModal}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={handleEarlyTrackingCancel}
+      >
+        <View style={homeStyles.notifBackdrop}>
+          <View style={homeStyles.notifWrapper}>
+            <View style={homeStyles.notifCard}>
+              <View style={homeStyles.notifIconWrapper}>
+                <Ionicons name="time-outline" size={36} color={colors.warning} />
+              </View>
+              <Text style={homeStyles.notifTitle}>{t('home:earlyTracking.title')}</Text>
+              <Text style={homeStyles.notifBody}>
+                {t('home:earlyTracking.message', { hours: hoursDisplay })}
+              </Text>
+              <View style={homeStyles.notifButtonContainer}>
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  onPress={handleEarlyTrackingConfirm}
+                  activeOpacity={0.8}
+                >
+                  <Text style={commonStyles.primaryButtonText}>{t('home:earlyTracking.yes')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={commonStyles.secondaryButton}
+                  onPress={handleEarlyTrackingCancel}
+                  activeOpacity={0.7}
+                >
+                  <Text style={commonStyles.secondaryButtonText}>{t('home:earlyTracking.no')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* ✅ Foreground notification popup */}
       <Modal
@@ -1161,7 +1242,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               {API_CONFIG.DEBUG &&
                 isGPSActive &&
                 !isSendingData &&
-                homeData?.manual_start !== 1 && (
+                homeData?.manual_start === 1 && (
                   <TouchableOpacity
                     style={[
                       homeStyles.button,

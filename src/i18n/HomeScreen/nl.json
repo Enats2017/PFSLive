@@ -69,5 +69,11 @@
     "gpsError": "GPS-fout",
     "gpsErrorDescription": "Kan je locatie niet bepalen. Controleer je GPS-instellingen.",
     "trackingFailed": "Starten van tracking mislukt"
+  },
+  "earlyTracking": {
+    "title": "Race nog niet begonnen",
+    "message": "Je race begint over {{hours}}. Wil je toch achtergrondlocatie inschakelen?",
+    "yes": "Ja, inschakelen",
+    "no": "Nee, annuleren"
   }
 }

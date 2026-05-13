@@ -69,5 +69,11 @@
     "gpsError": "Erreur GPS",
     "gpsErrorDescription": "Impossible d'obtenir votre position. Veuillez vérifier vos paramètres GPS.",
     "trackingFailed": "Échec du démarrage du suivi"
+  },
+  "earlyTracking": {
+    "title": "Course pas encore commencée",
+    "message": "Votre course commence dans {{hours}}. Voulez-vous quand même activer le suivi en arrière-plan ?",
+    "yes": "Oui, activer",
+    "no": "Non, annuler"
   }
 }

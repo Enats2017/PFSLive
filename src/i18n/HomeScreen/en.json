@@ -69,5 +69,11 @@
     "gpsError": "GPS Error",
     "gpsErrorDescription": "Unable to get your location. Please check your GPS settings.",
     "trackingFailed": "Failed to start tracking"
+  },
+  "earlyTracking": {
+    "title": "Race Not Started Yet",
+    "message": "Your race starts in {{hours}}. Do you still want to enable background location tracking?",
+    "yes": "Yes, Enable",
+    "no": "No, Cancel"
   }
 }
