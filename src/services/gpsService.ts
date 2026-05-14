@@ -147,7 +147,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
 
     // ✅ Determine is_moving from speed
     const speed = raw.coords.speed ?? null;
-    const isMoving = speed !== null ? speed > 0.5 : undefined;
+    const isMoving = (speed !== null && speed > 0) ? speed > 0.5 : undefined;
 
     const location: LocationData = {
       latitude: raw.coords.latitude,
@@ -264,7 +264,7 @@ export const gpsService = {
   async getCurrentPosition(): Promise<GPSPosition> {
     try {
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.High,
       });
 
       return {
@@ -383,7 +383,7 @@ export const gpsService = {
         // ✅ High accuracy — Balanced accuracy gets aggressively batched by Android
         // Doze mode. High accuracy uses GPS directly and fires more reliably at
         // the requested interval.
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.High,
         timeInterval: intervalSeconds * 1000,
         // ✅ distanceInterval: 50 — keeps the task firing reliably on Android.
         // Without a distance trigger, Android Doze mode batches timeInterval
@@ -412,7 +412,7 @@ export const gpsService = {
       // just enough to keep the position dot moving on screen.
       const subscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.High,
           timeInterval: Math.min(intervalSeconds * 1000, 5000), // max 5s for smooth UI
         },
         (location) => {
