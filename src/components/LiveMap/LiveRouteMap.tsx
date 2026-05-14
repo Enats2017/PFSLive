@@ -11,8 +11,9 @@ import { colors } from '../../styles/common.styles';
 const MARKER_COLORS = {
     start:       '#22C55E', // green  — universally understood as start
     finish:      '#EF4444', // red    — universally understood as finish
-    checkpoint:  '#1a1a2e', // dark — intermediate checkpoints (with fork & knife icon)
-    participant: '#F97316', // blue   — tracked athletes (distinct from start green)
+    checkpoint:  '#1a1a2e', // dark   — intermediate checkpoints
+    participant: '#F97316', // orange — tracked athletes
+    follower:    '#6366F1', // indigo — "you are here" marker (viewer's own position)
 } as const;
 
 interface LiveRouteMapProps {
@@ -23,6 +24,8 @@ interface LiveRouteMapProps {
     onAidStationPress: (station: AidStationMapMarker) => void;
     onParticipantPress: (participant: ParticipantMapMarker) => void;
     isLoadingParticipants?: boolean;
+    /** Viewer's own GPS position — plotted client-side, never stored to DB. */
+    followerLocation?: { lat: number; lon: number } | null;
 }
 
 export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
@@ -33,6 +36,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     onAidStationPress,
     onParticipantPress,
     isLoadingParticipants = false,
+    followerLocation = null,
 }) => {
     const cameraRef = useRef<Mapbox.Camera>(null);
     const [mapReady, setMapReady] = useState(false);
@@ -70,7 +74,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             };
         }
 
-
+        // Priority 2: participant positions
         const validParticipants = participants.filter(p => p.lat !== 0 && p.lon !== 0);
         if (validParticipants.length > 0) {
             const lons = validParticipants.map(p => p.lon);
@@ -134,7 +138,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     }, [bounds]);
 
     const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
-        console.log('Creating participants GeoJSON with', participants.length, 'participants');
+        console.log('🗺️ Creating participants GeoJSON with', participants.length, 'participants');
         return {
             type: 'FeatureCollection',
             features: participants.map(p => ({
@@ -182,7 +186,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 return valid;
             });
 
-
             console.log(`🗺️ Checkpoints: ${apiCheckpoints.length} total, ${validCheckpoints.length} with valid coords`);
 
             return {
@@ -212,10 +215,10 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         },
                     };
                 }),
-
             };
         }
 
+        // Fallback to GPX aid stations
         return {
             type: 'FeatureCollection',
             features: aidStations.map((station, idx) => ({
@@ -236,6 +239,18 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             })),
         };
     }, [aidStations, apiCheckpoints]);
+
+    // ✅ Follower's own position — built from live device GPS, never from DB.
+    const followerGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => ({
+        type: 'FeatureCollection',
+        features: followerLocation
+            ? [{
+                type: 'Feature',
+                properties: { type: 'follower' },
+                geometry: { type: 'Point', coordinates: [followerLocation.lon, followerLocation.lat] },
+            }]
+            : [],
+    }), [followerLocation]);
 
     const handleParticipantPress = (event: any) => {
         console.log('👆 Participant tapped:', event.features?.length);
@@ -299,7 +314,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 logoEnabled={false}
                 attributionEnabled={false}
                 onDidFinishLoadingMap={() => {
-                    console.log(' Map finished loading');
+                    console.log('🗺️ Map finished loading');
                     mapReadyRef.current = true;
                     setMapReady(true);
                 }}
@@ -368,6 +383,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         }}
                     />
 
+                    {/* S / F text for start & finish */}
                     <Mapbox.SymbolLayer
                         id="aidstation-sf-labels"
                         filter={['any',
@@ -402,7 +418,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         <Mapbox.CircleLayer
                             id="participant-dots"
                             style={{
-
                                 circleColor: MARKER_COLORS.participant, // blue
                                 circleRadius: 10,
                                 circleStrokeWidth: 3,
@@ -424,6 +439,37 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                 textAnchor: 'top',
                                 textAllowOverlap: true,
                                 iconAllowOverlap: true,
+                                textIgnorePlacement: true,
+                            }}
+                        />
+                    </Mapbox.ShapeSource>
+                )}
+                {/* ── Follower "You are here" marker ────────────────────────
+                    Indigo circle — distinct from orange participant markers.
+                    Rendered from device GPS only, no DB involved. */}
+                {followerLocation && (
+                    <Mapbox.ShapeSource id="follower-source" shape={followerGeoJSON}>
+                        <Mapbox.CircleLayer
+                            id="follower-dot"
+                            style={{
+                                circleColor: MARKER_COLORS.follower,
+                                circleRadius: 10,
+                                circleStrokeWidth: 3,
+                                circleStrokeColor: '#FFFFFF',
+                                circlePitchAlignment: 'map',
+                            }}
+                        />
+                        <Mapbox.SymbolLayer
+                            id="follower-label"
+                            style={{
+                                textField: 'YOU',
+                                textSize: 10,
+                                textColor: MARKER_COLORS.follower,
+                                textHaloColor: '#FFFFFF',
+                                textHaloWidth: 2,
+                                textOffset: [0, 1.8],
+                                textAnchor: 'top',
+                                textAllowOverlap: true,
                                 textIgnorePlacement: true,
                             }}
                         />

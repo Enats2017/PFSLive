@@ -23,6 +23,7 @@ import { ChartDataPoint } from '../types';
 import ErrorScreen from '../components/ErrorScreen';
 import { useScreenError } from '../hooks/useApiError';
 import { tokenService } from '../services/tokenService';
+import * as Location from 'expo-location';
 
 const safeParseFloat = (value: any): number => {
     if (value === null || value === undefined) return 0;
@@ -48,6 +49,10 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [profileCollapsed, setProfileCollapsed] = useState(false);
     const [participantsLoading, setParticipantsLoading] = useState(false);
     const [loadedGpxUrl, setLoadedGpxUrl] = useState<string | null>(null);
+
+    // ✅ Follower's own device location — plotted directly from GPS,
+    // never stored to DB (follower is watching, not racing).
+    const [followerLocation, setFollowerLocation] = useState<{ lat: number; lon: number } | null>(null);
 
     const hasLoadedInitialData = useRef(false);
     const { error, hasError, handleApiError, clearError } = useScreenError();
@@ -88,6 +93,37 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             };
         });
     }, [participants]);
+
+    // ✅ Follower's own position — watched on mount, never written to DB.
+    // Uses Balanced accuracy (battery friendly) since precision isn't critical.
+    useEffect(() => {
+        let watcher: Location.LocationSubscription | null = null;
+
+        const startFollowerLocation = async () => {
+            try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') return;
+                watcher = await Location.watchPositionAsync(
+                    {
+                        accuracy: Location.Accuracy.Balanced,
+                        timeInterval: 15000,  // every 15s
+                        distanceInterval: 20, // or every 20m moved
+                    },
+                    (loc) => {
+                        setFollowerLocation({
+                            lat: loc.coords.latitude,
+                            lon: loc.coords.longitude,
+                        });
+                    }
+                );
+            } catch (err) {
+                console.log('📍 Follower location error (non-fatal):', err);
+            }
+        };
+
+        startFollowerLocation();
+        return () => { watcher?.remove(); };
+    }, []);
 
     // ✅ Initial load with followed users check
     useEffect(() => {
@@ -150,12 +186,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             setParticipantsLoading(true);
             console.log('📡 Fetching live tracking data...', { autoRefresh });
 
+            // ✅ Include the logged-in user's own customer ID so they can
+            // track themselves on the map, in addition to followed users.
             const selfId = await tokenService.getCustomerId();
             const customerAppIds = selfId
                 ? Array.from(new Set([selfId, ...Array.from(followedUsers)]))
                 : Array.from(followedUsers);
 
-            console.log('👥 Followed users:', customerAppIds);
+            console.log('👥 Customer IDs (self + followed):', customerAppIds);
 
             // ✅ Determine which product_option_value_app_id to use
             const activeDistance = overrideDistance !== undefined ? overrideDistance : selectedDistance;
@@ -442,6 +480,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     onAidStationPress={handleAidStationPress}
                     onParticipantPress={handleParticipantPress}
                     isLoadingParticipants={participantsLoading}
+                    followerLocation={followerLocation}
                 />
             </View>
 
