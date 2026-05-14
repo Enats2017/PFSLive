@@ -22,6 +22,7 @@ import { liveTrackingStyles } from '../styles/liveTracking.styles';
 import { ChartDataPoint } from '../types';
 import ErrorScreen from '../components/ErrorScreen';
 import { useScreenError } from '../hooks/useApiError';
+import { tokenService } from '../services/tokenService';
 
 const safeParseFloat = (value: any): number => {
     if (value === null || value === undefined) return 0;
@@ -149,7 +150,11 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             setParticipantsLoading(true);
             console.log('📡 Fetching live tracking data...', { autoRefresh });
 
-            const customerAppIds = Array.from(followedUsers);
+            const selfId = await tokenService.getCustomerId();
+            const customerAppIds = selfId
+                ? Array.from(new Set([selfId, ...Array.from(followedUsers)]))
+                : Array.from(followedUsers);
+
             console.log('👥 Followed users:', customerAppIds);
 
             // ✅ Determine which product_option_value_app_id to use
