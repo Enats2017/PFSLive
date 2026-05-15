@@ -150,7 +150,12 @@ export const locationService = {
         console.error('❌ Failed to send location:', error.message);
       }
 
-      // Queue if failed and queuing is enabled
+      // ✅ Queue if failed and queuing is enabled.
+      // Do NOT re-throw after queuing — location is safely stored in queue,
+      // and re-throwing crashes the background task causing Android to apply
+      // exponential backoff and stop scheduling it entirely.
+      // Only re-throw when queueIfOffline=false (processQueue calls) so the
+      // caller can break its retry loop correctly.
       if (queueIfOffline) {
         const queuedLocation: QueuedLocation = {
           ...location,
@@ -161,9 +166,13 @@ export const locationService = {
         };
         await locationQueueService.addToQueue(queuedLocation);
         if (API_CONFIG.DEBUG) console.log('📦 Location queued (error)');
+        return {
+          success: false,
+          message: 'Location queued (network error)',
+        };
       }
 
-      throw error;
+      throw error;  // only re-throw when not queuing (processQueue path)
     }
   },
 

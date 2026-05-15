@@ -544,7 +544,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (queueProcessorRef.current || !participantId || !eventId) return;
 
     queueProcessorRef.current = setInterval(async () => {
-      // ✅ Check queue size before loading full queue — avoids unnecessary reads
+      // ✅ Check queue count key first — cheap single string read,
+      // avoids parsing full queue JSON when nothing is queued.
       const queueSize = await locationQueueService.getQueueSize();
       if (queueSize === 0) return;
 
@@ -559,8 +560,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(current + sentCount));
           } catch { /* silent */ }
 
-          await loadQueueSize();
-
           if (API_CONFIG.DEBUG) {
             toastSuccess(
               t('home:tracking.queueProcessed'),
@@ -571,7 +570,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       } catch (error) {
         // Silent fail
       }
-    }, 60000);
+    }, 10000);  // ✅ 10s — quick retry when network recovers after instability.
+                // Safe: getQueueSize() exits immediately if queue is empty.
   }, [participantId, eventId, loadQueueSize, t]);
 
   const startRaceStartChecker = useCallback(() => {

@@ -6,6 +6,9 @@ import { API_CONFIG } from '../constants/config';
 const QUEUE_STORAGE_KEY = '@PFSLive:locationQueue';
 const MAX_QUEUE_SIZE = 500;
 
+// ✅ Exported so HomeScreen can subscribe to queue count changes via AsyncStorage.
+export const QUEUE_COUNT_KEY = '@PFSLive:locationQueueCount';
+
 export interface QueuedLocation extends LocationData {
   participantId: string;
   eventId: string;
@@ -42,6 +45,9 @@ export const locationQueueService = {
 
       queue.push(location);
       await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
+      // ✅ Write count separately so HomeScreen 1s timer can read it cheaply
+      // without parsing the full queue JSON on every tick.
+      await AsyncStorage.setItem(QUEUE_COUNT_KEY, String(queue.length));
       
       if (API_CONFIG.DEBUG) {
         console.log(`📦 Location queued (${queue.length} in queue)`);
@@ -70,6 +76,7 @@ export const locationQueueService = {
       const queue = await this.getQueue();
       queue.splice(0, count);
       await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
+      await AsyncStorage.setItem(QUEUE_COUNT_KEY, String(queue.length));
       
       if (API_CONFIG.DEBUG) {
         console.log(`✅ Removed ${count} locations from queue (${queue.length} remaining)`);
@@ -84,6 +91,7 @@ export const locationQueueService = {
   async clearQueue(): Promise<void> {
     try {
       await AsyncStorage.removeItem(QUEUE_STORAGE_KEY);
+      await AsyncStorage.setItem(QUEUE_COUNT_KEY, '0');
       
       if (API_CONFIG.DEBUG) {
         console.log('✅ Queue cleared');
