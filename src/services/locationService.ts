@@ -24,6 +24,12 @@ export interface SendLocationResponse {
   success: boolean;
   message: string;
   locationId?: string;
+  /** Route km remaining to next checkpoint. */
+  distance_to_next_cp?: number | null;
+  /** Route km remaining to finish line — used by background task
+   *  to activate 5s finish-approach interval when ≤ 1km to finish.
+   *  More reliable than distance_to_next_cp which points to any CP. */
+  distance_to_finish_km?: number | null;
 }
 
 // Standard backend response format
@@ -118,10 +124,16 @@ export const locationService = {
       // Normalize response
       const normalizedResponse: SendLocationResponse = {
         success: success,
-        message: success 
-          ? 'Location saved successfully' 
+        message: success
+          ? 'Location saved successfully'
           : (error || 'Failed to save location'),
         locationId: data.coordinate_id || data.locationId,
+        // ✅ Pass through finish-line distances so the background task can
+        // detect finish-line proximity and switch to 5s interval.
+        // distance_to_finish_km is preferred — it targets the finish specifically.
+        // distance_to_next_cp is kept as legacy / fallback.
+        distance_to_next_cp: data.distance_to_next_cp ?? null,
+        distance_to_finish_km: data.distance_to_finish_km ?? null,
       };
 
       if (API_CONFIG.DEBUG) {

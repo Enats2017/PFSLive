@@ -27,6 +27,13 @@ export const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
 const LAST_POSITION_KEY = '@PFSLive:lastPosition';
 const LAST_ALTITUDE_KEY = '@PFSLive:lastAltitude';
 
+// ✅ Finish-line approach: when ≤ 1km to finish, override interval to 5s
+// for accurate plotting. Stored in AsyncStorage so the background task
+// can read it without access to React state.
+const FINISH_APPROACH_KEY      = '@PFSLive:finishApproach';   // '1' when active
+const FINISH_APPROACH_INTERVAL = 5;                            // seconds
+const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
+
 // ✅ Movement thresholds per sport category.
 // Used to skip sends when participant is standing still.
 const MOVEMENT_THRESHOLD: Record<number, number> = {
@@ -73,10 +80,6 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
 
     const { participantId, eventId, intervalSeconds, categoryId, raceStartTime, manualStart } = JSON.parse(paramsJson);
 
-    if (API_CONFIG.DEBUG) {
-      console.log('📍 BG task | manualStart:', manualStart, '| raceStartTime:', raceStartTime, '| now:', new Date().toISOString());
-    }
-
     // ✅ Race start check — do not send coordinates before race begins.
     // manualStart === 1 means organiser controls start — skip time check entirely.
     // Otherwise raceStartTime must be set AND in the past before any send.
@@ -98,7 +101,14 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     // ✅ Parse to number — API returns category_id as string e.g. "59"
     const minMovementMetres = (MOVEMENT_THRESHOLD[Number(categoryId)] ?? DEFAULT_MOVEMENT_METRES);
 
-    const minGapMs = ((intervalSeconds ?? 30) - 2) * 1000;
+    // ✅ Use finish-approach interval (5s) when runner is within 1km of finish.
+    // FINISH_APPROACH_KEY is set by the background task itself after each
+    // API response — no React state needed.
+    const finishApproach = await AsyncStorage.getItem(FINISH_APPROACH_KEY);
+    const effectiveInterval = finishApproach === '1'
+        ? FINISH_APPROACH_INTERVAL
+        : (intervalSeconds ?? 30);
+    const minGapMs = (effectiveInterval - 2) * 1000;
     const lastSentStr = await AsyncStorage.getItem(LAST_SENT_KEY);
     const lastSentAt = lastSentStr ? parseInt(lastSentStr) : 0;
     const now = Date.now();
@@ -147,7 +157,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
 
     // ✅ Determine is_moving from speed
     const speed = raw.coords.speed ?? null;
-    const isMoving = (speed !== null && speed > 0) ? speed > 0.5 : undefined;
+    const isMoving = speed !== null ? speed > 0.5 : undefined;
 
     const location: LocationData = {
       latitude: raw.coords.latitude,
@@ -202,6 +212,27 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
       const count = countStr ? parseInt(countStr) : 0;
       await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(count + 1));
+
+      // ✅ Finish-line approach: activate 5s interval when ≤ 1km to finish.
+      // API returns distance_to_next_cp (km) in the response.
+      // We check is_finish_next separately via the finish_distance field.
+      // Simpler: if distance_to_next_cp <= threshold AND it's the last CP,
+      // the API returns distance_to_next_cp = distance to finish.
+      // We activate approach mode whenever distance_to_next_cp <= 1km
+      // since at that point the runner is close enough that 5s matters.
+      // ✅ Use distance_to_finish_km (specific to finish line) rather than
+      // distance_to_next_cp (which could be any intermediate checkpoint).
+      // Falls back to distance_to_next_cp only if finish distance unavailable.
+      const distToFinish = result.distance_to_finish_km ?? result.distance_to_next_cp ?? null;
+      if (distToFinish !== null && distToFinish <= FINISH_APPROACH_THRESHOLD) {
+        await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
+        if (API_CONFIG.DEBUG) {
+          console.log(`🏁 Finish approach activated — ${distToFinish}km to finish (interval → ${FINISH_APPROACH_INTERVAL}s)`);
+        }
+      } else if (distToFinish !== null && distToFinish > FINISH_APPROACH_THRESHOLD) {
+        // Reset if runner moves away (e.g. GPS error placed them near finish)
+        await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
+      }
     }
 
   } catch (err: any) {
@@ -368,6 +399,7 @@ export const gpsService = {
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
       await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
       await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
+      await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
 
       // ✅ Set LAST_SENT_KEY based on race state:
       // - Race not started yet → set to now → throttles first invocation so no
@@ -447,6 +479,7 @@ export const gpsService = {
           await AsyncStorage.removeItem(LAST_POSITION_KEY);
           await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
           await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
+          await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
           if (API_CONFIG.DEBUG) console.log('✅ Background location task stopped');
         },
       };
