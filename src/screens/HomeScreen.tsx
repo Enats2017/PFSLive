@@ -27,6 +27,7 @@ import { UpdateRequiredModal } from '../components/UpdateRequiredModal';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
 import { gpsService, BACKGROUND_SENT_COUNT_KEY } from '../services/gpsService';
+import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
 import { tokenService } from '../services/tokenService';
@@ -838,7 +839,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     checkAndPromptBatteryOptimization();
   }, [checkAndPromptBatteryOptimization]);
 
-  // Countdown timer + background sent count sync
+  // Countdown timer + background sent count sync + queue count sync
   useEffect(() => {
     if (isGPSActive) {
       const interval = setInterval(async () => {
@@ -850,6 +851,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           if (countStr) {
             const bgCount = parseInt(countStr);
             setLocationUpdateCount(bgCount);
+          }
+        } catch {
+          // silent
+        }
+
+        // ✅ Sync queuedCount — read the lightweight count key written by
+        // locationQueueService on every addToQueue/removeFromQueue call.
+        // Avoids parsing the full queue JSON on every 1s tick.
+        try {
+          const queueCountStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
+          if (queueCountStr !== null) {
+            setQueuedCount(parseInt(queueCountStr) || 0);
           }
         } catch {
           // silent
@@ -1242,7 +1255,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               {API_CONFIG.DEBUG &&
                 isGPSActive &&
                 !isSendingData &&
-                homeData?.manual_start === 1 && (
+                homeData?.manual_start !== 1 && (
                   <TouchableOpacity
                     style={[
                       homeStyles.button,
