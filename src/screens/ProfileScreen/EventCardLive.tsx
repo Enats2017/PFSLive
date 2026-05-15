@@ -57,7 +57,9 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
         }
     }, [item.race_status, t]);
 
-    const isTrackingDisabled = item.race_status === 'finished';
+    // Edit is disabled when the race is finished — no point editing a completed event.
+    // Tracking button is always enabled so the user can view the live map regardless.
+    const isEditDisabled = item.race_status === 'finished';
 
     // ── Render ──────────────────────────────────────────────────
 
@@ -74,9 +76,15 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
                 // ── Two buttons side by side ──
                 <View style={styles.buttonRow}>
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, styles.halfButton, { borderRadius: 0 }]}
-                        onPress={handleEditPress}
-                        activeOpacity={0.8}
+                        style={[
+                            commonStyles.primaryButton,
+                            styles.halfButton,
+                            { borderRadius: 0 },
+                            isEditDisabled && styles.disabledButton,
+                        ]}
+                        onPress={isEditDisabled ? undefined : handleEditPress}
+                        activeOpacity={isEditDisabled ? 1 : 0.8}
+                        disabled={isEditDisabled}
                     >
                         <Text style={commonStyles.primaryButtonText}>{editLabel}</Text>
                     </TouchableOpacity>
@@ -87,11 +95,9 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
                             styles.halfButton,
                             styles.trackingButton,
                             { borderRadius: 0 },
-                            isTrackingDisabled && styles.disabledButton,
                         ]}
-                        onPress={isTrackingDisabled ? undefined : handleTrackingPress}
-                        activeOpacity={isTrackingDisabled ? 1 : 0.8}
-                        disabled={isTrackingDisabled}
+                        onPress={handleTrackingPress}
+                        activeOpacity={0.8}
                     >
                         <Text style={commonStyles.primaryButtonText}>{trackingLabel()}</Text>
                     </TouchableOpacity>
@@ -99,14 +105,9 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
             ) : (
                 // ── Single button (not own profile) ──
                 <TouchableOpacity
-                    style={[
-                        commonStyles.primaryButton,
-                        { borderRadius: 0 },
-                        isTrackingDisabled && styles.disabledButton,
-                    ]}
-                    onPress={isTrackingDisabled ? undefined : handleTrackingPress}
-                    activeOpacity={isTrackingDisabled ? 1 : 0.8}
-                    disabled={isTrackingDisabled}
+                    style={[commonStyles.primaryButton, { borderRadius: 0 }]}
+                    onPress={handleTrackingPress}
+                    activeOpacity={0.8}
                 >
                     <Text style={commonStyles.primaryButtonText}>{trackingLabel()}</Text>
                 </TouchableOpacity>
