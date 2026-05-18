@@ -61,6 +61,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const [upcomingEvents, setUpcomingEvents] = useState<EventItem[]>([]);
     const [participants, setParticipants] = useState<ParticipantItem[]>([]);
     const [searchText, setSearchText] = useState('');
+    const [searchPagination, setSearchPagination] = useState({ page: 1, total_pages: 1 });
     const [loadingMorePast, setLoadingMorePast] = useState(false);
     const [loadingMoreLive, setLoadingMoreLive] = useState(false);
     const [loadingMoreUpcoming, setLoadingMoreUpcoming] = useState(false);
@@ -78,6 +79,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const debounceTimer = useRef<NodeJS.Timeout | null>(null);
     const participantSearchFocused = useRef(false);
     const keyboardOffset = useRef(new Animated.Value(0)).current;
+    const isLoadingMoreSearch = useRef(false);
 
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -132,12 +134,10 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 page_participant: 1,
                 filter_name_participant: '',
             });
-
             setPastEvents(result.tabs.past);
             setLiveEvents(result.tabs.live);
             setUpcomingEvents(result.tabs.upcoming);
             setParticipants(result.participants || []);
-
             if (result.pagination) {
                 setPaginationInfo({
                     past: {
@@ -160,7 +160,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             }
 
             if (API_CONFIG.DEBUG) {
-                console.log('✅ Events loaded:', {
+                console.log('Events loaded:', {
                     past: result.tabs.past.length,
                     live: result.tabs.live.length,
                     upcoming: result.tabs.upcoming.length,
@@ -176,18 +176,15 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         }
     }, [t]);
 
-    // ✅ FOCUS EFFECT
     useFocusEffect(
         useCallback(() => {
             if (isFetching.current) {
                 if (API_CONFIG.DEBUG) console.log('⏸️ Already fetching, skipping duplicate call');
                 return;
             }
-
             const fetchAndSync = async () => {
                 await refreshFollowedUsers();
                 await fetchEvents('');
-
                 if (!isInitialMount.current) {
                     if (API_CONFIG.DEBUG) console.log('🔄 Syncing scroll to:', activeTab);
                     const index = TABS.indexOf(activeTab);
@@ -196,16 +193,12 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                     }, 100);
                 }
             };
-
             fetchAndSync();
-
             if (isInitialMount.current) isInitialMount.current = false;
-
             return () => { isFetching.current = false; };
         }, [fetchEvents, activeTab, refreshFollowedUsers])
     );
 
-    // ✅ LOAD MORE PAST
     const loadMorePast = useCallback(async () => {
         if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) return;
 
@@ -214,7 +207,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             const nextPage = paginationInfo.past.page + 1;
             if (API_CONFIG.DEBUG) console.log(`📡 Past: Loading page ${nextPage}`);
 
-            const result = await eventService.getEvents({ page_past: nextPage });
+            const result = await eventService.getEvents({ page_past: nextPage, filter_name_past: searchText });
 
             setPastEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
@@ -236,7 +229,6 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         }
     }, [loadingMorePast, paginationInfo.past.page, paginationInfo.past.total_pages]);
 
-    // ✅ LOAD MORE LIVE
     const loadMoreLive = useCallback(async () => {
         if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) return;
 
@@ -267,17 +259,13 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         }
     }, [loadingMoreLive, paginationInfo.live.page, paginationInfo.live.total_pages]);
 
-    // ✅ LOAD MORE UPCOMING
     const loadMoreUpcoming = useCallback(async () => {
         if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) return;
-
         try {
             setLoadingMoreUpcoming(true);
             const nextPage = paginationInfo.upcoming.page + 1;
             if (API_CONFIG.DEBUG) console.log(`📡 Upcoming: Loading page ${nextPage}`);
-
             const result = await eventService.getEvents({ page_upcoming: nextPage });
-
             setUpcomingEvents((prev) => {
                 const existingIds = new Set(prev.map((e) => e.product_app_id));
                 const newItems = result.tabs.upcoming.filter((item) => !existingIds.has(item.product_app_id));
@@ -334,7 +322,6 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         }
     }, [loadingMoreParticipant, paginationInfo.participants, searchText]);
 
-    // ✅ TAB HANDLERS
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
         setActiveTab(tab);
@@ -346,15 +333,15 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         if (TABS[index] && TABS[index] !== activeTab) setActiveTab(TABS[index]);
     }, [activeTab]);
 
-    // ✅ DEBOUNCED SEARCH
     useEffect(() => {
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
-
         if (searchText.trim().length === 0) {
             setSearchResults([]);
             return;
         }
-
+        isLoadingMoreSearch.current = false;
+        setSearchResults([]);
+        setSearchPagination({ page: 1, total_pages: 1 });
         debounceTimer.current = setTimeout(async () => {
             try {
                 setSearching(true);
@@ -365,9 +352,12 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                     page_participant: 1,
                     filter_name_participant: searchText,
                 });
-
                 setSearchResults(result.participants || []);
-                if (API_CONFIG.DEBUG) console.log('✅ Search results:', (result.participants || []).length);
+                setSearchPagination({
+                    page: 1,
+                    total_pages: result.pagination?.participants?.total_pages ?? 1,
+                });
+                if (API_CONFIG.DEBUG) console.log('search results:', (result.participants || []).length);
             } catch (error) {
                 if (API_CONFIG.DEBUG) console.error('❌ Search failed:', error);
             } finally {
@@ -380,10 +370,57 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
 
     const displayEvents = searchText.trim().length > 0 ? searchResults : participants;
 
-    // ✅ HANDLE LOAD MORE PARTICIPANTS
-    const handleLoadMoreParticipant = useCallback(() => {
-        if (searchText.trim().length > 0) return;
+    const loadMoreSearchResults = useCallback(async () => {
+        if (isLoadingMoreSearch.current) return;
+        let currentPage = 0;
+        let totalPages = 0;
+        setSearchPagination(prev => {
+            currentPage = prev.page;
+            totalPages = prev.total_pages;
+            return prev;
+        });
 
+        if (currentPage >= totalPages) return;
+        try {
+            isLoadingMoreSearch.current = true;
+            const nextPage = currentPage + 1;
+            console.log(`Fetching search page ${nextPage} for "${searchText}"`);
+            const result = await eventService.getEvents({
+                is_participant: '1',
+                page_participant: nextPage,
+                filter_name_participant: searchText,
+            });
+            console.log(`✅ Page ${nextPage} loaded:`, {
+                received: (result.participants || []).length,
+                total_pages: result.pagination?.participants?.total_pages,
+            });
+
+            setSearchResults(prev => {
+                const ids = new Set(prev.map(e => e.customer_app_id));
+                const newItems = (result.participants || []).filter(i => !ids.has(i.customer_app_id));
+                return [...prev, ...newItems];
+            });
+
+            setSearchPagination({
+                page: nextPage,
+                total_pages: result.pagination?.participants?.total_pages ?? totalPages,
+            });
+
+        } catch (err) {
+            console.error('❌ Search load more failed:', err);
+        } finally {
+            isLoadingMoreSearch.current = false;
+        }
+    }, [searchText]);
+
+    const handleLoadMoreParticipant = useCallback(() => {
+        if (searchText.trim().length > 0) {
+            if (!isLoadingMoreSearch.current && searchPagination.page < searchPagination.total_pages) {
+                console.log('✅ Loading more search results');
+                loadMoreSearchResults();
+            }
+            return;
+        }
         if (API_CONFIG.DEBUG) {
             console.log('🔍 Participant onEndReached:', {
                 hasMore: paginationInfo.participants.page < paginationInfo.participants.total_pages,
@@ -393,12 +430,12 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         }
 
         if (paginationInfo.participants.page < paginationInfo.participants.total_pages && !loadingMoreParticipant) {
-            if (API_CONFIG.DEBUG) console.log('✅ Calling loadMoreParticipant');
+            if (API_CONFIG.DEBUG) console.log('Calling loadMoreParticipant');
             loadMoreParticipant();
         }
-    }, [paginationInfo.participants, loadingMoreParticipant, loadMoreParticipant, participants.length, searchText]);
+    }, [paginationInfo.participants, loadingMoreParticipant, loadMoreParticipant, participants.length, searchText, searchPagination]);
 
-    // ✅ RENDER PARTICIPANT CARD
+    // RENDER PARTICIPANT CARD
     const renderParticipantCard = useCallback(
         ({ item }: { item: ParticipantItem }) => (
             <FanEventCard
@@ -416,7 +453,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         [isFollowed, isLoading, handleFollowPress]
     );
 
-    // ✅ LOADING STATE
+    // LOADING STATE
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -429,7 +466,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         );
     }
 
-    // ✅ ERROR STATE
+    // ERROR STATE
     if (hasError && !loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>

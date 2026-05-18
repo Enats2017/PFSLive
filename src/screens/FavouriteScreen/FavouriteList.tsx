@@ -245,7 +245,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     onPress={handleAddPress}
                 >
                     <View style={favstyle.iconWrapper}>
-                        <MaterialIcons name="person-add-alt" size={30} color={colors.white} />
+                    <MaterialIcons name="person-add-alt" size={30} color={colors.white} />
                     </View>
                 </TouchableOpacity>
             </View>
@@ -260,7 +260,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                 />
             ) : (
                 <BottomNavigation
-                    activeTab="Results"
+                    activeTab="Favorites"
                     product_app_id={product_app_id}
                     event_name={event_name}
                     sourceScreen={sourceScreen}

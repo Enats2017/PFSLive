@@ -139,20 +139,21 @@ export const resultListStyle = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "center",
     gap: 2,
+    overflow: "hidden",
   },
 
   cornerNum: {
     color: "rgba(255,255,255,0.75)",
     fontSize: 20,
     fontWeight: "600",
-    lineHeight: 16,
+    lineHeight: 20,
   },
 
   cornerGenderRank: {
     color: "#fff",
     fontSize: 13,
     fontWeight: "900",
-    lineHeight: 24,
+    lineHeight: 15,
   },
 
   // Keep for backward compat

@@ -170,6 +170,7 @@ export default ({ config }) => {
         projectId: "e72144dd-72cd-47f1-8409-125734130233"
       }
     },
+    
 
     // ✅ Organization Owner
     owner: "livio_app",

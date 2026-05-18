@@ -75,6 +75,7 @@ export const eventService = {
   ): Promise<EventResponse> {
     try {
       const language_id = getCurrentLanguageId();
+      console.log("🌐 language_id value:", language_id, typeof language_id);
 
       if (API_CONFIG.DEBUG) {
         console.log("📡 Fetching events:", { language_id, pagination });
