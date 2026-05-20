@@ -58,7 +58,17 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
     const participantMarkers: ParticipantMapMarker[] = useMemo(() => {
-        return participants.map(p => {
+        return participants
+            .filter(p => {
+                // ✅ Skip participants with null/zero coordinates.
+                // safeParseFloat returns 0 for null, and (0,0) plots in the
+                // Gulf of Guinea — means participant has no GPS fix yet.
+                // Use || not && so a single zero axis is still valid.
+                const lat = safeParseFloat(p.latitude);
+                const lon = safeParseFloat(p.longitude);
+                return lat !== 0 || lon !== 0;
+            })
+            .map(p => {
             const firstInitial = p.firstname?.charAt(0).toUpperCase() || '';
             const lastInitial = p.lastname?.charAt(0).toUpperCase() || '';
             const initials = event_source === 'custom'
