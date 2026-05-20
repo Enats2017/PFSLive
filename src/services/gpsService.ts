@@ -271,6 +271,62 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
   }
 });
 
+// ✅ Watchdog: called when app returns to foreground to ensure background
+// task is still alive. Android may silently kill it on aggressive OEMs
+// (Xiaomi, Samsung) even with battery optimization exempt.
+export const ensureBackgroundTaskAlive = async (
+  participantId: string,
+  eventId: string,
+  intervalSeconds: number,
+  categoryId: number | undefined,
+  raceStartTime: string | null,
+  manualStart: number | undefined,
+  notificationTitle: string,
+  notificationBody: string,
+): Promise<boolean> => {
+  try {
+    const isRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+    if (isRunning) return true;
+
+    if (API_CONFIG.DEBUG) {
+      console.log('⚠️ Background task died — restarting...');
+    }
+
+    // Re-store params (may have been cleared when task died)
+    await AsyncStorage.setItem(TRACKING_PARAMS_KEY, JSON.stringify({
+      participantId,
+      eventId,
+      intervalSeconds,
+      categoryId,
+      raceStartTime,
+      manualStart,
+    }));
+
+    await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+      accuracy: Location.Accuracy.High,
+      timeInterval: intervalSeconds * 1000,
+      distanceInterval: (categoryId !== undefined
+        ? (DISTANCE_INTERVAL_METRES[Number(categoryId)] ?? DEFAULT_DISTANCE_INTERVAL_METRES)
+        : DEFAULT_DISTANCE_INTERVAL_METRES),
+      foregroundService: {
+        notificationTitle,
+        notificationBody,
+        notificationColor: '#1a73e8',
+      },
+      pausesUpdatesAutomatically: false,
+      showsBackgroundLocationIndicator: true,
+      deferredUpdatesInterval: 0,
+      deferredUpdatesDistance: 0,
+    });
+
+    if (API_CONFIG.DEBUG) console.log('✅ Background task restarted');
+    return true;
+  } catch (err: any) {
+    if (API_CONFIG.DEBUG) console.error('❌ Failed to restart background task:', err?.message);
+    return false;
+  }
+};
+
 export const gpsService = {
   /**
    * Request location permissions
@@ -464,6 +520,11 @@ export const gpsService = {
         },
         pausesUpdatesAutomatically: false,
         showsBackgroundLocationIndicator: true,
+        // ✅ deferredUpdatesInterval: 0 — deliver location updates immediately,
+        // do not defer/batch them. Critical for screen-off background tracking.
+        // Without this Android batches updates during Doze maintenance windows.
+        deferredUpdatesInterval: 0,
+        deferredUpdatesDistance: 0,
       });
 
       if (API_CONFIG.DEBUG) {

@@ -26,7 +26,7 @@ import { AppHeader } from '../components/common/AppHeader';
 import { UpdateRequiredModal } from '../components/UpdateRequiredModal';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
-import { gpsService, BACKGROUND_SENT_COUNT_KEY } from '../services/gpsService';
+import { gpsService, BACKGROUND_SENT_COUNT_KEY, ensureBackgroundTaskAlive } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
@@ -161,6 +161,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const serverTimeOffsetRef = useRef<number>(0);
   // ✅ Ref so GPS callback always reads current value without stale closure
   const isSendingDataRef = useRef<boolean>(false);
+  // ✅ Ref to tracking params — needed by watchdog to restart task if killed
+  const trackingParamsRef = useRef<{
+    intervalSeconds: number;
+    notificationTitle: string;
+    notificationBody: string;
+  } | null>(null);
 
   // Derived values
   const participantId = homeData?.next_race_participant_app_id || null;
@@ -747,6 +753,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       gpsWatchRef.current = gpsWatch;
 
+      // ✅ Store for watchdog use in AppState listener
+      trackingParamsRef.current = {
+        intervalSeconds: intervalValue,
+        notificationTitle: t('home:tracking.backgroundNotificationTitle'),
+        notificationBody: t('home:tracking.backgroundNotificationBody'),
+      };
+
       startQueueProcessor();
 
       if (homeData?.manual_start !== 1) {
@@ -836,6 +849,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     isSendingDataRef.current = false;
     setIsSendingData(false);
     setCurrentLocation(null);
+    trackingParamsRef.current = null;
     AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => {});
 
     // ✅ Attempt to drain queue immediately on stop — covers the case where
@@ -942,6 +956,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         if (isGPSActive && participantId && eventId) {
+          // ✅ Watchdog: restart background task if Android killed it while backgrounded.
+          // Common on Xiaomi, Samsung, OnePlus with aggressive battery management.
+          if (trackingParamsRef.current) {
+            ensureBackgroundTaskAlive(
+              participantId,
+              eventId,
+              trackingParamsRef.current.intervalSeconds,
+              homeData?.next_race_category_id,
+              raceStartTimeRef.current?.toISOString() ?? null,
+              homeData?.manual_start,
+              trackingParamsRef.current.notificationTitle,
+              trackingParamsRef.current.notificationBody,
+            ).then(alive => {
+              if (API_CONFIG.DEBUG) console.log('🔍 Background task alive:', alive);
+            });
+          }
+
           locationService.processQueue(participantId, eventId).then(async sentCount => {
             if (sentCount > 0) {
               try {
