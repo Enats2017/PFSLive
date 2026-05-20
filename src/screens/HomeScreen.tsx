@@ -459,21 +459,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       if (response.data.success && response.data.data) {
         setHomeData(response.data.data);
 
-        // Calculate server time offset
+        // ✅ Calculate server time offset.
+        // server_datetime is in event timezone (e.g. Brussels), NOT UTC.
+        // Parse as fake-UTC (append 'Z') so JS doesn't apply device timezone.
+        // offset = serverFakeMs - Date.now()
+        //   → how far ahead event-tz time is from real UTC (in ms)
+        // getServerTime() = Date.now() + offset = current time in event tz (as UTC ms)
+        // This lets hasRaceStarted() compare raceTime (UTC ms) against event-tz now correctly.
         if (response.data.data.server_datetime) {
           try {
-            const serverTimeString = response.data.data.server_datetime.replace(' ', 'T');
-            const serverTime = new Date(serverTimeString);
-            const deviceTime = new Date();
-            const offset = serverTime.getTime() - deviceTime.getTime();
+            const serverFakeMs = new Date(
+              response.data.data.server_datetime.replace(' ', 'T') + 'Z'
+            ).getTime();
+            const offset = serverFakeMs - Date.now();
 
             setServerTimeOffset(offset);
             serverTimeOffsetRef.current = offset;
 
             if (API_CONFIG.DEBUG) {
-              console.log('🖥️ Server time:', serverTime.toLocaleString());
-              console.log('📱 Device time:', deviceTime.toLocaleString());
-              console.log('⏱️ Time offset:', (offset / 1000).toFixed(2), 'seconds');
+              console.log('🖥️ server_datetime (event tz):', response.data.data.server_datetime);
+              console.log('⏱️ event tz offset from UTC:', (offset / 3600000).toFixed(2), 'h');
+              console.log('🕐 getServerTime() now:', new Date(Date.now() + offset).toISOString());
             }
           } catch (error) {
             if (API_CONFIG.DEBUG) console.error('Error calculating offset:', error);
@@ -617,21 +623,53 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // Parse race start time
       if (homeData?.next_race_date && homeData?.next_race_time) {
         try {
-          // ✅ Race time stored in event timezone. Subtract serverTimeOffset to
-          // convert device-local parse to correct UTC regardless of device timezone.
-          const raceLocal = new Date(`${homeData.next_race_date}T${homeData.next_race_time}`);
-          const raceTime  = new Date(raceLocal.getTime() - serverTimeOffsetRef.current);
+          // ✅ Both server_datetime and race_time are in the event timezone.
+          // Parse both as fake-UTC (appending 'Z') so JS doesn't apply any
+          // device timezone offset. Since both strings are in the SAME timezone,
+          // the difference between them is always correct — no device time needed.
+          //
+          // server_datetime (fake-UTC ms) = actual event-tz now
+          // race_datetime   (fake-UTC ms) = actual event-tz race start
+          // diff = race_ms - server_ms = how far in the future the race is (in ms)
+          // raceTime = Date.now() + diff  ← correct UTC race start time
+          //
+          // Example:
+          //   server_datetime = "2026-05-20 07:24:43" Brussels (UTC+2) = 05:24 UTC
+          //   race_time       = "2026-05-20 05:00:00" Brussels (UTC+2) = 03:00 UTC
+          //   serverFakeMs = parse("2026-05-20T07:24:43Z") = 07:24 fake-UTC
+          //   raceFakeMs   = parse("2026-05-20T05:00:00Z") = 05:00 fake-UTC
+          //   diff = 05:00 - 07:24 = -2h24m (race was 2h24m ago in event tz)
+          //   raceTime = Date.now() + (-2h24m) = 2h24m ago in UTC ✅ correct
 
-          if (!isNaN(raceTime.getTime())) {
-            setRaceStartTime(raceTime);
-            raceStartTimeRef.current = raceTime;
+          const serverDatetimeStr = homeData?.server_datetime;
 
-            if (API_CONFIG.DEBUG) {
-              console.log('✅ Parsed Race Time:', raceTime.toLocaleString());
-              const now = getServerTime();
-              const diff = raceTime.getTime() - now.getTime();
-              console.log('⏰ Hours until race:', (diff / (1000 * 60 * 60)).toFixed(2));
+          if (serverDatetimeStr) {
+            const serverFakeMs = new Date(serverDatetimeStr.replace(' ', 'T') + 'Z').getTime();
+            const raceFakeMs   = new Date(`${homeData.next_race_date}T${homeData.next_race_time}Z`).getTime();
+
+            // How many ms from event-tz now until race start (negative = already started)
+            const msUntilRace = raceFakeMs - serverFakeMs;
+
+            // Anchor to real UTC now — no device timezone involved
+            const raceTime = new Date(Date.now() + msUntilRace);
+
+            if (!isNaN(raceTime.getTime())) {
+              setRaceStartTime(raceTime);
+              raceStartTimeRef.current = raceTime;
+
+              if (API_CONFIG.DEBUG) {
+                console.log('✅ server_datetime (event tz):', serverDatetimeStr);
+                console.log('✅ race_time (event tz):', `${homeData.next_race_date} ${homeData.next_race_time}`);
+                console.log('✅ ms until race:', msUntilRace, '→', (msUntilRace / 3600000).toFixed(2), 'h');
+                console.log('✅ raceTime (UTC):', raceTime.toISOString());
+              }
             }
+          } else {
+            // No server_datetime — cannot reliably compute race time
+            // Clear it so the background task does not send prematurely
+            setRaceStartTime(null);
+            raceStartTimeRef.current = null;
+            if (API_CONFIG.DEBUG) console.warn('⚠️ No server_datetime — race time not set');
           }
         } catch (error) {
           if (API_CONFIG.DEBUG) console.error('❌ Error parsing race time:', error);
