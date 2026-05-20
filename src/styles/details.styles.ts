@@ -131,4 +131,10 @@ export const detailsStyles = StyleSheet.create({
     color: colors.success,
     textTransform: 'uppercase',
   },
+
+  title: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.themeblue,
+  },
 });

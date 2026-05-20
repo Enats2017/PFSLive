@@ -43,6 +43,7 @@ export const colors = {
   inputBgItem: '#f3f4f6',      // BG_ITEM
 
   themeiColor: '#d5d92c',
+  themeblue: '#0f2a40',
 };
 
 // Spacing
