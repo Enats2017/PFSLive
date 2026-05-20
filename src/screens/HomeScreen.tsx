@@ -297,8 +297,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const hasRaceStarted = useCallback((): boolean => {
     if (homeData?.manual_start === 1) return true;
     if (!raceStartTimeRef.current) return false;
-    return getServerTime() >= raceStartTimeRef.current;
-  }, [homeData?.manual_start, getServerTime]);
+    // ✅ raceStartTimeRef is real UTC ms (Date.now() + msUntilRace).
+    // Compare against Date.now() directly — no offset needed.
+    // getServerTime() returns fake-UTC ms (event-tz number) which is
+    // numerically larger than real UTC, causing race to appear started early.
+    return Date.now() >= raceStartTimeRef.current.getTime();
+  }, [homeData?.manual_start]);
 
   // ==================== BATTERY OPTIMIZATION ====================
 
@@ -526,9 +530,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
 
     try {
-      const now = getServerTime();
+      // ✅ raceStartTimeRef is real UTC ms — compare against Date.now() directly.
+      const now = Date.now();
       const raceTime = raceStartTimeRef.current;
-      const diff = raceTime.getTime() - now.getTime();
+      const diff = raceTime.getTime() - now;
 
       if (diff <= 0) {
         setTimeUntilRace('Race started!');
@@ -587,7 +592,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // ✅ Use ref — not state — so callback reads current value not stale closure
       const started = hasRaceStarted();
       if (API_CONFIG.DEBUG) {
-        console.log('🕐 Race check — started:', started, '| server time:', getServerTime().toLocaleString());
+        console.log('🕐 Race check — started:', started, '| now (UTC):', new Date().toISOString(), '| raceTime (UTC):', raceStartTimeRef.current?.toISOString());
       }
       if (started && !isSendingDataRef.current) {
         isSendingDataRef.current = true;
@@ -894,36 +899,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // Countdown timer + background sent count sync + queue count sync
   useEffect(() => {
-    if (isGPSActive) {
-      const interval = setInterval(async () => {
-        calculateTimeUntilRace();
+    if (!isGPSActive) return;
+    const interval = setInterval(async () => {
+      calculateTimeUntilRace();
 
-        // ✅ Sync locationUpdateCount from background task's AsyncStorage counter.
-        try {
-          const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
-          if (countStr) {
-            const bgCount = parseInt(countStr);
-            setLocationUpdateCount(bgCount);
-          }
-        } catch {
-          // silent
-        }
+      // ✅ Sync locationUpdateCount from background task's AsyncStorage counter.
+      try {
+        const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+        if (countStr) setLocationUpdateCount(parseInt(countStr));
+      } catch { /* silent */ }
 
-        // ✅ Sync queuedCount — read the lightweight count key written by
-        // locationQueueService on every addToQueue/removeFromQueue call.
-        // Avoids parsing the full queue JSON on every 1s tick.
-        try {
-          const queueCountStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
-          if (queueCountStr !== null) {
-            setQueuedCount(parseInt(queueCountStr) || 0);
-          }
-        } catch {
-          // silent
-        }
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [isGPSActive, homeData?.manual_start, calculateTimeUntilRace]);
+      // ✅ Sync queuedCount — read the lightweight count key written by
+      // locationQueueService on every addToQueue/removeFromQueue call.
+      // Avoids parsing the full queue JSON on every 1s tick.
+      try {
+        const queueCountStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
+        if (queueCountStr !== null) setQueuedCount(parseInt(queueCountStr) || 0);
+      } catch { /* silent */ }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isGPSActive, calculateTimeUntilRace]);
 
   // Block back button on forced update
   useEffect(() => {
