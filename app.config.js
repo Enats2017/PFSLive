@@ -70,11 +70,6 @@ export default ({ config }) => {
 
     // ✅ Android Configuration
     android: {
-      foregroundService: {
-        notificationTitle: "Livio Live Tracking",
-        notificationBody: "Your location is being tracked for the race.",
-        notificationColor: "#1a73e8",
-      },
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"
