@@ -1330,7 +1330,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               )}
 
               {/* Manual Override (DEBUG only) */}
-              {API_CONFIG.DEBUG &&
+              {/*API_CONFIG.DEBUG &&
                 isGPSActive &&
                 !isSendingData &&
                 homeData?.manual_start !== 1 && (
@@ -1349,7 +1349,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       {t('home:alerts.startNow')} (OVERRIDE)
                     </Text>
                   </TouchableOpacity>
-                )}
+                )*/}
             </>
           ) : (
             <>
