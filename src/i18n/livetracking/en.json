@@ -22,5 +22,9 @@
     "noCarAccess": "No car access to this aid station",
     "getDirections": "Get Directions",
     "openDirections": "Open Directions",
-    "chooseMapApp": "Choose your preferred map app"
+    "chooseMapApp": "Choose your preferred map app",
+    "poweredBy": "Powered by",
+    "livio": "Livio",
+    "availableServices": "Available Services"
+
 }

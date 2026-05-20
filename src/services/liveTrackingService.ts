@@ -23,6 +23,7 @@ export interface LiveTrackingCheckpoint {
     latitude: number;
     longitude: number;
     accessible_by_car: boolean;
+    features?: string[]; 
 }
 
 export interface LiveTrackingParticipant {

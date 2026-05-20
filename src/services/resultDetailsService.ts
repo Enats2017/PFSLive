@@ -23,6 +23,8 @@ export interface CheckpointDetail {
     elevation_gain: string;  // ✅ added
     segment_elevation_gain: string;
     predicted_minutes: number | null;
+    features?: string[];
+    
 }
 
 export interface PreviousCp {

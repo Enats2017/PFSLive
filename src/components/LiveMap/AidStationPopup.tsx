@@ -5,9 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { AidStationMapMarker } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
 import { colors } from '../../styles/common.styles';
+import { getFeatureIcon } from '../../utils/featureIcons';
+
 
 interface AidStationPopupProps {
     station: AidStationMapMarker;
+
     onClose: () => void;
 }
 
@@ -16,11 +19,11 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
     onClose,
 }) => {
     const { t } = useTranslation(['livetracking', 'common']);
+    const features = station.features ?? [];
 
     const openDirections = async () => {
         const lat = station.lat;
         const lon = station.lon;
-
         const appleMapsUrl = `http://maps.apple.com/?daddr=${lat},${lon}&dirflg=d`;
         const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`;
 
@@ -59,6 +62,7 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                     <View style={liveTrackingStyles.aidStationIconCircle}>
                         <Ionicons name="restaurant" size={24} color={colors.white} />
                     </View>
+
                     <View style={liveTrackingStyles.aidStationHeaderText}>
                         <Text style={liveTrackingStyles.aidStationName}>
                             {station.name || 'Aid Station'}
@@ -67,6 +71,7 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                             {t('livetracking:aidStation')}
                         </Text>
                     </View>
+
                 </View>
 
                 <View style={liveTrackingStyles.popupSection}>
@@ -88,6 +93,31 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                             {station.ele ? Math.round(station.ele) : 0} m
                         </Text>
                     </View>
+                    {features.length > 0 && (
+                        <View style={{ paddingTop: 10 }}>
+                            <Text style={{
+                                fontSize: 11,
+                                fontWeight: '600',
+                                color: colors.gray500,
+                                letterSpacing: 0.6,
+                                textTransform: 'uppercase',
+                                marginBottom: 7,
+                            }}>
+                                {t('livetracking:availableServices')}
+                            </Text>
+                            <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                                {features.map(feature => (
+                                    <View key={feature}>
+                                        <Ionicons
+                                            name={getFeatureIcon(feature)}
+                                            size={18}
+                                            color={colors.gray600}
+                                        />
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
                 </View>
 
                 {!station.accessible_by_car && (
@@ -98,10 +128,9 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                         </Text>
                     </View>
                 )}
-
                 {station.accessible_by_car && (
-                    <TouchableOpacity 
-                        style={liveTrackingStyles.directionsBtn} 
+                    <TouchableOpacity
+                        style={liveTrackingStyles.directionsBtn}
                         onPress={openDirections}
                     >
                         <Ionicons name="navigate" size={20} color={colors.white} />
@@ -110,6 +139,15 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                         </Text>
                     </TouchableOpacity>
                 )}
+                <View style={{
+                    paddingTop: 12,
+                    alignItems: 'flex-end',
+                }}>
+                    <Text style={{ fontSize: 12, color: colors.gray600 }}>
+                        {t('livetracking:poweredBy')}{' '}
+                        <Text style={{ fontWeight: '700', color: colors.gray900 }}> {t('livetracking:livio')}</Text>
+                    </Text>
+                </View>
             </View>
         </View>
     );
