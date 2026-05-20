@@ -36,7 +36,8 @@
     "noData": "Aucune donnée de chronométrage disponible",
     "pace": "ALLURE",
     "speed": "VITESSE",
-    "elevation": "Altitude"
+    "elevation": "Altitude",
+    "availableServices": "Services disponibles"
   },
   "runnerInfo": {
     "club": "CLUB",

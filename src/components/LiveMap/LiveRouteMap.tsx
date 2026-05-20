@@ -208,6 +208,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                             accessible_by_car: checkpoint.accessible_by_car,
                             is_start: checkpoint.is_start,
                             is_finish: checkpoint.is_finish,
+                            features: JSON.stringify(checkpoint.features ?? []),
                         },
                         geometry: {
                             type: 'Point' as const,
@@ -240,7 +241,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         };
     }, [aidStations, apiCheckpoints]);
 
-    // ✅ Follower's own position — built from live device GPS, never from DB.
+    // Follower's own position — built from live device GPS, never from DB.
     const followerGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => ({
         type: 'FeatureCollection',
         features: followerLocation
@@ -299,7 +300,12 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 ele: props.ele,
                 distance_km: props.distance_km,
                 accessible_by_car: props.accessible_by_car,
+                features: typeof props.features === 'string' 
+                ? JSON.parse(props.features)  
+                : props.features ?? [],
+                
             };
+             
             onAidStationPress(station);
         }
     };

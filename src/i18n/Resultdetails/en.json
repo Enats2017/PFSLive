@@ -36,7 +36,9 @@
     "noData": "No timing data available",
     "pace": "PACE",
     "speed": "SPEED",
-    "elevation": "Elevation"
+    "elevation": "Elevation",
+    "availableServices": "Available Services"
+
   },
   "runnerInfo": {
     "club": "CLUB",

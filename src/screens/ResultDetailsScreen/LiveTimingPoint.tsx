@@ -3,13 +3,40 @@ import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
-import { commonStyles } from '../../styles/common.styles';
+import { colors, commonStyles } from '../../styles/common.styles';
 import { CheckpointDetail } from '../../services/resultDetailsService';
+import { getFeatureIcon } from '../../utils/featureIcons';
 
 interface LiveTimingPointProps {
     checkpoints?: CheckpointDetail[];
     raceStatus?: string;
 }
+
+const AmenityIcons = (({ features, t }: { features?: string[]; t: any }) => {   
+    if (!features || features.length === 0) return null;
+    return (
+        <View style={{ paddingBottom:5,justifyContent:"center", alignItems:"center"}}>
+            <Text style={commonStyles.subtitle}>
+                {t('timingPoint.availableServices')}
+            </Text>
+            <View style={{ flexDirection: 'row',  gap: 6, flexWrap: 'wrap' }}>
+                {features.map(feature => (
+                    <View key={feature} style={{
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: colors.gray100,
+                        borderRadius: 8,
+                        padding: 8,
+                        minWidth: 36,
+                        marginTop:7
+                    }}>
+                        <Ionicons name={getFeatureIcon(feature)} size={18} color={colors.gray900} />
+                    </View>
+                ))}
+            </View>
+        </View>
+    );
+});
 
 const val = (v: string | undefined, t: any) =>
     v || t('defaults.empty');
@@ -45,12 +72,12 @@ const StatRow = memo(({
 }) => (
     <View style={resultInfoStyles.twoColRow}>
         <View style={resultInfoStyles.twoColLeft}>
-            <Text style={[commonStyles.subtitle,{textAlign:"center"}]}>{leftLabel}</Text>
+            <Text style={[commonStyles.subtitle, { textAlign: "center" }]}>{leftLabel}</Text>
             <Text style={commonStyles.title}>{leftVal}</Text>
         </View>
         <View style={resultInfoStyles.verticalDivider} />
         <View style={resultInfoStyles.twoColRight}>
-            <Text style={[commonStyles.subtitle,{textAlign:"center"}]}>{rightLabel}</Text>
+            <Text style={[commonStyles.subtitle, { textAlign: "center" }]}>{rightLabel}</Text>
             <Text style={commonStyles.title}>{rightVal}</Text>
         </View>
     </View>
@@ -69,9 +96,9 @@ const CenteredDistanceElevation = memo(({
     leftLabel: string; leftVal: string;
     rightLabel: string; rightVal: string;
 }) => (
-    <View style={{ 
-        flex: 1, 
-        justifyContent: 'center', 
+    <View style={{
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 40,
     }}>
@@ -101,17 +128,20 @@ const CenteredDistanceElevation = memo(({
     </View>
 ));
 
-const CheckpointCard = memo(({ 
-    item, 
-    t, 
+
+const CheckpointCard = memo(({
+    item,
+    t,
     isFirstCheckpoint,
-    raceStatus 
-}: { 
-    item: CheckpointDetail; 
+    raceStatus
+}: {
+    item: CheckpointDetail;
     t: any;
     isFirstCheckpoint: boolean;
     raceStatus?: string;
 }) => {
+
+   console.log('📍 item.features:', item.name, item.features);
     const isUpcomingRace = raceStatus === 'not_started';
     const isStartedOrPastRace = raceStatus === 'in_progress' || raceStatus === 'finished';
     const isCrossed = item.is_crossed;
@@ -128,6 +158,7 @@ const CheckpointCard = memo(({
                     rightLabel={t('timingPoint.elevationGain')}
                     rightVal={elevation(item.elevation_gain, t)}
                 />
+                
             </View>
         );
     }
@@ -140,7 +171,7 @@ const CheckpointCard = memo(({
                 </View>
                 <StatCol
                     label={t('timingPoint.startTime')}
-                    value={item.day_name 
+                    value={item.day_name
                         ? `${t(`common:week.${item.day_name.toLowerCase()}`)} ${val(item.actual_time, t)}`
                         : val(item.actual_time, t)
                     }
@@ -174,6 +205,8 @@ const CheckpointCard = memo(({
                     rightLabel={t('timingPoint.elevationGain')}
                     rightVal={elevation(item.elevation_gain, t)}
                 />
+               
+               
             </View>
         );
     }
@@ -186,7 +219,7 @@ const CheckpointCard = memo(({
                 </View>
                 <StatCol
                     label={t('timingPoint.arrivalTime')}
-                    value={item.day_name 
+                    value={item.day_name
                         ? `${t(`common:week.${item.day_name.toLowerCase()}`)} ${val(item.actual_time, t)}`
                         : val(item.actual_time, t)
                     }
@@ -209,6 +242,9 @@ const CheckpointCard = memo(({
                     rightLabel={t('timingPoint.pace')}
                     rightVal={pace(item.pace, t)}
                 />
+
+                 <AmenityIcons features={item.features} t={t} />
+               
             </View>
         );
     }
@@ -258,8 +294,8 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
                         {index < lastIndex && (
                             <View style={resultInfoStyles.lineBottomWrap}>
                                 <View style={resultInfoStyles.lineBottom} />
-                                
-                                {/* ✅ Distance at TOP of line (blue) */}
+
+                                {/* Distance at TOP of line (blue) */}
                                 {checkpoints[index + 1]?.segment_distance && (
                                     <View style={resultInfoStyles.segmentDistanceLabel}>
                                         <Text style={resultInfoStyles.segmentDistanceText}>
@@ -268,7 +304,7 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
                                     </View>
                                 )}
 
-                                {/* ✅ Elevation at BOTTOM of line (green) */}
+                                {/* Elevation at BOTTOM of line (green) */}
                                 {checkpoints[index + 1]?.segment_elevation_gain && (
                                     <View style={resultInfoStyles.segmentElevationLabel}>
                                         <Text style={resultInfoStyles.segmentElevationText}>
@@ -280,9 +316,9 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
                         )}
                     </View>
 
-                    <CheckpointCard 
-                        item={item} 
-                        t={t} 
+                    <CheckpointCard
+                        item={item}
+                        t={t}
                         isFirstCheckpoint={index === 0}
                         raceStatus={raceStatus}
                     />

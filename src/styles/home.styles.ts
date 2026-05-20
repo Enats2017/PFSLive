@@ -7,7 +7,7 @@ export const homeStyles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xxxxl,
   },
   content: {
     flex: 1,

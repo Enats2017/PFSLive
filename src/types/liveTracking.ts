@@ -33,6 +33,8 @@ export interface AidStationMapMarker {
     ele: number;
     distance_km: number;
     accessible_by_car: boolean;
+    features?: string[];
+    
 }
 
 export interface CheckpointData {
@@ -45,6 +47,7 @@ export interface CheckpointData {
     accessible_by_car: boolean;
     is_start: boolean;
     is_finish: boolean;
+    features?: string[];
 }
 
 export type PopupState = {

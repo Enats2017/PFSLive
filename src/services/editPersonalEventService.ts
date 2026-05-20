@@ -93,6 +93,9 @@ export const updatePersonalEvent = async (
     body.append('race_date', params.date);
     body.append('timezone', params.timezone);
 
+    console.log("11111",params.timezone);
+    
+
     // ✅ startTime optional — only append if non-empty
     if (params.startTime?.trim()) {
       body.append('start_hour', params.startTime);
@@ -187,8 +190,15 @@ export const formatFileSize = (bytes: number | undefined): string => {
 
 export const getDeviceTimezone = (): string => {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  } catch {
+    let timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const timezoneAliases: Record<string, string> = {
+      'Asia/Calcutta': 'Asia/Kolkata',
+    };
+    timezone = timezoneAliases[timezone] || timezone;
+    console.log('Final Device Timezone:', timezone);
+    return timezone;
+  } catch (error) {
+    console.log('Timezone Detection Error:', error);
     return 'UTC';
   }
 };

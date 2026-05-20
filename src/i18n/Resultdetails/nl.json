@@ -36,7 +36,8 @@
     "noData": "Geen timing gegevens beschikbaar",
     "pace": "TEMPO",
     "speed": "SNELHEID",
-    "elevation": "Hoogte"
+    "elevation": "Hoogte",
+    "availableServices": "Beschikbare diensten"
   },
   "runnerInfo": {
     "club": "CLUB",

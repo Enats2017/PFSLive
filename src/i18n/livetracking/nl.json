@@ -22,5 +22,8 @@
     "noCarAccess": "Geen toegang met de auto tot deze post",
     "getDirections": "Routebeschrijving",
     "openDirections": "Routebeschrijving Openen",
-    "chooseMapApp": "Kies je kaart-app"
+    "chooseMapApp": "Kies je kaart-app",
+    "poweredBy": "Mogelijk gemaakt door",
+    "livio": "Livio",
+    "availableServices": "Beschikbare diensten"
 }

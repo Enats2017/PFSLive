@@ -239,6 +239,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     accessible_by_car: cp.accessible_by_car,
                     is_start: cp.is_start,
                     is_finish: cp.is_finish,
+                    features: cp.features ?? [],
                 }));
                 console.log('📍 Checkpoints from participant:', checkpoints.length);
                 setApiCheckpoints(checkpoints);
@@ -255,6 +256,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     accessible_by_car: cp.accessible_by_car,
                     is_start: cp.is_start,
                     is_finish: cp.is_finish,
+                    features: cp.features ?? [],
+                    
                 }));
                 console.log('📍 Checkpoints from separate array:', checkpoints.length);
                 setApiCheckpoints(checkpoints);
@@ -388,6 +391,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     };
 
     const handleAidStationPress = (station: AidStationMapMarker) => {
+         console.log('🔍 aid station pressed:', station);
         setPopupState({ type: 'aidstation', data: station });
     };
 
@@ -460,9 +464,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
-
             <AppHeader title={event_name} showLogo={true} />
-
             {showDistanceDropdown && selectedDistance && (
                 <DistanceDropdown
                     distances={distances}
