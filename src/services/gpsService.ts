@@ -35,24 +35,28 @@ const FINISH_APPROACH_INTERVAL = 5;                            // seconds
 const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 
 // ✅ Movement thresholds per sport category.
-// Used to skip sends when participant is standing still.
+// Must be LESS than (min_speed × timeInterval) so the check passes at minimum walking pace.
+// Walking min ~0.5 km/h → moves 4.2m in 30s → threshold must be < 4.2m → use 3m
+// Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
+// Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 10,  // Walking  — 10m (slow pace ~1-2 km/h)
-  59: 25,  // Running  — 25m (moderate pace ~8-12 km/h)
-  60: 50,  // Cycling  — 50m (fast pace ~20-30 km/h)
+  64: 3,   // Walking — 3m  (safe at 0.5 km/h min pace)
+  59: 15,  // Running — 15m (safe at 6 km/h min pace)
+  60: 30,  // Cycling — 30m (safe at 10 km/h min pace)
 };
-const DEFAULT_MOVEMENT_METRES = 15; // safe default for unknown category
+const DEFAULT_MOVEMENT_METRES = 5; // safe default for unknown category
 
-// ✅ distanceInterval per category — used as Android Doze keep-alive.
-// Must be small enough that timeInterval (30s) is the real rate-limiter,
-// not distanceInterval. Too large (50m) causes Android to require BOTH
-// 30s AND 50m before firing the task — missing coordinates on slow walks.
+// ✅ distanceInterval per category — Android Doze keep-alive.
+// Must fire WITHIN the timeInterval (30s) at minimum speed so time trigger dominates.
+// Walking min 0.5 km/h → 2m every 14s ✅ well under 30s
+// Running min 6 km/h   → 8m every 5s  ✅ well under 30s
+// Cycling min 10 km/h  → 15m every 5s ✅ well under 30s
 const DISTANCE_INTERVAL_METRES: Record<number, number> = {
-  64: 5,   // Walking — 5m  (fires every ~1.8s at 10 km/h, keeps Doze away)
-  59: 10,  // Running — 10m (fires every ~2.4s at 15 km/h)
-  60: 20,  // Cycling — 20m (fires every ~2.4s at 30 km/h)
+  64: 2,   // Walking — 2m  (fires every ~14s at 0.5 km/h minimum pace)
+  59: 8,   // Running — 8m  (fires every ~5s at 6 km/h minimum pace)
+  60: 15,  // Cycling — 15m (fires every ~5s at 10 km/h minimum pace)
 };
-const DEFAULT_DISTANCE_INTERVAL_METRES = 10; // safe default
+const DEFAULT_DISTANCE_INTERVAL_METRES = 5; // safe default for unknown category
 
 // Haversine formula — straight-line distance between two GPS coordinates in metres
 function distanceMetres(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -110,7 +114,14 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     }
 
     // ✅ Parse to number — API returns category_id as string e.g. "59"
-    const minMovementMetres = (MOVEMENT_THRESHOLD[Number(categoryId)] ?? DEFAULT_MOVEMENT_METRES);
+    const categoryIdNum = Number(categoryId);
+    const minMovementMetres = MOVEMENT_THRESHOLD[categoryIdNum] ?? DEFAULT_MOVEMENT_METRES;
+    const distInterval = DISTANCE_INTERVAL_METRES[categoryIdNum] ?? DEFAULT_DISTANCE_INTERVAL_METRES;
+
+    if (API_CONFIG.DEBUG) {
+      console.log(`📊 Background task config — categoryId: ${categoryId} (${categoryIdNum})`);
+      console.log(`   MOVEMENT_THRESHOLD: ${minMovementMetres}m | DISTANCE_INTERVAL: ${distInterval}m`);
+    }
 
     // ✅ Use finish-approach interval (5s) when runner is within 1km of finish.
     // FINISH_APPROACH_KEY is set by the background task itself after each
