@@ -810,7 +810,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setShowEarlyTrackingModal(false);
   }, []);
 
-  const stopGPSTracking = useCallback(() => {
+  const stopGPSTracking = useCallback(async () => {
     if (gpsWatchRef.current) {
       gpsWatchRef.current.remove();
       gpsWatchRef.current = null;
@@ -831,19 +831,34 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     isSendingDataRef.current = false;
     setIsSendingData(false);
     setCurrentLocation(null);
-    // ✅ Reset background sent counter
     AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => {});
+
+    // ✅ Attempt to drain queue immediately on stop — covers the case where
+    // network was unavailable during the race and locations were queued.
+    // processQueue is a no-op if queue is empty or network is still down.
+    if (participantId && eventId) {
+      try {
+        const sentCount = await locationService.processQueue(participantId, eventId);
+        if (API_CONFIG.DEBUG && sentCount > 0) {
+          console.log(`✅ Drained ${sentCount} queued locations on stop`);
+        }
+      } catch { /* silent — user can retry via button */ }
+    }
+
+    // ✅ Refresh queue count after drain attempt
+    const remaining = await locationQueueService.getQueueSize();
+    setQueuedCount(remaining);
 
     toastSuccess(
       t('home:tracking.gpsStopped'),
       t('home:tracking.trackingStopped', {
         sent: locationUpdateCount,
-        queued: queuedCount,
+        queued: remaining,
       })
     );
 
     setLocationUpdateCount(0);
-  }, [locationUpdateCount, queuedCount, t]);
+  }, [locationUpdateCount, participantId, eventId, t]);
 
   const manualStartSending = useCallback(() => {
     Alert.alert(
@@ -1288,6 +1303,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     : t('home:Event.buttonText')}
                 </Text>
               </TouchableOpacity>
+
+              {/* ✅ Queue retry button — shown after tracking stops if locations remain queued */}
+              {!isGPSActive && queuedCount > 0 && participantId && eventId && (
+                <TouchableOpacity
+                  style={[
+                    homeStyles.button,
+                    { width: '100%', marginBottom: spacing.md, backgroundColor: colors.warning },
+                  ]}
+                  onPress={async () => {
+                    try {
+                      const sentCount = await locationService.processQueue(participantId, eventId);
+                      const remaining = await locationQueueService.getQueueSize();
+                      setQueuedCount(remaining);
+                      if (sentCount > 0) {
+                        toastSuccess(
+                          t('home:tracking.queueProcessed'),
+                          t('home:tracking.queuedSent', { count: sentCount })
+                        );
+                      } else {
+                        toastError(t('common:errors.generic'), t('home:tracking.queueRetryFailed'));
+                      }
+                    } catch { /* silent */ }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={homeStyles.buttonText}>
+                    {t('home:tracking.retryQueue', { count: queuedCount })}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               {/* Manual Override (DEBUG only) */}
               {API_CONFIG.DEBUG &&

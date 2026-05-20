@@ -43,7 +43,9 @@
     "queueProcessed": "Queue Processed",
     "queuedSent": "{{count}} queued location(s) sent successfully",
     "backgroundNotificationTitle": "Live Tracking Active",
-    "backgroundNotificationBody": "Your location is being tracked for the race."
+    "backgroundNotificationBody": "Your location is being tracked for the race.",
+    "retryQueue": "Send {{count}} unsent location(s)",
+    "queueRetryFailed": "No network — try again later"
   },
   "battery": {
     "title": "Enable Background Tracking",

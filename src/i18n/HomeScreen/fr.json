@@ -43,7 +43,9 @@
     "queueProcessed": "File d'attente traitée",
     "queuedSent": "{{count}} localisation(s) en file d'attente envoyée(s) avec succès",
     "backgroundNotificationTitle": "Suivi en direct actif",
-    "backgroundNotificationBody": "Votre position est suivie pour la course."
+    "backgroundNotificationBody": "Votre position est suivie pour la course.",
+    "retryQueue": "Envoyer {{count}} position(s) non envoyée(s)",
+    "queueRetryFailed": "Pas de réseau — réessayez plus tard"
   },
   "battery": {
     "title": "Activer le suivi en arrière-plan",

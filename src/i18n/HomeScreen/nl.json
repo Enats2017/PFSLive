@@ -43,7 +43,9 @@
     "queueProcessed": "Wachtrij verwerkt",
     "queuedSent": "{{count}} locatie(s) uit wachtrij succesvol verzonden",
     "backgroundNotificationTitle": "Live Tracking Actief",
-    "backgroundNotificationBody": "Je locatie wordt bijgehouden voor de race."
+    "backgroundNotificationBody": "Je locatie wordt bijgehouden voor de race.",
+    "retryQueue": "{{count}} niet-verzonden locatie(s) versturen",
+    "queueRetryFailed": "Geen netwerk — probeer het later opnieuw"
   },
   "battery": {
     "title": "Achtergrondtracking inschakelen",
