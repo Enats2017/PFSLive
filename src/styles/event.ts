@@ -21,6 +21,17 @@ export const eventStyles = StyleSheet.create({
     backgroundColor: colors.themeiColor,
     marginVertical: spacing.sm,
   },
+  title: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.themeblue,
+  },
+  textCenter: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.themeblue,
+    textAlign:"center"
+  },
   header: {
     alignItems: "center",
     paddingTop: spacing.lg,

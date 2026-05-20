@@ -43,6 +43,17 @@ const MOVEMENT_THRESHOLD: Record<number, number> = {
 };
 const DEFAULT_MOVEMENT_METRES = 15; // safe default for unknown category
 
+// ✅ distanceInterval per category — used as Android Doze keep-alive.
+// Must be small enough that timeInterval (30s) is the real rate-limiter,
+// not distanceInterval. Too large (50m) causes Android to require BOTH
+// 30s AND 50m before firing the task — missing coordinates on slow walks.
+const DISTANCE_INTERVAL_METRES: Record<number, number> = {
+  64: 5,   // Walking — 5m  (fires every ~1.8s at 10 km/h, keeps Doze away)
+  59: 10,  // Running — 10m (fires every ~2.4s at 15 km/h)
+  60: 20,  // Cycling — 20m (fires every ~2.4s at 30 km/h)
+};
+const DEFAULT_DISTANCE_INTERVAL_METRES = 10; // safe default
+
 // Haversine formula — straight-line distance between two GPS coordinates in metres
 function distanceMetres(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -123,10 +134,6 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       return;
     }
 
-    // ✅ Write timestamp IMMEDIATELY — before any async work — so concurrent
-    // task invocations see it and exit via the throttle check above.
-    await AsyncStorage.setItem(LAST_SENT_KEY, String(now));
-
     // Use the most recent location
     const raw = data.locations[data.locations.length - 1];
 
@@ -176,6 +183,10 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     };
 
     // ✅ Movement check — skip send if participant hasn't moved since last send.
+    // ✅ FIX: checked BEFORE writing LAST_SENT_KEY so the throttle timestamp is
+    // only committed when we actually intend to send. Previously the timestamp
+    // was written first, causing the next invocation to be blocked even though
+    // the current one was silently skipped due to insufficient movement.
     const lastPosStr = await AsyncStorage.getItem(LAST_POSITION_KEY);
     if (lastPosStr) {
       const lastPos = JSON.parse(lastPosStr);
@@ -184,9 +195,17 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
         if (API_CONFIG.DEBUG) {
           console.log(`🚶 Background task: skipped — only moved ${moved.toFixed(1)}m (min ${minMovementMetres}m, category ${categoryId})`);
         }
+        // ✅ Do NOT write LAST_SENT_KEY — let the next invocation try again
+        // without waiting a full interval. This ensures queuing still happens
+        // when network returns even if movement was below threshold.
         return;
       }
     }
+
+    // ✅ Write timestamp NOW — after movement check passes, before send.
+    // This prevents concurrent invocations from double-sending while still
+    // allowing the next task to fire immediately if this one was skipped.
+    await AsyncStorage.setItem(LAST_SENT_KEY, String(now));
 
     // ✅ Update last known position before send
     await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
@@ -205,7 +224,19 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
 
     // Import here to avoid circular deps at module level
     const { locationService } = require('./locationService');
-    const result = await locationService.sendLocation(participantId, eventId, location, true);
+
+    // ✅ Wrap send in try/catch so a network error never throws out of the task.
+    // If the task throws uncaught, Android marks it as crashed and may kill
+    // the foreground service entirely — causing the "task fires 3 times then dies"
+    // behaviour seen with unstable networks. Queuing handles the offline case.
+    let result: any = { success: false };
+    try {
+      result = await locationService.sendLocation(participantId, eventId, location, true);
+    } catch (sendErr: any) {
+      if (API_CONFIG.DEBUG) console.log('⚠️ Background task: send failed, location queued:', sendErr?.message);
+      // sendLocation already queued it internally — task completes cleanly
+      return;
+    }
 
     // ✅ Increment background sent counter so HomeScreen can update its UI count
     if (result.success) {
@@ -417,12 +448,13 @@ export const gpsService = {
         // the requested interval.
         accuracy: Location.Accuracy.High,
         timeInterval: intervalSeconds * 1000,
-        // ✅ distanceInterval: 50 — keeps the task firing reliably on Android.
-        // Without a distance trigger, Android Doze mode batches timeInterval
-        // updates freely, causing 2-3min gaps. The distance trigger acts as
-        // a keep-alive that prevents Doze batching. The throttle inside the
-        // task ensures we never actually send more than once per intervalSeconds.
-        distanceInterval: 50,
+        // ✅ distanceInterval: category-based small value for Android Doze keep-alive.
+        // Android on some versions requires BOTH timeInterval AND distanceInterval
+        // to be satisfied before firing the task. A large value (50m) at walking
+        // speed means the task fires every 50s instead of every 30s — causing
+        // missed coordinates. Small values ensure timeInterval is the limiter.
+        // The movement threshold inside the task prevents actual double-sends.
+        distanceInterval: (categoryId !== undefined ? (DISTANCE_INTERVAL_METRES[Number(categoryId)] ?? DEFAULT_DISTANCE_INTERVAL_METRES) : DEFAULT_DISTANCE_INTERVAL_METRES),
         // ✅ Show foreground service notification on Android (required for background).
         // Strings passed from HomeScreen so they come from the language file.
         foregroundService: {

@@ -105,7 +105,7 @@ const EventDetails = ({ route }: EventDetailsProps) => {
       <AppHeader showLogo={true} />
 
       <View style={detailsStyles.section}>
-        <Text style={commonStyles.title}>{event_name}</Text>
+        <Text style={detailsStyles.title}>{event_name}</Text>
       </View>
 
       <View style={detailsStyles.tabBar}>

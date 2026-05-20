@@ -494,7 +494,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             >
                 {/* SECTION TITLE */}
                 <View style={eventStyles.section}>
-                    <Text style={commonStyles.textCenter}>{t('follower:official.title')}</Text>
+                    <Text style={eventStyles.textCenter}>{t('follower:official.title')}</Text>
                 </View>
 
                 {/* TAB BAR */}
@@ -573,7 +573,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 </View>
 
                 <View style={[eventStyles.section, { marginBottom: spacing.md, marginTop: spacing.sm }]}>
-                    <Text style={commonStyles.title}>{t('follower:personal.title')}</Text>
+                    <Text style={eventStyles.title}>{t('follower:personal.title')}</Text>
                 </View>
 
                 <View style={{ flex: 1 }}>

@@ -371,7 +371,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             >
                 <View style={{ flex: 1 }}>
                     <View style={eventStyles.section}>
-                        <Text style={commonStyles.textCenter}>{t('event:official.title')}</Text>
+                        <Text style={eventStyles.textCenter}>{t('event:official.title')}</Text>
                     </View>
 
                     {/* TAB BAR */}
@@ -453,7 +453,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
 
                     {/* PERSONAL EVENT SECTION */}
                     <View style={[eventStyles.section, { marginBottom: spacing.sm, marginTop: spacing.sm }]}>
-                        <Text style={commonStyles.title}>{t('event:personal.title')}</Text>
+                        <Text style={eventStyles.title}>{t('event:personal.title')}</Text>
                     </View>
                     <View
                         style={[
