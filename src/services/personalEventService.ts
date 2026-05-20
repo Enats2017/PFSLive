@@ -75,8 +75,15 @@ export const formatFileSize = (bytes: number | undefined): string => {
 
 export const getDeviceTimezone = (): string => {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  } catch {
+    let timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const timezoneAliases: Record<string, string> = {
+      'Asia/Calcutta': 'Asia/Kolkata',
+    };
+    timezone = timezoneAliases[timezone] || timezone;
+    console.log('Final Device Timezone:', timezone);
+    return timezone;
+  } catch (error) {
+    console.log('Timezone Detection Error:', error);
     return 'UTC';
   }
 };
@@ -157,6 +164,11 @@ export const createPersonalEvent = async (
       formData,
       { headers, timeout: API_CONFIG.TIMEOUT }
     );
+
+     console.log(
+    '📥 Full Backend Response:',
+    JSON.stringify(response.data, null, 2)
+  );
 
     if (API_CONFIG.DEBUG) console.log('📡 Full API Response:', response.data);
 
