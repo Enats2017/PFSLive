@@ -47,16 +47,25 @@ const MOVEMENT_THRESHOLD: Record<number, number> = {
 const DEFAULT_MOVEMENT_METRES = 5; // safe default for unknown category
 
 // ✅ distanceInterval per category — Android Doze keep-alive.
-// Must fire WITHIN the timeInterval (30s) at minimum speed so time trigger dominates.
-// Walking min 0.5 km/h → 2m every 14s ✅ well under 30s
-// Running min 6 km/h   → 8m every 5s  ✅ well under 30s
-// Cycling min 10 km/h  → 15m every 5s ✅ well under 30s
+// Walking: 0 — disable distance filtering entirely. At slow walking speed
+// (~1.3 km/h), Android's Significant Motion Detector (SMD) suppresses GPS
+// when distanceInterval > 0, causing 10-15 min gaps with screen off.
+// With distanceInterval: 0, task fires purely on timeInterval which Android
+// MUST honor for foreground services regardless of motion state.
+// Running/Cycling: small value keeps GPS chip awake at higher speeds where
+// SMD is not an issue and distance trigger adds reliability.
 const DISTANCE_INTERVAL_METRES: Record<number, number> = {
-  64: 2,   // Walking — 2m  (fires every ~14s at 0.5 km/h minimum pace)
+  64: 0,   // Walking — 0m  (time-only trigger, prevents SMD suppression)
   59: 8,   // Running — 8m  (fires every ~5s at 6 km/h minimum pace)
   60: 15,  // Cycling — 15m (fires every ~5s at 10 km/h minimum pace)
 };
-const DEFAULT_DISTANCE_INTERVAL_METRES = 5; // safe default for unknown category
+const DEFAULT_DISTANCE_INTERVAL_METRES = 0; // safe default — time-only
+
+// ✅ Finish approach distanceInterval — used only when ≤ 1km to finish.
+// Overrides the walking 0m default so the task fires every ~5s for accurate
+// finish-line plotting. Running/Cycling already fire frequently enough via
+// their regular distanceInterval so this only matters for walking.
+const FINISH_APPROACH_DISTANCE_INTERVAL = 2; // metres — fires every ~5s at walking speed
 
 // Haversine formula — straight-line distance between two GPS coordinates in metres
 function distanceMetres(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -130,7 +139,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     const effectiveInterval = finishApproach === '1'
         ? FINISH_APPROACH_INTERVAL
         : (intervalSeconds ?? 30);
-    const minGapMs = (effectiveInterval - 2) * 1000;
+    const minGapMs = (effectiveInterval - 5) * 1000; // ✅ 5s buffer for Doze timing variance
     const lastSentStr = await AsyncStorage.getItem(LAST_SENT_KEY);
     const lastSentAt = lastSentStr ? parseInt(lastSentStr) : 0;
     const now = Date.now();
@@ -267,9 +276,34 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       // Falls back to distance_to_next_cp only if finish distance unavailable.
       const distToFinish = result.distance_to_finish_km ?? result.distance_to_next_cp ?? null;
       if (distToFinish !== null && distToFinish <= FINISH_APPROACH_THRESHOLD) {
+        const wasActive = finishApproach === '1';
         await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
         if (API_CONFIG.DEBUG) {
           console.log(`🏁 Finish approach activated — ${distToFinish}km to finish (interval → ${FINISH_APPROACH_INTERVAL}s)`);
+        }
+        // ✅ Restart background task with smaller distanceInterval so walking
+        // category (distanceInterval: 0) fires every ~5s near finish instead of 30s.
+        // Only restart once when first activated — not on every subsequent send.
+        if (!wasActive) {
+          try {
+            // ✅ Restart with 5s timeInterval + 2m distanceInterval so walking
+            // category (which uses 0m distanceInterval normally) also fires every ~5s.
+            await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+              accuracy: Location.Accuracy.High,
+              timeInterval: FINISH_APPROACH_INTERVAL * 1000,
+              distanceInterval: FINISH_APPROACH_DISTANCE_INTERVAL,
+              foregroundService: {
+                notificationTitle: 'Live Tracking Active',
+                notificationBody: 'Approaching finish line...',
+                notificationColor: '#22C55E',
+              },
+              pausesUpdatesAutomatically: false,
+              showsBackgroundLocationIndicator: true,
+              deferredUpdatesInterval: 0,
+              deferredUpdatesDistance: 0,
+            });
+            if (API_CONFIG.DEBUG) console.log('🏁 Background task restarted for finish approach (5s / 2m)');
+          } catch { /* silent — task continues with existing interval */ }
         }
       } else if (distToFinish !== null && distToFinish > FINISH_APPROACH_THRESHOLD) {
         // Reset if runner moves away (e.g. GPS error placed them near finish)
@@ -281,6 +315,11 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     if (API_CONFIG.DEBUG) console.error('❌ Background task failed:', err?.message);
   }
 });
+
+// ✅ Module-level reference to the foreground watch AppState subscription.
+// Stored here so it can be cleaned up if startWatchingPosition is called
+// again without stop being called first (prevents listener leak).
+let _fgAppStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
 
 // ✅ Watchdog: called when app returns to foreground to ensure background
 // task is still alive. Android may silently kill it on aggressive OEMs
@@ -476,6 +515,12 @@ export const gpsService = {
 
       // ✅ Always stop any existing background task before starting fresh.
       // This prevents duplicate registrations which cause rapid-fire wakes.
+      // Also remove any existing AppState listener to prevent leaks if
+      // startWatchingPosition is called again without stop() being called.
+      if (_fgAppStateSubscription) {
+        _fgAppStateSubscription.remove();
+        _fgAppStateSubscription = null;
+      }
       try {
         await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
         if (API_CONFIG.DEBUG) console.log('♻️ Stopped existing background task before restart');
@@ -544,15 +589,22 @@ export const gpsService = {
 
       // ✅ Foreground watch — UI position updates ONLY, no sends.
       // Background task handles all API sends.
-      // Uses a longer interval (5x) so it doesn't wake the CPU frequently —
-      // just enough to keep the position dot moving on screen.
-      const subscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          timeInterval: Math.min(intervalSeconds * 1000, 5000), // max 5s for smooth UI
-        },
-        (location) => {
-          // ✅ UI only — background task handles sends
+      // Paused when screen turns off so it doesn't compete with the background
+      // task for the GPS chip — competition causes Android to reset the
+      // background task's timeInterval counter, causing gaps after app check-ins.
+      const fgWatchOptions = {
+        accuracy: Location.Accuracy.High, // ✅ High — needed for speed/heading on UI
+        timeInterval: Math.min(intervalSeconds * 1000, 5000), // max 5s for smooth UI
+      };
+
+      let fgSubscription: Location.LocationSubscription | null = null;
+      let fgStarting = false; // ✅ Guard against concurrent async calls
+
+      const startFgWatch = async () => {
+        if (fgSubscription || fgStarting) return; // ✅ prevent double subscription
+        fgStarting = true;
+        try {
+          fgSubscription = await Location.watchPositionAsync(fgWatchOptions, (location) => {
           callback({
             latitude: location.coords.latitude,
             longitude: location.coords.longitude,
@@ -564,13 +616,41 @@ export const gpsService = {
             timestamp: location.timestamp,
             mocked: location.mocked,
           });
+          });
+        } finally {
+          fgStarting = false; // ✅ always reset so next call can proceed
         }
-      );
+      };
+
+      const stopFgWatch = () => {
+        if (fgSubscription) {
+          fgSubscription.remove();
+          fgSubscription = null;
+        }
+      };
+
+      // ✅ Start foreground watch immediately (app is active)
+      await startFgWatch();
+
+      // ✅ Pause foreground watch when screen goes off, resume when screen on.
+      // This prevents GPS chip contention with background task during screen-off,
+      // which was causing background task timeInterval to reset after app check-ins.
+      _fgAppStateSubscription = AppState.addEventListener('change', (nextState) => {
+        if (nextState === 'active') {
+          startFgWatch();
+        } else {
+          stopFgWatch();
+        }
+      });
 
       return {
         remove: async () => {
-          // Stop foreground subscription
-          subscription.remove();
+          // Stop foreground subscription and AppState listener
+          if (_fgAppStateSubscription) {
+            _fgAppStateSubscription.remove();
+            _fgAppStateSubscription = null;
+          }
+          stopFgWatch();
           // Stop background task
           try {
             await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
