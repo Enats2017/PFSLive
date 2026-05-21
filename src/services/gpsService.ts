@@ -174,6 +174,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     // ✅ Guard against clock jumps (Samsung) or corrupted timestamp
     if (isNaN(lastSentAt) || lastSentAt > now) {
       await AsyncStorage.setItem(LAST_SENT_KEY, '0');
+      await addLog('⏰', `Clock jump detected — LAST_SENT reset (lastSentAt:${lastSentAt} now:${now})`);
     } else if (now - lastSentAt < minGapMs) {
       const elapsed = ((now - lastSentAt) / 1000).toFixed(1);
       if (API_CONFIG.DEBUG) {
