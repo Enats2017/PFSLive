@@ -67,6 +67,28 @@ const DEFAULT_DISTANCE_INTERVAL_METRES = 0; // safe default — time-only
 // their regular distanceInterval so this only matters for walking.
 const FINISH_APPROACH_DISTANCE_INTERVAL = 2; // metres — fires every ~5s at walking speed
 
+// ✅ Tracking log — ring buffer of recent background task events.
+// Written by background task, read by HomeScreen 1s timer for live display.
+export const TRACKING_LOG_KEY = '@PFSLive:trackingLog';
+const MAX_LOG_ENTRIES = 100; // keep last 100 events
+
+export interface TrackingLogEntry {
+  ts: number;        // Date.now() when event occurred
+  icon: string;      // emoji for quick scanning
+  msg: string;       // human-readable message
+}
+
+const addLog = async (icon: string, msg: string): Promise<void> => {
+  try {
+    const raw = await AsyncStorage.getItem(TRACKING_LOG_KEY);
+    const entries: TrackingLogEntry[] = raw ? JSON.parse(raw) : [];
+    entries.push({ ts: Date.now(), icon, msg });
+    // Keep only last MAX_LOG_ENTRIES
+    if (entries.length > MAX_LOG_ENTRIES) entries.splice(0, entries.length - MAX_LOG_ENTRIES);
+    await AsyncStorage.setItem(TRACKING_LOG_KEY, JSON.stringify(entries));
+  } catch { /* silent — log failure must never break tracking */ }
+};
+
 // Haversine formula — straight-line distance between two GPS coordinates in metres
 function distanceMetres(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -99,10 +121,13 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     const paramsJson = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
     if (!paramsJson) {
       if (API_CONFIG.DEBUG) console.log('⚠️ Background task: no tracking params found');
+      await addLog('⚠️', 'Task fired but no params found — may have been killed by OS');
       return;
     }
 
     const { participantId, eventId, intervalSeconds, categoryId, raceStartTime, manualStart } = JSON.parse(paramsJson);
+
+    await addLog('🔔', `Task fired — cat:${categoryId} interval:${intervalSeconds}s manualStart:${manualStart ?? 0}`);
 
     // ✅ Race start check — do not send coordinates before race begins.
     // manualStart === 1 means organiser controls start — skip time check entirely.
@@ -110,14 +135,16 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     if (manualStart !== 1) {
       if (!raceStartTime) {
         if (API_CONFIG.DEBUG) console.log('⏳ Background task: no race time configured — skipping send');
+        await addLog('⏳', 'Race time not set — skipping send');
         return;
       }
       const raceTimeMs = new Date(raceStartTime).getTime();
       if (isNaN(raceTimeMs) || Date.now() < raceTimeMs) {
+        const minsLeft = isNaN(raceTimeMs) ? '?' : ((raceTimeMs - Date.now()) / 60000).toFixed(1);
         if (API_CONFIG.DEBUG) {
-          const minsLeft = isNaN(raceTimeMs) ? '?' : ((raceTimeMs - Date.now()) / 60000).toFixed(1);
           console.log(`⏳ Background task: race not started yet — ${minsLeft} min remaining`);
         }
+        await addLog('⏳', `Race not started — ${minsLeft}min remaining`);
         return;
       }
     }
@@ -148,9 +175,11 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     if (isNaN(lastSentAt) || lastSentAt > now) {
       await AsyncStorage.setItem(LAST_SENT_KEY, '0');
     } else if (now - lastSentAt < minGapMs) {
+      const elapsed = ((now - lastSentAt) / 1000).toFixed(1);
       if (API_CONFIG.DEBUG) {
-        console.log(`⏭️ Background task throttled — ${((now - lastSentAt) / 1000).toFixed(1)}s since last send`);
+        console.log(`⏭️ Background task throttled — ${elapsed}s since last send`);
       }
+      await addLog('⏭️', `Throttled — only ${elapsed}s since last send (min ${(minGapMs/1000).toFixed(0)}s)`);
       return;
     }
 
@@ -215,6 +244,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
         if (API_CONFIG.DEBUG) {
           console.log(`🚶 Background task: skipped — only moved ${moved.toFixed(1)}m (min ${minMovementMetres}m, category ${categoryId})`);
         }
+        await addLog('🚶', `Skipped — moved only ${moved.toFixed(1)}m (need ${minMovementMetres}m)`);
         // ✅ Do NOT write LAST_SENT_KEY — let the next invocation try again
         // without waiting a full interval. This ensures queuing still happens
         // when network returns even if movement was below threshold.
@@ -232,6 +262,8 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       lat: location.latitude,
       lon: location.longitude,
     }));
+
+    await addLog('📍', `Sending — lat:${location.latitude.toFixed(5)} lon:${location.longitude.toFixed(5)} spd:${location.speed?.toFixed(1) ?? '?'}m/s bat:${location.batteryLevel ?? '?'}% ele:${location.altitude?.toFixed(0) ?? '?'}m`);
 
     if (API_CONFIG.DEBUG) {
       console.log('📍 Background task: sending location', {
@@ -254,12 +286,18 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       result = await locationService.sendLocation(participantId, eventId, location, true);
     } catch (sendErr: any) {
       if (API_CONFIG.DEBUG) console.log('⚠️ Background task: send failed, location queued:', sendErr?.message);
+      await addLog('📦', `Send failed — queued. Error: ${sendErr?.message ?? 'unknown'}`);
       // sendLocation already queued it internally — task completes cleanly
       return;
     }
 
     // ✅ Increment background sent counter so HomeScreen can update its UI count
+    if (!result.success) {
+      await addLog('🔴', `API rejected — ${result.message ?? 'unknown'} (location queued if applicable)`);
+    }
+
     if (result.success) {
+      await addLog('✅', `Sent OK — id:${result.locationId ?? '?'} dist_to_finish:${result.distance_to_finish_km ?? '?'}km`);
       const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
       const count = countStr ? parseInt(countStr) : 0;
       await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(count + 1));
@@ -303,16 +341,21 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
               deferredUpdatesDistance: 0,
             });
             if (API_CONFIG.DEBUG) console.log('🏁 Background task restarted for finish approach (5s / 2m)');
+            await addLog('🏁', 'Finish approach activated — switched to 5s/2m interval');
           } catch { /* silent — task continues with existing interval */ }
         }
       } else if (distToFinish !== null && distToFinish > FINISH_APPROACH_THRESHOLD) {
         // Reset if runner moves away (e.g. GPS error placed them near finish)
+        if (finishApproach === '1') {
+          await addLog('🔄', `Finish approach reset — now ${distToFinish.toFixed(2)}km from finish`);
+        }
         await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
       }
     }
 
   } catch (err: any) {
     if (API_CONFIG.DEBUG) console.error('❌ Background task failed:', err?.message);
+    await addLog('❌', `Task crashed: ${err?.message ?? 'unknown error'}`);
   }
 });
 
@@ -336,7 +379,10 @@ export const ensureBackgroundTaskAlive = async (
 ): Promise<boolean> => {
   try {
     const isRunning = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-    if (isRunning) return true;
+    if (isRunning) {
+      await addLog('💚', 'Watchdog check — background task alive');
+      return true;
+    }
 
     if (API_CONFIG.DEBUG) {
       console.log('⚠️ Background task died — restarting...');
@@ -370,6 +416,7 @@ export const ensureBackgroundTaskAlive = async (
     });
 
     if (API_CONFIG.DEBUG) console.log('✅ Background task restarted');
+    await addLog('♻️', 'Watchdog: background task was dead — restarted successfully');
     return true;
   } catch (err: any) {
     if (API_CONFIG.DEBUG) console.error('❌ Failed to restart background task:', err?.message);
@@ -538,7 +585,8 @@ export const gpsService = {
         manualStart,    // ✅ 1 = skip race start check
       }));
 
-      // ✅ Clear position + elevation from previous session
+      // ✅ Clear position + elevation + log from previous session
+      await AsyncStorage.removeItem(TRACKING_LOG_KEY);
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
       await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
       await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
@@ -586,6 +634,7 @@ export const gpsService = {
       if (API_CONFIG.DEBUG) {
         console.log('✅ Background location task started');
       }
+      await addLog('🚀', `Background task started — interval:${intervalSeconds}s distInterval:${categoryId !== undefined ? (DISTANCE_INTERVAL_METRES[Number(categoryId)] ?? DEFAULT_DISTANCE_INTERVAL_METRES) : DEFAULT_DISTANCE_INTERVAL_METRES}m cat:${categoryId}`);
 
       // ✅ Foreground watch — UI position updates ONLY, no sends.
       // Background task handles all API sends.
@@ -604,6 +653,7 @@ export const gpsService = {
         if (fgSubscription || fgStarting) return; // ✅ prevent double subscription
         fgStarting = true;
         try {
+          addLog('👁️', 'Foreground watch started (screen on)');
           fgSubscription = await Location.watchPositionAsync(fgWatchOptions, (location) => {
           callback({
             latitude: location.coords.latitude,
@@ -626,6 +676,7 @@ export const gpsService = {
         if (fgSubscription) {
           fgSubscription.remove();
           fgSubscription = null;
+          addLog('👁️', 'Foreground watch stopped (screen off)');
         }
       };
 
@@ -637,8 +688,14 @@ export const gpsService = {
       // which was causing background task timeInterval to reset after app check-ins.
       _fgAppStateSubscription = AppState.addEventListener('change', (nextState) => {
         if (nextState === 'active') {
+          addLog('📱', 'App foregrounded — foreground watch starting');
           startFgWatch();
-        } else {
+        } else if (nextState === 'background') {
+          addLog('🌙', 'App backgrounded — foreground watch stopped, background task continues');
+          stopFgWatch();
+        } else if (nextState === 'inactive') {
+          // iOS only — transitioning between foreground/background
+          addLog('💤', 'App inactive (screen off / transitioning)');
           stopFgWatch();
         }
       });
@@ -665,6 +722,7 @@ export const gpsService = {
           await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
           await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
           if (API_CONFIG.DEBUG) console.log('✅ Background location task stopped');
+          await addLog('🛑', 'Background task stopped — tracking ended');
         },
       };
     } catch (error) {
