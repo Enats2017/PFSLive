@@ -46,26 +46,17 @@ const MOVEMENT_THRESHOLD: Record<number, number> = {
 };
 const DEFAULT_MOVEMENT_METRES = 5; // safe default for unknown category
 
-// ✅ distanceInterval per category — Android Doze keep-alive.
-// Walking: 0 — disable distance filtering entirely. At slow walking speed
-// (~1.3 km/h), Android's Significant Motion Detector (SMD) suppresses GPS
-// when distanceInterval > 0, causing 10-15 min gaps with screen off.
-// With distanceInterval: 0, task fires purely on timeInterval which Android
-// MUST honor for foreground services regardless of motion state.
-// Running/Cycling: small value keeps GPS chip awake at higher speeds where
-// SMD is not an issue and distance trigger adds reliability.
+// ✅ distanceInterval is now 0 for ALL categories and ALL modes.
+// timeInterval: 5s handles all firing. distanceInterval > 0 causes Android's
+// SMD to suppress GPS at slow speeds. All distance-based filtering is handled
+// by the movement threshold inside the task — not by the OS trigger.
+// DISTANCE_INTERVAL_METRES kept for reference but no longer used in task registration.
 const DISTANCE_INTERVAL_METRES: Record<number, number> = {
-  64: 0,   // Walking — 0m  (time-only trigger, prevents SMD suppression)
-  59: 8,   // Running — 8m  (fires every ~5s at 6 km/h minimum pace)
-  60: 15,  // Cycling — 15m (fires every ~5s at 10 km/h minimum pace)
+  64: 0,   // Walking — 0m
+  59: 0,   // Running — 0m
+  60: 0,   // Cycling — 0m
 };
-const DEFAULT_DISTANCE_INTERVAL_METRES = 0; // safe default — time-only
-
-// ✅ Finish approach distanceInterval — used only when ≤ 1km to finish.
-// Overrides the walking 0m default so the task fires every ~5s for accurate
-// finish-line plotting. Running/Cycling already fire frequently enough via
-// their regular distanceInterval so this only matters for walking.
-const FINISH_APPROACH_DISTANCE_INTERVAL = 2; // metres — fires every ~5s at walking speed
+const DEFAULT_DISTANCE_INTERVAL_METRES = 0;
 
 // ✅ Tracking log — ring buffer of recent background task events.
 // Written by background task, read by HomeScreen 1s timer for live display.
@@ -241,7 +232,10 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     if (lastPosStr) {
       const lastPos = JSON.parse(lastPosStr);
       const moved = distanceMetres(lastPos.lat, lastPos.lon, location.latitude, location.longitude);
-      if (moved < minMovementMetres) {
+      // ✅ Skip movement check during finish approach — every metre counts near finish.
+      // Runner may be slowing to a walk, crossing timing mats, or briefly stopped.
+      // Movement threshold would suppress these critical final coordinates.
+      if (finishApproach !== '1' && moved < minMovementMetres) {
         if (API_CONFIG.DEBUG) {
           console.log(`🚶 Background task: skipped — only moved ${moved.toFixed(1)}m (min ${minMovementMetres}m, category ${categoryId})`);
         }
@@ -320,30 +314,11 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
         if (API_CONFIG.DEBUG) {
           console.log(`🏁 Finish approach activated — ${distToFinish}km to finish (interval → ${FINISH_APPROACH_INTERVAL}s)`);
         }
-        // ✅ Restart background task with smaller distanceInterval so walking
-        // category (distanceInterval: 0) fires every ~5s near finish instead of 30s.
-        // Only restart once when first activated — not on every subsequent send.
+        // ✅ No task restart needed — task already fires every 5s from the start.
+        // minGapMs = 0 when finish approach active → every fire sends immediately.
+        // Previously we called stop/start here which killed the task's own execution.
         if (!wasActive) {
-          try {
-            // ✅ Restart with 5s timeInterval + 2m distanceInterval so walking
-            // category (which uses 0m distanceInterval normally) also fires every ~5s.
-            await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-              accuracy: Location.Accuracy.High,
-              timeInterval: FINISH_APPROACH_INTERVAL * 1000,
-              distanceInterval: FINISH_APPROACH_DISTANCE_INTERVAL,
-              foregroundService: {
-                notificationTitle: 'Live Tracking Active',
-                notificationBody: 'Approaching finish line...',
-                notificationColor: '#22C55E',
-              },
-              pausesUpdatesAutomatically: false,
-              showsBackgroundLocationIndicator: true,
-              deferredUpdatesInterval: 0,
-              deferredUpdatesDistance: 0,
-            });
-            if (API_CONFIG.DEBUG) console.log('🏁 Background task restarted for finish approach (5s / 2m)');
-            await addLog('🏁', 'Finish approach activated — switched to 5s/2m interval');
-          } catch { /* silent — task continues with existing interval */ }
+          await addLog('🏁', `Finish approach activated — ${distToFinish.toFixed(2)}km to finish, sending every 5s`);
         }
       } else if (distToFinish !== null && distToFinish > FINISH_APPROACH_THRESHOLD) {
         // Reset if runner moves away (e.g. GPS error placed them near finish)
@@ -401,10 +376,11 @@ export const ensureBackgroundTaskAlive = async (
 
     await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
       accuracy: Location.Accuracy.High,
-      timeInterval: intervalSeconds * 1000,
-      distanceInterval: (categoryId !== undefined
-        ? (DISTANCE_INTERVAL_METRES[Number(categoryId)] ?? DEFAULT_DISTANCE_INTERVAL_METRES)
-        : DEFAULT_DISTANCE_INTERVAL_METRES),
+      // ✅ Always 5s timeInterval — same as initial start.
+      // No need to check FINISH_APPROACH_KEY since task always fires every 5s.
+      // minGapMs inside the task handles send rate (25s normal, 0s finish approach).
+      timeInterval: 5000,
+      distanceInterval: 0,
       foregroundService: {
         notificationTitle,
         notificationBody,
@@ -608,14 +584,16 @@ export const gpsService = {
         // Doze mode. High accuracy uses GPS directly and fires more reliably at
         // the requested interval.
         accuracy: Location.Accuracy.High,
-        timeInterval: intervalSeconds * 1000,
-        // ✅ distanceInterval: category-based small value for Android Doze keep-alive.
-        // Android on some versions requires BOTH timeInterval AND distanceInterval
-        // to be satisfied before firing the task. A large value (50m) at walking
-        // speed means the task fires every 50s instead of every 30s — causing
-        // missed coordinates. Small values ensure timeInterval is the limiter.
-        // The movement threshold inside the task prevents actual double-sends.
-        distanceInterval: (categoryId !== undefined ? (DISTANCE_INTERVAL_METRES[Number(categoryId)] ?? DEFAULT_DISTANCE_INTERVAL_METRES) : DEFAULT_DISTANCE_INTERVAL_METRES),
+        // ✅ timeInterval: 5s always — task fires every 5s for ALL categories.
+        // Actual send rate is controlled by minGapMs inside the task (default 25s).
+        // This eliminates the need to restart the task for finish approach —
+        // when dist ≤ 1km, minGapMs drops to 0 and every fire sends immediately.
+        // Calling stop/start from within the task callback kills its own execution.
+        timeInterval: 5000,
+        // ✅ distanceInterval: 0 — time-only trigger for all categories.
+        // Android's SMD suppresses GPS at slow speeds when distanceInterval > 0.
+        // Running/Cycling fire frequently enough via timeInterval: 5s anyway.
+        distanceInterval: 0,
         // ✅ Show foreground service notification on Android (required for background).
         // Strings passed from HomeScreen so they come from the language file.
         foregroundService: {
