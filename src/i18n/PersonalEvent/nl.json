@@ -58,7 +58,8 @@
     "removeButton": "Verwijderen",
     "removed": "Bestand verwijderd",
     "existingFile": "Huidig bestand",
-    "undoRemove": "Verwijderen ongedaan maken"
+    "undoRemove": "Verwijderen ongedaan maken",
+     "loading": "Bestand laden..."
   },
   "eventTypes": {
     "organizedWithResults": "Georganiseerd evenement met rangschikking / resultaten",

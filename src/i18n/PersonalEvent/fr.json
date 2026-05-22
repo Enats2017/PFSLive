@@ -58,7 +58,8 @@
     "removeButton": "Supprimer",
     "removed": "Fichier supprimé",
     "existingFile": "Fichier actuel",
-    "undoRemove": "Annuler la suppression"
+    "undoRemove": "Annuler la suppression",
+    "loading": "Chargement du fichier..."
   },
   "eventTypes": {
     "organizedWithResults": "Événement organisé avec classement / résultats",
@@ -69,5 +70,7 @@
   "walking": "Marche",
   "running": "Course",
   "cycling": "Cyclisme"
-}
+  }
+
+  
 }

@@ -58,7 +58,8 @@
     "removeButton": "Remove",
     "removed": "File removed",
     "existingFile": "Current file",
-    "undoRemove": "Undo remove"
+    "undoRemove": "Undo remove",
+    "loading": "Loading file..."
   },
   "eventTypes": {
     "organizedWithResults": "Organized Event with ranking / results",
@@ -70,4 +71,5 @@
     "running": "Running",
     "cycling": "Cycling"
   }
+   
 }

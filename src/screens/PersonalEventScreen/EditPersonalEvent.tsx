@@ -51,6 +51,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     shouldRemoveGpx,
     initExistingFile,
     pickFile,
+    isPickingFile,
     viewNewFile,
     discardNewFile,
     removeExistingFile,
@@ -63,6 +64,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasFetched = useRef(false);
+  const isBusy = isSubmitting || isPickingFile;
 
   useEffect(() => {
     if (hasFetched.current) return;
@@ -106,8 +108,8 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
         case 'race_date_required':
           setFieldError('date', t('personal:errors.dateRequired'));
           break;
-        case 'category_id_invalid':                                           
-          setFieldError('category', t('personal:errors.categoryInvalid'));   
+        case 'category_id_invalid':
+          setFieldError('category', t('personal:errors.categoryInvalid'));
           break;
         case 'race_date_invalid':
           setFieldError('date', t('personal:errors.invalidDate'));
@@ -337,7 +339,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                   {existingFile?.removed && (
                     <TouchableOpacity
                       onPress={undoRemoveExistingFile}
-                      disabled={isSubmitting}
+                      disabled={isBusy}
                       style={personalStyles.undoBtn}
                     >
                       <Text style={personalStyles.undoText}>{t('personal:file.undoRemove')}</Text>
@@ -347,13 +349,24 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                     style={[personalStyles.uploadBox, errors.file && personalStyles.uploadBoxError]}
                     onPress={pickFile}
                     activeOpacity={0.8}
-                    disabled={isSubmitting}
+                    disabled={isBusy}
                   >
-                    <Ionicons name="cloud-upload-outline" size={40} color={colors.primary} />
-                    <Text style={personalStyles.uploadTitle}>{t('personal:file.uploadTitle')}</Text>
-                    <Text style={personalStyles.uploadSubtitle}>
-                      {t('personal:file.uploadSubtitle', { size: MB })}
-                    </Text>
+                    {isPickingFile ? (                    
+                      <>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={personalStyles.uploadTitle}>
+                          {t('personal:file.loading')}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Ionicons name="cloud-upload-outline" size={40} color={colors.primary} />
+                        <Text style={personalStyles.uploadTitle}>{t('personal:file.uploadTitle')}</Text>
+                        <Text style={personalStyles.uploadSubtitle}>
+                          {t('personal:file.uploadSubtitle', { size: MB })}
+                        </Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </>
               )}
@@ -362,7 +375,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                 <FileCard
                   fileName={existingFile!.name}
                   fileSubtitle={t('personal:file.existingFile')}
-                  disabled={isSubmitting}
+                  disabled={isBusy} 
                   swapIcon="swap-horizontal-outline"
                   onSwapOrView={pickFile}
                   onRemoveOrDiscard={removeExistingFile}
@@ -373,7 +386,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                 <FileCard
                   fileName={selectedFile!.name}
                   fileSubtitle={formatFileSize(selectedFile!.size)}
-                  disabled={isSubmitting}
+                  disabled={isBusy}
                   swapIcon="eye-outline"
                   onSwapOrView={viewNewFile}
                   onRemoveOrDiscard={discardNewFile}
@@ -389,10 +402,10 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
               style={[
                 commonStyles.primaryButton,
                 personalStyles.submitBtn,
-                isSubmitting && personalStyles.disabled,
+                isBusy && personalStyles.disabled,
               ]}
               onPress={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isBusy}
               activeOpacity={0.8}
             >
               {isSubmitting ? (

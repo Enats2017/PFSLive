@@ -29,6 +29,7 @@ export const useEditFileUpload = ({
 
   const [existingFile, setExistingFile] = useState<ExistingFile | null>(null);
   const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
+    const [isPickingFile, setIsPickingFile] = useState(false);
 
   const initExistingFile = useCallback((gpxPath: string) => {
     if (!gpxPath) return;
@@ -42,6 +43,7 @@ export const useEditFileUpload = ({
 
   const pickFile = useCallback(async () => {
     try {
+      setIsPickingFile(true);
       const result = await DocumentPicker.getDocumentAsync({
         type: ["application/gpx+xml", "application/xml", "text/xml", "*/*"],
         copyToCacheDirectory: true,
@@ -78,7 +80,10 @@ export const useEditFileUpload = ({
 
     } catch {
       onFileError("Could not open file picker");
+    } finally {
+      setIsPickingFile(false);  
     }
+
   }, [maxFileSize, onFileError, t]);
 
   const viewNewFile = useCallback(() => {
@@ -122,6 +127,7 @@ export const useEditFileUpload = ({
     selectedFile,
     shouldRemoveGpx,
     initExistingFile,
+    isPickingFile,
     pickFile,
     viewNewFile,
     discardNewFile,
