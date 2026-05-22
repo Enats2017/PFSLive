@@ -75,18 +75,13 @@ export const formatFileSize = (bytes: number | undefined): string => {
 
 export const getDeviceTimezone = (): string => {
   try {
-    let timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-    const timezoneAliases: Record<string, string> = {
-      'Asia/Calcutta': 'Asia/Kolkata',
-    };
-    timezone = timezoneAliases[timezone] || timezone;
-    console.log('Final Device Timezone:', timezone);
-    return timezone;
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return timezone || 'UTC';
   } catch (error) {
-    console.log('Timezone Detection Error:', error);
     return 'UTC';
   }
 };
+
 
 export const getTimezoneOffset = (): number => new Date().getTimezoneOffset();
 
