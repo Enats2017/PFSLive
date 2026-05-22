@@ -26,7 +26,7 @@ import { AppHeader } from '../components/common/AppHeader';
 import { UpdateRequiredModal } from '../components/UpdateRequiredModal';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
-import { gpsService, BACKGROUND_SENT_COUNT_KEY, ensureBackgroundTaskAlive } from '../services/gpsService';
+import { gpsService, BACKGROUND_SENT_COUNT_KEY, ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
@@ -132,6 +132,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [sendingInterval, setSendingInterval] = useState(30);
   const [timeUntilRace, setTimeUntilRace] = useState<string>('');
   const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
+
+  // ✅ Tracking log — DEBUG only, shows background task events live
+  const [trackingLogs, setTrackingLogs] = useState<TrackingLogEntry[]>([]);
 
   // ✅ Battery explanation modal — shown once before system dialog
   const [showBatteryModal, setShowBatteryModal] = useState(false);
@@ -930,6 +933,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const queueCountStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
         if (queueCountStr !== null) setQueuedCount(parseInt(queueCountStr) || 0);
       } catch { /* silent */ }
+
+      // ✅ Sync tracking logs — DEBUG only
+      if (API_CONFIG.DEBUG) {
+        try {
+          const logsStr = await AsyncStorage.getItem(TRACKING_LOG_KEY);
+          if (logsStr) setTrackingLogs(JSON.parse(logsStr));
+        } catch { /* silent */ }
+      }
     }, 1000);
     return () => clearInterval(interval);
   }, [isGPSActive, calculateTimeUntilRace]);
@@ -1223,6 +1234,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         style={homeStyles.scrollView}
         contentContainerStyle={homeStyles.scrollContent}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
       >
         {/* Logo & Title */}
         <View style={homeStyles.cardscetion}>
@@ -1303,6 +1315,34 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     </Text>
                   </View>
                 </View>
+              )}
+
+              {/* ✅ Tracking log panel — DEBUG only */}
+              {API_CONFIG.DEBUG && isGPSActive && trackingLogs.length > 0 && (
+                <ScrollView
+                  style={{
+                    maxHeight: 200,
+                    backgroundColor: '#0f172a',
+                    borderRadius: 8,
+                    padding: 8,
+                    marginBottom: spacing.md,
+                  }}
+                  showsVerticalScrollIndicator={true}
+                  persistentScrollbar={true}
+                  nestedScrollEnabled={true}
+                >
+                  {[...trackingLogs].reverse().map((entry, idx) => {
+                    const time = new Date(entry.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    return (
+                      <Text
+                        key={idx}
+                        style={{ fontFamily: 'monospace', fontSize: 10, color: '#e2e8f0', marginBottom: 2 }}
+                      >
+                        {time} {entry.icon} {entry.msg}
+                      </Text>
+                    );
+                  })}
+                </ScrollView>
               )}
 
               {/* Description */}
