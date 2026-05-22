@@ -3,6 +3,7 @@
   "editTitle": "Jouw evenement bijwerken",
   "name": "Naam evenement",
   "type": "Type evenement",
+   "category": "Categorie Type",
   "date": "Datum evenement",
   "startTime": "Starttijd",
   "fileInfo": "Het uploaden van een GPX-bestand is optioneel maar sterk aanbevolen voor nauwkeurige tracking",
@@ -44,7 +45,8 @@
     "participantInsertFailed": "Evenement aangemaakt maar registratie mislukt. Probeer opnieuw.",
     "eventNotFound": "Evenement niet gevonden. Het is mogelijk verwijderd.",
     "noChanges": "Er zijn geen wijzigingen aangebracht.",
-    "invalidEventId": "Ongeldig evenement. Ga terug en probeer opnieuw."
+    "invalidEventId": "Ongeldig evenement. Ga terug en probeer opnieuw.",
+    "categoryInvalid": "Selecteer een geldige categorie"   
   },
   "file": {
     "uploadTitle": "Tik om GPX-bestand te uploaden",
@@ -62,5 +64,10 @@
     "organizedWithResults": "Georganiseerd evenement met rangschikking / resultaten",
     "organizedWithoutResults": "Georganiseerd evenement zonder rangschikking / resultaten",
     "training": "Trainingssessie"
-  }
+  },
+  "categoryTypes": {
+  "walking": "Wandelen",
+  "running": "Hardlopen",
+  "cycling": "Fietsen"
+}
 }

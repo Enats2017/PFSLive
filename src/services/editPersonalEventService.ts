@@ -10,6 +10,7 @@ export interface PersonalEvent {
   start_hour: string;
   timezone: string;
   gpx_path: string;
+  category_id?: number | null;
 }
 
 export interface SelectedFile {
@@ -23,6 +24,7 @@ export interface UpdatePersonalEventParams {
   eventId: number;
   name: string;
   eventTypeId: number | null;
+  categoryId?: number | null; 
   date: string;
   startTime: string;
   timezone: string;
@@ -105,6 +107,11 @@ export const updatePersonalEvent = async (
       body.append('event_type', String(params.eventTypeId));
     }
 
+    if (params.categoryId !== null && params.categoryId !== undefined) {
+      body.append('category_id', String(params.categoryId));
+      if (API_CONFIG.DEBUG) console.log('📦 category_id appended:', params.categoryId);
+    }
+
     if (params.selectedFile) {
       const fileData: any = {
         uri: params.selectedFile.uri,
@@ -128,6 +135,7 @@ export const updatePersonalEvent = async (
         eventId: params.eventId,
         name: params.name,
         eventTypeId: params.eventTypeId,
+        categoryId: params.categoryId,
         date: params.date,
         startTime: params.startTime || '(not set)',
         hasFile: !!params.selectedFile,

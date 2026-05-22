@@ -9,12 +9,18 @@ import {
 interface FieldErrors {
   name?: string;
   eventType?: string;
+  category?: string; 
   date?: string;
   startTime?: string;
   file?: string;
 }
 
 interface EventType {
+  label: string;
+  value: number;
+}
+
+interface CategoryType {
   label: string;
   value: number;
 }
@@ -43,6 +49,7 @@ export const usePersonalEventForm = () => {
   const [formData, setFormData] = useState({
     name: '',
     selectedEventType: null as EventType | null,
+    selectedCategory: null as CategoryType | null,
     date: getTodayDate(),
     startTime: '', // optional — empty by default
   });
@@ -71,6 +78,11 @@ export const usePersonalEventForm = () => {
 
   const handleEventTypeChange = useCallback(
     (value: EventType | null) => handleFieldChange('selectedEventType', 'eventType')(value),
+    [handleFieldChange]
+  );
+
+  const handleCategoryChange = useCallback(
+    (value: CategoryType | null) => handleFieldChange('selectedCategory', 'category')(value),
     [handleFieldChange]
   );
 
@@ -142,6 +154,7 @@ export const usePersonalEventForm = () => {
     setFormData({
       name: '',
       selectedEventType: null,
+      selectedCategory: null,
       date: getTodayDate(),
       startTime: '',
     });
@@ -154,6 +167,7 @@ export const usePersonalEventForm = () => {
     handlers: {
       handleNameChange,
       handleEventTypeChange,
+      handleCategoryChange,
       handleDateChange,
       handleStartTimeChange,
       handleClearStartTime,

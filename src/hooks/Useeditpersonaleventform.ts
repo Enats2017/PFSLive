@@ -7,9 +7,15 @@ export interface EventTypeOption {
   value: number;
 }
 
+export interface CategoryOption {
+  label: string;
+  value: number;
+}
+
 export interface EditFormData {
   name: string;
   selectedEventType: EventTypeOption | null;
+  selectedCategory: CategoryOption | null; 
   date: string;
   startTime: string;
 }
@@ -17,6 +23,7 @@ export interface EditFormData {
 export interface EditFormErrors {
   name?: string;
   eventType?: string;
+  category?: string;   
   date?: string;
   startTime?: string;
   file?: string;
@@ -30,7 +37,15 @@ const matchEventType = (raw: string, options: EventTypeOption[]): EventTypeOptio
     : options.find((o) => o.label === raw) ?? null;
 };
 
-const INITIAL_FORM: EditFormData = { name: '', selectedEventType: null, date: '', startTime: '' };
+const matchCategory = (raw: string | number | null, options: CategoryOption[]): CategoryOption | null => {
+  if (!raw) return null;
+  const n = Number(raw);
+  return (!isNaN(n) && n > 0)
+    ? options.find((o) => o.value === n) ?? null
+    : null;
+};
+
+const INITIAL_FORM: EditFormData = { name: '', selectedEventType: null, selectedCategory: null, date: '', startTime: '' };
 
 export const useEditPersonalEventForm = () => {
   const { t } = useTranslation(['personal']);
@@ -44,6 +59,15 @@ export const useEditPersonalEventForm = () => {
     [t],
   );
 
+   const categoryOptions: CategoryOption[] = useMemo(
+    () => [
+      { label: t('personal:categoryTypes.walking'), value: 64 },
+      { label: t('personal:categoryTypes.running'), value: 59 },
+      { label: t('personal:categoryTypes.cycling'), value: 60 },
+    ],
+    [t],
+  );
+
   const [formData, setFormData] = useState<EditFormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<EditFormErrors>({});
 
@@ -52,6 +76,7 @@ export const useEditPersonalEventForm = () => {
       setFormData({
         name: event.name ?? '',
         selectedEventType: matchEventType(event.event_type, eventTypeOptions),
+        selectedCategory: matchCategory(event.category_id ?? null, categoryOptions), 
         date: event.race_date ?? '',
         startTime: (event.start_hour ?? '').substring(0, 5), // "HH:MM:SS" → "HH:MM"
       });
@@ -67,7 +92,9 @@ export const useEditPersonalEventForm = () => {
       });
 
       const errorKey: keyof EditFormErrors =
-        field === 'selectedEventType' ? 'eventType' : (field as keyof EditFormErrors);
+        field === 'selectedEventType' ? 'eventType' :
+        field === 'selectedCategory' ? 'category' :   
+        (field as keyof EditFormErrors);
 
       setErrors((prev) => {
         if (!prev[errorKey]) return prev;
@@ -81,6 +108,7 @@ export const useEditPersonalEventForm = () => {
     () => ({
       handleNameChange:      (v: string) => setField('name', v),
       handleEventTypeChange: (v: EventTypeOption) => setField('selectedEventType', v),
+      handleCategoryChange:   (v: CategoryOption | null) => setField('selectedCategory', v),
       handleDateChange:      (v: string) => setField('date', v),
       handleStartTimeChange: (v: string) => setField('startTime', v),
       // ✅ Clears start time — exposed so UI can show a clear button
@@ -128,6 +156,7 @@ export const useEditPersonalEventForm = () => {
     formData,
     errors,
     eventTypeOptions,
+    categoryOptions, 
     initFormFromEvent,
     setFieldError,
     clearAllErrors,

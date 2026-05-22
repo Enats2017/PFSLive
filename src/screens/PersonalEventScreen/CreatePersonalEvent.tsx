@@ -50,6 +50,15 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
     [t]
   );
 
+  const CATEGORY_OPTIONS = useMemo(
+    () => [
+      { label: t('personal:categoryTypes.walking'), value: 64 },
+      { label: t('personal:categoryTypes.running'), value: 59 },
+      { label: t('personal:categoryTypes.cycling'), value: 60 },
+    ],
+    [t]
+  );
+
   const {
     formData,
     errors,
@@ -113,6 +122,9 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
         case 'event_type_required':
           setFieldError('eventType', t('personal:errors.eventTypeRequired'));
           break;
+        case 'category_id_invalid':                                           
+          setFieldError('category', t('personal:errors.categoryInvalid'));    
+          break;
         case 'race_date_required':
           setFieldError('date', t('personal:errors.dateRequired'));
           break;
@@ -155,6 +167,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
       const response = await createPersonalEvent({
         name: formData.name.trim(),
         eventTypeId: formData.selectedEventType?.value ?? null,
+        categoryId: formData.selectedCategory?.value ?? null,
         date: formData.date,
         startTime: formData.startTime,
         timezone: deviceTimezone,
@@ -265,12 +278,28 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
               {errors.name && <Text style={personalStyles.errorText}>{errors.name}</Text>}
             </View>
 
+            <View style={personalStyles.fieldWrapper}>
+              <FloatingLabelInput
+                label={t('personal:category')}
+                value={formData.selectedCategory?.label ?? ''}
+                onChangeText={() => { }}
+                isDropdown
+                options={CATEGORY_OPTIONS}
+                onSelect={handlers.handleCategoryChange}
+                editable={!isSubmitting}
+                error={!!errors.category}
+              />
+              {errors.category && (
+                <Text style={personalStyles.errorText}>{errors.category}</Text>
+              )}
+            </View>
+
             {/* Event Type */}
             <View style={personalStyles.fieldWrapper}>
               <FloatingLabelInput
                 label={t('personal:type')}
                 value={formData.selectedEventType?.label ?? ''}
-                onChangeText={() => {}}
+                onChangeText={() => { }}
                 isDropdown
                 options={EVENT_TYPE_OPTIONS}
                 onSelect={handlers.handleEventTypeChange}

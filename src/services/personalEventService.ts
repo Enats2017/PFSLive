@@ -8,9 +8,15 @@ export interface PersonalEventFile {
   size: number | undefined;
 }
 
+export interface CategoryOption {
+  label: string;
+  value: number;
+}
+
 export interface PersonalEventPayload {
   name: string;
   eventTypeId: number | null;
+  categoryId?: number | null; 
   date: string;
   startTime: string; // empty string = not set (optional)
   timezone?: string;
@@ -94,7 +100,7 @@ export const getTimezoneOffsetString = (): string => {
 };
 
 const buildFormData = (payload: PersonalEventPayload): FormData => {
-  const { name, eventTypeId, date, startTime, timezone, selectedFile } = payload;
+  const { name, eventTypeId, categoryId, date, startTime, timezone, selectedFile } = payload;
   const formData = new FormData();
 
   formData.append('name', name.trim());
@@ -102,6 +108,11 @@ const buildFormData = (payload: PersonalEventPayload): FormData => {
 
   if (eventTypeId !== null && eventTypeId !== undefined) {
     formData.append('event_type', String(eventTypeId));
+  }
+
+  if (categoryId !== null && categoryId !== undefined) {  
+    if (API_CONFIG.DEBUG) console.log('📦 category_id appended:', categoryId);
+    formData.append('category_id', String(categoryId));
   }
 
   if (startTime?.trim()) {
@@ -142,6 +153,7 @@ export const createPersonalEvent = async (
       console.log('📤 Creating personal event:', {
         name: payload.name,
         eventTypeId: payload.eventTypeId,
+        categoryId: payload.categoryId ?? null, 
         date: payload.date,
         startTime: payload.startTime || '(not set)',
         timezone: payload.timezone,
