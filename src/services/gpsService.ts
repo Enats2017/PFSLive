@@ -615,36 +615,37 @@ export const gpsService = {
       }
       await addLog('🚀', `Background task started — interval:${intervalSeconds}s distInterval:${categoryId !== undefined ? (DISTANCE_INTERVAL_METRES[Number(categoryId)] ?? DEFAULT_DISTANCE_INTERVAL_METRES) : DEFAULT_DISTANCE_INTERVAL_METRES}m cat:${categoryId}`);
 
-      // ✅ Foreground watch — UI position updates ONLY, no sends.
-      // Background task handles all API sends.
-      // Paused when screen turns off so it doesn't compete with the background
-      // task for the GPS chip — competition causes Android to reset the
-      // background task's timeInterval counter, causing gaps after app check-ins.
-      const fgWatchOptions = {
-        accuracy: Location.Accuracy.High, // ✅ High — needed for speed/heading on UI
-        timeInterval: Math.min(intervalSeconds * 1000, 5000), // max 5s for smooth UI
-      };
-
       let fgSubscription: Location.LocationSubscription | null = null;
       let fgStarting = false; // ✅ Guard against concurrent async calls
+
+      // ✅ Foreground watch — always High accuracy, always 5s.
+      // Never stopped on screen-off — stopping it caused Android to renegotiate
+      // the GPS session for the background task, batching all updates until the
+      // next Doze maintenance window (causing 10-15 min gaps with screen off).
+      // Both fg watch and bg task use High accuracy — Android merges into one
+      // GPS session internally. No chip contention.
+      const fgWatchOptions = {
+        accuracy: Location.Accuracy.High,
+        timeInterval: Math.min(intervalSeconds * 1000, 5000),
+      };
 
       const startFgWatch = async () => {
         if (fgSubscription || fgStarting) return; // ✅ prevent double subscription
         fgStarting = true;
         try {
-          addLog('👁️', 'Foreground watch started (screen on)');
+          addLog('👁️', 'Foreground watch started (High/5s)');
           fgSubscription = await Location.watchPositionAsync(fgWatchOptions, (location) => {
-          callback({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            altitude: location.coords.altitude,
-            accuracy: location.coords.accuracy,
-            altitudeAccuracy: location.coords.altitudeAccuracy,
-            speed: location.coords.speed,
-            heading: location.coords.heading,
-            timestamp: location.timestamp,
-            mocked: location.mocked,
-          });
+            callback({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              altitude: location.coords.altitude,
+              accuracy: location.coords.accuracy,
+              altitudeAccuracy: location.coords.altitudeAccuracy,
+              speed: location.coords.speed,
+              heading: location.coords.heading,
+              timestamp: location.timestamp,
+              mocked: location.mocked,
+            });
           });
         } finally {
           fgStarting = false; // ✅ always reset so next call can proceed
@@ -655,27 +656,23 @@ export const gpsService = {
         if (fgSubscription) {
           fgSubscription.remove();
           fgSubscription = null;
-          addLog('👁️', 'Foreground watch stopped (screen off)');
+          addLog('👁️', 'Foreground watch stopped');
         }
       };
 
       // ✅ Start foreground watch immediately (app is active)
       await startFgWatch();
 
-      // ✅ Pause foreground watch when screen goes off, resume when screen on.
-      // This prevents GPS chip contention with background task during screen-off,
-      // which was causing background task timeInterval to reset after app check-ins.
+      // ✅ Foreground watch stays running on screen-off — no stop/switch.
+      // AppState listener only logs transitions and restarts watch if somehow stopped.
       _fgAppStateSubscription = AppState.addEventListener('change', (nextState) => {
         if (nextState === 'active') {
-          addLog('📱', 'App foregrounded — foreground watch starting');
-          startFgWatch();
+          addLog('📱', 'App foregrounded');
+          startFgWatch(); // restart if somehow stopped
         } else if (nextState === 'background') {
-          addLog('🌙', 'App backgrounded — foreground watch stopped, background task continues');
-          stopFgWatch();
+          addLog('🌙', 'App backgrounded — fg watch continues (prevents GPS renegotiation)');
         } else if (nextState === 'inactive') {
-          // iOS only — transitioning between foreground/background
-          addLog('💤', 'App inactive (screen off / transitioning)');
-          stopFgWatch();
+          addLog('💤', 'App inactive (iOS transition)');
         }
       });
 
