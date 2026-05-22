@@ -26,7 +26,7 @@ import { AppHeader } from '../components/common/AppHeader';
 import { UpdateRequiredModal } from '../components/UpdateRequiredModal';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
-import { gpsService, BACKGROUND_SENT_COUNT_KEY } from '../services/gpsService';
+import { gpsService, BACKGROUND_SENT_COUNT_KEY, ensureBackgroundTaskAlive } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
@@ -161,6 +161,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const serverTimeOffsetRef = useRef<number>(0);
   // ✅ Ref so GPS callback always reads current value without stale closure
   const isSendingDataRef = useRef<boolean>(false);
+  // ✅ Ref to tracking params — needed by watchdog to restart task if killed
+  const trackingParamsRef = useRef<{
+    intervalSeconds: number;
+    notificationTitle: string;
+    notificationBody: string;
+  } | null>(null);
 
   // Derived values
   const participantId = homeData?.next_race_participant_app_id || null;
@@ -297,8 +303,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const hasRaceStarted = useCallback((): boolean => {
     if (homeData?.manual_start === 1) return true;
     if (!raceStartTimeRef.current) return false;
-    return getServerTime() >= raceStartTimeRef.current;
-  }, [homeData?.manual_start, getServerTime]);
+    // ✅ raceStartTimeRef is real UTC ms (Date.now() + msUntilRace).
+    // Compare against Date.now() directly — no offset needed.
+    // getServerTime() returns fake-UTC ms (event-tz number) which is
+    // numerically larger than real UTC, causing race to appear started early.
+    return Date.now() >= raceStartTimeRef.current.getTime();
+  }, [homeData?.manual_start]);
 
   // ==================== BATTERY OPTIMIZATION ====================
 
@@ -526,9 +536,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
 
     try {
-      const now = getServerTime();
+      // ✅ raceStartTimeRef is real UTC ms — compare against Date.now() directly.
+      const now = Date.now();
       const raceTime = raceStartTimeRef.current;
-      const diff = raceTime.getTime() - now.getTime();
+      const diff = raceTime.getTime() - now;
 
       if (diff <= 0) {
         setTimeUntilRace('Race started!');
@@ -587,7 +598,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // ✅ Use ref — not state — so callback reads current value not stale closure
       const started = hasRaceStarted();
       if (API_CONFIG.DEBUG) {
-        console.log('🕐 Race check — started:', started, '| server time:', getServerTime().toLocaleString());
+        console.log('🕐 Race check — started:', started, '| now (UTC):', new Date().toISOString(), '| raceTime (UTC):', raceStartTimeRef.current?.toISOString());
       }
       if (started && !isSendingDataRef.current) {
         isSendingDataRef.current = true;
@@ -742,6 +753,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       gpsWatchRef.current = gpsWatch;
 
+      // ✅ Store for watchdog use in AppState listener
+      trackingParamsRef.current = {
+        intervalSeconds: intervalValue,
+        notificationTitle: t('home:tracking.backgroundNotificationTitle'),
+        notificationBody: t('home:tracking.backgroundNotificationBody'),
+      };
+
       startQueueProcessor();
 
       if (homeData?.manual_start !== 1) {
@@ -831,6 +849,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     isSendingDataRef.current = false;
     setIsSendingData(false);
     setCurrentLocation(null);
+    trackingParamsRef.current = null;
     AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => {});
 
     // ✅ Attempt to drain queue immediately on stop — covers the case where
@@ -894,36 +913,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // Countdown timer + background sent count sync + queue count sync
   useEffect(() => {
-    if (isGPSActive) {
-      const interval = setInterval(async () => {
-        calculateTimeUntilRace();
+    if (!isGPSActive) return;
+    const interval = setInterval(async () => {
+      calculateTimeUntilRace();
 
-        // ✅ Sync locationUpdateCount from background task's AsyncStorage counter.
-        try {
-          const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
-          if (countStr) {
-            const bgCount = parseInt(countStr);
-            setLocationUpdateCount(bgCount);
-          }
-        } catch {
-          // silent
-        }
+      // ✅ Sync locationUpdateCount from background task's AsyncStorage counter.
+      try {
+        const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+        if (countStr) setLocationUpdateCount(parseInt(countStr));
+      } catch { /* silent */ }
 
-        // ✅ Sync queuedCount — read the lightweight count key written by
-        // locationQueueService on every addToQueue/removeFromQueue call.
-        // Avoids parsing the full queue JSON on every 1s tick.
-        try {
-          const queueCountStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
-          if (queueCountStr !== null) {
-            setQueuedCount(parseInt(queueCountStr) || 0);
-          }
-        } catch {
-          // silent
-        }
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [isGPSActive, homeData?.manual_start, calculateTimeUntilRace]);
+      // ✅ Sync queuedCount — read the lightweight count key written by
+      // locationQueueService on every addToQueue/removeFromQueue call.
+      // Avoids parsing the full queue JSON on every 1s tick.
+      try {
+        const queueCountStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
+        if (queueCountStr !== null) setQueuedCount(parseInt(queueCountStr) || 0);
+      } catch { /* silent */ }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isGPSActive, calculateTimeUntilRace]);
 
   // Block back button on forced update
   useEffect(() => {
@@ -947,6 +956,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         if (isGPSActive && participantId && eventId) {
+          // ✅ Watchdog: restart background task if Android killed it while backgrounded.
+          // Common on Xiaomi, Samsung, OnePlus with aggressive battery management.
+          if (trackingParamsRef.current) {
+            ensureBackgroundTaskAlive(
+              participantId,
+              eventId,
+              trackingParamsRef.current.intervalSeconds,
+              homeData?.next_race_category_id,
+              raceStartTimeRef.current?.toISOString() ?? null,
+              homeData?.manual_start,
+              trackingParamsRef.current.notificationTitle,
+              trackingParamsRef.current.notificationBody,
+            ).then(alive => {
+              if (API_CONFIG.DEBUG) console.log('🔍 Background task alive:', alive);
+            });
+          }
+
           locationService.processQueue(participantId, eventId).then(async sentCount => {
             if (sentCount > 0) {
               try {
@@ -1335,7 +1361,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               )}
 
               {/* Manual Override (DEBUG only) */}
-              {API_CONFIG.DEBUG &&
+              {/*API_CONFIG.DEBUG &&
                 isGPSActive &&
                 !isSendingData &&
                 homeData?.manual_start !== 1 && (
@@ -1354,7 +1380,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       {t('home:alerts.startNow')} (OVERRIDE)
                     </Text>
                   </TouchableOpacity>
-                )}
+                )*/}
             </>
           ) : (
             <>

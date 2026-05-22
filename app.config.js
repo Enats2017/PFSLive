@@ -146,7 +146,10 @@ export default ({ config }) => {
         {
           locationAlwaysAndWhenInUsePermission: "Allow Livio to use your location to track your race progress.",
           locationAlwaysPermission: "Allow Livio to use your location even when the app is in the background.",
-          locationWhenInUsePermission: "Allow Livio to use your location to track your race progress."
+          locationWhenInUsePermission: "Allow Livio to use your location to track your race progress.",
+          isHighAccuracyEnabled: true,
+          isAndroidBackgroundLocationEnabled: true,
+          isIosBackgroundLocationEnabled: true,
         }
       ],
       "expo-localization",

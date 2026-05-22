@@ -163,6 +163,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     ele: data.checkpoint.elevation,
                     distance_km: data.checkpoint.distance,
                     accessible_by_car: data.checkpoint.accessible_by_car,
+                    features: data.checkpoint.features ?? [],
                 };
             } else {
                 // GPX aid station
@@ -174,6 +175,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     ele: data.station.ele,
                     distance_km: data.station.distance || 0,
                     accessible_by_car: data.station.accessible_by_car,
+                    features: data.station.features ?? [],
                 };
             }
             

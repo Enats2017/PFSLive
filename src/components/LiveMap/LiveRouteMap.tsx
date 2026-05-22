@@ -139,9 +139,15 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
 
     const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
         console.log('🗺️ Creating participants GeoJSON with', participants.length, 'participants');
+
+        // ✅ Filter out (0,0) coords — null lat/lon gets parsed as 0 by safeParseFloat.
+        // (0,0) is a real coordinate in the Gulf of Guinea — not a race location.
+        // Already filtered in LiveTrackingScreen but kept here as a safety net.
+        const validParticipants = participants.filter(p => p.lat !== 0 || p.lon !== 0);
+
         return {
             type: 'FeatureCollection',
-            features: participants.map(p => ({
+            features: validParticipants.map(p => ({
                 type: 'Feature',
                 properties: {
                     id: p.id,
