@@ -136,37 +136,51 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
     const renderItem = useCallback(
         ({ item }: { item: EventItem }) => (
-            <View
+            <TouchableOpacity
                 style={[
                     commonStyles.card,
                     {
-                        paddingTop: spacing.xs,
-                        padding: 0,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingHorizontal: spacing.lg,
+                        paddingVertical: spacing.md,
                         marginBottom: spacing.md,
                     },
                 ]}
+                onPress={() =>
+                    navigation.navigate('FollowDetails', {
+                        product_app_id: Number(item.product_app_id),
+                        event_name: item.name,
+                        sourceTab: 'past',
+                    })
+                }
+                activeOpacity={0.8}
             >
-                <View style={eventStyles.header}>
-                    <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
-                        {item.name}
-                    </Text>
-                    <Text style={commonStyles.subtitle}>{formatEventDate(item.race_date, t)}</Text>
+                <View style={eventStyles.eventCardInfo}>
+                    <Text style={[commonStyles.title, { marginBottom: 4 }]}>{item.name}</Text>
+                    <View style={eventStyles.eventCardDateRow}>
+                        <Ionicons name="calendar-outline" size={14} color={colors.gray500} />
+                        <Text style={commonStyles.date}>
+                            {formatEventDate(item.race_date, t)}
+                        </Text>
+                    </View>
                 </View>
+
+                {/* Eye icon button - dark blue */}
                 <TouchableOpacity
-                    style={[commonStyles.primaryButton, { borderRadius: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, }]}
+                    style={eventStyles.iconButtonBlue}
                     onPress={() =>
                         navigation.navigate('FollowDetails', {
                             product_app_id: Number(item.product_app_id),
                             event_name: item.name,
                             sourceTab: 'past',
-
                         })
                     }
                     activeOpacity={0.8}
                 >
-                    <Text style={commonStyles.primaryButtonText}>{t('event:past.button')}</Text>
+                    <Ionicons name="bar-chart-outline" size={23} color={colors.primaryDark} />
                 </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
         ),
         [navigation, t]
     );

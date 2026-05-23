@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react
 import { EventItem } from '../../services/followerEvent';
 import { commonStyles, spacing, colors } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { formatEventDate } from '../../utils/dateFormatter';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,60 +21,78 @@ interface UpcomingTabProps {
 const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { t } = useTranslation(['follower', 'common']);
-     const handleLoadMore = useCallback(() => {
-            if (API_CONFIG.DEBUG) {
-                console.log('🔍 Upcoming onEndReached:', {
-                    hasMore,
-                    loadingMore,
-                    eventsCount: events.length,
-                });
-            }
-    
-            if (hasMore && !loadingMore) {
-                if (API_CONFIG.DEBUG) {
-                    console.log('✅ Calling onLoadMore');
-                }
-                onLoadMore();
-            } else {
-                if (API_CONFIG.DEBUG) {
-                    console.log('⏸️ Skipped - hasMore:', hasMore, 'loadingMore:', loadingMore);
-                }
-            }
-        }, [hasMore, loadingMore, onLoadMore, events.length]);
+    const handleLoadMore = useCallback(() => {
+        if (API_CONFIG.DEBUG) {
+            console.log('🔍 Upcoming onEndReached:', {
+                hasMore,
+                loadingMore,
+                eventsCount: events.length,
+            });
+        }
 
-    const renderItem = useCallback(({ item }: { item: EventItem }) => (
-        <View style={[
-            commonStyles.card,
-            {
-                paddingTop: spacing.xs,
-                padding: 0,
-                
-                marginBottom: spacing.md // ✅ Consistent spacing
+        if (hasMore && !loadingMore) {
+            if (API_CONFIG.DEBUG) {
+                console.log('✅ Calling onLoadMore');
             }
-        ]}>
-            <View style={eventStyles.header}>
-                <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
-                    {item.name}
-                </Text>
-                <Text style={commonStyles.subtitle}>
-                    {formatEventDate(item.race_date, t)}
-                </Text>
-            </View>
+            onLoadMore();
+        } else {
+            if (API_CONFIG.DEBUG) {
+                console.log('⏸️ Skipped - hasMore:', hasMore, 'loadingMore:', loadingMore);
+            }
+        }
+    }, [hasMore, loadingMore, onLoadMore, events.length]);
+
+    const renderItem = useCallback(
+        ({ item }: { item: EventItem }) => (
             <TouchableOpacity
-                style={[commonStyles.primaryButton, { borderRadius: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12,}]}
-                 onPress={() => navigation.navigate('FollowDetails', {
-                    product_app_id: Number(item.product_app_id),
-                    event_name: item.name,
-                    sourceTab: 'upcoming',         
-                })}
+                style={[
+                    commonStyles.card,
+                    {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingHorizontal: spacing.lg,
+                        paddingVertical: spacing.md,
+                        marginBottom: spacing.md,
+                    },
+                ]}
+                onPress={() =>
+                    navigation.navigate('FollowDetails', {
+                        product_app_id: Number(item.product_app_id),
+                        event_name: item.name,
+                        sourceTab: 'upcoming',
+                    })
+                }
                 activeOpacity={0.8}
             >
-                <Text style={commonStyles.primaryButtonText}>
-                    {t('follower:button.show_event')}
-                </Text>
+                <View style={eventStyles.eventCardInfo}>
+                    <Text style={[commonStyles.title, { marginBottom: 4 }]}>{item.name}</Text>
+                    <View style={eventStyles.eventCardDateRow}>
+                        <Ionicons name="calendar-outline" size={14} color={colors.gray500} />
+                        <Text style={commonStyles.date}>
+                            {formatEventDate(item.race_date, t)}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Eye icon button - dark blue */}
+                <TouchableOpacity
+                    style={eventStyles.iconButtonBlue}
+                    onPress={() =>
+                        navigation.navigate('FollowDetails', {
+                            product_app_id: Number(item.product_app_id),
+                            event_name: item.name,
+                            sourceTab: 'upcoming',
+                        })
+                    }
+                    activeOpacity={0.8}
+                >
+                    <Ionicons name="eye-outline" size={23} color={colors.primaryDark} />
+                </TouchableOpacity>
             </TouchableOpacity>
-        </View>
-    ), [navigation, t]);
+        ),
+        [navigation, t]
+    );
+
 
     const keyExtractor = useCallback(
         (item: EventItem, index: number) => `${item.product_app_id}-${index}`,

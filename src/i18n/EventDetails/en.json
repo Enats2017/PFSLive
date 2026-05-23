@@ -21,7 +21,7 @@
   },
   "athletes": "Athletes",
   "participant": {
-    "empty": "No participants yet",
+    "empty": "Search participants by name or bib number",
     "search": "Search participants by name, bib number",
     "searching": "Searching...",
     "noResults": "No participants found for",

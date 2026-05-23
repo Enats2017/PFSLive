@@ -21,7 +21,7 @@
     "empty": "Geen afstanden beschikbaar"
   },
   "participant": {
-    "empty": "Nog geen deelnemers",
+    "empty": "Zoek deelnemers op naam, rugnummer",
     "search": "Zoek deelnemers op naam, rugnummer",
     "searching": "Zoeken...",
     "noResults": "Geen deelnemers gevonden voor",
