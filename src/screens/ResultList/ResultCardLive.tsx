@@ -27,6 +27,23 @@ const getActiveCheckpoints = (checkpoints: RaceResult['checkpoints']) => {
     return crossedCheckpoints.slice(-2);
 };
 
+// ✅ Returns { lastCrossed, nextCp, finishCp } for the live stats row
+// lastCrossed — most recently crossed checkpoint (race_time = elapsed)
+// nextCp      — first not-yet-crossed checkpoint (actual_time = ETA)
+// finishCp    — last checkpoint in array (always finish, actual_time = ETA finish)
+const getLiveStats = (checkpoints: RaceResult['checkpoints']) => {
+    if (!checkpoints || checkpoints.length === 0) {
+        return { lastCrossed: null, nextCp: null, finishCp: null };
+    }
+    const crossed = checkpoints.filter(cp => cp.is_crossed === true);
+    const notCrossed = checkpoints.filter(cp => cp.is_crossed === false);
+    const lastCrossed = crossed.length > 0 ? crossed[crossed.length - 1] : null;
+    const nextCp = notCrossed.length > 0 ? notCrossed[0] : null;
+    // ✅ Finish is always the last checkpoint regardless of is_crossed
+    const finishCp = checkpoints[checkpoints.length - 1];
+    return { lastCrossed, nextCp, finishCp };
+};
+
 const truncateCheckpointName = (name: string, maxLength: number = 12): string => {
     if (!name) return '';
     if (name.length <= maxLength) return name;
@@ -51,6 +68,8 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     const isLive = item.live_tracking_activated === 1;
     const activeCheckpoints = getActiveCheckpoints(item.checkpoints);
     const isFemale = item.gender === 'female';
+    // ✅ Live stats for bottom row: last crossed CP, next CP ETA, finish ETA
+    const { lastCrossed, nextCp, finishCp } = getLiveStats(item.checkpoints);
 
     // ✅ Gender rank only for female
     const genderRank = isFemale && item.finish_rank_gender
@@ -106,9 +125,19 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     {t('allrace:race.bibNumber')} {item.bib}
                 </Text>
 
-                <Text style={resultListStyle.teamText} numberOfLines={1}>
-                    {[item.club, item.nation].filter(Boolean).join(' · ')}
-                </Text>
+                {/* ✅ Flag + country + age row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                    {item.nation_flag ? (
+                        <SvgUri
+                            uri={item.nation_flag}
+                            width={20}
+                            height={14}
+                        />
+                    ) : null}
+                    <Text style={resultListStyle.teamText} numberOfLines={1}>
+                        {[item.club, item.nation, item.age].filter(Boolean).join(' · ')}
+                    </Text>
+                </View>
 
                 {isLive && (
                     <View style={{ marginTop: 6 }}>
@@ -119,10 +148,17 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                 <View style={resultListStyle.statsRow}>
                     <View style={[
                         resultListStyle.statCol,
-                        fromLive === 1 && activeCheckpoints.length === 0 && { alignItems: 'flex-start' },
+                        fromLive === 1 && !lastCrossed && { alignItems: 'flex-start' },
                     ]}>
-                        <Text style={resultListStyle.statLabel}>{t('allrace:race.time')}</Text>
-                        <Text style={resultListStyle.statVal}>{item.time}</Text>
+                        {/* ✅ Col 1: Last crossed CP race time (green) — always shown */}
+                        <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                            {lastCrossed
+                                ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
+                                : t('allrace:race.raceTime')}
+                        </Text>
+                        <Text style={[resultListStyle.statVal, { color: lastCrossed?.race_time ? '#22C55E' : '#9CA3AF' }]}>
+                            {lastCrossed?.race_time || item.time || '-'}
+                        </Text>
                     </View>
 
                     {fromLive === 0 ? (
@@ -140,39 +176,29 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         </>
                     ) : (
                         <>
-                            {activeCheckpoints[0] && (
-                                <View style={[
-                                    resultListStyle.statCol,
-                                    activeCheckpoints[1] ? resultListStyle.statColMid : resultListStyle.statColLeft,
-                                ]}>
-                                    <Text style={resultListStyle.statLabel} numberOfLines={1}>
-                                        {truncateCheckpointName(activeCheckpoints[0].name)}
-                                    </Text>
-                                    <Text style={resultListStyle.statVal}>
-                                        {activeCheckpoints[0].day_name
-                                            ? t(`common:week.${activeCheckpoints[0].day_name.toLowerCase()}`)
-                                            : '-'}
-                                    </Text>
-                                    <Text style={resultListStyle.statVal}>
-                                        {activeCheckpoints[0].actual_time || '-'}
-                                    </Text>
-                                </View>
-                            )}
-                            {activeCheckpoints[1] && (
-                                <View style={resultListStyle.statCol}>
-                                    <Text style={resultListStyle.statLabel} numberOfLines={1}>
-                                        {truncateCheckpointName(activeCheckpoints[1].name)}
-                                    </Text>
-                                    <Text style={resultListStyle.statVal}>
-                                        {activeCheckpoints[1].day_name
-                                            ? t(`common:week.${activeCheckpoints[1].day_name.toLowerCase()}`)
-                                            : '-'}
-                                    </Text>
-                                    <Text style={resultListStyle.statVal}>
-                                        {activeCheckpoints[1].actual_time || '-'}
-                                    </Text>
-                                </View>
-                            )}
+                            {/* ✅ Col 2: Next CP ETA — if race finished, show lastCrossed actual_time */}
+                            <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
+                                <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                                    {nextCp
+                                        ? `ETA ${truncateCheckpointName(nextCp.name)}`
+                                        : lastCrossed
+                                            ? truncateCheckpointName(lastCrossed.name)
+                                            : 'ETA'}
+                                </Text>
+                                <Text style={resultListStyle.statVal}>
+                                    {nextCp?.actual_time || lastCrossed?.actual_time || '-'}
+                                </Text>
+                            </View>
+
+                            {/* ✅ Col 3: ETA Finish — always finish CP actual_time */}
+                            <View style={resultListStyle.statCol}>
+                                <Text style={resultListStyle.statLabel} numberOfLines={1}>
+                                    {t('allrace:race.etaFinish')}
+                                </Text>
+                                <Text style={resultListStyle.statVal}>
+                                    {finishCp?.actual_time || '-'}
+                                </Text>
+                            </View>
                         </>
                     )}
                 </View>
@@ -185,7 +211,9 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     prev.isFollowed === next.isFollowed &&
     prev.isLoading === next.isLoading &&
     prev.item.position === next.item.position &&
-    prev.item.live_tracking_activated === next.item.live_tracking_activated
+    prev.item.live_tracking_activated === next.item.live_tracking_activated &&
+    // ✅ Re-render when checkpoints change — live stats depend on them
+    prev.item.checkpoints === next.item.checkpoints
 );
 
 ResultCardLive.displayName = 'ResultCardLive';

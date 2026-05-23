@@ -26,7 +26,7 @@ import { AppHeader } from '../components/common/AppHeader';
 import { UpdateRequiredModal } from '../components/UpdateRequiredModal';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
-import { gpsService, BACKGROUND_SENT_COUNT_KEY, ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry } from '../services/gpsService';
+import { gpsService, BACKGROUND_SENT_COUNT_KEY, ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry, startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
@@ -756,6 +756,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       gpsWatchRef.current = gpsWatch;
 
+      // ✅ Start background fetch keepalive — fires every 15s via JobScheduler.
+      // Bypasses Samsung One UI Adaptive Battery throttling of GPS during walking.
+      await startBackgroundFetchKeepalive();
+
       // ✅ Store for watchdog use in AppState listener
       trackingParamsRef.current = {
         intervalSeconds: intervalValue,
@@ -854,6 +858,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setCurrentLocation(null);
     trackingParamsRef.current = null;
     AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => {});
+
+    // ✅ Stop background fetch keepalive
+    await stopBackgroundFetchKeepalive();
 
     // ✅ Attempt to drain queue immediately on stop — covers the case where
     // network was unavailable during the race and locations were queued.

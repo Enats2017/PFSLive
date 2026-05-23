@@ -4,12 +4,13 @@
     "noResults": "Geen resultaten voor deze filters.",
     "live": "LIVE",
     "bibNumber": "Startnummer",
-    "time": "TIJD",
+    "raceTime": "RACE TIJD",
     "diffFirst": "VERSCHIL 1E",
     "ranking": "RANGSCHIKKING",
     "retry": "Opnieuw proberen",
     "errorLoad": "Kan resultaten niet laden. Tik om opnieuw te proberen.",
-    "utmbIndex": "INDEX"
+    "utmbIndex": "INDEX",
+    "etaFinish": "ETA FINISH"
   },
   
   "filter": {

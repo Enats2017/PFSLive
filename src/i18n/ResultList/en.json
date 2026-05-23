@@ -4,12 +4,13 @@
     "noResults": "No results for these filters.",
     "live": "LIVE",
     "bibNumber": "Bib number",
-    "time": "TIME",
+    "raceTime": "RACE TIME",
     "diffFirst": "DIFF 1ST",
     "ranking": "RANKING",
     "retry": "Retry",
     "errorLoad": "Failed to load results. Tap to retry.",
-    "utmbIndex": "INDEX"
+    "utmbIndex": "INDEX",
+    "etaFinish": "ETA FINISH"
   },
   
   "filter": {
