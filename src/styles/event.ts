@@ -64,4 +64,22 @@ export const eventStyles = StyleSheet.create({
     width: "60%",
     borderRadius: 2,
   },
+
+  eventCardInfo: {
+  flex: 1,
+  
+},
+
+eventCardDateRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+iconButtonBlue: {
+  backgroundColor: colors.themeiColor,
+  borderRadius: 8,
+  width: 45,
+  height: 40,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
 });

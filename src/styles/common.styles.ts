@@ -14,6 +14,7 @@ export const colors = {
   
   // Status colors
   success: '#4CAF50',
+  ligtgreen: '#88E788',
   warning: '#FF9800',
   error: '#DC143C',
   info: '#2196F3',
@@ -42,8 +43,10 @@ export const colors = {
   inputBgSelected: '#fff5f5',  // BG_SELECTED
   inputBgItem: '#f3f4f6',      // BG_ITEM
 
-  themeiColor: '#d5d92c',
+  themeiColor: '#D1E231',
   themeblue: '#0f2a40',
+
+  
 };
 
 // Spacing
@@ -97,17 +100,27 @@ export const commonStyles = StyleSheet.create({
     backgroundColor: colors.gray300,
     marginVertical: spacing.sm,
   },
+
+  date:{
+     fontSize: typography.sizes.sm,
+      color: colors.gray600,
+      fontWeight: typography.weights.regular,
+      marginLeft: 5,
+
+  },
   
   // Text
   text: {
     fontSize: typography.sizes.md,
     color: colors.black,
     fontWeight: typography.weights.regular,
+    
   },
   title: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.black,
+    marginBottom: 2,
     
   },
 
@@ -231,4 +244,6 @@ export const commonStyles = StyleSheet.create({
     justifyContent: 'center',
     minWidth: 120,
   },
+
+ 
 });

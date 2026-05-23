@@ -21,7 +21,7 @@
     "empty": "Aucune distance disponible"
   },
   "participant": {
-    "empty": "Pas encore de participants",
+    "empty": "Rechercher des participants par nom numéro de dossard",
     "search": "Rechercher des participants par nom, numéro de dossard",
     "searching": "Recherche...",
     "noResults": "Aucun participant trouvé pour",
