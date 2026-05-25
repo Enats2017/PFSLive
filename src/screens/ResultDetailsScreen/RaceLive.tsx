@@ -8,6 +8,7 @@ import { resultListStyle } from '../../styles/ResultList.styles';
 import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/resultDetailsService';
 import ElevationChart from '../../components/ElevationChart';
 import { useGpxElevation } from '../../hooks/useGpxElevation';
+import { formatClockTime } from '../../utils/timeFormat';
 
 const parseTimeToSeconds = (time: string): number => {
     if (!time) return 0;
@@ -103,9 +104,9 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                                 {raceInfo.next_cp.name}
                             </Text>
                             <Text style={resultInfoStyles.timingPointDate}>
-                                {raceInfo.next_cp.day_name 
-                                    ? `${t(`common:week.${raceInfo.next_cp.day_name.toLowerCase()}`)} ${raceInfo.next_cp.predicted_time ?? '—'}`
-                                    : raceInfo.next_cp.predicted_time ?? '—'
+                                {raceInfo.next_cp.day_name
+                                    ? `${t(`common:week.${raceInfo.next_cp.day_name.toLowerCase()}`)} ${formatClockTime(raceInfo.next_cp.predicted_time) || '—'}`
+                                    : formatClockTime(raceInfo.next_cp.predicted_time) || '—'
                                 }
                             </Text>
                             {raceInfo.next_cp.predicted_minutes != null && (
@@ -127,8 +128,8 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                         </Text>
                         <Text style={resultInfoStyles.timingPointDate}>
                             {raceInfo.previous_cp.day_name
-                                ? `${t(`common:week.${raceInfo.previous_cp.day_name.toLowerCase()}`)} ${raceInfo.previous_cp.actual_time || '—'}`
-                                : raceInfo.previous_cp.actual_time || '—'
+                                ? `${t(`common:week.${raceInfo.previous_cp.day_name.toLowerCase()}`)} ${formatClockTime(raceInfo.previous_cp.actual_time) || '—'}`
+                                : formatClockTime(raceInfo.previous_cp.actual_time) || '—'
                             }
                         </Text>
                         <View style={[resultInfoStyles.headerBar, {
