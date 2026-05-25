@@ -10,9 +10,11 @@
     "retry": "Retry",
     "errorLoad": "Failed to load results. Tap to retry.",
     "utmbIndex": "INDEX",
-    "etaFinish": "ETA FINISH"
+    "eta": "ETA",
+    "etaFinish": "ETA FINISH",
+    "finish": "FINISH"
   },
-  
+
   "filter": {
     "results": "Results",
     "live": "Live",

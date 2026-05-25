@@ -10,7 +10,9 @@
     "retry": "Réessayer",
     "errorLoad": "Échec du chargement des résultats. Appuyez pour réessayer.",
     "utmbIndex": "INDEX",
-    "etaFinish": "ETA ARRIVÉE"
+    "eta": "ETA",
+    "etaFinish": "ETA ARRIVÉE",
+    "finish": "ARRIVÉE"
   },
   
   "filter": {

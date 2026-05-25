@@ -176,24 +176,24 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         </>
                     ) : (
                         <>
-                            {/* ✅ Col 2: Next CP ETA — if race finished, show lastCrossed actual_time */}
+                            {/* ✅ Col 2: Next CP ETA — if race finished (no next), show lastCrossed name only (no ETA prefix) */}
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                 <Text style={resultListStyle.statLabel} numberOfLines={2}>
                                     {nextCp
-                                        ? `ETA ${truncateCheckpointName(nextCp.name)}`
+                                        ? `${t('allrace:race.eta')} ${truncateCheckpointName(nextCp.name)}`
                                         : lastCrossed
                                             ? truncateCheckpointName(lastCrossed.name)
-                                            : 'ETA'}
+                                            : t('allrace:race.eta')}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
                                     {nextCp?.actual_time || lastCrossed?.actual_time || '-'}
                                 </Text>
                             </View>
 
-                            {/* ✅ Col 3: ETA Finish — always finish CP actual_time */}
+                            {/* ✅ Col 3: Finish — 'FINISH' once crossed (actual time), else 'ETA FINISH' */}
                             <View style={resultListStyle.statCol}>
                                 <Text style={resultListStyle.statLabel} numberOfLines={1}>
-                                    {t('allrace:race.etaFinish')}
+                                    {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
                                     {finishCp?.actual_time || '-'}

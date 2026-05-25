@@ -14,16 +14,22 @@ export const favstyle = StyleSheet.create({
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.01,
-       ...Platform.select({
-        ios: {
-          shadowOpacity: 0.15,
-          shadowRadius: 5,
-        },
-       
-      }),
+    ...Platform.select({
+      ios: {
+        shadowOpacity: 0.15,
+        shadowRadius: 5,
+      },
+    }),
     shadowRadius: 10,
     elevation: 4,
     paddingBottom: 10,
+    overflow: "hidden", // ✅ keep diagonal header + badge inside rounded corners
+  },
+
+  // ── Diagonal header ──────────────────────────────────────
+  headerBar: {
+    flexDirection: "row",
+    alignItems: "center",
   },
 
   headerLeft: {
@@ -35,6 +41,12 @@ export const favstyle = StyleSheet.create({
     width: 120,
     height: 33,
     zIndex: 3,
+  },
+
+  // ✅ Header label text (status + distance)
+  headerText: {
+    fontSize: typography.sizes.md,
+    fontWeight: "600",
   },
 
   diagLeft: {
@@ -82,35 +94,135 @@ export const favstyle = StyleSheet.create({
     zIndex: 1,
   },
 
-  body: {
+  // ── Star + rank badge (interactive) ──────────────────────
+  cornerBadge: {
+    position: "absolute",
+    top: 45,
+    right: 14,
+    flexDirection: "row",
     alignItems: "center",
-    paddingTop: 10,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    zIndex: 20,
+    gap: 8,
+    minWidth: 56,
+    justifyContent: "center",
   },
 
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: 8,
+  cornerStar: {
+    fontSize: 26,
+    color: "#FFD700",
   },
 
-  profilePlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  cornerStarUnfilled: {
+    fontSize: 26,
+    color: "#FFFFFF",
+  },
+
+  cornerBadgeRight: {
+    alignItems: "flex-start",
+    justifyContent: "center",
+    gap: 2,
+  },
+
+  cornerNum: {
+    color: colors.white,
+    fontSize: 20,
+    fontWeight: "700",
+    lineHeight: 22,
+  },
+
+  cornerGenderRank: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 12,
+    fontWeight: "900",
+    lineHeight: 14,
+  },
+
+  // ── Body ─────────────────────────────────────────────────
+  bodyRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 12,
+  },
+
+  bodyLeft: {
+    flex: 1,
+    paddingRight: 90, // ✅ leave room for the badge on the right
+  },
+
+  runnerName: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.gray900,
+  },
+
+  bibText: {
+    fontSize: 12,
+    color: colors.gray500,
+    marginTop: 4,
+  },
+
+  nationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
+  },
+
+  nationText: {
+    fontSize: 12,
+    color: colors.gray500,
+    flexShrink: 1,
+  },
+
+  // ── Separator ────────────────────────────────────────────
+  separator: {
+    height: 1,
     backgroundColor: colors.gray200,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
+    marginHorizontal: 16,
   },
 
-  profileInitials: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.gray700,
+  // ── Stats row (3 columns) ────────────────────────────────
+  statsRow: {
+    flexDirection: "row",
+    paddingVertical: 14,
+    paddingHorizontal: 8,
   },
 
+  statCol: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
+  statColMid: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.gray300,
+  },
+
+  statLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: colors.gray500,
+    textAlign: "center",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+
+  statVal: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.gray900,
+    textAlign: "center",
+  },
+
+  // ── Finish time (kept for backward compatibility) ────────
   finishTime: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
@@ -119,6 +231,7 @@ export const favstyle = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
+  // ── Add button (FAB) ─────────────────────────────────────
   addButtonContainer: {
     position: "absolute",
     bottom: 140,
@@ -144,13 +257,42 @@ export const favstyle = StyleSheet.create({
     justifyContent: "center",
   },
 
+  // ── Legacy styles kept for any other consumers ───────────
+  body: {
+    alignItems: "center",
+    paddingTop: 10,
+  },
+
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 8,
+  },
+
+  profilePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.gray200,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+  profileInitials: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: colors.gray700,
+  },
+
   bibBox: {
     width: 60,
     height: 60,
     borderRadius: 10,
     backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   content: {
@@ -163,34 +305,33 @@ export const favstyle = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 2,
-    borderColor: '#ccc',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "#ccc",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 5,
   },
 
   righticon: {
     width: 44,
     height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-   
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   addBtnActive: {
     borderColor: colors.primary,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
   },
 
   participantcard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.white,
     borderRadius: 10,
     padding: 5,
     marginVertical: 5,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },

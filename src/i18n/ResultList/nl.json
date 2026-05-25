@@ -10,7 +10,9 @@
     "retry": "Opnieuw proberen",
     "errorLoad": "Kan resultaten niet laden. Tik om opnieuw te proberen.",
     "utmbIndex": "INDEX",
-    "etaFinish": "ETA FINISH"
+    "eta": "ETA",
+    "etaFinish": "ETA FINISH",
+    "finish": "FINISH"
   },
   
   "filter": {

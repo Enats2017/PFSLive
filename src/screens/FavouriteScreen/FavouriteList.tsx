@@ -8,6 +8,7 @@ import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
+import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import FavouriteCard from './FavouriteCard';
 import { favouritesApi, FavouriteItem } from '../../services/favourites';
 import { API_CONFIG } from '../../constants/config';
@@ -15,6 +16,7 @@ import { FavouriteListpops } from '../../types/navigation';
 import { favstyle } from '../../styles/favourite.style';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
+import { useFollowManager } from '../../hooks/useFollowManager';
 
 const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const {
@@ -30,37 +32,37 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const [favourites, setFavourites] = useState<FavouriteItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    //const [error, setError] = useState<string | null>(null);
-    const [paginationInfo, setPaginationInfo] = useState({
-        page: 1,
-        total_pages: 1,
-    });
+    const [paginationInfo, setPaginationInfo] = useState({ page: 1, total_pages: 1 });
     const isFetching = useRef(false);
     const isInitialMount = useRef(true);
 
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
+    // ✅ Same follow plumbing as ResultListScreen — single source of truth
+    const {
+        isFollowed,
+        isLoading,
+        refreshFollowedUsers,
+        handleFollowPress,
+        passwordModalVisible,
+        isVerifying,
+        passwordError,
+        handlePasswordSubmit,
+        handlePasswordModalClose,
+    } = useFollowManager(t, product_app_id);
+
     const fetchFavourites = useCallback(async () => {
         if (isFetching.current) {
-            if (API_CONFIG.DEBUG) {
-                console.log('⏸️ Fetch already in progress');
-            }
+            if (API_CONFIG.DEBUG) console.log('⏸️ Fetch already in progress');
             return;
         }
 
         try {
             isFetching.current = true;
-
-            if (isInitialMount.current) {
-                setLoading(true);
-            }
-
+            if (isInitialMount.current) setLoading(true);
             clearError();
 
-            const result = await favouritesApi.getFavourites({
-                product_app_id,
-                page: 1,
-            });
+            const result = await favouritesApi.getFavourites({ product_app_id, page: 1 });
 
             setFavourites(result.favourites);
             setPaginationInfo({
@@ -75,10 +77,8 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                 });
             }
         } catch (err: any) {
-            if (API_CONFIG.DEBUG) {
-                console.error('❌ Favourites fetch failed:', err);
-            }
-            handleApiError(error);
+            if (API_CONFIG.DEBUG) console.error('❌ Favourites fetch failed:', err);
+            handleApiError(err);
         } finally {
             setLoading(false);
             isFetching.current = false;
@@ -92,59 +92,39 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             setPaginationInfo({ page: 1, total_pages: 1 });
             isInitialMount.current = true;
             isFetching.current = false;
+            refreshFollowedUsers();
             fetchFavourites();
-        }, [fetchFavourites])
+        }, [fetchFavourites, refreshFollowedUsers])
     );
 
     const loadMore = useCallback(async () => {
-        if (loadingMore || paginationInfo.page >= paginationInfo.total_pages) {
-            return;
-        }
+        if (loadingMore || paginationInfo.page >= paginationInfo.total_pages) return;
 
         try {
             setLoadingMore(true);
             const nextPage = paginationInfo.page + 1;
 
-            if (API_CONFIG.DEBUG) {
-                console.log(`📡 Favourites: Loading page ${nextPage}`);
-            }
+            if (API_CONFIG.DEBUG) console.log(`📡 Favourites: Loading page ${nextPage}`);
 
-            const result = await favouritesApi.getFavourites({
-                product_app_id,
-                page: nextPage,
-            });
+            const result = await favouritesApi.getFavourites({ product_app_id, page: nextPage });
 
             setFavourites(prev => {
                 const existingKeys = new Set(
                     prev.map(item =>
-                        item.customer_app_id
-                            ? `user-${item.customer_app_id}`
-                            : `bib-${item.bib_number}`
+                        item.customer_app_id ? `user-${item.customer_app_id}` : `bib-${item.bib_number}`
                     )
                 );
                 const newItems = result.favourites.filter(item => {
-                    const key = item.customer_app_id
-                        ? `user-${item.customer_app_id}`
-                        : `bib-${item.bib_number}`;
+                    const key = item.customer_app_id ? `user-${item.customer_app_id}` : `bib-${item.bib_number}`;
                     return !existingKeys.has(key);
                 });
-
-                if (API_CONFIG.DEBUG) {
-                    console.log(`➕ Favourites: Adding ${newItems.length} new items`);
-                }
-
+                if (API_CONFIG.DEBUG) console.log(`➕ Favourites: Adding ${newItems.length} new items`);
                 return [...prev, ...newItems];
             });
 
-            setPaginationInfo({
-                page: nextPage,
-                total_pages: result.pagination.total_pages,
-            });
-
+            setPaginationInfo({ page: nextPage, total_pages: result.pagination.total_pages });
         } catch (err) {
-            if (API_CONFIG.DEBUG) {
-                console.error('❌ Favourites: Load more failed:', err);
-            }
+            if (API_CONFIG.DEBUG) console.error('❌ Favourites: Load more failed:', err);
         } finally {
             setLoadingMore(false);
         }
@@ -160,32 +140,33 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         <FavouriteCard
             item={item}
             product_app_id={product_app_id}
+            isFollowed={isFollowed(product_app_id, item.bib_number, item.customer_app_id)}
+            isLoading={isLoading(product_app_id, item.bib_number, item.customer_app_id)}
+            onToggleFollow={() => handleFollowPress({
+                customer_app_id: item.customer_app_id,
+                password_protected: item.password_protected,
+                bib_number: item.bib_number,
+            })}
         />
-    ), [product_app_id]);
+    ), [product_app_id, isFollowed, isLoading, handleFollowPress]);
 
     const renderEmptyComponent = useCallback(() => (
         <View style={commonStyles.centerContainer}>
             <Text style={{ fontSize: 48, marginBottom: 10 }}>⭐</Text>
-            <Text style={commonStyles.title}>
-                {t('favourite:message.nofavourite')}
-            </Text>
-            <Text style={[commonStyles.subtitle,{textAlign:"center",marginTop:5}]}>
+            <Text style={commonStyles.title}>{t('favourite:message.nofavourite')}</Text>
+            <Text style={[commonStyles.subtitle, { textAlign: 'center', marginTop: 5 }]}>
                 {t('favourite:message.favouritemsg')}
             </Text>
         </View>
     ), [t]);
 
     const renderFooter = useCallback(() => {
-        if (loadingMore) {
-            return <ActivityIndicator size="small" style={{ paddingVertical: 14 }} />;
-        }
+        if (loadingMore) return <ActivityIndicator size="small" style={{ paddingVertical: 14 }} />;
         return null;
     }, [loadingMore]);
 
     const handleAddPress = useCallback(() => {
-        navigation.navigate('AllParticipant', {
-            product_app_id,
-        });
+        navigation.navigate('AllParticipant', { product_app_id });
     }, [navigation, product_app_id]);
 
     if (loading) {
@@ -213,7 +194,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     type={error!.type}
                     title={error!.title}
                     message={error!.message}
-                    onRetry={() => { clearError(); fetchFavourites() }}
+                    onRetry={() => { clearError(); fetchFavourites(); }}
                 />
             </SafeAreaView>
         );
@@ -245,7 +226,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     onPress={handleAddPress}
                 >
                     <View style={favstyle.iconWrapper}>
-                    <MaterialIcons name="person-add-alt" size={30} color={colors.white} />
+                        <MaterialIcons name="person-add-alt" size={30} color={colors.white} />
                     </View>
                 </TouchableOpacity>
             </View>
@@ -267,6 +248,14 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     product_option_value_app_id={product_option_value_app_id}
                 />
             )}
+
+            <TrackingPasswordModal
+                visible={passwordModalVisible}
+                isVerifying={isVerifying}
+                passwordError={passwordError}
+                onSubmit={handlePasswordSubmit}
+                onClose={handlePasswordModalClose}
+            />
         </SafeAreaView>
     );
 };
