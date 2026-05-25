@@ -15,6 +15,12 @@
     "finish": "FINISH"
   },
 
+  "time": {
+    "use12h": "1",
+    "am": "AM",
+    "pm": "PM"
+  },
+
   "filter": {
     "results": "Results",
     "live": "Live",

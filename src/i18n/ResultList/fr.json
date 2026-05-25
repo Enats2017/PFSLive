@@ -14,7 +14,11 @@
     "etaFinish": "ETA ARRIVÉE",
     "finish": "ARRIVÉE"
   },
-  
+  "time": {
+    "use12h": "1",
+    "am": "AM",
+    "pm": "PM"
+  },
   "filter": {
     "results": "Résultats",
     "live": "En direct",

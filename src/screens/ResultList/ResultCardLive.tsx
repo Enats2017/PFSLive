@@ -7,6 +7,7 @@ import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { colors } from '../../styles/common.styles';
+import { formatClockTime } from '../../utils/timeFormat';
 
 interface ResultCardLiveProps {
     item: RaceResult;
@@ -186,7 +187,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                             : t('allrace:race.eta')}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
-                                    {nextCp?.actual_time || lastCrossed?.actual_time || '-'}
+                                    {formatClockTime(nextCp?.actual_time || lastCrossed?.actual_time) || '-'}
                                 </Text>
                             </View>
 
@@ -196,7 +197,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
-                                    {finishCp?.actual_time || '-'}
+                                    {formatClockTime(finishCp?.actual_time) || '-'}
                                 </Text>
                             </View>
                         </>

@@ -8,6 +8,7 @@ import { resultListStyle } from '../../styles/ResultList.styles';
 import { favstyle } from '../../styles/favourite.style';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { FavouriteItem, FavouriteCheckpoint } from '../../services/favourites';
+import { formatClockTime } from '../../utils/timeFormat';
 
 const getStatusColors = (status: string) => {
     switch (status) {
@@ -196,7 +197,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                                             : t('allrace:race.eta')}
                                 </Text>
                                 <Text style={favstyle.statVal}>
-                                    {nextCp?.actual_time || lastCrossed?.actual_time || '-'}
+                                    {formatClockTime(nextCp?.actual_time || lastCrossed?.actual_time) || '-'}
                                 </Text>
                             </View>
 
@@ -206,7 +207,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
                                 <Text style={favstyle.statVal}>
-                                    {finishCp?.actual_time || '-'}
+                                    {formatClockTime(finishCp?.actual_time) || '-'}
                                 </Text>
                             </View>
                         </View>
