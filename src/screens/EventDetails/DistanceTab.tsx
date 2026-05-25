@@ -27,6 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/common/AppHeader';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { formatClockTime } from '../../utils/timeFormat';
 
 interface DistanceTabProps {
   product_app_id: string | number;
@@ -275,7 +276,7 @@ const DistanceTab = ({
             <View style={detailsStyles.metaRow}>
               <Feather name="clock" size={15} olor={colors.gray400} />
               <Text style={commonStyles.subtitle} numberOfLines={1}>
-                {item.race_time}
+                {formatClockTime(item.race_time)} 
               </Text>
             </View>
 
@@ -287,7 +288,7 @@ const DistanceTab = ({
             </View>
 
             <View style={detailsStyles.metaRow}>
-              <Feather name="clock" size={15} olor={colors.gray400} />
+              
               <CountdownBadge
                 days={item.countdown.days}
                 hours={item.countdown.hours}

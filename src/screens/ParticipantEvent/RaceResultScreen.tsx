@@ -20,6 +20,7 @@ import { API_CONFIG } from '../../constants/config';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { Ionicons, Feather } from '@expo/vector-icons';
+import { formatClockTime } from '../../utils/timeFormat';
 
 const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }) => {
   const { product_app_id, event_name } = route.params;
@@ -98,7 +99,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             <View style={detailsStyles.metaRow}>
               <Feather name="clock" size={15} olor={colors.gray400} />
               <Text style={commonStyles.subtitle} numberOfLines={1}>
-                {item.race_time}
+                {formatClockTime(item.race_time)}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>
