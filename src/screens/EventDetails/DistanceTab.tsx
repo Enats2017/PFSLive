@@ -26,7 +26,7 @@ import { useScreenError } from '../../hooks/useApiError';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/common/AppHeader';
 import CountdownBadge from '../../components/CountdownBadge';
-import { Ionicons, Feather } from '@expo/vector-icons';
+import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 
 interface DistanceTabProps {
@@ -249,9 +249,6 @@ const DistanceTab = ({
     setSelectedUndoItem(null);
   }, [selectedUndoItem, handleDelete]);
 
-  // ✅ GET COUNTDOWN BADGE (SMART UNIT DISPLAY)
-
-
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isRegistering =
       registerLoading &&
@@ -274,7 +271,7 @@ const DistanceTab = ({
             </View>
 
             <View style={detailsStyles.metaRow}>
-              <Feather name="clock" size={15} olor={colors.gray400} />
+              <Ionicons name="time-outline" size={15} color={colors.gray600} />
               <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {formatClockTime(item.race_time)} 
               </Text>
@@ -288,7 +285,7 @@ const DistanceTab = ({
             </View>
 
             <View style={detailsStyles.metaRow}>
-              
+              <MaterialCommunityIcons name="timer-sand" size={15} color={colors.gray600} />
               <CountdownBadge
                 days={item.countdown.days}
                 hours={item.countdown.hours}
@@ -299,7 +296,7 @@ const DistanceTab = ({
           </View>
 
           <TouchableOpacity
-            style={detailsStyles.resultsButton}
+            style={[detailsStyles.resultsButton,{paddingHorizontal:spacing.sm}]}
             onPress={() =>
               item.registration_status === 'registered'
                 ? handleUndoClick(item)

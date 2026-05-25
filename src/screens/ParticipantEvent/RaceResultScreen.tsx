@@ -71,7 +71,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
     [product_app_id, t]
   );
 
-  // ✅ FETCH ON FOCUS (NO CACHE BUST - USE API CACHE)
+  // FETCH ON FOCUS (NO CACHE BUST - USE API CACHE)
   useFocusEffect(
     useCallback(() => {
       fetchResults(false);
@@ -92,23 +92,22 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             </Text>
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {item.race_date_formatted}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>
-              <Feather name="clock" size={15} olor={colors.gray400} />
+              <Ionicons name="time-outline" size={15} color={colors.gray600} />
               <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {formatClockTime(item.race_time)}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>
               <Feather name="users" size={16} color={colors.gray500} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {item.participant_count} {t('details:athletes')}
               </Text>
             </View>
-
           </View>
           <TouchableOpacity
             style={detailsStyles.resultsButton}
@@ -128,9 +127,6 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
               {t('button.result')}
             </Text>
           </TouchableOpacity>
-
-
-
         </View>
       </View>
     );
