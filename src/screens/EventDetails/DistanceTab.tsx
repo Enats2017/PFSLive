@@ -26,6 +26,8 @@ import { useScreenError } from '../../hooks/useApiError';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/common/AppHeader';
 import CountdownBadge from '../../components/CountdownBadge';
+import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { formatClockTime } from '../../utils/timeFormat';
 
 interface DistanceTabProps {
   product_app_id: string | number;
@@ -247,41 +249,54 @@ const DistanceTab = ({
     setSelectedUndoItem(null);
   }, [selectedUndoItem, handleDelete]);
 
-  // ✅ GET COUNTDOWN BADGE (SMART UNIT DISPLAY)
+  const renderItem = useCallback(({ item }: { item: Distance }) => {
+    const isRegistering =
+      registerLoading &&
+      (confirmItem?.product_option_value_app_id === item.product_option_value_app_id ||
+        selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
 
+    return (
+      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
+        <View style={detailsStyles.distance}>
+          <View style={detailsStyles.distanceInfo}>
+            <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
+              {item.distance_name}
+            </Text>
 
-  const renderItem = useCallback(
-    ({ item }: { item: Distance }) => {
-      const isRegistering =
-        registerLoading &&
-        (confirmItem?.product_option_value_app_id === item.product_option_value_app_id ||
-          selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
-
-      return (
-        <View style={[commonStyles.card, { padding: 0, marginBottom: 16 }]}>
-          <View style={detailsStyles.distance}>
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.title, { marginBottom: 4 }]}>
-                {item.distance_name}
+            <View style={detailsStyles.metaRow}>
+              <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
+                {item.race_date_formatted}
               </Text>
-              <Text style={commonStyles.subtitle}>{item.race_date_formatted}</Text>
-              <Text style={commonStyles.subtitle}>{item.race_time}</Text>
-              <Text style={commonStyles.subtitle}>
+            </View>
+
+            <View style={detailsStyles.metaRow}>
+              <Ionicons name="time-outline" size={15} color={colors.gray600} />
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
+                {formatClockTime(item.race_time)} 
+              </Text>
+            </View>
+
+            <View style={detailsStyles.metaRow}>
+              <Feather name="users" size={16} color={colors.gray500} />
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {item.participant_count} {t('details:athletes')}
               </Text>
             </View>
-            <CountdownBadge
-              days={item.countdown.days}
-              hours={item.countdown.hours}
-              minutes={item.countdown.minutes}
-              status={item.countdown.status}
-            />
+
+            <View style={detailsStyles.metaRow}>
+              <MaterialCommunityIcons name="timer-sand" size={15} color={colors.gray600} />
+              <CountdownBadge
+                days={item.countdown.days}
+                hours={item.countdown.hours}
+                minutes={item.countdown.minutes}
+                status={item.countdown.status}
+              />
+            </View>
           </View>
+
           <TouchableOpacity
-            style={[commonStyles.primaryButton, {
-              borderRadius: 0, opacity: isRegistering ? 0.7 : 1, borderBottomLeftRadius: 12,
-              borderBottomRightRadius: 12,
-            }]}
+            style={[detailsStyles.resultsButton,{paddingHorizontal:spacing.sm}]}
             onPress={() =>
               item.registration_status === 'registered'
                 ? handleUndoClick(item)
@@ -300,11 +315,13 @@ const DistanceTab = ({
               </Text>
             )}
           </TouchableOpacity>
+
+
+
         </View>
-      );
-    },
-    [CountdownBadge, handleRegister, handleUndoClick, registerLoading, confirmItem, selectedItem, t]
-  );
+      </View>
+    );
+  }, [CountdownBadge, handleRegister, handleUndoClick, registerLoading, confirmItem, selectedItem, t]);
 
   if (loading) {
     return (
@@ -340,7 +357,7 @@ const DistanceTab = ({
         data={distances}
         keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 50, paddingTop: spacing.md }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 50,  }}
         renderItem={renderItem}
       />
 

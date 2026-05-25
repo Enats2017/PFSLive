@@ -4,7 +4,6 @@ import { colors, spacing, typography } from "./common.styles";
 export const detailsStyles = StyleSheet.create({
   section: {
     alignItems: "center",
-    padding: 6,
     backgroundColor: colors.themeiColor,
     marginVertical: spacing.sm,
   },
@@ -34,25 +33,12 @@ export const detailsStyles = StyleSheet.create({
     width: "60%",
     borderRadius: 2,
   },
-  // ✅ UPDATED COUNT BADGE - MORE PADDING FOR READABILITY
-  count: {
-    backgroundColor: colors.success,
-    minWidth: 100,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopRightRadius: 20,
-    borderBottomStartRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
+
   distance: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
+    padding: spacing.sm,
   },
   topRow: {
     flexDirection: "row",
@@ -60,6 +46,26 @@ export const detailsStyles = StyleSheet.create({
     padding: spacing.md,
   },
   
+    distanceInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+   metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: spacing.sm,
+  },
+  metaIcon: {
+    fontSize: 13,
+  },
+  metaText: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray500,
+    fontWeight: typography.weights.medium,
+    flexShrink: 1,
+  },
   // ✅ AVATAR CONTAINER
   avatar: {
     width: 60,
@@ -136,5 +142,28 @@ export const detailsStyles = StyleSheet.create({
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
     color: colors.themeblue,
+  },
+
+    resultsButton: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    minWidth: 120,
+    
+  },
+
+  routeButton: {
+    backgroundColor: colors.primary,
+    borderRadius: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    minWidth: 120,
   },
 });

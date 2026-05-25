@@ -59,10 +59,11 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                     },
                 ]}
                 onPress={() =>
-                    navigation.navigate('FollowDetails', {
+                    navigation.navigate('EventDetails', {
                         product_app_id: Number(item.product_app_id),
                         event_name: item.name,
-                        sourceTab: 'live',
+                        auto_register_id: null,
+                        
                     })
                 }
                 activeOpacity={0.8}
