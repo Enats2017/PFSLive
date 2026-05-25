@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
 import { commonStyles } from '../../styles/common.styles';
 import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/resultDetailsService';
+import { formatClockTime } from '../../utils/timeFormat';
 
 interface Props {
     raceInfo?: RaceInfo;
@@ -59,7 +60,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                     </Text>
                     <Text style={resultInfoStyles.timingPointDate}>
                         {raceInfo?.previous_cp?.day_name && raceInfo?.previous_cp?.actual_time
-                            ? `${t(`common:week.${raceInfo.previous_cp.day_name.toLowerCase()}`)} ${raceInfo.previous_cp.actual_time}`
+                            ? `${t(`common:week.${raceInfo.previous_cp.day_name.toLowerCase()}`)} ${formatClockTime(raceInfo.previous_cp.actual_time)}`
                             : '—'}
                     </Text>
                 </View>

@@ -4,14 +4,21 @@
     "noResults": "Aucun résultat pour ces filtres.",
     "live": "EN DIRECT",
     "bibNumber": "Numéro de dossard",
-    "time": "TEMPS",
+    "raceTime": "TEMPS TEMPS",
     "diffFirst": "DIFF 1ER",
     "ranking": "CLASSEMENT",
     "retry": "Réessayer",
     "errorLoad": "Échec du chargement des résultats. Appuyez pour réessayer.",
-    "utmbIndex": "INDEX"
+    "utmbIndex": "INDEX",
+    "eta": "ETA",
+    "etaFinish": "ETA ARRIVÉE",
+    "finish": "ARRIVÉE"
   },
-  
+  "time": {
+    "use12h": "1",
+    "am": "AM",
+    "pm": "PM"
+  },
   "filter": {
     "results": "Résultats",
     "live": "En direct",

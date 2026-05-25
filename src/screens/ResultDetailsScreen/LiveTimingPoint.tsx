@@ -6,13 +6,14 @@ import { resultInfoStyles } from '../../styles/resultDetails.styles';
 import { colors, commonStyles } from '../../styles/common.styles';
 import { CheckpointDetail } from '../../services/resultDetailsService';
 import { getFeatureIcon } from '../../utils/featureIcons';
+import { formatClockTime } from '../../utils/timeFormat';
 
 interface LiveTimingPointProps {
     checkpoints?: CheckpointDetail[];
     raceStatus?: string;
 }
 
-const AmenityIcons = (({ features, t }: { features?: string[]; t: any }) => {   
+const AmenityIcons = (({ features, t }: { features?: string[]; t: any }) => {
     if (!features || features.length === 0) return null;
     return (
         <View style={{ paddingBottom:5,justifyContent:"center", alignItems:"center"}}>
@@ -40,6 +41,13 @@ const AmenityIcons = (({ features, t }: { features?: string[]; t: any }) => {
 
 const val = (v: string | undefined, t: any) =>
     v || t('defaults.empty');
+
+// ✅ Clock time-of-day → localized 12h/24h via timeFormat, with the same
+// empty fallback as val(). Used for arrival/start actual_time only.
+const clockTime = (v: string | undefined, t: any) => {
+    const formatted = formatClockTime(v);
+    return formatted || t('defaults.empty');
+};
 
 const time = (v: string | undefined, t: any) =>
     v || t('defaults.time');
@@ -141,7 +149,6 @@ const CheckpointCard = memo(({
     raceStatus?: string;
 }) => {
 
-   console.log('📍 item.features:', item.name, item.features);
     const isUpcomingRace = raceStatus === 'not_started';
     const isStartedOrPastRace = raceStatus === 'in_progress' || raceStatus === 'finished';
     const isCrossed = item.is_crossed;
@@ -158,7 +165,7 @@ const CheckpointCard = memo(({
                     rightLabel={t('timingPoint.elevationGain')}
                     rightVal={elevation(item.elevation_gain, t)}
                 />
-                
+
             </View>
         );
     }
@@ -172,8 +179,8 @@ const CheckpointCard = memo(({
                 <StatCol
                     label={t('timingPoint.startTime')}
                     value={item.day_name
-                        ? `${t(`common:week.${item.day_name.toLowerCase()}`)} ${val(item.actual_time, t)}`
-                        : val(item.actual_time, t)
+                        ? `${t(`common:week.${item.day_name.toLowerCase()}`)} ${clockTime(item.actual_time, t)}`
+                        : clockTime(item.actual_time, t)
                     }
                 />
                 <StatRow
@@ -205,8 +212,8 @@ const CheckpointCard = memo(({
                     rightLabel={t('timingPoint.elevationGain')}
                     rightVal={elevation(item.elevation_gain, t)}
                 />
-               
-               
+
+
             </View>
         );
     }
@@ -220,8 +227,8 @@ const CheckpointCard = memo(({
                 <StatCol
                     label={t('timingPoint.arrivalTime')}
                     value={item.day_name
-                        ? `${t(`common:week.${item.day_name.toLowerCase()}`)} ${val(item.actual_time, t)}`
-                        : val(item.actual_time, t)
+                        ? `${t(`common:week.${item.day_name.toLowerCase()}`)} ${clockTime(item.actual_time, t)}`
+                        : clockTime(item.actual_time, t)
                     }
                 />
                 <StatRow
@@ -244,7 +251,7 @@ const CheckpointCard = memo(({
                 />
 
                  <AmenityIcons features={item.features} t={t} />
-               
+
             </View>
         );
     }
@@ -265,14 +272,16 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
         );
     }
 
-    const lastIndex = checkpoints.length - 1;
+    // ✅ Reverse to show Finish → CP3 → CP2 → CP1 → Start (descending order)
+    const reversed = [...checkpoints].reverse();
+    const lastIndex = reversed.length - 1;
 
     return (
         <ScrollView
             contentContainerStyle={[resultInfoStyles.scrollContent, { paddingHorizontal: 10 }]}
             showsVerticalScrollIndicator={false}
         >
-            {checkpoints.map((item, index) => (
+            {reversed.map((item, index) => (
                 <View key={index} style={resultInfoStyles.headerBar}>
                     <View style={resultInfoStyles.leftCol}>
                         {index === 0
@@ -296,19 +305,22 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
                                 <View style={resultInfoStyles.lineBottom} />
 
                                 {/* Distance at TOP of line (blue) */}
-                                {checkpoints[index + 1]?.segment_distance && (
+                                {/* ✅ Use reversed[index] — in descending order, the segment
+                                    between current and next item belongs to current item.
+                                    e.g. Finish.segment_distance = dist(CP2→Finish) */}
+                                {reversed[index]?.segment_distance && (
                                     <View style={resultInfoStyles.segmentDistanceLabel}>
                                         <Text style={resultInfoStyles.segmentDistanceText}>
-                                            {checkpoints[index + 1].segment_distance} {t('units.km')}
+                                            {reversed[index].segment_distance} {t('units.km')}
                                         </Text>
                                     </View>
                                 )}
 
                                 {/* Elevation at BOTTOM of line (green) */}
-                                {checkpoints[index + 1]?.segment_elevation_gain && (
+                                {reversed[index]?.segment_elevation_gain && (
                                     <View style={resultInfoStyles.segmentElevationLabel}>
                                         <Text style={resultInfoStyles.segmentElevationText}>
-                                            {checkpoints[index + 1].segment_elevation_gain} {t('units.meterPlus')}
+                                            {reversed[index].segment_elevation_gain} {t('units.meterPlus')}
                                         </Text>
                                     </View>
                                 )}
@@ -319,7 +331,7 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
                     <CheckpointCard
                         item={item}
                         t={t}
-                        isFirstCheckpoint={index === 0}
+                        isFirstCheckpoint={index === lastIndex} // ✅ Start is now last in reversed list
                         raceStatus={raceStatus}
                     />
                 </View>

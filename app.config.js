@@ -33,7 +33,7 @@ export default ({ config }) => {
         NSLocationWhenInUseUsageDescription: "Livio uses your location to track your race progress in real-time.",
         NSLocationAlwaysAndWhenInUseUsageDescription: "Livio needs background location access to track your race even when the app is minimized.",
         NSLocationAlwaysUsageDescription: "Livio requires continuous location access to provide accurate race tracking.",
-        UIBackgroundModes: ["remote-notification", "location"],
+        UIBackgroundModes: ["remote-notification", "location", "fetch"],
         NSAppTransportSecurity: {
           NSAllowsArbitraryLoads: true  // ⚠️ Remove before production
         },
@@ -147,11 +147,18 @@ export default ({ config }) => {
           locationAlwaysAndWhenInUsePermission: "Allow Livio to use your location to track your race progress.",
           locationAlwaysPermission: "Allow Livio to use your location even when the app is in the background.",
           locationWhenInUsePermission: "Allow Livio to use your location to track your race progress.",
+          // ✅ These generate the correct AndroidManifest.xml entries for background
+          // location and foreground service. Raw permissions array alone is not enough —
+          // expo-location plugin wires additional service declarations in the manifest.
           isHighAccuracyEnabled: true,
           isAndroidBackgroundLocationEnabled: true,
+          isAndroidForegroundServiceEnabled: true,
+          // ✅ iOS: enables location in UIBackgroundModes via plugin (supplements
+          // the manual UIBackgroundModes entry in infoPlist above).
           isIosBackgroundLocationEnabled: true,
         }
       ],
+      "expo-background-task",
       "expo-localization",
       "expo-secure-store",
       "@react-native-community/datetimepicker",

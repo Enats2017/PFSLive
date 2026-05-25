@@ -1,5 +1,6 @@
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import * as BackgroundTask from 'expo-background-task';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import * as Battery from 'expo-battery';
@@ -40,7 +41,7 @@ const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 // Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
 // Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 3,   // Walking — 3m  (safe at 0.5 km/h min pace)
+  64: 0,   // Walking — 3m  (safe at 0.5 km/h min pace)
   59: 15,  // Running — 15m (safe at 6 km/h min pace)
   60: 30,  // Cycling — 30m (safe at 10 km/h min pace)
 };
@@ -78,6 +79,47 @@ const addLog = async (icon: string, msg: string): Promise<void> => {
     if (entries.length > MAX_LOG_ENTRIES) entries.splice(0, entries.length - MAX_LOG_ENTRIES);
     await AsyncStorage.setItem(TRACKING_LOG_KEY, JSON.stringify(entries));
   } catch { /* silent — log failure must never break tracking */ }
+};
+
+// ✅ Background task keepalive — fires every 15s via Android JobScheduler.
+// Samsung One UI's Adaptive Battery throttles GPS foreground services during
+// low-motion activities (walking). JobScheduler has a guaranteed execution
+// exemption on One UI that bypasses this restriction.
+// When this fires, any batched GPS updates are delivered to the location task.
+const BACKGROUND_KEEPALIVE_TASK = 'background-keepalive';
+
+TaskManager.defineTask(BACKGROUND_KEEPALIVE_TASK, async () => {
+  if (API_CONFIG.DEBUG) console.log('⚡ Background keepalive fired');
+  await addLog('⚡', 'Keepalive fired — waking JS context to unblock GPS');
+});
+
+export const startBackgroundFetchKeepalive = async (): Promise<void> => {
+  try {
+    await BackgroundTask.registerTaskAsync(BACKGROUND_KEEPALIVE_TASK, {
+      minimumInterval: 15,    // ✅ 15s — frequent enough to unblock batched GPS
+    });
+    await addLog('⚡', 'Background keepalive registered (15s interval)');
+    if (API_CONFIG.DEBUG) console.log('✅ Background keepalive started');
+  } catch (err: any) {
+    // Already registered from previous session — unregister and re-register
+    try {
+      await BackgroundTask.unregisterTaskAsync(BACKGROUND_KEEPALIVE_TASK);
+      await BackgroundTask.registerTaskAsync(BACKGROUND_KEEPALIVE_TASK, {
+        minimumInterval: 15,
+      });
+      if (API_CONFIG.DEBUG) console.log('✅ Background keepalive re-registered');
+    } catch (retryErr: any) {
+      if (API_CONFIG.DEBUG) console.log('⚠️ Background keepalive failed:', retryErr?.message);
+    }
+  }
+};
+
+export const stopBackgroundFetchKeepalive = async (): Promise<void> => {
+  try {
+    await BackgroundTask.unregisterTaskAsync(BACKGROUND_KEEPALIVE_TASK);
+    await addLog('⚡', 'Background keepalive stopped');
+    if (API_CONFIG.DEBUG) console.log('✅ Background keepalive stopped');
+  } catch { /* silent — may not have been registered */ }
 };
 
 // Haversine formula — straight-line distance between two GPS coordinates in metres

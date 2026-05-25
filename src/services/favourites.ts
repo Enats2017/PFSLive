@@ -3,18 +3,74 @@ import { apiClient } from "./api";
 import { getCurrentLanguageId } from "../i18n";
 import { getFollowedUsers, getFollowedBibs } from "../utils/followStorage";
 
+// ── Checkpoint (same shape as RaceResult['checkpoints'] from resultList) ──
+export interface FavouriteCheckpoint {
+  name: string;
+  day_name: string;
+  distance: string;
+  segment_distance: string;
+  race_time: string;
+  actual_time: string;
+  ranking: string;
+  rank_gender: string;
+  rank_agegroup: string;
+  speed: string;
+  pace: string;
+  is_crossed: boolean;
+  is_start: boolean;
+  is_finish: boolean;
+}
+
+// ── Previous / next CP summary (derived server-side from checkpoints) ──
+export interface FavouritePreviousCp {
+  name: string;
+  day_name: string;
+  distance: string;
+  race_time: string;
+  actual_time: string;
+  ranking: string;
+}
+
+export interface FavouriteNextCp {
+  name: string;
+  day_name: string;
+  distance: string;
+  actual_time: string;
+}
+
 export interface FavouriteItem {
   bib_number: string;
   firstname: string;
   lastname: string;
+  name: string; // ✅ full RR name (single column); firstname mirrors it for RR rows
+  club: string; // ✅ added
+  gender: "male" | "female" | ""; // ✅ added
+  nation: string; // ✅ added
+  nation_code: string; // ✅ added
+  nation_flag: string; // ✅ added (SVG url)
+  age: string; // ✅ added
+  position: string; // ✅ added (overall rank)
+  participant_status: "not_started" | "in_progress" | "finished" | string; // ✅ added (DNF/DNS/DSQ possible)
+  time: string; // ✅ added
+  diff: string; // ✅ added
+  category_name: string; // ✅ added
+  category_rank: string; // ✅ added
+  finish_rank_gender: string; // ✅ added
+  finish_rank_agegroup: string; // ✅ added
+  last_cp_distance: string; // ✅ added
+  checkpoints: FavouriteCheckpoint[]; // ✅ added (full array)
+  previous_cp: FavouritePreviousCp | null; // ✅ added
+  next_cp: FavouriteNextCp | null; // ✅ added
   distance_name: string;
-  product_option_value_app_id: number; // ✅ Added
-  sort_order: number; // ✅ Added
+  product_option_value_app_id: number | null;
+  sort_order: number;
   race_status: "not_started" | "in_progress" | "finished";
-  finish_time: string; // ✅ Added
+  finish_time: string;
   profile_picture: string;
   live_tracking_activated: 0 | 1;
+  participant_app_id: number | null; // ✅ added
   customer_app_id: number | null;
+  password_protected: 0 | 1; // ✅ added (1 = private tracking)
   source: "race_result" | "local";
 }
 
@@ -94,7 +150,7 @@ export const favouritesApi = {
       );
 
       const data = response.data;
-      
+
       if (API_CONFIG.DEBUG) {
         console.log("✅ Favourites loaded:", {
           total: data.pagination?.total,
@@ -102,7 +158,7 @@ export const favouritesApi = {
           page: data.pagination?.page,
         });
       }
-      
+
       return data;
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
