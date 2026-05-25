@@ -14,6 +14,8 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CountdownBadge from '../../components/CountdownBadge';
+import { Ionicons, Feather } from '@expo/vector-icons';
+
 
 interface DistanceTabProps {
   product_app_id: number;
@@ -44,64 +46,93 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
 
   useFocusEffect(useCallback(() => { fetchResults(); }, [fetchResults]));
 
-  const renderItem = useCallback(({ item }: { item: Distance }) => {    
+  const renderItem = useCallback(({ item }: { item: Distance }) => {
+    const isPast = sourceTab === 'past';
+    const isLiveOrUpcoming = sourceTab === 'live' || sourceTab === 'upcoming';
+
     return (
-      <View style={[commonStyles.card, { padding: 0, marginBottom: spacing.sm }]}>
+      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
         <View style={detailsStyles.distance}>
-          <View style={{ flex: 1 }}>
-            <Text style={[commonStyles.title, { marginBottom: 4 }]}>
+          <View style={detailsStyles.distanceInfo}>
+            <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
               {item.distance_name}
             </Text>
-            <Text style={commonStyles.subtitle}>{item.race_date_formatted}</Text>
-            <Text style={commonStyles.subtitle}>{item.race_time}</Text>
-            <Text style={commonStyles.subtitle}>
-              {item.participant_count} {t('details:athletes')}
-            </Text>
+
+            <View style={detailsStyles.metaRow}>
+              <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
+                {item.race_date_formatted}
+              </Text>
+            </View>
+
+            <View style={detailsStyles.metaRow}>
+              <Feather name="clock" size={15} olor={colors.gray400} />
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
+                {item.race_time}
+              </Text>
+            </View>
+
+            <View style={detailsStyles.metaRow}>
+              <Feather name="users" size={16} color={colors.gray500} />
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
+                {item.participant_count} {t('details:athletes')}
+              </Text>
+            </View>
+
+
+            {!isPast && (
+              <View style={detailsStyles.metaRow}>
+                <Feather name="clock" size={15} olor={colors.gray400} />
+                <CountdownBadge
+                  days={item.countdown.days}
+                  hours={item.countdown.hours}
+                  minutes={item.countdown.minutes}
+                  status={item.countdown.status}
+                />
+              </View>
+            )}
           </View>
-          <CountdownBadge
-            days={item.countdown.days}
-            hours={item.countdown.hours}
-            minutes={item.countdown.minutes}
-            status={item.countdown.status}
-          />
-        </View>
 
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          <TouchableOpacity
-            style={[commonStyles.favoriteButton, { borderRadius: 0 }]}
-            onPress={() => navigation.navigate('ResultList', {
-              product_app_id,
-              product_option_value_app_id: Number(item.product_option_value_app_id),
-              event_name: event_name,
-              sourceScreen: 'FollowerDistanceScreen',
-              sectionType: 'follower',
-              sourceTab,
-            })}
-          >
-            <Text style={commonStyles.primaryButtonText}>
-              {t('button.result')}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[commonStyles.livetracking, { borderRadius: 0, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, }]}
-            onPress={() => navigation.navigate('LiveTracking', {
-              product_app_id,
-              product_option_value_app_id: item.product_option_value_app_id || '',
-              event_name: event_name,
-              sourceScreen: 'FollowerDistanceScreen',
-              sectionType: 'follower',
-              sourceTab,
-            })}
-          >
-            <Text style={commonStyles.primaryButtonText}>
-              {t('button.route')}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'column', gap: spacing.md }}>
+            <TouchableOpacity
+              style={detailsStyles.resultsButton}
+              onPress={() => navigation.navigate('ResultList', {
+                product_app_id,
+                product_option_value_app_id: Number(item.product_option_value_app_id),
+                event_name: event_name,
+                sourceScreen: 'FollowerDistanceScreen',
+                sectionType: 'follower',
+                sourceTab,
+              })}
+              activeOpacity={0.8}
+            >
+              <Text style={commonStyles.primaryButtonText}>
+                {t('button.result')}
+              </Text>
+            </TouchableOpacity>
+            {isLiveOrUpcoming && (
+              <TouchableOpacity
+                style={detailsStyles.routeButton}
+                onPress={() => navigation.navigate('LiveTracking', {
+                  product_app_id,
+                  product_option_value_app_id: item.product_option_value_app_id || '',
+                  event_name: event_name,
+                  sourceScreen: 'FollowerDistanceScreen',
+                  sectionType: 'follower',
+                  sourceTab,
+                })}
+                activeOpacity={0.8}
+              >
+                <Text style={commonStyles.primaryButtonText}>
+                  {t('button.route')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
     );
-  }, [navigation, product_app_id, sourceTab, CountdownBadge, t]);
+  }, [navigation, product_app_id, sourceTab,  t]);
 
   if (loading) {
     return (
@@ -138,7 +169,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
           data={results}
           keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1, padding: spacing.xs, paddingBottom: 10, paddingTop: spacing.md }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.md, paddingBottom: 10, paddingTop: spacing.md }}
           renderItem={renderItem}
         />
       )}

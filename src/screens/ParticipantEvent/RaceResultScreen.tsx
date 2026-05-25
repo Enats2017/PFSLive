@@ -19,6 +19,7 @@ import { eventDetailService, Distance } from '../../services/eventDetailService'
 import { API_CONFIG } from '../../constants/config';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
+import { Ionicons, Feather } from '@expo/vector-icons';
 
 const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }) => {
   const { product_app_id, event_name } = route.params;
@@ -61,7 +62,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         if (API_CONFIG.DEBUG) {
           console.error('❌ Error fetching race results:', err);
         }
-         handleApiError(err);
+        handleApiError(err);
       } finally {
         setLoading(false);
       }
@@ -76,152 +77,63 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
     }, [fetchResults])
   );
 
-  // ✅ GET COUNTDOWN BADGE (SMART UNIT DISPLAY)
-  const getCountdownBadge = useCallback(
-    (item: Distance) => {
-      const { status, days, hours, minutes } = item.countdown;
 
-      if (API_CONFIG.DEBUG) {
-        console.log('⏱️ Countdown:', { status, days, hours, minutes });
-      }
 
-      switch (status) {
-        case 'in_progress':
-          return {
-            label: t('details:countdown.live'),
-            color: colors.success,
-          };
-        
-        case 'finished':
-          return {
-            label: t('details:countdown.finished'),
-            color: colors.gray500,
-          };
-        
-        case 'not_started': {
-          // ✅ SMART DISPLAY LOGIC
-          const parts: string[] = [];
-          let color = colors.gray500;
 
-          // ✅ PRIORITY 1: If days exist, show ONLY days
-          if (days > 0) {
-            parts.push(`${days} ${t('details:countdown.days')}`);
-            color = colors.info; // Blue for days
-          }
-          // ✅ PRIORITY 2: If no days but hours exist, show hours and minutes
-          else if (hours > 0) {
-            parts.push(`${hours} ${t('details:countdown.hours')}`);
-            if (minutes > 0) {
-              parts.push(`${minutes} ${t('details:countdown.minutes')}`);
+  const renderItem = useCallback(({ item }: { item: Distance }) => {
+
+    return (
+      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
+        <View style={detailsStyles.distance}>
+          <View style={detailsStyles.distanceInfo}>
+            <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
+              {item.distance_name}
+            </Text>
+            <View style={detailsStyles.metaRow}>
+              <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
+                {item.race_date_formatted}
+              </Text>
+            </View>
+            <View style={detailsStyles.metaRow}>
+              <Feather name="clock" size={15} olor={colors.gray400} />
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
+                {item.race_time}
+              </Text>
+            </View>
+            <View style={detailsStyles.metaRow}>
+              <Feather name="users" size={16} color={colors.gray500} />
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
+                {item.participant_count} {t('details:athletes')}
+              </Text>
+            </View>
+
+          </View>
+          <TouchableOpacity
+            style={detailsStyles.resultsButton}
+            onPress={() =>
+              navigation.navigate('ResultList', {
+                product_app_id,
+                product_option_value_app_id: Number(item.product_option_value_app_id),
+                event_name: event_name,
+                sourceScreen: 'RaceResultScreen',
+                sectionType: 'participant',
+                sourceTab: 'past',
+              })
             }
-            color = colors.success; // Green for hours
-          }
-          // ✅ PRIORITY 3: If only minutes exist, show only minutes
-          else if (minutes > 0) {
-            parts.push(`${minutes} ${t('details:countdown.minutes')}`);
-            color = colors.warning; // Orange for minutes only
-          }
+            activeOpacity={0.8}
+          >
+            <Text style={commonStyles.primaryButtonText}>
+              {t('button.result')}
+            </Text>
+          </TouchableOpacity>
 
-          // ✅ IF ALL ARE ZERO
-          if (parts.length === 0) {
-            return {
-              label: t('details:countdown.startingSoon'),
-              color: colors.warning,
-            };
-          }
 
-          // ✅ JOIN PARTS
-          const countdownText = parts.join(' ');
 
-          return {
-            label: `${t('details:countdown.startsIn')} ${countdownText}`,
-            color,
-          };
-        }
-        
-        default:
-          return { label: '', color: colors.gray500 };
-      }
-    },
-    [t]
-  );
-
-  // ✅ RENDER DISTANCE CARD
-  const renderItem = useCallback(
-    ({ item }: { item: Distance }) => {
-      const badge = getCountdownBadge(item);
-
-      return (
-        <View
-          style={[
-            commonStyles.card,
-            { padding: 0,  marginBottom: spacing.md },
-          ]}
-        >
-          <View style={detailsStyles.distance}>
-            <View style={{ flex: 1 }}>
-              <Text style={[commonStyles.title, { marginBottom: 4 }]}>
-                {item.distance_name}
-              </Text>
-              <Text style={commonStyles.subtitle}>{item.race_date_formatted}</Text>
-              <Text style={commonStyles.subtitle}>{item.race_time}</Text>
-            </View>
-            <View style={[detailsStyles.count, { backgroundColor: badge.color }]}>
-              <Text style={[commonStyles.text, { color: '#fff', fontWeight: '600' }]}>
-                {badge.label}
-              </Text>
-            </View>
-          </View>
-
-          {/* ✅ ACTION BUTTONS */}
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            {/* Result Button */}
-            <TouchableOpacity
-              style={[commonStyles.favoriteButton, { borderRadius: 0, flex: 1 }]}
-              onPress={() =>
-                navigation.navigate('ResultList', {
-                  product_app_id,
-                  product_option_value_app_id: Number(item.product_option_value_app_id),
-                  event_name: event_name,
-                  sourceScreen: 'RaceResultScreen',
-                  sectionType:'participant',
-                  sourceTab: 'past',
-                })
-              }
-              activeOpacity={0.8}
-            >
-              <Text style={commonStyles.primaryButtonText}>
-                {t('result:button.result')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Route Button */}
-            <TouchableOpacity
-              style={[commonStyles.livetracking, { borderRadius: 0, flex: 1 }]}
-              onPress={() =>
-                navigation.navigate('LiveTracking', {
-                  product_app_id,
-                  product_option_value_app_id: item.product_option_value_app_id || 0,
-                  event_name: event_name,
-                  sourceScreen: 'RaceResultScreen',
-                  sectionType:'participant',
-                  sourceTab: 'past',
-                })
-              }
-              activeOpacity={0.8}
-            >
-              <Text style={commonStyles.primaryButtonText}>
-                {t('result:button.route')}
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
-
-      );
-    },
-    [navigation, product_app_id, event_name, getCountdownBadge, t]
-
-  );
+      </View>
+    );
+  }, [navigation, product_app_id, t]);
 
   // ✅ LOADING STATE
   if (loading) {
@@ -232,8 +144,8 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         <View style={commonStyles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
-        <BottomNavigation 
-          activeTab="Home" 
+        <BottomNavigation
+          activeTab="Home"
           product_app_id={product_app_id}
           event_name={event_name}
         />
@@ -242,7 +154,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   }
 
   // ✅ ERROR STATE
- if (hasError && !loading) {
+  if (hasError && !loading) {
     return (
       <SafeAreaView style={commonStyles.container} edges={['top']}>
         <StatusBar barStyle="dark-content" />
@@ -252,8 +164,8 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           message={error!.message}
           onRetry={() => { clearError(); fetchResults(); }}
         />
-         <BottomNavigation 
-          activeTab="Home" 
+        <BottomNavigation
+          activeTab="Home"
           product_app_id={product_app_id}
           event_name={event_name}
         />
@@ -261,7 +173,6 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
     );
   }
 
-  // ✅ MAIN CONTENT
   return (
     <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" />
@@ -284,7 +195,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             flexGrow: 1,
-            paddingHorizontal: spacing.lg,
+            paddingHorizontal: spacing.md,
             paddingBottom: 80,
           }}
           renderItem={renderItem}
@@ -292,8 +203,8 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
       )}
 
       {/* ✅ BOTTOM NAVIGATION - HOME ACTIVE */}
-      <BottomNavigation 
-        activeTab="Home" 
+      <BottomNavigation
+        activeTab="Home"
         product_app_id={product_app_id}
         event_name={event_name}
       />
