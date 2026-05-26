@@ -19,7 +19,7 @@ export default ({ config }) => {
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff"
+      backgroundColor: "#D5DA28"
     },
 
     assetBundlePatterns: ["**/*"],
@@ -72,7 +72,7 @@ export default ({ config }) => {
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#ffffff"
+        backgroundColor: "#D5DA28"
       },
       package: "com.pfs.livio",
       versionCode: 1,
@@ -166,7 +166,7 @@ export default ({ config }) => {
         "expo-notifications",
         {
           icon: "./assets/notification-icon.png",
-          color: "#3B82F6",
+          color: "#D5DA28",
           defaultChannel: "default",
           sounds: [],
           mode: "production"

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Participant } from '../../services/participantService';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
@@ -10,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 interface ParticipantCardProps {
   item: Participant;
-  product_app_id: number; // ✅ ADDED
+  product_app_id: number;
   isFollowed: boolean;
   isLoading: boolean;
   onToggleFollow: () => void;
@@ -19,12 +20,13 @@ interface ParticipantCardProps {
 
 const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
   item,
-  product_app_id, // ✅ ADDED
+  product_app_id,
   isFollowed,
   isLoading,
   onToggleFollow
 }) => {
   const { t } = useTranslation(['details', 'follower']);
+  const navigation = useNavigation<any>();
 
   // ✅ MEMOIZED VALUES
   const fullName = useMemo(() =>
@@ -43,7 +45,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
 
   const profileImageUri = useMemo(() =>
     item.profile_picture && item.profile_picture.trim() !== ''
-      ?(item.profile_picture)
+      ? (item.profile_picture)
       : null,
     [item.profile_picture]
   );
@@ -51,13 +53,48 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
   const hasBibNumber = item.bib_number && item.bib_number.trim() !== '';
   const isLiveTracking = item.live_tracking_activated === 1;
 
-  // ✅ REMOVED: canFollow check - show button for ALL participants
+  // ✅ Button logic driven by source + race_status
+  const isResultSource = item.source === 'race_result';
+  const isPast         = item.race_status === 'finished';
+  // Follow only makes sense before/while racing (not for finished/past)
+  const showFollow     = !isPast;
+
+  const bib = item.bib || item.bib_number || '';
+
+  // Navigate to ResultDetails (race_result participants)
+  const goToResults = () => {
+    navigation.navigate('ResultDetails', {
+      raceStatus: item.race_status,
+      product_app_id,
+      product_option_value_app_id: item.product_option_value_app_id,
+      bib: item.bib_number,
+      from_live: 0,
+    });
+  };
+
+  // Navigate to ProfileScreen (local participants)
+  const goToProfile = () => {
+    navigation.navigate('ProfileScreen', {
+      customer_app_id: item.customer_app_id,
+    });
+  };
+
+  const onPrimaryPress = isResultSource ? goToResults : goToProfile;
+  const primaryLabel   = isResultSource
+    ? t('details:participant.results')
+    : t('follower:button.viewprofile');
+
+  const followLabel = isFollowed
+    ? t('follower:button.unfollow')
+    : item?.password_protected === 1
+      ? `🔒 ${t('follower:button.follower')}`
+      : t('follower:button.follower');
 
   return (
     <View
       style={[
         commonStyles.card,
-        { padding: 0,  marginBottom: spacing.lg },
+        { padding: 0, marginBottom: spacing.lg },
       ]}
     >
       <View style={detailsStyles.topRow}>
@@ -111,28 +148,50 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
         </View>
       )}
 
-      {/* ✅ SHOW BUTTON FOR ALL PARTICIPANTS */}
-      <TouchableOpacity
-        style={[
-          commonStyles.primaryButton,
-          { borderRadius: 0, opacity: isLoading ? 0.6 : 1,  borderBottomLeftRadius: 12, borderBottomRightRadius: 12,  },
-        ]}
-        activeOpacity={0.8}
-        onPress={onToggleFollow}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <ActivityIndicator size="small" color="#ffffff" />
-        ) : (
-          <Text style={commonStyles.primaryButtonText}>
-            {isFollowed
-              ? t('follower:button.unfollow')
-              : item?.password_protected === 1
-                ? `🔒 ${t('follower:button.follower')}`
-                : t('follower:button.follower')}
-          </Text>
+      {/* ✅ ACTION ROW
+          - Past/finished: primary button only (full width)
+          - Else: primary button + follow/unfollow side by side */}
+      <View style={{ flexDirection: 'row' }}>
+        <TouchableOpacity
+          style={[
+            commonStyles.primaryButton,
+            {
+              flex: 1,
+              borderRadius: 0,
+              borderBottomLeftRadius: 12,
+              borderBottomRightRadius: showFollow ? 0 : 12,
+            },
+          ]}
+          activeOpacity={0.8}
+          onPress={onPrimaryPress}
+        >
+          <Text style={commonStyles.primaryButtonText}>{primaryLabel}</Text>
+        </TouchableOpacity>
+
+        {showFollow && (
+          <TouchableOpacity
+            style={[
+              commonStyles.primaryButton,
+              {
+                flex: 1,
+                borderRadius: 0,
+                borderBottomRightRadius: 12,
+                opacity: isLoading ? 0.6 : 1,
+                backgroundColor: colors.primaryLight,
+              },
+            ]}
+            activeOpacity={0.8}
+            onPress={onToggleFollow}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Text style={commonStyles.primaryButtonText}>{followLabel}</Text>
+            )}
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
+      </View>
     </View>
   );
 }, (prevProps, nextProps) => {
@@ -141,6 +200,8 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     prevProps.item.participant_app_id === nextProps.item.participant_app_id &&
     prevProps.item.profile_picture === nextProps.item.profile_picture &&
     prevProps.item.bib_number === nextProps.item.bib_number &&
+    prevProps.item.race_status === nextProps.item.race_status &&
+    prevProps.item.source === nextProps.item.source &&
     prevProps.isFollowed === nextProps.isFollowed &&
     prevProps.isLoading === nextProps.isLoading &&
     prevProps.password_protected === nextProps.password_protected
