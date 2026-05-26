@@ -26,7 +26,8 @@
     "searching": "Zoeken...",
     "noResults": "Geen deelnemers gevonden voor",
     "favorite": "TOEVOEGEN AAN FAVORIETEN",
-    "unknownName": "ONBEKENDE DEELNEMER"
+    "unknownName": "ONBEKENDE DEELNEMER",
+    "results": "RESULTATEN"
   },
   "tracking": {
     "live": "Live Tracking Actief",

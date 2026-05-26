@@ -26,7 +26,8 @@
     "searching": "Searching...",
     "noResults": "No participants found for",
     "favorite": "ADD TO FAVORITE",
-    "unknownName": "UNKNOWN PARTICIPANT"
+    "unknownName": "UNKNOWN PARTICIPANT",
+    "results": "RESULTS"
   },
   "tracking": {
     "live": "Live Tracking Active",

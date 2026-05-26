@@ -15,6 +15,10 @@ export interface Participant {
   source?: string;
   profile_picture?: string;
   password_protected: 0 | 1;
+  // ✅ NEW — returned by the API for result-detail navigation + status-based buttons
+  product_app_id?: number;
+  product_option_value_app_id?: number | null;
+  race_status?: 'not_started' | 'in_progress' | 'finished' | string;
 }
 
 export interface ParticipantPagination {
@@ -33,7 +37,7 @@ interface GetParticipantsParams {
   product_app_id: string | number;
   page?: number;
   filter_name?: string;
-  product_option_value_app_id?: string | number|null;
+  product_option_value_app_id?: string | number | null;
 }
 
 export const participantService = {
@@ -74,7 +78,7 @@ export const participantService = {
       if (response.success && response.data) {
         // ✅ Cast to any to bypass TypeScript errors, then extract data
         const apiData = response.data as any;
-        
+
         if (API_CONFIG.DEBUG) {
           console.log('✅ Participants loaded:', apiData.participants?.length || 0);
         }
