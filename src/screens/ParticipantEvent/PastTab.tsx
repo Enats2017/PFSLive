@@ -259,7 +259,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 contentContainerStyle={{
                     paddingTop:spacing.sm,
                     paddingHorizontal: spacing.md,
-                    paddingBottom: spacing.xl,
+                    paddingBottom: spacing.xxxxl,
                     flexGrow: 1,
                 }}
                 ListFooterComponent={ListFooterComponent}

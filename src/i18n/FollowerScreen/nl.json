@@ -1,0 +1,13 @@
+{
+  "upcomingrace": "ZOEK EEN AANKOMENDE RACE",
+  "pastrace": "ZOEK EEN EERDERE RACE",
+  "athlete": "ZOEK EEN ATLEET",
+  "button": {
+    "upcoming": "TOON ALLE AANKOMENDE EVENEMENTEN",
+    "past": "TOON ALLE RESULTATEN"
+  },
+  "search": {
+    "upcomgsearch": "Zoek race op evenementnaam",
+    "athletesearch": "Zoek deelnemer op naam, startnummer"
+  }
+}

@@ -43,7 +43,7 @@ export const colors = {
   inputBgSelected: '#fff5f5',  // BG_SELECTED
   inputBgItem: '#f3f4f6',      // BG_ITEM
 
-  themeiColor: '#D1E231',
+  themeiColor: '#d5da28',
   themeblue: '#0f2a40',
 
   

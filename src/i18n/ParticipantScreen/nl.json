@@ -1,0 +1,12 @@
+{
+  "liveTracking": {
+    "title": "AANMELDEN VOOR LIVE TRACKING",
+    "hint": "OF",
+    "showAll": "TOON ALLE AANKOMENDE EVENEMENTEN"
+  },
+  "personalRace": {
+    "title": "PERSOONLIJKE RACE MAKEN",
+    "description": "Doe je mee aan een evenement dat niet op onze officiële kalender staat of plan je een trainingssessie? Maak hieronder je live tracking-sessie aan. GPX-upload is optioneel.",
+    "createButton": "PERSOONLIJK EVENEMENT MAKEN"
+  }
+}

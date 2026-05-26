@@ -7,6 +7,7 @@ import { RootStackParamList } from '../../types/navigation';
 import { AthleteEvent } from '../../services/athleteProfileService';
 import { commonStyles, spacing, colors } from '../../styles/common.styles';
 import { profileStyles } from '../../styles/Profile.styles';
+import { Feather, MaterialCommunityIcons,Ionicons} from '@expo/vector-icons';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditPersonalEvent'>;
 
@@ -52,64 +53,53 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
         switch (item.race_status) {
             case 'in_progress': return t('profile:buttons.live_tracking_progress');
             case 'not_started': return t('profile:buttons.live_tracking_soon');
-            case 'finished':    return t('profile:buttons.live_tracking_ended');
-            default:             return t('profile:buttons.live_tracking_soon');
+            case 'finished': return t('profile:buttons.live_tracking_ended');
+            default: return t('profile:buttons.live_tracking_soon');
         }
     }, [item.race_status, t]);
 
-    // Edit is disabled when the race is finished — no point editing a completed event.
-    // Tracking button is always enabled so the user can view the live map regardless.
+
     const isEditDisabled = item.race_status === 'finished';
 
     // ── Render ──────────────────────────────────────────────────
 
     return (
-        <View style={[commonStyles.card, profileStyles.eventCard]}>
-            <View style={profileStyles.textsection}>
-                <Text style={commonStyles.title}>{item.name}</Text>
-                <Text style={commonStyles.text}>
-                    {item.race_date_formatted} {item.race_time?.slice(0, 5)}
-                </Text>
+        <View style={[commonStyles.card, { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }]}>
+            <View style={styles.info}>
+                <Text style={commonStyles.title} numberOfLines={1}>{item.name}</Text>
+                <View style={styles.dateRow}>
+                    <MaterialCommunityIcons name="calendar-month-outline" size={13} color="#888" style={{ marginRight: 4 }} />
+                    <Text style={commonStyles.date}>
+                        {item.race_date_formatted}{item.race_time ? `  ${item.race_time.slice(0, 5)}` : ''}
+                    </Text>
+                </View>
             </View>
 
             {isOwnProfile ? (
-                // ── Two buttons side by side ──
-                <View style={styles.buttonRow}>
+                <View style = {{flexDirection:'row', alignItems:'center', gap:6}}>
                     <TouchableOpacity
-                        style={[
-                            commonStyles.primaryButton,
-                            styles.halfButton,
-                            { borderRadius: 0 },
-                            isEditDisabled && styles.disabledButton,
-                        ]}
+                        style={[styles.iconBtn, isEditDisabled && styles.disabledBtn]}
                         onPress={isEditDisabled ? undefined : handleEditPress}
                         activeOpacity={isEditDisabled ? 1 : 0.8}
                         disabled={isEditDisabled}
                     >
-                        <Text style={commonStyles.primaryButtonText}>{editLabel}</Text>
+                    <Ionicons name="pencil-outline" size={23} color={colors.primaryDark} />
                     </TouchableOpacity>
-
                     <TouchableOpacity
-                        style={[
-                            commonStyles.primaryButton,
-                            styles.halfButton,
-                            styles.trackingButton,
-                            { borderRadius: 0 },
-                        ]}
+                        style={styles.iconBtn}
                         onPress={handleTrackingPress}
                         activeOpacity={0.8}
                     >
-                        <Text style={commonStyles.primaryButtonText}>{trackingLabel()}</Text>
+                        <Ionicons name="eye-outline" size={23} color={colors.primaryDark} />
                     </TouchableOpacity>
                 </View>
             ) : (
-                // ── Single button (not own profile) ──
                 <TouchableOpacity
-                    style={[commonStyles.primaryButton, { borderRadius: 0 }]}
+                    style={styles.iconBtn}
                     onPress={handleTrackingPress}
                     activeOpacity={0.8}
                 >
-                    <Text style={commonStyles.primaryButtonText}>{trackingLabel()}</Text>
+                    <Feather name="eye" size={16} color="#fff" />
                 </TouchableOpacity>
             )}
         </View>
@@ -119,18 +109,28 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
 EventCard.displayName = 'EventCard';
 
 const styles = StyleSheet.create({
-    buttonRow: {
-        flexDirection: 'row',
-    },
-    halfButton: {
+
+
+    info: {
         flex: 1,
+        justifyContent: 'center',
     },
-    trackingButton: {
-        backgroundColor: colors.primary ?? colors.primary,
-        borderLeftWidth: 1,
-        borderLeftColor: colors.white ?? '#fff',
+
+    dateRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    disabledButton: {
-        opacity: 0.5,
+
+
+    iconBtn: {
+        backgroundColor: colors.themeiColor,
+        borderRadius: 8,
+        width: 45,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    disabledBtn: {
+        opacity: 0.4,
     },
 });

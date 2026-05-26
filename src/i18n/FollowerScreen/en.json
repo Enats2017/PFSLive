@@ -1,0 +1,15 @@
+{
+    "upcomingrace":"FIND AN UPCOMING RACE",
+    "pastrace":"FIND A PAST RACE",
+    "athlete":"FIND AN ATHLETE",
+    "button":{
+        "upcoming":"SHOW ALL UPCOMING EVENTS",
+        "past":"SHOW ALL RESULTS"
+    },
+    "search":{
+        "upcomgsearch":"Search Race By Event Name",
+         "athletesearch":"Search Participant By Name, Bib Number"
+
+    }
+
+}

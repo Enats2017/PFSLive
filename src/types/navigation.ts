@@ -55,7 +55,9 @@ export type RootStackParamList = {
     from_live : 0 | 1,
      raceStatus?: 'finished' | 'in_progress' | 'not_started';
   };
-  FollowerEvent: undefined;
+  FollowerEvent: {
+    initialTab?: 'Past' | 'Live' | 'Upcoming';
+  };
   FollowDetails: {
     product_app_id: number;
     event_name: string;
@@ -79,7 +81,9 @@ export type RootStackParamList = {
     product_option_value_app_id: number;
     raceStatus?: 'finished' | 'in_progress' | 'not_started' ; 
   },
-  LiveTrackingSettings:undefined
+  LiveTrackingSettings:undefined,
+  ParticipantScreen:undefined,
+  FollowerSrceen:undefined
 };
 
 export type HomeScreenProps = NativeStackScreenProps<
@@ -174,6 +178,15 @@ export type SearchParticipantpops = NativeStackScreenProps<
 export type LiveTrackingSettingspops = NativeStackScreenProps<
   RootStackParamList,
   "LiveTrackingSettings"
+>;
+export type ParticipantScreenpops = NativeStackScreenProps<
+  RootStackParamList,
+  "ParticipantScreen"
+>;
+
+export type FollowerScreenpops = NativeStackScreenProps<
+  RootStackParamList,
+  "FollowerSrceen"
 >;
 
 export type AuthStackParamList = {

@@ -1,0 +1,13 @@
+
+{
+  "liveTracking": {
+    "title": "SIGN UP LIVE TRACKING",
+    "hint": "OR",
+    "showAll": "SHOW ALL UPCOMING EVENTS"
+  },
+  "personalRace": {
+    "title": "CREATE PERSONAL RACE",
+    "description": "Racing an event not on our official calendar or planning a training session? Create your live tracking session below. GPX upload is optional.",
+    "createButton": "CREATE PERSONAL EVENT"
+  }
+}

@@ -24,11 +24,8 @@ import { eventService, EventItem, ParticipantItem } from '../../services/followe
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { API_CONFIG } from '../../constants/config';
-import SearchInput from '../../components/SearchInput';
-import FanEventCard from './FollowerCard';
 import { FollowerEventpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
-import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 
@@ -37,8 +34,9 @@ const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
 const { width, height } = Dimensions.get('window');
 const TAB_CONTENT_HEIGHT = height * 0.39;
 
-const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
+const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
     const { t } = useTranslation(['follower', 'common']);
+    const initialTab = (route.params?.initialTab) as Tab;
 
     const {
         isFollowed,
@@ -52,7 +50,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         handlePasswordModalClose,
     } = useFollowManager(t);
 
-    const [activeTab, setActiveTab] = useState<Tab>('Live');
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [loading, setLoading] = useState(true);
     const [searchResults, setSearchResults] = useState<ParticipantItem[]>([]);
     const [searching, setSearching] = useState(false);
@@ -80,6 +78,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
     const participantSearchFocused = useRef(false);
     const keyboardOffset = useRef(new Animated.Value(0)).current;
     const isLoadingMoreSearch = useRef(false);
+    const activeTabRef = useRef<Tab>(initialTab ?? 'Upcoming');
 
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -176,6 +175,10 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         }
     }, [t]);
 
+    useEffect(() => {
+        activeTabRef.current = activeTab;
+    }, [activeTab]);
+
     useFocusEffect(
         useCallback(() => {
             if (isFetching.current) {
@@ -187,7 +190,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 await fetchEvents('');
                 if (!isInitialMount.current) {
                     if (API_CONFIG.DEBUG) console.log('🔄 Syncing scroll to:', activeTab);
-                    const index = TABS.indexOf(activeTab);
+                    const index = TABS.indexOf(activeTabRef.current);
                     setTimeout(() => {
                         flatListRef.current?.scrollToIndex({ index, animated: false });
                     }, 100);
@@ -196,7 +199,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
             fetchAndSync();
             if (isInitialMount.current) isInitialMount.current = false;
             return () => { isFetching.current = false; };
-        }, [fetchEvents, activeTab, refreshFollowedUsers])
+        }, [fetchEvents,  refreshFollowedUsers])
     );
 
     const loadMorePast = useCallback(async () => {
@@ -286,41 +289,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         }
     }, [loadingMoreUpcoming, paginationInfo.upcoming.page, paginationInfo.upcoming.total_pages]);
 
-    // ✅ LOAD MORE PARTICIPANTS
-    const loadMoreParticipant = useCallback(async () => {
-        if (loadingMoreParticipant || paginationInfo.participants.page >= paginationInfo.participants.total_pages) return;
 
-        try {
-            setLoadingMoreParticipant(true);
-            const nextPage = paginationInfo.participants.page + 1;
-            if (API_CONFIG.DEBUG) console.log(`📡 Participants: Loading page ${nextPage}`);
-
-            const result = await eventService.getEvents({
-                is_participant: '1',
-                page_participant: nextPage,
-                filter_name_participant: searchText,
-            });
-
-            setParticipants(prev => {
-                const ids = new Set(prev.map(e => e.customer_app_id));
-                const newItems = (result.participants || []).filter(i => !ids.has(i.customer_app_id));
-                if (API_CONFIG.DEBUG) console.log(`➕ Participants: Adding ${newItems.length} new items`);
-                return [...prev, ...newItems];
-            });
-
-            setPaginationInfo(prev => ({
-                ...prev,
-                participants: {
-                    page: nextPage,
-                    total_pages: result.pagination?.participants?.total_pages ?? prev.participants.total_pages,
-                },
-            }));
-        } catch (err) {
-            if (API_CONFIG.DEBUG) console.error('❌ Participant: Load more failed:', err);
-        } finally {
-            setLoadingMoreParticipant(false);
-        }
-    }, [loadingMoreParticipant, paginationInfo.participants, searchText]);
 
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
@@ -368,92 +337,8 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
     }, [searchText]);
 
-    const displayEvents = searchText.trim().length > 0 ? searchResults : participants;
-
-    const loadMoreSearchResults = useCallback(async () => {
-        if (isLoadingMoreSearch.current) return;
-        let currentPage = 0;
-        let totalPages = 0;
-        setSearchPagination(prev => {
-            currentPage = prev.page;
-            totalPages = prev.total_pages;
-            return prev;
-        });
-
-        if (currentPage >= totalPages) return;
-        try {
-            isLoadingMoreSearch.current = true;
-            const nextPage = currentPage + 1;
-            console.log(`Fetching search page ${nextPage} for "${searchText}"`);
-            const result = await eventService.getEvents({
-                is_participant: '1',
-                page_participant: nextPage,
-                filter_name_participant: searchText,
-            });
-            console.log(`✅ Page ${nextPage} loaded:`, {
-                received: (result.participants || []).length,
-                total_pages: result.pagination?.participants?.total_pages,
-            });
-
-            setSearchResults(prev => {
-                const ids = new Set(prev.map(e => e.customer_app_id));
-                const newItems = (result.participants || []).filter(i => !ids.has(i.customer_app_id));
-                return [...prev, ...newItems];
-            });
-
-            setSearchPagination({
-                page: nextPage,
-                total_pages: result.pagination?.participants?.total_pages ?? totalPages,
-            });
-
-        } catch (err) {
-            console.error('❌ Search load more failed:', err);
-        } finally {
-            isLoadingMoreSearch.current = false;
-        }
-    }, [searchText]);
-
-    const handleLoadMoreParticipant = useCallback(() => {
-        if (searchText.trim().length > 0) {
-            if (!isLoadingMoreSearch.current && searchPagination.page < searchPagination.total_pages) {
-                console.log('✅ Loading more search results');
-                loadMoreSearchResults();
-            }
-            return;
-        }
-        if (API_CONFIG.DEBUG) {
-            console.log('🔍 Participant onEndReached:', {
-                hasMore: paginationInfo.participants.page < paginationInfo.participants.total_pages,
-                loadingMore: loadingMoreParticipant,
-                participantsCount: participants.length,
-            });
-        }
-
-        if (paginationInfo.participants.page < paginationInfo.participants.total_pages && !loadingMoreParticipant) {
-            if (API_CONFIG.DEBUG) console.log('Calling loadMoreParticipant');
-            loadMoreParticipant();
-        }
-    }, [paginationInfo.participants, loadingMoreParticipant, loadMoreParticipant, participants.length, searchText, searchPagination]);
-
-    // RENDER PARTICIPANT CARD
-    const renderParticipantCard = useCallback(
-        ({ item }: { item: ParticipantItem }) => (
-            <FanEventCard
-                item={item}
-                isFollowed={isFollowed(item.customer_app_id)}
-                isLoading={isLoading(item.customer_app_id)}
-                onToggleFollow={() => {
-                    handleFollowPress({
-                        customer_app_id: item.customer_app_id,
-                        password_protected: item.password_protected ?? 0,
-                    });
-                }}
-            />
-        ),
-        [isFollowed, isLoading, handleFollowPress]
-    );
-
-    // LOADING STATE
+    
+     // LOADING STATE
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -525,7 +410,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                 </View>
 
                 {/* TAB CONTENT */}
-                <View style={{ height: TAB_CONTENT_HEIGHT }}>
+                <View>
                     <FlatList
                         ref={flatListRef}
                         data={TABS}
@@ -535,6 +420,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                         keyExtractor={(item) => item}
                         onMomentumScrollEnd={handleSwipe}
                         initialScrollIndex={TABS.indexOf('Live')}
+                        contentContainerStyle={{paddingBottom:spacing.xxxxl}}
                         scrollEnabled={true}
                         getItemLayout={(_, index) => ({
                             length: width,
@@ -571,70 +457,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation }) => {
                         )}
                     />
                 </View>
-
-                <View style={[eventStyles.section, { marginBottom: spacing.md, marginTop: spacing.sm }]}>
-                    <Text style={eventStyles.title}>{t('follower:personal.title')}</Text>
-                </View>
-
-                <View style={{ flex: 1 }}>
-                    <FlatList
-                        data={displayEvents}
-                        keyExtractor={(item, index) => `${item.customer_app_id}_${index}`}
-                        renderItem={renderParticipantCard}
-                        onEndReached={handleLoadMoreParticipant}
-                        onEndReachedThreshold={0.5}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={{
-                            paddingHorizontal: spacing.md,
-                            paddingBottom: spacing.xxxl,
-                        }}
-                        keyboardShouldPersistTaps="handled"
-                        removeClippedSubviews={false}
-                        ListHeaderComponent={
-                            <>
-                                <SearchInput
-                                    placeholder={t('details:participant.search')}
-                                    value={searchText}
-                                    onChangeText={setSearchText}
-                                    icon="search"
-                                    onFocus={() => { participantSearchFocused.current = true; }}
-                                    onBlur={() => { participantSearchFocused.current = false; }}
-                                />
-                                {searching && (
-                                    <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-                                        <ActivityIndicator size="small" color={colors.primary} />
-                                    </View>
-                                )}
-                            </>
-                        }
-                        ListEmptyComponent={
-                            <View style={{ marginTop: 40, alignItems: 'center' }}>
-                                <Text style={commonStyles.errorText}>
-                                    {searchText.trim().length > 0
-                                        ? t('follower:empty.searchNoResults')
-                                        : t('details:participant.empty')}
-                                </Text>
-                            </View>
-                        }
-                        ListFooterComponent={
-                            loadingMoreParticipant ? (
-                                <ActivityIndicator
-                                    size="small"
-                                    color={colors.primary}
-                                    style={{ marginVertical: spacing.md }}
-                                />
-                            ) : null
-                        }
-                    />
-                </View>
             </Animated.View>
-            <TrackingPasswordModal
-                visible={passwordModalVisible}
-                isVerifying={isVerifying}
-                passwordError={passwordError}
-                onSubmit={handlePasswordSubmit}
-                onClose={handlePasswordModalClose}
-            />
         </SafeAreaView>
     );
 };
