@@ -5,7 +5,8 @@ export const detailsStyles = StyleSheet.create({
   section: {
     alignItems: "center",
     backgroundColor: colors.themeiColor,
-    marginVertical: spacing.sm,
+     paddingVertical: spacing.sm,
+     marginBottom:spacing.sm,
   },
   tabBar: {
     flexDirection: "row",

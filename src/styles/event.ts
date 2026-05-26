@@ -16,10 +16,11 @@ export const eventStyles = StyleSheet.create({
   },
   section: {
     alignItems: "center",
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    marginBottom:spacing.sm,
+    
     backgroundColor: colors.themeiColor,
-    marginVertical: spacing.sm,
+    
   },
   title: {
     fontSize: typography.sizes.xl,

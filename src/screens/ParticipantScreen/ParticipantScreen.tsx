@@ -87,8 +87,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
             </View>
             <View style={particpant.dividerRow}>
                 <View style={particpant.dividerLine} />
-                <Text style={particpant.dividerLabel}>OR</Text>
-                <View style={particpant.dividerLine} />
+                
             </View>
             <View style={particpant.yellowHeader}>
                 <Feather name="plus-circle" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />

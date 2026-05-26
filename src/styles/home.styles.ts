@@ -44,7 +44,7 @@ export const homeStyles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 1,
     marginTop: spacing.xs,
-    marginBottom: spacing.xxxl,
+    marginBottom: spacing.sm,
   },
 
   // Event info section
@@ -267,4 +267,43 @@ export const homeStyles = StyleSheet.create({
   notifViewButton: {
     backgroundColor: colors.primary,
   },
+  logosSection: {
+    
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.sm,
+},
+logosTitle: {
+    fontSize: spacing.md,
+     fontStyle:"italic",
+    color: colors.gray50,
+    textTransform: 'capitalize',
+    letterSpacing: 2,
+    textAlign: 'center',
+    
+},
+logosContainer: {
+    backgroundColor: colors.primary,   // ← single dark navy bg
+    borderRadius: 5,
+    padding: spacing.md,
+},
+
+logoBox: {
+  width: 135,          // fixed width for snapping
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    
+},
+partnerLogo: {
+    width: '135%',
+    height: '100%',
+     
+},
+
+logosRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+},
+
 });

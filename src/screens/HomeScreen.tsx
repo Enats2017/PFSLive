@@ -186,7 +186,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     //   sectionType: 'follower',
     //   sourceTab: 'live'
     // });
-    if(data.product_option_value_app_id == 0) {
+    if (data.product_option_value_app_id == 0) {
       navigation.navigate('LiveTracking', {
         product_app_id: Number(data.race_id),
         product_option_value_app_id: Number(data.product_option_value_app_id),
@@ -205,7 +205,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         raceStatus: (data.race_status as any) ?? undefined,
       });
     }
-    
+
   }, [navigation]);
 
   const closeNotificationPopup = useCallback(() => {
@@ -265,10 +265,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const syncFromServer = async () => {
       try {
         const data = await followerApi.getFollowerData(expoPushToken);
-        
+
         console.log('data');
         console.log(data);
-        
+
         await syncFollowDataFromAPI(
           data.followed_customers ?? [],
           data.followed_bibs ?? {},
@@ -591,7 +591,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // Silent fail
       }
     }, 10000);  // ✅ 10s — quick retry when network recovers after instability.
-                // Safe: getQueueSize() exits immediately if queue is empty.
+    // Safe: getQueueSize() exits immediately if queue is empty.
   }, [participantId, eventId, loadQueueSize, t]);
 
   const startRaceStartChecker = useCallback(() => {
@@ -659,7 +659,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
           if (serverDatetimeStr) {
             const serverFakeMs = new Date(serverDatetimeStr.replace(' ', 'T') + 'Z').getTime();
-            const raceFakeMs   = new Date(`${homeData.next_race_date}T${homeData.next_race_time}Z`).getTime();
+            const raceFakeMs = new Date(`${homeData.next_race_date}T${homeData.next_race_time}Z`).getTime();
 
             // How many ms from event-tz now until race start (negative = already started)
             const msUntilRace = raceFakeMs - serverFakeMs;
@@ -857,7 +857,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setIsSendingData(false);
     setCurrentLocation(null);
     trackingParamsRef.current = null;
-    AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => {});
+    AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => { });
 
     // ✅ Stop background fetch keepalive
     await stopBackgroundFetchKeepalive();
@@ -1051,6 +1051,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       };
     }, [checkAppVersion, fetchHomeData])
   );
+
+  const PARTNER_LOGOS = [
+    'https://www-static.liviolive.com/wp-content/uploads/2026/05/fantomes-2.png',
+    'https://www-static.liviolive.com/wp-content/uploads/2026/05/terhills.png',
+    'https://www-static.liviolive.com/wp-content/uploads/2026/05/walking.png',
+    'https://www-static.liviolive.com/wp-content/uploads/2026/05/soup.png',
+    'https://www-static.liviolive.com/wp-content/uploads/2026/05/gtlc-1.png',
+    'https://www-static.liviolive.com/wp-content/uploads/2026/05/orval.png',
+    'https://www-static.liviolive.com/wp-content/uploads/2026/05/heuvelland.png',
+    'https://www-static.liviolive.com/wp-content/uploads/2026/05/chouffe.png',
+    'https://www-static.liviolive.com/wp-content/uploads/2026/05/castle-1.png',
+    'https://www-static.liviolive.com/wp-content/uploads/2026/05/castle-1.png',
+    'https://www-static.liviolive.com/wp-content/uploads/2026/05/ballon-1.png'
+
+  ];
 
   // ==================== RENDER ====================
 
@@ -1257,6 +1272,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           {/* {t('home:subtitle')} */}
         </Text>
 
+        <View style={homeStyles.logosSection}>
+    <View style={homeStyles.logosContainer}>
+        <Text style={homeStyles.logosTitle}>{t('home:Logotagline')}</Text>
+        <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={homeStyles.logosRow}
+            decelerationRate="fast"
+            snapToInterval={110}   // ← logoBox width + gap, snaps per logo
+            snapToAlignment="start"
+        >
+            {PARTNER_LOGOS.map((uri, index) => (
+                <View key={index} style={homeStyles.logoBox}>
+                    <Image
+                        source={{ uri }}
+                        style={homeStyles.partnerLogo}
+                        resizeMode="contain"
+                    />
+                </View>
+            ))}
+        </ScrollView>
+    </View>
+</View>
+
         {/* Main Content */}
         <View style={homeStyles.textContainer}>
           {homeData?.show_start_track === 1 ? (
@@ -1372,8 +1411,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   {isGPSActive
                     ? t('home:Event.button')
                     : !participantId || !eventId
-                    ? t('home:status.waitingForData')
-                    : t('home:Event.buttonText')}
+                      ? t('home:status.waitingForData')
+                      : t('home:Event.buttonText')}
                 </Text>
               </TouchableOpacity>
 

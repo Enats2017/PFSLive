@@ -11,7 +11,6 @@ import { colors, spacing } from "./common.styles";
     yellowHeader: {
         flexDirection: 'row',
         backgroundColor: colors.themeiColor,
-        borderRadius: 10,
         paddingVertical: spacing.sm,
         alignItems: 'center',
         justifyContent: 'center',
@@ -26,24 +25,16 @@ import { colors, spacing } from "./common.styles";
     },
 
     dividerRow: {
-        paddingHorizontal: spacing.sm,
         paddingVertical: spacing.xl,
         flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.sm,
+        alignItems: 'center',       
     },
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: colors.gray300,
+        backgroundColor: colors.gray200,
     },
-    dividerLabel: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: colors.gray400,
-        letterSpacing: 1,
-    },
-
+  
     infoCard: {
         flexDirection: 'row',
         backgroundColor: '#f8f8f8',

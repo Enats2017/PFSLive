@@ -31,8 +31,8 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 const Divider = () => (
     <View style={follow.dividerRow}>
         <View style={follow.dividerLine} />
-        <Text style={follow.dividerLabel}>OR</Text>
-        <View style={follow.dividerLine} />
+
+        
     </View>
 );
 

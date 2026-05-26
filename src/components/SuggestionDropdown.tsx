@@ -10,6 +10,8 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { colors } from '../styles/common.styles';
 import { SuggestionItem } from '../services/followerScreenService';
+import { formatEventDate } from '../utils/dateFormatter';
+import { useTranslation } from 'react-i18next';
 
 
 interface SuggestionDropdownProps {
@@ -25,7 +27,9 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
     visible,
     onSelect,
 }) => {
+    const { t } = useTranslation(['event', 'common']);
     if (!visible) return null;
+
 
     if (loading) {
         return (
@@ -69,7 +73,7 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
                                 {item.name}
                             </Text>
                             <Text style={styles.date}>
-                                {item.race_date}{item.city ? `  ·  ${item.city}` : ''}
+                                {formatEventDate(item.race_date,t)}{item.city ? `  ·  ${item.city}` : ''}
                             </Text>
                         </View>
                         <Feather name="chevron-right" size={14} color="#bbb" />
