@@ -41,7 +41,7 @@ const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 // Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
 // Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 0,   // Walking — 3m  (safe at 0.5 km/h min pace)
+  64: 3,   // Walking — 3m  (safe at 0.5 km/h min pace)
   59: 15,  // Running — 15m (safe at 6 km/h min pace)
   60: 30,  // Cycling — 30m (safe at 10 km/h min pace)
 };
@@ -349,7 +349,11 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       // ✅ Use distance_to_finish_km (specific to finish line) rather than
       // distance_to_next_cp (which could be any intermediate checkpoint).
       // Falls back to distance_to_next_cp only if finish distance unavailable.
-      const distToFinish = result.distance_to_finish_km ?? result.distance_to_next_cp ?? null;
+      const sentCountStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+      const sentCount = sentCountStr ? parseInt(sentCountStr) : 0;
+      const distToFinish = (sentCount < 10)
+        ? null  // ✅ ignore finish distance in first ~5 minutes (10 × 30s)
+        : (result.distance_to_finish_km ?? result.distance_to_next_cp ?? null);
       if (distToFinish !== null && distToFinish <= FINISH_APPROACH_THRESHOLD) {
         const wasActive = finishApproach === '1';
         await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
@@ -432,10 +436,13 @@ export const ensureBackgroundTaskAlive = async (
       showsBackgroundLocationIndicator: true,
       deferredUpdatesInterval: 0,
       deferredUpdatesDistance: 0,
+      // ✅ Same activityType as initial start — must match to avoid GPS priority drop
+      activityType: Location.LocationActivityType.Fitness,
     });
 
     if (API_CONFIG.DEBUG) console.log('✅ Background task restarted');
     await addLog('♻️', 'Watchdog: background task was dead — restarted successfully');
+
     return true;
   } catch (err: any) {
     if (API_CONFIG.DEBUG) console.error('❌ Failed to restart background task:', err?.message);
@@ -650,6 +657,15 @@ export const gpsService = {
         // Without this Android batches updates during Doze maintenance windows.
         deferredUpdatesInterval: 0,
         deferredUpdatesDistance: 0,
+        // ✅ activityType: Fitness — tells Android/iOS this is a fitness session.
+        // Prevents the OS from throttling GPS when multiple fitness apps have
+        // active GPS sessions simultaneously (e.g. StepSetGo walking session).
+        // When StepSetGo starts a walking session it opens a High accuracy GPS
+        // session — without Fitness activityType, Samsung One UI deprioritises
+        // Livio's session as the newer consumer, causing background GPS gaps.
+        // With Fitness activityType, both sessions get equal GPS priority.
+        // Same flag used by Strava, Nike Run Club, Google Fit for this reason.
+        activityType: Location.LocationActivityType.Fitness,
       });
 
       if (API_CONFIG.DEBUG) {
