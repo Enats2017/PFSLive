@@ -1,12 +1,13 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import { commonStyles } from '../../styles/common.styles';
+import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { profileStyles } from '../../styles/Profile.styles';
 import { AthleteEvent } from '../../services/athleteProfileService';
+import { Feather, MaterialCommunityIcons,Ionicons } from '@expo/vector-icons';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -49,26 +50,51 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
     }, [item, isOwnProfile, navigation]);
 
     return (
-        <View style={[commonStyles.card, profileStyles.eventCard]}>
-            <View style={profileStyles.textsection}>
-                <Text style={commonStyles.title}>{item.name}</Text>
-                <Text style={commonStyles.text}>
-                    {item.race_date_formatted} {item.race_time?.slice(0, 5)}
-                </Text>
+        <View style={[commonStyles.card, { flexDirection: 'row', alignItems: 'center', marginBottom:spacing.md }]}>
+            <View style={styles.info}>
+                <Text style={[commonStyles.title, { marginBottom: spacing.sm }]} numberOfLines={1}>{item.name}</Text>
+                <View style={styles.dateRow}>
+                    <MaterialCommunityIcons name="calendar-month-outline" size={16} color="#888" style={{ marginRight: 4 }} />
+                    <Text style={commonStyles.date}>
+                        {item.race_date_formatted}{item.race_time ? `  ${item.race_time.slice(0, 5)}` : ''}
+                    </Text>
+                </View>
             </View>
+
             <TouchableOpacity
-                style={[commonStyles.primaryButton, { borderRadius: 0 }]}
+                style={styles.iconButtonBlue}
                 onPress={handlePress}
                 activeOpacity={0.8}
             >
-                <Text style={commonStyles.primaryButtonText}>
-                    {t('profile:past.view_results')}
-                </Text>
+                <Ionicons name="bar-chart-outline" size={23} color={colors.primaryDark} />
             </TouchableOpacity>
         </View>
     );
 });
 
 EventCardPast.displayName = 'EventCardPast';
+
+const styles = StyleSheet.create({
+    
+   
+    info: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+ 
+    dateRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+   
+    iconButtonBlue: {
+        backgroundColor: colors.themeiColor,
+        borderRadius: 8,
+        width: 45,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+});
 
 export default EventCardPast;

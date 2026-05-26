@@ -1442,13 +1442,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={homeStyles.buttonContainer}>
           <TouchableOpacity
             style={homeStyles.button}
-            onPress={() => navigation.navigate('ParticipantEvent')}
+            onPress={() => navigation.navigate('ParticipantScreen')}
           >
             <Text style={homeStyles.buttonText}>{t('home:button.Participant')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={homeStyles.button}
-            onPress={() => navigation.navigate('FollowerEvent')}
+            onPress={() => navigation.navigate('FollowerSrceen')}
           >
             <Text style={homeStyles.buttonText}>{t('home:button.Fan')}</Text>
           </TouchableOpacity>

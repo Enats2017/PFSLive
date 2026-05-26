@@ -11,9 +11,9 @@ export const personalStyles = StyleSheet.create({
   // ✅ SECTION HEADER
   section: {
     alignItems: "center",
-    paddingVertical: spacing.md,
-    backgroundColor: colors.gray100,
-    marginVertical: spacing.sm,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.themeiColor,
+   
   },
 
   // ✅ TEXT STYLES

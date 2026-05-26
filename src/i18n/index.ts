@@ -102,6 +102,13 @@ import ErrorScreenEN from "./ErrorScreen/en.json";
 import ErrorScreenFR from "./ErrorScreen/fr.json";
 import ErrorScreenNL from "./ErrorScreen/nl.json";
 
+import participantScreenEN from "./ParticipantScreen/en.json";
+import participantScreenFR from "./ParticipantScreen/fr.json";
+import participantScreenNL from "./ParticipantScreen/nl.json";
+import FollowerSrceenEN from "./FollowerScreen/en.json";
+import FollowerSrceenFR from "./FollowerScreen/fr.json";
+import FollowerSrceenNL from "./FollowerScreen/nl.json";
+
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
 export const LANGUAGES = {
@@ -260,7 +267,9 @@ i18n.use(initReactI18next).init({
       forget:ForgetEN,
       favourite:FavouriteEN,
       setting:SettingScreenEN,
-      errorScreen:ErrorScreenEN, 
+      errorScreen:ErrorScreenEN,
+      participant:participantScreenEN,
+      follow:FollowerSrceenEN, 
     },
     fr: {
       common: commonFR,
@@ -285,6 +294,8 @@ i18n.use(initReactI18next).init({
       favourite:FavouriteFR,
       setting:SettingScreenFR,
       errorScreen:ErrorScreenFR,
+      participant:participantScreenFR,
+      follow:FollowerSrceenFR, 
     },
     nl: {
       common: commonNL,
@@ -309,6 +320,8 @@ i18n.use(initReactI18next).init({
       favourite:FavouriteNL,
       setting:SettingScreenNL,
       errorScreen:ErrorScreenNL,
+      participant:participantScreenNL,
+      follow:FollowerSrceenNL, 
     },
   },
   lng: initialLanguage,
@@ -322,6 +335,7 @@ i18n.use(initReactI18next).init({
     'personal',
     'details',
     'participantResult',
+    'participant',
     'register',
     'login',
     'otp',
@@ -335,7 +349,8 @@ i18n.use(initReactI18next).init({
     'forget',
     'favourite',
     'setting',
-    'errorScreen'
+    'errorScreen',
+    'follow'
   ],
   interpolation: {
     escapeValue: false,

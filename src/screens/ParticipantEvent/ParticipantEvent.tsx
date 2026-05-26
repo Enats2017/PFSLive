@@ -316,20 +316,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         }
     }, [activeTab]);
 
-    const handlePersonalEventPress = useCallback(async () => {
-        try {
-            const token = await tokenService.getToken();
-            if (token !== null && token !== '') {
-                navigation.navigate('PersonalEvent');
-                return;
-            }
-            navigation.navigate('LoginScreen');
-        } catch (error) {
-            console.log('❌ Token check failed:', error);
-            navigation.navigate('RegisterScreen');
-        }
-    }, [navigation]);
-
     // ✅ LOADING STATE
     if (loading) {
         return (
@@ -363,128 +349,96 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
-            <ScrollView
-                style={{ flex: 1 }}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ flexGrow: 1 }}
-                keyboardShouldPersistTaps="handled"
-            >
-                <View style={{ flex: 1 }}>
-                    <View style={eventStyles.section}>
-                        <Text style={eventStyles.textCenter}>{t('event:official.title')}</Text>
-                    </View>
 
-                    {/* TAB BAR */}
-                    <View style={eventStyles.tabBar}>
-                        {TABS.map((tab) => (
-                            <TouchableOpacity
-                                key={tab}
-                                style={eventStyles.tabItem}
-                                onPress={() => handleTabPress(tab)}
-                                activeOpacity={0.7}
+            <View style={{ flex: 1 }}>
+                <View style={eventStyles.section}>
+                    <Text style={eventStyles.textCenter}>{t('event:official.title')}</Text>
+                </View>
+
+                {/* TAB BAR */}
+                <View style={eventStyles.tabBar}>
+                    {TABS.map((tab) => (
+                        <TouchableOpacity
+                            key={tab}
+                            style={eventStyles.tabItem}
+                            onPress={() => handleTabPress(tab)}
+                            activeOpacity={0.7}
+                        >
+                            <Text
+                                style={[
+                                    commonStyles.subtitle,
+                                    activeTab === tab && eventStyles.activeTabText,
+                                ]}
                             >
-                                <Text
-                                    style={[
-                                        commonStyles.subtitle,
-                                        activeTab === tab && eventStyles.activeTabText,
-                                    ]}
-                                >
-                                    {t(`event:live.${tab}`)}
-                                </Text>
-                                {activeTab === tab && (
-                                    <LinearGradient
-                                        colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                        style={eventStyles.underline}
+                                {t(`event:live.${tab}`)}
+                            </Text>
+                            {activeTab === tab && (
+                                <LinearGradient
+                                    colors={['#e8341a', '#f4a100', '#1a73e8']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={eventStyles.underline}
+                                />
+                            )}
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                {/* TAB CONTENT */}
+                <View>
+                    <FlatList
+                        ref={flatListRef}
+                        data={TABS}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={(item) => item}
+                        onMomentumScrollEnd={handleSwipe}
+                        initialScrollIndex={TABS.indexOf('Live')}
+                        contentContainerStyle={{
+
+                            paddingBottom: spacing.xxxxl,
+                            flexGrow: 1,
+                        }}
+                        scrollEnabled={true}
+                        getItemLayout={(_, index) => ({
+                            length: width,
+                            offset: width * index,
+                            index,
+                        })}
+                        renderItem={({ item }) => (
+                            <View style={{ width }}>
+                                {item === 'Past' && (
+                                    <PastTab
+                                        events={pastEvents}
+                                        onLoadMore={loadMorePast}
+                                        loadingMore={loadingMorePast}
+                                        hasMore={paginationInfo.past.page < paginationInfo.past.total_pages}
                                     />
                                 )}
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-
-                    {/* TAB CONTENT */}
-                    <View style={{ height: TAB_CONTENT_HEIGHT }}>
-                        <FlatList
-                            ref={flatListRef}
-                            data={TABS}
-                            horizontal
-                            pagingEnabled
-                            showsHorizontalScrollIndicator={false}
-                            keyExtractor={(item) => item}
-                            onMomentumScrollEnd={handleSwipe}
-                            initialScrollIndex={TABS.indexOf('Live')}
-                            scrollEnabled={true}
-                            getItemLayout={(_, index) => ({
-                                length: width,
-                                offset: width * index,
-                                index,
-                            })}
-                            renderItem={({ item }) => (
-                                <View style={{ width }}>
-                                    {item === 'Past' && (
-                                        <PastTab
-                                            events={pastEvents}
-                                            onLoadMore={loadMorePast}
-                                            loadingMore={loadingMorePast}
-                                            hasMore={paginationInfo.past.page < paginationInfo.past.total_pages}
-                                        />
-                                    )}
-                                    {item === 'Live' && (
-                                        <LiveTab
-                                            events={liveEvents}
-                                            onLoadMore={loadMoreLive}
-                                            loadingMore={loadingMoreLive}
-                                            hasMore={paginationInfo.live.page < paginationInfo.live.total_pages}
-                                        />
-                                    )}
-                                    {item === 'Upcoming' && (
-                                        <UpcomingTab
-                                            events={upcomingEvents}
-                                            onLoadMore={loadMoreUpcoming}
-                                            loadingMore={loadingMoreUpcoming}
-                                            hasMore={paginationInfo.upcoming.page < paginationInfo.upcoming.total_pages}
-                                        />
-                                    )}
-                                </View>
-                            )}
-                        />
-                    </View>
-
-                    {/* PERSONAL EVENT SECTION */}
-                    <View style={[eventStyles.section, { marginBottom: spacing.sm, marginTop: spacing.sm }]}>
-                        <Text style={eventStyles.title}>{t('event:personal.title')}</Text>
-                    </View>
-                    <View
-                        style={[
-                            commonStyles.card,
-                            {
-                                marginHorizontal: spacing.md,
-                                padding: 0,
-
-                                marginBottom: spacing.xl,
-                            },
-                        ]}
-                    >
-                        <View style={eventStyles.header}>
-                            <Text style={[homeStyles.heading, { marginBottom: 0 }]}>
-                                {t('event:personal.description')}
-                            </Text>
-                        </View>
-                        <TouchableOpacity
-                            style={[commonStyles.primaryButton, {
-                                borderRadius: 0, borderBottomLeftRadius: 12,
-                                borderBottomRightRadius: 12,
-                            }]}
-                            onPress={handlePersonalEventPress}
-                            activeOpacity={0.8}
-                        >
-                            <Text style={commonStyles.primaryButtonText}>{t('personal.button')}</Text>
-                        </TouchableOpacity>
-                    </View>
+                                {item === 'Live' && (
+                                    <LiveTab
+                                        events={liveEvents}
+                                        onLoadMore={loadMoreLive}
+                                        loadingMore={loadingMoreLive}
+                                        hasMore={paginationInfo.live.page < paginationInfo.live.total_pages}
+                                    />
+                                )}
+                                {item === 'Upcoming' && (
+                                    <UpcomingTab
+                                        events={upcomingEvents}
+                                        onLoadMore={loadMoreUpcoming}
+                                        loadingMore={loadingMoreUpcoming}
+                                        hasMore={paginationInfo.upcoming.page < paginationInfo.upcoming.total_pages}
+                                    />
+                                )}
+                            </View>
+                        )}
+                    />
                 </View>
-            </ScrollView>
-        </SafeAreaView> 
+            </View>
+
+        </SafeAreaView>
     );
 };
 
