@@ -349,7 +349,11 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       // ✅ Use distance_to_finish_km (specific to finish line) rather than
       // distance_to_next_cp (which could be any intermediate checkpoint).
       // Falls back to distance_to_next_cp only if finish distance unavailable.
-      const distToFinish = result.distance_to_finish_km ?? result.distance_to_next_cp ?? null;
+      const sentCountStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+      const sentCount = sentCountStr ? parseInt(sentCountStr) : 0;
+      const distToFinish = (sentCount < 10)
+        ? null  // ✅ ignore finish distance in first ~5 minutes (10 × 30s)
+        : (result.distance_to_finish_km ?? result.distance_to_next_cp ?? null);
       if (distToFinish !== null && distToFinish <= FINISH_APPROACH_THRESHOLD) {
         const wasActive = finishApproach === '1';
         await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
