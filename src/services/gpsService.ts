@@ -349,10 +349,13 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       // ✅ Use distance_to_finish_km (specific to finish line) rather than
       // distance_to_next_cp (which could be any intermediate checkpoint).
       // Falls back to distance_to_next_cp only if finish distance unavailable.
+      // ✅ Loop course guard: skip finish approach for first 3 sends (~90s).
+      // Prevents false activation when GPS snaps to near-finish km on a loop
+      // course start. 90s is safe for all sports — no race finishes in 90s.
       const sentCountStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
       const sentCount = sentCountStr ? parseInt(sentCountStr) : 0;
-      const distToFinish = (sentCount < 10)
-        ? null  // ✅ ignore finish distance in first ~5 minutes (10 × 30s)
+      const distToFinish = (sentCount < 3)
+        ? null
         : (result.distance_to_finish_km ?? result.distance_to_next_cp ?? null);
       if (distToFinish !== null && distToFinish <= FINISH_APPROACH_THRESHOLD) {
         const wasActive = finishApproach === '1';
