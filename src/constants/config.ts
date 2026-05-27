@@ -124,7 +124,7 @@ export const API_CONFIG = {
   USE_MOCK_DATA: false,
 
   // ✅ Debug flag for development
-  DEBUG: true, // true in development, false in production
+  DEBUG: process.env.EXPO_PUBLIC_ENV !== 'production', // true in development, false in production
 
   /**
    * Get request headers with current auth token
