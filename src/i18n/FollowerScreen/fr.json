@@ -9,5 +9,9 @@
   "search": {
     "upcomgsearch": "Rechercher une course par nom d'événement",
     "athletesearch": "Rechercher un participant par nom, numéro de dossard"
-  }
+  },
+  "empty": {
+    "emptyTitle": "Trouvez votre athlète",
+    "emptySubtitle": "Recherchez par nom ou numéro de dossard pour trouver et suivre des participants"
+}
 }

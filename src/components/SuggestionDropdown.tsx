@@ -58,6 +58,7 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
                 data={suggestions}
                 keyExtractor={(item) => String(item.product_app_id)}
                 keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
                 nestedScrollEnabled
                 style={{ maxHeight: 220 }}
                 ItemSeparatorComponent={() => <View style={styles.separator} />}

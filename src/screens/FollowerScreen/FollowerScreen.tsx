@@ -22,9 +22,9 @@ import SearchInput from '../../components/SearchInput';
 import { SuggestionItem } from '../../services/followerScreenService';
 import SuggestionDropdown from '../../components/SuggestionDropdown';
 import useSearchSuggestions from '../../hooks/useSearchSuggestions';
-import { eventService } from '../../services/followerEvent';
+import { eventService,ParticipantItem } from '../../services/followerEvent';
 import AthleteSuggestionDropdown from '../../components/AthleteSuggestionDropdown';
-import { AthleteSuggestionItem } from '../../services/followerScreenService';
+
 
 
 
@@ -40,7 +40,7 @@ const FollowerScreen = () => {
     const upcoming = useSearchSuggestions('filter_name', ['upcoming', 'live']);
     const past = useSearchSuggestions('filter_name_past_suggestion', ['past']);
     const [athleteQuery, setAthleteQuery] = useState('');
-    const [athleteSuggestions, setAthleteSuggestions] = useState<AthleteSuggestionItem[]>([]);
+    const [athleteSuggestions, setAthleteSuggestions] = useState<ParticipantItem[]>([]);
     const [athleteLoading, setAthleteLoading] = useState(false);
     const [athleteLoadingMore, setAthleteLoadingMore] = useState(false);
     const [athleteDropdownVisible, setAthleteDropdownVisible] = useState(false);
@@ -148,7 +148,7 @@ const FollowerScreen = () => {
         }
     }, [athleteLoadingMore, athletePage, athleteTotalPages]);
 
-    const handleAthleteSelect = useCallback((item: AthleteSuggestionItem) => {
+    const handleAthleteSelect = useCallback((item: ParticipantItem) => {
         setAthleteDropdownVisible(false);
         setAthleteSuggestions([]);
         setAthleteQuery('');

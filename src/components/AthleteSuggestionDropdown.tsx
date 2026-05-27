@@ -9,17 +9,17 @@ import {
     View,
 } from 'react-native';
 import { colors, spacing } from '../styles/common.styles';
-import { AthleteSuggestionItem } from '../services/followerScreenService';
+import {  ParticipantItem } from '../services/followerEvent';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AthleteSuggestionDropdownProps {
-    suggestions: AthleteSuggestionItem[];
+    suggestions: ParticipantItem[];
     loading: boolean;
     loadingMore: boolean;
     visible: boolean;
     hasMore: boolean;
-    onSelect: (item: AthleteSuggestionItem) => void;
+    onSelect: (item: ParticipantItem) => void;
     onLoadMore: () => void;
 }
 
@@ -63,6 +63,7 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
                 data={suggestions}
                 keyExtractor={(item) => String(item.customer_app_id)}
                 keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
                 nestedScrollEnabled
                 style={{ maxHeight: 260 }}
                 onEndReached={hasMore ? onLoadMore : undefined}

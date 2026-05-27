@@ -9,5 +9,9 @@
   "search": {
     "upcomgsearch": "Zoek race op evenementnaam",
     "athletesearch": "Zoek deelnemer op naam, startnummer"
-  }
+  },
+  "empty": {
+    "emptyTitle": "Vind uw atleet",
+    "emptySubtitle": "Zoek op naam of startnummer om deelnemers te vinden en te volgen"
+}
 }
