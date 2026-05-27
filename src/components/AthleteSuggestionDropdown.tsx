@@ -63,6 +63,7 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
                 data={suggestions}
                 keyExtractor={(item) => String(item.customer_app_id)}
                 keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
                 nestedScrollEnabled
                 style={{ maxHeight: 260 }}
                 onEndReached={hasMore ? onLoadMore : undefined}
