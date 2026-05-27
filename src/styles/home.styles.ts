@@ -50,23 +50,18 @@ export const homeStyles = StyleSheet.create({
   // Event info section
   textContainer: {
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.xxxl,
+    marginTop:spacing.xl,
+    marginBottom: spacing.xxl,
   },
 
   // Event Name
   eventInfo: {
     marginBottom: spacing.md,
-    backgroundColor: colors.white,
-    padding: spacing.md,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
+  
   },
   eventNameText: {
     fontSize: typography.sizes.lg,
     color: colors.black,
-    textAlign: 'left',
-    lineHeight: 24,
     flexWrap: 'wrap',
   },
   eventLabel: {
@@ -84,7 +79,7 @@ export const homeStyles = StyleSheet.create({
     textAlign: 'left',
     marginBottom: spacing.sm,
     fontWeight: typography.weights.medium,
-    paddingLeft: spacing.md,
+    
   },
 
   centeredText: {
@@ -122,11 +117,12 @@ export const homeStyles = StyleSheet.create({
     alignItems: 'flex-start',
     backgroundColor: colors.success + '20',
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.sm,
     borderRadius: 12,
     marginBottom: spacing.lg,
     marginTop: spacing.md,
     width: '100%',
+    
   },
   trackingStatusIcon: {
     fontSize: 16,
@@ -268,9 +264,8 @@ export const homeStyles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   logosSection: {
-    
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.sm,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
 },
 logosTitle: {
     fontSize: spacing.md,
@@ -283,7 +278,7 @@ logosTitle: {
 },
 logosContainer: {
     backgroundColor: colors.primary,   // ← single dark navy bg
-    borderRadius: 5,
+    borderRadius: 8,
     padding: spacing.md,
 },
 

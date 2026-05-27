@@ -1266,156 +1266,146 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             resizeMode="contain"
           />
         </View>
-
-        {/* Subtitle */}
-        <Text style={homeStyles.subtitle}>
-          {/* {t('home:subtitle')} */}
-        </Text>
-
         <View style={homeStyles.logosSection}>
-    <View style={homeStyles.logosContainer}>
-        <Text style={homeStyles.logosTitle}>{t('home:Logotagline')}</Text>
-        <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={homeStyles.logosRow}
-            decelerationRate="fast"
-            snapToInterval={110}   // ← logoBox width + gap, snaps per logo
-            snapToAlignment="start"
-        >
-            {PARTNER_LOGOS.map((uri, index) => (
+          <View style={homeStyles.logosContainer}>
+            <Text style={homeStyles.logosTitle}>{t('home:Logotagline')}</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={homeStyles.logosRow}
+              decelerationRate="fast"
+              snapToInterval={110}   // ← logoBox width + gap, snaps per logo
+              snapToAlignment="start"
+            >
+              {PARTNER_LOGOS.map((uri, index) => (
                 <View key={index} style={homeStyles.logoBox}>
-                    <Image
-                        source={{ uri }}
-                        style={homeStyles.partnerLogo}
-                        resizeMode="contain"
-                    />
+                  <Image
+                    source={{ uri }}
+                    style={homeStyles.partnerLogo}
+                    resizeMode="contain"
+                  />
                 </View>
-            ))}
-        </ScrollView>
-    </View>
-</View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
 
         {/* Main Content */}
         <View style={homeStyles.textContainer}>
           {homeData?.show_start_track === 1 ? (
             <>
-              {/* Event Info */}
-              <View style={homeStyles.eventInfo}>
-                <Text style={homeStyles.eventNameText}>
-                  <Text style={homeStyles.eventLabel}>{t('home:Event.title')}: </Text>
-                  <Text style={homeStyles.eventValue}>{homeData.next_race_name}</Text>
-                </Text>
-              </View>
-
-              {/* Date */}
-              <Text style={homeStyles.smallText}>
-                <Text style={{ fontWeight: typography.weights.bold }}>{t('home:Event.Date')}:</Text>
-                {' '}
-                {formatDate(homeData.next_race_date!)}
-              </Text>
-
-              {/* Manual Start Indicator */}
-              {homeData?.manual_start === 1 && (
-                <View style={[homeStyles.trackingStatus, { backgroundColor: colors.warning + '20' }]}>
-                  <Text style={homeStyles.trackingStatusIcon}>🔓</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[homeStyles.trackingStatusText, { color: colors.warning }]}>
-                      {t('home:status.manualStartEnabled')}
-                    </Text>
-                    <Text style={[homeStyles.trackingCountText, { color: colors.warning }]}>
-                      {t('home:status.manualStartDescription')}
-                    </Text>
-                  </View>
+              <View style={commonStyles.card}>
+                <View style={homeStyles.eventInfo}>
+                  <Text style={homeStyles.eventNameText}>
+                    <Text style={homeStyles.eventLabel}>{t('home:Event.title')}: </Text>
+                    <Text style={homeStyles.eventValue}>{homeData.next_race_name}</Text>
+                  </Text>
                 </View>
-              )}
 
-              {/* GPS Status (DEBUG only) */}
-              {isGPSActive && API_CONFIG.DEBUG && (
-                <View style={homeStyles.trackingStatus}>
-                  <Text style={homeStyles.trackingStatusIcon}>{isSendingData ? '🟢' : '🟡'}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={homeStyles.trackingStatusText}>
-                      {isSendingData ? t('home:status.sendingData') : t('home:status.gpsActive')}
-                    </Text>
+                {/* Date */}
+                <Text style={homeStyles.smallText}>
+                  <Text style={{ fontWeight: typography.weights.bold }}>{t('home:Event.Date')}:</Text>
+                  {' '}
+                  {formatDate(homeData.next_race_date!)}
+                </Text>
+                {/* Manual Start Indicator */}
+                {homeData?.manual_start === 1 && (
+                  <View style={[homeStyles.trackingStatus, { backgroundColor: colors.warning + '20' }]}>
+                    <Text style={homeStyles.trackingStatusIcon}>🔓</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[homeStyles.trackingStatusText, { color: colors.warning }]}>
+                        {t('home:status.manualStartEnabled')}
+                      </Text>
+                      <Text style={[homeStyles.trackingCountText, { color: colors.warning }]}>
+                        {t('home:status.manualStartDescription')}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                {/* GPS Status (DEBUG only) */}
+                {isGPSActive && API_CONFIG.DEBUG && (
+                  <View style={homeStyles.trackingStatus}>
+                    <Text style={homeStyles.trackingStatusIcon}>{isSendingData ? '🟢' : '🟡'}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={homeStyles.trackingStatusText}>
+                        {isSendingData ? t('home:status.sendingData') : t('home:status.gpsActive')}
+                      </Text>
 
-                    {!isSendingData && timeUntilRace && (
+                      {!isSendingData && timeUntilRace && (
+                        <Text style={homeStyles.trackingCountText}>
+                          {homeData?.manual_start === 1
+                            ? t('home:status.manualStartReady')
+                            : `Race starts in: ${timeUntilRace}`}
+                        </Text>
+                      )}
+
+                      {currentLocation && (
+                        <Text style={homeStyles.trackingLocationText}>
+                          {currentLocation.lat.toFixed(6)}, {currentLocation.lon.toFixed(6)}
+                        </Text>
+                      )}
                       <Text style={homeStyles.trackingCountText}>
-                        {homeData?.manual_start === 1
-                          ? t('home:status.manualStartReady')
-                          : `Race starts in: ${timeUntilRace}`}
+                        {t('home:status.sent')}: {locationUpdateCount} | {t('home:status.queued')}:{' '}
+                        {queuedCount}
                       </Text>
-                    )}
-
-                    {currentLocation && (
-                      <Text style={homeStyles.trackingLocationText}>
-                        {currentLocation.lat.toFixed(6)}, {currentLocation.lon.toFixed(6)}
+                      <Text style={homeStyles.trackingCountText}>
+                        {t('home:status.interval')}: {sendingInterval}s
                       </Text>
-                    )}
-                    <Text style={homeStyles.trackingCountText}>
-                      {t('home:status.sent')}: {locationUpdateCount} | {t('home:status.queued')}:{' '}
-                      {queuedCount}
-                    </Text>
-                    <Text style={homeStyles.trackingCountText}>
-                      {t('home:status.interval')}: {sendingInterval}s
-                    </Text>
+                    </View>
                   </View>
-                </View>
-              )}
+                )}
 
-              {/* ✅ Tracking log panel — DEBUG only */}
-              {API_CONFIG.DEBUG && isGPSActive && trackingLogs.length > 0 && (
-                <ScrollView
-                  style={{
-                    maxHeight: 200,
-                    backgroundColor: '#0f172a',
-                    borderRadius: 8,
-                    padding: 8,
-                    marginBottom: spacing.md,
-                  }}
-                  showsVerticalScrollIndicator={true}
-                  persistentScrollbar={true}
-                  nestedScrollEnabled={true}
+                {/* ✅ Tracking log panel — DEBUG only */}
+                {API_CONFIG.DEBUG && isGPSActive && trackingLogs.length > 0 && (
+                  <ScrollView
+                    style={{
+                      maxHeight: 200,
+                      backgroundColor: '#0f172a',
+                      borderRadius: 8,
+                      padding: 8,
+                      marginBottom: spacing.md,
+                    }}
+                    showsVerticalScrollIndicator={true}
+                    persistentScrollbar={true}
+                    nestedScrollEnabled={true}
+                  >
+                    {[...trackingLogs].reverse().map((entry, idx) => {
+                      const time = new Date(entry.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                      return (
+                        <Text
+                          key={idx}
+                          style={{ fontFamily: 'monospace', fontSize: 10, color: '#e2e8f0', marginBottom: 2 }}
+                        >
+                          {time} {entry.icon} {entry.msg}
+                        </Text>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+
+                <Text style={homeStyles.heading}>{t('home:Event.description')}</Text>
+                {/* Tracking Button */}
+                <TouchableOpacity
+                  style={[
+                    homeStyles.button,
+                    { width: '100%', marginBottom: spacing.md },
+                    (!participantId || !eventId) && {
+                      backgroundColor: colors.gray400,
+                      opacity: 0.6,
+                    },
+                  ]}
+                  onPress={isGPSActive ? stopGPSTracking : startGPSTracking}
+                  disabled={!isGPSActive && (!participantId || !eventId)}
                 >
-                  {[...trackingLogs].reverse().map((entry, idx) => {
-                    const time = new Date(entry.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                    return (
-                      <Text
-                        key={idx}
-                        style={{ fontFamily: 'monospace', fontSize: 10, color: '#e2e8f0', marginBottom: 2 }}
-                      >
-                        {time} {entry.icon} {entry.msg}
-                      </Text>
-                    );
-                  })}
-                </ScrollView>
-              )}
-
-              {/* Description */}
-              <Text style={homeStyles.heading}>{t('home:Event.description')}</Text>
-
-              {/* Tracking Button */}
-              <TouchableOpacity
-                style={[
-                  homeStyles.button,
-                  { width: '100%', marginBottom: spacing.md },
-                  (!participantId || !eventId) && {
-                    backgroundColor: colors.gray400,
-                    opacity: 0.6,
-                  },
-                ]}
-                onPress={isGPSActive ? stopGPSTracking : startGPSTracking}
-                disabled={!isGPSActive && (!participantId || !eventId)}
-              >
-                <Text style={homeStyles.buttonText}>
-                  {isGPSActive
-                    ? t('home:Event.button')
-                    : !participantId || !eventId
-                      ? t('home:status.waitingForData')
-                      : t('home:Event.buttonText')}
-                </Text>
-              </TouchableOpacity>
-
+                  <Text style={homeStyles.buttonText}>
+                    {isGPSActive
+                      ? t('home:Event.button')
+                      : !participantId || !eventId
+                        ? t('home:status.waitingForData')
+                        : t('home:Event.buttonText')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
               {/* ✅ Queue retry button — shown after tracking stops if locations remain queued */}
               {!isGPSActive && queuedCount > 0 && participantId && eventId && (
                 <TouchableOpacity
