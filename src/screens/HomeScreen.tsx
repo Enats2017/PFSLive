@@ -878,6 +878,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const remaining = await locationQueueService.getQueueSize();
     setQueuedCount(remaining);
 
+    // ✅ Upload tracking log to server for debugging
+    // Only in DEBUG mode or always — your choice. Non-fatal if it fails.
+    if (participantId && eventId) {
+      try {
+        const logsStr = await AsyncStorage.getItem(TRACKING_LOG_KEY);
+        const logs: TrackingLogEntry[] = logsStr ? JSON.parse(logsStr) : [];
+        if (logs.length > 0) {
+          await locationService.saveTrackingLog(
+            participantId,
+            eventId,
+            logs,
+            locationUpdateCount,
+            queuedCount,
+          );
+        }
+      } catch { /* silent */ }
+    }
+
     toastSuccess(
       t('home:tracking.gpsStopped'),
       t('home:tracking.trackingStopped', {

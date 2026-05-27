@@ -112,7 +112,8 @@ export const API_CONFIG = {
     SYNC_FOLLOW_DATA: '/update_follower_favourites_api.php',
     update_customer_setting: '/update_customer_setting_api.php',
     VERIFY_TRACKING_PASSWORD: '/verify_tracking_password_api.php',
-    GET_FOLLOWER_DATA: '/get_follower_data_api.php'
+    GET_FOLLOWER_DATA: '/get_follower_data_api.php',
+    SAVE_TRACKING_LOG: '/save_tracking_log_api.php'
   },
 
   TIMEOUT: 15000,
@@ -123,7 +124,7 @@ export const API_CONFIG = {
   USE_MOCK_DATA: false,
 
   // ✅ Debug flag for development
-  DEBUG: true, // true in development, false in production
+  DEBUG: process.env.EXPO_PUBLIC_ENV !== 'production', // true in development, false in production
 
   /**
    * Get request headers with current auth token

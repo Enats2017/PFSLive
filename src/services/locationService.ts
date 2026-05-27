@@ -1,6 +1,8 @@
 import { apiClient } from './api';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { locationQueueService, QueuedLocation } from './locationQueueService';
+import { Platform } from 'react-native';
+import { TrackingLogEntry } from './gpsService';
 
 export interface LocationData {
   latitude: number;
@@ -240,4 +242,29 @@ export const locationService = {
 
     return sentCount;
   },
+
+  async saveTrackingLog(
+    participantId: string,
+    eventId: string,
+    logs: TrackingLogEntry[],
+    totalSent: number,
+    totalQueued: number,
+  ): Promise<void> {
+    try {
+      const url     = getApiEndpoint(API_CONFIG.ENDPOINTS.SAVE_TRACKING_LOG);
+      const headers = await API_CONFIG.getHeaders();
+      await apiClient.post(url, {
+        participantId,
+        eventId,
+        logs,
+        totalSent,
+        totalQueued,
+        deviceInfo: `${Platform.OS} ${Platform.Version}`,
+      }, { headers, timeout: 10000 });
+      if (API_CONFIG.DEBUG) console.log('✅ Tracking log saved to server');
+    } catch (err: any) {
+      if (API_CONFIG.DEBUG) console.log('⚠️ Tracking log save failed (non-fatal):', err?.message);
+      // Silent — log upload failure must never block stop tracking
+    }
+  }
 };

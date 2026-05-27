@@ -34,9 +34,11 @@ export default ({ config }) => {
         NSLocationAlwaysAndWhenInUseUsageDescription: "Livio needs background location access to track your race even when the app is minimized.",
         NSLocationAlwaysUsageDescription: "Livio requires continuous location access to provide accurate race tracking.",
         UIBackgroundModes: ["remote-notification", "location", "fetch"],
-        NSAppTransportSecurity: {
-          NSAllowsArbitraryLoads: true  // ⚠️ Remove before production
-        },
+        ...(process.env.EXPO_PUBLIC_ENV !== "production" && {
+          NSAppTransportSecurity: {
+            NSAllowsArbitraryLoads: true
+          }
+        }),
         // ✅ Register GPX file type handler for iOS share extension
         CFBundleDocumentTypes: [
           {
@@ -126,7 +128,7 @@ export default ({ config }) => {
         "expo-build-properties",
         {
           android: {
-            usesCleartextTraffic: true,  // ⚠️ Remove before production
+            usesCleartextTraffic: process.env.EXPO_PUBLIC_ENV !== "production",  // ⚠️ Remove before production
             enableProguardInReleaseBuilds: true,
             enableShrinkResourcesInReleaseBuilds: true,
             enableSeparateBuildPerCPUArchitecture: true,
