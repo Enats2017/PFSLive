@@ -62,7 +62,7 @@ const DEFAULT_DISTANCE_INTERVAL_METRES = 0;
 // ✅ Tracking log — ring buffer of recent background task events.
 // Written by background task, read by HomeScreen 1s timer for live display.
 export const TRACKING_LOG_KEY = '@PFSLive:trackingLog';
-const MAX_LOG_ENTRIES = 100; // keep last 100 events
+const MAX_LOG_ENTRIES = 500; // keep last 100 events
 
 export interface TrackingLogEntry {
   ts: number;        // Date.now() when event occurred
