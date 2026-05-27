@@ -4,7 +4,7 @@ import {
   suggestionService,
 } from "../services/followerScreenService";
 
-export type SuggestionKey = "filter_name" | "filter_name_past_suggestion" | "filter_name_participant"
+export type SuggestionKey = "filter_name" | "filter_name_past_suggestion";
 export type TabFilter = "past" | "live" | "upcoming";
 
 export interface UseSearchSuggestionsReturn {
@@ -52,9 +52,7 @@ const useSearchSuggestions = (
         try {
           const results = await suggestionService.getSuggestions({
             [apiKey]: text.trim(),
-          });
-          console.log("🔍 Hook received results:", results.length, JSON.stringify(results, null, 2));  // ← add
-console.log("🔍 tabFilters:", tabFilters);  
+          }); 
           setSuggestions(
             tabFilters.length > 0
               ? results.filter((r) => r.tab && tabFilters.includes(r.tab))

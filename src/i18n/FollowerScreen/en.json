@@ -14,9 +14,7 @@
     },
     "empty": {
     "emptyTitle": "Find Your Athlete",
-    "emptySubtitle": "Search by name or bib number to find and follow participants",
-    "hintName": "Name",
-    "hintBib": "Bib Number"
+    "emptySubtitle": "Search by name or bib number to find and follow participants"
 }
 
 }
