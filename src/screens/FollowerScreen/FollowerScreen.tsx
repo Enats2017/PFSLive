@@ -22,17 +22,15 @@ import SearchInput from '../../components/SearchInput';
 import { SuggestionItem } from '../../services/followerScreenService';
 import SuggestionDropdown from '../../components/SuggestionDropdown';
 import useSearchSuggestions from '../../hooks/useSearchSuggestions';
-import { eventService, EventItem, ParticipantItem } from '../../services/followerEvent';
-import FanEventCard from '../FollowerEventList/FollowerCard';
-import { FlatList } from 'react-native-gesture-handler';
-import { useFollowManager } from '../../hooks/useFollowManager';
-import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
+import { eventService } from '../../services/followerEvent';
+import AthleteSuggestionDropdown from '../../components/AthleteSuggestionDropdown';
+import { AthleteSuggestionItem } from '../../services/followerScreenService';
+
+
 
 const Divider = () => (
     <View style={follow.dividerRow}>
         <View style={follow.dividerLine} />
-
-        
     </View>
 );
 
@@ -41,13 +39,18 @@ const FollowerScreen = () => {
     const { t } = useTranslation(['follow']);
     const upcoming = useSearchSuggestions('filter_name', ['upcoming', 'live']);
     const past = useSearchSuggestions('filter_name_past_suggestion', ['past']);
-    const [athleteSearch, setAthleteSearch] = useState('');
+    const [athleteQuery, setAthleteQuery] = useState('');
+    const [athleteSuggestions, setAthleteSuggestions] = useState<AthleteSuggestionItem[]>([]);
+    const [athleteLoading, setAthleteLoading] = useState(false);
+    const [athleteLoadingMore, setAthleteLoadingMore] = useState(false);
+    const [athleteDropdownVisible, setAthleteDropdownVisible] = useState(false);
+    const [athletePage, setAthletePage] = useState(1);
+    const [athleteTotalPages, setAthleteTotalPages] = useState(0);
+    const athleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const athleteQueryRef = useRef('');
+
     const participantSearchFocused = useRef(false);
     const keyboardOffset = useRef(new Animated.Value(0)).current;
-    const [athleteResults, setAthleteResults] = useState<ParticipantItem[]>([]);
-    const [athleteSearching, setAthleteSearching] = useState(false);
-    const [athletePagination, setAthletePagination] = useState({ page: 0, total_pages: 0 });
-    const isLoadingMore = useRef(false);
 
     useEffect(() => {
         const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -95,85 +98,65 @@ const FollowerScreen = () => {
         });
     }, [navigation, past]);
 
-    const {
-        isFollowed,
-        isLoading,
-        refreshFollowedUsers,
-        handleFollowPress,
-        passwordModalVisible,
-        isVerifying,
-        passwordError,
-        handlePasswordSubmit,
-        handlePasswordModalClose,
-    } = useFollowManager(t);
-
-    useEffect(() => {
-        if (!athleteSearch.trim()) {
-            setAthleteResults([]);
-            setAthletePagination({ page: 0, total_pages: 0 });
+    const handleAthleteSearch = useCallback((text: string) => {
+        setAthleteQuery(text);
+        athleteQueryRef.current = text;
+        if (athleteTimer.current) clearTimeout(athleteTimer.current);
+        if (!text.trim()) {
+            setAthleteSuggestions([]);
+            setAthleteDropdownVisible(false);
             return;
         }
-        const timer = setTimeout(async () => {
+        setAthleteLoading(true);
+        setAthleteDropdownVisible(true);
+        athleteTimer.current = setTimeout(async () => {
             try {
-                setAthleteSearching(true);
                 const result = await eventService.getEvents({
                     is_participant: '1',
                     page_participant: 1,
-                    filter_name_participant: athleteSearch.trim(),
+                    filter_name_participant: text.trim(),
                 });
-                setAthleteResults(result.participants || []);
-                setAthletePagination({
-                    page: 1,
-                    total_pages: result.pagination?.participants?.total_pages ?? 0,
-                });
-            } catch (err) {
-                console.error('❌ Athlete search failed:', err);
+                setAthleteSuggestions(result.participants || []);
+                setAthletePage(1);
+                setAthleteTotalPages(result.pagination?.participants?.total_pages ?? 0);
+            } catch {
+                setAthleteSuggestions([]);
             } finally {
-                setAthleteSearching(false);
+                setAthleteLoading(false);
             }
         }, 350);
-        return () => clearTimeout(timer);
-    }, [athleteSearch]);
+    }, []);
 
-    const loadMoreAthletes = useCallback(async () => {
-        if (isLoadingMore.current) return;
-        if (athletePagination.page >= athletePagination.total_pages) return;
+    const handleAthleteLoadMore = useCallback(async () => {
+        if (athleteLoadingMore || athletePage >= athleteTotalPages) return;
         try {
-            isLoadingMore.current = true;
-            const nextPage = athletePagination.page + 1;
+            setAthleteLoadingMore(true);
+            const nextPage = athletePage + 1;
             const result = await eventService.getEvents({
                 is_participant: '1',
                 page_participant: nextPage,
-                filter_name_participant: athleteSearch.trim(),
+                filter_name_participant: athleteQueryRef.current.trim(),
             });
-            setAthleteResults(prev => {
+            setAthleteSuggestions(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
                 return [...prev, ...(result.participants || []).filter(i => !ids.has(i.customer_app_id))];
             });
-            setAthletePagination(prev => ({ ...prev, page: nextPage }));
-        } catch (err) {
-            console.error('Load more athletes failed:', err);
+            setAthletePage(nextPage);
+        } catch {
         } finally {
-            isLoadingMore.current = false;
+            setAthleteLoadingMore(false);
         }
-    }, [athleteSearch, athletePagination]);
+    }, [athleteLoadingMore, athletePage, athleteTotalPages]);
 
-    const renderAthleteCard = useCallback(
-        ({ item }: { item: ParticipantItem }) => (
-            <FanEventCard
-                item={item}
-                isFollowed={isFollowed(item.customer_app_id)}
-                isLoading={isLoading(item.customer_app_id)}
-                onToggleFollow={() => {
-                    handleFollowPress({
-                        customer_app_id: item.customer_app_id,
-                        password_protected: item.password_protected ?? 0,
-                    });
-                }}
-            />
-        ),
-        [isFollowed, isLoading, handleFollowPress]  
-    );
+    const handleAthleteSelect = useCallback((item: AthleteSuggestionItem) => {
+        setAthleteDropdownVisible(false);
+        setAthleteSuggestions([]);
+        setAthleteQuery('');
+        navigation.navigate('ProfileScreen', {
+
+            customer_app_id: item.customer_app_id,
+        });
+    }, [navigation]);
 
     return (
         <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -242,50 +225,39 @@ const FollowerScreen = () => {
                     <Feather name="plus-circle" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
                     <Text style={commonStyles.title}>{t('follow:athlete')}</Text>
                 </View>
-                <View style={[follow.section, { flex: 1 }]}>
-                    <FlatList
-                        data={athleteResults}
-                        keyExtractor={(item, index) => `${item.customer_app_id}_${index}`}
-                        renderItem={renderAthleteCard}
-                        onEndReached={loadMoreAthletes}
-                        onEndReachedThreshold={0.5}
-                        showsVerticalScrollIndicator={false}
-                        keyboardShouldPersistTaps="handled"
-                        removeClippedSubviews={false}
-                        ListHeaderComponent={
-                            <SearchInput
-                                placeholder={t('follow:search.athletesearch')}
-                                value={athleteSearch}
-                                onChangeText={setAthleteSearch}
-                                icon="search"
-                                onFocus={() => { participantSearchFocused.current = true; }}
-                                onBlur={() => { participantSearchFocused.current = false; }}
-                            />
-                        }
-                        ListEmptyComponent={
-                            athleteSearching ? (
-                                <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: spacing.lg }} />
-                            ) : athleteSearch.trim().length > 0 ? (
-                                <Text style={[commonStyles.errorText, { textAlign: 'center', marginTop: 40 }]}>
-                                    {t('follower:empty.searchNoResults')}
-                                </Text>
-                            ) : null
-                        }
-                        ListFooterComponent={
-                            isLoadingMore.current ? (
-                                <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.md }} />
-                            ) : null
-                        }
-                    />
+                <View style={follow.section}>
+                    <View style={{ zIndex: 5 }}>
+                        <SearchInput
+                            placeholder={t('follow:search.athletesearch')}
+                            value={athleteQuery}
+                            onChangeText={handleAthleteSearch}
+                            icon="search"
+                            onFocus={() => { participantSearchFocused.current = true; }}
+                            onBlur={() => { participantSearchFocused.current = false; }}
+                        />
+                        <AthleteSuggestionDropdown
+                            suggestions={athleteSuggestions}
+                            loading={athleteLoading}
+                            loadingMore={athleteLoadingMore}
+                            visible={athleteDropdownVisible}
+                            onSelect={handleAthleteSelect}
+                            onLoadMore={handleAthleteLoadMore}
+                            hasMore={athletePage < athleteTotalPages}
+                        />
+
+                        <TouchableOpacity
+                            style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.xl }]}
+                            onPress={() => navigation.navigate('AthleteSearchScreen', {})}
+                            activeOpacity={0.8}
+                        >
+                            <Feather name="search" size={15} color="#fff" style={{ marginRight: 8 }} />
+                            <Text style={commonStyles.primaryButtonText}>
+                                {t('follow:button.athlete')}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </Animated.View>
-            <TrackingPasswordModal
-                visible={passwordModalVisible}
-                isVerifying={isVerifying}
-                passwordError={passwordError}
-                onSubmit={handlePasswordSubmit}
-                onClose={handlePasswordModalClose}
-            />
         </SafeAreaView>
     );
 };

@@ -21,6 +21,7 @@ import AllParticipant from '../screens/FavouriteScreen/AllParticipant';
 import SearchParticipant from '../screens/ResultList/SearchParticipant';
 import ParticipantScreen from '../screens/ParticipantScreen/ParticipantScreen';
 import FollowerSrceen from '../screens/FollowerScreen/FollowerScreen';
+import AthleteSearchScreen from '../screens/FollowerScreen/AthleteSearchScreen';
 
 
 // ✅ AUTH SCREENS
@@ -95,6 +96,7 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen name="ProfileScreen" component={ProfileScreen} options={noGesture} />
           <Stack.Screen name="ParticipantScreen" component={ParticipantScreen} options={noGesture} />
           <Stack.Screen name="FollowerSrceen" component={FollowerSrceen} options={noGesture} />
+          <Stack.Screen name="AthleteSearchScreen" component={AthleteSearchScreen} options={noGesture} />
 
           <Stack.Screen
             name="LiveTracking"

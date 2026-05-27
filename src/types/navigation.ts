@@ -84,6 +84,11 @@ export type RootStackParamList = {
   LiveTrackingSettings:undefined,
   ParticipantScreen:undefined,
   FollowerSrceen:undefined
+
+  AthleteSearchScreen: {
+    initialQuery?: string;
+    customer_app_id?: number;
+};
 };
 
 export type HomeScreenProps = NativeStackScreenProps<
@@ -187,6 +192,10 @@ export type ParticipantScreenpops = NativeStackScreenProps<
 export type FollowerScreenpops = NativeStackScreenProps<
   RootStackParamList,
   "FollowerSrceen"
+>;
+export type AthleteSearchScreenpops = NativeStackScreenProps<
+  RootStackParamList,
+  "AthleteSearchScreen"
 >;
 
 export type AuthStackParamList = {
