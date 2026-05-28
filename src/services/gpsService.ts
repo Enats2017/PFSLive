@@ -309,6 +309,30 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       lon: location.longitude,
     }));
 
+    // ✅ SEND-GAP DIAGNOSTIC — log the actual elapsed time since the previous
+    // send so freezes / OS throttling are obvious in the tracking log.
+    // During a screen-off multi-app contention test this is the key signal:
+    //   • gap ≈ effectiveInterval  → healthy, task firing on schedule
+    //   • gap ≫ effectiveInterval  → JS context was frozen/throttled (Samsung
+    //     One UI, Doze, or another GPS app starved us). A ⏱️ line with a big
+    //     number = exactly the gap Transistor's WakeLock is meant to prevent.
+    // lastSentAt === 0 means this is the first send of the session (no gap yet).
+    // Also skip when lastSentAt was invalid (clock jump / NaN / future) — the
+    // clock-jump guard above resets the stored key but this local still holds the
+    // stale value, which would produce a misleading gap on that one cycle.
+    const lastSentValid = (lastSentAt > 0 && !isNaN(lastSentAt) && lastSentAt <= now);
+    if (lastSentValid) {
+      const gapSec      = (now - lastSentAt) / 1000;
+      const expectedSec = effectiveInterval; // 5s finish-approach, else interval (e.g. 30s)
+      // Flag a gap as a freeze when it exceeds expected by > 2× the 5s task period
+      // (i.e. more than ~2 missed task fires beyond the expected send interval).
+      const isFreeze = gapSec > (expectedSec + 10);
+      await addLog(
+        isFreeze ? '⏱️🔴' : '⏱️',
+        `Send gap ${gapSec.toFixed(1)}s (expected ~${expectedSec}s)${isFreeze ? ' — POSSIBLE FREEZE/THROTTLE' : ''}`
+      );
+    }
+
     await addLog('📍', `Sending — lat:${location.latitude.toFixed(5)} lon:${location.longitude.toFixed(5)} spd:${location.speed?.toFixed(1) ?? '?'}m/s bat:${location.batteryLevel ?? '?'}% ele:${location.altitude?.toFixed(0) ?? '?'}m`);
 
     if (API_CONFIG.DEBUG) {
