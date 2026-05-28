@@ -984,7 +984,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
     }, 1000);
     return () => clearInterval(interval);
-  }, [isGPSActive, calculateTimeUntilRace]);
+  }, [isGPSActive, calculateTimeUntilRace, stopGPSTracking]);
 
   // Block back button on forced update
   useEffect(() => {
@@ -1035,13 +1035,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             }
           });
           loadQueueSize();
+
+          // ✅ NEW: Check for auto-stop flag — wrapped in async IIFE because
+          // AppState listener callback is synchronous and cannot be made async.
+          (async () => {
+            try {
+              const raceFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
+              if (raceFinished === '1') {
+                await AsyncStorage.removeItem(RACE_FINISHED_KEY);
+                await stopGPSTracking();
+              }
+            } catch { /* silent */ }
+          })();
         }
       }
       appState.current = nextAppState;
     });
 
     return () => subscription.remove();
-  }, [isGPSActive, participantId, eventId, loadQueueSize]);
+  }, [isGPSActive, participantId, eventId, loadQueueSize, stopGPSTracking]);
 
   // Smart polling with version check
   useFocusEffect(

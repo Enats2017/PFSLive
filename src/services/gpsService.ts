@@ -386,20 +386,28 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
         await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
       }
 
-      // ✅ Auto-stop detection: participant has crossed the finish line when
-      // distance_to_finish_km drops to near-zero (≤ 0.05km = 50m threshold).
-      // Using ≤ 0.05 not === 0 because GPS drift means finish is rarely exactly 0:
-      // real-world values seen: 0.008, 0.011, 0.005km etc.
+      // ✅ Auto-stop detection: participant has finished the race.
       //
-      // THREE guards required — all must be true to trigger auto-stop:
+      // The server now returns `finished` (1/0) for BOTH event types:
+      //   • Partner events with RaceResult: finished = runner CROSSED the finish
+      //     timing mat (RR is_finish && is_crossed).
+      //   • Custom events & partner-without-RR: finished = 1 when the server's
+      //     distance_to_finish_km <= 0.05 (50m).
       //
-      // 1. finishedRaw <= 0.05 — within 50m of finish line
+      // We require the server flag AND all the existing local guards — every
+      // condition must be true to auto-stop. The server flag is the
+      // authoritative "are they done" signal; the local guards remain as
+      // safety against loop-course / GPS-snap edge cases:
       //
-      // 2. sentCount >= 3 — loop course guard (start == finish physically).
+      // 1. finished === 1 — server confirms finished (both event types).
+      //
+      // 2. finishedRaw <= 0.05 — within 50m of finish line (local cross-check).
+      //
+      // 3. sentCount >= 3 — loop course guard (start == finish physically).
       //    First 3 sends (~90s) are ignored so a participant standing at the
       //    start/finish area of a loop course doesn't trigger auto-stop immediately.
       //
-      // 3. nearFinish === '1' — participant must have been within 1km of finish
+      // 4. nearFinish === '1' — participant must have been within 1km of finish
       //    at some point during this session (set just above, same send).
       //    Unlike finishApproach (read at task START = previous send state),
       //    NEAR_FINISH_KEY is SET then immediately READ in the same execution,
@@ -408,6 +416,10 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       //    never have been active in a previous send, but nearFinish is set
       //    and checked in the same send. Prevents false trigger from a GPS snap
       //    error mid-race that accidentally reports near-zero finish distance.
+
+      // ✅ Server-authoritative finished flag (1/0). Accept number or string form.
+      const serverFinished = result.finished === 1 || result.finished === '1';
+
       const finishedRaw = result.distance_to_finish_km ?? null;
       // ✅ Set NEAR_FINISH_KEY the moment participant first comes within 1km of finish.
       // Done BEFORE the auto-stop check so cycling (fast sport) can trigger auto-stop
@@ -421,13 +433,30 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       const nearFinish = await AsyncStorage.getItem(NEAR_FINISH_KEY);
 
       if (
+        serverFinished &&
         finishedRaw !== null &&
         finishedRaw <= 0.05 &&
         sentCount >= 3 &&
         nearFinish === '1'
       ) {
         await AsyncStorage.setItem(RACE_FINISHED_KEY, '1');
-        await addLog('🏆', `Finish line crossed — ${finishedRaw.toFixed(3)}km to finish, signalling auto-stop`);
+        await addLog('🏆', `Finish line crossed (server finished=1) — ${finishedRaw.toFixed(3)}km to finish, stopping GPS`);
+
+        // ✅ Stop GPS engines immediately from the background task.
+        // This stops location updates RIGHT NOW without waiting for the app
+        // to come to foreground. React state cleanup (intervals, UI, queue drain,
+        // log upload) happens in stopGPSTracking() when user opens the app —
+        // both the 1s timer and the AppState listener read RACE_FINISHED_KEY
+        // and call stopGPSTracking() which safely no-ops the GPS stop calls
+        // since they're already stopped here.
+        try {
+          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+          await addLog('🛑', 'GPS engines stopped from background — finish line reached');
+        } catch { /* silent — may already be stopped */ }
+        try {
+          await BackgroundGeolocation.stop();
+          BackgroundGeolocation.removeListeners();
+        } catch { /* silent */ }
       }
     }
 
