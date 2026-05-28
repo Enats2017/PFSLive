@@ -32,6 +32,16 @@ export interface SendLocationResponse {
    *  to activate 5s finish-approach interval when ≤ 1km to finish.
    *  More reliable than distance_to_next_cp which points to any CP. */
   distance_to_finish_km?: number | null;
+  /** ✅ Finished flag (1/0) from the API. Background task uses this
+   *  (AND-ed with the local distance / sentCount / nearFinish guards) to
+   *  auto-stop tracking. Partner+RR: finish timing mat crossed.
+   *  Custom / non-RR: server saw distance_to_finish_km ≤ 50m. */
+  finished?: number;
+  /** ✅ How `finished` was determined:
+   *   'rr'       → RR recorded the finish crossing (authoritative — trust
+   *                finished=1 alone, GPS distance can lag).
+   *   'distance' → derived from distance_to_finish_km ≤ 50m (apply GPS guards). */
+  finish_source?: 'rr' | 'distance';
 }
 
 // Standard backend response format
@@ -40,6 +50,15 @@ interface StandardApiResponse<T = any> {
   data: T;
   error: string | null;
 }
+
+// ✅ Mutex — prevents concurrent processQueue() calls from sending duplicates.
+// Race condition confirmed in client ride data (2026-05-27):
+//   ids 693/695, 696/697 etc — same coord sent twice, same recorded_at second.
+// Cause: AppState listener (app foregrounded) AND 10s interval timer BOTH
+// call processQueue() simultaneously when network recovers after a gap.
+// Without this lock each queued item is read by both calls → double send.
+// Module-level so it persists across all calls within the same JS context.
+let _isProcessingQueue = false;
 
 export const locationService = {
   /**
@@ -136,6 +155,14 @@ export const locationService = {
         // distance_to_next_cp is kept as legacy / fallback.
         distance_to_next_cp: data.distance_to_next_cp ?? null,
         distance_to_finish_km: data.distance_to_finish_km ?? null,
+        // ✅ Pass through finished flag (1/0) so the background task can auto-stop.
+        // Coerce to number; default 0 when absent so the gpsService AND-condition
+        // (serverFinished === 1) simply stays false on older API responses.
+        finished: Number(data.finished ?? 0),
+        // ✅ Finish authority — tells the background task whether to trust `finished`
+        // alone ('rr') or apply its GPS guards ('distance'). Default 'distance' when
+        // absent (older API) so guards are applied conservatively.
+        finish_source: (data.finish_source === 'rr') ? 'rr' : 'distance',
       };
 
       if (API_CONFIG.DEBUG) {
@@ -179,20 +206,33 @@ export const locationService = {
   },
 
   /**
-   * Process queued locations (send when network is back)
+   * Process queued locations (send when network is back).
+   *
+   * ✅ MUTEX PROTECTED — only one processQueue() runs at a time.
+   * Called concurrently from:
+   *   1. AppState listener — when app returns to foreground
+   *   2. 10s interval timer — queueProcessorRef in HomeScreen
+   *   3. stopGPSTracking() — drain on session end
+   * Without the mutex, all three can overlap on network recovery,
+   * reading the same queue snapshot and sending each item 2-3 times.
    */
   async processQueue(participantId: string, eventId: string): Promise<number> {
-    const hasNetwork = await locationQueueService.hasNetwork();
-
-    if (!hasNetwork) {
+    // ✅ Mutex check — bail immediately if another call is in progress.
+    // Use _isProcessingQueue flag at module level so it persists across
+    // all callers within the same JS context.
+    if (_isProcessingQueue) {
+      if (API_CONFIG.DEBUG) console.log('⏭️ processQueue: already running — skipping to prevent duplicates');
       return 0;
     }
+
+    const hasNetwork = await locationQueueService.hasNetwork();
+    if (!hasNetwork) return 0;
 
     const queue = await locationQueueService.getQueue();
+    if (queue.length === 0) return 0;
 
-    if (queue.length === 0) {
-      return 0;
-    }
+    // ✅ Acquire lock AFTER early exits — no point locking if there's nothing to do
+    _isProcessingQueue = true;
 
     if (API_CONFIG.DEBUG) {
       console.log(`📤 Processing ${queue.length} queued locations...`);
@@ -201,43 +241,50 @@ export const locationService = {
     let sentCount = 0;
     const batchSize = 10;
 
-    for (let i = 0; i < Math.min(queue.length, batchSize); i++) {
-      const queuedLocation = queue[i];
+    try {
+      for (let i = 0; i < Math.min(queue.length, batchSize); i++) {
+        const queuedLocation = queue[i];
 
-      try {
-        await this.sendLocation(
-          queuedLocation.participantId,
-          queuedLocation.eventId,
-          {
-            latitude: queuedLocation.latitude,
-            longitude: queuedLocation.longitude,
-            altitude: queuedLocation.altitude || queuedLocation.elevation, // ✅ FIX
-            accuracy: queuedLocation.accuracy,
-            timestamp: queuedLocation.timestamp,
-            speed: queuedLocation.speed,
-            heading: queuedLocation.heading,
-            elevationGain: queuedLocation.elevationGain,
-            batteryLevel: queuedLocation.batteryLevel,
-            batteryCharging: queuedLocation.batteryCharging,
-            isMoving: queuedLocation.isMoving,
-          },
-          false
-        );
+        try {
+          await this.sendLocation(
+            queuedLocation.participantId,
+            queuedLocation.eventId,
+            {
+              latitude: queuedLocation.latitude,
+              longitude: queuedLocation.longitude,
+              altitude: queuedLocation.altitude || queuedLocation.elevation, // ✅ FIX
+              accuracy: queuedLocation.accuracy,
+              timestamp: queuedLocation.timestamp,
+              speed: queuedLocation.speed,
+              heading: queuedLocation.heading,
+              elevationGain: queuedLocation.elevationGain,
+              batteryLevel: queuedLocation.batteryLevel,
+              batteryCharging: queuedLocation.batteryCharging,
+              isMoving: queuedLocation.isMoving,
+            },
+            false
+          );
 
-        sentCount++;
-      } catch (error) {
-        if (API_CONFIG.DEBUG) {
-          console.error('❌ Failed to send queued location');
+          sentCount++;
+        } catch (error) {
+          if (API_CONFIG.DEBUG) {
+            console.error('❌ Failed to send queued location');
+          }
+          break;
         }
-        break;
       }
-    }
 
-    if (sentCount > 0) {
-      await locationQueueService.removeFromQueue(sentCount);
-      if (API_CONFIG.DEBUG) {
-        console.log(`✅ Processed ${sentCount} queued locations`);
+      if (sentCount > 0) {
+        await locationQueueService.removeFromQueue(sentCount);
+        if (API_CONFIG.DEBUG) {
+          console.log(`✅ Processed ${sentCount} queued locations`);
+        }
       }
+    } finally {
+      // ✅ Always release the lock — even if an unexpected error is thrown.
+      // Without finally, a thrown error would leave _isProcessingQueue = true
+      // permanently, blocking all future queue processing for the session.
+      _isProcessingQueue = false;
     }
 
     return sentCount;

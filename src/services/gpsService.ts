@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import BackgroundGeolocation from 'react-native-background-geolocation';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundTask from 'expo-background-task';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -32,6 +33,14 @@ const LAST_ALTITUDE_KEY = '@PFSLive:lastAltitude';
 // for accurate plotting. Stored in AsyncStorage so the background task
 // can read it without access to React state.
 const FINISH_APPROACH_KEY      = '@PFSLive:finishApproach';   // '1' when active
+// ✅ Race finished flag — set by background task when distance_to_finish_km === 0.
+// Read by HomeScreen 1s timer to auto-stop tracking when participant crosses finish.
+export const RACE_FINISHED_KEY = '@PFSLive:raceFinished';        // '1' when finished
+// ✅ Near-finish flag — set when distance_to_finish_km ≤ 1km for the first time.
+// Persists across sends so auto-stop works even for fast cyclists who skip from
+// 1.5km directly to 0.02km in a single 30s interval (25 km/h covers ~208m/30s).
+// Set BEFORE the auto-stop check so it works on the same send it is first activated.
+const NEAR_FINISH_KEY = '@PFSLive:nearFinish';                   // '1' when ever within 1km
 const FINISH_APPROACH_INTERVAL = 5;                            // seconds
 const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 
@@ -62,7 +71,7 @@ const DEFAULT_DISTANCE_INTERVAL_METRES = 0;
 // ✅ Tracking log — ring buffer of recent background task events.
 // Written by background task, read by HomeScreen 1s timer for live display.
 export const TRACKING_LOG_KEY = '@PFSLive:trackingLog';
-const MAX_LOG_ENTRIES = 500; // keep last 100 events
+const MAX_LOG_ENTRIES = 500; // keep last 500 events
 
 export interface TrackingLogEntry {
   ts: number;        // Date.now() when event occurred
@@ -376,6 +385,102 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
         }
         await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
       }
+
+      // ✅ Auto-stop detection: participant has finished the race.
+      //
+      // The server now returns `finished` (1/0) for BOTH event types:
+      //   • Partner events with RaceResult: finished = runner CROSSED the finish
+      //     timing mat (RR is_finish && is_crossed).
+      //   • Custom events & partner-without-RR: finished = 1 when the server's
+      //     distance_to_finish_km <= 0.05 (50m).
+      //
+      // We require the server flag AND all the existing local guards — every
+      // condition must be true to auto-stop. The server flag is the
+      // authoritative "are they done" signal; the local guards remain as
+      // safety against loop-course / GPS-snap edge cases:
+      //
+      // 1. finished === 1 — server confirms finished (both event types).
+      //
+      // 2. finishedRaw <= 0.05 — within 50m of finish line (local cross-check).
+      //
+      // 3. sentCount >= 3 — loop course guard (start == finish physically).
+      //    First 3 sends (~90s) are ignored so a participant standing at the
+      //    start/finish area of a loop course doesn't trigger auto-stop immediately.
+      //
+      // 4. nearFinish === '1' — participant must have been within 1km of finish
+      //    at some point during this session (set just above, same send).
+      //    Unlike finishApproach (read at task START = previous send state),
+      //    NEAR_FINISH_KEY is SET then immediately READ in the same execution,
+      //    so it works even when a fast cyclist (25 km/h) jumps from 1.5km
+      //    directly to 0.02km in a single 30s interval — finish approach would
+      //    never have been active in a previous send, but nearFinish is set
+      //    and checked in the same send. Prevents false trigger from a GPS snap
+      //    error mid-race that accidentally reports near-zero finish distance.
+
+      // ✅ Server-authoritative finished flag (1/0). Accept number or string form.
+      const serverFinished = result.finished === 1 || result.finished === '1';
+      // ✅ Finish authority. 'rr' = RR recorded the crossing → trust finished alone
+      // (GPS distance can lag far behind the timing mat). 'distance' = derived from
+      // distance_to_finish_km ≤ 50m → apply the GPS guards below. Default 'distance'.
+      const finishSource = result.finish_source ?? 'distance';
+
+      const finishedRaw = result.distance_to_finish_km ?? null;
+      // ✅ Set NEAR_FINISH_KEY the moment participant first comes within 1km of finish.
+      // Done BEFORE the auto-stop check so cycling (fast sport) can trigger auto-stop
+      // on the same send where they first enter the 1km zone — even if they jump from
+      // 1.5km to 0.02km in a single 30s interval at 25 km/h.
+      // finishApproach (read at task start) reflects PREVIOUS send — too late for cycling.
+      // NEAR_FINISH_KEY is set HERE then immediately checked below — same-send detection.
+      if (distToFinish !== null && distToFinish <= FINISH_APPROACH_THRESHOLD) {
+        await AsyncStorage.setItem(NEAR_FINISH_KEY, '1');
+      }
+      const nearFinish = await AsyncStorage.getItem(NEAR_FINISH_KEY);
+
+      // ✅ Auto-stop decision depends on the finish authority:
+      //   • RR ('rr'): RR has recorded the finish-line crossing — this is
+      //     definitive. Stop on finished=1 alone. We deliberately do NOT apply
+      //     the GPS guards here, because the phone's GPS distance can lag far
+      //     behind the timing mat (observed: finished=1 while GPS showed 16km
+      //     remaining). Applying the ≤0.05km guard would wrongly block the stop.
+      //   • Distance ('distance' — custom / partner-without-RR): finished was
+      //     derived from GPS proximity, so keep the full guard set as a safety net
+      //     against a mid-race GPS snap falsely reporting near-zero finish distance:
+      //       finished=1 AND ≤50m AND sentCount≥3 AND was-within-1km-this-session.
+      const shouldStop = (finishSource === 'rr')
+        ? serverFinished
+        : (
+            serverFinished &&
+            finishedRaw !== null &&
+            finishedRaw <= 0.05 &&
+            sentCount >= 3 &&
+            nearFinish === '1'
+          );
+
+      if (shouldStop) {
+        await AsyncStorage.setItem(RACE_FINISHED_KEY, '1');
+        await addLog(
+          '🏆',
+          finishSource === 'rr'
+            ? `Finish confirmed by RaceResult (finished=1) — stopping GPS`
+            : `Finish line crossed — ${finishedRaw?.toFixed(3)}km to finish, stopping GPS`
+        );
+
+        // ✅ Stop GPS engines immediately from the background task.
+        // This stops location updates RIGHT NOW without waiting for the app
+        // to come to foreground. React state cleanup (intervals, UI, queue drain,
+        // log upload) happens in stopGPSTracking() when user opens the app —
+        // both the 1s timer and the AppState listener read RACE_FINISHED_KEY
+        // and call stopGPSTracking() which safely no-ops the GPS stop calls
+        // since they're already stopped here.
+        try {
+          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+          await addLog('🛑', 'GPS engines stopped from background — finish line reached');
+        } catch { /* silent — may already be stopped */ }
+        try {
+          await BackgroundGeolocation.stop();
+          BackgroundGeolocation.removeListeners();
+        } catch { /* silent */ }
+      }
     }
 
   } catch (err: any) {
@@ -445,6 +550,15 @@ export const ensureBackgroundTaskAlive = async (
 
     if (API_CONFIG.DEBUG) console.log('✅ Background task restarted');
     await addLog('♻️', 'Watchdog: background task was dead — restarted successfully');
+
+    // ✅ [TRANSISTOR] Also restart transistor if it stopped
+    try {
+      const bgState = await BackgroundGeolocation.getState();
+      if (!bgState.enabled) {
+        await BackgroundGeolocation.start();
+        await addLog('♻️', 'Watchdog: transistor also restarted');
+      }
+    } catch { /* silent */ }
 
     return true;
   } catch (err: any) {
@@ -620,6 +734,8 @@ export const gpsService = {
       await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
       await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
       await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
+      await AsyncStorage.removeItem(RACE_FINISHED_KEY);
+      await AsyncStorage.removeItem(NEAR_FINISH_KEY);
 
       // ✅ Set LAST_SENT_KEY based on race state:
       // - Race not started yet → set to now → throttles first invocation so no
@@ -675,6 +791,93 @@ export const gpsService = {
         console.log('✅ Background location task started');
       }
       await addLog('🚀', `Background task started — interval:${intervalSeconds}s distInterval:${categoryId !== undefined ? (DISTANCE_INTERVAL_METRES[Number(categoryId)] ?? DEFAULT_DISTANCE_INTERVAL_METRES) : DEFAULT_DISTANCE_INTERVAL_METRES}m cat:${categoryId}`);
+
+      // ✅ [TRANSISTOR] react-native-background-geolocation: secondary GPS engine.
+      // Transistor's native WakeLock prevents Samsung One UI from freezing the JS
+      // context during cycling sessions (~6-10 min into background ride) — confirmed
+      // over 4-5 sessions where expo-location alone had 87-278s random gaps.
+      // Runs ALONGSIDE expo-location — expo-location remains the primary engine.
+      // Non-fatal try/catch — if transistor fails, expo-location continues normally.
+      // ⚠️ DEBUG builds work without license key (free to test).
+      // RELEASE/PREVIEW builds need key from shop.transistorsoft.com in app.config.js.
+      try {
+        await BackgroundGeolocation.ready({
+          // ✅ Geolocation config (GeoConfig) — all geo options nested here
+          geolocation: {
+            desiredAccuracy:              BackgroundGeolocation.DesiredAccuracy.High,
+            locationAuthorizationRequest: 'Always',
+            distanceFilter:               0,
+            locationUpdateInterval:       intervalSeconds * 1000,
+            fastestLocationUpdateInterval: 5000,
+            disableStopDetection:         true,   // ✅ never auto-stop during race
+            stopTimeout:                  5,
+            pausesLocationUpdatesAutomatically: false,
+            showsBackgroundLocationIndicator:   true,
+            activityType:                 BackgroundGeolocation.ActivityType.Fitness,
+            allowIdenticalLocations:      true,   // ✅ allow same coords at water stations
+          },
+          // ✅ Activity recognition config (ActivityConfig)
+          // disableMotionActivityUpdates: we handle movement filtering ourselves
+          // via minMovementMetres in the background task — transistor's motion
+          // state machine would pause GPS delivery which we don't want.
+          activity: {
+            activityRecognitionInterval:  10000,
+            disableMotionActivityUpdates: true,
+          },
+          // ✅ App config (AppConfig)
+          // foregroundService is NOT listed here — it is enabled automatically
+          // on Android when a notification is configured.
+          app: {
+            stopOnTerminate:   false,
+            startOnBoot:       false,
+            heartbeatInterval: 60,
+            preventSuspend:    true,
+            notification: {
+              title: notificationTitle ?? 'Live Tracking Active',
+              text:  notificationBody  ?? 'Your location is being tracked.',
+              color: '#1a73e8',
+            },
+          },
+          // ✅ Logger config (LoggerConfig)
+          logger: {
+            logLevel: API_CONFIG.DEBUG
+              ? BackgroundGeolocation.LogLevel.Verbose
+              : BackgroundGeolocation.LogLevel.Off,
+          },
+          reset: true,
+        });
+
+        // ✅ Transistor delivers locations independently of expo-location.
+        // Both engines run in parallel — transistor's native WakeLock prevents
+        // Samsung from freezing the JS context during cycling sessions.
+        BackgroundGeolocation.onLocation((bgLoc) => {
+          // ✅ Update foreground UI with transistor's position
+          callback({
+            latitude:         bgLoc.coords.latitude,
+            longitude:        bgLoc.coords.longitude,
+            altitude:         bgLoc.coords.altitude ?? null,
+            accuracy:         bgLoc.coords.accuracy ?? null,
+            altitudeAccuracy: bgLoc.coords.altitude_accuracy ?? null,  // snake_case in transistor
+            speed:            bgLoc.coords.speed ?? null,
+            heading:          bgLoc.coords.heading ?? null,
+            timestamp:        new Date(bgLoc.timestamp).getTime(),
+            mocked:           bgLoc.mock,
+          });
+          addLog('🛰️', `Transistor loc — lat:${bgLoc.coords.latitude.toFixed(5)} spd:${bgLoc.coords.speed?.toFixed(1) ?? '?'}m/s moving:${bgLoc.is_moving}`);
+        });
+
+        BackgroundGeolocation.onMotionChange((event) => {
+          addLog(event.isMoving ? '🏃' : '🧍', `Motion: ${event.isMoving ? 'moving' : 'stationary'}`);
+        });
+
+        await BackgroundGeolocation.start();
+        await addLog('🛰️', 'Transistor started — native WakeLock active, Samsung JS freeze prevented');
+        if (API_CONFIG.DEBUG) console.log('✅ BackgroundGeolocation (transistor) started');
+      } catch (transistorErr: any) {
+        // ✅ Non-fatal — expo-location background task still running as primary
+        await addLog('⚠️', `Transistor start failed: ${transistorErr?.message ?? 'unknown'} — expo-location continues`);
+        if (API_CONFIG.DEBUG) console.warn('⚠️ Transistor failed to start:', transistorErr?.message);
+      }
 
       let fgSubscription: Location.LocationSubscription | null = null;
       let fgStarting = false; // ✅ Guard against concurrent async calls
@@ -751,6 +954,11 @@ export const gpsService = {
           } catch (err) {
             if (API_CONFIG.DEBUG) console.error('❌ Error stopping background task:', err);
           }
+          // ✅ [TRANSISTOR] Stop transistor
+          try {
+            await BackgroundGeolocation.stop();
+            BackgroundGeolocation.removeListeners();
+          } catch { /* silent */ }
           // Clean up stored params
           await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
           await AsyncStorage.removeItem(LAST_SENT_KEY);
@@ -758,6 +966,8 @@ export const gpsService = {
           await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
           await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
           await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
+          await AsyncStorage.removeItem(RACE_FINISHED_KEY);
+          await AsyncStorage.removeItem(NEAR_FINISH_KEY);
           if (API_CONFIG.DEBUG) console.log('✅ Background location task stopped');
           await addLog('🛑', 'Background task stopped — tracking ended');
         },
