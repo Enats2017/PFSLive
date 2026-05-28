@@ -33,6 +33,14 @@ const LAST_ALTITUDE_KEY = '@PFSLive:lastAltitude';
 // for accurate plotting. Stored in AsyncStorage so the background task
 // can read it without access to React state.
 const FINISH_APPROACH_KEY      = '@PFSLive:finishApproach';   // '1' when active
+// ✅ Race finished flag — set by background task when distance_to_finish_km === 0.
+// Read by HomeScreen 1s timer to auto-stop tracking when participant crosses finish.
+export const RACE_FINISHED_KEY = '@PFSLive:raceFinished';        // '1' when finished
+// ✅ Near-finish flag — set when distance_to_finish_km ≤ 1km for the first time.
+// Persists across sends so auto-stop works even for fast cyclists who skip from
+// 1.5km directly to 0.02km in a single 30s interval (25 km/h covers ~208m/30s).
+// Set BEFORE the auto-stop check so it works on the same send it is first activated.
+const NEAR_FINISH_KEY = '@PFSLive:nearFinish';                   // '1' when ever within 1km
 const FINISH_APPROACH_INTERVAL = 5;                            // seconds
 const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 
@@ -377,6 +385,50 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
         }
         await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
       }
+
+      // ✅ Auto-stop detection: participant has crossed the finish line when
+      // distance_to_finish_km drops to near-zero (≤ 0.05km = 50m threshold).
+      // Using ≤ 0.05 not === 0 because GPS drift means finish is rarely exactly 0:
+      // real-world values seen: 0.008, 0.011, 0.005km etc.
+      //
+      // THREE guards required — all must be true to trigger auto-stop:
+      //
+      // 1. finishedRaw <= 0.05 — within 50m of finish line
+      //
+      // 2. sentCount >= 3 — loop course guard (start == finish physically).
+      //    First 3 sends (~90s) are ignored so a participant standing at the
+      //    start/finish area of a loop course doesn't trigger auto-stop immediately.
+      //
+      // 3. nearFinish === '1' — participant must have been within 1km of finish
+      //    at some point during this session (set just above, same send).
+      //    Unlike finishApproach (read at task START = previous send state),
+      //    NEAR_FINISH_KEY is SET then immediately READ in the same execution,
+      //    so it works even when a fast cyclist (25 km/h) jumps from 1.5km
+      //    directly to 0.02km in a single 30s interval — finish approach would
+      //    never have been active in a previous send, but nearFinish is set
+      //    and checked in the same send. Prevents false trigger from a GPS snap
+      //    error mid-race that accidentally reports near-zero finish distance.
+      const finishedRaw = result.distance_to_finish_km ?? null;
+      // ✅ Set NEAR_FINISH_KEY the moment participant first comes within 1km of finish.
+      // Done BEFORE the auto-stop check so cycling (fast sport) can trigger auto-stop
+      // on the same send where they first enter the 1km zone — even if they jump from
+      // 1.5km to 0.02km in a single 30s interval at 25 km/h.
+      // finishApproach (read at task start) reflects PREVIOUS send — too late for cycling.
+      // NEAR_FINISH_KEY is set HERE then immediately checked below — same-send detection.
+      if (distToFinish !== null && distToFinish <= FINISH_APPROACH_THRESHOLD) {
+        await AsyncStorage.setItem(NEAR_FINISH_KEY, '1');
+      }
+      const nearFinish = await AsyncStorage.getItem(NEAR_FINISH_KEY);
+
+      if (
+        finishedRaw !== null &&
+        finishedRaw <= 0.05 &&
+        sentCount >= 3 &&
+        nearFinish === '1'
+      ) {
+        await AsyncStorage.setItem(RACE_FINISHED_KEY, '1');
+        await addLog('🏆', `Finish line crossed — ${finishedRaw.toFixed(3)}km to finish, signalling auto-stop`);
+      }
     }
 
   } catch (err: any) {
@@ -630,6 +682,8 @@ export const gpsService = {
       await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
       await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
       await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
+      await AsyncStorage.removeItem(RACE_FINISHED_KEY);
+      await AsyncStorage.removeItem(NEAR_FINISH_KEY);
 
       // ✅ Set LAST_SENT_KEY based on race state:
       // - Race not started yet → set to now → throttles first invocation so no
@@ -860,6 +914,8 @@ export const gpsService = {
           await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
           await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
           await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
+          await AsyncStorage.removeItem(RACE_FINISHED_KEY);
+          await AsyncStorage.removeItem(NEAR_FINISH_KEY);
           if (API_CONFIG.DEBUG) console.log('✅ Background location task stopped');
           await addLog('🛑', 'Background task stopped — tracking ended');
         },

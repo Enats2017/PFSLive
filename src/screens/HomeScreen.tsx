@@ -26,7 +26,9 @@ import { AppHeader } from '../components/common/AppHeader';
 import { UpdateRequiredModal } from '../components/UpdateRequiredModal';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
-import { gpsService, BACKGROUND_SENT_COUNT_KEY, ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry, startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive } from '../services/gpsService';
+import { gpsService, BACKGROUND_SENT_COUNT_KEY, RACE_FINISHED_KEY,
+  ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry,
+  startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
@@ -966,6 +968,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           if (logsStr) setTrackingLogs(JSON.parse(logsStr));
         } catch { /* silent */ }
       }
+
+      // ✅ Auto-stop when participant crosses finish line.
+      // Background task sets RACE_FINISHED_KEY='1' when distance_to_finish_km===0.
+      // We read it here in the 1s timer so stopGPSTracking() runs in React context
+      // (cannot call it from the background task JS context directly).
+      // Clear the flag first to prevent double-trigger on next tick.
+      try {
+        const raceFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
+        if (raceFinished === '1') {
+          await AsyncStorage.removeItem(RACE_FINISHED_KEY);
+          await stopGPSTracking();
+        }
+      } catch { /* silent */ }
+      
     }, 1000);
     return () => clearInterval(interval);
   }, [isGPSActive, calculateTimeUntilRace]);
