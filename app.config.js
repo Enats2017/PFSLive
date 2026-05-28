@@ -161,6 +161,12 @@ export default ({ config }) => {
         }
       ],
       "expo-background-task",
+      [
+        "react-native-background-geolocation",
+        {
+          license: ""  // ← empty for DEBUG/development, add key for preview/production
+        }
+      ],
       "expo-localization",
       "expo-secure-store",
       "@react-native-community/datetimepicker",

@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import BackgroundGeolocation from 'react-native-background-geolocation';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundTask from 'expo-background-task';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -62,7 +63,7 @@ const DEFAULT_DISTANCE_INTERVAL_METRES = 0;
 // ✅ Tracking log — ring buffer of recent background task events.
 // Written by background task, read by HomeScreen 1s timer for live display.
 export const TRACKING_LOG_KEY = '@PFSLive:trackingLog';
-const MAX_LOG_ENTRIES = 500; // keep last 100 events
+const MAX_LOG_ENTRIES = 500; // keep last 500 events
 
 export interface TrackingLogEntry {
   ts: number;        // Date.now() when event occurred
@@ -446,6 +447,15 @@ export const ensureBackgroundTaskAlive = async (
     if (API_CONFIG.DEBUG) console.log('✅ Background task restarted');
     await addLog('♻️', 'Watchdog: background task was dead — restarted successfully');
 
+    // ✅ [TRANSISTOR] Also restart transistor if it stopped
+    try {
+      const bgState = await BackgroundGeolocation.getState();
+      if (!bgState.enabled) {
+        await BackgroundGeolocation.start();
+        await addLog('♻️', 'Watchdog: transistor also restarted');
+      }
+    } catch { /* silent */ }
+
     return true;
   } catch (err: any) {
     if (API_CONFIG.DEBUG) console.error('❌ Failed to restart background task:', err?.message);
@@ -676,6 +686,93 @@ export const gpsService = {
       }
       await addLog('🚀', `Background task started — interval:${intervalSeconds}s distInterval:${categoryId !== undefined ? (DISTANCE_INTERVAL_METRES[Number(categoryId)] ?? DEFAULT_DISTANCE_INTERVAL_METRES) : DEFAULT_DISTANCE_INTERVAL_METRES}m cat:${categoryId}`);
 
+      // ✅ [TRANSISTOR] react-native-background-geolocation: secondary GPS engine.
+      // Transistor's native WakeLock prevents Samsung One UI from freezing the JS
+      // context during cycling sessions (~6-10 min into background ride) — confirmed
+      // over 4-5 sessions where expo-location alone had 87-278s random gaps.
+      // Runs ALONGSIDE expo-location — expo-location remains the primary engine.
+      // Non-fatal try/catch — if transistor fails, expo-location continues normally.
+      // ⚠️ DEBUG builds work without license key (free to test).
+      // RELEASE/PREVIEW builds need key from shop.transistorsoft.com in app.config.js.
+      try {
+        await BackgroundGeolocation.ready({
+          // ✅ Geolocation config (GeoConfig) — all geo options nested here
+          geolocation: {
+            desiredAccuracy:              BackgroundGeolocation.DesiredAccuracy.High,
+            locationAuthorizationRequest: 'Always',
+            distanceFilter:               0,
+            locationUpdateInterval:       intervalSeconds * 1000,
+            fastestLocationUpdateInterval: 5000,
+            disableStopDetection:         true,   // ✅ never auto-stop during race
+            stopTimeout:                  5,
+            pausesLocationUpdatesAutomatically: false,
+            showsBackgroundLocationIndicator:   true,
+            activityType:                 BackgroundGeolocation.ActivityType.Fitness,
+            allowIdenticalLocations:      true,   // ✅ allow same coords at water stations
+          },
+          // ✅ Activity recognition config (ActivityConfig)
+          // disableMotionActivityUpdates: we handle movement filtering ourselves
+          // via minMovementMetres in the background task — transistor's motion
+          // state machine would pause GPS delivery which we don't want.
+          activity: {
+            activityRecognitionInterval:  10000,
+            disableMotionActivityUpdates: true,
+          },
+          // ✅ App config (AppConfig)
+          // foregroundService is NOT listed here — it is enabled automatically
+          // on Android when a notification is configured.
+          app: {
+            stopOnTerminate:   false,
+            startOnBoot:       false,
+            heartbeatInterval: 60,
+            preventSuspend:    true,
+            notification: {
+              title: notificationTitle ?? 'Live Tracking Active',
+              text:  notificationBody  ?? 'Your location is being tracked.',
+              color: '#1a73e8',
+            },
+          },
+          // ✅ Logger config (LoggerConfig)
+          logger: {
+            logLevel: API_CONFIG.DEBUG
+              ? BackgroundGeolocation.LogLevel.Verbose
+              : BackgroundGeolocation.LogLevel.Off,
+          },
+          reset: true,
+        });
+
+        // ✅ Transistor delivers locations independently of expo-location.
+        // Both engines run in parallel — transistor's native WakeLock prevents
+        // Samsung from freezing the JS context during cycling sessions.
+        BackgroundGeolocation.onLocation((bgLoc) => {
+          // ✅ Update foreground UI with transistor's position
+          callback({
+            latitude:         bgLoc.coords.latitude,
+            longitude:        bgLoc.coords.longitude,
+            altitude:         bgLoc.coords.altitude ?? null,
+            accuracy:         bgLoc.coords.accuracy ?? null,
+            altitudeAccuracy: bgLoc.coords.altitude_accuracy ?? null,  // snake_case in transistor
+            speed:            bgLoc.coords.speed ?? null,
+            heading:          bgLoc.coords.heading ?? null,
+            timestamp:        new Date(bgLoc.timestamp).getTime(),
+            mocked:           bgLoc.mock,
+          });
+          addLog('🛰️', `Transistor loc — lat:${bgLoc.coords.latitude.toFixed(5)} spd:${bgLoc.coords.speed?.toFixed(1) ?? '?'}m/s moving:${bgLoc.is_moving}`);
+        });
+
+        BackgroundGeolocation.onMotionChange((event) => {
+          addLog(event.isMoving ? '🏃' : '🧍', `Motion: ${event.isMoving ? 'moving' : 'stationary'}`);
+        });
+
+        await BackgroundGeolocation.start();
+        await addLog('🛰️', 'Transistor started — native WakeLock active, Samsung JS freeze prevented');
+        if (API_CONFIG.DEBUG) console.log('✅ BackgroundGeolocation (transistor) started');
+      } catch (transistorErr: any) {
+        // ✅ Non-fatal — expo-location background task still running as primary
+        await addLog('⚠️', `Transistor start failed: ${transistorErr?.message ?? 'unknown'} — expo-location continues`);
+        if (API_CONFIG.DEBUG) console.warn('⚠️ Transistor failed to start:', transistorErr?.message);
+      }
+
       let fgSubscription: Location.LocationSubscription | null = null;
       let fgStarting = false; // ✅ Guard against concurrent async calls
 
@@ -751,6 +848,11 @@ export const gpsService = {
           } catch (err) {
             if (API_CONFIG.DEBUG) console.error('❌ Error stopping background task:', err);
           }
+          // ✅ [TRANSISTOR] Stop transistor
+          try {
+            await BackgroundGeolocation.stop();
+            BackgroundGeolocation.removeListeners();
+          } catch { /* silent */ }
           // Clean up stored params
           await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
           await AsyncStorage.removeItem(LAST_SENT_KEY);
