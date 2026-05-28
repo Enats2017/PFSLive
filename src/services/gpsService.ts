@@ -419,6 +419,10 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
 
       // ✅ Server-authoritative finished flag (1/0). Accept number or string form.
       const serverFinished = result.finished === 1 || result.finished === '1';
+      // ✅ Finish authority. 'rr' = RR recorded the crossing → trust finished alone
+      // (GPS distance can lag far behind the timing mat). 'distance' = derived from
+      // distance_to_finish_km ≤ 50m → apply the GPS guards below. Default 'distance'.
+      const finishSource = result.finish_source ?? 'distance';
 
       const finishedRaw = result.distance_to_finish_km ?? null;
       // ✅ Set NEAR_FINISH_KEY the moment participant first comes within 1km of finish.
@@ -432,15 +436,34 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       }
       const nearFinish = await AsyncStorage.getItem(NEAR_FINISH_KEY);
 
-      if (
-        serverFinished &&
-        finishedRaw !== null &&
-        finishedRaw <= 0.05 &&
-        sentCount >= 3 &&
-        nearFinish === '1'
-      ) {
+      // ✅ Auto-stop decision depends on the finish authority:
+      //   • RR ('rr'): RR has recorded the finish-line crossing — this is
+      //     definitive. Stop on finished=1 alone. We deliberately do NOT apply
+      //     the GPS guards here, because the phone's GPS distance can lag far
+      //     behind the timing mat (observed: finished=1 while GPS showed 16km
+      //     remaining). Applying the ≤0.05km guard would wrongly block the stop.
+      //   • Distance ('distance' — custom / partner-without-RR): finished was
+      //     derived from GPS proximity, so keep the full guard set as a safety net
+      //     against a mid-race GPS snap falsely reporting near-zero finish distance:
+      //       finished=1 AND ≤50m AND sentCount≥3 AND was-within-1km-this-session.
+      const shouldStop = (finishSource === 'rr')
+        ? serverFinished
+        : (
+            serverFinished &&
+            finishedRaw !== null &&
+            finishedRaw <= 0.05 &&
+            sentCount >= 3 &&
+            nearFinish === '1'
+          );
+
+      if (shouldStop) {
         await AsyncStorage.setItem(RACE_FINISHED_KEY, '1');
-        await addLog('🏆', `Finish line crossed (server finished=1) — ${finishedRaw.toFixed(3)}km to finish, stopping GPS`);
+        await addLog(
+          '🏆',
+          finishSource === 'rr'
+            ? `Finish confirmed by RaceResult (finished=1) — stopping GPS`
+            : `Finish line crossed — ${finishedRaw?.toFixed(3)}km to finish, stopping GPS`
+        );
 
         // ✅ Stop GPS engines immediately from the background task.
         // This stops location updates RIGHT NOW without waiting for the app
