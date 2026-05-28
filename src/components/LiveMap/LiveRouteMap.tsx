@@ -9,11 +9,11 @@ import { colors } from '../../styles/common.styles';
 // ── Map marker colors ────────────────────────────────────────────────────────
 // Each marker type has a distinct color so they're easy to tell apart at a glance.
 const MARKER_COLORS = {
-    start:       '#22C55E', // green  — universally understood as start
-    finish:      '#EF4444', // red    — universally understood as finish
-    checkpoint:  '#1a1a2e', // dark   — intermediate checkpoints
+    start: '#22C55E', // green  — universally understood as start
+    finish: '#EF4444', // red    — universally understood as finish
+    checkpoint: '#1a1a2e', // dark   — intermediate checkpoints
     participant: '#F97316', // orange — tracked athletes
-    follower:    '#6366F1', // indigo — "you are here" marker (viewer's own position)
+    follower: '#6366F1', // indigo — "you are here" marker (viewer's own position)
 } as const;
 
 interface LiveRouteMapProps {
@@ -136,6 +136,40 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         const timer = setTimeout(tryFocus, 300);
         return () => clearTimeout(timer);
     }, [bounds]);
+
+
+    useEffect(() => {
+        if (!mapReadyRef.current) return;  
+        if (participants.length === 0) return;
+
+        const valid = participants.filter(p => p.lat !== 0 && p.lon !== 0);
+        if (valid.length === 0) return;
+        if (!cameraRef.current) return;
+
+        const timer = setTimeout(() => {
+            if (!cameraRef.current) return;
+
+            if (valid.length === 1) {
+                cameraRef.current.setCamera({
+                    centerCoordinate: [valid[0].lon, valid[0].lat],
+                    zoomLevel: 12,
+                    animationDuration: 800,
+                    animationMode: 'flyTo',
+                });
+            } else {
+                const lons = valid.map(p => p.lon);
+                const lats = valid.map(p => p.lat);
+                cameraRef.current.fitBounds(
+                    [Math.max(...lons), Math.max(...lats)],
+                    [Math.min(...lons), Math.min(...lats)],
+                    [80, 80, 80, 80],
+                    800
+                );
+            }
+        }, 500); 
+
+        return () => clearTimeout(timer);
+    }, [participants, mapReady]); // ← add mapReady as dependency
 
     const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
         console.log('🗺️ Creating participants GeoJSON with', participants.length, 'participants');
@@ -262,6 +296,8 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     const handleParticipantPress = (event: any) => {
         console.log('👆 Participant tapped:', event.features?.length);
         const feature = event.features[0];
+
+
         if (feature && feature.properties) {
             const props = feature.properties;
             const participant: ParticipantMapMarker = {
@@ -306,12 +342,12 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 ele: props.ele,
                 distance_km: props.distance_km,
                 accessible_by_car: props.accessible_by_car,
-                features: typeof props.features === 'string' 
-                ? JSON.parse(props.features)  
-                : props.features ?? [],
-                
+                features: typeof props.features === 'string'
+                    ? JSON.parse(props.features)
+                    : props.features ?? [],
+
             };
-             
+
             onAidStationPress(station);
         }
     };
@@ -367,7 +403,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         style={{
                             circleColor: [
                                 'case',
-                                ['==', ['get', 'is_start'], true],  MARKER_COLORS.start,
+                                ['==', ['get', 'is_start'], true], MARKER_COLORS.start,
                                 ['==', ['get', 'is_finish'], true], MARKER_COLORS.finish,
                                 MARKER_COLORS.checkpoint,
                             ] as any,
@@ -429,10 +465,11 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     >
                         <Mapbox.CircleLayer
                             id="participant-dots"
+
                             style={{
                                 circleColor: MARKER_COLORS.participant, // blue
-                                circleRadius: 10,
-                                circleStrokeWidth: 3,
+                                circleRadius: 13,
+                                circleStrokeWidth: 4,
                                 circleStrokeColor: '#FFFFFF',
                                 circlePitchAlignment: 'map',
                                 circleOpacity: 1,
@@ -443,7 +480,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                             minZoomLevel={13}
                             style={{
                                 textField: ['get', 'initials'],
-                                textSize: 12,
+                                textSize: 24,
                                 textColor: MARKER_COLORS.participant,
                                 textHaloColor: '#FFFFFF',
                                 textHaloWidth: 2,

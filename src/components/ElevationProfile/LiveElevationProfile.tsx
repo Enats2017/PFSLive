@@ -31,26 +31,24 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
 }) => {
     const { t } = useTranslation('livetracking');
     const screenWidth = Dimensions.get('window').width;
-    
+
     const chartWidth = Math.max(screenWidth, totalDistance * 80);
     const chartHeight = 220;
 
-    const yDomain: [number, number] = [minElevation, maxElevation];
+   const yDomain: [number, number] = [minElevation, maxElevation];
 
     // ✅ Use API checkpoints if available, otherwise GPX aid stations
     // ✅ Remove START and FINISH from elevation profile
     const checkpointChartPoints = React.useMemo(() => {
         if (apiCheckpoints.length > 0) {
-            // Filter out START and FINISH
-            //const visible = apiCheckpoints.filter(cp => !cp.is_start && !cp.is_finish);
             const visible = apiCheckpoints;
-            
+
             console.log('📊 Using API checkpoints for elevation:', visible.map(c => ({
                 name: c.name,
                 distance: c.distance,
                 segment: c.segment_distance
             })));
-            
+
             return visible.map((cp, idx) => ({
                 x: cp.distance,
                 y: cp.elevation,
@@ -59,15 +57,15 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
             }));
         }
 
-        // Fallback to GPX (remove first and last)
+
         const sorted = [...aidStations]
             .filter(s => s.distance !== undefined)
             .sort((a, b) => a.distance! - b.distance!);
-        
+
         if (sorted.length <= 2) return [];
 
         const intermediate = sorted.slice(1, -1);
-        
+
         return intermediate.map((s, idx) => ({
             x: s.distance!,
             y: s.ele,
@@ -76,12 +74,28 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
         }));
     }, [aidStations, apiCheckpoints]);
 
-    const participantChartPoints = React.useMemo(() => 
-        participants
+    const participantChartPoints = React.useMemo(() => {
+        return participants
             .filter(p => p.distance_km > 0)
-            .map(p => ({ x: p.distance_km, y: p.ele })),
-        [participants]
-    );
+            .map(p => {
+                let elevation = p.ele;
+                if (chartData.length > 0) {
+                    const closest = chartData.reduce((prev, curr) =>
+                        Math.abs(curr.x - p.distance_km) < Math.abs(prev.x - p.distance_km)
+                            ? curr : prev
+                    );
+                    elevation = closest.y;
+                }
+                console.log('📊 Participant chart point:', {
+                    name: p.name,
+                    distance_km: p.distance_km,
+                    originalEle: p.ele,
+                    interpolatedEle: elevation,
+                });
+                return { x: p.distance_km, y: elevation };
+            });
+    }, [participants, chartData]);
+
 
     const distanceMarkers = React.useMemo(() => {
         const markers: number[] = [];
@@ -95,14 +109,14 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     // ✅ Calculate segment distances using API checkpoint data
     const segmentDistances = React.useMemo(() => {
         const segments: Array<{ midX: number; distance: number; text: string }> = [];
-        
+
         if (apiCheckpoints.length > 0) {
             // Use official segment distances from API
             apiCheckpoints.forEach((cp, idx) => {
                 if (cp.segment_distance > 0) {
                     const prevDistance = idx === 0 ? 0 : apiCheckpoints[idx - 1].distance;
                     const midX = (prevDistance + cp.distance) / 2;
-                    
+
                     segments.push({
                         midX,
                         distance: cp.segment_distance,
@@ -110,7 +124,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     });
                 }
             });
-            
+
             console.log('📏 Segment distances from API:', segments.map(s => s.text));
         } else if (checkpointChartPoints.length > 0) {
             // Fallback: calculate from GPX
@@ -120,39 +134,39 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                 distance: firstCP.x,
                 text: `${firstCP.x.toFixed(1)} km`,
             });
-            
+
             for (let i = 0; i < checkpointChartPoints.length - 1; i++) {
                 const current = checkpointChartPoints[i];
                 const next = checkpointChartPoints[i + 1];
-                
+
                 const segmentDistance = next.x - current.x;
                 const midX = (current.x + next.x) / 2;
-                
+
                 segments.push({
                     midX,
                     distance: segmentDistance,
                     text: `${segmentDistance.toFixed(1)} km`,
                 });
             }
-            
+
             const lastCP = checkpointChartPoints[checkpointChartPoints.length - 1];
             const segmentDistance = totalDistance - lastCP.x;
             const midX = (lastCP.x + totalDistance) / 2;
-            
+
             segments.push({
                 midX,
                 distance: segmentDistance,
                 text: `${segmentDistance.toFixed(1)} km`,
             });
         }
-        
+
         return segments;
     }, [apiCheckpoints, checkpointChartPoints, totalDistance]);
 
     const handleCheckpointClick = (data: any, idx: number) => {
         if (onAidStationPress) {
             let station: AidStationMapMarker;
-            
+
             if (data.checkpoint) {
                 // API checkpoint
                 station = {
@@ -178,7 +192,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     features: data.station.features ?? [],
                 };
             }
-            
+
             onAidStationPress(station);
         }
     };
@@ -187,12 +201,19 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
         return null;
     }
 
+    console.log('📊 Y Domain check:', {
+        minElevation,
+        maxElevation,
+        participantEle: 515.8,
+        isInRange: 515.8 >= minElevation && 515.8 <= maxElevation
+    });
+
     return (
         <View style={liveTrackingStyles.profileContainer}>
             <Text style={liveTrackingStyles.profileTitle}>{t('elevationProfile')}</Text>
-            
-            <ScrollView 
-                horizontal 
+
+            <ScrollView
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 style={liveTrackingStyles.profileScrollView}
             >
@@ -239,8 +260,8 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                     { x: distance, y: yDomain[1] },
                                 ]}
                                 style={{
-                                    data: { 
-                                        stroke: colors.gray400, 
+                                    data: {
+                                        stroke: colors.gray400,
                                         strokeWidth: 1,
                                     },
                                 }}
@@ -255,9 +276,9 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                     { x: point.x, y: yDomain[1] },
                                 ]}
                                 style={{
-                                    data: { 
-                                        stroke: colors.black, 
-                                        strokeWidth: 1.5, 
+                                    data: {
+                                        stroke: colors.black,
+                                        strokeWidth: 1.5,
                                         strokeDasharray: '4,3',
                                     },
                                 }}
@@ -281,7 +302,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                         {participantChartPoints.length > 0 && (
                             <VictoryScatter
                                 data={participantChartPoints}
-                                size={7}
+                                size={11}
                                 style={{
                                     data: {
                                         fill: '#F97316',
@@ -295,7 +316,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                         {segmentDistances.map((segment, idx) => {
                             const xPosition = (segment.midX / totalDistance) * chartWidth;
                             const yPosition = 15;
-                            
+
                             return (
                                 <VictoryLabel
                                     key={`segment-label-${idx}`}
