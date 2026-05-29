@@ -152,7 +152,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             if (valid.length === 1) {
                 cameraRef.current.setCamera({
                     centerCoordinate: [valid[0].lon, valid[0].lat],
-                    zoomLevel: 12,
+                    zoomLevel: 15,
                     animationDuration: 800,
                     animationMode: 'flyTo',
                 });
