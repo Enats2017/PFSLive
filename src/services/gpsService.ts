@@ -41,6 +41,17 @@ export const RACE_FINISHED_KEY = '@PFSLive:raceFinished';        // '1' when fin
 // 1.5km directly to 0.02km in a single 30s interval (25 km/h covers ~208m/30s).
 // Set BEFORE the auto-stop check so it works on the same send it is first activated.
 const NEAR_FINISH_KEY = '@PFSLive:nearFinish';                   // '1' when ever within 1km
+// ✅ Transistor-active flag — set after BackgroundGeolocation.start() succeeds,
+// cleared on stop / start failure. Used by the expo-location TaskManager task
+// to decide whether to send or stay silent:
+//   • Flag '1'  → Transistor is alive and sending. Task no-ops (heartbeat only)
+//                 to prevent duplicate sends from the two engines racing.
+//   • Unset    → Transistor failed to start or hasn't started yet. Task acts
+//                 as the fallback sender.
+// This is the cross-engine deduplication primitive — necessary because the
+// AsyncStorage-based throttle (LAST_SENT_KEY) has an unavoidable race when
+// both engines read it within ~10ms of each other.
+const TRANSISTOR_ACTIVE_KEY = '@PFSLive:transistorActive';      // '1' when Transistor is sending
 const FINISH_APPROACH_INTERVAL = 5;                            // seconds
 const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 
@@ -143,50 +154,88 @@ function distanceMetres(lat1: number, lon1: number, lat2: number, lon2: number):
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ✅ BACKGROUND TASK — defined at TOP LEVEL (required by expo-task-manager).
-// Runs even when app is backgrounded or phone is locked.
-// Reads participantId/eventId from AsyncStorage, sends or queues the location.
-//
-// IMPORTANT: This task runs in a SEPARATE JS context from the main app on Android.
-// Module-level variables in this file are NOT shared with the main app context.
-// All state must go through AsyncStorage.
-TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) => {
-  if (error) {
-    if (API_CONFIG.DEBUG) console.error('❌ Background location task error:', error);
-    return;
-  }
+// ✅ Normalized location shape produced by BOTH GPS engines before they hand off
+// to the shared send pipeline. Each engine has a slightly different raw shape
+// (expo-location uses `coords.altitudeAccuracy`, Transistor uses
+// `coords.altitude_accuracy`, timestamps differ in type, etc.), so we
+// normalize at the entry point of each engine and feed a single shape into
+// processLocationForSend below.
+interface NormalizedRawLocation {
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+  accuracy: number | null;
+  altitudeAccuracy: number | null;
+  speed: number | null;
+  heading: number | null;
+  timestamp: number;   // ms since epoch
+  mocked: boolean;
+}
 
-  if (!data?.locations?.length) return;
+// ✅ SHARED SEND PIPELINE — used by BOTH expo-location's background task AND
+// Transistor's onLocation handler. The single source of truth for: race-start
+// gating, throttling, movement filtering, elevation/battery enrichment,
+// send-gap diagnostics, the actual HTTP send, finish-approach activation, and
+// auto-stop.
+//
+// WHY THIS LIVES AT MODULE LEVEL (not inside a class / closure):
+//   - On Android, expo-task-manager runs its task body in a SEPARATE JS context
+//     from the main app. Each context loads this module fresh and therefore has
+//     its own copy of this function. They share NOTHING in memory.
+//   - All cross-context state goes through AsyncStorage (LAST_SENT_KEY,
+//     FINISH_APPROACH_KEY, BACKGROUND_SENT_COUNT_KEY, etc.).
+//   - Transistor's listeners are registered from the MAIN JS context, so its
+//     calls into this function happen in main-context's copy.
+//   - Both copies execute the same code against the same AsyncStorage keys,
+//     so the throttle works as a soft cross-context lock.
+//
+// DOUBLE-SEND RACE:
+//   In theory both engines could fire within the same ~10ms window, both read
+//   LAST_SENT_KEY before either writes it, and both proceed to send. In
+//   practice the engines fire on different schedules (expo-location every 5s
+//   via OS location updates; Transistor at locationUpdateInterval=30s) so the
+//   collision window is tiny. AND on Samsung One UI the expo-location task is
+//   usually frozen anyway, so only Transistor fires. If a duplicate ever slips
+//   through, server-side dedup or a future client-side lock token can address
+//   it — accepted risk for v1.
+//
+// SOURCE LABEL:
+//   The `source` argument tags every log line so the tracking log clearly
+//   shows which engine produced each send:
+//     • 'task'       → expo-location's TaskManager background task (no suffix in logs)
+//     • 'transistor' → Transistor's onLocation handler ([t] suffix in logs)
+//   This is essential for diagnostics: on Samsung you should see [t] sends
+//   continuing through periods where plain sends stop (the freeze pattern).
+const processLocationForSend = async (
+  raw: NormalizedRawLocation,
+  source: 'task' | 'transistor',
+): Promise<void> => {
+  const tag = source === 'transistor' ? ' [t]' : '';
 
   try {
     // Read tracking params stored when GPS was started
     const paramsJson = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
     if (!paramsJson) {
-      if (API_CONFIG.DEBUG) console.log('⚠️ Background task: no tracking params found');
-      await addLog('⚠️', 'Task fired but no params found — may have been killed by OS');
+      // No params means either the session was stopped between this fire and
+      // processing, or the OS killed the task and Transistor woke up before
+      // re-registration. Silent return — no send, no log spam.
       return;
     }
 
     const { participantId, eventId, intervalSeconds, categoryId, raceStartTime, manualStart } = JSON.parse(paramsJson);
-
-    await addLog('🔔', `Task fired — cat:${categoryId} interval:${intervalSeconds}s manualStart:${manualStart ?? 0}`);
 
     // ✅ Race start check — do not send coordinates before race begins.
     // manualStart === 1 means organiser controls start — skip time check entirely.
     // Otherwise raceStartTime must be set AND in the past before any send.
     if (manualStart !== 1) {
       if (!raceStartTime) {
-        if (API_CONFIG.DEBUG) console.log('⏳ Background task: no race time configured — skipping send');
-        await addLog('⏳', 'Race time not set — skipping send');
+        await addLog('⏳', `Race time not set — skipping send${tag}`);
         return;
       }
       const raceTimeMs = new Date(raceStartTime).getTime();
       if (isNaN(raceTimeMs) || Date.now() < raceTimeMs) {
         const minsLeft = isNaN(raceTimeMs) ? '?' : ((raceTimeMs - Date.now()) / 60000).toFixed(1);
-        if (API_CONFIG.DEBUG) {
-          console.log(`⏳ Background task: race not started yet — ${minsLeft} min remaining`);
-        }
-        await addLog('⏳', `Race not started — ${minsLeft}min remaining`);
+        await addLog('⏳', `Race not started — ${minsLeft}min remaining${tag}`);
         return;
       }
     }
@@ -194,20 +243,12 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     // ✅ Parse to number — API returns category_id as string e.g. "59"
     const categoryIdNum = Number(categoryId);
     const minMovementMetres = MOVEMENT_THRESHOLD[categoryIdNum] ?? DEFAULT_MOVEMENT_METRES;
-    const distInterval = DISTANCE_INTERVAL_METRES[categoryIdNum] ?? DEFAULT_DISTANCE_INTERVAL_METRES;
-
-    if (API_CONFIG.DEBUG) {
-      console.log(`📊 Background task config — categoryId: ${categoryId} (${categoryIdNum})`);
-      console.log(`   MOVEMENT_THRESHOLD: ${minMovementMetres}m | DISTANCE_INTERVAL: ${distInterval}m`);
-    }
 
     // ✅ Use finish-approach interval (5s) when runner is within 1km of finish.
-    // FINISH_APPROACH_KEY is set by the background task itself after each
-    // API response — no React state needed.
     const finishApproach = await AsyncStorage.getItem(FINISH_APPROACH_KEY);
     const effectiveInterval = finishApproach === '1'
-        ? FINISH_APPROACH_INTERVAL
-        : (intervalSeconds ?? 30);
+      ? FINISH_APPROACH_INTERVAL
+      : (intervalSeconds ?? 30);
     const minGapMs = (effectiveInterval - 5) * 1000; // ✅ 5s buffer for Doze timing variance
     const lastSentStr = await AsyncStorage.getItem(LAST_SENT_KEY);
     const lastSentAt = lastSentStr ? parseInt(lastSentStr) : 0;
@@ -216,22 +257,16 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     // ✅ Guard against clock jumps (Samsung) or corrupted timestamp
     if (isNaN(lastSentAt) || lastSentAt > now) {
       await AsyncStorage.setItem(LAST_SENT_KEY, '0');
-      await addLog('⏰', `Clock jump detected — LAST_SENT reset (lastSentAt:${lastSentAt} now:${now})`);
+      await addLog('⏰', `Clock jump detected — LAST_SENT reset (lastSentAt:${lastSentAt} now:${now})${tag}`);
     } else if (now - lastSentAt < minGapMs) {
       const elapsed = ((now - lastSentAt) / 1000).toFixed(1);
-      if (API_CONFIG.DEBUG) {
-        console.log(`⏭️ Background task throttled — ${elapsed}s since last send`);
-      }
-      await addLog('⏭️', `Throttled — only ${elapsed}s since last send (min ${(minGapMs/1000).toFixed(0)}s)`);
+      await addLog('⏭️', `Throttled — only ${elapsed}s since last send (min ${(minGapMs/1000).toFixed(0)}s)${tag}`);
       return;
     }
 
-    // Use the most recent location
-    const raw = data.locations[data.locations.length - 1];
-
     // ✅ Calculate elevation gain from last known altitude
     let elevationGain: number | undefined;
-    const currentAltitude = raw.coords.altitude ?? null;
+    const currentAltitude = raw.altitude;
     if (currentAltitude !== null) {
       const lastAltStr = await AsyncStorage.getItem(LAST_ALTITUDE_KEY);
       if (lastAltStr) {
@@ -243,7 +278,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       await AsyncStorage.setItem(LAST_ALTITUDE_KEY, String(currentAltitude));
     }
 
-    // ✅ Read battery info
+    // ✅ Read battery info — best-effort, silent on failure
     let batteryLevel: number | undefined;
     let batteryCharging: boolean | undefined;
     try {
@@ -254,19 +289,21 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
                         state === Battery.BatteryState.FULL;
     } catch { /* silent */ }
 
-    // ✅ Determine is_moving from speed
-    const speed = raw.coords.speed ?? null;
+    // ✅ Determine is_moving from speed (consistent with previous behavior —
+    // both engines also report their own is_moving flag, but we derive from
+    // speed for parity with what the server expects)
+    const speed = raw.speed;
     const isMoving = speed !== null ? speed > 0.5 : undefined;
 
     const location: LocationData = {
-      latitude: raw.coords.latitude,
-      longitude: raw.coords.longitude,
+      latitude: raw.latitude,
+      longitude: raw.longitude,
       altitude: currentAltitude ?? undefined,
-      accuracy: raw.coords.accuracy ?? undefined,
-      altitudeAccuracy: raw.coords.altitudeAccuracy ?? undefined,
+      accuracy: raw.accuracy ?? undefined,
+      altitudeAccuracy: raw.altitudeAccuracy ?? undefined,
       timestamp: new Date(raw.timestamp).toISOString(),
       speed: speed ?? undefined,
-      heading: raw.coords.heading ?? undefined,
+      heading: raw.heading ?? undefined,
       isMock: raw.mocked || false,
       elevationGain,
       batteryLevel,
@@ -275,35 +312,23 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     };
 
     // ✅ Movement check — skip send if participant hasn't moved since last send.
-    // ✅ FIX: checked BEFORE writing LAST_SENT_KEY so the throttle timestamp is
-    // only committed when we actually intend to send. Previously the timestamp
-    // was written first, causing the next invocation to be blocked even though
-    // the current one was silently skipped due to insufficient movement.
+    // Checked BEFORE writing LAST_SENT_KEY so the throttle timestamp is only
+    // committed when we actually intend to send.
     const lastPosStr = await AsyncStorage.getItem(LAST_POSITION_KEY);
     if (lastPosStr) {
       const lastPos = JSON.parse(lastPosStr);
       const moved = distanceMetres(lastPos.lat, lastPos.lon, location.latitude, location.longitude);
       // ✅ Skip movement check during finish approach — every metre counts near finish.
-      // Runner may be slowing to a walk, crossing timing mats, or briefly stopped.
-      // Movement threshold would suppress these critical final coordinates.
       if (finishApproach !== '1' && moved < minMovementMetres) {
-        if (API_CONFIG.DEBUG) {
-          console.log(`🚶 Background task: skipped — only moved ${moved.toFixed(1)}m (min ${minMovementMetres}m, category ${categoryId})`);
-        }
-        await addLog('🚶', `Skipped — moved only ${moved.toFixed(1)}m (need ${minMovementMetres}m)`);
-        // ✅ Do NOT write LAST_SENT_KEY — let the next invocation try again
-        // without waiting a full interval. This ensures queuing still happens
-        // when network returns even if movement was below threshold.
+        await addLog('🚶', `Skipped — moved only ${moved.toFixed(1)}m (need ${minMovementMetres}m)${tag}`);
         return;
       }
     }
 
     // ✅ Write timestamp NOW — after movement check passes, before send.
-    // This prevents concurrent invocations from double-sending while still
-    // allowing the next task to fire immediately if this one was skipped.
+    // This is the soft cross-engine lock: the other engine reading
+    // LAST_SENT_KEY after this point will see the gap and throttle itself.
     await AsyncStorage.setItem(LAST_SENT_KEY, String(now));
-
-    // ✅ Update last known position before send
     await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
       lat: location.latitude,
       lon: location.longitude,
@@ -311,80 +336,45 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
 
     // ✅ SEND-GAP DIAGNOSTIC — log the actual elapsed time since the previous
     // send so freezes / OS throttling are obvious in the tracking log.
-    // During a screen-off multi-app contention test this is the key signal:
-    //   • gap ≈ effectiveInterval  → healthy, task firing on schedule
-    //   • gap ≫ effectiveInterval  → JS context was frozen/throttled (Samsung
-    //     One UI, Doze, or another GPS app starved us). A ⏱️ line with a big
-    //     number = exactly the gap Transistor's WakeLock is meant to prevent.
-    // lastSentAt === 0 means this is the first send of the session (no gap yet).
-    // Also skip when lastSentAt was invalid (clock jump / NaN / future) — the
-    // clock-jump guard above resets the stored key but this local still holds the
-    // stale value, which would produce a misleading gap on that one cycle.
     const lastSentValid = (lastSentAt > 0 && !isNaN(lastSentAt) && lastSentAt <= now);
     if (lastSentValid) {
-      const gapSec      = (now - lastSentAt) / 1000;
-      const expectedSec = effectiveInterval; // 5s finish-approach, else interval (e.g. 30s)
-      // Flag a gap as a freeze when it exceeds expected by > 2× the 5s task period
-      // (i.e. more than ~2 missed task fires beyond the expected send interval).
+      const gapSec = (now - lastSentAt) / 1000;
+      const expectedSec = effectiveInterval;
       const isFreeze = gapSec > (expectedSec + 10);
       await addLog(
         isFreeze ? '⏱️🔴' : '⏱️',
-        `Send gap ${gapSec.toFixed(1)}s (expected ~${expectedSec}s)${isFreeze ? ' — POSSIBLE FREEZE/THROTTLE' : ''}`
+        `Send gap ${gapSec.toFixed(1)}s (expected ~${expectedSec}s)${isFreeze ? ' — POSSIBLE FREEZE/THROTTLE' : ''}${tag}`
       );
     }
 
-    await addLog('📍', `Sending — lat:${location.latitude.toFixed(5)} lon:${location.longitude.toFixed(5)} spd:${location.speed?.toFixed(1) ?? '?'}m/s bat:${location.batteryLevel ?? '?'}% ele:${location.altitude?.toFixed(0) ?? '?'}m`);
-
-    if (API_CONFIG.DEBUG) {
-      console.log('📍 Background task: sending location', {
-        lat: location.latitude,
-        lon: location.longitude,
-        participantId,
-        eventId,
-      });
-    }
+    await addLog('📍', `Sending — lat:${location.latitude.toFixed(5)} lon:${location.longitude.toFixed(5)} spd:${location.speed?.toFixed(1) ?? '?'}m/s bat:${location.batteryLevel ?? '?'}% ele:${location.altitude?.toFixed(0) ?? '?'}m${tag}`);
 
     // Import here to avoid circular deps at module level
     const { locationService } = require('./locationService');
 
-    // ✅ Wrap send in try/catch so a network error never throws out of the task.
-    // If the task throws uncaught, Android marks it as crashed and may kill
-    // the foreground service entirely — causing the "task fires 3 times then dies"
-    // behaviour seen with unstable networks. Queuing handles the offline case.
+    // ✅ Wrap send in try/catch so a network error never throws out of the
+    // engine handler. If a Transistor onLocation callback throws, the SDK
+    // may stop firing further locations. Queuing handles the offline case.
     let result: any = { success: false };
     try {
       result = await locationService.sendLocation(participantId, eventId, location, true);
     } catch (sendErr: any) {
-      if (API_CONFIG.DEBUG) console.log('⚠️ Background task: send failed, location queued:', sendErr?.message);
-      await addLog('📦', `Send failed — queued. Error: ${sendErr?.message ?? 'unknown'}`);
-      // sendLocation already queued it internally — task completes cleanly
+      await addLog('📦', `Send failed — queued. Error: ${sendErr?.message ?? 'unknown'}${tag}`);
       return;
     }
 
-    // ✅ Increment background sent counter so HomeScreen can update its UI count
     if (!result.success) {
-      await addLog('🔴', `API rejected — ${result.message ?? 'unknown'} (location queued if applicable)`);
+      await addLog('🔴', `API rejected — ${result.message ?? 'unknown'} (location queued if applicable)${tag}`);
     }
 
     if (result.success) {
-      await addLog('✅', `Sent OK — id:${result.locationId ?? '?'} dist_to_finish:${result.distance_to_finish_km ?? '?'}km`);
+      await addLog('✅', `Sent OK — id:${result.locationId ?? '?'} dist_to_finish:${result.distance_to_finish_km ?? '?'}km${tag}`);
       const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
       const count = countStr ? parseInt(countStr) : 0;
       await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(count + 1));
 
       // ✅ Finish-line approach: activate 5s interval when ≤ 1km to finish.
-      // API returns distance_to_next_cp (km) in the response.
-      // We check is_finish_next separately via the finish_distance field.
-      // Simpler: if distance_to_next_cp <= threshold AND it's the last CP,
-      // the API returns distance_to_next_cp = distance to finish.
-      // We activate approach mode whenever distance_to_next_cp <= 1km
-      // since at that point the runner is close enough that 5s matters.
-      // ✅ Use distance_to_finish_km (specific to finish line) rather than
-      // distance_to_next_cp (which could be any intermediate checkpoint).
-      // Falls back to distance_to_next_cp only if finish distance unavailable.
-      // ✅ Loop course guard: skip finish approach for first 3 sends (~90s).
-      // Prevents false activation when GPS snaps to near-finish km on a loop
-      // course start. 90s is safe for all sports — no race finishes in 90s.
+      // Loop course guard: skip finish approach for first 3 sends (~90s).
       const sentCountStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
       const sentCount = sentCountStr ? parseInt(sentCountStr) : 0;
       const distToFinish = (sentCount < 3)
@@ -393,83 +383,27 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
       if (distToFinish !== null && distToFinish <= FINISH_APPROACH_THRESHOLD) {
         const wasActive = finishApproach === '1';
         await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
-        if (API_CONFIG.DEBUG) {
-          console.log(`🏁 Finish approach activated — ${distToFinish}km to finish (interval → ${FINISH_APPROACH_INTERVAL}s)`);
-        }
-        // ✅ No task restart needed — task already fires every 5s from the start.
-        // minGapMs = 0 when finish approach active → every fire sends immediately.
-        // Previously we called stop/start here which killed the task's own execution.
         if (!wasActive) {
-          await addLog('🏁', `Finish approach activated — ${distToFinish.toFixed(2)}km to finish, sending every 5s`);
+          await addLog('🏁', `Finish approach activated — ${distToFinish.toFixed(2)}km to finish, sending every 5s${tag}`);
         }
       } else if (distToFinish !== null && distToFinish > FINISH_APPROACH_THRESHOLD) {
-        // Reset if runner moves away (e.g. GPS error placed them near finish)
         if (finishApproach === '1') {
-          await addLog('🔄', `Finish approach reset — now ${distToFinish.toFixed(2)}km from finish`);
+          await addLog('🔄', `Finish approach reset — now ${distToFinish.toFixed(2)}km from finish${tag}`);
         }
         await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
       }
 
-      // ✅ Auto-stop detection: participant has finished the race.
-      //
-      // The server now returns `finished` (1/0) for BOTH event types:
-      //   • Partner events with RaceResult: finished = runner CROSSED the finish
-      //     timing mat (RR is_finish && is_crossed).
-      //   • Custom events & partner-without-RR: finished = 1 when the server's
-      //     distance_to_finish_km <= 0.05 (50m).
-      //
-      // We require the server flag AND all the existing local guards — every
-      // condition must be true to auto-stop. The server flag is the
-      // authoritative "are they done" signal; the local guards remain as
-      // safety against loop-course / GPS-snap edge cases:
-      //
-      // 1. finished === 1 — server confirms finished (both event types).
-      //
-      // 2. finishedRaw <= 0.05 — within 50m of finish line (local cross-check).
-      //
-      // 3. sentCount >= 3 — loop course guard (start == finish physically).
-      //    First 3 sends (~90s) are ignored so a participant standing at the
-      //    start/finish area of a loop course doesn't trigger auto-stop immediately.
-      //
-      // 4. nearFinish === '1' — participant must have been within 1km of finish
-      //    at some point during this session (set just above, same send).
-      //    Unlike finishApproach (read at task START = previous send state),
-      //    NEAR_FINISH_KEY is SET then immediately READ in the same execution,
-      //    so it works even when a fast cyclist (25 km/h) jumps from 1.5km
-      //    directly to 0.02km in a single 30s interval — finish approach would
-      //    never have been active in a previous send, but nearFinish is set
-      //    and checked in the same send. Prevents false trigger from a GPS snap
-      //    error mid-race that accidentally reports near-zero finish distance.
-
-      // ✅ Server-authoritative finished flag (1/0). Accept number or string form.
+      // ✅ Auto-stop detection — see comment block in the original task body
+      // for the full reasoning behind the RR/distance authority split and the
+      // four-guard set (finished, ≤50m, sentCount≥3, nearFinish).
       const serverFinished = result.finished === 1 || result.finished === '1';
-      // ✅ Finish authority. 'rr' = RR recorded the crossing → trust finished alone
-      // (GPS distance can lag far behind the timing mat). 'distance' = derived from
-      // distance_to_finish_km ≤ 50m → apply the GPS guards below. Default 'distance'.
       const finishSource = result.finish_source ?? 'distance';
-
       const finishedRaw = result.distance_to_finish_km ?? null;
-      // ✅ Set NEAR_FINISH_KEY the moment participant first comes within 1km of finish.
-      // Done BEFORE the auto-stop check so cycling (fast sport) can trigger auto-stop
-      // on the same send where they first enter the 1km zone — even if they jump from
-      // 1.5km to 0.02km in a single 30s interval at 25 km/h.
-      // finishApproach (read at task start) reflects PREVIOUS send — too late for cycling.
-      // NEAR_FINISH_KEY is set HERE then immediately checked below — same-send detection.
       if (distToFinish !== null && distToFinish <= FINISH_APPROACH_THRESHOLD) {
         await AsyncStorage.setItem(NEAR_FINISH_KEY, '1');
       }
       const nearFinish = await AsyncStorage.getItem(NEAR_FINISH_KEY);
 
-      // ✅ Auto-stop decision depends on the finish authority:
-      //   • RR ('rr'): RR has recorded the finish-line crossing — this is
-      //     definitive. Stop on finished=1 alone. We deliberately do NOT apply
-      //     the GPS guards here, because the phone's GPS distance can lag far
-      //     behind the timing mat (observed: finished=1 while GPS showed 16km
-      //     remaining). Applying the ≤0.05km guard would wrongly block the stop.
-      //   • Distance ('distance' — custom / partner-without-RR): finished was
-      //     derived from GPS proximity, so keep the full guard set as a safety net
-      //     against a mid-race GPS snap falsely reporting near-zero finish distance:
-      //       finished=1 AND ≤50m AND sentCount≥3 AND was-within-1km-this-session.
       const shouldStop = (finishSource === 'rr')
         ? serverFinished
         : (
@@ -485,20 +419,22 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
         await addLog(
           '🏆',
           finishSource === 'rr'
-            ? `Finish confirmed by RaceResult (finished=1) — stopping GPS`
-            : `Finish line crossed — ${finishedRaw?.toFixed(3)}km to finish, stopping GPS`
+            ? `Finish confirmed by RaceResult (finished=1) — stopping GPS${tag}`
+            : `Finish line crossed — ${finishedRaw?.toFixed(3)}km to finish, stopping GPS${tag}`
         );
 
-        // ✅ Stop GPS engines immediately from the background task.
-        // This stops location updates RIGHT NOW without waiting for the app
-        // to come to foreground. React state cleanup (intervals, UI, queue drain,
-        // log upload) happens in stopGPSTracking() when user opens the app —
-        // both the 1s timer and the AppState listener read RACE_FINISHED_KEY
-        // and call stopGPSTracking() which safely no-ops the GPS stop calls
-        // since they're already stopped here.
+        // ✅ Stop both GPS engines.
+        //
+        // Important architectural note: when this branch fires from the
+        // 'transistor' source on Samsung One UI, the call runs in the MAIN JS
+        // context (Transistor's onLocation listeners are registered from
+        // startWatchingPosition which runs on main). That bypasses the
+        // Samsung-quirk we saw before where stops issued from inside the
+        // TaskManager task callback could leave orphan foreground-service
+        // notifications. Auto-stop is therefore more reliable than before.
         try {
           await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-          await addLog('🛑', 'GPS engines stopped from background — finish line reached');
+          await addLog('🛑', `GPS engines stopped — finish line reached${tag}`);
         } catch { /* silent — may already be stopped */ }
         try {
           await BackgroundGeolocation.stop();
@@ -508,9 +444,82 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
     }
 
   } catch (err: any) {
-    if (API_CONFIG.DEBUG) console.error('❌ Background task failed:', err?.message);
-    await addLog('❌', `Task crashed: ${err?.message ?? 'unknown error'}`);
+    await addLog('❌', `processLocationForSend crashed: ${err?.message ?? 'unknown error'}${tag}`);
   }
+};
+
+// ✅ BACKGROUND TASK — defined at TOP LEVEL (required by expo-task-manager).
+// Runs even when app is backgrounded or phone is locked.
+//
+// IMPORTANT: This task runs in a SEPARATE JS context from the main app on Android.
+// Module-level variables in this file are NOT shared with the main app context.
+// All state must go through AsyncStorage.
+//
+// As of Option A, this task is a thin wrapper around processLocationForSend.
+// Most of the work has moved into the shared function so Transistor's onLocation
+// can also call it. On Samsung One UI this task is often frozen by the OS —
+// Transistor's onLocation handler then carries the load instead.
+TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) => {
+  if (error) {
+    if (API_CONFIG.DEBUG) console.error('❌ Background location task error:', error);
+    return;
+  }
+
+  if (!data?.locations?.length) return;
+
+  // ✅ Log entry per fire so we can see expo-location task heartbeats even
+  // when sends are throttled. Need to peek at params for the category/interval
+  // labels — silent if params are missing (session stopped mid-fire).
+  try {
+    const paramsJson = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!paramsJson) {
+      await addLog('⚠️', 'Task fired but no params found — may have been killed by OS');
+      return;
+    }
+    const { categoryId, intervalSeconds, manualStart } = JSON.parse(paramsJson);
+    await addLog('🔔', `Task fired — cat:${categoryId} interval:${intervalSeconds}s manualStart:${manualStart ?? 0}`);
+  } catch { /* silent */ }
+
+  // ✅ Cross-engine deduplication: if Transistor is alive and sending, the
+  // task path stays silent. Otherwise we'd see N-way duplicate sends from the
+  // task and Transistor racing on the same LAST_SENT_KEY throttle.
+  //
+  // Why this can't be solved purely via LAST_SENT_KEY: AsyncStorage reads
+  // are not atomic with writes across JS contexts. When the task (in its
+  // own context on Android) and Transistor's onLocation (in main context)
+  // fire within ~10ms of each other, both can read the stale LAST_SENT_KEY
+  // before either writes it, both pass the throttle check, both proceed.
+  // Observed in dev log: ids 441 and 442 returned from server within 8ms
+  // (different IDs = two independent inserts, not server-side dedup).
+  //
+  // TRANSISTOR_ACTIVE_KEY is the authoritative "who's in charge" signal.
+  // Set after Transistor.start() succeeds, cleared on stop / start-failure.
+  // If unset, the task takes over as fallback sender (Transistor failed for
+  // some reason, e.g. license rejection at runtime).
+  try {
+    const transistorActive = await AsyncStorage.getItem(TRANSISTOR_ACTIVE_KEY);
+    if (transistorActive === '1') {
+      // Transistor is the sole sender — task stays silent.
+      // Heartbeat-only mode: registered listener keeps the expo-location
+      // foreground service alive (Android background-location permission
+      // requires an active foreground service), but no sends from this path.
+      return;
+    }
+  } catch { /* silent — fall through to send as fallback */ }
+
+  // Normalize expo-location's location shape and hand off to the shared pipeline.
+  const raw = data.locations[data.locations.length - 1];
+  await processLocationForSend({
+    latitude:         raw.coords.latitude,
+    longitude:        raw.coords.longitude,
+    altitude:         raw.coords.altitude ?? null,
+    accuracy:         raw.coords.accuracy ?? null,
+    altitudeAccuracy: raw.coords.altitudeAccuracy ?? null,
+    speed:            raw.coords.speed ?? null,
+    heading:          raw.coords.heading ?? null,
+    timestamp:        raw.timestamp,
+    mocked:           raw.mocked || false,
+  }, 'task');
 });
 
 // ✅ Module-level reference to the foreground watch AppState subscription.
@@ -760,6 +769,12 @@ export const gpsService = {
       await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
       await AsyncStorage.removeItem(RACE_FINISHED_KEY);
       await AsyncStorage.removeItem(NEAR_FINISH_KEY);
+      // ✅ Critical: clear stale Transistor-active flag from a previous session.
+      // If left set, the task body would no-op even before THIS session's
+      // Transistor.start() has succeeded — leaving us with no sender during
+      // the brief window between task registration and Transistor start (and
+      // permanently if Transistor fails to start this session).
+      await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
 
       // ✅ Set LAST_SENT_KEY based on race state:
       // - Race not started yet → set to now → throttles first invocation so no
@@ -825,6 +840,21 @@ export const gpsService = {
       // ⚠️ DEBUG builds work without license key (free to test).
       // RELEASE/PREVIEW builds need key from shop.transistorsoft.com in app.config.js.
       try {
+        // ✅ Defensive: clear any Transistor listeners that may have been left
+        // over from a previous startWatchingPosition call. Each onLocation /
+        // onMotionChange call ADDS a listener — it does NOT replace. If this
+        // function runs twice without remove() in between (e.g. dev mode hot
+        // reload, or user taps Start → Stop → Start quickly), listeners
+        // accumulate and every location event fires every accumulated listener,
+        // causing N-way duplicate sends.
+        //
+        // removeListeners() is safe to call even when no listeners are registered.
+        // Confirmed observed in a development log: 3 stacked Transistor listeners
+        // produced 3 Sent OK lines from a single onLocation fire (server dedup
+        // caught it and returned the same id three times, but we still made
+        // three redundant HTTP calls).
+        try { BackgroundGeolocation.removeListeners(); } catch { /* silent */ }
+
         await BackgroundGeolocation.ready({
           // ✅ Geolocation config (GeoConfig) — all geo options nested here
           geolocation: {
@@ -872,18 +902,51 @@ export const gpsService = {
         });
 
         // ✅ Transistor delivers locations independently of expo-location.
-        // Both engines run in parallel — transistor's native WakeLock prevents
-        // Samsung from freezing the JS context during cycling sessions.
+        // Both engines run in parallel. On Samsung One UI, expo-location's
+        // TaskManager background task gets frozen by Adaptive Battery after
+        // ~6 min of screen-off, but Transistor's foreground service stays
+        // alive (different OS primitives). Transistor's onLocation handler
+        // now feeds the same processLocationForSend pipeline as the
+        // TaskManager task, so coordinates continue flowing to the server
+        // even when the task is frozen.
         //
-        // ✅ Transistor does NOT feed the foreground UI callback — expo-location's
-        // foreground watch (started below) is the single source of truth for the
-        // displayed position. Feeding callback from both engines caused the on-screen
-        // lat/lon to jitter between the two providers (they fire at different rates
-        // and through different GPS smoothing). Transistor's job here is to keep the
-        // native WakeLock alive so expo-location's background task doesn't get frozen
-        // by Samsung One UI — not to drive the UI.
+        // Throttling via AsyncStorage's LAST_SENT_KEY prevents double-sends
+        // when both engines fire close together — whichever writes first
+        // wins, the other reads the updated timestamp and throttles itself.
+        //
+        // Transistor does NOT feed the foreground UI callback — expo-location's
+        // foreground watch (started below) remains the single source of truth
+        // for the displayed lat/lon. Feeding the UI from both engines caused
+        // visible jitter as the two providers report at different rates.
         BackgroundGeolocation.onLocation((bgLoc) => {
+          // ✅ Diagnostic log every receive — gives full visibility of Transistor's
+          // cadence in the tracking log, independent of whether each event ends in
+          // a send (most are throttled — Transistor fires at fastestLocationUpdateInterval
+          // which is faster than the send interval).
           addLog('🛰️', `Transistor loc — lat:${bgLoc.coords.latitude.toFixed(5)} spd:${bgLoc.coords.speed?.toFixed(1) ?? '?'}m/s moving:${bgLoc.is_moving}`);
+
+          // ✅ Feed the shared send pipeline. Fire-and-forget — onLocation must
+          // return quickly; we don't want to block the Transistor SDK by awaiting
+          // a network round-trip inside its callback. processLocationForSend has
+          // its own try/catch so any errors are contained.
+          //
+          // Transistor's bgLoc.timestamp is an ISO 8601 string (e.g. "2026-05-29T10:09:07.762Z").
+          // Convert to ms so processLocationForSend can do `new Date(ms).toISOString()`.
+          // Transistor uses snake_case `altitude_accuracy` (vs expo-location's camelCase).
+          const ts = typeof bgLoc.timestamp === 'string'
+            ? new Date(bgLoc.timestamp).getTime()
+            : (bgLoc.timestamp as unknown as number);
+          processLocationForSend({
+            latitude:         bgLoc.coords.latitude,
+            longitude:        bgLoc.coords.longitude,
+            altitude:         bgLoc.coords.altitude ?? null,
+            accuracy:         bgLoc.coords.accuracy ?? null,
+            altitudeAccuracy: (bgLoc.coords as any).altitude_accuracy ?? null,
+            speed:            bgLoc.coords.speed ?? null,
+            heading:          bgLoc.coords.heading ?? null,
+            timestamp:        isNaN(ts) ? Date.now() : ts,
+            mocked:           false, // Transistor doesn't expose a mocked flag
+          }, 'transistor');
         });
 
         BackgroundGeolocation.onMotionChange((event) => {
@@ -920,6 +983,16 @@ export const gpsService = {
           await BackgroundGeolocation.changePace(true);
         } catch { /* silent — already in moving state */ }
 
+        // ✅ Mark Transistor as the active sender. The TaskManager task body
+        // reads this flag at the top of each fire and exits early if set,
+        // which is how we prevent task/Transistor cross-engine duplicates.
+        // (See the comment block at the top of TaskManager.defineTask for
+        // the full reasoning on why a flag is necessary instead of trying
+        // to make LAST_SENT_KEY truly atomic across JS contexts.)
+        try {
+          await AsyncStorage.setItem(TRANSISTOR_ACTIVE_KEY, '1');
+        } catch { /* silent */ }
+
         await addLog('🛰️', 'Transistor started — native WakeLock active, Samsung JS freeze prevented');
         if (API_CONFIG.DEBUG) console.log('✅ BackgroundGeolocation (transistor) started');
       } catch (transistorErr: any) {
@@ -930,6 +1003,10 @@ export const gpsService = {
         // self-heals, but the orphaned listeners can still cause double-fires
         // until then. removeListeners() is safe to call even if none registered.
         try { BackgroundGeolocation.removeListeners(); } catch { /* silent */ }
+        // ✅ Make sure the active-flag is NOT set so the task path takes over
+        // as the fallback sender. If a previous session left the flag set, this
+        // unsets it now that we know Transistor failed.
+        try { await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY); } catch { /* silent */ }
         await addLog('⚠️', `Transistor start failed: ${transistorErr?.message ?? 'unknown'} — expo-location continues`);
         if (API_CONFIG.DEBUG) console.warn('⚠️ Transistor failed to start:', transistorErr?.message);
       }
@@ -1023,6 +1100,7 @@ export const gpsService = {
           await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
           await AsyncStorage.removeItem(RACE_FINISHED_KEY);
           await AsyncStorage.removeItem(NEAR_FINISH_KEY);
+          await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
           if (API_CONFIG.DEBUG) console.log('✅ Background location task stopped');
           await addLog('🛑', 'Background task stopped — tracking ended');
         },

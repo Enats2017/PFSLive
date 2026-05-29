@@ -98,7 +98,7 @@ const requestBatteryOptimizationExemption = async (): Promise<void> => {
   try {
     await IntentLauncher.startActivityAsync(
       IntentLauncher.ActivityAction.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-      { data: 'package:com.pfs.livio' }
+      { data: 'package:eu.passionforsports.livio' }
     );
   } catch {
     // Fallback — open battery optimization list directly
