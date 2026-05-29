@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as IntentLauncher from 'expo-intent-launcher';
+import * as Battery from 'expo-battery';
 
 // Local imports
 import { HomeScreenProps } from '../types/navigation';
@@ -26,9 +27,11 @@ import { AppHeader } from '../components/common/AppHeader';
 import { UpdateRequiredModal } from '../components/UpdateRequiredModal';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
-import { gpsService, BACKGROUND_SENT_COUNT_KEY, RACE_FINISHED_KEY,
+import {
+  gpsService, BACKGROUND_SENT_COUNT_KEY, RACE_FINISHED_KEY,
   ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry,
-  startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive } from '../services/gpsService';
+  startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive
+} from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
@@ -38,6 +41,7 @@ import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { useNotifications, NotificationData } from '../hooks/useNotifications';
 import { followerApi } from '../services/registerFollowerServices';
 import { syncFollowDataFromAPI } from '../utils/followStorage';
+
 // Styles
 import { colors, spacing, typography, commonStyles } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
@@ -94,7 +98,7 @@ const requestBatteryOptimizationExemption = async (): Promise<void> => {
   try {
     await IntentLauncher.startActivityAsync(
       IntentLauncher.ActivityAction.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-      { data: 'package:eu.passionforsports.livio' }
+      { data: 'package:com.pfs.livio' }
     );
   } catch {
     // Fallback — open battery optimization list directly
@@ -134,6 +138,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [sendingInterval, setSendingInterval] = useState(30);
   const [timeUntilRace, setTimeUntilRace] = useState<string>('');
   const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
+  const [showPowerSavingModal, setShowPowerSavingModal] = useState(false);
 
   // ✅ Tracking log — DEBUG only, shows background task events live
   const [trackingLogs, setTrackingLogs] = useState<TrackingLogEntry[]>([]);
@@ -346,6 +351,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     try {
       await AsyncStorage.setItem(BATTERY_PROMPTED_KEY, '1');
     } catch { /* silent */ }
+  }, []);
+
+
+  const checkPowerSavingMode = useCallback(async (): Promise<boolean> => {
+    try {
+      const isLowPower = await Battery.isLowPowerModeEnabledAsync();
+      return isLowPower;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const openPowerSavingSettings = useCallback(async () => {
+    if (Platform.OS !== 'android') return;
+    try {
+      await IntentLauncher.startActivityAsync('android.settings.BATTERY_SAVER_SETTINGS');
+    } catch {
+      try {
+        await IntentLauncher.startActivityAsync('android.settings.BATTERY_SAVER_SETTINGS');
+      } catch { /* silent */ }
+    }
   }, []);
 
   // ==================== VERSION CHECK ====================
@@ -813,7 +839,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       return;
     }
 
-    // ✅ If race is more than 24h away, warn user before enabling background location
+    const isPowerSaving = await checkPowerSavingMode();
+    console.log('Power Saving Mode:', isPowerSaving);
+    if (isPowerSaving) {
+      setShowPowerSavingModal(true);
+      return;
+
+    }
+
     const hoursUntilRace = homeData?.next_race_in_hours ?? 0;
     if (
       homeData?.manual_start !== 1 &&
@@ -981,7 +1014,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           await stopGPSTracking();
         }
       } catch { /* silent */ }
-      
+
     }, 1000);
     return () => clearInterval(interval);
   }, [isGPSActive, calculateTimeUntilRace, stopGPSTracking]);
@@ -1007,6 +1040,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+
+         if (showPowerSavingModal) {
+            (async () => {
+              const stillSaving = await checkPowerSavingMode();
+              if (!stillSaving) setShowPowerSavingModal(false);
+            })();
+          }
         if (isGPSActive && participantId && eventId) {
           // ✅ Watchdog: restart background task if Android killed it while backgrounded.
           // Common on Xiaomi, Samsung, OnePlus with aggressive battery management.
@@ -1036,6 +1076,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           });
           loadQueueSize();
 
+          // ✅ Auto-dismiss power saving modal if user turned it off in Settings
+         
+
           // ✅ NEW: Check for auto-stop flag — wrapped in async IIFE because
           // AppState listener callback is synchronous and cannot be made async.
           (async () => {
@@ -1053,7 +1096,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     });
 
     return () => subscription.remove();
-  }, [isGPSActive, participantId, eventId, loadQueueSize, stopGPSTracking]);
+  }, [isGPSActive, participantId, eventId, loadQueueSize, stopGPSTracking,showPowerSavingModal]);
 
   // Smart polling with version check
   useFocusEffect(
@@ -1232,6 +1275,49 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* ✅ Power Saving Mode modal — blocks tracking when battery saver is ON */}
+      <Modal
+        transparent
+        visible={showPowerSavingModal}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setShowPowerSavingModal(false)}
+      >
+        <View style={homeStyles.notifBackdrop}>
+          <View style={homeStyles.notifWrapper}>
+            <View style={homeStyles.notifCard}>
+
+              {/* Icon */}
+              <View style={homeStyles.notifIconWrapper}>
+                <Ionicons name="battery-dead-outline" size={36} color={colors.error} />
+              </View>
+              <Text style={homeStyles.notifTitle}>{t('home:powerSaving.title')}</Text>
+              <Text style={homeStyles.notifBody}>{t('home:powerSaving.message')}</Text>
+              <View style={homeStyles.notifButtonContainer}>
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  onPress={openPowerSavingSettings}
+                  activeOpacity={0.8}
+                >
+                  <Text style={commonStyles.primaryButtonText}>
+                    {t('home:powerSaving.disable')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={commonStyles.secondaryButton}
+                  onPress={() => setShowPowerSavingModal(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={commonStyles.secondaryButtonText}>{t('home:battery.skip')}</Text>
+
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
 
       {/* ✅ Foreground notification popup */}
       <Modal

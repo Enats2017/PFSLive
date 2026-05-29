@@ -78,5 +78,10 @@
     "message": "Je race begint over {{hours}}. Wil je toch achtergrondlocatie inschakelen?",
     "yes": "Ja, inschakelen",
     "no": "Nee, annuleren"
-  }
+  },
+  "powerSaving": {
+  "title": "Batterijwaarschuwing",
+  "message": "De energiebesparingsmodus is ingeschakeld. Dit blokkeert GPS en tracking op de achtergrond. Schakel deze eerst uit.",
+  "disable": "Batterijinstellingen openen"
+}
 }

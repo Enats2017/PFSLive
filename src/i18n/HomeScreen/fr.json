@@ -78,5 +78,10 @@
     "message": "Votre course commence dans {{hours}}. Voulez-vous quand même activer le suivi en arrière-plan ?",
     "yes": "Oui, activer",
     "no": "Non, annuler"
-  }
+  },
+  "powerSaving": {
+  "title": "Avertissement batterie",
+  "message": "Le mode économie d'énergie est activé. Cela bloque le GPS et le suivi en arrière-plan. Veuillez le désactiver d'abord.",
+  "disable": "Ouvrir les paramètres de batterie"
+}
 }

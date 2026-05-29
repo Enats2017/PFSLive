@@ -78,5 +78,12 @@
     "message": "Your race starts in {{hours}}. Do you still want to enable background location tracking?",
     "yes": "Yes, Enable",
     "no": "No, Cancel"
-  }
+  },
+
+"powerSaving": {
+  "title": "Battery Warning",
+  "message": "Power Saving Mode is ON. This blocks GPS and background tracking. Please disable it first.",
+  
+  "disable": "Open Battery Settings"
+}
 }
