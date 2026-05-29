@@ -34,6 +34,7 @@ export default ({ config }) => {
         NSLocationAlwaysAndWhenInUseUsageDescription: "Livio needs background location access to track your race even when the app is minimized.",
         NSLocationAlwaysUsageDescription: "Livio requires continuous location access to provide accurate race tracking.",
         UIBackgroundModes: ["remote-notification", "location", "fetch"],
+        TSLocationManagerLicense: process.env.TSLOCATIONMANAGER_LICENSE ?? "",
         ...(process.env.EXPO_PUBLIC_ENV !== "production" && {
           NSAppTransportSecurity: {
             NSAllowsArbitraryLoads: true
@@ -164,9 +165,10 @@ export default ({ config }) => {
       [
         "react-native-background-geolocation",
         {
-          license: ""  // ← empty for DEBUG/development, add key for preview/production
+          license: process.env.TRANSISTOR_LICENSE_KEY ?? ""  // ← empty for DEBUG/development, add key for preview/production
         }
       ],
+      "expo-font",
       "expo-localization",
       "expo-secure-store",
       "@react-native-community/datetimepicker",

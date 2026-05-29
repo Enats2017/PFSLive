@@ -874,19 +874,15 @@ export const gpsService = {
         // ✅ Transistor delivers locations independently of expo-location.
         // Both engines run in parallel — transistor's native WakeLock prevents
         // Samsung from freezing the JS context during cycling sessions.
+        //
+        // ✅ Transistor does NOT feed the foreground UI callback — expo-location's
+        // foreground watch (started below) is the single source of truth for the
+        // displayed position. Feeding callback from both engines caused the on-screen
+        // lat/lon to jitter between the two providers (they fire at different rates
+        // and through different GPS smoothing). Transistor's job here is to keep the
+        // native WakeLock alive so expo-location's background task doesn't get frozen
+        // by Samsung One UI — not to drive the UI.
         BackgroundGeolocation.onLocation((bgLoc) => {
-          // ✅ Update foreground UI with transistor's position
-          callback({
-            latitude:         bgLoc.coords.latitude,
-            longitude:        bgLoc.coords.longitude,
-            altitude:         bgLoc.coords.altitude ?? null,
-            accuracy:         bgLoc.coords.accuracy ?? null,
-            altitudeAccuracy: bgLoc.coords.altitude_accuracy ?? null,  // snake_case in transistor
-            speed:            bgLoc.coords.speed ?? null,
-            heading:          bgLoc.coords.heading ?? null,
-            timestamp:        new Date(bgLoc.timestamp).getTime(),
-            mocked:           bgLoc.mock,
-          });
           addLog('🛰️', `Transistor loc — lat:${bgLoc.coords.latitude.toFixed(5)} spd:${bgLoc.coords.speed?.toFixed(1) ?? '?'}m/s moving:${bgLoc.is_moving}`);
         });
 
@@ -895,10 +891,45 @@ export const gpsService = {
         });
 
         await BackgroundGeolocation.start();
+
+        // ✅ Force MOVING state immediately after start.
+        //
+        // This is mandatory in v5 when combined with activity.disableMotionActivityUpdates:
+        // true above. Without it, the SDK defaults to STATIONARY state and — because
+        // motion-activity sensors are disabled — has no signal to ever transition to
+        // MOVING. The SDK logs "started" but onLocation never fires, the native
+        // WakeLock never engages, and Transistor adds no protection against Samsung
+        // freezes (defeating the entire point of installing it).
+        //
+        // Confirmed empirically by the 33-min Samsung One UI test log: line
+        // "Transistor started" appears once, ZERO subsequent "Transistor loc"
+        // entries across the whole session.
+        //
+        // changePace(true) is the v5-correct way to force MOVING state. Note:
+        //   • v4 had an isMoving: true config flag for this purpose. v5 removed
+        //     it from the compound-config types — the equivalent is this runtime
+        //     call. (Older docs/examples still show isMoving: true in ready()
+        //     config — that's v4 carryover and produces a TS error in v5.)
+        //   • Once SDK is MOVING, disableStopDetection: true keeps it there.
+        //   • Transistor CHANGELOG documents a historical Android race condition
+        //     ("calling .start() followed immediately by .changePace(true). The
+        //     SDK would fail to enter the moving state, entering the stationary
+        //     state instead") — fixed in newer versions, but we await this call
+        //     to be safe.
+        try {
+          await BackgroundGeolocation.changePace(true);
+        } catch { /* silent — already in moving state */ }
+
         await addLog('🛰️', 'Transistor started — native WakeLock active, Samsung JS freeze prevented');
         if (API_CONFIG.DEBUG) console.log('✅ BackgroundGeolocation (transistor) started');
       } catch (transistorErr: any) {
-        // ✅ Non-fatal — expo-location background task still running as primary
+        // ✅ Non-fatal — expo-location background task still running as primary.
+        // ✅ Also clean up any onLocation/onMotionChange listeners that were
+        // registered before .start() failed (e.g. license rejection on a release
+        // build). Without this, a subsequent ready() with reset:true mostly
+        // self-heals, but the orphaned listeners can still cause double-fires
+        // until then. removeListeners() is safe to call even if none registered.
+        try { BackgroundGeolocation.removeListeners(); } catch { /* silent */ }
         await addLog('⚠️', `Transistor start failed: ${transistorErr?.message ?? 'unknown'} — expo-location continues`);
         if (API_CONFIG.DEBUG) console.warn('⚠️ Transistor failed to start:', transistorErr?.message);
       }
