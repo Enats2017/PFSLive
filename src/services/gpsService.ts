@@ -891,6 +891,35 @@ export const gpsService = {
         });
 
         await BackgroundGeolocation.start();
+
+        // ✅ Force MOVING state immediately after start.
+        //
+        // This is mandatory in v5 when combined with activity.disableMotionActivityUpdates:
+        // true above. Without it, the SDK defaults to STATIONARY state and — because
+        // motion-activity sensors are disabled — has no signal to ever transition to
+        // MOVING. The SDK logs "started" but onLocation never fires, the native
+        // WakeLock never engages, and Transistor adds no protection against Samsung
+        // freezes (defeating the entire point of installing it).
+        //
+        // Confirmed empirically by the 33-min Samsung One UI test log: line
+        // "Transistor started" appears once, ZERO subsequent "Transistor loc"
+        // entries across the whole session.
+        //
+        // changePace(true) is the v5-correct way to force MOVING state. Note:
+        //   • v4 had an isMoving: true config flag for this purpose. v5 removed
+        //     it from the compound-config types — the equivalent is this runtime
+        //     call. (Older docs/examples still show isMoving: true in ready()
+        //     config — that's v4 carryover and produces a TS error in v5.)
+        //   • Once SDK is MOVING, disableStopDetection: true keeps it there.
+        //   • Transistor CHANGELOG documents a historical Android race condition
+        //     ("calling .start() followed immediately by .changePace(true). The
+        //     SDK would fail to enter the moving state, entering the stationary
+        //     state instead") — fixed in newer versions, but we await this call
+        //     to be safe.
+        try {
+          await BackgroundGeolocation.changePace(true);
+        } catch { /* silent — already in moving state */ }
+
         await addLog('🛰️', 'Transistor started — native WakeLock active, Samsung JS freeze prevented');
         if (API_CONFIG.DEBUG) console.log('✅ BackgroundGeolocation (transistor) started');
       } catch (transistorErr: any) {
