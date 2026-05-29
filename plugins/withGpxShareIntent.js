@@ -89,14 +89,20 @@ const withGpxNativeFiles = (config) => {
   return withDangerousMod(config, [
     'android',
     async (mod) => {
+      // ✅ Dynamic package path based on bundle ID
+      const packageName = config.android?.package ?? 'eu.passionforsports.livio';
+      const packagePath = packageName.replace(/\./g, '/');
       const dir = path.join(
         mod.modRequest.platformProjectRoot,
-        'app/src/main/java/com/pfs/livio'
+        `app/src/main/java/${packagePath}`
       );
+
+      // ✅ Create directory if it doesn't exist
+      fs.mkdirSync(dir, { recursive: true });
 
       fs.writeFileSync(
         path.join(dir, 'GpxShareModule.kt'),
-        `package com.pfs.livio
+        `package ${packageName}
 
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -129,7 +135,7 @@ class GpxShareModule(ctx: ReactApplicationContext) : ReactContextBaseJavaModule(
 
       fs.writeFileSync(
         path.join(dir, 'GpxSharePackage.kt'),
-        `package com.pfs.livio
+        `package ${packageName}
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
