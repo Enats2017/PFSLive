@@ -61,7 +61,7 @@ const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 // Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
 // Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 0,   // Walking — 3m  (safe at 0.5 km/h min pace)
+  64: 3,   // Walking — 3m  (safe at 0.5 km/h min pace)
   59: 15,  // Running — 15m (safe at 6 km/h min pace)
   60: 30,  // Cycling — 30m (safe at 10 km/h min pace)
 };
