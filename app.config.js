@@ -27,7 +27,7 @@ export default ({ config }) => {
     // ✅ iOS Configuration
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.pfs.livio",
+      bundleIdentifier: "eu.passionforsports.livio",
       buildNumber: "1",
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "Livio uses your location to track your race progress in real-time.",
@@ -76,7 +76,7 @@ export default ({ config }) => {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#D5DA28"
       },
-      package: "com.pfs.livio",
+      package: "eu.passionforsports.livio",
       versionCode: 1,
       googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
       allowBackup: true,
