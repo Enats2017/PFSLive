@@ -874,19 +874,15 @@ export const gpsService = {
         // ✅ Transistor delivers locations independently of expo-location.
         // Both engines run in parallel — transistor's native WakeLock prevents
         // Samsung from freezing the JS context during cycling sessions.
+        //
+        // ✅ Transistor does NOT feed the foreground UI callback — expo-location's
+        // foreground watch (started below) is the single source of truth for the
+        // displayed position. Feeding callback from both engines caused the on-screen
+        // lat/lon to jitter between the two providers (they fire at different rates
+        // and through different GPS smoothing). Transistor's job here is to keep the
+        // native WakeLock alive so expo-location's background task doesn't get frozen
+        // by Samsung One UI — not to drive the UI.
         BackgroundGeolocation.onLocation((bgLoc) => {
-          // ✅ Update foreground UI with transistor's position
-          callback({
-            latitude:         bgLoc.coords.latitude,
-            longitude:        bgLoc.coords.longitude,
-            altitude:         bgLoc.coords.altitude ?? null,
-            accuracy:         bgLoc.coords.accuracy ?? null,
-            altitudeAccuracy: bgLoc.coords.altitude_accuracy ?? null,  // snake_case in transistor
-            speed:            bgLoc.coords.speed ?? null,
-            heading:          bgLoc.coords.heading ?? null,
-            timestamp:        new Date(bgLoc.timestamp).getTime(),
-            mocked:           bgLoc.mock,
-          });
           addLog('🛰️', `Transistor loc — lat:${bgLoc.coords.latitude.toFixed(5)} spd:${bgLoc.coords.speed?.toFixed(1) ?? '?'}m/s moving:${bgLoc.is_moving}`);
         });
 
@@ -898,7 +894,13 @@ export const gpsService = {
         await addLog('🛰️', 'Transistor started — native WakeLock active, Samsung JS freeze prevented');
         if (API_CONFIG.DEBUG) console.log('✅ BackgroundGeolocation (transistor) started');
       } catch (transistorErr: any) {
-        // ✅ Non-fatal — expo-location background task still running as primary
+        // ✅ Non-fatal — expo-location background task still running as primary.
+        // ✅ Also clean up any onLocation/onMotionChange listeners that were
+        // registered before .start() failed (e.g. license rejection on a release
+        // build). Without this, a subsequent ready() with reset:true mostly
+        // self-heals, but the orphaned listeners can still cause double-fires
+        // until then. removeListeners() is safe to call even if none registered.
+        try { BackgroundGeolocation.removeListeners(); } catch { /* silent */ }
         await addLog('⚠️', `Transistor start failed: ${transistorErr?.message ?? 'unknown'} — expo-location continues`);
         if (API_CONFIG.DEBUG) console.warn('⚠️ Transistor failed to start:', transistorErr?.message);
       }
