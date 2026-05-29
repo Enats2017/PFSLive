@@ -135,7 +135,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
             contentContainerStyle={{
                 paddingHorizontal: spacing.md,
                 paddingTop: spacing.md,
-                paddingBottom: spacing.xxxl,
+                paddingBottom: spacing.xxxxl,
                 flexGrow: 1,
             }}
             ListFooterComponent={ListFooterComponent}

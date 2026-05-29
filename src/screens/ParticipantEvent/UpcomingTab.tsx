@@ -136,7 +136,7 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
             contentContainerStyle={{
                 paddingHorizontal: spacing.md,
                 paddingTop: spacing.md,
-                paddingBottom: spacing.xl,
+                paddingBottom: spacing.xxxxl,
                 flexGrow: 1,
             }}
             ListFooterComponent={ListFooterComponent}
