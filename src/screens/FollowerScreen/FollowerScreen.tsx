@@ -184,7 +184,7 @@ const FollowerScreen = () => {
                     </View>
                     <TouchableOpacity
                         style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.md }]}
-                        onPress={() => navigation.navigate('FollowerEvent')}
+                        onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Live' })}
                         activeOpacity={0.8}
                     >
                         <Feather name="calendar" size={15} color="#fff" style={{ marginRight: 8 }} />

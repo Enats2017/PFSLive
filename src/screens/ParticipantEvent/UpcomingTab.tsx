@@ -90,7 +90,7 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                     }
                     activeOpacity={0.8}
                 >
-                    <Ionicons name="bar-chart-outline" size={23} color={colors.primaryDark} />
+                    <Ionicons name="eye-outline" size={23} color={colors.primaryDark} />
                 </TouchableOpacity>
             </TouchableOpacity>
         ),
