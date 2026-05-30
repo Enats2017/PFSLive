@@ -1040,54 +1040,55 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        if (showPowerSavingModal) {
+          (async () => {
+            const stillSaving = await checkPowerSavingMode();
+            if (!stillSaving) setShowPowerSavingModal(false);
+          })();
+        }
 
-         if (showPowerSavingModal) {
-            (async () => {
-              const stillSaving = await checkPowerSavingMode();
-              if (!stillSaving) setShowPowerSavingModal(false);
-            })();
-          }
         if (isGPSActive && participantId && eventId) {
-          // ✅ Watchdog: restart background task if Android killed it while backgrounded.
-          // Common on Xiaomi, Samsung, OnePlus with aggressive battery management.
-          if (trackingParamsRef.current) {
-            ensureBackgroundTaskAlive(
-              participantId,
-              eventId,
-              trackingParamsRef.current.intervalSeconds,
-              homeData?.next_race_category_id,
-              raceStartTimeRef.current?.toISOString() ?? null,
-              homeData?.manual_start,
-              trackingParamsRef.current.notificationTitle,
-              trackingParamsRef.current.notificationBody,
-            ).then(alive => {
-              if (API_CONFIG.DEBUG) console.log('🔍 Background task alive:', alive);
-            });
-          }
-
-          locationService.processQueue(participantId, eventId).then(async sentCount => {
-            if (sentCount > 0) {
-              try {
-                const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
-                const current = countStr ? parseInt(countStr) : 0;
-                await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(current + sentCount));
-              } catch { /* silent */ }
-            }
-          });
-          loadQueueSize();
-
-          // ✅ Auto-dismiss power saving modal if user turned it off in Settings
-         
-
-          // ✅ NEW: Check for auto-stop flag — wrapped in async IIFE because
-          // AppState listener callback is synchronous and cannot be made async.
+          // ✅ FIX 2: Check the race-finished flag FIRST, before the watchdog.
+          // If auto-stop already fired in the background while the app was
+          // closed, calling ensureBackgroundTaskAlive first would restart
+          // Transistor for ~70ms and send one unwanted coordinate before
+          // stopGPSTracking finally tears everything down. Doing the check
+          // first means: if the race is over, we stop cleanly and skip the
+          // watchdog/queue work entirely.
           (async () => {
             try {
               const raceFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
               if (raceFinished === '1') {
                 await AsyncStorage.removeItem(RACE_FINISHED_KEY);
                 await stopGPSTracking();
+                return;
               }
+
+              // Race still running — watchdog + queue drain.
+              if (trackingParamsRef.current) {
+                ensureBackgroundTaskAlive(
+                  participantId,
+                  eventId,
+                  trackingParamsRef.current.intervalSeconds,
+                  homeData?.next_race_category_id,
+                  raceStartTimeRef.current?.toISOString() ?? null,
+                  homeData?.manual_start,
+                  trackingParamsRef.current.notificationTitle,
+                  trackingParamsRef.current.notificationBody,
+                ).then(alive => {
+                  if (API_CONFIG.DEBUG) console.log('🔍 Background task alive:', alive);
+                });
+              }
+
+              const sentCount = await locationService.processQueue(participantId, eventId);
+              if (sentCount > 0) {
+                try {
+                  const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+                  const current = countStr ? parseInt(countStr) : 0;
+                  await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(current + sentCount));
+                } catch { /* silent */ }
+              }
+              await loadQueueSize();
             } catch { /* silent */ }
           })();
         }
@@ -1096,7 +1097,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     });
 
     return () => subscription.remove();
-  }, [isGPSActive, participantId, eventId, loadQueueSize, stopGPSTracking,showPowerSavingModal]);
+  }, [isGPSActive, participantId, eventId, loadQueueSize, stopGPSTracking, showPowerSavingModal, homeData?.next_race_category_id, homeData?.manual_start]);
 
   // Smart polling with version check
   useFocusEffect(
