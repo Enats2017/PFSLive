@@ -73,7 +73,7 @@ const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m e
 // Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
 // Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 3,   // Walking — 3m
+  64: 0,   // Walking — 3m
   59: 15,  // Running — 15m
   60: 30,  // Cycling — 30m
 };
@@ -451,6 +451,180 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
 // between.
 let _fgAppStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
 
+// Module-level reference to the active foreground watch subscription. Lives
+// at module scope (not inside startWatchingPosition's closure) so that
+// detachUi / reattachUi can manage it across screen remounts.
+let _activeFgSubscription: Location.LocationSubscription | null = null;
+
+// Module-level UI callback. The foreground watch always invokes _uiCallback
+// rather than a captured closure, so HomeScreen can swap in a new callback on
+// remount without restarting the watch. When _uiCallback is null, fg watch
+// fires are silently dropped (no consumer).
+let _uiCallback: ((position: GPSPosition) => void) | null = null;
+let _uiIntervalMs: number = 5000;
+
+// ✅ Internal: start the foreground watch. Idempotent — silently returns if a
+// watch is already active. Routes location events through _uiCallback (which
+// HomeScreen sets via attachUi) so the callback can be swapped on remount.
+let _fgStarting = false;
+const _startFgWatch = async (): Promise<void> => {
+  if (_activeFgSubscription || _fgStarting) return;
+  _fgStarting = true;
+  try {
+    await addLog('👁️', 'Foreground watch started (High/5s)');
+    _activeFgSubscription = await Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, timeInterval: _uiIntervalMs },
+      (location) => {
+        if (!_uiCallback) return;
+        _uiCallback({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          altitude: location.coords.altitude,
+          accuracy: location.coords.accuracy,
+          altitudeAccuracy: location.coords.altitudeAccuracy,
+          speed: location.coords.speed,
+          heading: location.coords.heading,
+          timestamp: location.timestamp,
+          mocked: location.mocked,
+        });
+      },
+    );
+  } finally {
+    _fgStarting = false;
+  }
+};
+
+// ✅ Internal: stop the foreground watch (UI-only — does not stop Transistor).
+const _stopFgWatch = async (): Promise<void> => {
+  if (_activeFgSubscription) {
+    _activeFgSubscription.remove();
+    _activeFgSubscription = null;
+    await addLog('👁️', 'Foreground watch stopped');
+  }
+};
+
+// ✅ Internal: register the AppState listener that restarts fg watch when the
+// app returns to foreground. Removes any previous listener first so callers
+// can re-register safely (idempotent).
+const _registerFgAppStateListener = (): void => {
+  if (_fgAppStateSubscription) {
+    _fgAppStateSubscription.remove();
+    _fgAppStateSubscription = null;
+  }
+  _fgAppStateSubscription = AppState.addEventListener('change', (nextState) => {
+    if (nextState === 'active') {
+      addLog('📱', 'App foregrounded');
+      _startFgWatch();
+    } else if (nextState === 'background') {
+      addLog('🌙', 'App backgrounded — fg watch continues (prevents GPS renegotiation)');
+    } else if (nextState === 'inactive') {
+      addLog('💤', 'App inactive (iOS transition)');
+    }
+  });
+};
+
+// ✅ Internal: full teardown — stops Transistor, fg watch, AppState listener,
+// and clears all session-scoped AsyncStorage keys. Called by stopWatching()
+// below and indirectly by the remove() handle returned from
+// startWatchingPosition. Idempotent — safe to call multiple times.
+const _doFullStop = async (): Promise<void> => {
+  if (_fgAppStateSubscription) {
+    _fgAppStateSubscription.remove();
+    _fgAppStateSubscription = null;
+  }
+  await _stopFgWatch();
+  _uiCallback = null;
+
+  // Defensive: stop expo-location task if older app version registered one.
+  try { await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK); } catch { /* silent */ }
+  try {
+    await BackgroundGeolocation.stop();
+    BackgroundGeolocation.removeListeners();
+  } catch { /* silent */ }
+  // Clean up all session-scoped keys.
+  await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
+  await AsyncStorage.removeItem(LAST_SENT_KEY);
+  await AsyncStorage.removeItem(LAST_POSITION_KEY);
+  await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
+  await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
+  await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
+  await AsyncStorage.removeItem(RACE_FINISHED_KEY);
+  await AsyncStorage.removeItem(NEAR_FINISH_KEY);
+  await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
+  await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
+  if (API_CONFIG.DEBUG) console.log('✅ Tracking stopped');
+  await addLog('🛑', 'Tracking stopped');
+};
+
+// ✅ PUBLIC: full stop — equivalent to calling .remove() on the handle returned
+// from startWatchingPosition, but doesn't require holding the handle. Useful
+// when the screen that started tracking has been unmounted and remounted
+// (losing the JS handle), and the user now taps Stop. Idempotent.
+export const stopWatching = (): Promise<void> => _doFullStop();
+
+// ✅ PUBLIC: check whether a tracking session is currently active.
+// Returns true if TRACKING_PARAMS_KEY exists in AsyncStorage. Used by
+// HomeScreen on mount to detect tracking-in-progress after screen unmount.
+export const isTracking = async (): Promise<boolean> => {
+  try {
+    const params = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    return params !== null;
+  } catch {
+    return false;
+  }
+};
+
+// ✅ PUBLIC: read the current tracking params (if any). Returns null when no
+// session is active. HomeScreen uses this to restore UI state (race start
+// time, interval, etc.) when remounting onto an in-progress session.
+export const getTrackingParams = async (): Promise<{
+  participantId: string;
+  eventId: string;
+  intervalSeconds: number;
+  categoryId?: number;
+  raceStartTime?: string | null;
+  manualStart?: number;
+} | null> => {
+  try {
+    const json = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    return json ? JSON.parse(json) : null;
+  } catch {
+    return null;
+  }
+};
+
+// ✅ PUBLIC: attach a UI callback to the (already running) foreground watch.
+// HomeScreen calls this on mount when restoring an in-progress tracking
+// session. The fg watch is module-managed, so calling this swaps in the new
+// callback without restarting GPS. If the watch isn't running yet (e.g.,
+// previous session torn down its fg watch but Transistor is still alive),
+// this starts a new one.
+//
+// Also re-registers the AppState listener so the watch is reattached when the
+// app returns to foreground.
+export const attachUi = async (
+  callback: (position: GPSPosition) => void,
+  intervalSeconds: number = 30,
+): Promise<void> => {
+  _uiCallback = callback;
+  _uiIntervalMs = Math.min(intervalSeconds * 1000, 5000);
+  await _startFgWatch();
+  _registerFgAppStateListener();
+};
+
+// ✅ PUBLIC: detach the UI callback and stop the foreground watch + AppState
+// listener. Does NOT stop Transistor — the background tracking continues.
+// HomeScreen calls this on unmount so the OS doesn't keep firing GPS into a
+// defunct component's callback while the user is on another screen.
+export const detachUi = async (): Promise<void> => {
+  if (_fgAppStateSubscription) {
+    _fgAppStateSubscription.remove();
+    _fgAppStateSubscription = null;
+  }
+  await _stopFgWatch();
+  _uiCallback = null;
+};
+
 // ✅ Watchdog: called when app returns to foreground to ensure Transistor is
 // still alive. Aggressive OEMs (Xiaomi, Samsung, OnePlus) may kill the
 // foreground service even with battery-optimisation exempt.
@@ -739,84 +913,21 @@ export const gpsService = {
       // ✅ Foreground UI watch — drives the lat/lon display on HomeScreen.
       // Does NOT create a notification (it's not a foreground service, just an
       // in-process subscription) and does NOT call processLocationForSend.
-      let fgSubscription: Location.LocationSubscription | null = null;
-      let fgStarting = false;
-
-      const fgWatchOptions = {
-        accuracy: Location.Accuracy.High,
-        timeInterval: Math.min(intervalSeconds * 1000, 5000),
-      };
-
-      const startFgWatch = async () => {
-        if (fgSubscription || fgStarting) return;
-        fgStarting = true;
-        try {
-          addLog('👁️', 'Foreground watch started (High/5s)');
-          fgSubscription = await Location.watchPositionAsync(fgWatchOptions, (location) => {
-            callback({
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              altitude: location.coords.altitude,
-              accuracy: location.coords.accuracy,
-              altitudeAccuracy: location.coords.altitudeAccuracy,
-              speed: location.coords.speed,
-              heading: location.coords.heading,
-              timestamp: location.timestamp,
-              mocked: location.mocked,
-            });
-          });
-        } finally {
-          fgStarting = false;
-        }
-      };
-
-      const stopFgWatch = () => {
-        if (fgSubscription) {
-          fgSubscription.remove();
-          fgSubscription = null;
-          addLog('👁️', 'Foreground watch stopped');
-        }
-      };
-
-      await startFgWatch();
-
-      _fgAppStateSubscription = AppState.addEventListener('change', (nextState) => {
-        if (nextState === 'active') {
-          addLog('📱', 'App foregrounded');
-          startFgWatch();
-        } else if (nextState === 'background') {
-          addLog('🌙', 'App backgrounded — fg watch continues (prevents GPS renegotiation)');
-        } else if (nextState === 'inactive') {
-          addLog('💤', 'App inactive (iOS transition)');
-        }
-      });
+      //
+      // The watch and AppState listener are managed by the module-level
+      // attachUi / detachUi helpers so HomeScreen can re-attach the callback
+      // on remount without restarting Transistor. See attachUi below.
+      _uiCallback = callback;
+      _uiIntervalMs = Math.min(intervalSeconds * 1000, 5000);
+      await _startFgWatch();
+      _registerFgAppStateListener();
 
       return {
         remove: async () => {
-          if (_fgAppStateSubscription) {
-            _fgAppStateSubscription.remove();
-            _fgAppStateSubscription = null;
-          }
-          stopFgWatch();
-          // Defensive: stop expo-location task if older app version registered one.
-          try { await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK); } catch { /* silent */ }
-          try {
-            await BackgroundGeolocation.stop();
-            BackgroundGeolocation.removeListeners();
-          } catch { /* silent */ }
-          // Clean up all session-scoped keys.
-          await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
-          await AsyncStorage.removeItem(LAST_SENT_KEY);
-          await AsyncStorage.removeItem(LAST_POSITION_KEY);
-          await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
-          await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
-          await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
-          await AsyncStorage.removeItem(RACE_FINISHED_KEY);
-          await AsyncStorage.removeItem(NEAR_FINISH_KEY);
-          await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
-          await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
-          if (API_CONFIG.DEBUG) console.log('✅ Tracking stopped');
-          await addLog('🛑', 'Tracking stopped');
+          // ✅ Delegate to the module-level _doFullStop so the handle returned
+          // here and the standalone stopWatching() export do exactly the
+          // same thing. Idempotent.
+          await _doFullStop();
         },
       };
     } catch (error) {

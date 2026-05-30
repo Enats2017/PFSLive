@@ -30,7 +30,8 @@ import { locationService } from '../services/locationService';
 import {
   gpsService, BACKGROUND_SENT_COUNT_KEY, RACE_FINISHED_KEY,
   ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry,
-  startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive
+  startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive,
+  isTracking, getTrackingParams, stopWatching, attachUi, detachUi,
 } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -1027,14 +1028,123 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   }, [showUpdateModal, updateInfo?.isForced]);
 
-  // Cleanup on unmount
+  // ✅ Cleanup on unmount.
+  //
+  // CRITICAL: do NOT call gpsWatchRef.current.remove() here. Some React
+  // Navigation configurations unmount HomeScreen when the user navigates to
+  // another screen, and calling remove() in that case stops Transistor — so
+  // when the user navigates back, tracking has silently died.
+  //
+  // Tracking is intended to persist across screen mounts. It is stopped only
+  // by:
+  //   • Explicit user action (Stop Tracking button → stopGPSTracking)
+  //   • Auto-stop after the finish line (RACE_FINISHED_KEY → stopGPSTracking)
+  //   • App process termination (OS tears down Transistor's foreground service)
+  //
+  // On unmount we DO detach the UI-only foreground watch (so the GPS chip
+  // isn't kept warm on a defunct screen) and clear the screen-scoped timers.
+  // Transistor's background service keeps running.
   useEffect(() => {
     return () => {
-      if (gpsWatchRef.current) gpsWatchRef.current.remove();
       if (queueProcessorRef.current) clearInterval(queueProcessorRef.current);
       if (raceStartCheckRef.current) clearInterval(raceStartCheckRef.current);
+      // Detach the foreground UI watch (does NOT stop Transistor).
+      detachUi().catch(() => { /* silent */ });
     };
   }, []);
+
+  // ✅ Restore tracking state on mount.
+  //
+  // If the user started tracking, navigated away, and came back, Transistor
+  // is still running (we don't stop it on unmount any more). But this fresh
+  // HomeScreen mount has isGPSActive=false, gpsWatchRef.current=null, and no
+  // attached UI callback. This effect detects the existing session and wires
+  // everything back up so the screen shows the correct state and the Stop
+  // button works.
+  useEffect(() => {
+    let cancelled = false;
+
+    const restore = async () => {
+      try {
+        const active = await isTracking();
+        if (!active || cancelled) return;
+
+        const params = await getTrackingParams();
+        if (!params || cancelled) return;
+
+        if (API_CONFIG.DEBUG) console.log('🔄 Restoring active tracking session');
+
+        // Restore tracking flags.
+        setIsGPSActive(true);
+        isGPSActiveRef.current = true;
+
+        if (params.intervalSeconds) {
+          setSendingInterval(params.intervalSeconds);
+        }
+
+        if (params.raceStartTime) {
+          const rt = new Date(params.raceStartTime);
+          if (!isNaN(rt.getTime())) {
+            setRaceStartTime(rt);
+            raceStartTimeRef.current = rt;
+          }
+        }
+
+        // If the race has already started, the sending state should reflect that.
+        const started =
+          params.manualStart === 1 ||
+          (params.raceStartTime !== null &&
+            params.raceStartTime !== undefined &&
+            Date.now() >= new Date(params.raceStartTime).getTime());
+        if (started) {
+          isSendingDataRef.current = true;
+          setIsSendingData(true);
+        }
+
+        // Restore the stop handle so the Stop Tracking button works on this
+        // new screen instance. stopWatching is the same teardown the original
+        // remove() would have called.
+        gpsWatchRef.current = { remove: stopWatching };
+
+        // Restore the watchdog's params reference (used by AppState handler).
+        trackingParamsRef.current = {
+          intervalSeconds: params.intervalSeconds ?? 30,
+          notificationTitle: t('home:tracking.backgroundNotificationTitle'),
+          notificationBody: t('home:tracking.backgroundNotificationBody'),
+        };
+
+        // Re-attach the foreground UI callback so live lat/lon updates resume
+        // on this screen instance. Transistor's background sends continue
+        // independently of this — this only drives the screen display.
+        await attachUi(async (gpsPosition) => {
+          if (!isGPSActiveRef.current) return;
+          setCurrentLocation({
+            lat: gpsPosition.latitude,
+            lon: gpsPosition.longitude,
+          });
+          const shouldSend = hasRaceStarted();
+          if (shouldSend && !isSendingDataRef.current) {
+            isSendingDataRef.current = true;
+            setIsSendingData(true);
+          }
+        }, params.intervalSeconds ?? 30);
+
+        // Restart the screen-scoped timers (these are cleared on unmount).
+        startQueueProcessor();
+        if (params.manualStart !== 1) {
+          startRaceStartChecker();
+        }
+      } catch (err) {
+        if (API_CONFIG.DEBUG) console.error('❌ Restore tracking state failed:', err);
+      }
+    };
+
+    restore();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasRaceStarted, startQueueProcessor, startRaceStartChecker, t]);
 
   // App state changes
   useEffect(() => {
