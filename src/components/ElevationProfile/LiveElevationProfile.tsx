@@ -32,13 +32,13 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     const { t } = useTranslation('livetracking');
     const screenWidth = Dimensions.get('window').width;
 
+    const scrollViewRef = React.useRef<ScrollView>(null);
+
     const chartWidth = Math.max(screenWidth, totalDistance * 80);
     const chartHeight = 220;
 
-   const yDomain: [number, number] = [minElevation, maxElevation];
+    const yDomain: [number, number] = [minElevation, maxElevation];
 
-    // ✅ Use API checkpoints if available, otherwise GPX aid stations
-    // ✅ Remove START and FINISH from elevation profile
     const checkpointChartPoints = React.useMemo(() => {
         if (apiCheckpoints.length > 0) {
             const visible = apiCheckpoints;
@@ -56,7 +56,6 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                 id: `checkpoint-${idx}`,
             }));
         }
-
 
         const sorted = [...aidStations]
             .filter(s => s.distance !== undefined)
@@ -96,6 +95,29 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
             });
     }, [participants, chartData]);
 
+    // ✅ NEW: Auto-scroll to keep participant dot visible whenever their position changes
+    React.useEffect(() => {
+        if (participantChartPoints.length === 0 || !scrollViewRef.current) return;
+
+        // Use the first participant's position (adjust if you support multiple)
+        const participantX = participantChartPoints[0].x;
+
+        // Pixel position of the dot on the chart
+        const dotPixelX = (participantX / totalDistance) * chartWidth;
+
+        // Scroll so the dot is centered in the visible screen area
+        const scrollTarget = dotPixelX - screenWidth / 2;
+
+        // Small delay to ensure chart has rendered before scrolling
+        const timer = setTimeout(() => {
+            scrollViewRef.current?.scrollTo({
+                x: Math.max(0, scrollTarget),
+                animated: true,
+            });
+        }, 200);
+
+        return () => clearTimeout(timer);
+    }, [participantChartPoints, chartWidth, totalDistance, screenWidth]);
 
     const distanceMarkers = React.useMemo(() => {
         const markers: number[] = [];
@@ -106,12 +128,10 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
         return markers;
     }, [totalDistance]);
 
-    // ✅ Calculate segment distances using API checkpoint data
     const segmentDistances = React.useMemo(() => {
         const segments: Array<{ midX: number; distance: number; text: string }> = [];
 
         if (apiCheckpoints.length > 0) {
-            // Use official segment distances from API
             apiCheckpoints.forEach((cp, idx) => {
                 if (cp.segment_distance > 0) {
                     const prevDistance = idx === 0 ? 0 : apiCheckpoints[idx - 1].distance;
@@ -127,7 +147,6 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
 
             console.log('📏 Segment distances from API:', segments.map(s => s.text));
         } else if (checkpointChartPoints.length > 0) {
-            // Fallback: calculate from GPX
             const firstCP = checkpointChartPoints[0];
             segments.push({
                 midX: firstCP.x / 2,
@@ -168,7 +187,6 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
             let station: AidStationMapMarker;
 
             if (data.checkpoint) {
-                // API checkpoint
                 station = {
                     id: `checkpoint-${idx}`,
                     name: data.checkpoint.name,
@@ -180,7 +198,6 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     features: data.checkpoint.features ?? [],
                 };
             } else {
-                // GPX aid station
                 station = {
                     id: `aid-${idx}`,
                     name: data.station.name,
@@ -213,6 +230,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
             <Text style={liveTrackingStyles.profileTitle}>{t('elevationProfile')}</Text>
 
             <ScrollView
+                ref={scrollViewRef}  // ✅ NEW: attach ref
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={liveTrackingStyles.profileScrollView}
