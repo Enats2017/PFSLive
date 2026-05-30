@@ -1061,13 +1061,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // attached UI callback. This effect detects the existing session and wires
   // everything back up so the screen shows the correct state and the Stop
   // button works.
+  const hasRestoredRef = useRef(false);
+
   useEffect(() => {
+    if (hasRestoredRef.current) return;
     let cancelled = false;
 
     const restore = async () => {
       try {
         const active = await isTracking();
         if (!active || cancelled) return;
+
+        hasRestoredRef.current = true;
 
         const params = await getTrackingParams();
         if (!params || cancelled) return;

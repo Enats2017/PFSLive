@@ -73,7 +73,7 @@ const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m e
 // Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
 // Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 0,   // Walking — 3m
+  64: 3,   // Walking — 3m
   59: 15,  // Running — 15m
   60: 30,  // Cycling — 30m
 };
@@ -147,7 +147,44 @@ interface NormalizedRawLocation {
 // With Option B in place, this is now called only by Transistor's onLocation
 // handler. The TaskManager.defineTask block below is kept for backward
 // compatibility but won't fire unless an old app install has a leftover task.
+//
+// ✅ CONCURRENCY GUARD: Transistor emits 1-2 onLocation fires very rapidly at
+// session start (both from its own initial state detection AND from the
+// changePace(true) we call right after start()). With concurrent JS execution
+// and AsyncStorage being non-atomic (read-then-write), two fires within ~25ms
+// can both:
+//   - read LAST_POSITION_KEY as null (Fix 5 hasn't written yet)
+//   - read LAST_SENT_KEY as 0 (throttle hasn't been updated)
+//   - progress through every check
+//   - both call HTTP send
+// Server-side dedup catches the duplicate (same row ID returned), but the
+// device still made 2 network requests it shouldn't have.
+//
+// The mutex below ensures only one processLocationForSend runs at a time. If
+// a second fire arrives while the first is in-flight, it's dropped — the next
+// fire (8s later, well after the first completes) will handle whatever needs
+// handling. Same pattern as _isProcessingQueue in locationService.ts.
+let _isProcessingSend = false;
+
 const processLocationForSend = async (
+  raw: NormalizedRawLocation,
+  source: 'task' | 'transistor',
+): Promise<void> => {
+  if (_isProcessingSend) {
+    if (API_CONFIG.DEBUG) {
+      console.log(`⏭️ processLocationForSend already running — skipping concurrent fire (${source})`);
+    }
+    return;
+  }
+  _isProcessingSend = true;
+  try {
+    return await _processLocationForSendInternal(raw, source);
+  } finally {
+    _isProcessingSend = false;
+  }
+};
+
+const _processLocationForSendInternal = async (
   raw: NormalizedRawLocation,
   source: 'task' | 'transistor',
 ): Promise<void> => {
