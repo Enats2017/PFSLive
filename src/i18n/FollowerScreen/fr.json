@@ -4,7 +4,8 @@
   "athlete": "TROUVER UN ATHLÈTE",
   "button": {
     "upcoming": "AFFICHER TOUS LES ÉVÉNEMENTS À VENIR",
-    "past": "AFFICHER TOUS LES RÉSULTATS"
+    "past": "AFFICHER TOUS LES RÉSULTATS",
+    "athlete": "Rechercher un athlète"
   },
   "search": {
     "upcomgsearch": "Rechercher une course par nom d'événement",

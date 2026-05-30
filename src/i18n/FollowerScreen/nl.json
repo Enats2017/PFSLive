@@ -4,7 +4,8 @@
   "athlete": "ZOEK EEN ATLEET",
   "button": {
     "upcoming": "TOON ALLE AANKOMENDE EVENEMENTEN",
-    "past": "TOON ALLE RESULTATEN"
+    "past": "TOON ALLE RESULTATEN",
+    "athlete": "Atleet zoeken"
   },
   "search": {
     "upcomgsearch": "Zoek race op evenementnaam",
