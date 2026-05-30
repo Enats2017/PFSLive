@@ -872,6 +872,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, []);
 
   const stopGPSTracking = useCallback(async () => {
+    // ✅ FIRST — read the actual sent count from AsyncStorage BEFORE we tear
+    //    anything down. When auto-stop fires after a background→active
+    //    transition, the 1s sync interval hasn't run (JS suspended in bg), so
+    //    React state `locationUpdateCount` may still be 0 even though
+    //    Transistor sent dozens of locations. AsyncStorage is the source of
+    //    truth — read it here so the stop-toast and log upload show real numbers.
+    let actualSentCount = locationUpdateCount;
+    try {
+      const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+      if (countStr) {
+        const parsed = parseInt(countStr);
+        if (!isNaN(parsed) && parsed >= 0) actualSentCount = parsed;
+      }
+    } catch { /* silent — fall back to React state */ }
+
     if (gpsWatchRef.current) {
       gpsWatchRef.current.remove();
       gpsWatchRef.current = null;
@@ -895,27 +910,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     trackingParamsRef.current = null;
     AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => { });
 
-    // ✅ Stop background fetch keepalive
     await stopBackgroundFetchKeepalive();
 
-    // ✅ Attempt to drain queue immediately on stop — covers the case where
-    // network was unavailable during the race and locations were queued.
-    // processQueue is a no-op if queue is empty or network is still down.
     if (participantId && eventId) {
       try {
         const sentCount = await locationService.processQueue(participantId, eventId);
         if (API_CONFIG.DEBUG && sentCount > 0) {
           console.log(`✅ Drained ${sentCount} queued locations on stop`);
         }
-      } catch { /* silent — user can retry via button */ }
+      } catch { /* silent */ }
     }
 
-    // ✅ Refresh queue count after drain attempt
     const remaining = await locationQueueService.getQueueSize();
     setQueuedCount(remaining);
 
-    // ✅ Upload tracking log to server for debugging
-    // Only in DEBUG mode or always — your choice. Non-fatal if it fails.
     if (participantId && eventId) {
       try {
         const logsStr = await AsyncStorage.getItem(TRACKING_LOG_KEY);
@@ -925,8 +933,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             participantId,
             eventId,
             logs,
-            locationUpdateCount,
-            queuedCount,
+            actualSentCount,   // ✅ was: locationUpdateCount
+            remaining,
           );
         }
       } catch { /* silent */ }
@@ -935,7 +943,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     toastSuccess(
       t('home:tracking.gpsStopped'),
       t('home:tracking.trackingStopped', {
-        sent: locationUpdateCount,
+        sent: actualSentCount,   // ✅ was: locationUpdateCount
         queued: remaining,
       })
     );
