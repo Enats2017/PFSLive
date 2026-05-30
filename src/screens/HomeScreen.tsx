@@ -1514,29 +1514,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             resizeMode="contain"
           />
         </View>
-        <View style={homeStyles.logosSection}>
-          <View style={homeStyles.logosContainer}>
-            <Text style={homeStyles.logosTitle}>{t('home:Logotagline')}</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={homeStyles.logosRow}
-              decelerationRate="fast"
-              snapToInterval={110}   // ← logoBox width + gap, snaps per logo
-              snapToAlignment="start"
-            >
-              {PARTNER_LOGOS.map((uri, index) => (
-                <View key={index} style={homeStyles.logoBox}>
-                  <Image
-                    source={{ uri }}
-                    style={homeStyles.partnerLogo}
-                    resizeMode="contain"
-                  />
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
+        
 
         {/* Main Content */}
         <View style={homeStyles.textContainer}>
@@ -1708,9 +1686,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </>
           ) : (
             <>
-              <Text style={homeStyles.tagline}>{t('home:tagline')}</Text>
+              {/* <Text style={homeStyles.tagline}>{t('home:tagline')}</Text>
               <Text style={homeStyles.centeredText}>{t('home:participant.title')}</Text>
-              <Text style={homeStyles.centeredText}>{t('home:subtext')}</Text>
+              <Text style={homeStyles.centeredText}>{t('home:subtext')}</Text> */}
             </>
           )}
         </View>
@@ -1729,6 +1707,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           >
             <Text style={homeStyles.buttonText}>{t('home:button.Fan')}</Text>
           </TouchableOpacity>
+        </View>
+        <View style={homeStyles.logosSection}>
+          <View style={homeStyles.logosContainer}>
+            <Text style={homeStyles.logosTitle}>{t('home:Logotagline')}</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={homeStyles.logosRow}
+              decelerationRate="fast"
+              snapToInterval={110}   // ← logoBox width + gap, snaps per logo
+              snapToAlignment="start"
+            >
+              {PARTNER_LOGOS.map((uri, index) => (
+                <View key={index} style={homeStyles.logoBox}>
+                  <Image
+                    source={{ uri }}
+                    style={homeStyles.partnerLogo}
+                    resizeMode="contain"
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
