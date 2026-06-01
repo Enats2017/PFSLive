@@ -22,5 +22,9 @@
     "profile": {
         "followers": "Abonnés",
         "following": "Abonnements"
-    }
+    },
+    "backbtn": {
+  "events": "Vos Événements",
+  "training": "Sessions d'Entraînement"
+}
 }

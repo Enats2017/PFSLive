@@ -22,5 +22,9 @@
     "profile": {
         "followers": "Volgers",
         "following": "Volgend"
-    }
+    },
+    "backbtn": {
+  "events": "Uw Evenementen",
+  "training": "Trainingssessies"
+}
 }

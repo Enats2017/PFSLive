@@ -1,5 +1,5 @@
-import { StyleSheet, Platform } from 'react-native';
-import { colors, spacing, typography } from './common.styles';
+import { StyleSheet, Platform } from "react-native";
+import { colors, spacing, typography } from "./common.styles";
 
 export const homeStyles = StyleSheet.create({
   scrollView: {
@@ -19,21 +19,21 @@ export const homeStyles = StyleSheet.create({
     marginTop: spacing.lg,
     marginBottom: 0,
   },
-  
+
   logo: {
-    width: '100%',
+    width: "100%",
     height: 250,
   },
 
   textSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
     color: colors.black,
-    textAlign: 'center',
+    textAlign: "center",
   },
 
   // Subtitle
@@ -41,7 +41,7 @@ export const homeStyles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: colors.error,
     fontWeight: typography.weights.semibold,
-    textAlign: 'center',
+    textAlign: "center",
     letterSpacing: 1,
     marginTop: spacing.xs,
     marginBottom: spacing.sm,
@@ -50,19 +50,18 @@ export const homeStyles = StyleSheet.create({
   // Event info section
   textContainer: {
     paddingHorizontal: spacing.md,
-    marginTop:spacing.xl,
+    marginTop: spacing.xl,
     marginBottom: spacing.xxl,
   },
 
   // Event Name
   eventInfo: {
     marginBottom: spacing.md,
-  
   },
   eventNameText: {
     fontSize: typography.sizes.lg,
     color: colors.black,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   eventLabel: {
     fontWeight: typography.weights.bold,
@@ -76,16 +75,15 @@ export const homeStyles = StyleSheet.create({
   smallText: {
     fontSize: typography.sizes.md,
     color: colors.black,
-    textAlign: 'left',
+    textAlign: "left",
     marginBottom: spacing.sm,
     fontWeight: typography.weights.medium,
-    
   },
 
   centeredText: {
     fontSize: typography.sizes.md,
     color: colors.black,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: spacing.sm,
     fontWeight: typography.weights.medium,
     paddingHorizontal: spacing.sm,
@@ -94,7 +92,7 @@ export const homeStyles = StyleSheet.create({
   heading: {
     fontSize: typography.sizes.md,
     color: colors.black,
-    textAlign: 'center',
+    textAlign: "center",
     marginVertical: spacing.lg,
     lineHeight: 22,
     fontWeight: typography.weights.medium,
@@ -104,7 +102,7 @@ export const homeStyles = StyleSheet.create({
   tagline: {
     fontSize: typography.sizes.lg,
     color: colors.black,
-    textAlign: 'center',
+    textAlign: "center",
     fontWeight: typography.weights.semibold,
     marginBottom: spacing.md,
     paddingHorizontal: spacing.sm,
@@ -113,16 +111,15 @@ export const homeStyles = StyleSheet.create({
 
   // Tracking Status
   trackingStatus: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.success + '20',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: colors.success + "20",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
     borderRadius: 12,
     marginBottom: spacing.lg,
     marginTop: spacing.md,
-    width: '100%',
-    
+    width: "100%",
   },
   trackingStatusIcon: {
     fontSize: 16,
@@ -138,7 +135,7 @@ export const homeStyles = StyleSheet.create({
   trackingLocationText: {
     fontSize: typography.sizes.xs,
     color: colors.success,
-    fontFamily: 'monospace',
+    fontFamily: "monospace",
     marginBottom: 4,
     fontWeight: typography.weights.medium,
   },
@@ -150,19 +147,19 @@ export const homeStyles = StyleSheet.create({
   },
 
   permissionWarning: {
-    backgroundColor: colors.warning + '20',
+    backgroundColor: colors.warning + "20",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: 12,
     marginBottom: spacing.lg,
     marginTop: spacing.md,
-    width: '100%',
+    width: "100%",
   },
   permissionWarningText: {
     fontSize: typography.sizes.sm,
     color: colors.warning,
     fontWeight: typography.weights.semibold,
-    textAlign: 'center',
+    textAlign: "center",
   },
 
   // Buttons
@@ -171,7 +168,7 @@ export const homeStyles = StyleSheet.create({
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xl,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: spacing.md,
     elevation: 3,
     shadowColor: colors.black,
@@ -184,7 +181,7 @@ export const homeStyles = StyleSheet.create({
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
 
   buttonContainer: {
@@ -195,7 +192,7 @@ export const homeStyles = StyleSheet.create({
 
   footer: {
     paddingVertical: spacing.xl,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: spacing.xl,
   },
   footerText: {
@@ -207,12 +204,12 @@ export const homeStyles = StyleSheet.create({
   // ✅ Notification popup — consistent with SuccessCelebrationModal & UndoConfirmModal
   notifBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: "rgba(0,0,0,0.6)",
   },
   notifWrapper: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: spacing.xl,
   },
   notifCard: {
@@ -220,9 +217,9 @@ export const homeStyles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: spacing.xxl,
     paddingVertical: spacing.xxxl,
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
-    alignItems: 'center',
+    alignItems: "center",
     ...Platform.select({
       ios: {
         shadowColor: colors.black,
@@ -237,27 +234,27 @@ export const homeStyles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: colors.primary + "15",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.lg,
   },
   notifTitle: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
-    color: '#0f172a',
-    textAlign: 'center',
+    color: "#0f172a",
+    textAlign: "center",
     marginBottom: spacing.sm,
   },
   notifBody: {
     fontSize: typography.sizes.sm,
-    color: '#64748b',
-    textAlign: 'center',
+    color: "#64748b",
+    textAlign: "center",
     lineHeight: 22,
     marginBottom: spacing.xxl,
   },
   notifButtonContainer: {
-    width: '100%',
+    width: "100%",
     gap: spacing.md,
   },
   notifViewButton: {
@@ -266,39 +263,82 @@ export const homeStyles = StyleSheet.create({
   logosSection: {
     marginTop: spacing.md,
     paddingHorizontal: spacing.md,
-},
-logosTitle: {
+  },
+  logosTitle: {
     fontSize: spacing.md,
-     fontStyle:"italic",
+    fontStyle: "italic",
     color: colors.gray50,
-    textTransform: 'capitalize',
+    textTransform: "capitalize",
     letterSpacing: 2,
-    textAlign: 'center',
-    
-},
-logosContainer: {
-    backgroundColor: colors.primary,   // ← single dark navy bg
+    textAlign: "center",
+  },
+  logosContainer: {
+    backgroundColor: colors.primary, // ← single dark navy bg
     borderRadius: 8,
     padding: spacing.md,
-},
+  },
 
-logoBox: {
-  width: 135,          // fixed width for snapping
+  logoBox: {
+    width: 135, // fixed width for snapping
     height: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-    
-},
-partnerLogo: {
-    width: '135%',
-    height: '100%',
-     
-},
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  partnerLogo: {
+    width: "135%",
+    height: "100%",
+  },
 
-logosRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  logosRow: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
-},
+  },
 
+  section: { paddingBottom: 10 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
+
+  cardTop: { flexDirection: "row", alignItems: "center", gap: 12 },
+  eventBody: { flex: 1 },
+  eventMeta: { flexDirection: "row", alignItems: "center" },
+  countdownBlock: { alignItems: "flex-end" },
+  countdownValue: {
+    fontSize: 15,
+    fontWeight: "500",
+    letterSpacing: 0.3,
+    color: "#A32D2D",
+  },
+
+  liveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#FDECEA",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#A32D2D",
+  },
+  liveText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#A32D2D",
+    letterSpacing: 0.5,
+  },
+
+  divider: {
+    height: 0.5,
+    backgroundColor: "rgba(0,0,0,0.2)",
+    marginVertical: 12,
+  },
 });

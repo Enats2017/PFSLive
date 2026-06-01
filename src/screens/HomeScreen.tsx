@@ -38,7 +38,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
 import { tokenService } from '../services/tokenService';
 import { versionService } from '../services/versionService';
-import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { useNotifications, NotificationData } from '../hooks/useNotifications';
 import { followerApi } from '../services/registerFollowerServices';
 import { syncFollowDataFromAPI } from '../utils/followStorage';
@@ -46,6 +46,7 @@ import { syncFollowDataFromAPI } from '../utils/followStorage';
 // Styles
 import { colors, spacing, typography, commonStyles } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
+import FollowingLiveEventsSection from './FollowingLiveEventsSection';
 
 // ==================== TYPES ====================
 
@@ -64,6 +65,26 @@ interface UpdateInfo {
   updateUrl: string;
 }
 
+export interface FollowingLiveEvent {
+  product_app_id: number;
+  product_option_value_app_id: number;
+  event_name: string;
+  event_source: string;
+  race_date: string;
+  race_time: string;
+  end_time: string | null;
+  timezone: string;
+  race_status: 'in_progress' | 'upcoming' | 'finished';
+  followed_participants: {
+    participant_app_id: number;
+    customer_app_id: number;
+    bib_number: string;
+    firstname: string;
+    lastname: string;
+    profile_picture: string;
+  }[];
+}
+
 interface HomeData {
   next_race_participant_app_id?: string;
   next_race_id?: string;
@@ -77,6 +98,7 @@ interface HomeData {
   server_datetime?: string;
   timezone?: string;
   next_race_in_hours?: number;
+  following_live_events?: FollowingLiveEvent[];
 }
 
 // ==================== CONSTANTS ====================
@@ -460,7 +482,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const fetchHomeData = useCallback(async () => {
     try {
       const token = await tokenService.getToken();
-
+      const deviceId = await getDeviceId();
       if (!token) {
         if (API_CONFIG.DEBUG) console.log('⚠️ No token - skipping fetch');
         setHasToken(false);
@@ -472,12 +494,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setHasToken(true);
 
       const headers = await API_CONFIG.getHeaders();
+      const requestBody = {
+        device_id: deviceId,
+      };
 
       if (API_CONFIG.DEBUG) console.log('📤 Fetching home data');
 
-      const response = await axios.get<StandardApiResponse>(
+      const response = await axios.post<StandardApiResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.HOME),
-        { headers, timeout: API_CONFIG.TIMEOUT }
+        requestBody,
+        { headers, timeout: API_CONFIG.TIMEOUT },
       );
 
       if (API_CONFIG.DEBUG) {
@@ -500,6 +526,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // ✅ Normal success flow
       if (response.data.success && response.data.data) {
         setHomeData(response.data.data);
+        console.log("11111", response.data.data);
+
 
         // ✅ Calculate server time offset.
         // server_datetime is in event timezone (e.g. Brussels), NOT UTC.
@@ -1514,7 +1542,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             resizeMode="contain"
           />
         </View>
-        
+
 
         {/* Main Content */}
         <View style={homeStyles.textContainer}>
@@ -1528,7 +1556,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </Text>
                 </View>
 
-                {/* Date */}
                 <Text style={homeStyles.smallText}>
                   <Text style={{ fontWeight: typography.weights.bold }}>{t('home:Event.Date')}:</Text>
                   {' '}
@@ -1686,13 +1713,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </>
           ) : (
             <>
-              {/* <Text style={homeStyles.tagline}>{t('home:tagline')}</Text>
-              <Text style={homeStyles.centeredText}>{t('home:participant.title')}</Text>
-              <Text style={homeStyles.centeredText}>{t('home:subtext')}</Text> */}
+              {homeData?.following_live_events && homeData.following_live_events.length > 0 && (
+                <FollowingLiveEventsSection
+                  events={homeData.following_live_events}
+                  serverDatetime={homeData.server_datetime!}
+                  onRoutePress={(event) => {
+                    navigation.navigate('LiveTracking', {
+                      product_app_id: event.product_app_id,
+                      product_option_value_app_id: event.product_option_value_app_id,
+                      event_name: event.event_name,
+                      sourceScreen: 'HomeScreen',
+                      sectionType: 'follower',
+                      sourceTab: 'live',
+                      event_source: event.event_source,
+                    });
+                  }}
+                />
+              )}
             </>
           )}
         </View>
-
         {/* Bottom Buttons */}
         <View style={homeStyles.buttonContainer}>
           <TouchableOpacity

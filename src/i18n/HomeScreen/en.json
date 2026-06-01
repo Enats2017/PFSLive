@@ -85,5 +85,11 @@
   "message": "Power Saving Mode is ON. This blocks GPS and background tracking. Please disable it first.",
   
   "disable": "Open Battery Settings"
-}
+},
+"followingEvents": {
+    "sectionTitle": "EVENTS YOU FOLLOW",
+    "startsIn": "STARTS IN",
+    "live": "LIVE",
+    "routeButton": "Route"
+  }
 }

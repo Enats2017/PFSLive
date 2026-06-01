@@ -83,5 +83,11 @@
   "title": "Avertissement batterie",
   "message": "Le mode économie d'énergie est activé. Cela bloque le GPS et le suivi en arrière-plan. Veuillez le désactiver d'abord.",
   "disable": "Ouvrir les paramètres de batterie"
+},
+"followingEvents": {
+  "sectionTitle": "ÉVÉNEMENTS QUE VOUS SUIVEZ",
+  "startsIn": "COMMENCE DANS",
+  "live": "EN DIRECT",
+  "routeButton": "Itinéraire"
 }
 }

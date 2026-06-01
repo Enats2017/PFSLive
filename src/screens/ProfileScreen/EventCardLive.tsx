@@ -93,7 +93,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
                     onPress={handleTrackingPress}
                     activeOpacity={0.8}
                 >
-                    <Feather name="eye" size={16} color="#fff" />
+                    <Ionicons name="eye-outline" size={23} color={colors.primaryDark} />
                 </TouchableOpacity>
             )}
         </View>

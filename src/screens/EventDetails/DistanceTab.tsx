@@ -296,7 +296,7 @@ const DistanceTab = ({
           </View>
 
           <TouchableOpacity
-            style={[detailsStyles.resultsButton,{paddingHorizontal:spacing.sm}]}
+            style={[detailsStyles.resultsButton]}
             onPress={() =>
               item.registration_status === 'registered'
                 ? handleUndoClick(item)
@@ -308,7 +308,7 @@ const DistanceTab = ({
             {isRegistering ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={commonStyles.primaryButtonText}>
+              <Text style={[commonStyles.primaryButtonText,{fontSize:12.5}]}>
                 {item.registration_status === 'registered'
                   ? t('details:undo')
                   : t('details:button')}

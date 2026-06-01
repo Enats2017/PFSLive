@@ -9,7 +9,7 @@ import {
     View,
 } from 'react-native';
 import { colors, spacing } from '../styles/common.styles';
-import {  ParticipantItem } from '../services/followerEvent';
+import { ParticipantItem } from '../services/followerEvent';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +65,10 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled
+                contentContainerStyle={{
+                    paddingBottom: spacing.xxxxl,
+                    flexGrow: 1,
+                }}
                 style={{ maxHeight: 260 }}
                 onEndReached={hasMore ? onLoadMore : undefined}
                 onEndReachedThreshold={0.5}

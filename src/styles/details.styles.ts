@@ -39,7 +39,7 @@ export const detailsStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: spacing.sm,
+   
   },
   topRow: {
     flexDirection: "row",
