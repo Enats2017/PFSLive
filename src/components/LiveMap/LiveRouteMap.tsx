@@ -42,6 +42,26 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     const [mapReady, setMapReady] = useState(false);
     const mapReadyRef = useRef(false);
 
+    // ✅ NEW — camera fit-once tracking.
+    //
+    //   hasFitCameraRef
+    //     Becomes true after the FIRST successful auto-fit for the currently
+    //     loaded route. While true, both auto-fit effects below short-circuit
+    //     so subsequent renders (driven by the parent's 60s auto-refresh
+    //     updating the `participants` array → new bounds memo reference →
+    //     useEffect re-fires) don't clobber whatever zoom / pan the fan has
+    //     done manually.
+    //
+    //   prevTrackPointsLengthRef
+    //     Lets us detect a fresh route load. When trackPoints goes from
+    //     empty → non-empty we treat it as "new route" and reset hasFitCameraRef
+    //     to false so the next render fits the new route. This covers both
+    //     initial mount AND the distance switch flow in the parent
+    //     (handleDistanceChange sets routeData=null → trackPoints=[] →
+    //     GPX loads → trackPoints=[N]).
+    const hasFitCameraRef          = useRef(false);
+    const prevTrackPointsLengthRef = useRef(0);
+
     console.log('👥 Map received participants:', {
         count: participants.length,
         firstParticipant: participants[0] ? { lat: participants[0].lat, lon: participants[0].lon } : null,
@@ -111,8 +131,43 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         bounds,
     });
 
+    // ✅ NEW — detect "fresh route loaded" and re-arm the auto-fit.
+    //
+    // When trackPoints transitions from 0 → N, this is either (a) the initial
+    // GPX load on mount, or (b) the user switching distance (parent reset
+    // routeData to null, then loaded a new GPX). In both cases we want the
+    // next bounds change to actually fit the camera. So we clear the
+    // "already fit" flag here. Other transitions (N → N, N → 0) leave the
+    // flag alone — N → N happens during auto-refresh (participants update
+    // but route is unchanged) and N → 0 is just the cleanup half of a
+    // distance switch (the next 0 → M transition will reset).
+    //
+    // Must run BEFORE the two camera-fit effects below in declaration order,
+    // since React runs effects top-to-bottom — that way the reset is in
+    // place before either fit-effect re-evaluates hasFitCameraRef.
+    useEffect(() => {
+        const prev = prevTrackPointsLengthRef.current;
+        const curr = trackPoints.length;
+        if (prev === 0 && curr > 0) {
+            console.log('🆕 Fresh route loaded — re-arming auto-fit');
+            hasFitCameraRef.current = false;
+        }
+        prevTrackPointsLengthRef.current = curr;
+    }, [trackPoints]);
+
     useEffect(() => {
         if (!bounds) return;
+
+        // ✅ NEW — short-circuit if we've already done the initial fit for
+        // this route. This is the main guard that stops the parent's
+        // 60s auto-refresh from re-firing the camera and clobbering the
+        // fan's manual zoom / pan. The flag is re-armed by the reset effect
+        // above whenever trackPoints goes 0 → N (initial load / distance
+        // switch), so legitimate re-fits still happen.
+        if (hasFitCameraRef.current) {
+            console.log('🔒 Skipping bounds fit — camera already positioned (preserving user view)');
+            return;
+        }
 
         const tryFocus = () => {
             if (!cameraRef.current) {
@@ -132,6 +187,10 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             } else {
                 cameraRef.current.fitBounds(bounds.ne, bounds.sw, [50, 50, 50, 50], 1000);
             }
+            // ✅ Mark fit as done so subsequent renders don't move the camera.
+            //    Set INSIDE the timeout (after cameraRef check) so we don't
+            //    falsely flag a fit that never actually happened.
+            hasFitCameraRef.current = true;
         };
         const timer = setTimeout(tryFocus, 300);
         return () => clearTimeout(timer);
@@ -145,6 +204,15 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         const valid = participants.filter(p => p.lat !== 0 && p.lon !== 0);
         if (valid.length === 0) return;
         if (!cameraRef.current) return;
+
+        // ✅ NEW — same fit-once guard as the bounds effect. Without this,
+        // every auto-refresh would re-fit on participants and yank the
+        // map back to the participants' bounding box, undoing the fan's
+        // zoom-in. Re-armed by the reset effect on route change.
+        if (hasFitCameraRef.current) {
+            console.log('🔒 Skipping participants fit — camera already positioned (preserving user view)');
+            return;
+        }
 
         const timer = setTimeout(() => {
             if (!cameraRef.current) return;
@@ -166,6 +234,8 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     800
                 );
             }
+            // ✅ Mark fit as done so subsequent renders don't move the camera.
+            hasFitCameraRef.current = true;
         }, 500); 
 
         return () => clearTimeout(timer);
