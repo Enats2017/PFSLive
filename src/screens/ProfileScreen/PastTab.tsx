@@ -20,7 +20,6 @@ interface PastTabProps {
 const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasMore, profile }) => {
     const { t } = useTranslation(['profile']);
 
-    // ✅ SIMPLIFIED: Just check hasMore and loadingMore
     const handleLoadMore = useCallback(() => {
         if (API_CONFIG.DEBUG) {
             console.log('🔍 Past onEndReached:', {
@@ -32,12 +31,12 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
         if (hasMore && !loadingMore) {
             if (API_CONFIG.DEBUG) {
-                console.log('✅ Calling onLoadMore');
+                console.log('Calling onLoadMore');
             }
             onLoadMore();
         } else {
             if (API_CONFIG.DEBUG) {
-                console.log('⏸️ Skipped - hasMore:', hasMore, 'loadingMore:', loadingMore);
+                console.log('Skipped - hasMore:', hasMore, 'loadingMore:', loadingMore);
             }
         }
     }, [hasMore, loadingMore, onLoadMore, events.length]);
@@ -45,7 +44,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
     const renderItem = useCallback(
         ({ item }: { item: AthleteEvent }) => <EventCardPast
             item={item}
-            isOwnProfile={profile?.is_own_profile === 1}  // ← add
+            isOwnProfile={profile?.is_own_profile === 1} 
         />,
         []
     );
@@ -89,7 +88,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
             contentContainerStyle={{
                 paddingHorizontal: spacing.md,
                 paddingTop: spacing.md,
-                paddingBottom: spacing.xl,
+                paddingBottom: spacing.xxxxl,
                 flexGrow: 1,
             }}
             ListFooterComponent={ListFooterComponent}

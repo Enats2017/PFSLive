@@ -19,13 +19,7 @@ interface LiveTabProps {
 
 const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasMore, profile }) => {
     const { t } = useTranslation(['profile']);
-    console.log("111", profile);
-
-    console.log(profile?.profile_picture);
     
-
-
-    // ✅ SIMPLIFIED: Just check hasMore and loadingMore
     const handleLoadMore = useCallback(() => {
         if (API_CONFIG.DEBUG) {
             console.log('🔍 Live onEndReached:', {
@@ -54,7 +48,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 isOwnProfile={profile?.is_own_profile === 1}
             />
         ),
-        [profile]  // ← add profile to dependencies
+        [profile]
     );
 
     const keyExtractor = useCallback(
@@ -96,7 +90,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
             contentContainerStyle={{
                 paddingHorizontal: spacing.md,
                 paddingTop: spacing.md,
-                paddingBottom: spacing.xl,
+                paddingBottom: spacing.xxxxl,
                 flexGrow: 1,
             }}
             ListFooterComponent={ListFooterComponent}

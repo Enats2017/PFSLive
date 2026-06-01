@@ -8,6 +8,7 @@ import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { profileStyles } from '../../styles/Profile.styles';
 import { AthleteEvent } from '../../services/athleteProfileService';
 import { Feather, MaterialCommunityIcons,Ionicons } from '@expo/vector-icons';
+import { formatClockTime } from '../../utils/timeFormat';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -56,7 +57,7 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
                 <View style={styles.dateRow}>
                     <MaterialCommunityIcons name="calendar-month-outline" size={16} color="#888" style={{ marginRight: 4 }} />
                     <Text style={commonStyles.date}>
-                        {item.race_date_formatted}{item.race_time ? `  ${item.race_time.slice(0, 5)}` : ''}
+                        {item.race_date_formatted} {formatClockTime(item.race_time)}
                     </Text>
                 </View>
             </View>
@@ -75,8 +76,6 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
 EventCardPast.displayName = 'EventCardPast';
 
 const styles = StyleSheet.create({
-    
-   
     info: {
         flex: 1,
         justifyContent: 'center',

@@ -189,7 +189,7 @@ const EditProfileScreen = () => {
             }
 
             const customer_app_id = await tokenService.getCustomerId()
-            navigation.navigate('ProfileScreen', {
+            navigation.navigate('OwnProfile', {
                 customer_app_id: customer_app_id || 0,
                 fromEdit: true,
             })

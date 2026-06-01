@@ -44,6 +44,7 @@ export type RootStackParamList = {
     sourceTab?: "past" | "live" | "upcoming";
   };
   ProfileScreen: { customer_app_id?: number; fromEdit?: boolean };
+  OwnProfile:{ customer_app_id?: number; fromEdit?: boolean };
   EditProfileScreen: undefined;
   EditPersonalEvent: {
     eventId: number;
@@ -138,6 +139,11 @@ export type ResultListprops = NativeStackScreenProps<
 export type ProfileScreenprops = NativeStackScreenProps<
   RootStackParamList,
   "ProfileScreen"
+>;
+
+export type OwnProfileprops = NativeStackScreenProps<
+  RootStackParamList,
+  "OwnProfile"
 >;
 export type EditProfileScreenprops = NativeStackScreenProps<
   RootStackParamList,

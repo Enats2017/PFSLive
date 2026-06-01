@@ -34,7 +34,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     const isValid = await tokenService.isTokenValid();
     if (isValid) {
       const customer_app_id = await tokenService.getCustomerId();
-      navigation.navigate('ProfileScreen', { customer_app_id });
+      navigation.navigate('OwnProfile', { customer_app_id });
     } else {
       navigation.navigate('LoginScreen');
     }

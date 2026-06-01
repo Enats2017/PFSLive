@@ -8,6 +8,7 @@ import { AthleteEvent } from '../../services/athleteProfileService';
 import { commonStyles, spacing, colors } from '../../styles/common.styles';
 import { profileStyles } from '../../styles/Profile.styles';
 import { Feather, MaterialCommunityIcons,Ionicons} from '@expo/vector-icons';
+import { formatClockTime } from '../../utils/timeFormat';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditPersonalEvent'>;
 
@@ -17,8 +18,6 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
 }) => {
     const { t } = useTranslation(['profile']);
     const navigation = useNavigation<NavigationProp>();
-
-    // ── Navigation handlers ─────────────────────────────────────
 
     const handleEditPress = useCallback(() => {
         if (item.event_source === 'custom') {
@@ -43,8 +42,6 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
         });
     }, [item, isOwnProfile, navigation]);
 
-    // ── Label helpers ───────────────────────────────────────────
-
     const editLabel = item.event_source === 'custom'
         ? t('profile:buttons.edit_personal_event')
         : t('profile:buttons.edit_live_tracking_event');
@@ -58,10 +55,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
         }
     }, [item.race_status, t]);
 
-
     const isEditDisabled = item.race_status === 'finished';
-
-    // ── Render ──────────────────────────────────────────────────
 
     return (
         <View style={[commonStyles.card, { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }]}>
@@ -70,7 +64,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
                 <View style={styles.dateRow}>
                     <MaterialCommunityIcons name="calendar-month-outline" size={13} color="#888" style={{ marginRight: 4 }} />
                     <Text style={commonStyles.date}>
-                        {item.race_date_formatted}{item.race_time ? `  ${item.race_time.slice(0, 5)}` : ''}
+                        {item.race_date_formatted} {formatClockTime(item.race_time)}
                     </Text>
                 </View>
             </View>
@@ -110,7 +104,6 @@ EventCard.displayName = 'EventCard';
 
 const styles = StyleSheet.create({
 
-
     info: {
         flex: 1,
         justifyContent: 'center',
@@ -120,7 +113,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
     },
-
 
     iconBtn: {
         backgroundColor: colors.themeiColor,
