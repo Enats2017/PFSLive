@@ -898,6 +898,7 @@ export const gpsService = {
             logLevel: API_CONFIG.DEBUG
               ? BackgroundGeolocation.LogLevel.Verbose
               : BackgroundGeolocation.LogLevel.Off,
+            debug: API_CONFIG.DEBUG,
           },
           reset: true,
         });
