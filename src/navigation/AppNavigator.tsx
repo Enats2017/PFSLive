@@ -22,6 +22,7 @@ import SearchParticipant from '../screens/ResultList/SearchParticipant';
 import ParticipantScreen from '../screens/ParticipantScreen/ParticipantScreen';
 import FollowerSrceen from '../screens/FollowerScreen/FollowerScreen';
 import AthleteSearchScreen from '../screens/FollowerScreen/AthleteSearchScreen';
+import OwnProfile from '../screens/ProfileScreen/OwnProfile';
 
 
 // ✅ AUTH SCREENS
@@ -97,6 +98,7 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen name="ParticipantScreen" component={ParticipantScreen} options={noGesture} />
           <Stack.Screen name="FollowerSrceen" component={FollowerSrceen} options={noGesture} />
           <Stack.Screen name="AthleteSearchScreen" component={AthleteSearchScreen} options={noGesture} />
+          <Stack.Screen name="OwnProfile" component={OwnProfile} options={noGesture} />
 
           <Stack.Screen
             name="LiveTracking"
@@ -107,9 +109,8 @@ export const AppNavigator: React.FC = () => {
               // ✅ FIXED: gestureResponseDistance expects an object not a number
               gestureResponseDistance: { start: 50 },
             }}
-          />
+          /> 
 
-          {/* ── Auth screens — only when NOT logged in ───────────────── */}
           {!isLoggedIn && (
             <>
               <Stack.Screen name="LoginScreen"           component={LoginScreen}           options={noGesture} />

@@ -1,0 +1,111 @@
+import React, { useCallback } from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    FlatList,
+    ActivityIndicator,
+    StyleSheet,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
+import { EventCard } from './EventCardLive';
+import { ownProfile } from '../../styles/ownProfile.styles';
+import ErrorScreen from '../../components/ErrorScreen';
+import { useTranslation } from 'react-i18next';
+
+interface TrainingContentProps {
+    onBack: () => void;
+    liveEvents: AthleteEvent[];
+    loadMoreLive: () => void;
+    loadingMoreLive: boolean;
+    profile: AthleteProfile | null;
+    pagination: {
+        live: { page: number; total_pages: number };
+    };
+}
+
+const TrainingContent: React.FC<TrainingContentProps> = ({
+    onBack,
+    liveEvents,
+    loadMoreLive,
+    loadingMoreLive,
+    pagination,
+    profile,
+}) => {
+    const hasMore = pagination.live.page < pagination.live.total_pages;
+    const { t } = useTranslation(['profile', "ownProfile"]);
+    // Add this line before the return
+const partnerEvents = liveEvents.filter(e => e.event_source === 'partner');
+
+    const handleLoadMore = useCallback(() => {
+        if (hasMore && !loadingMoreLive) {
+            loadMoreLive();
+        }
+    }, [hasMore, loadingMoreLive, loadMoreLive]);
+
+    const renderItem = useCallback(({ item }: { item: AthleteEvent }) => (
+        <EventCard
+            item={item}
+            isOwnProfile={profile?.is_own_profile === 1} 
+        />
+
+    ), []);
+
+    const keyExtractor = useCallback(
+        (item: AthleteEvent, index: number) => `${item.participant_app_id}-${index}`,
+        []
+    );
+
+    const ListFooterComponent = useCallback(() => {
+        if (!loadingMoreLive) return null;
+        return (
+            <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={{ marginVertical: spacing.md }}
+            />
+        );
+    }, [loadingMoreLive]);
+
+    const ListEmptyComponent = useCallback(() => (
+       <ErrorScreen
+                type="empty"
+                title={t('profile:empty.no_live_events')}
+                message={t('profile:empty.no_live_events_msg')}
+                onRetry={() => { }}
+            />
+    ), []);
+
+    return (
+        <View style={{ flex: 1 }}>
+            <TouchableOpacity style={ownProfile.backRow} onPress={onBack} activeOpacity={0.7}>
+                <Ionicons name="arrow-back" size={22} color={colors.gray900} />
+                <Text style={ownProfile.backLabel}>{t('ownProfile:backbtn.training')}</Text>
+            </TouchableOpacity>
+
+            <FlatList
+                data={partnerEvents}
+                keyExtractor={keyExtractor}
+                renderItem={renderItem}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{
+                    paddingHorizontal: spacing.md,
+                    paddingTop: spacing.xs,
+                    paddingBottom: spacing.xxxxl,
+                    flexGrow: 1,
+                }}
+                ListFooterComponent={ListFooterComponent}
+                ListEmptyComponent={ListEmptyComponent}
+                removeClippedSubviews={false}
+            />
+        </View>
+    );
+};
+
+
+
+export default React.memo(TrainingContent);

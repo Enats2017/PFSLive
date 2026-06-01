@@ -1,0 +1,26 @@
+{
+    "tracking": {
+        "unlimited": "U heeft onbeperkte live trackingsessies.",
+        "remaining": "U heeft nog {{count}} live trackingsessie(s) over.",
+        "exhausted": "U heeft geen live trackingsessies meer over.",
+        "subtitle": "Ledenbeheer is beschikbaar op onze website."
+    },
+    "menu": {
+        "events": {
+            "title": "Uw evenementen",
+            "subtitle": "Bekijk uw vroegere resultaten"
+        },
+        "training": {
+            "title": "Uw trainingssessies",
+            "subtitle": "Bekijk uw vroegere trainingssessies of upload een nieuwe."
+        },
+        "account": {
+            "title": "Account",
+            "subtitle": "Beheer uw accountinstellingen"
+        }
+    },
+    "profile": {
+        "followers": "Volgers",
+        "following": "Volgend"
+    }
+}

@@ -109,6 +109,10 @@ import FollowerSrceenEN from "./FollowerScreen/en.json";
 import FollowerSrceenFR from "./FollowerScreen/fr.json";
 import FollowerSrceenNL from "./FollowerScreen/nl.json";
 
+import OwnProfileEN from "./OwnProfile/en.json";
+import OwnProfileFR from "./OwnProfile/fr.json";
+import OwnProfileNL from "./OwnProfile/nl.json";
+
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
 export const LANGUAGES = {
@@ -270,6 +274,7 @@ i18n.use(initReactI18next).init({
       errorScreen:ErrorScreenEN,
       participant:participantScreenEN,
       follow:FollowerSrceenEN, 
+      ownProfile:OwnProfileEN
     },
     fr: {
       common: commonFR,
@@ -296,6 +301,7 @@ i18n.use(initReactI18next).init({
       errorScreen:ErrorScreenFR,
       participant:participantScreenFR,
       follow:FollowerSrceenFR, 
+      ownProfile:OwnProfileFR,
     },
     nl: {
       common: commonNL,
@@ -321,7 +327,8 @@ i18n.use(initReactI18next).init({
       setting:SettingScreenNL,
       errorScreen:ErrorScreenNL,
       participant:participantScreenNL,
-      follow:FollowerSrceenNL, 
+      follow:FollowerSrceenNL,
+      ownProfile:OwnProfileNL, 
     },
   },
   lng: initialLanguage,
@@ -350,7 +357,8 @@ i18n.use(initReactI18next).init({
     'favourite',
     'setting',
     'errorScreen',
-    'follow'
+    'follow',
+    'ownProfile'
   ],
   interpolation: {
     escapeValue: false,

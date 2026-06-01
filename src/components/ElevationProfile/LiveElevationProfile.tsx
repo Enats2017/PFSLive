@@ -98,17 +98,9 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     // ✅ NEW: Auto-scroll to keep participant dot visible whenever their position changes
     React.useEffect(() => {
         if (participantChartPoints.length === 0 || !scrollViewRef.current) return;
-
-        // Use the first participant's position (adjust if you support multiple)
         const participantX = participantChartPoints[0].x;
-
-        // Pixel position of the dot on the chart
         const dotPixelX = (participantX / totalDistance) * chartWidth;
-
-        // Scroll so the dot is centered in the visible screen area
         const scrollTarget = dotPixelX - screenWidth / 2;
-
-        // Small delay to ensure chart has rendered before scrolling
         const timer = setTimeout(() => {
             scrollViewRef.current?.scrollTo({
                 x: Math.max(0, scrollTarget),

@@ -1,0 +1,32 @@
+{
+    "tracking": {
+        "unlimited": "You have unlimited live tracking sessions.",
+        "remaining": "You have {{count}} live tracking session(s) left.",
+        "exhausted": "You have no live tracking sessions left.",
+        "subtitle": "Membership management available on our website."
+    },
+    "menu": {
+        "events": {
+            "title": "Your Event",
+            "subtitle": "Watch Your Past Result"
+        },
+        "training": {
+            "title": "Your training sessions",
+            "subtitle": "See Your Past Training Sessions or Upload a New One."
+        },
+        "account": {
+            "title": "Account",
+            "subtitle": "Manage Your Account Settings"
+        }
+    },
+    "profile": {
+        "followers": "Followers",
+        "following": "Following"
+    },
+    "backbtn":{
+        "events":"Your Events",
+        "training":"Tranning Sessions"
+
+    }
+    
+}

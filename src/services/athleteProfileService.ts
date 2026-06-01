@@ -1,15 +1,28 @@
 import { apiClient } from "./api";
-import { API_CONFIG, getApiEndpoint } from "../constants/config";
+import { API_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
 import { getCurrentLanguageId } from "../i18n";
 import { tokenService } from "./tokenService";
+
+export interface MembershipInfo {
+    has_membership: boolean;
+    unlimited: boolean;
+    remaining: number | null;
+    total_limit: number | null;
+    total_used: number | null;
+    memberships_count: number;
+}
 
 export interface AthleteProfile {
   firstname: string;
   lastname: string;
   profile_picture: string;
   is_own_profile: number;
-  password_protected: 0 | 1; 
+  password_protected: 0 | 1;
+  followers_count: number;
+  following_count: number;
+   membership_info: MembershipInfo | null;
 }
+
 
 export interface AthleteEvent {
   participant_app_id: number;
@@ -77,10 +90,11 @@ export const eventService = {
       page_live: 1,
     },
     targetId?: number,
-    bustCache: boolean = false // ✅ CACHE BUSTING PARAMETER
+    bustCache: boolean = false, // ✅ CACHE BUSTING PARAMETER
   ): Promise<AthleteProfileResponse> {
     try {
       const language_id = getCurrentLanguageId();
+      const deviceId = await getDeviceId();
       const customerId = targetId
         ? Number(targetId)
         : ((await tokenService.getCustomerId()) ?? 0);
@@ -101,6 +115,7 @@ export const eventService = {
       const requestBody: any = {
         customer_app_id: customerId,
         language_id: language_id,
+        device_id: deviceId,
         page_past: pagination.page_past || 1,
         page_live: pagination.page_live || 1,
       };
@@ -108,9 +123,12 @@ export const eventService = {
       // ✅ ADD CACHE BUSTING TIMESTAMP
       if (bustCache) {
         requestBody._t = Date.now();
-        
+
         if (API_CONFIG.DEBUG) {
-          console.log("🔄 Cache busting enabled with timestamp:", requestBody._t);
+          console.log(
+            "🔄 Cache busting enabled with timestamp:",
+            requestBody._t,
+          );
         }
       }
 
@@ -159,8 +177,10 @@ export const eventService = {
               lastname: "",
               profile_picture: "",
               is_own_profile: 0,
-              password_protected: 0 ,
-              
+              password_protected: 0,
+              followers_count: 0, // ← add
+              following_count: 0,
+              membership_info: null,
             },
             tabs: {
               past: eventsData.past || [],

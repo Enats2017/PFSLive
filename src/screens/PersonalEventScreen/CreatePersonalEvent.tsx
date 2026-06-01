@@ -256,7 +256,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
         <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom:spacing.xxxxl }}
           keyboardShouldPersistTaps="handled"
         >
           <View style={personalStyles.section}>
