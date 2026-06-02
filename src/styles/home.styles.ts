@@ -296,6 +296,9 @@ export const homeStyles = StyleSheet.create({
   },
 
   section: { paddingBottom: 10 },
+
+  section_followers: { paddingBottom: 10, paddingTop: 20, },
+
   header: {
     flexDirection: "row",
     alignItems: "center",

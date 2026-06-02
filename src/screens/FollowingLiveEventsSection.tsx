@@ -45,7 +45,7 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, serverDatetime, o
     }, [serverOffset]);
 
     return (
-        <View style={homeStyles.section}>
+        <View style={homeStyles.section_followers}>
             <View style={homeStyles.header}>
                 <Text style={commonStyles.subtitle}>{t('home:followingEvents.sectionTitle')}</Text>
             </View>

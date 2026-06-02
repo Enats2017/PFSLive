@@ -500,6 +500,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       if (API_CONFIG.DEBUG) console.log('📤 Fetching home data');
 
+      if (API_CONFIG.DEBUG) console.log(requestBody);
+
       const response = await axios.post<StandardApiResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.HOME),
         requestBody,
@@ -1719,9 +1721,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </TouchableOpacity>
                 )*/}
             </>
+            
           ) : (
             <>
-              {homeData?.following_live_events && homeData.following_live_events.length > 0 && (
+              {/*homeData?.following_live_events && homeData.following_live_events.length > 0 && (
                 <FollowingLiveEventsSection
                   events={homeData.following_live_events}
                   serverDatetime={homeData.server_datetime!}
@@ -1737,8 +1740,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     });
                   }}
                 />
-              )}
+              )*/}
             </>
+          )}
+
+          {homeData?.following_live_events && homeData.following_live_events.length > 0 && (
+            <FollowingLiveEventsSection
+              events={homeData.following_live_events}
+              serverDatetime={homeData.server_datetime!}
+              onRoutePress={(event) => {
+                navigation.navigate('LiveTracking', {
+                  product_app_id: event.product_app_id,
+                  product_option_value_app_id: event.product_option_value_app_id,
+                  event_name: event.event_name,
+                  sourceScreen: 'HomeScreen',
+                  sectionType: 'follower',
+                  sourceTab: 'live',
+                  event_source: event.event_source,
+                });
+              }}
+            />
           )}
         </View>
         {/* Bottom Buttons */}
