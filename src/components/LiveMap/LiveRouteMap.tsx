@@ -28,6 +28,37 @@ interface LiveRouteMapProps {
     followerLocation?: { lat: number; lon: number } | null;
 }
 
+// ── Viewport helper ───────────────────────────────────────────────────────────
+// Mapbox getVisibleBounds() returns [[neLon, neLat], [swLon, swLat]].
+// Returns true when (lon,lat) sits inside that rectangle, with an optional
+// margin (fraction of the viewport span) so a point that's technically
+// on-screen but hugging the very edge still counts as "needs recenter".
+const isPointInBounds = (
+    lon: number,
+    lat: number,
+    visibleBounds: [[number, number], [number, number]],
+    marginFraction = 0.15,
+): boolean => {
+    const [[neLon, neLat], [swLon, swLat]] = visibleBounds;
+
+    const maxLon = Math.max(neLon, swLon);
+    const minLon = Math.min(neLon, swLon);
+    const maxLat = Math.max(neLat, swLat);
+    const minLat = Math.min(neLat, swLat);
+
+    // Shrink the box inward by marginFraction so points near the edge are
+    // treated as out-of-view and trigger a recenter before they fully exit.
+    const lonSpan = (maxLon - minLon) * marginFraction;
+    const latSpan = (maxLat - minLat) * marginFraction;
+
+    return (
+        lon >= minLon + lonSpan &&
+        lon <= maxLon - lonSpan &&
+        lat >= minLat + latSpan &&
+        lat <= maxLat - latSpan
+    );
+};
+
 export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     trackPoints,
     aidStations,
@@ -39,26 +70,24 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     followerLocation = null,
 }) => {
     const cameraRef = useRef<Mapbox.Camera>(null);
+    // ✅ NEW — ref to the MapView so we can read the current viewport
+    // (getVisibleBounds) during auto-refresh and decide whether the tracked
+    // participant has drifted off-screen.
+    const mapViewRef = useRef<Mapbox.MapView>(null);
     const [mapReady, setMapReady] = useState(false);
     const mapReadyRef = useRef(false);
 
-    // ✅ NEW — camera fit-once tracking.
+    // ✅ camera fit-once tracking.
     //
     //   hasFitCameraRef
     //     Becomes true after the FIRST successful auto-fit for the currently
-    //     loaded route. While true, both auto-fit effects below short-circuit
-    //     so subsequent renders (driven by the parent's 60s auto-refresh
-    //     updating the `participants` array → new bounds memo reference →
-    //     useEffect re-fires) don't clobber whatever zoom / pan the fan has
-    //     done manually.
+    //     loaded route. While true, the route-bounds effect short-circuits so
+    //     subsequent renders don't clobber the fan's manual zoom / pan. The
+    //     participants effect no longer hard short-circuits — instead it does
+    //     a "follow if off-screen" check (see below).
     //
     //   prevTrackPointsLengthRef
-    //     Lets us detect a fresh route load. When trackPoints goes from
-    //     empty → non-empty we treat it as "new route" and reset hasFitCameraRef
-    //     to false so the next render fits the new route. This covers both
-    //     initial mount AND the distance switch flow in the parent
-    //     (handleDistanceChange sets routeData=null → trackPoints=[] →
-    //     GPX loads → trackPoints=[N]).
+    //     Lets us detect a fresh route load (0 → N) to re-arm the auto-fit.
     const hasFitCameraRef          = useRef(false);
     const prevTrackPointsLengthRef = useRef(0);
 
@@ -131,20 +160,9 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         bounds,
     });
 
-    // ✅ NEW — detect "fresh route loaded" and re-arm the auto-fit.
-    //
-    // When trackPoints transitions from 0 → N, this is either (a) the initial
-    // GPX load on mount, or (b) the user switching distance (parent reset
-    // routeData to null, then loaded a new GPX). In both cases we want the
-    // next bounds change to actually fit the camera. So we clear the
-    // "already fit" flag here. Other transitions (N → N, N → 0) leave the
-    // flag alone — N → N happens during auto-refresh (participants update
-    // but route is unchanged) and N → 0 is just the cleanup half of a
-    // distance switch (the next 0 → M transition will reset).
-    //
-    // Must run BEFORE the two camera-fit effects below in declaration order,
-    // since React runs effects top-to-bottom — that way the reset is in
-    // place before either fit-effect re-evaluates hasFitCameraRef.
+    // ✅ detect "fresh route loaded" and re-arm the auto-fit.
+    // When trackPoints transitions 0 → N (initial load or distance switch),
+    // clear the "already fit" flag so the next render fits the new route.
     useEffect(() => {
         const prev = prevTrackPointsLengthRef.current;
         const curr = trackPoints.length;
@@ -155,15 +173,12 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         prevTrackPointsLengthRef.current = curr;
     }, [trackPoints]);
 
+    // Route-bounds fit: fit ONCE per route load. The route never moves, so
+    // after the first fit we leave the camera entirely to the user / to the
+    // participants follow-effect below.
     useEffect(() => {
         if (!bounds) return;
 
-        // ✅ NEW — short-circuit if we've already done the initial fit for
-        // this route. This is the main guard that stops the parent's
-        // 60s auto-refresh from re-firing the camera and clobbering the
-        // fan's manual zoom / pan. The flag is re-armed by the reset effect
-        // above whenever trackPoints goes 0 → N (initial load / distance
-        // switch), so legitimate re-fits still happen.
         if (hasFitCameraRef.current) {
             console.log('🔒 Skipping bounds fit — camera already positioned (preserving user view)');
             return;
@@ -187,66 +202,106 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             } else {
                 cameraRef.current.fitBounds(bounds.ne, bounds.sw, [50, 50, 50, 50], 1000);
             }
-            // ✅ Mark fit as done so subsequent renders don't move the camera.
-            //    Set INSIDE the timeout (after cameraRef check) so we don't
-            //    falsely flag a fit that never actually happened.
             hasFitCameraRef.current = true;
         };
         const timer = setTimeout(tryFocus, 300);
         return () => clearTimeout(timer);
     }, [bounds]);
 
-
+    // ── Participants follow effect ─────────────────────────────────────────
+    // BEFORE the first fit: behaves like before (fit to participant bounds).
+    // AFTER the first fit: no longer hard short-circuits. Instead it preserves
+    // the fan's current ZOOM and only PANS when the tracked position has
+    // drifted off-screen (outside getVisibleBounds, minus a small margin).
+    // If the tracked position is still comfortably on-screen, the camera is
+    // left untouched so manual zoom / pan is preserved.
     useEffect(() => {
-        if (!mapReadyRef.current) return;  
+        if (!mapReadyRef.current) return;
         if (participants.length === 0) return;
 
         const valid = participants.filter(p => p.lat !== 0 && p.lon !== 0);
         if (valid.length === 0) return;
         if (!cameraRef.current) return;
 
-        // ✅ NEW — same fit-once guard as the bounds effect. Without this,
-        // every auto-refresh would re-fit on participants and yank the
-        // map back to the participants' bounding box, undoing the fan's
-        // zoom-in. Re-armed by the reset effect on route change.
-        if (hasFitCameraRef.current) {
-            console.log('🔒 Skipping participants fit — camera already positioned (preserving user view)');
-            return;
+        // ── Case 1: initial fit not done yet → original fit-to-bounds behaviour.
+        if (!hasFitCameraRef.current) {
+            const timer = setTimeout(() => {
+                if (!cameraRef.current) return;
+
+                if (valid.length === 1) {
+                    cameraRef.current.setCamera({
+                        centerCoordinate: [valid[0].lon, valid[0].lat],
+                        zoomLevel: 15,
+                        animationDuration: 800,
+                        animationMode: 'flyTo',
+                    });
+                } else {
+                    const lons = valid.map(p => p.lon);
+                    const lats = valid.map(p => p.lat);
+                    cameraRef.current.fitBounds(
+                        [Math.max(...lons), Math.max(...lats)],
+                        [Math.min(...lons), Math.min(...lats)],
+                        [80, 80, 80, 80],
+                        800
+                    );
+                }
+                hasFitCameraRef.current = true;
+            }, 500);
+
+            return () => clearTimeout(timer);
         }
 
-        const timer = setTimeout(() => {
-            if (!cameraRef.current) return;
+        // ── Case 2: already fit (auto-refresh) → follow only if off-screen,
+        //    preserving the fan's current zoom level.
+        let cancelled = false;
 
-            if (valid.length === 1) {
-                cameraRef.current.setCamera({
-                    centerCoordinate: [valid[0].lon, valid[0].lat],
-                    zoomLevel: 15,
-                    animationDuration: 800,
-                    animationMode: 'flyTo',
-                });
-            } else {
-                const lons = valid.map(p => p.lon);
-                const lats = valid.map(p => p.lat);
-                cameraRef.current.fitBounds(
-                    [Math.max(...lons), Math.max(...lats)],
-                    [Math.min(...lons), Math.min(...lats)],
-                    [80, 80, 80, 80],
-                    800
-                );
+        const followIfOffScreen = async () => {
+            if (!mapViewRef.current || !cameraRef.current) return;
+
+            let visibleBounds: [[number, number], [number, number]] | null = null;
+            try {
+                // getVisibleBounds → [[neLon, neLat], [swLon, swLat]]
+                visibleBounds = await mapViewRef.current.getVisibleBounds() as any;
+            } catch (e) {
+                console.log('⚠️ getVisibleBounds failed, skipping follow:', e);
+                return;
             }
-            // ✅ Mark fit as done so subsequent renders don't move the camera.
-            hasFitCameraRef.current = true;
-        }, 500); 
+            if (cancelled || !visibleBounds) return;
 
-        return () => clearTimeout(timer);
-    }, [participants, mapReady]); // ← add mapReady as dependency
+            // Track the centroid of all valid participants (for a single
+            // self-tracked user this is just their position).
+            const lons = valid.map(p => p.lon);
+            const lats = valid.map(p => p.lat);
+            const centerLon = (Math.max(...lons) + Math.min(...lons)) / 2;
+            const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
+
+            // If EVERY tracked point is still on-screen, leave the camera as
+            // the fan set it. Otherwise recenter on the centroid, keeping zoom.
+            const allOnScreen = valid.every(p =>
+                isPointInBounds(p.lon, p.lat, visibleBounds!),
+            );
+
+            if (allOnScreen) {
+                console.log('✅ Tracked position still on-screen — preserving fan view');
+                return;
+            }
+
+            console.log('📍 Tracked position off-screen — panning to follow (zoom preserved)');
+            // setCamera with ONLY centerCoordinate keeps the current zoomLevel.
+            cameraRef.current!.setCamera({
+                centerCoordinate: [centerLon, centerLat],
+                animationDuration: 800,
+                animationMode: 'easeTo',
+            });
+        };
+
+        const timer = setTimeout(followIfOffScreen, 500);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [participants, mapReady]);
 
     const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
         console.log('🗺️ Creating participants GeoJSON with', participants.length, 'participants');
 
-        // ✅ Filter out (0,0) coords — null lat/lon gets parsed as 0 by safeParseFloat.
-        // (0,0) is a real coordinate in the Gulf of Guinea — not a race location.
-        // Already filtered in LiveTrackingScreen but kept here as a safety net.
         const validParticipants = participants.filter(p => p.lat !== 0 || p.lon !== 0);
 
         return {
@@ -304,7 +359,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     const lat = parseFloat(String(checkpoint.latitude));
                     const lon = parseFloat(String(checkpoint.longitude));
 
-                    // ✅ Offset FIN slightly so it doesn't fully overlap START
                     const offsetLon = checkpoint.is_finish ? lon + 0.0003 : lon;
                     const offsetLat = checkpoint.is_finish ? lat + 0.0003 : lat;
 
@@ -329,7 +383,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             };
         }
 
-        // Fallback to GPX aid stations
         return {
             type: 'FeatureCollection',
             features: aidStations.map((station, idx) => ({
@@ -351,7 +404,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         };
     }, [aidStations, apiCheckpoints]);
 
-    // Follower's own position — built from live device GPS, never from DB.
     const followerGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => ({
         type: 'FeatureCollection',
         features: followerLocation
@@ -366,7 +418,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     const handleParticipantPress = (event: any) => {
         console.log('👆 Participant tapped:', event.features?.length);
         const feature = event.features[0];
-
 
         if (feature && feature.properties) {
             const props = feature.properties;
@@ -415,7 +466,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 features: typeof props.features === 'string'
                     ? JSON.parse(props.features)
                     : props.features ?? [],
-
             };
 
             onAidStationPress(station);
@@ -425,6 +475,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     return (
         <View style={liveTrackingStyles.mapContainer}>
             <Mapbox.MapView
+                ref={mapViewRef}
                 style={{ flex: 1 }}
                 styleURL={Mapbox.StyleURL.Outdoors}
                 compassEnabled={true}
@@ -458,11 +509,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     />
                 </Mapbox.ShapeSource>
 
-                {/* ── Checkpoints / Aid Stations ───────────────────────────
-                    green  = START
-                    red    = FINISH
-                    orange = intermediate checkpoints (with fork & knife icon)
-                    Two filtered SymbolLayers to avoid mixing textField + iconImage. */}
+                {/* ── Checkpoints / Aid Stations ─────────────────────────── */}
                 <Mapbox.ShapeSource
                     id="aidstations-source"
                     shape={aidStationsGeoJSON}
@@ -485,7 +532,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         }}
                     />
 
-                    {/* Fork & knife icon for intermediate checkpoints */}
                     <Mapbox.SymbolLayer
                         id="aidstation-fork-icons"
                         filter={['all',
@@ -501,7 +547,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         }}
                     />
 
-                    {/* S / F text for start & finish */}
                     <Mapbox.SymbolLayer
                         id="aidstation-sf-labels"
                         filter={['any',
@@ -521,12 +566,9 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                             textIgnorePlacement: true,
                         }}
                     />
-
-
                 </Mapbox.ShapeSource>
 
-                {/* ── Participants ─────────────────────────────────────────
-                    Blue circles — distinct from green START marker. */}
+                {/* ── Participants ───────────────────────────────────────── */}
                 {participants.length > 0 && (
                     <Mapbox.ShapeSource
                         id="participants-source"
@@ -535,9 +577,8 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     >
                         <Mapbox.CircleLayer
                             id="participant-dots"
-
                             style={{
-                                circleColor: MARKER_COLORS.participant, // blue
+                                circleColor: MARKER_COLORS.participant,
                                 circleRadius: 13,
                                 circleStrokeWidth: 4,
                                 circleStrokeColor: '#FFFFFF',
@@ -563,9 +604,8 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         />
                     </Mapbox.ShapeSource>
                 )}
-                {/* ── Follower "You are here" marker ────────────────────────
-                    Indigo circle — distinct from orange participant markers.
-                    Rendered from device GPS only, no DB involved. */}
+
+                {/* ── Follower "You are here" marker ──────────────────────── */}
                 {followerLocation && (
                     <Mapbox.ShapeSource id="follower-source" shape={followerGeoJSON}>
                         <Mapbox.CircleLayer
