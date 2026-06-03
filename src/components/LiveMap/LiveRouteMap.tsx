@@ -353,14 +353,44 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
 
             console.log(`🗺️ Checkpoints: ${apiCheckpoints.length} total, ${validCheckpoints.length} with valid coords`);
 
+            // ── Start/Finish overlap handling ──────────────────────────────
+            // On LOOP courses start ≈ finish, so the S and F markers would
+            // render on top of each other. We nudge the finish marker a tiny
+            // amount ONLY in that case. On point-to-point courses (start far
+            // from finish) the finish keeps its TRUE coordinate, so zooming in
+            // shows it exactly on the route end instead of floating ~33m aside.
+            const startCp  = validCheckpoints.find(cp => cp.is_start);
+            const finishCp = validCheckpoints.find(cp => cp.is_finish);
+
+            let finishNudgeLat = 0;
+            if (startCp && finishCp) {
+                const sLat = parseFloat(String(startCp.latitude));
+                const sLon = parseFloat(String(startCp.longitude));
+                const fLat = parseFloat(String(finishCp.latitude));
+                const fLon = parseFloat(String(finishCp.longitude));
+                // Cheap equirectangular metres (exact enough under ~100m).
+                const dLatM = (fLat - sLat) * 111320;
+                const dLonM = (fLon - sLon) * 111320 * Math.cos((sLat * Math.PI) / 180);
+                const startFinishMeters = Math.sqrt(dLatM * dLatM + dLonM * dLonM);
+
+                // Within ~25m → effectively the same point (loop). A ~6.7m
+                // nudge keeps both circles visible while the finish stays
+                // essentially on the route end at any zoom.
+                if (startFinishMeters <= 25) {
+                    finishNudgeLat = 0.00006; // ≈ 6.7m north
+                }
+            }
+
             return {
                 type: 'FeatureCollection',
                 features: validCheckpoints.map((checkpoint, idx) => {
                     const lat = parseFloat(String(checkpoint.latitude));
                     const lon = parseFloat(String(checkpoint.longitude));
 
-                    const offsetLon = checkpoint.is_finish ? lon + 0.0003 : lon;
-                    const offsetLat = checkpoint.is_finish ? lat + 0.0003 : lat;
+                    // Only loop-course finishes get a small nudge; everything
+                    // else (and all non-finish CPs) sits on its true coordinate.
+                    const useLat = checkpoint.is_finish ? lat + finishNudgeLat : lat;
+                    const useLon = lon;
 
                     return {
                         type: 'Feature' as const,
@@ -376,7 +406,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         },
                         geometry: {
                             type: 'Point' as const,
-                            coordinates: [offsetLon, offsetLat],
+                            coordinates: [useLon, useLat],
                         },
                     };
                 }),
