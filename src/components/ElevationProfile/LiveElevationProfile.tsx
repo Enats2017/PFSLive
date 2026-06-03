@@ -34,7 +34,19 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
 
     const scrollViewRef = React.useRef<ScrollView>(null);
 
-    const chartWidth = Math.max(screenWidth, totalDistance * 80);
+    // Pixels-per-km tapers with route length so short routes stay legible and
+    // very long routes (100–200km) don't produce an unscrollably huge canvas.
+    //   - Floor (screenWidth): short routes fill the screen, no scroll.
+    //   - Target 150 px/km: smooth dot movement on short/medium routes (≤80km).
+    //   - Ceiling (MAX_CHART_WIDTH): beyond ~80km the cap kicks in and px/km
+    //     tapers — e.g. 100km → 120px/km, 200km → 60px/km — still visible
+    //     movement, but Victory renders and scrolls without lag.
+    const PER_KM_TARGET = 150;     // ideal px/km for short/medium routes
+    const MAX_CHART_WIDTH = 12000; // hard ceiling on total scroll width
+    const chartWidth = Math.min(
+        MAX_CHART_WIDTH,
+        Math.max(screenWidth, totalDistance * PER_KM_TARGET)
+    );
     const chartHeight = 220;
 
     const elevationRange = maxElevation - minElevation;
