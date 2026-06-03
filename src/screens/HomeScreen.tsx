@@ -462,6 +462,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const token = await tokenService.getToken();
       setHasToken(!!token);
 
+      // ✅ Always fetch home data — a logged-out fan still needs
+      //    following_live_events (keyed on device_id). The token-only work
+      //    (GPS permissions + queue size, which are participant-tracking
+      //    concerns) stays gated behind a present token.
       if (token) {
         await Promise.all([
           fetchHomeData(),
@@ -469,8 +473,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           loadQueueSize(),
         ]);
       } else {
-        if (API_CONFIG.DEBUG) console.log('⚠️ No token - clearing home data');
-        setHomeData(null);
+        if (API_CONFIG.DEBUG) console.log('⚠️ No token - fetching follower data only');
+        await fetchHomeData();
       }
     } catch (error) {
       if (API_CONFIG.DEBUG) console.error('❌ Error initializing screen:', error);
@@ -483,17 +487,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     try {
       const token = await tokenService.getToken();
       const deviceId = await getDeviceId();
-      if (!token) {
-        if (API_CONFIG.DEBUG) console.log('⚠️ No token - skipping fetch');
-        setHasToken(false);
-        setHomeData(null);
-        setLoading(false);
-        return;
-      }
 
-      setHasToken(true);
+      // ✅ Do NOT bail out when there is no token. A not-logged-in fan still
+      //    needs home data (following_live_events) to see who they follow —
+      //    that section is keyed on device_id, which getDeviceId() provides
+      //    regardless of login. We only set hasToken so the participant-only
+      //    UI (start-tracking card) stays hidden for logged-out users; the
+      //    fetch itself proceeds either way. When a token IS present we send
+      //    the auth headers; when it isn't we send a plain device_id body so
+      //    the server returns the follower payload only.
+      setHasToken(!!token);
 
-      const headers = await API_CONFIG.getHeaders();
+      const headers = token
+        ? await API_CONFIG.getHeaders()
+        : { 'Content-Type': 'application/json' };
       const requestBody = {
         device_id: deviceId,
       };
@@ -1260,16 +1267,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const checkTokenAndPoll = async () => {
         const token = await tokenService.getToken();
 
-        if (!token) {
-          if (API_CONFIG.DEBUG) console.log('📴 No token - clearing data');
-          setHasToken(false);
-          setHomeData(null);
-          return null;
+        // ✅ Poll for everyone — logged-out fans need following_live_events to
+        //    refresh too. hasToken still reflects login state (it gates the
+        //    participant-only UI), but the fetch + poll run either way.
+        setHasToken(!!token);
+
+        if (API_CONFIG.DEBUG) {
+          console.log(token
+            ? '📡 Home screen focused - Fetching data'
+            : '📡 Home screen focused - Fetching follower data (no token)');
         }
-
-        setHasToken(true);
-
-        if (API_CONFIG.DEBUG) console.log('📡 Home screen focused - Fetching data');
         fetchHomeData();
 
         const interval = setInterval(() => {
