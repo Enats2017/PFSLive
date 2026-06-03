@@ -16,6 +16,89 @@ const MARKER_COLORS = {
     follower: '#6366F1', // indigo — "you are here" marker (viewer's own position)
 } as const;
 
+// ── Distance-marker styling ───────────────────────────────────────────────────
+const KM_MARKER_COLOR  = '#475569'; // slate — neutral dot anchor (labels tinted per leg)
+const MINOR_KM_MIN_ZOOM = 13;       // every-km markers appear once zoomed in past this
+                                    // (major 5km markers are always visible)
+
+const ROUTE_OUT_COLOR = '#3B82F6'; // blue   — outbound ("going")
+const ROUTE_IN_COLOR  = '#A855F7'; // purple — inbound ("coming back")
+
+const INBOUND_OFFSET_M = 15; // metres the inbound lane is shifted sideways from outbound
+
+// Haversine distance in km between two lat/lon points.
+const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+// Shift a polyline perpendicular to its travel direction by a fixed metre amount.
+// Used to draw the inbound leg as a parallel "lane" beside the outbound leg so
+// its line, arrows and km markers don't land on top of the outbound geometry.
+const offsetPolylineMeters = (coords: [number, number][], offsetM: number): [number, number][] => {
+    const n = coords.length;
+    if (n < 2 || offsetM === 0) return coords;
+    const out: [number, number][] = [];
+    for (let i = 0; i < n; i++) {
+        const a = coords[Math.max(0, i - 1)];
+        const b = coords[Math.min(n - 1, i + 1)];
+        const lat = coords[i][1];
+        const cosLat = Math.cos((lat * Math.PI) / 180) || 1e-6;
+        const dE = (b[0] - a[0]) * 111320 * cosLat; // east metres
+        const dN = (b[1] - a[1]) * 111320;          // north metres
+        const len = Math.sqrt(dE * dE + dN * dN) || 1;
+        const ue = dE / len, un = dN / len;          // unit travel vector
+        const pe = -un, pn = ue;                     // perpendicular (left of travel)
+        const dLon = (pe * offsetM) / (111320 * cosLat);
+        const dLat = (pn * offsetM) / 111320;
+        out.push([coords[i][0] + dLon, coords[i][1] + dLat]);
+    }
+    return out;
+};
+
+// Walk a polyline placing a marker at each integer-km boundary. distanceCoords
+// drives the km VALUE (true geometry), posCoords drives the placed POSITION
+// (may be the offset lane). Both arrays share indices/length. Returns the end km.
+const placeKmMarkers = (
+    distanceCoords: [number, number][],
+    posCoords: [number, number][],
+    startKm: number,
+    leg: string,
+    stopBeforeKm: number,
+    features: GeoJSON.Feature<GeoJSON.Point>[],
+): number => {
+    let cumulative = startKm;
+    let nextKm = Math.floor(startKm) + 1;
+    for (let i = 1; i < distanceCoords.length; i++) {
+        const segKm = haversineKm(
+            distanceCoords[i - 1][1], distanceCoords[i - 1][0],
+            distanceCoords[i][1], distanceCoords[i][0],
+        );
+        const segEnd = cumulative + segKm;
+        while (nextKm <= segEnd && nextKm < stopBeforeKm) {
+            if (segKm > 0) {
+                const f = (nextKm - cumulative) / segKm;
+                const lon = posCoords[i - 1][0] + (posCoords[i][0] - posCoords[i - 1][0]) * f;
+                const lat = posCoords[i - 1][1] + (posCoords[i][1] - posCoords[i - 1][1]) * f;
+                features.push({
+                    type: 'Feature',
+                    properties: { km: nextKm, is_major: nextKm % 5 === 0, label: `${nextKm}k`, leg },
+                    geometry: { type: 'Point', coordinates: [lon, lat] },
+                });
+            }
+            nextKm += 1;
+        }
+        cumulative = segEnd;
+    }
+    return cumulative;
+};
+
 interface LiveRouteMapProps {
     trackPoints: GPXTrackPoint[];
     aidStations: GPXAidStation[];
@@ -339,6 +422,92 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         };
     }, [participants]);
 
+    // ── Shared route split (outbound / offset inbound) ──────────────────────────
+    // Computed once; both the colored legs and the km markers derive from it.
+    // Only loop / out-and-back routes (start ≈ end) are split at the cumulative-
+    // distance midpoint (the turnaround on an out-and-back, first-half/second-half
+    // on a loop). Point-to-point routes (start far from end) stay a single line.
+    // The inbound leg's GEOMETRY is offset sideways so its line, arrows and km
+    // markers form a parallel lane instead of stacking on the outbound geometry.
+    const routeSplit = React.useMemo(() => {
+        if (trackPoints.length < 2) {
+            return { isLoop: false, outCoords: [] as [number, number][], inCoordsTrue: [] as [number, number][], inCoords: [] as [number, number][], totalKm: 0 };
+        }
+        const coords = trackPoints.map(pt => [pt.lon, pt.lat] as [number, number]);
+
+        const startEndKm = haversineKm(
+            trackPoints[0].lat, trackPoints[0].lon,
+            trackPoints[trackPoints.length - 1].lat, trackPoints[trackPoints.length - 1].lon,
+        );
+        const isLoop = startEndKm <= 0.1; // start within 100m of end → loop / out-and-back
+
+        let totalKm = 0;
+        for (let i = 1; i < trackPoints.length; i++) {
+            totalKm += haversineKm(trackPoints[i - 1].lat, trackPoints[i - 1].lon, trackPoints[i].lat, trackPoints[i].lon);
+        }
+
+        if (!isLoop) {
+            return { isLoop: false, outCoords: coords, inCoordsTrue: [] as [number, number][], inCoords: [] as [number, number][], totalKm };
+        }
+
+        const halfKm = totalKm / 2;
+        let cumulative = 0;
+        let splitIdx = 1;
+        for (let i = 1; i < trackPoints.length; i++) {
+            cumulative += haversineKm(trackPoints[i - 1].lat, trackPoints[i - 1].lon, trackPoints[i].lat, trackPoints[i].lon);
+            if (cumulative >= halfKm) { splitIdx = i; break; }
+        }
+
+        const outCoords    = coords.slice(0, splitIdx + 1); // include split point in both
+        const inCoordsTrue = coords.slice(splitIdx);
+        const inCoords     = offsetPolylineMeters(inCoordsTrue, INBOUND_OFFSET_M);
+
+        return { isLoop: true, outCoords, inCoordsTrue, inCoords, totalKm };
+    }, [trackPoints]);
+
+    // ── Distance (km) markers ───────────────────────────────────────────────────
+    // Placed by cumulative distance. Outbound markers sit on the true path;
+    // inbound markers use the TRUE inbound geometry for the km value but the
+    // OFFSET geometry for position, so they sit on the purple lane while the
+    // labels stay accurate. Loop/out-and-back numbers continue across the
+    // turnaround (… 8k going, 9k coming back). We never place a marker at total
+    // distance (the Finish). Each marker is tagged `leg` so labels can be tinted.
+    const distanceMarkersGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
+        const { isLoop, outCoords, inCoordsTrue, inCoords, totalKm } = routeSplit;
+        if (outCoords.length < 2 || totalKm <= 0) {
+            return { type: 'FeatureCollection', features: [] };
+        }
+        const features: GeoJSON.Feature<GeoJSON.Point>[] = [];
+
+        if (!isLoop) {
+            placeKmMarkers(outCoords, outCoords, 0, 'out', totalKm, features);
+        } else {
+            const outEnd = placeKmMarkers(outCoords, outCoords, 0, 'out', totalKm, features);
+            placeKmMarkers(inCoordsTrue, inCoords, outEnd, 'in', totalKm, features);
+        }
+
+        console.log(`📏 Route km markers: ${features.length} placed (total ${totalKm.toFixed(2)}km, loop=${isLoop})`);
+        return { type: 'FeatureCollection', features };
+    }, [routeSplit]);
+
+    // ── Route legs (outbound / inbound) ─────────────────────────────────────────
+    // Loop/out-and-back routes draw an outbound leg (true path) and an inbound
+    // leg (offset lane); point-to-point routes have only the outbound leg → a
+    // single line. Derived from routeSplit so geometry, arrows and km markers all
+    // agree on where each lane is.
+    const routeLegsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.LineString>>(() => {
+        const { isLoop, outCoords, inCoords } = routeSplit;
+        if (outCoords.length < 2) return { type: 'FeatureCollection', features: [] };
+
+        const features: GeoJSON.Feature<GeoJSON.LineString>[] = [
+            { type: 'Feature', properties: { leg: 'out' }, geometry: { type: 'LineString', coordinates: outCoords } },
+        ];
+        if (isLoop && inCoords.length >= 2) {
+            features.push({ type: 'Feature', properties: { leg: 'in' }, geometry: { type: 'LineString', coordinates: inCoords } });
+        }
+        return { type: 'FeatureCollection', features };
+    }, [routeSplit]);
+
     const aidStationsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
         if (apiCheckpoints.length > 0) {
             const validCheckpoints = apiCheckpoints.filter(cp => {
@@ -526,18 +695,187 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     animationDuration={1000}
                 />
 
-                {/* Route */}
-                <Mapbox.ShapeSource id="route-source" shape={routeGeoJSON}>
+                {/* ── Route legs + direction arrows ───────────────────────────
+                    Loop/out-and-back routes draw the outbound leg blue on the
+                    true path and the inbound leg purple on a parallel lane
+                    (its GEOMETRY is offset, so line + arrows + km all line up).
+                    Point-to-point routes have only the 'out' feature → single
+                    blue line. Arrows use allowOverlap so BOTH directions always
+                    render — that's what fixes the missing return chevrons. */}
+                <Mapbox.ShapeSource id="route-source" shape={routeLegsGeoJSON}>
+                    {/* ── Casing (border) layers — drawn first so they sit UNDER
+                        the colored lines, creating a slick outline. Wider than
+                        the line on top. */}
                     <Mapbox.LineLayer
-                        id="route-line"
+                        id="route-line-out-casing"
+                        filter={['==', ['get', 'leg'], 'out'] as any}
                         style={{
-                            lineColor: '#3B82F6',
+                            lineColor: '#1E293B',
+                            lineWidth: 7,            // wider than the 4px line on top
+                            lineCap: 'round',
+                            lineJoin: 'round',
+                            lineOpacity: 0.9,
+                        }}
+                    />
+                    <Mapbox.LineLayer
+                        id="route-line-in-casing"
+                        filter={['==', ['get', 'leg'], 'in'] as any}
+                        style={{
+                            lineColor: '#1E293B',
+                            lineWidth: 7,
+                            lineCap: 'round',
+                            lineJoin: 'round',
+                            lineOpacity: 0.9,
+                        }}
+                    />
+
+                    {/* Outbound line (going) */}
+                    <Mapbox.LineLayer
+                        id="route-line-out"
+                        filter={['==', ['get', 'leg'], 'out'] as any}
+                        style={{
+                            lineColor: ROUTE_OUT_COLOR,
                             lineWidth: 4,
                             lineCap: 'round',
                             lineJoin: 'round',
                         }}
                     />
+                    {/* Inbound line (coming back) — geometry already offset into
+                        a parallel lane, so no lineOffset here */}
+                    <Mapbox.LineLayer
+                        id="route-line-in"
+                        filter={['==', ['get', 'leg'], 'in'] as any}
+                        style={{
+                            lineColor: ROUTE_IN_COLOR,
+                            lineWidth: 4,
+                            lineCap: 'round',
+                            lineJoin: 'round',
+                        }}
+                    />
+
+                    {/* Outbound arrows (blue halo) */}
+                    <Mapbox.SymbolLayer
+                        id="route-arrows-out"
+                        filter={['==', ['get', 'leg'], 'out'] as any}
+                        minZoomLevel={12}
+                        style={{
+                            symbolPlacement: 'line',
+                            symbolSpacing: 140,
+                            textField: '▶',                 // swap to '>' if blank
+                            textSize: 14,
+                            textColor: '#FFFFFF',
+                            textHaloColor: ROUTE_OUT_COLOR,
+                            textHaloWidth: 1.5,
+                            textKeepUpright: false,
+                            textRotationAlignment: 'map',
+                            textPitchAlignment: 'map',
+                            textAllowOverlap: true,         // ✅ always render
+                            textIgnorePlacement: true,
+                        }}
+                    />
+                    {/* Inbound arrows (purple halo) */}
+                    <Mapbox.SymbolLayer
+                        id="route-arrows-in"
+                        filter={['==', ['get', 'leg'], 'in'] as any}
+                        minZoomLevel={12}
+                        style={{
+                            symbolPlacement: 'line',
+                            symbolSpacing: 140,
+                            textField: '▶',
+                            textSize: 14,
+                            textColor: '#FFFFFF',
+                            textHaloColor: ROUTE_IN_COLOR,
+                            textHaloWidth: 1.5,
+                            textKeepUpright: false,
+                            textRotationAlignment: 'map',
+                            textPitchAlignment: 'map',
+                            textAllowOverlap: true,
+                            textIgnorePlacement: true,
+                        }}
+                    />
                 </Mapbox.ShapeSource>
+
+                {/* ── Distance (km) markers ───────────────────────────────────
+                    Points on km-markers-source. Dots stay slate (neutral
+                    anchor); labels are tinted blue (outbound) / purple (inbound)
+                    so they match their lane. Major (every 5km) always visible
+                    and grow when zoomed out; minor (every km) only appears once
+                    zoomed in past MINOR_KM_MIN_ZOOM. */}
+                {trackPoints.length > 1 && (
+                    <Mapbox.ShapeSource id="km-markers-source" shape={distanceMarkersGeoJSON}>
+                        {/* Major dots (5,10,15 …) — always visible, grow when zoomed out */}
+                        <Mapbox.CircleLayer
+                            id="km-dots-major"
+                            filter={['==', ['get', 'is_major'], true] as any}
+                            style={{
+                                circleColor: KM_MARKER_COLOR,
+                                circleRadius: [
+                                    'interpolate', ['linear'], ['zoom'],
+                                    10, 9,   // zoomed out → bigger
+                                    13, 6,
+                                    16, 5,   // zoomed in → normal
+                                ] as any,
+                                circleStrokeWidth: 2,
+                                circleStrokeColor: '#FFFFFF',
+                                circlePitchAlignment: 'map',
+                                circleOpacity: 1,
+                            }}
+                        />
+                        <Mapbox.SymbolLayer
+                            id="km-labels-major"
+                            filter={['==', ['get', 'is_major'], true] as any}
+                            style={{
+                                textField: ['get', 'label'] as any,
+                                textSize: [
+                                    'interpolate', ['linear'], ['zoom'],
+                                    10, 14,
+                                    13, 12,
+                                    16, 11,
+                                ] as any,
+                                textColor: ['case', ['==', ['get', 'leg'], 'in'], ROUTE_IN_COLOR, ROUTE_OUT_COLOR] as any,
+                                textHaloColor: '#FFFFFF',
+                                textHaloWidth: 2,
+                                textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                                textOffset: [0, -0.9],
+                                textAnchor: 'bottom',
+                                textAllowOverlap: false,
+                                textIgnorePlacement: false,
+                            }}
+                        />
+
+                        {/* Minor dots (1,2,3 …) — only when zoomed in */}
+                        <Mapbox.CircleLayer
+                            id="km-dots-minor"
+                            minZoomLevel={MINOR_KM_MIN_ZOOM}
+                            filter={['!=', ['get', 'is_major'], true] as any}
+                            style={{
+                                circleColor: KM_MARKER_COLOR,
+                                circleRadius: 4,
+                                circleStrokeWidth: 2,
+                                circleStrokeColor: '#FFFFFF',
+                                circlePitchAlignment: 'map',
+                                circleOpacity: 0.9,
+                            }}
+                        />
+                        <Mapbox.SymbolLayer
+                            id="km-labels-minor"
+                            minZoomLevel={MINOR_KM_MIN_ZOOM}
+                            filter={['!=', ['get', 'is_major'], true] as any}
+                            style={{
+                                textField: ['get', 'label'] as any,
+                                textSize: 10,
+                                textColor: ['case', ['==', ['get', 'leg'], 'in'], ROUTE_IN_COLOR, ROUTE_OUT_COLOR] as any,
+                                textHaloColor: '#FFFFFF',
+                                textHaloWidth: 2,
+                                textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                                textOffset: [0, -0.9],
+                                textAnchor: 'bottom',
+                                textAllowOverlap: false,
+                                textIgnorePlacement: false,
+                            }}
+                        />
+                    </Mapbox.ShapeSource>
+                )}
 
                 {/* ── Checkpoints / Aid Stations ─────────────────────────── */}
                 <Mapbox.ShapeSource
