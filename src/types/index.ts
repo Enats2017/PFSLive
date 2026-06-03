@@ -21,7 +21,9 @@ export interface RouteData {
 
 export interface ChartDataPoint {
 	x: number; // distance in km
-	y: number; // elevation in m
+	y: number;
+	 lat: number; // ✅ added
+    lon: number; // elevation in m
 }
 
 export interface ParticipantPosition {

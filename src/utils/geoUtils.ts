@@ -68,6 +68,8 @@ export function buildChartData(
 	return trackPoints.map((pt, idx) => ({
 		x: distances[idx],
 		y: pt.ele,
+		lat: pt.lat, // ✅ added
+        lon: pt.lon,
 	}));
 }
 

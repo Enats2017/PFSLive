@@ -37,7 +37,10 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     const chartWidth = Math.max(screenWidth, totalDistance * 80);
     const chartHeight = 220;
 
-    const yDomain: [number, number] = [minElevation, maxElevation];
+    const elevationRange = maxElevation - minElevation;
+    const topBuffer = elevationRange * 0.15;
+
+    const yDomain: [number, number] = [minElevation, maxElevation + topBuffer];
 
     const checkpointChartPoints = React.useMemo(() => {
         if (apiCheckpoints.length > 0) {
@@ -75,24 +78,41 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
 
     const participantChartPoints = React.useMemo(() => {
         return participants
-            .filter(p => p.distance_km > 0)
+            .filter(p => p.lat !== 0 && p.lon !== 0)
             .map(p => {
-                let elevation = p.ele;
-                if (chartData.length > 0) {
-                    const closest = chartData.reduce((prev, curr) =>
-                        Math.abs(curr.x - p.distance_km) < Math.abs(prev.x - p.distance_km)
-                            ? curr : prev
-                    );
-                    elevation = closest.y;
-                }
-                console.log('📊 Participant chart point:', {
-                    name: p.name,
-                    distance_km: p.distance_km,
-                    originalEle: p.ele,
-                    interpolatedEle: elevation,
+                if (chartData.length === 0) return null;
+
+                // ✅ Find top 3 closest chart points by lat/lon
+                const sorted = [...chartData]
+                    .map(pt => ({
+                        pt,
+                        diff: Math.pow(pt.lat - p.lat, 2) + Math.pow(pt.lon - p.lon, 2),
+                    }))
+                    .sort((a, b) => a.diff - b.diff)
+                    .slice(0, 3); // top 3 nearest candidates
+
+                // ✅ Among candidates, pick the one whose x (distance)
+                // is closest to p.distance_km (API distance as hint)
+                // This resolves loop ambiguity — same lat/lon, different route km
+                const best = sorted.reduce((prev, curr) => {
+                    const prevDiff = Math.abs(prev.pt.x - p.distance_km);
+                    const currDiff = Math.abs(curr.pt.x - p.distance_km);
+                    return currDiff < prevDiff ? curr : prev;
                 });
-                return { x: p.distance_km, y: elevation };
-            });
+
+                console.log('📍 Participant elevation point:', {
+                    name: p.name,
+                    lat: p.lat,
+                    lon: p.lon,
+                    distance_km: p.distance_km,
+                    chosenX: best.pt.x,
+                    chosenY: best.pt.y,
+                    candidates: sorted.map(s => ({ x: s.pt.x, diff: s.diff })),
+                });
+
+                return { x: best.pt.x, y: best.pt.y };
+            })
+            .filter((p): p is { x: number; y: number } => p !== null);
     }, [participants, chartData]);
 
     // ✅ NEW: Auto-scroll to keep participant dot visible whenever their position changes
@@ -231,7 +251,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     <VictoryChart
                         width={chartWidth}
                         height={chartHeight}
-                        padding={{ top: 10, bottom: 20, left: 0, right: 0 }}
+                        padding={{ top: 20, bottom: 20, left: 0, right: 0 }}
                         domain={{ x: [0, totalDistance] as [number, number], y: yDomain }}
                     >
                         <VictoryAxis
