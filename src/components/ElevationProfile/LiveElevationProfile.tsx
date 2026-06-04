@@ -220,6 +220,49 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
         }
     };
 
+    // Combined tap targets (checkpoints + participants) in screen coordinates.
+    // One flat list so taps are resolved by nearest-hit, not by which absolute
+    // overlay happens to sit on top — fixes occlusion when participants cluster.
+    const tapTargets = React.useMemo(() => {
+        const PAD_TOP = 20, PAD_BOTTOM = 20;
+        const plotHeight = chartHeight - PAD_TOP - PAD_BOTTOM;
+        const toScreenY = (yVal: number) => {
+            const yPct = (yVal - yDomain[0]) / (yDomain[1] - yDomain[0]);
+            return PAD_TOP + (1 - yPct) * plotHeight;
+        };
+        const targets: Array<{
+            kind: 'cp' | 'pt'; idx: number; sx: number; sy: number; point: any;
+        }> = [];
+        checkpointChartPoints.forEach((point, idx) => {
+            targets.push({ kind: 'cp', idx, sx: (point.x / totalDistance) * chartWidth, sy: toScreenY(point.y), point });
+        });
+        participantChartPoints.forEach((point, idx) => {
+            targets.push({ kind: 'pt', idx, sx: (point.x / totalDistance) * chartWidth, sy: toScreenY(point.y), point });
+        });
+        return targets;
+    }, [checkpointChartPoints, participantChartPoints, chartWidth, totalDistance, yDomain, chartHeight]);
+
+    // Given an absolute touch point on the chart, dispatch to the nearest target.
+    // Participants get a small bias so a participant sitting on a checkpoint wins
+    // the tie, but an off-participant tap still falls to the checkpoint.
+    const dispatchNearestTarget = (absX: number, absY: number) => {
+        let best: typeof tapTargets[number] | null = null;
+        let bestScore = Infinity;
+        for (const tgt of tapTargets) {
+            const dx = tgt.sx - absX;
+            const dy = tgt.sy - absY;
+            const d = dx * dx + dy * dy;
+            const score = tgt.kind === 'pt' ? d - 4 : d; // slight participant bias
+            if (score < bestScore) { bestScore = score; best = tgt; }
+        }
+        if (!best) return;
+        if (best.kind === 'cp') {
+            handleCheckpointClick(best.point, best.idx);
+        } else if (onParticipantPress) {
+            onParticipantPress(best.point.participant);
+        }
+    };
+
     if (chartData.length === 0) {
         return null;
     }
@@ -405,48 +448,28 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                         />
                     </VictoryChart>
 
-                    {/* Checkpoint tap targets (lower layer) */}
-                    {checkpointChartPoints.map((point, idx) => {
-                        const xPosition = (point.x / totalDistance) * chartWidth;
-                        const PAD_TOP = 20, PAD_BOTTOM = 20;
-                        const plotHeight = chartHeight - PAD_TOP - PAD_BOTTOM;
-                        const yPct = (point.y - yDomain[0]) / (yDomain[1] - yDomain[0]);
-                        const yPosition = PAD_TOP + (1 - yPct) * plotHeight;
+                    {/* Unified tap layer — one box per target, all same size + z.
+                        Whichever box catches the touch resolves to the truly
+                        nearest target via dispatchNearestTarget, so overlapping
+                        participants/checkpoints no longer occlude one another. */}
+                    {tapTargets.map((tgt) => {
+                        const left = tgt.sx - 22;
+                        const top = tgt.sy - 22;
                         return (
                             <TouchableOpacity
-                                key={`cp-touch-${idx}`}
+                                key={`hit-${tgt.kind}-${tgt.idx}`}
                                 style={{
                                     position: 'absolute',
-                                    left: xPosition - 20, top: yPosition - 20,
-                                    width: 40, height: 40,
+                                    left, top,
+                                    width: 44, height: 44,
                                     alignItems: 'center', justifyContent: 'center',
                                     zIndex: 10, elevation: 10,
                                 }}
-                                onPress={() => handleCheckpointClick(point, idx)}
                                 activeOpacity={0.6}
-                            />
-                        );
-                    })}
-
-                    {/* Participant tap targets (upper layer, tighter) */}
-                    {onParticipantPress && participantChartPoints.map((point, idx) => {
-                        const xPosition = (point.x / totalDistance) * chartWidth;
-                        const PAD_TOP = 20, PAD_BOTTOM = 20;
-                        const plotHeight = chartHeight - PAD_TOP - PAD_BOTTOM;
-                        const yPct = (point.y - yDomain[0]) / (yDomain[1] - yDomain[0]);
-                        const yPosition = PAD_TOP + (1 - yPct) * plotHeight;
-                        return (
-                            <TouchableOpacity
-                                key={`pt-touch-${idx}`}
-                                style={{
-                                    position: 'absolute',
-                                    left: xPosition - 16, top: yPosition - 16,
-                                    width: 32, height: 32,        // tighter than checkpoint
-                                    alignItems: 'center', justifyContent: 'center',
-                                    zIndex: 20, elevation: 20,    // above checkpoint overlay
+                                onPress={(e) => {
+                                    const { locationX, locationY } = e.nativeEvent;
+                                    dispatchNearestTarget(left + locationX, top + locationY);
                                 }}
-                                onPress={() => onParticipantPress(point.participant)}
-                                activeOpacity={0.6}
                             />
                         );
                     })}
