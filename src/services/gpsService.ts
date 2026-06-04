@@ -222,6 +222,37 @@ const _processLocationForSendInternal = async (
       }
     }
 
+    // ── DRAIN OFFLINE QUEUE FIRST (FIFO, oldest → newest) ──────────────
+    // Runs inside the Transistor onLocation handler — the ONLY code that
+    // executes while the phone is in a pocket (the React 10s queue interval
+    // and the AppState 'active' drain are both suspended in background).
+    // onLocation wakes JS for every fix, so this flushes the queue within
+    // one fire-cycle of network returning, no app-open needed.
+    //
+    // We MUST drain before sending the current (newer) fix: the server
+    // computes distance as a cumulative haversine against the latest stored
+    // fix and rejects anything older than what's stored. Sending the new fix
+    // first would store it ahead of the queued ones, and the queued (older)
+    // fixes would then be dropped as stale. Drain-then-send keeps the server
+    // receiving ascending device_timestamps. Placed before the throttle gate
+    // so a flush is attempted on every fire, even if the current fix is
+    // itself throttled.
+    try {
+      const { QUEUE_COUNT_KEY } = require('./locationQueueService');
+      const qCountStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
+      const qCount = qCountStr ? parseInt(qCountStr) : 0;
+      if (qCount > 0) {
+        const { locationService } = require('./locationService');
+        const flushed = await locationService.processQueue(participantId, eventId);
+        if (flushed > 0) {
+          const cStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+          const c = cStr ? parseInt(cStr) : 0;
+          await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(c + flushed));
+          await addLog('📤', `Drained ${flushed} queued fix(es) before live send${tag}`);
+        }
+      }
+    } catch { /* silent — drain failure must never block the live send */ }
+
     const categoryIdNum = Number(categoryId);
     const minMovementMetres = MOVEMENT_THRESHOLD[categoryIdNum] ?? DEFAULT_MOVEMENT_METRES;
 
