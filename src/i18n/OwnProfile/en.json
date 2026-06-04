@@ -7,7 +7,7 @@
     },
     "menu": {
         "events": {
-            "title": "Your Event",
+            "title": "Your Events",
             "subtitle": "Watch Your Past Result"
         },
         "training": {
@@ -25,7 +25,7 @@
     },
     "backbtn":{
         "events":"Your Events",
-        "training":"Tranning Sessions"
+        "training": "Training Sessions"
 
     }
     
