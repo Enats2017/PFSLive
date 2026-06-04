@@ -37,7 +37,6 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
     const hasMore = pagination.live.page < pagination.live.total_pages;
     const { t } = useTranslation(['profile', "ownProfile"]);
     // Add this line before the return
-const partnerEvents = liveEvents.filter(e => e.event_source === 'partner');
 
     const handleLoadMore = useCallback(() => {
         if (hasMore && !loadingMoreLive) {
@@ -86,7 +85,7 @@ const partnerEvents = liveEvents.filter(e => e.event_source === 'partner');
             </TouchableOpacity>
 
             <FlatList
-                data={partnerEvents}
+                data={liveEvents}
                 keyExtractor={keyExtractor}
                 renderItem={renderItem}
                 onEndReached={handleLoadMore}

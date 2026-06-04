@@ -277,12 +277,17 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     }, [loadingMorePast, pagination.past, targetId]);
 
     const renderContent = (): React.ReactNode => {
+
         if (activeSection === 'menu') return <MenuContent onSelect={setActiveSection} onNavigate={(screen) => navigation.navigate(screen as never)} profile={profile} />;
         if (activeSection === 'events') return (
             <EventsContent
                 onBack={goBack}
-                liveEvents={liveEvents}
-                pastEvents={pastEvents}
+                liveEvents={liveEvents.filter(
+                    event => event.event_source === 'partner'
+                )}
+                pastEvents={pastEvents.filter(
+                    event => event.event_source === 'partner'
+                )}
                 profile={profile}
                 loadMoreLive={loadMoreLive}
                 loadMorePast={loadMorePast}
@@ -293,7 +298,9 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
         );
         if (activeSection === 'training') return <TrainingContent
             onBack={goBack}
-            liveEvents={liveEvents}
+            liveEvents={liveEvents.filter(
+                event => event.event_source === 'custom'
+            )}
             profile={profile}
             loadMoreLive={loadMoreLive}
             loadingMoreLive={loadingMoreLive}
@@ -310,8 +317,8 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     return (
         <SafeAreaView style={ownProfile.safeArea} edges={['top']}>
             <StatusBar barStyle="dark-content" backgroundColor={colors.themeiColor} />
-            <TouchableOpacity style={{ paddingHorizontal: spacing.xl, alignSelf: 'flex-start', marginTop: spacing.md,}} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' as never }],})}>
-            <Ionicons name="arrow-back" size={28} color={colors.primaryDark} />
+            <TouchableOpacity style={{ paddingHorizontal: spacing.xl, alignSelf: 'flex-start', marginTop: spacing.md, }} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' as never }], })}>
+                <Ionicons name="arrow-back" size={28} color={colors.primaryDark} />
             </TouchableOpacity>
             <View style={ownProfile.scrollContent}>
                 <View style={ownProfile.header} />
