@@ -75,6 +75,12 @@ export interface FollowingLiveEvent {
   end_time: string | null;
   timezone: string;
   race_status: 'in_progress' | 'upcoming' | 'finished';
+  starts_in_seconds: number;
+  starts_in_hours: number;
+  starts_in_minutes: number;
+  starts_in_secs: number;
+  race_start_ts: number;
+  server_now_ts: number;
   followed_participants: {
     participant_app_id: number;
     customer_app_id: number;
@@ -1754,7 +1760,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           {homeData?.following_live_events && homeData.following_live_events.length > 0 && (
             <FollowingLiveEventsSection
               events={homeData.following_live_events}
-              serverDatetime={homeData.server_datetime!}
               onRoutePress={(event) => {
                 navigation.navigate('LiveTracking', {
                   product_app_id: event.product_app_id,
