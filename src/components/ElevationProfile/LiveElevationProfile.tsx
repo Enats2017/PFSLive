@@ -17,6 +17,7 @@ interface LiveElevationProfileProps {
     minElevation: number;
     maxElevation: number;
     onAidStationPress?: (station: AidStationMapMarker) => void;
+    onParticipantPress?: (participant: ParticipantMapMarker) => void; 
 }
 
 export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.memo(({
@@ -28,6 +29,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     minElevation,
     maxElevation,
     onAidStationPress,
+    onParticipantPress,
 }) => {
     const { t } = useTranslation('livetracking');
     const screenWidth = Dimensions.get('window').width;
@@ -93,38 +95,18 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
             .filter(p => p.lat !== 0 && p.lon !== 0)
             .map(p => {
                 if (chartData.length === 0) return null;
-
-                // ✅ Find top 3 closest chart points by lat/lon
                 const sorted = [...chartData]
-                    .map(pt => ({
-                        pt,
-                        diff: Math.pow(pt.lat - p.lat, 2) + Math.pow(pt.lon - p.lon, 2),
-                    }))
+                    .map(pt => ({ pt, diff: Math.pow(pt.lat - p.lat, 2) + Math.pow(pt.lon - p.lon, 2) }))
                     .sort((a, b) => a.diff - b.diff)
-                    .slice(0, 3); // top 3 nearest candidates
-
-                // ✅ Among candidates, pick the one whose x (distance)
-                // is closest to p.distance_km (API distance as hint)
-                // This resolves loop ambiguity — same lat/lon, different route km
+                    .slice(0, 3);
                 const best = sorted.reduce((prev, curr) => {
                     const prevDiff = Math.abs(prev.pt.x - p.distance_km);
                     const currDiff = Math.abs(curr.pt.x - p.distance_km);
                     return currDiff < prevDiff ? curr : prev;
                 });
-
-                console.log('📍 Participant elevation point:', {
-                    name: p.name,
-                    lat: p.lat,
-                    lon: p.lon,
-                    distance_km: p.distance_km,
-                    chosenX: best.pt.x,
-                    chosenY: best.pt.y,
-                    candidates: sorted.map(s => ({ x: s.pt.x, diff: s.diff })),
-                });
-
-                return { x: best.pt.x, y: best.pt.y };
+                return { x: best.pt.x, y: best.pt.y, participant: p };  // ✅ keep p
             })
-            .filter((p): p is { x: number; y: number } => p !== null);
+            .filter((p): p is { x: number; y: number; participant: ParticipantMapMarker } => p !== null);
     }, [participants, chartData]);
 
     // ✅ NEW: Auto-scroll to keep participant dot visible whenever their position changes
@@ -423,32 +405,47 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                         />
                     </VictoryChart>
 
+                    {/* Checkpoint tap targets (lower layer) */}
                     {checkpointChartPoints.map((point, idx) => {
                         const xPosition = (point.x / totalDistance) * chartWidth;
-
-                        // Match VictoryChart's padding (top:20, bottom:20). The plot area is
-                        // (chartHeight - top - bottom) tall, offset down by `top`.
-                        const PAD_TOP = 20;
-                        const PAD_BOTTOM = 20;
+                        const PAD_TOP = 20, PAD_BOTTOM = 20;
                         const plotHeight = chartHeight - PAD_TOP - PAD_BOTTOM;
-                        const yPercentage = (point.y - yDomain[0]) / (yDomain[1] - yDomain[0]);
-                        const yPosition = PAD_TOP + (1 - yPercentage) * plotHeight;
-
+                        const yPct = (point.y - yDomain[0]) / (yDomain[1] - yDomain[0]);
+                        const yPosition = PAD_TOP + (1 - yPct) * plotHeight;
                         return (
                             <TouchableOpacity
-                                key={`touchable-${idx}`}
+                                key={`cp-touch-${idx}`}
                                 style={{
                                     position: 'absolute',
-                                    left: xPosition - 22,
-                                    top: yPosition - 22,
-                                    width: 44,
-                                    height: 44,
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    zIndex: 10,          // ✅ sit above the chart
-                                    elevation: 10,       // ✅ Android stacking
+                                    left: xPosition - 20, top: yPosition - 20,
+                                    width: 40, height: 40,
+                                    alignItems: 'center', justifyContent: 'center',
+                                    zIndex: 10, elevation: 10,
                                 }}
                                 onPress={() => handleCheckpointClick(point, idx)}
+                                activeOpacity={0.6}
+                            />
+                        );
+                    })}
+
+                    {/* Participant tap targets (upper layer, tighter) */}
+                    {onParticipantPress && participantChartPoints.map((point, idx) => {
+                        const xPosition = (point.x / totalDistance) * chartWidth;
+                        const PAD_TOP = 20, PAD_BOTTOM = 20;
+                        const plotHeight = chartHeight - PAD_TOP - PAD_BOTTOM;
+                        const yPct = (point.y - yDomain[0]) / (yDomain[1] - yDomain[0]);
+                        const yPosition = PAD_TOP + (1 - yPct) * plotHeight;
+                        return (
+                            <TouchableOpacity
+                                key={`pt-touch-${idx}`}
+                                style={{
+                                    position: 'absolute',
+                                    left: xPosition - 16, top: yPosition - 16,
+                                    width: 32, height: 32,        // tighter than checkpoint
+                                    alignItems: 'center', justifyContent: 'center',
+                                    zIndex: 20, elevation: 20,    // above checkpoint overlay
+                                }}
+                                onPress={() => onParticipantPress(point.participant)}
                                 activeOpacity={0.6}
                             />
                         );

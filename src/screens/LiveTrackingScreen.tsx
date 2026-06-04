@@ -507,6 +507,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         minElevation={routeData?.minElevation ?? 0}
                         maxElevation={routeData?.maxElevation ?? 0}
                         onAidStationPress={handleAidStationPress}
+                        onParticipantPress={handleParticipantPress}
                     />
                 </View>
             )}
