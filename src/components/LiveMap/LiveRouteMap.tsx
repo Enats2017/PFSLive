@@ -38,6 +38,42 @@ const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): nu
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
+// Ramer–Douglas–Peucker: drop points that lie within `epsilon` of the line
+// between their neighbours. Straight stretches collapse to two points; real
+// corners are kept. epsilon is in metres.
+const simplifyRDP = (pts: [number, number][], epsilonM: number): [number, number][] => {
+    if (pts.length < 3) return pts;
+
+    // perpendicular distance (metres) of p from line a→b, in local flat metres
+    const perpDist = (p: [number, number], a: [number, number], b: [number, number]): number => {
+        const cosLat = Math.cos((a[1] * Math.PI) / 180) || 1e-6;
+        const toM = (lon: number, lat: number): [number, number] => [lon * 111320 * cosLat, lat * 111320];
+        const [px, py] = toM(p[0], p[1]);
+        const [ax, ay] = toM(a[0], a[1]);
+        const [bx, by] = toM(b[0], b[1]);
+        const dx = bx - ax, dy = by - ay;
+        const len2 = dx * dx + dy * dy;
+        if (len2 === 0) return Math.hypot(px - ax, py - ay);
+        let t = ((px - ax) * dx + (py - ay) * dy) / len2;
+        t = Math.max(0, Math.min(1, t));
+        const cx = ax + t * dx, cy = ay + t * dy;
+        return Math.hypot(px - cx, py - cy);
+    };
+
+    let maxD = 0, idx = 0;
+    for (let i = 1; i < pts.length - 1; i++) {
+        const d = perpDist(pts[i], pts[0], pts[pts.length - 1]);
+        if (d > maxD) { maxD = d; idx = i; }
+    }
+
+    if (maxD > epsilonM) {
+        const left  = simplifyRDP(pts.slice(0, idx + 1), epsilonM);
+        const right = simplifyRDP(pts.slice(idx), epsilonM);
+        return left.slice(0, -1).concat(right); // drop duplicated joint
+    }
+    return [pts[0], pts[pts.length - 1]];
+};
+
 // Shift a polyline perpendicular to its travel direction by a fixed metre amount.
 // Used to draw the inbound leg as a parallel "lane" beside the outbound leg so
 // its line, arrows and km markers don't land on top of the outbound geometry.
@@ -433,28 +469,34 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         if (trackPoints.length < 2) {
             return { isLoop: false, outCoords: [] as [number, number][], inCoordsTrue: [] as [number, number][], inCoords: [] as [number, number][], totalKm: 0 };
         }
-        const coords = trackPoints.map(pt => [pt.lon, pt.lat] as [number, number]);
+
+        // Simplify FIRST, then do everything (split, distance, offset) on the
+        // simplified line so indices and geometry always refer to the same array.
+        const rawCoords = trackPoints.map(pt => [pt.lon, pt.lat] as [number, number]);
+        const coords = simplifyRDP(rawCoords, 8); // 8m tolerance — straighten noise, keep real turns
 
         const startEndKm = haversineKm(
-            trackPoints[0].lat, trackPoints[0].lon,
-            trackPoints[trackPoints.length - 1].lat, trackPoints[trackPoints.length - 1].lon,
+            coords[0][1], coords[0][0],
+            coords[coords.length - 1][1], coords[coords.length - 1][0],
         );
         const isLoop = startEndKm <= 0.1; // start within 100m of end → loop / out-and-back
 
+        // total distance along the SIMPLIFIED line
         let totalKm = 0;
-        for (let i = 1; i < trackPoints.length; i++) {
-            totalKm += haversineKm(trackPoints[i - 1].lat, trackPoints[i - 1].lon, trackPoints[i].lat, trackPoints[i].lon);
+        for (let i = 1; i < coords.length; i++) {
+            totalKm += haversineKm(coords[i - 1][1], coords[i - 1][0], coords[i][1], coords[i][0]);
         }
 
         if (!isLoop) {
             return { isLoop: false, outCoords: coords, inCoordsTrue: [] as [number, number][], inCoords: [] as [number, number][], totalKm };
         }
 
+        // midpoint index WITHIN the simplified coords (not trackPoints!)
         const halfKm = totalKm / 2;
         let cumulative = 0;
         let splitIdx = 1;
-        for (let i = 1; i < trackPoints.length; i++) {
-            cumulative += haversineKm(trackPoints[i - 1].lat, trackPoints[i - 1].lon, trackPoints[i].lat, trackPoints[i].lon);
+        for (let i = 1; i < coords.length; i++) {
+            cumulative += haversineKm(coords[i - 1][1], coords[i - 1][0], coords[i][1], coords[i][0]);
             if (cumulative >= halfKm) { splitIdx = i; break; }
         }
 
