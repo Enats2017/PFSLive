@@ -38,6 +38,65 @@ const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): nu
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
+// Cumulative distance (metres) at each route vertex.
+const routeCumMeters = (route: [number, number][]): number[] => {
+    const cum = [0];
+    for (let i = 1; i < route.length; i++) {
+        cum.push(cum[i - 1] + haversineKm(route[i - 1][1], route[i - 1][0], route[i][1], route[i][0]) * 1000);
+    }
+    return cum;
+};
+
+// Project (lon,lat) onto the route polyline. Returns the closest point ON the
+// line plus the cumulative distance (metres) along the route at that point —
+// the distance is used to nudge duplicates ALONG the line so they don't restack.
+const projectToRoute = (
+    lon: number, lat: number, route: [number, number][], cum: number[],
+): { lon: number; lat: number; distM: number } => {
+    let best = { d2: Infinity, lon, lat, distM: 0 };
+    const cosLat = Math.cos((lat * Math.PI) / 180) || 1e-6;
+    const X = (lo: number) => lo * 111320 * cosLat;
+    const Y = (la: number) => la * 111320;
+    const px = X(lon), py = Y(lat);
+    for (let i = 1; i < route.length; i++) {
+        const ax = X(route[i - 1][0]), ay = Y(route[i - 1][1]);
+        const bx = X(route[i][0]),     by = Y(route[i][1]);
+        const dx = bx - ax, dy = by - ay;
+        const len2 = dx * dx + dy * dy;
+        let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+        t = Math.max(0, Math.min(1, t));
+        const cx = ax + t * dx, cy = ay + t * dy;
+        const d2 = (px - cx) ** 2 + (py - cy) ** 2;
+        if (d2 < best.d2) {
+            best = {
+                d2,
+                lon: route[i - 1][0] + t * (route[i][0] - route[i - 1][0]),
+                lat: route[i - 1][1] + t * (route[i][1] - route[i - 1][1]),
+                distM: cum[i - 1] + t * Math.sqrt(len2),
+            };
+        }
+    }
+    return { lon: best.lon, lat: best.lat, distM: best.distM };
+};
+
+// Position (lon,lat) at a given cumulative distance (metres) along the route.
+const pointAtDistance = (distM: number, route: [number, number][], cum: number[]): [number, number] => {
+    if (distM <= 0) return route[0];
+    const total = cum[cum.length - 1];
+    if (distM >= total) return route[route.length - 1];
+    for (let i = 1; i < route.length; i++) {
+        if (cum[i] >= distM) {
+            const segLen = cum[i] - cum[i - 1] || 1;
+            const t = (distM - cum[i - 1]) / segLen;
+            return [
+                route[i - 1][0] + t * (route[i][0] - route[i - 1][0]),
+                route[i - 1][1] + t * (route[i][1] - route[i - 1][1]),
+            ];
+        }
+    }
+    return route[route.length - 1];
+};
+
 // Ramer–Douglas–Peucker: drop points that lie within `epsilon` of the line
 // between their neighbours. Straight stretches collapse to two points; real
 // corners are kept. epsilon is in metres.
@@ -223,6 +282,17 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             coordinates: trackPoints.map(pt => [pt.lon, pt.lat]),
         },
     }), [trackPoints]);
+
+    // Single source of truth for the simplified route geometry. BOTH the drawn
+    // route line (routeSplit) and the participant snap use this exact polyline,
+    // so a snapped dot always sits on the line you see — at every zoom level.
+    // (Snapping to the full trackPoints instead made dots drift off the drawn
+    // line when zoomed in, because the drawn line is the simplified one.)
+    const ROUTE_SIMPLIFY_M = 8;
+    const simplifiedCoords = React.useMemo<[number, number][]>(() => {
+        if (trackPoints.length < 2) return [];
+        return simplifyRDP(trackPoints.map(pt => [pt.lon, pt.lat] as [number, number]), ROUTE_SIMPLIFY_M);
+    }, [trackPoints]);
 
     const mapCenter = React.useMemo(() => {
         if (trackPoints.length === 0) return [4.4699, 50.5039];
@@ -418,46 +488,6 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         return () => { cancelled = true; clearTimeout(timer); };
     }, [participants, mapReady]);
 
-    const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
-        console.log('🗺️ Creating participants GeoJSON with', participants.length, 'participants');
-
-        const validParticipants = participants.filter(p => p.lat !== 0 || p.lon !== 0);
-
-        return {
-            type: 'FeatureCollection',
-            features: validParticipants.map(p => ({
-                type: 'Feature',
-                properties: {
-                    id: p.id,
-                    bib: p.bib,
-                    name: p.name,
-                    customer_app_id: p.customer_app_id,
-                    gender: p.gender,
-                    position: p.position,
-                    position_gender: p.position_gender,
-                    position_category: p.position_category,
-                    category: p.category,
-                    race_time: p.race_time,
-                    race_time_seconds: p.race_time_seconds,
-                    distance_km: p.distance_km,
-                    avg_speed_kmh: p.avg_speed_kmh,
-                    last_checkpoint_name: p.last_checkpoint_name,
-                    distance_to_next_cp: p.distance_to_next_cp,
-                    last_update: p.last_update,
-                    last_update_time: p.last_update_time,
-                    last_update_type: p.last_update_type,
-                    profile_picture: p.profile_picture,
-                    source: p.source,
-                    initials: p.initials,
-                },
-                geometry: {
-                    type: 'Point',
-                    coordinates: [p.lon, p.lat],
-                },
-            })),
-        };
-    }, [participants]);
-
     // ── Shared route split (outbound / offset inbound) ──────────────────────────
     // Computed once; both the colored legs and the km markers derive from it.
     // Only loop / out-and-back routes (start ≈ end) are split at the cumulative-
@@ -466,14 +496,10 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     // The inbound leg's GEOMETRY is offset sideways so its line, arrows and km
     // markers form a parallel lane instead of stacking on the outbound geometry.
     const routeSplit = React.useMemo(() => {
-        if (trackPoints.length < 2) {
+        const coords = simplifiedCoords;
+        if (coords.length < 2) {
             return { isLoop: false, outCoords: [] as [number, number][], inCoordsTrue: [] as [number, number][], inCoords: [] as [number, number][], totalKm: 0 };
         }
-
-        // Simplify FIRST, then do everything (split, distance, offset) on the
-        // simplified line so indices and geometry always refer to the same array.
-        const rawCoords = trackPoints.map(pt => [pt.lon, pt.lat] as [number, number]);
-        const coords = simplifyRDP(rawCoords, 8); // 8m tolerance — straighten noise, keep real turns
 
         const startEndKm = haversineKm(
             coords[0][1], coords[0][0],
@@ -505,7 +531,76 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         const inCoords     = offsetPolylineMeters(inCoordsTrue, INBOUND_OFFSET_M);
 
         return { isLoop: true, outCoords, inCoordsTrue, inCoords, totalKm };
-    }, [trackPoints]);
+    }, [simplifiedCoords]);
+
+    const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
+        const valid = participants.filter(p => p.lat !== 0 || p.lon !== 0);
+
+        // Snap to the DRAWN geometry (outbound + offset inbound legs), not the
+        // true centerline. On loop/out-and-back courses the return leg is drawn
+        // shifted sideways by INBOUND_OFFSET_M; snapping to the centerline left
+        // dots floating that many metres off the purple lane when zoomed in.
+        // Concatenating the legs makes each dot land on whichever lane is drawn
+        // nearest it. (outCoords already === full simplified line on point-to-point.)
+        const route = (routeSplit.isLoop && routeSplit.inCoords.length >= 2)
+            ? routeSplit.outCoords.concat(routeSplit.inCoords)
+            : routeSplit.outCoords;
+        const canSnap = route.length >= 2;
+
+        let placed: Array<{ p: ParticipantMapMarker; lon: number; lat: number }>;
+
+        if (canSnap) {
+            const cum = routeCumMeters(route);
+            const snapped = valid.map(p => ({ p, distM: projectToRoute(p.lon, p.lat, route, cum).distM }));
+
+            // Enforce a minimum gap between markers measured ALONG the route.
+            const SPACING_M = 8;
+            snapped.sort((a, b) => a.distM - b.distM);
+            for (let i = 1; i < snapped.length; i++) {
+                if (snapped[i].distM < snapped[i - 1].distM + SPACING_M) {
+                    snapped[i].distM = snapped[i - 1].distM + SPACING_M;
+                }
+            }
+
+            placed = snapped.map(({ p, distM }) => {
+                const [lon, lat] = pointAtDistance(distM, route, cum);
+                return { p, lon, lat };
+            });
+        } else {
+            placed = valid.map(p => ({ p, lon: p.lon, lat: p.lat }));
+        }
+
+        return {
+            type: 'FeatureCollection',
+            features: placed.map(({ p, lon, lat }) => ({
+                type: 'Feature',
+                properties: {
+                    id: p.id,
+                    bib: p.bib,
+                    name: p.name,
+                    customer_app_id: p.customer_app_id,
+                    gender: p.gender,
+                    position: p.position,
+                    position_gender: p.position_gender,
+                    position_category: p.position_category,
+                    category: p.category,
+                    race_time: p.race_time,
+                    race_time_seconds: p.race_time_seconds,
+                    distance_km: p.distance_km,
+                    avg_speed_kmh: p.avg_speed_kmh,
+                    last_checkpoint_name: p.last_checkpoint_name,
+                    distance_to_next_cp: p.distance_to_next_cp,
+                    last_update: p.last_update,
+                    last_update_time: p.last_update_time,
+                    last_update_type: p.last_update_type,
+                    profile_picture: p.profile_picture,
+                    source: p.source,
+                    initials: p.initials,
+                },
+                geometry: { type: 'Point', coordinates: [lon, lat] },
+            })),
+        };
+    }, [participants, routeSplit]);
 
     // ── Distance (km) markers ───────────────────────────────────────────────────
     // Placed by cumulative distance. Outbound markers sit on the true path;
@@ -998,18 +1093,15 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         />
                         <Mapbox.SymbolLayer
                             id="participant-bibs"
-                            minZoomLevel={13}
                             style={{
                                 textField: ['get', 'initials'],
-                                textSize: 24,
-                                textColor: MARKER_COLORS.participant,
-                                textHaloColor: '#FFFFFF',
-                                textHaloWidth: 2,
-                                textOffset: [0, 1.8],
-                                textAnchor: 'top',
+                                textSize: 11,
+                                textColor: '#FFFFFF',          // white text on the orange dot
+                                textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
                                 textAllowOverlap: true,
-                                iconAllowOverlap: true,
                                 textIgnorePlacement: true,
+                                // no textOffset / no textAnchor → text centers on the point
+                                // no minZoomLevel → label shows at every zoom
                             }}
                         />
                     </Mapbox.ShapeSource>
