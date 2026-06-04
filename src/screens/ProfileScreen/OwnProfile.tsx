@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, Image, StatusBar, Dimensions, TouchableOpacity, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { colors, commonStyles } from '../../styles/common.styles'
+import { colors, commonStyles, spacing } from '../../styles/common.styles'
 import { Ionicons, FontAwesome5, FontAwesome6 } from '@expo/vector-icons'
 import { eventService, AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { FlatList } from 'react-native-gesture-handler'
@@ -18,7 +18,7 @@ type SectionKey = 'menu' | 'events' | 'training' | 'account'
 interface MenuContentProps {
     onSelect: (id: SectionKey) => void;
     onNavigate: (screen: string) => void;
-     profile: AthleteProfile | null;
+    profile: AthleteProfile | null;
 }
 interface PaginationState {
     live: { page: number; total_pages: number };
@@ -310,6 +310,9 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     return (
         <SafeAreaView style={ownProfile.safeArea} edges={['top']}>
             <StatusBar barStyle="dark-content" backgroundColor={colors.themeiColor} />
+            <TouchableOpacity style={{ paddingHorizontal: spacing.xl, alignSelf: 'flex-start', marginTop: spacing.md,}} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' as never }],})}>
+            <Ionicons name="arrow-back" size={28} color={colors.primaryDark} />
+            </TouchableOpacity>
             <View style={ownProfile.scrollContent}>
                 <View style={ownProfile.header} />
                 <View style={ownProfile.profileRow}>
