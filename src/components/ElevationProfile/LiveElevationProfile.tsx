@@ -425,20 +425,28 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
 
                     {checkpointChartPoints.map((point, idx) => {
                         const xPosition = (point.x / totalDistance) * chartWidth;
+
+                        // Match VictoryChart's padding (top:20, bottom:20). The plot area is
+                        // (chartHeight - top - bottom) tall, offset down by `top`.
+                        const PAD_TOP = 20;
+                        const PAD_BOTTOM = 20;
+                        const plotHeight = chartHeight - PAD_TOP - PAD_BOTTOM;
                         const yPercentage = (point.y - yDomain[0]) / (yDomain[1] - yDomain[0]);
-                        const yPosition = chartHeight - 20 - (yPercentage * (chartHeight - 20));
+                        const yPosition = PAD_TOP + (1 - yPercentage) * plotHeight;
 
                         return (
                             <TouchableOpacity
                                 key={`touchable-${idx}`}
                                 style={{
                                     position: 'absolute',
-                                    left: xPosition - 20,
-                                    top: yPosition - 20,
-                                    width: 40,
-                                    height: 40,
+                                    left: xPosition - 22,
+                                    top: yPosition - 22,
+                                    width: 44,
+                                    height: 44,
                                     alignItems: 'center',
                                     justifyContent: 'center',
+                                    zIndex: 10,          // ✅ sit above the chart
+                                    elevation: 10,       // ✅ Android stacking
                                 }}
                                 onPress={() => handleCheckpointClick(point, idx)}
                                 activeOpacity={0.6}
