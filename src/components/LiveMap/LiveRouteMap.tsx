@@ -22,7 +22,7 @@ const MINOR_KM_MIN_ZOOM = 13;       // every-km markers appear once zoomed in pa
                                     // (major 5km markers are always visible)
 
 const ROUTE_OUT_COLOR = '#3B82F6'; // blue   — outbound ("going")
-const ROUTE_IN_COLOR  = '#A855F7'; // purple — inbound ("coming back")
+const ROUTE_IN_COLOR  = '#3B82F6'; // purple — inbound ("coming back")
 
 const INBOUND_OFFSET_M = 15; // metres the inbound lane is shifted sideways from outbound
 
