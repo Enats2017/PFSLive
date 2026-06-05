@@ -233,8 +233,9 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
                 keyboardShouldPersistTaps="handled"
                 removeClippedSubviews={false}
                 contentContainerStyle={{
+                    flexGrow:1,
                     paddingHorizontal: spacing.md,
-                    paddingBottom: spacing.xxxl,
+                    paddingBottom: spacing.xxxxl,
                 }}
                 ListHeaderComponent={
                     <SearchInput

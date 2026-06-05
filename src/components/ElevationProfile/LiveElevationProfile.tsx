@@ -17,7 +17,7 @@ interface LiveElevationProfileProps {
     minElevation: number;
     maxElevation: number;
     onAidStationPress?: (station: AidStationMapMarker) => void;
-    onParticipantPress?: (participant: ParticipantMapMarker) => void; 
+    onParticipantPress?: (participant: ParticipantMapMarker) => void;
 }
 
 export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.memo(({
@@ -377,6 +377,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                         strokeWidth: 2.5,
                                     },
                                 }}
+
                             />
                         )}
 
@@ -447,6 +448,30 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                             textAnchor="end"
                         />
                     </VictoryChart>
+
+                    {tapTargets
+                        .filter(t => t.kind === 'pt')
+                        .map((t, idx) => (
+                            <Text
+                                key={`participant-label-${idx}`}
+                                style={{
+                                    position: 'absolute',
+                                    left: t.sx - 11,
+                                    top: t.sy - 7,
+                                    width: 22,
+                                    textAlign: 'center',
+                                    color: colors.white,
+                                    fontSize: 10,
+                                    fontWeight: '700',
+                                    zIndex: 20,
+                                    elevation: 20,
+                                }}
+                                pointerEvents="none"
+                            >
+                                {t.point.participant.initials || String(t.point.participant.bib) || '?'}
+                            </Text>
+                        ))
+                    }
 
                     {/* Unified tap layer — one box per target, all same size + z.
                         Whichever box catches the touch resolves to the truly

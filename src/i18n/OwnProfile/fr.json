@@ -1,9 +1,9 @@
 {
     "tracking": {
-        "unlimited": "You have unlimited live tracking sessions.",
-        "remaining": "You have {{count}} live tracking session(s) left.",
-        "exhausted": "You have no live tracking sessions left.",
-        "subtitle": "Membership management available on our website."
+    "unlimited": "Vous avez des sessions de suivi en direct illimitées.",
+    "remaining": "Il vous reste {{count}} session(s) de suivi en direct.",
+    "exhausted": "Vous n'avez plus de sessions de suivi en direct.",
+    "subtitle": "La gestion des abonnements est disponible sur notre site web."
     },
     "menu": {
         "events": {
