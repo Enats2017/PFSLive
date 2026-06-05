@@ -24,7 +24,8 @@ const MINOR_KM_MIN_ZOOM = 13;       // every-km markers appear once zoomed in pa
 const ROUTE_OUT_COLOR = '#3B82F6'; // blue   — outbound ("going")
 const ROUTE_IN_COLOR  = '#A855F7'; // purple — inbound ("coming back")
 
-const INBOUND_OFFSET_M = 15; // metres the inbound lane is shifted sideways from outbound
+// const INBOUND_OFFSET_M = 15; // metres the inbound lane is shifted sideways from outbound
+const LANE_SEPARATION_M = 5;
 
 // Haversine distance in km between two lat/lon points.
 const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -288,7 +289,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     // so a snapped dot always sits on the line you see — at every zoom level.
     // (Snapping to the full trackPoints instead made dots drift off the drawn
     // line when zoomed in, because the drawn line is the simplified one.)
-    const ROUTE_SIMPLIFY_M = 8;
+    const ROUTE_SIMPLIFY_M = 0;
     const simplifiedCoords = React.useMemo<[number, number][]>(() => {
         if (trackPoints.length < 2) return [];
         return simplifyRDP(trackPoints.map(pt => [pt.lon, pt.lat] as [number, number]), ROUTE_SIMPLIFY_M);
@@ -505,32 +506,56 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             coords[0][1], coords[0][0],
             coords[coords.length - 1][1], coords[coords.length - 1][0],
         );
-        const isLoop = startEndKm <= 0.1; // start within 100m of end → loop / out-and-back
+        const isLoop = startEndKm <= 0.1;
 
-        // total distance along the SIMPLIFIED line
         let totalKm = 0;
         for (let i = 1; i < coords.length; i++) {
             totalKm += haversineKm(coords[i - 1][1], coords[i - 1][0], coords[i][1], coords[i][0]);
         }
 
+        // Point-to-point (start far from end): one faithful on-road line, like RaceResult.
         if (!isLoop) {
             return { isLoop: false, outCoords: coords, inCoordsTrue: [] as [number, number][], inCoords: [] as [number, number][], totalKm };
         }
 
-        // midpoint index WITHIN the simplified coords (not trackPoints!)
-        const halfKm = totalKm / 2;
-        let cumulative = 0;
-        let splitIdx = 1;
+        // Real turnaround = point geographically farthest from the start.
+        let turnIdx = 1, maxD = -1;
         for (let i = 1; i < coords.length; i++) {
-            cumulative += haversineKm(coords[i - 1][1], coords[i - 1][0], coords[i][1], coords[i][0]);
-            if (cumulative >= halfKm) { splitIdx = i; break; }
+            const d = haversineKm(coords[0][1], coords[0][0], coords[i][1], coords[i][0]);
+            if (d > maxD) { maxD = d; turnIdx = i; }
+        }
+        if (turnIdx < 1) turnIdx = 1;
+        if (turnIdx > coords.length - 2) turnIdx = coords.length - 2;
+
+        const outCoords    = coords.slice(0, turnIdx + 1);   // TRUE path → on the road like RR
+        const inCoordsTrue = coords.slice(turnIdx);          // TRUE → accurate km values
+
+        // Does the return RETRACE the outbound (out-and-back) or use different
+        // roads (true loop)? Sample inbound points; mostly within 30 m of the
+        // outbound → retrace → offset it aside for the gap. Otherwise it's a real
+        // loop already on separate streets → leave it on its true road.
+        let retrace = false;
+        {
+            const sampleN = Math.min(8, inCoordsTrue.length);
+            let close = 0, tested = 0;
+            for (let s = 0; s < sampleN; s++) {
+                const p = inCoordsTrue[Math.floor((s / sampleN) * inCoordsTrue.length)];
+                let minM = Infinity;
+                for (const q of outCoords) {
+                    const d = haversineKm(p[1], p[0], q[1], q[0]) * 1000;
+                    if (d < minM) minM = d;
+                }
+                tested++;
+                if (minM < 30) close++;
+            }
+            retrace = tested > 0 && (close / tested) >= 0.6;
         }
 
-        const outCoords    = coords.slice(0, splitIdx + 1); // include split point in both
-        const inCoordsTrue = coords.slice(splitIdx);
-        const inCoords     = offsetPolylineMeters(inCoordsTrue, INBOUND_OFFSET_M);
+        const inCoords = retrace
+            ? offsetPolylineMeters(inCoordsTrue, LANE_SEPARATION_M)  // out-and-back → visible gap
+            : inCoordsTrue;                                          // true loop → stay on road
 
-        return { isLoop: true, outCoords, inCoordsTrue, inCoords, totalKm };
+        return { isLoop: true, outCoords, inCoords, inCoordsTrue, totalKm };
     }, [simplifiedCoords]);
 
     const participantsGeoJSON = React.useMemo<GeoJSON.FeatureCollection<GeoJSON.Point>>(() => {
