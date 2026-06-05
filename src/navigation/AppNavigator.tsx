@@ -6,7 +6,7 @@ import { RootStackParamList } from '../types/navigation';
 
 // ✅ APP SCREENS
 import HomeScreen from '../screens/HomeScreen';
-//import LiveTrackingScreen from '../screens/LiveTrackingScreen';
+import LiveTrackingScreen from '../screens/LiveTrackingScreen';
 import ParticipantEvent from '../screens/ParticipantEvent/ParticipantEvent';
 import PersonalEvent from '../screens/PersonalEventScreen/CreatePersonalEvent';
 import EventDetails from '../screens/EventDetails/EventDetails';
@@ -101,7 +101,7 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen name="AthleteSearchScreen" component={AthleteSearchScreen} options={noGesture} />
           <Stack.Screen name="UserFavouriteList" component={UserFavouriteList} options={noGesture} />
 
-          {/* <Stack.Screen
+          <Stack.Screen
             name="LiveTracking"
             component={LiveTrackingScreen}
             options={{
@@ -110,7 +110,7 @@ export const AppNavigator: React.FC = () => {
               // ✅ FIXED: gestureResponseDistance expects an object not a number
               gestureResponseDistance: { start: 50 },
             }}
-          />  */}
+          /> 
 
           {!isLoggedIn && (
             <>
