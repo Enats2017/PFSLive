@@ -22,7 +22,7 @@
   },
   "participant": {
     "empty": "Zoek deelnemers op naam, rugnummer",
-    "search": "Zoek deelnemers op naam, rugnummer",
+    "search": "Deelnemer zoeken op naam of e-mail",
     "searching": "Zoeken...",
     "noResults": "Geen deelnemers gevonden voor",
     "favorite": "TOEVOEGEN AAN FAVORIETEN",

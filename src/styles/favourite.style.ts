@@ -1,5 +1,5 @@
 import { Platform, StyleSheet } from "react-native";
-import { colors, typography } from "../styles/common.styles";
+import { colors, spacing, typography } from "../styles/common.styles";
 
 export const favstyle = StyleSheet.create({
   wrapper: {
@@ -330,6 +330,7 @@ export const favstyle = StyleSheet.create({
     borderRadius: 10,
     padding: 5,
     marginVertical: 5,
+    marginTop:spacing.sm,
     elevation: 3,
     shadowColor: "#000",
     shadowOpacity: 0.1,

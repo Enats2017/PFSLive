@@ -22,7 +22,7 @@
   },
   "participant": {
     "empty": "Rechercher des participants par nom numéro de dossard",
-    "search": "Rechercher des participants par nom, numéro de dossard",
+    "search": "Rechercher un participant par nom ou e-mail",
     "searching": "Recherche...",
     "noResults": "Aucun participant trouvé pour",
     "favorite": "AJOUTER AUX FAVORIS",

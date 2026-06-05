@@ -9,7 +9,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Feather } from '@expo/vector-icons';
-
 import { commonStyles, colors, spacing } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';

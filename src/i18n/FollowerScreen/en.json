@@ -9,7 +9,7 @@
     },
     "search":{
         "upcomgsearch":"Search Race By Event Name",
-         "athletesearch":"Search Participant By Name, Bib Number"
+         "athletesearch":"Search Participant by Name or Email"
 
     },
     "empty": {

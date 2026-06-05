@@ -9,7 +9,7 @@
   },
   "search": {
     "upcomgsearch": "Zoek race op evenementnaam",
-    "athletesearch": "Zoek deelnemer op naam, startnummer"
+    "athletesearch": "Deelnemer zoeken op naam of e-mail"
   },
   "empty": {
     "emptyTitle": "Vind uw atleet",

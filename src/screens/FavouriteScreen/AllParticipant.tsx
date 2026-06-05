@@ -240,7 +240,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
 
-            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom:spacing.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 }}>
                     <TouchableOpacity
                         style={{ width: 32 }}

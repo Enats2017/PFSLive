@@ -22,15 +22,12 @@ function formatCountdown(totalSec: number): string {
 
 const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) => {
     const { t } = useTranslation(['home', 'common']);
-
     const mountTimeRef = useRef(Date.now());
     const [elapsed, setElapsed] = useState(0);
 
     useEffect(() => {
-        // Only tick if there are upcoming events
         const hasUpcoming = events.some(e => e.race_status === 'upcoming');
         if (!hasUpcoming) return;
-
         const interval = setInterval(() => {
             setElapsed(Math.floor((Date.now() - mountTimeRef.current) / 1000));
         }, 1000);
@@ -47,15 +44,9 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
             </View>
 
             {events.map((event) => {
-                 const remainingSec = Math.max( 0,(event.starts_in_seconds || 0) - elapsed);
-
-                // Show LIVE automatically when countdown reaches 0
-                const isLive =
-                    event.race_status === 'in_progress' ||
-                    (event.race_status === 'upcoming' &&
-                        remainingSec === 0);
-                const isUpcoming = event.race_status === 'upcoming';
-                
+                const remainingSec = Math.max(0, (event.starts_in_seconds || 0) - elapsed);
+                const isLive = event.race_status === 'in_progress' || (event.race_status === 'upcoming' &&  remainingSec === 0);
+                const isUpcoming = event.race_status === 'upcoming' && remainingSec > 0;
 
                 return (
                     <View
@@ -69,7 +60,7 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                             },
                         ]}
                     >
-                        {/* Top row */}
+
                         <View style={homeStyles.cardTop}>
                             {/* Left: name + time */}
                             <View style={homeStyles.eventBody}>
@@ -84,7 +75,6 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                                 </View>
                             </View>
 
-                            {/* Right: live badge or countdown */}
                             <View style={homeStyles.countdownBlock}>
                                 {isLive && (
                                     <View style={homeStyles.liveBadge}>
@@ -107,10 +97,8 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                             </View>
                         </View>
 
-                        {/* Divider */}
                         <View style={homeStyles.divider} />
 
-                        {/* Button */}
                         <TouchableOpacity
                             style={[commonStyles.primaryButton, { flexDirection: 'row', gap: 6 }]}
                             onPress={() => onRoutePress(event)}

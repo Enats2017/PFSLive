@@ -9,7 +9,7 @@
   },
   "search": {
     "upcomgsearch": "Rechercher une course par nom d'événement",
-    "athletesearch": "Rechercher un participant par nom, numéro de dossard"
+    "athletesearch": "Rechercher un participant par nom ou e-mail"
   },
   "empty": {
     "emptyTitle": "Trouvez votre athlète",
