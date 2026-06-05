@@ -87,9 +87,12 @@ export type RootStackParamList = {
   FollowerSrceen:undefined
 
   AthleteSearchScreen: {
-    initialQuery?: string;
-    customer_app_id?: number;
-};
+      initialQuery?: string;
+      customer_app_id?: number;
+  };
+
+  UserFavouriteList:undefined;
+
 };
 
 export type HomeScreenProps = NativeStackScreenProps<
@@ -202,6 +205,10 @@ export type FollowerScreenpops = NativeStackScreenProps<
 export type AthleteSearchScreenpops = NativeStackScreenProps<
   RootStackParamList,
   "AthleteSearchScreen"
+>;
+export type UserFavouriteListpops = NativeStackScreenProps<
+  RootStackParamList,
+  "UserFavouriteList"
 >;
 
 export type AuthStackParamList = {

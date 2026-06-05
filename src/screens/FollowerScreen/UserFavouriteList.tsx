@@ -15,8 +15,8 @@ import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
 import FanEventCard from '../FollowerEventList/FollowerCard';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
-import { eventService, ParticipantItem } from '../../services/followerEvent';
-import { AthleteSearchScreenpops } from '../../types/navigation';
+import { userfavouriteService, FavouriteItem } from '../../services/userfavouriteService';
+import { UserFavouriteListpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
 
 interface PaginationState {
@@ -24,16 +24,24 @@ interface PaginationState {
     total_pages: number;
 }
 
-const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
+const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
     const { t } = useTranslation(['follow', 'follower']);
     const [searchText, setSearchText] = useState('');
-    const [participants, setParticipants] = useState<ParticipantItem[]>([]);
-    const [searchResults, setSearchResults] = useState<ParticipantItem[]>([]);
+    const [favourites, setFavourites] = useState<FavouriteItem[]>([]);
+    const [searchResults, setSearchResults] = useState<FavouriteItem[]>([]);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [searching, setSearching] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
-    const [loadingMoreParticipant, setLoadingMoreParticipant] = useState(false);
-    const [participantPagination, setParticipantPagination] = useState<PaginationState>({ page: 1, total_pages: 1 });
-    const [searchPagination, setSearchPagination] = useState<PaginationState>({ page: 1, total_pages: 1 });
+    const [loadingMoreFav, setLoadingMoreFav] = useState(false);
+
+    const [favPagination, setFavPagination] = useState<PaginationState>({
+        page: 1,
+        total_pages: 1,
+    });
+    const [searchPagination, setSearchPagination] = useState<PaginationState>({
+        page: 1,
+        total_pages: 1,
+    });
 
     const isLoadingMoreSearch = useRef(false);
     const {
@@ -47,7 +55,26 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
         handlePasswordModalClose,
     } = useFollowManager(t);
 
-    const displayEvents = searchText.trim().length > 0 ? searchResults : participants;
+    const displayList = searchText.trim().length > 0 ? searchResults : favourites;
+
+    useEffect(() => {
+        const loadInitial = async () => {
+            try {
+                setInitialLoading(true);
+                const result = await userfavouriteService.getFavourites({ page: 1 });
+                setFavourites(result.favourites);
+                setFavPagination({
+                    page: 1,
+                    total_pages: result.pagination.total_pages,
+                });
+            } catch (err) {
+                console.error('❌ Favourites initial load failed:', err);
+            } finally {
+                setInitialLoading(false);
+            }
+        };
+        loadInitial();
+    }, []);
 
     useEffect(() => {
         if (!searchText.trim()) {
@@ -58,18 +85,17 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
         const timer = setTimeout(async () => {
             try {
                 setSearching(true);
-                const result = await eventService.getEvents({
-                    is_participant: '1',
-                    page_participant: 1,
-                    filter_name_participant: searchText.trim(),
+                const result = await userfavouriteService.getFavourites({
+                    search: searchText.trim(),
+                    page: 1,
                 });
-                setSearchResults(result.participants || []);
+                setSearchResults(result.favourites);
                 setSearchPagination({
                     page: 1,
-                    total_pages: result.pagination?.participants?.total_pages ?? 1,
+                    total_pages: result.pagination.total_pages,
                 });
             } catch (err) {
-                console.error('❌ Search failed:', err);
+                console.error('❌ Favourites search failed:', err);
             } finally {
                 setSearching(false);
             }
@@ -86,62 +112,53 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
             totalPages = prev.total_pages;
             return prev;
         });
-
         if (currentPage >= totalPages) return;
 
         try {
             isLoadingMoreSearch.current = true;
             setLoadingMore(true);
             const nextPage = currentPage + 1;
-            const result = await eventService.getEvents({
-                is_participant: '1',
-                page_participant: nextPage,
-                filter_name_participant: searchText,
+            const result = await userfavouriteService.getFavourites({
+                search: searchText,
+                page: nextPage,
             });
             setSearchResults(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
-                return [...prev, ...(result.participants || []).filter(i => !ids.has(i.customer_app_id))];
+                return [...prev, ...result.favourites.filter(i => !ids.has(i.customer_app_id))];
             });
             setSearchPagination({
                 page: nextPage,
-                total_pages: result.pagination?.participants?.total_pages ?? totalPages,
+                total_pages: result.pagination.total_pages,
             });
         } catch (err) {
-            console.error('❌ Search load more failed:', err);
+            console.error('❌ Favourites search load more failed:', err);
         } finally {
             isLoadingMoreSearch.current = false;
             setLoadingMore(false);
         }
     }, [searchText]);
 
-
-    const loadMoreParticipant = useCallback(async () => {
-        if (loadingMoreParticipant || participantPagination.page >= participantPagination.total_pages) return;
-
+    const loadMoreFavourites = useCallback(async () => {
+        if (loadingMoreFav || favPagination.page >= favPagination.total_pages) return;
         try {
-            setLoadingMoreParticipant(true);
-            const nextPage = participantPagination.page + 1;
-            const result = await eventService.getEvents({
-                is_participant: '1',
-                page_participant: nextPage,
-                filter_name_participant: '',
-            });
-            setParticipants(prev => {
+            setLoadingMoreFav(true);
+            const nextPage = favPagination.page + 1;
+            const result = await userfavouriteService.getFavourites({ page: nextPage });
+            setFavourites(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
-                return [...prev, ...(result.participants || []).filter(i => !ids.has(i.customer_app_id))];
+                return [...prev, ...result.favourites.filter(i => !ids.has(i.customer_app_id))];
             });
-            setParticipantPagination(prev => ({
+            setFavPagination({
                 page: nextPage,
-                total_pages: result.pagination?.participants?.total_pages ?? prev.total_pages,
-            }));
+                total_pages: result.pagination.total_pages,
+            });
         } catch (err) {
-            console.error('❌ Participant load more failed:', err);
+            console.error('❌ Favourites load more failed:', err);
         } finally {
-            setLoadingMoreParticipant(false);
+            setLoadingMoreFav(false);
         }
-    }, [loadingMoreParticipant, participantPagination]);
+    }, [loadingMoreFav, favPagination]);
 
-    
     const handleLoadMore = useCallback(() => {
         if (searchText.trim().length > 0) {
             if (!isLoadingMoreSearch.current && searchPagination.page < searchPagination.total_pages) {
@@ -149,20 +166,20 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
             }
             return;
         }
-        if (participantPagination.page < participantPagination.total_pages && !loadingMoreParticipant) {
-            loadMoreParticipant();
+        if (favPagination.page < favPagination.total_pages && !loadingMoreFav) {
+            loadMoreFavourites();
         }
     }, [
         searchText,
         searchPagination,
-        participantPagination,
-        loadingMoreParticipant,
+        favPagination,
+        loadingMoreFav,
         loadMoreSearchResults,
-        loadMoreParticipant,
+        loadMoreFavourites,
     ]);
 
     const renderCard = useCallback(
-        ({ item }: { item: ParticipantItem }) => (
+        ({ item }: { item: FavouriteItem }) => (
             <FanEventCard
                 item={item}
                 isFollowed={isFollowed(item.customer_app_id)}
@@ -179,7 +196,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
     );
 
     const renderEmpty = useCallback(() => {
-        if (searching) {
+        if (initialLoading || searching) {
             return (
                 <ActivityIndicator
                     size="small"
@@ -195,18 +212,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
                 </Text>
             );
         }
-        return (
-            <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: spacing.xl, gap: 12 }}>
-                <Feather name="users" size={48} color={colors.gray500} />
-                <Text style={commonStyles.title}>
-                    {t('follow:empty.emptyTitle')}
-                </Text>
-                <Text style={[commonStyles.subtitle, { textAlign: 'center' }]}>
-                    {t('follow:empty.emptySubtitle')}
-                </Text>
-            </View>
-        );
-    }, [searching, searchText, t]);
+    }, [initialLoading, searching, searchText, t]);
 
     return (
         <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -214,12 +220,12 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
             <AppHeader />
 
             <View style={follow.yellowHeader}>
-                <Text style={commonStyles.title}>{t('follow:athlete')}</Text>
+                <Text style={commonStyles.title}>{t('follow:favourite')}</Text>
             </View>
 
             <FlatList
-                data={displayEvents}
-                keyExtractor={(item, index) => `${item.customer_app_id}_${index}`}
+                data={displayList}
+                keyExtractor={(item, index) => `fav_${item.customer_app_id}_${index}`}
                 renderItem={renderCard}
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
@@ -240,7 +246,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
                 }
                 ListEmptyComponent={renderEmpty}
                 ListFooterComponent={
-                    loadingMore || loadingMoreParticipant ? (
+                    loadingMore || loadingMoreFav ? (
                         <ActivityIndicator
                             size="small"
                             color={colors.primary}
@@ -249,7 +255,6 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
                     ) : null
                 }
             />
-
             <TrackingPasswordModal
                 visible={passwordModalVisible}
                 isVerifying={isVerifying}
@@ -261,4 +266,4 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
     );
 };
 
-export default AthleteSearchScreen;
+export default UserFavouriteList;

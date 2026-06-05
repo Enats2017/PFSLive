@@ -2,10 +2,12 @@
   "upcomingrace": "TROUVER UNE COURSE À VENIR",
   "pastrace": "TROUVER UNE COURSE PASSÉE",
   "athlete": "TROUVER UN ATHLÈTE",
+  "favourite": "ATHLÈTES FAVORIS",
   "button": {
     "upcoming": "AFFICHER TOUS LES ÉVÉNEMENTS À VENIR",
     "past": "AFFICHER TOUS LES RÉSULTATS",
-    "athlete": "Rechercher un athlète"
+    "athlete": "Rechercher un athlète",
+    "favourite": "LISTE DES FAVORIS"
   },
   "search": {
     "upcomgsearch": "Rechercher une course par nom d'événement",
@@ -13,6 +15,9 @@
   },
   "empty": {
     "emptyTitle": "Trouvez votre athlète",
-    "emptySubtitle": "Recherchez par nom ou numéro de dossard pour trouver et suivre des participants"
-}
+    "emptySubtitle": "Recherchez par nom ou numéro de dossard pour trouver et suivre des participants",
+    "favouriteEmptyTitle": "Aucun Favori Pour L'instant",
+    "favouriteEmptySubtitle": "Nous n'avons trouvé aucun favori correspondant",
+    "favouriteSearchEmpty": "Aucun Athlète Trouvé"
+  }
 }
