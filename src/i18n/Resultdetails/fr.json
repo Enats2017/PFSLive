@@ -1,8 +1,8 @@
 {
   "tabs": {
-    "raceInfo": "Info Course",
-    "timingPoint": "Point de Chronométrage",
-    "runnerInfo": "Info Coureur",
+    "raceInfo": "Résultats en direct",
+    "timingPoint": "Historique des points de contrôle",
+    "runnerInfo": "Infos coureur",
     "awards": "Récompenses"
   },
   "raceInfo": {

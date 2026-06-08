@@ -1,8 +1,8 @@
 {
-  "tabs": {
-    "raceInfo": "Race Info",
-    "timingPoint": "Timing Point",
-    "runnerInfo": "Runner Info",
+ "tabs": {
+    "raceInfo": "Live Results",
+    "timingPoint": "Checkpoint History",
+    "runnerInfo": " About Runner",
     "awards": "Awards"
   },
   "raceInfo": {

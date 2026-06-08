@@ -12,6 +12,7 @@ interface BottomNavigationFollowerProps {
   event_name?: string;
   product_option_value_app_id?: string | number;
   sourceTab?: 'past' | 'live' | 'upcoming';
+  selectedDistanceLabel?: string | number; 
 }
 
 // ✅ Custom icon assets from assets folder
@@ -28,6 +29,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
   event_name,
   product_option_value_app_id,
   sourceTab,
+  selectedDistanceLabel,
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute();
@@ -68,6 +70,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
             sourceScreen: route.name,
             sectionType: 'follower',
             sourceTab,
+            selectedDistanceLabel,
           });
         }
         break;

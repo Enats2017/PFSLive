@@ -33,7 +33,7 @@ const safeParseFloat = (value: any): number => {
 
 const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigation }) => {
     const { t } = useTranslation(['livetracking', 'common']);
-    const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab, event_source } = route.params;
+    const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab, event_source, selectedDistanceLabel } = route.params;
 
     const isCustomEvent = event_source === 'custom';
     const { followedUsers } = useFollowManager(t);
@@ -69,39 +69,39 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 return lat !== 0 || lon !== 0;
             })
             .map(p => {
-            const firstInitial = p.firstname?.charAt(0).toUpperCase() || '';
-            const lastInitial = p.lastname?.charAt(0).toUpperCase() || '';
-            const initials = event_source === 'custom'
-                ? `${firstInitial}${lastInitial}`         // ✅ partner → bib number
-                : String(p.bib_number);
+                const firstInitial = p.firstname?.charAt(0).toUpperCase() || '';
+                const lastInitial = p.lastname?.charAt(0).toUpperCase() || '';
+                const initials = event_source === 'custom'
+                    ? `${firstInitial}${lastInitial}`         // ✅ partner → bib number
+                    : String(p.bib_number);
 
-            return {
-                id: p.participant_app_id,
-                customer_app_id: p.customer_app_id,
-                bib: p.bib_number,
-                name: `${p.firstname || ''} ${p.lastname || ''}`.trim() || 'Unknown',
-                initials,
-                source: p.source,
-                lat: safeParseFloat(p.latitude),
-                lon: safeParseFloat(p.longitude),
-                ele: safeParseFloat(p.altitude),
-                gender: p.gender,
-                position: p.position || '',
-                position_gender: p.position_gender || '',
-                position_category: p.position_category || '',
-                category: p.category || '',
-                race_time: p.race_time_display || '00:00:00',
-                race_time_seconds: p.race_time_seconds || 0,
-                distance_km: safeParseFloat(p.distance_covered_km),
-                avg_speed_kmh: safeParseFloat(p.avg_speed_kmh),
-                last_checkpoint_name: p.last_checkpoint_name || '',
-                distance_to_next_cp: p.distance_to_next_cp !== null ? safeParseFloat(p.distance_to_next_cp) : null,
-                last_update: p.last_update || new Date().toISOString(),
-                profile_picture: p.profile_picture,
-                last_update_time: p.last_update_time,
-                last_update_type: p.last_update_type,
-            };
-        });
+                return {
+                    id: p.participant_app_id,
+                    customer_app_id: p.customer_app_id,
+                    bib: p.bib_number,
+                    name: `${p.firstname || ''} ${p.lastname || ''}`.trim() || 'Unknown',
+                    initials,
+                    source: p.source,
+                    lat: safeParseFloat(p.latitude),
+                    lon: safeParseFloat(p.longitude),
+                    ele: safeParseFloat(p.altitude),
+                    gender: p.gender,
+                    position: p.position || '',
+                    position_gender: p.position_gender || '',
+                    position_category: p.position_category || '',
+                    category: p.category || '',
+                    race_time: p.race_time_display || '00:00:00',
+                    race_time_seconds: p.race_time_seconds || 0,
+                    distance_km: safeParseFloat(p.distance_covered_km),
+                    avg_speed_kmh: safeParseFloat(p.avg_speed_kmh),
+                    last_checkpoint_name: p.last_checkpoint_name || '',
+                    distance_to_next_cp: p.distance_to_next_cp !== null ? safeParseFloat(p.distance_to_next_cp) : null,
+                    last_update: p.last_update || new Date().toISOString(),
+                    profile_picture: p.profile_picture,
+                    last_update_time: p.last_update_time,
+                    last_update_type: p.last_update_type,
+                };
+            });
     }, [participants]);
 
     // ✅ Follower's own position — watched on mount, never written to DB.
@@ -267,7 +267,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     is_start: cp.is_start,
                     is_finish: cp.is_finish,
                     features: cp.features ?? [],
-                    
+
                 }));
                 console.log('📍 Checkpoints from separate array:', checkpoints.length);
                 setApiCheckpoints(checkpoints);
@@ -283,15 +283,25 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 if (response.data.distances && response.data.distances.length > 0) {
                     setDistances(response.data.distances);
 
-                    // ✅ Set selected distance from API response (only on initial load)
-                    if (!activeDistance && response.data.selected_distance) {
-                        const apiSelectedDistance = response.data.distances.find(
-                            d => d.product_option_value_app_id === response.data.selected_distance!.product_option_value_app_id
-                        );
-
-                        if (apiSelectedDistance) {
-                            console.log('✅ Setting selected distance:', apiSelectedDistance.distance_name);
-                            setSelectedDistance(apiSelectedDistance);
+                    if (!activeDistance) {
+                        // ✅ Priority 1: match from route params
+                        if (selectedDistanceLabel) {
+                            const matchedDistance = response.data.distances.find(
+                                d => d.distance_name === selectedDistanceLabel
+                            );
+                            if (matchedDistance) {
+                                console.log('✅ Setting distance from route params:', matchedDistance.distance_name);
+                                setSelectedDistance(matchedDistance);
+                            }
+                            // ✅ Priority 2: API default
+                        } else if (response.data.selected_distance) {
+                            const apiSelectedDistance = response.data.distances.find(
+                                d => d.product_option_value_app_id === response.data.selected_distance!.product_option_value_app_id
+                            );
+                            if (apiSelectedDistance) {
+                                console.log('✅ Setting distance from API:', apiSelectedDistance.distance_name);
+                                setSelectedDistance(apiSelectedDistance);
+                            }
                         }
                     }
                 }
@@ -401,7 +411,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     };
 
     const handleAidStationPress = (station: AidStationMapMarker) => {
-         console.log('🔍 aid station pressed:', station);
+        console.log('🔍 aid station pressed:', station);
         setPopupState({ type: 'aidstation', data: station });
     };
 

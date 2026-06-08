@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { tokenService } from '../../services/tokenService';
 import { colors } from '../../styles/common.styles';
 
+
 interface AppHeaderProps {
   title?: string;
   showLogo?: boolean;
@@ -93,7 +94,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             onPress={handleSearchPress}
             activeOpacity={0.7}
           >
-            <Text style={headerStyles.Searchicon}>🔍</Text>
+            <MaterialCommunityIcons
+              name="account-search"
+              size={30}
+              color={colors.primary}
+            />
           </TouchableOpacity>
         )}
         <TouchableOpacity

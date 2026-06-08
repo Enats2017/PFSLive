@@ -263,6 +263,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     event_name={event_name}
                     product_option_value_app_id={product_option_value_app_id}
                     sourceTab={sourceTab}
+                    selectedDistanceLabel={selectedDistanceLabel} 
                 />
             ) : (
                 <BottomNavigation
@@ -271,6 +272,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     event_name={event_name}
                     product_option_value_app_id={product_option_value_app_id}
                     sourceScreen={sourceScreen}
+                    selectedDistanceLabel={selectedDistanceLabel} 
                 />
             )}
 

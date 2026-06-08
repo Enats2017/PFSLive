@@ -27,7 +27,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
             <View style={resultInfoStyles.card}>
                 <View style={resultInfoStyles.headerBar}>
                     <View style={resultInfoStyles.headerGreen}>
-                        <Text style={commonStyles.text}>
+                        <Text style={resultInfoStyles.text}>
                             {t(`status.${raceInfo?.participant_status ?? 'finished'}`)}
                         </Text>
                     </View>
@@ -35,7 +35,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                     <View style={resultInfoStyles.headerMiddle} />
                     <View style={resultInfoStyles.diagRight} />
                     <View style={resultInfoStyles.headerRed}>
-                        <Text style={commonStyles.text}>
+                        <Text style={resultInfoStyles.text}>
                             {event?.distance_name ?? '—'}
                         </Text>
                     </View>

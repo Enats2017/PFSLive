@@ -71,6 +71,7 @@ export interface FollowingLiveEvent {
   event_name: string;
   event_source: string;
   race_date: string;
+  race_distance: string;
   race_time: string;
   end_time: string | null;
   timezone: string;

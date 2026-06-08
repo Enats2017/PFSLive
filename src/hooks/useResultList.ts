@@ -11,11 +11,11 @@ import { API_CONFIG } from "../constants/config";
 // ADD these two imports
 import { AppError, ErrorType } from "../services/api";
 import { useScreenError, ScreenError } from "../hooks/useApiError";
+import { useTranslation } from "react-i18next";
 
 export const TYPE_OPTIONS: FilterOption[] = [
   { label: "allrace:filter.results", value: "0" },
   { label: "allrace:filter.live", value: "1" },
-  { label: "allrace:filter.favourite", value: "fav" },
 ];
 
 type FetchMode = "initial" | "filter" | "paginate" | "refresh";
@@ -38,6 +38,7 @@ export const useResultList = (
   const isMounted = useRef(true);
   const requestLock = useRef(false);
   const hasFetched = useRef(false);
+  const { t } = useTranslation(["allrace"]);
 
   const [selectedPovId, setSelectedPovId] = useState<number | undefined>(
     initial_pov_id,
@@ -53,7 +54,7 @@ export const useResultList = (
     [selectedType.value],
   );
 
-  const isFavTab = selectedType.value === "fav";
+  const isFavTab = selectedCategory === "favourite";
 
   const [distances, setDistances] = useState<Distance[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -128,7 +129,10 @@ export const useResultList = (
 
           if (API_CONFIG.DEBUG) {
             console.log("✅ Race Status:", data.event.race_status);
-            console.log("✅ Race Progress Status:", data.event.race_progress_status);
+            console.log(
+              "✅ Race Progress Status:",
+              data.event.race_progress_status,
+            );
           }
         }
 
@@ -227,18 +231,21 @@ export const useResultList = (
       }
 
       setSelectedPovId(newId);
-      setSelectedCategory("scratch");
+      //setSelectedCategory("scratch");
       setFavBibs(new Set());
+
+      const categoryToSend = selectedCategory === "favourite" ? "favourite" : "scratch";
+      if (selectedCategory !== "favourite") setSelectedCategory("scratch");
 
       fetchData({
         povId: newId,
         live: fromLive,
-        category: "scratch",
+        category: categoryToSend,
         page: 1,
         mode: "filter",
       });
     },
-    [selectedPovId, fromLive, fetchData],
+    [selectedPovId, fromLive, selectedCategory,fetchData],
   );
 
   const onTypeSelect = useCallback(
@@ -250,22 +257,23 @@ export const useResultList = (
       }
 
       setSelectedType(opt);
-      setSelectedCategory("scratch");
+      //setSelectedCategory("scratch");
 
-      // ✅ For favourite tab, don't fetch - we'll filter locally
-      if (opt.value === "fav") return;
+      //if (opt.value === "fav") return;
 
       const newLive: 0 | 1 = opt.value === "1" ? 1 : 0;
+      const categoryToSend = selectedCategory === "favourite" ? "favourite" : "scratch";
+      if (selectedCategory !== "favourite") setSelectedCategory("scratch");
 
       fetchData({
         povId: selectedPovId,
         live: newLive,
-        category: "scratch",
+        category: categoryToSend,
         page: 1,
         mode: "filter",
       });
     },
-    [selectedType.value, selectedPovId, fetchData],
+    [selectedType.value, selectedPovId, selectedCategory, fetchData],
   );
 
   const onCategorySelect = useCallback(
@@ -277,6 +285,7 @@ export const useResultList = (
       }
 
       setSelectedCategory(opt.value);
+      //if (opt.value === 'favourite') return;
 
       fetchData({
         povId: selectedPovId,
@@ -364,12 +373,17 @@ export const useResultList = (
   );
 
   const categoryOptions = useMemo<FilterOption[]>(
-    () =>
-      categories.map((c) => ({
+    () => [
+      ...categories.map((c) => ({
         label: c.label,
         value: c.key,
       })),
-    [categories],
+      {
+        label: t("allrace:filter.favourite"), // ✅ now actually translates
+        value: "favourite",
+      },
+    ],
+    [categories, t],
   );
 
   const selectedDistanceLabel = useMemo(
@@ -394,47 +408,20 @@ export const useResultList = (
     );
   }, [distances]);
 
-  const selectedCategoryLabel = useMemo(
-    () =>
-      categories.find((c) => c.key === selectedCategory)?.label ?? "Scratch",
-    [categories, selectedCategory],
-  );
+  const selectedCategoryLabel = useMemo(() => {
+    if (selectedCategory === "favourite") return t("allrace:filter.favourite"); // ✅ add this
+    return (
+      categories.find((c) => c.key === selectedCategory)?.label ?? "Scratch"
+    );
+  }, [categories, selectedCategory, t]);
 
   // ✅ FILTER RESULTS BASED ON FOLLOW STATUS
   const displayResults = useMemo<RaceResult[]>(() => {
-    if (!isFavTab) {
-      return results.map((item, index) => ({
-        ...item,
-        category_rank: String(index + 1),
-      }));
-    }
-
-    // ✅ Filter by BOTH customer_app_id AND BIB
-    const filtered = results.filter((result) => {
-      // Check customer-based follow
-      if (
-        result.customer_app_id &&
-        followedUsers?.has(Number(result.customer_app_id))
-      ) {
-        return true;
-      }
-
-      // Check BIB-based follow
-      if (result.bib && product_app_id && followedBibs) {
-        const bibSet = followedBibs.get(product_app_id);
-        if (bibSet?.has(String(result.bib))) {
-          return true;
-        }
-      }
-
-      return false;
-    });
-
-    return filtered.map((item, index) => ({
+    return results.map((item, index) => ({
       ...item,
       category_rank: String(index + 1),
     }));
-  }, [isFavTab, results, followedUsers, followedBibs, product_app_id]);
+  }, [results]);
 
   return {
     results,

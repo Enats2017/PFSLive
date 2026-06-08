@@ -11,6 +11,7 @@ export type RootStackParamList = {
     sectionType?: string;
     sourceTab?: "past" | "live" | "upcoming";
     event_source?: string,
+    selectedDistanceLabel?:string | number;
   };
   ParticipantEvent: undefined;
   PersonalEvent: { sharedFileUri?: string; sharedFileName?: string } | undefined;

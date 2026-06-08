@@ -80,13 +80,11 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
         [item.checkpoints]
     );
 
-    // ✅ Overall rank (badge) — only meaningful once race has positions
     const overallRank = useMemo(
         () => (item.position ? item.position.replace('.', '') : ''),
         [item.position]
     );
 
-    // ✅ Gender rank shown under overall rank for females (parity with ResultCardLive)
     const genderRank = isFemale && item.finish_rank_gender ? `F ${item.finish_rank_gender}` : null;
 
     const handleCardPress = useCallback(() => {
@@ -103,11 +101,8 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
         if (!isLoading) onToggleFollow();
     }, [isLoading, onToggleFollow]);
 
-    return (
-        <View style={favstyle.wrapper}>
+    return (     
             <View style={favstyle.card}>
-
-                {/* ── Diagonal header: status left | distance right ── */}
                 <View style={favstyle.headerBar}>
                     <View style={[favstyle.headerLeft, { backgroundColor: statusColors.backgroundColor }]}>
                         <Text style={[favstyle.headerText, { color: statusColors.textColor }]}>
@@ -213,8 +208,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                         </View>
                     )}
                 </TouchableOpacity>
-            </View>
-        </View>
+            </View>       
     );
 };
 

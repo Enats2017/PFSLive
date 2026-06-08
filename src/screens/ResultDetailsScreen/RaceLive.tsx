@@ -64,7 +64,7 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
             <View style={[resultInfoStyles.card, { marginBottom: 20 }]}>
                 <View style={resultInfoStyles.headerBar}>
                     <View style={[resultInfoStyles.headerGreen]}>
-                        <Text style={commonStyles.text}>
+                        <Text style={resultInfoStyles.text}>
                             {t(`status.${event?.race_status ?? 'in_progress'}`)}
                         </Text>
                     </View>
@@ -72,7 +72,7 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                     <View style={resultInfoStyles.headerMiddle} />
                     <View style={resultInfoStyles.diagRight} />
                     <View style={resultInfoStyles.headerRed}>
-                        <Text style={commonStyles.text}>
+                        <Text style={resultInfoStyles.text}>
                             {event?.distance_name ?? '—'}
                         </Text>
                     </View>

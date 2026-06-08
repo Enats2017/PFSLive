@@ -94,7 +94,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     <View
       style={[
         commonStyles.card,
-        { padding: 0, marginBottom: spacing.lg },
+        { padding: 0, marginBottom: spacing.lg, },
       ]}
     >
       <View style={detailsStyles.topRow}>

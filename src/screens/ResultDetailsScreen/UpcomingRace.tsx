@@ -21,7 +21,7 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
             <View style={resultInfoStyles.card}>
                 <View style={resultInfoStyles.headerBar}>
                     <View style={resultInfoStyles.headerGreen}>
-                        <Text style={commonStyles.text}>
+                        <Text style={resultInfoStyles.text}>
                             {t(`status.${event?.race_status ?? 'not_started'}`)}
                         </Text>
                     </View>
@@ -29,7 +29,7 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                     <View style={resultInfoStyles.headerMiddle} />
                     <View style={resultInfoStyles.diagRight} />
                     <View style={resultInfoStyles.headerRed}>
-                        <Text style={commonStyles.text}>
+                        <Text style={resultInfoStyles.text}>
                             {event?.distance_name ?? '—'}
                         </Text>
                     </View>

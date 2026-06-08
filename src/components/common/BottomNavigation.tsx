@@ -12,6 +12,7 @@ interface BottomNavigationProps {
   event_name?: string;
   product_option_value_app_id?: string | number;
   sourceScreen?: string;
+  selectedDistanceLabel?: string | number;
 }
 
 // ✅ Custom icon assets from assets folder
@@ -28,6 +29,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   event_name,
   product_option_value_app_id,
   sourceScreen,
+  selectedDistanceLabel,
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute();
@@ -68,6 +70,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             sourceScreen: route.name,
             sectionType: 'participant',
             sourceTab: 'live',
+            selectedDistanceLabel,
           });
         }
         break;
