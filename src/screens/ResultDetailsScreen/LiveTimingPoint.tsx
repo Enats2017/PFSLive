@@ -272,8 +272,17 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
         );
     }
 
+    // Once the race is live/finished, only show timing points the participant has
+    // actually crossed — hide the ones not yet reached. The start (index 0) is kept
+    // as the anchor so the start card + first-checkpoint logic stay correct.
+    // Pre-race (not_started) the full schedule is still shown.
+    const isLiveOrFinished = raceStatus === 'in_progress' || raceStatus === 'finished';
+    const visibleCheckpoints = isLiveOrFinished
+        ? checkpoints.filter((cp, i) => cp.is_crossed || i === 0)
+        : checkpoints;
+
     // ✅ Reverse to show Finish → CP3 → CP2 → CP1 → Start (descending order)
-    const reversed = [...checkpoints].reverse();
+    const reversed = [...visibleCheckpoints].reverse();
     const lastIndex = reversed.length - 1;
 
     return (
