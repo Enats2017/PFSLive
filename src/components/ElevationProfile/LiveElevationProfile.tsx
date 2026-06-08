@@ -137,68 +137,21 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
         return () => clearTimeout(timer);
     }, [participantChartPoints, chartWidth, totalDistance, screenWidth]);
 
+    // One vertical grid line per cm of width → spacing = kmPerCm.
+    //   100km → every 10km (10, 20, 30 …),  50km → every 5km (5, 10, 15 …).
+    // Stop half an interval before the end so no line/label hugs the finish
+    // (routes are rarely an exact round total, e.g. a "100km" GPX is ~100.4km,
+    // which would otherwise draw a clipped "100 km" line at the very edge).
     const distanceMarkers = React.useMemo(() => {
         const markers: number[] = [];
-        const interval = 20;
-        for (let i = interval; i < totalDistance; i += interval) {
+        const interval = kmPerCm;
+        if (interval <= 0) return markers;
+        const limit = totalDistance - interval * 0.5;
+        for (let i = interval; i < limit; i += interval) {
             markers.push(i);
         }
         return markers;
-    }, [totalDistance]);
-
-    const segmentDistances = React.useMemo(() => {
-        const segments: Array<{ midX: number; distance: number; text: string }> = [];
-
-        if (apiCheckpoints.length > 0) {
-            apiCheckpoints.forEach((cp, idx) => {
-                if (cp.segment_distance > 0) {
-                    const prevDistance = idx === 0 ? 0 : apiCheckpoints[idx - 1].distance;
-                    const midX = (prevDistance + cp.distance) / 2;
-
-                    segments.push({
-                        midX,
-                        distance: cp.segment_distance,
-                        text: `${cp.segment_distance.toFixed(1)} km`,
-                    });
-                }
-            });
-
-            console.log('📏 Segment distances from API:', segments.map(s => s.text));
-        } else if (checkpointChartPoints.length > 0) {
-            const firstCP = checkpointChartPoints[0];
-            segments.push({
-                midX: firstCP.x / 2,
-                distance: firstCP.x,
-                text: `${firstCP.x.toFixed(1)} km`,
-            });
-
-            for (let i = 0; i < checkpointChartPoints.length - 1; i++) {
-                const current = checkpointChartPoints[i];
-                const next = checkpointChartPoints[i + 1];
-
-                const segmentDistance = next.x - current.x;
-                const midX = (current.x + next.x) / 2;
-
-                segments.push({
-                    midX,
-                    distance: segmentDistance,
-                    text: `${segmentDistance.toFixed(1)} km`,
-                });
-            }
-
-            const lastCP = checkpointChartPoints[checkpointChartPoints.length - 1];
-            const segmentDistance = totalDistance - lastCP.x;
-            const midX = (lastCP.x + totalDistance) / 2;
-
-            segments.push({
-                midX,
-                distance: segmentDistance,
-                text: `${segmentDistance.toFixed(1)} km`,
-            });
-        }
-
-        return segments;
-    }, [apiCheckpoints, checkpointChartPoints, totalDistance]);
+    }, [totalDistance, kmPerCm]);
 
     const handleCheckpointClick = (data: any, idx: number) => {
         if (onAidStationPress) {
@@ -236,7 +189,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     // One flat list so taps are resolved by nearest-hit, not by which absolute
     // overlay happens to sit on top — fixes occlusion when participants cluster.
     const tapTargets = React.useMemo(() => {
-        const PAD_TOP = 20, PAD_BOTTOM = 20;
+        const PAD_TOP = 20, PAD_BOTTOM = 0;   // must match VictoryChart padding
         const plotHeight = chartHeight - PAD_TOP - PAD_BOTTOM;
         const toScreenY = (yVal: number) => {
             const yPct = (yVal - yDomain[0]) / (yDomain[1] - yDomain[0]);
@@ -303,7 +256,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     <VictoryChart
                         width={chartWidth}
                         height={chartHeight}
-                        padding={{ top: 20, bottom: 20, left: 0, right: 0 }}
+                        padding={{ top: 20, bottom: 0, left: 0, right: 0 }}
                         domain={{ x: [0, totalDistance] as [number, number], y: yDomain }}
                     >
                         <VictoryAxis
@@ -344,7 +297,9 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                 ]}
                                 style={{
                                     data: {
-                                        stroke: colors.gray400,
+                                        // Light grey, but semi-transparent dark so it stays visible
+                                        // over the map (pure #D1D5DB washed out on the overlay).
+                                        stroke: 'rgba(75, 85, 99, 0.45)',
                                         strokeWidth: 1,
                                     },
                                 }}
@@ -356,7 +311,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                 key={`checkpoint-line-${idx}`}
                                 data={[
                                     { x: point.x, y: yDomain[0] },
-                                    { x: point.x, y: yDomain[1] },
+                                    { x: point.x, y: point.y },   // ✅ stop at the dot, not full height
                                 ]}
                                 style={{
                                     data: {
@@ -397,72 +352,26 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                             />
                         )}
 
-                        {segmentDistances.map((segment, idx) => {
-                            const xPosition = (segment.midX / totalDistance) * chartWidth;
-                            const yPosition = 15;
-
-                            return (
-                                <VictoryLabel
-                                    key={`segment-label-${idx}`}
-                                    x={xPosition}
-                                    y={yPosition}
-                                    text={segment.text}
-                                    style={{
-                                        fontSize: 9,
-                                        fill: colors.gray700,
-                                        fontWeight: '600',
-                                    }}
-                                    textAnchor="middle"
-                                    backgroundStyle={{
-                                        fill: 'rgba(255, 255, 255, 0.8)',
-                                        padding: 2,
-                                    }}
-                                    backgroundPadding={3}
-                                />
-                            );
-                        })}
-
                         {distanceMarkers.map((distance, idx) => {
                             const xPosition = (distance / totalDistance) * chartWidth;
                             return (
                                 <VictoryLabel
                                     key={`distance-label-${idx}`}
-                                    x={xPosition}
-                                    y={chartHeight - 5}
-                                    text={`${distance} km`}
+                                    x={xPosition + 4}
+                                    y={14}
+                                    text={`${Math.round(distance)} km`}
                                     style={{
                                         fontSize: 10,
                                         fill: colors.gray700,
-                                        fontWeight: '500',
+                                        fontWeight: '600',
                                     }}
-                                    textAnchor="middle"
+                                    textAnchor="start"
+                                    backgroundStyle={{ fill: 'rgba(255, 255, 255, 0.85)' }}
+                                    backgroundPadding={3}
                                 />
                             );
                         })}
 
-                        <VictoryLabel
-                            x={30}
-                            y={chartHeight - 5}
-                            text={`${Math.round(minElevation)} m`}
-                            style={{
-                                fontSize: 10,
-                                fill: colors.gray700,
-                                fontWeight: '500',
-                            }}
-                            textAnchor="start"
-                        />
-
-                        <VictoryLabel
-                            x={chartWidth - 30}
-                            y={chartHeight - 5}
-                            text={`${Math.round(totalDistance)} km`}
-                            style={{
-                                fontSize: 10,
-                                fill: colors.gray700,
-                                fontWeight: '500',
-                            }}
-                            textAnchor="end"
-                        />
                     </VictoryChart>
 
                     {tapTargets

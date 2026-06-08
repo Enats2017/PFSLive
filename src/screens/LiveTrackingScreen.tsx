@@ -504,7 +504,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         position: 'absolute',
                         left: 0,
                         right: 0,
-                        bottom: showBottomNav ? 60 : 0,   // sit above the bottom nav; tweak to taste
+                        bottom: showBottomNav ? 50 : 0,   // sit above the bottom nav; tweak to taste
                         backgroundColor: 'transparent',
                         zIndex: 5,
                         elevation: 5,
@@ -528,7 +528,10 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
             {showElevationProfile && (
                 <TouchableOpacity
-                    style={liveTrackingStyles.collapseBtn}
+                    style={[
+                        liveTrackingStyles.collapseBtn,
+                        { bottom: 260, zIndex: 10, elevation: 10 },   // follow the bottom:0 profile + sit above the overlay
+                    ]}
                     onPress={() => setProfileCollapsed(!profileCollapsed)}
                 >
                     <Ionicons
