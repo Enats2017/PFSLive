@@ -11,6 +11,7 @@ import { formatClockTime } from '../../utils/timeFormat';
 interface LiveTimingPointProps {
     checkpoints?: CheckpointDetail[];
     raceStatus?: string;
+    gender?: string;
 }
 
 const AmenityIcons = (({ features, t }: { features?: string[]; t: any }) => {
@@ -71,6 +72,22 @@ const pace = (v: string | undefined, t: any) =>
     v
         ? `${v} ${t('units.minPerKm')}`
         : t('defaults.empty');
+
+const genderLetter = (gender: string | undefined) =>
+    gender === 'female' ? 'F' : gender === 'male' ? 'M' : '';
+
+// "25 F 5" → 25th overall at this point, 5th in gender. Falls back to the bare
+// ranking when there's no gender rank or the gender is unknown.
+const rankingWithGender = (
+    ranking: string | undefined,
+    gender: string | undefined,
+    rank_gender: string | undefined,
+    t: any,
+) => {
+    if (!ranking) return t('defaults.empty');
+    const g = genderLetter(gender);
+    return (g && rank_gender) ? `${ranking} ${g} ${rank_gender}` : ranking;
+};
 
 const StatRow = memo(({
     leftLabel, leftVal, rightLabel, rightVal,
@@ -141,12 +158,14 @@ const CheckpointCard = memo(({
     item,
     t,
     isFirstCheckpoint,
-    raceStatus
+    raceStatus,
+    gender,
 }: {
     item: CheckpointDetail;
     t: any;
     isFirstCheckpoint: boolean;
     raceStatus?: string;
+    gender?: string;
 }) => {
 
     const isUpcomingRace = raceStatus === 'not_started';
@@ -193,7 +212,7 @@ const CheckpointCard = memo(({
                     leftLabel={t('timingPoint.time')}
                     leftVal={time(item.race_time, t)}
                     rightLabel={t('timingPoint.ranking')}
-                    rightVal={val(item.ranking, t)}
+                    rightVal={rankingWithGender(item.ranking, gender, item.rank_gender, t)}
                 />
                 <View style={{ height: 30 }} />
             </View>
@@ -241,7 +260,7 @@ const CheckpointCard = memo(({
                     leftLabel={t('timingPoint.time')}
                     leftVal={time(item.race_time, t)}
                     rightLabel={t('timingPoint.ranking')}
-                    rightVal={val(item.ranking, t)}
+                    rightVal={rankingWithGender(item.ranking, gender, item.rank_gender, t)}
                 />
                 <StatRow
                     leftLabel={t('timingPoint.speed')}
@@ -259,7 +278,7 @@ const CheckpointCard = memo(({
     return null;
 });
 
-const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStatus }) => {
+const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStatus, gender }) => {
     const { t } = useTranslation(['resultdetails', 'common']);
 
     if (!checkpoints || checkpoints.length === 0) {
@@ -342,6 +361,7 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
                         t={t}
                         isFirstCheckpoint={index === lastIndex} // ✅ Start is now last in reversed list
                         raceStatus={raceStatus}
+                        gender={gender}
                     />
                 </View>
             ))}

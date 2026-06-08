@@ -132,7 +132,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     ) : null
                 )}
                 {item === 'timingPoint' && (
-                    <LiveTimingPoint checkpoints={data?.checkpoints} raceStatus={data?.event?.race_status} />
+                    <LiveTimingPoint checkpoints={data?.checkpoints} raceStatus={data?.event?.race_status} gender={data?.race_info?.gender} />
                 )}
                 {item === 'runnerInfo' && (
                     <RunnerInfoTab runnerInfo={data?.runner_info} />
