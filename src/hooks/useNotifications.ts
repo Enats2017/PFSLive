@@ -37,9 +37,13 @@ async function setupAndroidChannel(): Promise<void> {
   if (Platform.OS !== "android" || !Notifications) return;
 
   try {
-    await Notifications.setNotificationChannelAsync("default", {
+    // The old "default" channel was created without `sound`, and Android does
+    // not allow a channel's sound/importance to be changed after creation —
+    // so we create a new channel id and point the server's channelId at it.
+    await Notifications.setNotificationChannelAsync("default_v2", {
       name: "Default",
       importance: Notifications.AndroidImportance.MAX,
+      sound: "default",                 // ← the missing piece: plays the default tone
       vibrationPattern: [0, 250, 250, 250],
       lightColor: "#FF231F7C",
       enableVibrate: true,
