@@ -34,6 +34,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
     const handleTrackingPress = useCallback(() => {
         navigation.navigate('LiveTracking', {
             product_app_id: item.id,
+            product_option_value_app_id: item.product_option_value_app_id,
             event_name: item.name,
             event_source: item.event_source,
             sourceScreen: isOwnProfile ? 'Profile' : 'FollowerDistanceScreen',
