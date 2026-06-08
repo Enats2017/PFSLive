@@ -23,6 +23,7 @@ import ParticipantScreen from '../screens/ParticipantScreen/ParticipantScreen';
 import FollowerSrceen from '../screens/FollowerScreen/FollowerScreen';
 import AthleteSearchScreen from '../screens/FollowerScreen/AthleteSearchScreen';
 import OwnProfile from '../screens/ProfileScreen/OwnProfile';
+import UserFavouriteList from '../screens/FollowerScreen/UserFavouriteList';
 
 
 // ✅ AUTH SCREENS
@@ -98,7 +99,7 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen name="ParticipantScreen" component={ParticipantScreen} options={noGesture} />
           <Stack.Screen name="FollowerSrceen" component={FollowerSrceen} options={noGesture} />
           <Stack.Screen name="AthleteSearchScreen" component={AthleteSearchScreen} options={noGesture} />
-          <Stack.Screen name="OwnProfile" component={OwnProfile} options={noGesture} />
+          <Stack.Screen name="UserFavouriteList" component={UserFavouriteList} options={noGesture} />
 
           <Stack.Screen
             name="LiveTracking"
@@ -126,6 +127,7 @@ export const AppNavigator: React.FC = () => {
               <Stack.Screen name="EditProfileScreen"    component={EditProfileScreen}    options={noGesture} />
               <Stack.Screen name="EditPersonalEvent"    component={EditPersonalEvent}    options={noGesture} />
               <Stack.Screen name="LiveTrackingSettings" component={LiveTrackingSettings} options={noGesture} />
+              <Stack.Screen name="OwnProfile" component={OwnProfile} options={noGesture} />
             </>
           )}
         </Stack.Navigator>

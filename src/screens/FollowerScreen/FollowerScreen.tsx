@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
@@ -22,11 +22,8 @@ import SearchInput from '../../components/SearchInput';
 import { SuggestionItem } from '../../services/followerScreenService';
 import SuggestionDropdown from '../../components/SuggestionDropdown';
 import useSearchSuggestions from '../../hooks/useSearchSuggestions';
-import { eventService,ParticipantItem } from '../../services/followerEvent';
+import { eventService, ParticipantItem } from '../../services/followerEvent';
 import AthleteSuggestionDropdown from '../../components/AthleteSuggestionDropdown';
-
-
-
 
 const Divider = () => (
     <View style={follow.dividerRow}>
@@ -162,6 +159,7 @@ const FollowerScreen = () => {
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader />
+
             <Animated.View style={{ flex: 1, transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }] }} >
                 <View style={follow.yellowHeader}>
                     <Feather name="radio" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
@@ -256,6 +254,18 @@ const FollowerScreen = () => {
                             </Text>
                         </TouchableOpacity>
                     </View>
+                </View>
+                <View style={follow.section}>
+                    <TouchableOpacity
+                        style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.xl, gap: 8 }]}
+                        onPress={() => navigation.navigate('UserFavouriteList')}
+                        activeOpacity={0.8}
+                    >
+                        <MaterialIcons name="favorite-outline" size={18} color={colors.white} />
+                        <Text style={commonStyles.primaryButtonText}>
+                            {t('follow:button.favourite')}
+                        </Text>
+                    </TouchableOpacity>
                 </View>
             </Animated.View>
         </SafeAreaView>

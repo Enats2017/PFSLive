@@ -99,6 +99,8 @@ export const API_CONFIG = {
     RESET_PASSWORD: "/reset_password_api.php",
     GET_FAVOURITES: "/get_favourite_api.php",
     SAVE_PUSH_TOKEN: "/register_follower_api.php",
+    GET_ALL_FAVOURITES: "/get_favourite_all_api.php",
+    
     
 
     // Participants

@@ -2,10 +2,12 @@
   "upcomingrace": "ZOEK EEN AANKOMENDE RACE",
   "pastrace": "ZOEK EEN EERDERE RACE",
   "athlete": "ZOEK EEN ATLEET",
+  "favourite": "FAVORIETE ATLETEN",
   "button": {
     "upcoming": "TOON ALLE AANKOMENDE EVENEMENTEN",
     "past": "TOON ALLE RESULTATEN",
-    "athlete": "Atleet zoeken"
+    "athlete": "Atleet zoeken",
+    "favourite": "LIJST VAN FAVORIETEN"
   },
   "search": {
     "upcomgsearch": "Zoek race op evenementnaam",
@@ -13,6 +15,9 @@
   },
   "empty": {
     "emptyTitle": "Vind uw atleet",
-    "emptySubtitle": "Zoek op naam of startnummer om deelnemers te vinden en te volgen"
-}
+    "emptySubtitle": "Zoek op naam of startnummer om deelnemers te vinden en te volgen",
+    "favouriteEmptyTitle": "Nog Geen Favorieten",
+    "favouriteEmptySubtitle": "We konden geen overeenkomende favoriet vinden",
+    "favouriteSearchEmpty": "Geen Atleten Gevonden"
+  }
 }
