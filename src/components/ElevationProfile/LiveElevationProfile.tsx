@@ -36,19 +36,31 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
 
     const scrollViewRef = React.useRef<ScrollView>(null);
 
-    // Pixels-per-km tapers with route length so short routes stay legible and
-    // very long routes (100–200km) don't produce an unscrollably huge canvas.
-    //   - Floor (screenWidth): short routes fill the screen, no scroll.
-    //   - Target 150 px/km: smooth dot movement on short/medium routes (≤80km).
-    //   - Ceiling (MAX_CHART_WIDTH): beyond ~80km the cap kicks in and px/km
-    //     tapers — e.g. 100km → 120px/km, 200km → 60px/km — still visible
-    //     movement, but Victory renders and scrolls without lag.
-    const PER_KM_TARGET = 150;     // ideal px/km for short/medium routes
-    const MAX_CHART_WIDTH = 12000; // hard ceiling on total scroll width
-    const chartWidth = Math.min(
-        MAX_CHART_WIDTH,
-        Math.max(screenWidth, totalDistance * PER_KM_TARGET)
-    );
+    // ── Chart width ───────────────────────────────────────────────────────
+    // Short/medium routes span a FIXED physical width (DISTANCE_DIVISOR cm), so
+    // the profile stays compact and overlay-friendly. A clamp on km-per-cm caps
+    // how compressed it can ever get: once a route would exceed MAX_KM_PER_CM,
+    // the width grows (and scrolls) instead of cramming more in.
+    //
+    //   km shown per cm = min(totalDistance / DISTANCE_DIVISOR, MAX_KM_PER_CM)
+    //     ≤100km → totalDistance/10  → route spans exactly DISTANCE_DIVISOR cm
+    //     >100km → capped at 10 km/cm → width grows linearly, scrolls
+    //   e.g. 50km→10cm, 100km→10cm, 170km→17cm, 330km→33cm.
+    //
+    // React Native layout units (dp) are normalised to 160 dpi, so 1 cm ≈ 63 dp
+    // on every device. Tune: DISTANCE_DIVISOR = fit-width for short/medium
+    // routes; MAX_KM_PER_CM = worst-case zoom (lower = less compression, more
+    // scroll on ultras).
+    const DISTANCE_DIVISOR = 10;            // short/medium routes span this many cm
+    const MAX_KM_PER_CM    = 10;            // compression ceiling — never cram more than this per cm
+    const DP_PER_CM = 160 / 2.54;           // ≈ 63 dp per physical cm in RN layout units
+
+    const kmPerCm = totalDistance > 0
+        ? Math.min(totalDistance / DISTANCE_DIVISOR, MAX_KM_PER_CM)
+        : 1;
+    const routeWidthCm = kmPerCm > 0 ? totalDistance / kmPerCm : DISTANCE_DIVISOR;
+    // Never narrower than the screen: fills wide screens, scrolls when longer.
+    const chartWidth = Math.max(screenWidth, routeWidthCm * DP_PER_CM);
     const chartHeight = 220;
 
     const elevationRange = maxElevation - minElevation;
@@ -275,14 +287,17 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     });
 
     return (
-        <View style={liveTrackingStyles.profileContainer}>
+        // ✅ Transparent so the map behind shows through. (For the map to actually
+        // be visible behind it, the parent chartContainer must overlap the map —
+        // see the absolute-overlay snippet in LiveTrackingScreen.)
+        <View style={[liveTrackingStyles.profileContainer, { backgroundColor: 'transparent' }]}>
             <Text style={liveTrackingStyles.profileTitle}>{t('elevationProfile')}</Text>
 
             <ScrollView
                 ref={scrollViewRef}  // ✅ NEW: attach ref
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                style={liveTrackingStyles.profileScrollView}
+                style={[liveTrackingStyles.profileScrollView, { backgroundColor: 'transparent' }]}
             >
                 <View>
                     <VictoryChart
@@ -312,7 +327,8 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                             interpolation="monotoneX"
                             style={{
                                 data: {
-                                    fill: 'rgba(59, 130, 246, 0.4)',
+                                    // Lighter fill so the map reads through the elevation shape.
+                                    fill: 'rgba(59, 130, 246, 0.25)',
                                     stroke: '#3B82F6',
                                     strokeWidth: 3,
                                 },

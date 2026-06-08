@@ -497,7 +497,21 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             </View>
 
             {showElevationProfile && !profileCollapsed && (
-                <View style={liveTrackingStyles.chartContainer}>
+                <View
+                    style={[
+                    liveTrackingStyles.chartContainer,
+                    {
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        bottom: showBottomNav ? 60 : 0,   // sit above the bottom nav; tweak to taste
+                        backgroundColor: 'transparent',
+                        zIndex: 5,
+                        elevation: 5,
+                    },
+                    ]}
+                    pointerEvents="box-none"
+                >
                     <LiveElevationProfile
                         chartData={chartData}
                         aidStations={showCheckpoints ? (routeData?.aidStations ?? []) : []}
@@ -540,7 +554,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 />
             )}
 
-            {showBottomNav && (
+            {/* {showBottomNav && (
                 sectionType === 'follower' ? (
                     <BottomNavigationFollower
                         activeTab="Map"
@@ -558,7 +572,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         sourceScreen={sourceScreen}
                     />
                 )
-            )}
+            )} */}
         </SafeAreaView>
     );
 };
