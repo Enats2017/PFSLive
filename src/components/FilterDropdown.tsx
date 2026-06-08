@@ -133,6 +133,8 @@ const Dropdown: React.FC<DropdownProps> = ({
                 top: pos.top,
                 left: pos.left,
                 minWidth: pos.width,
+                  maxHeight: 420,  
+                
                 opacity: fadeAnim,
                 transform: [{ scaleY: scaleAnim }],
               },

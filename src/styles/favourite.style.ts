@@ -2,16 +2,13 @@ import { Platform, StyleSheet } from "react-native";
 import { colors, spacing, typography } from "../styles/common.styles";
 
 export const favstyle = StyleSheet.create({
-  wrapper: {
-    paddingVertical: 5,
-  },
 
   card: {
     backgroundColor: colors.white,
     borderRadius: 10,
     borderWidth: 0.5,
     borderColor: "rgba(0,0,0,0.08)",
-    shadowColor: "#000",
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.01,
     ...Platform.select({
@@ -21,9 +18,9 @@ export const favstyle = StyleSheet.create({
       },
     }),
     shadowRadius: 10,
-    elevation: 4,
+    elevation: 3,
     paddingBottom: 10,
-    overflow: "hidden", // ✅ keep diagonal header + badge inside rounded corners
+    marginBottom:spacing.md
   },
 
   // ── Diagonal header ──────────────────────────────────────

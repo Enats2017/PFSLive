@@ -23,12 +23,12 @@ const getInitials = (name?: string): string => {
 const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo }) => {
     const { t } = useTranslation('resultdetails');
     const initials = getInitials(runnerInfo?.name);
-    
+
     // ✅ Check if UTMB index exists, is not empty, and is not 0
-    const hasUtmbIndex = runnerInfo?.utmb_index && 
-                         runnerInfo.utmb_index.trim() !== '' && 
-                         runnerInfo.utmb_index !== '0' &&
-                         Number(runnerInfo.utmb_index) !== 0;
+    const hasUtmbIndex = runnerInfo?.utmb_index &&
+        runnerInfo.utmb_index.trim() !== '' &&
+        runnerInfo.utmb_index !== '0' &&
+        Number(runnerInfo.utmb_index) !== 0;
 
     return (
         <View style={commonStyles.container}>
@@ -72,7 +72,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo }) => {
                     </View>
                 </View>
 
-                <View style={resultInfoStyles.row}>
+                {/* <View style={resultInfoStyles.row}>
                     <View style={resultInfoStyles.col}>
                         <Text style={commonStyles.subtitle}>{t('runnerInfo.club')}</Text>
                         <Text style={commonStyles.subtitle}>
@@ -88,7 +88,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo }) => {
                             {runnerInfo?.category_name || '—'}
                         </Text>
                     </View>
-                </View>
+                </View> */}
 
                 {/* ✅ Only show UTMB section if utmb_index exists and is not 0 */}
                 {hasUtmbIndex && (
@@ -109,16 +109,12 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo }) => {
 
                         <View style={resultInfoStyles.colDivider} />
 
-                        <View style={resultInfoStyles.col}>
-                            <View style={resultInfoStyles.utmbSeriesBadge}>
-                                <Text style={resultInfoStyles.utmbSeriesTitle}>UTMB®</Text>
-                                <Text style={resultInfoStyles.utmbSeriesSub}>
-                                    {t('runnerInfo.utmbSeries')}
-                                </Text>
-                            </View>
-                            <View>
-                                <Ionicons name="card-outline" size={28} color="#333" />
-                            </View>
+                        <View style={[resultInfoStyles.col,{gap:5}]}>
+                            <Text style={commonStyles.subtitle}>{t('runnerInfo.category')}</Text>
+                            <Text style={commonStyles.title}>
+                                {runnerInfo?.category_name || '—'}
+                            </Text>
+                            <Ionicons name="card-outline" size={28} color="#333" />
                         </View>
                     </View>
                 )}

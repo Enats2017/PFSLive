@@ -1,4 +1,4 @@
-import { API_CONFIG, getApiEndpoint } from "../constants/config";
+import { API_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
 import { apiClient } from "./api";
 import { getCurrentLanguageId } from "../i18n";
 
@@ -101,6 +101,7 @@ export const resultList = {
     try {
       const headers = await API_CONFIG.getHeaders();
       const language_id = getCurrentLanguageId();
+      const deviceId = await getDeviceId();
 
       if (API_CONFIG.DEBUG) {
         console.log("📡 Fetching event ranking:", {
@@ -118,12 +119,16 @@ export const resultList = {
         filter_category: params.filter_category,
         page: params.page,
         language_id,
+        device_id: deviceId,
+
       };
+
 
       if (params.product_option_value_app_id !== undefined && params.product_option_value_app_id != 0) {
         requestBody.product_option_value_app_id =
           params.product_option_value_app_id;
       }
+      
 
       const response = await apiClient.post<EventRankingResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.GET_EVENT_RANKING),
@@ -133,6 +138,8 @@ export const resultList = {
           timeout: API_CONFIG.TIMEOUT,
         },
       );
+
+    
 
       const data = response.data;
 

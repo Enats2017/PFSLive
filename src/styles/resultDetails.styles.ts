@@ -13,6 +13,12 @@ export const resultInfoStyles = StyleSheet.create({
     paddingTop: spacing.sm,
     marginBottom: spacing.xxxl,
   },
+   text: {
+    fontSize: typography.sizes.md,
+    color: colors.white,
+    fontWeight: typography.weights.regular,
+    
+  },
 
   header: {
     flexDirection: "row",
@@ -81,7 +87,7 @@ export const resultInfoStyles = StyleSheet.create({
     flexDirection: "row",
   },
   headerGreen: {
-    backgroundColor: colors.success,
+    backgroundColor: colors.primary,
     paddingHorizontal: 14,
     justifyContent: "center",
     alignItems: "center",
@@ -97,7 +103,7 @@ export const resultInfoStyles = StyleSheet.create({
     borderRightWidth: 18,
     borderBottomWidth: 0,
     borderLeftWidth: 0,
-    borderTopColor: colors.success,
+    borderTopColor: colors.primary,
     borderRightColor: "transparent",
     borderBottomColor: "transparent",
     borderLeftColor: "transparent",
@@ -111,7 +117,7 @@ export const resultInfoStyles = StyleSheet.create({
     borderRightWidth: 0,
     borderBottomWidth: 0,
     borderLeftWidth: 18,
-    borderTopColor: colors.participantColor,
+    borderTopColor: colors.primaryLight,
     borderRightColor: "transparent",
     borderBottomColor: "transparent",
     borderLeftColor: "transparent",
@@ -120,7 +126,7 @@ export const resultInfoStyles = StyleSheet.create({
     flex: 1,
   },
   headerRed: {
-    backgroundColor: colors.participantColor,
+    backgroundColor: colors.primaryLight,
     paddingHorizontal: 14,
     justifyContent: "center",
     alignItems: "center",

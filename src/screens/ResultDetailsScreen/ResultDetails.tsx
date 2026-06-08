@@ -203,8 +203,8 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                         disabled={Loading}
                     >
                         <Entypo
-                            name={Followed ? "heart" : "heart-outlined"}
-                            size={30}
+                            name={Followed ? "star" : "star-outlined"}
+                            size={33}
                             color="black"
                         />
                     </TouchableOpacity>

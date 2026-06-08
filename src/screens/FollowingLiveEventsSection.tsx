@@ -45,7 +45,7 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
 
             {events.map((event) => {
                 const remainingSec = Math.max(0, (event.starts_in_seconds || 0) - elapsed);
-                const isLive = event.race_status === 'in_progress' || (event.race_status === 'upcoming' &&  remainingSec === 0);
+                const isLive = event.race_status === 'in_progress' || (event.race_status === 'upcoming' && remainingSec === 0);
                 const isUpcoming = event.race_status === 'upcoming' && remainingSec > 0;
 
                 return (
@@ -64,9 +64,17 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                         <View style={homeStyles.cardTop}>
                             {/* Left: name + time */}
                             <View style={homeStyles.eventBody}>
-                                <Text style={commonStyles.title} numberOfLines={1}>
+                                <Text style={[commonStyles.title,{marginBottom:spacing.xs}]} numberOfLines={1}>
                                     {event.event_name}
                                 </Text>
+                                {event.race_distance ? (
+                                    <View style={[homeStyles.eventMeta,{marginBottom:spacing.xs}]}>
+                                        <Ionicons name="map-outline" size={13} color={colors.gray700} />  {/* ✅ map icon for distance */}
+                                        <Text style={commonStyles.date}>
+                                            {event.race_distance}
+                                        </Text>
+                                    </View>
+                                ) : null}
                                 <View style={homeStyles.eventMeta}>
                                     <Ionicons name="time-outline" size={13} color="#888780" />
                                     <Text style={commonStyles.date}>

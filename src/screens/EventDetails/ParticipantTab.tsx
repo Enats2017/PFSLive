@@ -244,8 +244,9 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     <>
       <View
         style={{
-          paddingHorizontal: spacing.lg,
+          paddingHorizontal: spacing.md,
           paddingTop: spacing.md,
+          paddingBottom:spacing.sm
         }}
       >
         <SearchInput
