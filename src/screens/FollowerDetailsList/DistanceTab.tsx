@@ -76,7 +76,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
             <View style={detailsStyles.metaRow}>
               <Feather name="users" size={16} color={colors.gray500} />
               <Text style={commonStyles.subtitle} numberOfLines={1}>
-                {item.participant_count} {t('details:athletes')}
+                {item.participant_started_count} {t('details:athletes')}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>

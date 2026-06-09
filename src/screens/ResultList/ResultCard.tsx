@@ -76,7 +76,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                     isWomen
                         ? { backgroundColor: colors.pinkcolor }  
                         : hasFinished
-                            ? { backgroundColor: colors.themeiColor } 
+                            ? { backgroundColor: "#028A77" } 
                             : null, 
                 ]}
                 onPress={handleStarPress}

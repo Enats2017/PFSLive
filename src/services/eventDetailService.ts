@@ -20,6 +20,7 @@ export interface Distance {
   participant_app_id?: number;
   participant_count: number;
   finished_count: number;
+  participant_started_count: number;
 }
 
 export interface RaceResultData {

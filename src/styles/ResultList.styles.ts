@@ -143,7 +143,7 @@ export const resultListStyle = StyleSheet.create({
   },
 
   cornerNum: {
-    color: "rgba(255,255,255,0.75)",
+    color: "#ffffff",
     fontSize: 20,
     fontWeight: "600",
     lineHeight: 20,
