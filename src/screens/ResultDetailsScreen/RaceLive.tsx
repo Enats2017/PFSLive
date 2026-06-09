@@ -56,6 +56,8 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
         .reverse()
         .find(cp => cp.is_crossed);
 
+    const fmtRank = (v?: string) => (/^\d+$/.test(v ?? '') ? (v as string) : '—');
+
     return (
         <ScrollView
             contentContainerStyle={resultInfoStyles.scrollContent}
@@ -146,9 +148,9 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
 
                 <View style={resultInfoStyles.rankingsCard}>
                     {[
-                        { labelKey: 'raceInfo.overallRanking', value: lastCheckpoint?.ranking || '—' },
-                        { labelKey: 'raceInfo.rankingInOpen', value: lastCheckpoint?.rank_agegroup || '—' },
-                        { labelKey: 'raceInfo.genderRanking', value: lastCheckpoint?.rank_gender || '—' },
+                        { labelKey: 'raceInfo.overallRanking', value: fmtRank(raceInfo?.position) },
+                        { labelKey: 'raceInfo.rankingInOpen',  value: fmtRank(raceInfo?.category_rank) },
+                        { labelKey: 'raceInfo.genderRanking',  value: fmtRank(raceInfo?.gender_ranking) },
                     ].map((item, i) => (
                         <View
                             key={item.labelKey}
