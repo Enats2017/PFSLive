@@ -1561,7 +1561,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         {/* Logo & Title */}
         <View style={homeStyles.cardscetion}>
           <Image
-            source={require('../../assets/livio_logo.png')}
+            source={require('../../assets/livio_logo_transparent.png')}
             style={homeStyles.logo}
             resizeMode="contain"
           />
@@ -1790,7 +1790,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <Text style={homeStyles.buttonText}>{t('home:button.Fan')}</Text>
           </TouchableOpacity>
         </View>
-        <View style={homeStyles.logosSection}>
+        {/* <View style={homeStyles.logosSection}>
           <View style={homeStyles.logosContainer}>
             <Text style={homeStyles.logosTitle}>{t('home:Logotagline')}</Text>
             <ScrollView
@@ -1812,7 +1812,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               ))}
             </ScrollView>
           </View>
-        </View>
+        </View> */}
       </ScrollView>
     </SafeAreaView>
   );

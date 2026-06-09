@@ -20,6 +20,7 @@
     "empty": "No distances available"
   },
   "athletes": "Athletes",
+  "finished": "Athletes Finished",
   "participant": {
     "empty": "Search participants by name or bib number",
     "search": "Search participants by name, bib number",

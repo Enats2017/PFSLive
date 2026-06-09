@@ -255,6 +255,7 @@ export const liveTrackingStyles = StyleSheet.create({
         color: colors.gray900,
         marginLeft: spacing.md,
         marginBottom: spacing.xs,
+        paddingTop:spacing.sm
     },
     profileScrollView: {
         flex: 1,

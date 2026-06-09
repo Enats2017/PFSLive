@@ -17,6 +17,7 @@
     "seconds": "S" 
   },
    "athletes": "Atleten",
+   "finished": "Atleten Gefinisht",
   "distance": {
     "empty": "Geen afstanden beschikbaar"
   },

@@ -68,6 +68,9 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
 
     const isLive = item.live_tracking_activated === 1;
     const activeCheckpoints = getActiveCheckpoints(item.checkpoints);
+    const hasFinished = item.status === 'finished';
+    console.log("11111finshed", hasFinished);
+
     const isFemale = item.gender === 'female';
     // ✅ Live stats for bottom row: last crossed CP, next CP ETA, finish ETA
     const { lastCrossed, nextCp, finishCp } = getLiveStats(item.checkpoints);
@@ -95,7 +98,14 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
 
             {/* ✅ Badge: star left | overall rank top + gender rank bottom */}
             <TouchableOpacity
-                style={[resultListStyle.cornerBadge, isWomen && { backgroundColor: colors.pinkcolor }]}
+                style={[
+                    resultListStyle.cornerBadge,
+                    isWomen
+                        ? { backgroundColor: colors.pinkcolor }  
+                        : hasFinished
+                            ? { backgroundColor: colors.themeiColor } 
+                            : null, 
+                ]}
                 onPress={handleStarPress}
                 activeOpacity={0.8}
                 disabled={isLoading}
@@ -214,6 +224,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     prev.item.position === next.item.position &&
     prev.item.live_tracking_activated === next.item.live_tracking_activated &&
     // ✅ Re-render when checkpoints change — live stats depend on them
+    prev.item.status === next.item.status &&
     prev.item.checkpoints === next.item.checkpoints
 );
 

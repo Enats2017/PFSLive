@@ -67,20 +67,21 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                                 <Text style={[commonStyles.title,{marginBottom:spacing.xs}]} numberOfLines={1}>
                                     {event.event_name}
                                 </Text>
-                                {event.race_distance ? (
-                                    <View style={[homeStyles.eventMeta,{marginBottom:spacing.xs}]}>
-                                        <Ionicons name="map-outline" size={13} color={colors.gray700} />  {/* ✅ map icon for distance */}
-                                        <Text style={commonStyles.date}>
-                                            {event.race_distance}
-                                        </Text>
-                                    </View>
-                                ) : null}
+                               
                                 <View style={homeStyles.eventMeta}>
                                     <Ionicons name="time-outline" size={13} color="#888780" />
                                     <Text style={commonStyles.date}>
                                         {formatClockTime(event.race_time)}
                                     </Text>
                                 </View>
+                                 {event.race_distance ? (
+                                    <View style={[homeStyles.eventMeta,{marginBottom:spacing.xs}]}>
+                                        <Ionicons name="location" size={13} color={colors.gray700} />  {/* ✅ map icon for distance */}
+                                        <Text style={commonStyles.date}>
+                                            {event.race_distance}
+                                        </Text>
+                                    </View>
+                                ) : null}
                             </View>
 
                             <View style={homeStyles.countdownBlock}>
@@ -108,12 +109,12 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                         <View style={homeStyles.divider} />
 
                         <TouchableOpacity
-                            style={[commonStyles.primaryButton, { flexDirection: 'row', gap: 6 }]}
+                            style={[homeStyles.followerBtn, { flexDirection: 'row', gap: 6 }]}
                             onPress={() => onRoutePress(event)}
-                            activeOpacity={0.7}
+                            
                         >
-                            <MaterialIcons name="route" size={16} color={colors.white} />
-                            <Text style={commonStyles.primaryButtonText}>
+                            <MaterialIcons name="person-add-alt-1" size={24} color={colors.black} />
+                            <Text style={homeStyles.followerText}>
                                 {t('home:followingEvents.routeButton')}
                             </Text>
                         </TouchableOpacity>

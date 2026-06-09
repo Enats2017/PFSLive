@@ -5,6 +5,7 @@ import { getCurrentLanguageId } from "../i18n";
 export interface RaceResult {
   position: string;
   bib: string;
+  status: string
   name: string;
   club: string;
   gender: string;

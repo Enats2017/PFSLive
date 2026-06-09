@@ -108,6 +108,13 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
                 {item.participant_count} {t('details:athletes')}
               </Text>
             </View>
+            <View style={detailsStyles.metaRow}>
+              <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
+                {item.finished_count} {t('details:finished')}
+              </Text>
+            </View>
+            
           </View>
           <TouchableOpacity
             style={detailsStyles.resultsButton}

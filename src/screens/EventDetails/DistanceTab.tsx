@@ -285,6 +285,13 @@ const DistanceTab = ({
             </View>
 
             <View style={detailsStyles.metaRow}>
+              <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
+                {item.finished_count} {t('details:finished')}
+              </Text>
+            </View>
+
+            <View style={detailsStyles.metaRow}>
               <MaterialCommunityIcons name="timer-sand" size={15} color={colors.gray600} />
               <CountdownBadge
                 days={item.countdown.days}

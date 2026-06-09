@@ -17,6 +17,7 @@
     "seconds": "S" 
   },
   "athletes": "Athlètes",
+  "finished": "Athlètes Terminés",
   "distance": {
     "empty": "Aucune distance disponible"
   },

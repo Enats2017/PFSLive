@@ -16,13 +16,17 @@ export const homeStyles = StyleSheet.create({
 
   // Logo section
   cardscetion: {
-    marginTop: spacing.lg,
+    marginTop:spacing.xl,
+    
     marginBottom: 0,
+    alignItems:"center",
+    justifyContent:"center",
+   
   },
 
   logo: {
-    width: "100%",
-    height: 250,
+    width: "80%",
+    height: 170,
   },
 
   textSection: {
@@ -344,4 +348,20 @@ export const homeStyles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.2)",
     marginVertical: 12,
   },
+
+  followerBtn: {
+    backgroundColor: colors.themeiColor,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 120,
+     borderRadius: 8,   
+  },
+
+  followerText:{
+    color: colors.black,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+  }
 });

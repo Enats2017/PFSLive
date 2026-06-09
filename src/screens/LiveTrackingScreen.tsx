@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ActivityIndicator, StatusBar, Alert, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView,useSafeAreaInsets  } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../components/common/AppHeader';
@@ -35,6 +35,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const { t } = useTranslation(['livetracking', 'common']);
     const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab, event_source, selectedDistanceLabel } = route.params;
 
+    const insets = useSafeAreaInsets();
+    const profileBottom = insets.bottom;
+    const collapseBtnBottom = profileBottom + 240;
     const isCustomEvent = event_source === 'custom';
     const { followedUsers } = useFollowManager(t);
     const [routeData, setRouteData] = useState<GPXRouteData | null>(null);
@@ -482,7 +485,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader title={event_name} showLogo={true} />
             {showDistanceDropdown && selectedDistance && (
@@ -514,7 +517,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         position: 'absolute',
                         left: 0,
                         right: 0,
-                        bottom: showBottomNav ? 50 : 0,   // sit above the bottom nav; tweak to taste
+                        bottom: profileBottom,   // sit above the bottom nav; tweak to taste
                         backgroundColor: 'transparent',
                         zIndex: 5,
                         elevation: 5,
@@ -540,7 +543,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 <TouchableOpacity
                     style={[
                         liveTrackingStyles.collapseBtn,
-                        { bottom: 260, zIndex: 10, elevation: 10 },   // follow the bottom:0 profile + sit above the overlay
+                        { bottom: collapseBtnBottom, zIndex: 10, elevation: 10 },   // follow the bottom:0 profile + sit above the overlay
                     ]}
                     onPress={() => setProfileCollapsed(!profileCollapsed)}
                 >

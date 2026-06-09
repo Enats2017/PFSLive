@@ -44,6 +44,9 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 
     const isLive = item.live_tracking_activated === 1;
     const isFemale = item.gender === 'female';
+    const hasFinished = item.status === 'finished';
+    console.log("hasFinished",hasFinished);
+    
 
     // ✅ Gender rank only for female
     const genderRank = isFemale && item.finish_rank_gender
@@ -68,12 +71,19 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 
             {/* ✅ Badge: star left | overall rank top + gender rank bottom */}
             <TouchableOpacity
-                style={[resultListStyle.cornerBadge, isWomen && { backgroundColor: colors.pinkcolor }]}
+                style={[
+                    resultListStyle.cornerBadge,
+                    isWomen
+                        ? { backgroundColor: colors.pinkcolor }  
+                        : hasFinished
+                            ? { backgroundColor: colors.themeiColor } 
+                            : null, 
+                ]}
                 onPress={handleStarPress}
                 activeOpacity={0.8}
                 disabled={isLoading}
             >
-                <Text style={isFollowed ? resultListStyle.cornerStar : resultListStyle.cornerStarUnfilled}>
+                <Text style={[isFollowed ? resultListStyle.cornerStar : resultListStyle.cornerStarUnfilled]}>
                     ★
                 </Text>
                 <View style={resultListStyle.cornerBadgeRight}>
@@ -86,7 +96,6 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 </View>
             </TouchableOpacity>
 
-            {/* Card Content */}
             <TouchableOpacity onPress={handleCardPress} activeOpacity={0.7}>
                 <View style={resultListStyle.cardTop}>
                     <View style={resultListStyle.cardTopLeft}>

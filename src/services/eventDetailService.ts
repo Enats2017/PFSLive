@@ -19,6 +19,7 @@ export interface Distance {
   registration_status: 'available' | 'registered' | 'membership_required' | 'limit_reached' | 'membership_upcoming' | 'unavailable';
   participant_app_id?: number;
   participant_count: number;
+  finished_count: number;
 }
 
 export interface RaceResultData {
