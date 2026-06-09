@@ -48,8 +48,8 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     console.log("hasFinished",hasFinished);
     
 
-    // ✅ Gender rank only for female
-    const genderRank = isFemale && item.finish_rank_gender
+    // ✅ Gender rank only for female, and only when it's a numeric rank (hide "DNF" etc.)
+    const genderRank = isFemale && /^\d+$/.test(item.finish_rank_gender ?? '')
         ? `F ${item.finish_rank_gender}`
         : null;
 

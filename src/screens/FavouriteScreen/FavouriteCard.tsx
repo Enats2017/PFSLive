@@ -85,7 +85,10 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
         [item.position]
     );
 
-    const genderRank = isFemale && item.finish_rank_gender ? `F ${item.finish_rank_gender}` : null;
+    // ✅ Gender rank only for female, and only when it's a numeric rank (hide "DNF" etc.)
+    const genderRank = isFemale && /^\d+$/.test(item.finish_rank_gender ?? '')
+        ? `F ${item.finish_rank_gender}`
+        : null;
 
     const handleCardPress = useCallback(() => {
         navigation.navigate('ResultDetails', {
