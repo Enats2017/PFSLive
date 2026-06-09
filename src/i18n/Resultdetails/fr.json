@@ -58,7 +58,10 @@
   "status": {
     "not_started": "Pas Commencé",
     "in_progress": "En Cours",
-    "finished": "Terminé"
+    "finished": "Terminé",
+    "DNF": "Abandon",
+    "DNS": "Non Partant",
+    "DSQ": "Disqualifié"
   },
   "countdown": {
     "days": "Jours",
