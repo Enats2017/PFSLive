@@ -45,8 +45,8 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     const isLive = item.live_tracking_activated === 1;
     const isFemale = item.gender === 'female';
 
-    // ✅ Gender rank only for female
-    const genderRank = isFemale && item.finish_rank_gender
+    // ✅ Gender rank only for female, and only when it's a numeric rank (hide "DNF" etc.)
+    const genderRank = isFemale && /^\d+$/.test(item.finish_rank_gender ?? '')
         ? `F ${item.finish_rank_gender}`
         : null;
 

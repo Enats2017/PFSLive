@@ -72,8 +72,8 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     // ✅ Live stats for bottom row: last crossed CP, next CP ETA, finish ETA
     const { lastCrossed, nextCp, finishCp } = getLiveStats(item.checkpoints);
 
-    // ✅ Gender rank only for female
-    const genderRank = isFemale && item.finish_rank_gender
+    // ✅ Gender rank only for female, and only when it's a numeric rank (hide "DNF" etc.)
+    const genderRank = isFemale && /^\d+$/.test(item.finish_rank_gender ?? '')
         ? `F ${item.finish_rank_gender}`
         : null;
 
