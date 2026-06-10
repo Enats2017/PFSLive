@@ -37,6 +37,7 @@ export default ({ config }) => {
         UIBackgroundModes: ["remote-notification", "location", "fetch"],
         TSLocationManagerLicense: process.env.TSLOCATIONMANAGER_LICENSE ?? "",
         LSSupportsOpeningDocumentsInPlace: true,
+        ITSAppUsesNonExemptEncryption: false,
         ...(process.env.EXPO_PUBLIC_ENV !== "production" && {
           NSAppTransportSecurity: {
             NSAllowsArbitraryLoads: true
