@@ -63,6 +63,7 @@ export type RootStackParamList = {
   FollowDetails: {
     product_app_id: number;
     event_name: string;
+    event_image?: string; 
     sourceTab?: "past" | "live" | "upcoming";
   };
 

@@ -6,12 +6,13 @@ import {
   FlatList,
   StatusBar,
   Dimensions,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
-import { commonStyles } from '../../styles/common.styles';
+import { commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import DistanceTab from './DistanceTab';
 import ParticipantTab from '../EventDetails/ParticipantTab';
@@ -28,8 +29,8 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   const [activeTab, setActiveTab] = useState<Tab>('Distance');
   const flatListRef = useRef<FlatList>(null);
 
-  const { product_app_id, event_name, sourceTab } = route.params;
-
+  const { product_app_id, event_name, sourceTab, event_image } = route.params;
+  
   const renderContent = useCallback(
     (tab: Tab) => {
       if (!product_app_id) {
@@ -86,6 +87,17 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
       <View style={detailsStyles.section}>
         <Text style={commonStyles.title}>{event_name}</Text>
       </View>
+      {event_image ? (
+        <Image
+          source={{ uri: event_image }}
+          style={{
+            width: '100%',
+            height: 200,
+            resizeMode: 'cover',
+            marginBottom: spacing.sm,
+          }}
+        />
+      ) : null}
 
       <View style={detailsStyles.tabBar}>
         {TABS.map((tab) => (

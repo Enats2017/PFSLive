@@ -6,7 +6,7 @@ export const detailsStyles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.themeiColor,
      paddingVertical: spacing.sm,
-     marginBottom:spacing.sm,
+    
   },
   tabBar: {
     flexDirection: "row",

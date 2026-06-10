@@ -11,6 +11,7 @@ export interface EventItem {
   city: string;
   result_url: string;
   race_result_api_url: string;
+  event_image: string; 
 }
 
 export interface EventTabs {
