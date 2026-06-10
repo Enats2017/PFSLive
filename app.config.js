@@ -33,8 +33,10 @@ export default ({ config }) => {
         NSLocationWhenInUseUsageDescription: "Livio uses your location to track your race progress in real-time.",
         NSLocationAlwaysAndWhenInUseUsageDescription: "Livio needs background location access to track your race even when the app is minimized.",
         NSLocationAlwaysUsageDescription: "Livio requires continuous location access to provide accurate race tracking.",
+        NSMotionUsageDescription: "Livio uses motion data during active race tracking to improve location accuracy and optimize battery usage.",
         UIBackgroundModes: ["remote-notification", "location", "fetch"],
         TSLocationManagerLicense: process.env.TSLOCATIONMANAGER_LICENSE ?? "",
+        LSSupportsOpeningDocumentsInPlace: true,
         ...(process.env.EXPO_PUBLIC_ENV !== "production" && {
           NSAppTransportSecurity: {
             NSAllowsArbitraryLoads: true
