@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { colors, spacing, typography } from "./common.styles";
 
 export const detailsStyles = StyleSheet.create({
@@ -18,6 +18,23 @@ export const detailsStyles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
   },
+  card: {
+      backgroundColor: colors.white,
+      borderRadius: 12,
+      padding: spacing.md,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 10,
+      elevation: 3,
+       ...Platform.select({
+      ios: {
+        shadowOpacity: 0.15,
+        shadowRadius: 5,
+      },   
+    }),
+  
+    },
   tabText: {
     fontSize: 14,
     color: "#999",
@@ -55,9 +72,10 @@ export const detailsStyles = StyleSheet.create({
    metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
     marginTop: spacing.sm,
   },
+
   metaIcon: {
     fontSize: 13,
   },
@@ -149,7 +167,7 @@ export const detailsStyles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     borderRadius: spacing.sm,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
