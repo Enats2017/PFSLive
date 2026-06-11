@@ -482,6 +482,9 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               iconName="calendar-outline"
               isDatePicker
               datePickerPlaceholder={t('common:datePicker.placeholder')}
+              maximumDate={new Date()}               // ← block future DOBs
+              pickerDoneLabel={t('common:buttons.done')}
+              pickerCancelLabel={t('common:buttons.cancel')}
               required
               editable={!loading}
               error={!!errors.dob}

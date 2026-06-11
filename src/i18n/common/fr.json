@@ -12,7 +12,8 @@
     "close": "Fermer",
     "retry": "Réessayer",
     "refresh": "Actualiser",
-    "view": "Voir"
+    "view": "Voir",
+    "done": "Terminé"
   },
   "nav": {
     "home": "Accueil",

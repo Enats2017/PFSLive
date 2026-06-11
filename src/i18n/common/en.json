@@ -12,7 +12,8 @@
     "close": "Close",
     "retry": "Retry",
     "refresh": "Refresh",
-    "view": "View"
+    "view": "View",
+    "done": "Done"
   },
   "nav": {
     "home": "Home",
