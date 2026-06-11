@@ -21,12 +21,14 @@ export interface GPSPosition {
 
 // ✅ AsyncStorage keys.
 //
-// ARCHITECTURE NOTE (Option B): As of this version, ALL background location
-// work is handled by Transistor (react-native-background-geolocation). The
-// expo-location TaskManager background task is no longer registered — its
-// foreground service created a duplicate Android notification and (after the
-// 16-min Samsung screen-off pocket test confirmed Transistor handles all
-// sends reliably with [t] tags) it was redundant overhead.
+// ARCHITECTURE NOTE (Option B): As of this version, ALL location work — both
+// background sends AND the foreground UI display — is handled by Transistor
+// (react-native-background-geolocation). The expo-location TaskManager
+// background task is no longer registered, and the separate expo-location
+// foreground watch (watchPositionAsync) has been removed: running two
+// CLLocationManager streams into JS at once doubled the native→JS callback
+// pressure that destabilised Hermes under the New Architecture. Transistor's
+// onLocation now drives the HomeScreen live display directly.
 //
 // BACKGROUND_LOCATION_TASK is kept exported for backward compatibility with
 // older app installs that may still have a registered task — calling
@@ -73,9 +75,9 @@ const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m e
 // Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
 // Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 0,   // Walking — 3m
-  59: 0,  // Running — 15m
-  60: 0,  // Cycling — 30m
+  64: 3,   // Walking — 3m
+  59: 15,  // Running — 15m
+  60: 30,  // Cycling — 30m
 };
 const DEFAULT_MOVEMENT_METRES = 5;
 
@@ -554,66 +556,39 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
   }, 'task');
 });
 
-// Module-level reference to the foreground watch AppState subscription so we
-// can clean it up if startWatchingPosition is called twice without stop in
-// between.
+// Module-level reference to the AppState subscription so we can clean it up if
+// startWatchingPosition is called twice without stop in between. (With the
+// expo-location foreground watch removed this listener no longer restarts a
+// watch — it remains only for lightweight lifecycle logging and is torn down
+// cleanly on stop.)
 let _fgAppStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
 
-// Module-level reference to the active foreground watch subscription. Lives
-// at module scope (not inside startWatchingPosition's closure) so that
-// detachUi / reattachUi can manage it across screen remounts.
-let _activeFgSubscription: Location.LocationSubscription | null = null;
-
-// Module-level UI callback. The foreground watch always invokes _uiCallback
-// rather than a captured closure, so HomeScreen can swap in a new callback on
-// remount without restarting the watch. When _uiCallback is null, fg watch
-// fires are silently dropped (no consumer).
+// Module-level UI callback. Transistor's onLocation handler always invokes
+// _uiCallback (rather than a captured closure), so HomeScreen can swap in a
+// new callback on remount via attachUi without restarting tracking. When
+// _uiCallback is null, location fires simply aren't mirrored to the UI.
 let _uiCallback: ((position: GPSPosition) => void) | null = null;
 let _uiIntervalMs: number = 5000;
 
-// ✅ Internal: start the foreground watch. Idempotent — silently returns if a
-// watch is already active. Routes location events through _uiCallback (which
-// HomeScreen sets via attachUi) so the callback can be swapped on remount.
-let _fgStarting = false;
+// ✅ Foreground UI updates are now driven directly by Transistor's onLocation
+// handler (see startWatchingPosition) instead of a second expo-location
+// watchPositionAsync. Running two CLLocationManager streams into JS at once
+// doubled the native→JS callback pressure that destabilised Hermes under the
+// New Architecture. These remain as no-ops so the existing call-sites
+// (attachUi, the AppState listener, _doFullStop, startWatchingPosition) don't
+// need to change.
 const _startFgWatch = async (): Promise<void> => {
-  if (_activeFgSubscription || _fgStarting) return;
-  _fgStarting = true;
-  try {
-    await addLog('👁️', 'Foreground watch started (High/5s)');
-    _activeFgSubscription = await Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, timeInterval: _uiIntervalMs },
-      (location) => {
-        if (!_uiCallback) return;
-        _uiCallback({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          altitude: location.coords.altitude,
-          accuracy: location.coords.accuracy,
-          altitudeAccuracy: location.coords.altitudeAccuracy,
-          speed: location.coords.speed,
-          heading: location.coords.heading,
-          timestamp: location.timestamp,
-          mocked: location.mocked,
-        });
-      },
-    );
-  } finally {
-    _fgStarting = false;
-  }
+  // No-op — Transistor onLocation drives the UI now.
 };
 
-// ✅ Internal: stop the foreground watch (UI-only — does not stop Transistor).
 const _stopFgWatch = async (): Promise<void> => {
-  if (_activeFgSubscription) {
-    _activeFgSubscription.remove();
-    _activeFgSubscription = null;
-    await addLog('👁️', 'Foreground watch stopped');
-  }
+  // No-op — nothing to stop; Transistor owns the location stream.
 };
 
-// ✅ Internal: register the AppState listener that restarts fg watch when the
-// app returns to foreground. Removes any previous listener first so callers
-// can re-register safely (idempotent).
+// ✅ Internal: register a lightweight AppState listener. Removes any previous
+// listener first so callers can re-register safely (idempotent). With the
+// second location engine gone this no longer manages a watch — it just keeps
+// the lifecycle log honest.
 const _registerFgAppStateListener = (): void => {
   if (_fgAppStateSubscription) {
     _fgAppStateSubscription.remove();
@@ -621,20 +596,19 @@ const _registerFgAppStateListener = (): void => {
   }
   _fgAppStateSubscription = AppState.addEventListener('change', (nextState) => {
     if (nextState === 'active') {
-      addLog('📱', 'App foregrounded');
-      _startFgWatch();
+      addLog('📱', 'App foregrounded — UI driven by Transistor onLocation');
     } else if (nextState === 'background') {
-      addLog('🌙', 'App backgrounded — fg watch continues (prevents GPS renegotiation)');
+      addLog('🌙', 'App backgrounded — Transistor continues in background');
     } else if (nextState === 'inactive') {
       addLog('💤', 'App inactive (iOS transition)');
     }
   });
 };
 
-// ✅ Internal: full teardown — stops Transistor, fg watch, AppState listener,
-// and clears all session-scoped AsyncStorage keys. Called by stopWatching()
-// below and indirectly by the remove() handle returned from
-// startWatchingPosition. Idempotent — safe to call multiple times.
+// ✅ Internal: full teardown — stops Transistor, the AppState listener, and
+// clears all session-scoped AsyncStorage keys. Called by stopWatching() below
+// and indirectly by the remove() handle returned from startWatchingPosition.
+// Idempotent — safe to call multiple times.
 const _doFullStop = async (): Promise<void> => {
   if (_fgAppStateSubscription) {
     _fgAppStateSubscription.remove();
@@ -702,15 +676,17 @@ export const getTrackingParams = async (): Promise<{
   }
 };
 
-// ✅ PUBLIC: attach a UI callback to the (already running) foreground watch.
-// HomeScreen calls this on mount when restoring an in-progress tracking
-// session. The fg watch is module-managed, so calling this swaps in the new
-// callback without restarting GPS. If the watch isn't running yet (e.g.,
-// previous session torn down its fg watch but Transistor is still alive),
-// this starts a new one.
+// ✅ PUBLIC: attach a UI callback so live lat/lon updates from Transistor's
+// onLocation are mirrored to the screen. HomeScreen calls this on mount when
+// restoring an in-progress session. Because onLocation reads the module-level
+// _uiCallback, this just swaps in the new callback — no GPS restart.
 //
-// Also re-registers the AppState listener so the watch is reattached when the
-// app returns to foreground.
+// NOTE: within a single app process (navigate away → back), Transistor's
+// onLocation listener registered by startWatchingPosition is still alive, so
+// the display resumes immediately. On a COLD relaunch onto an already-active
+// session, onLocation isn't re-registered yet (that path also affects
+// background sends and is handled separately), so the live display may not
+// tick until tracking is re-initialised.
 export const attachUi = async (
   callback: (position: GPSPosition) => void,
   intervalSeconds: number = 30,
@@ -721,10 +697,10 @@ export const attachUi = async (
   _registerFgAppStateListener();
 };
 
-// ✅ PUBLIC: detach the UI callback and stop the foreground watch + AppState
-// listener. Does NOT stop Transistor — the background tracking continues.
-// HomeScreen calls this on unmount so the OS doesn't keep firing GPS into a
-// defunct component's callback while the user is on another screen.
+// ✅ PUBLIC: detach the UI callback and AppState listener. Does NOT stop
+// Transistor — background tracking continues. HomeScreen calls this on unmount
+// so location fires aren't mirrored into a defunct component's callback while
+// the user is on another screen.
 export const detachUi = async (): Promise<void> => {
   if (_fgAppStateSubscription) {
     _fgAppStateSubscription.remove();
@@ -929,11 +905,12 @@ export const gpsService = {
       // inside processLocationForSend handles pre-race blocking.
       await AsyncStorage.setItem(LAST_SENT_KEY, '0');
 
-      // ✅ TRANSISTOR — sole GPS engine for background sends. Native foreground
-      // service + WakeLock keeps the SDK alive on Samsung One UI without the
-      // expo-location task or background-fetch keepalive that earlier versions
-      // needed. Non-fatal try/catch — if Transistor fails, the no-op task
-      // above still acts as a safety net for older app installs.
+      // ✅ TRANSISTOR — sole GPS engine for both background sends AND the
+      // foreground UI display. Native foreground service + WakeLock keeps the
+      // SDK alive on Samsung One UI without the expo-location task or
+      // background-fetch keepalive that earlier versions needed. Non-fatal
+      // try/catch — if Transistor fails, the no-op task above still acts as a
+      // safety net for older app installs.
       try {
         // Defensive: clear any listeners left over from a previous start.
         try { BackgroundGeolocation.removeListeners(); } catch { /* silent */ }
@@ -977,11 +954,31 @@ export const gpsService = {
         });
 
         BackgroundGeolocation.onLocation((bgLoc) => {
-          addLog('🛰️', `Transistor loc — lat:${bgLoc.coords.latitude.toFixed(5)} spd:${bgLoc.coords.speed?.toFixed(1) ?? '?'}m/s moving:${bgLoc.is_moving}`);
-
           const ts = typeof bgLoc.timestamp === 'string'
             ? new Date(bgLoc.timestamp).getTime()
             : (bgLoc.timestamp as unknown as number);
+
+          // ✅ Drive the HomeScreen live display straight from Transistor.
+          // This replaces the separate expo-location watchPositionAsync watch —
+          // one location engine, one native→JS callback stream. Running two
+          // CLLocationManager streams into JS at once doubled the callback
+          // pressure that corrupted Hermes under the New Architecture.
+          if (_uiCallback) {
+            _uiCallback({
+              latitude:         bgLoc.coords.latitude,
+              longitude:        bgLoc.coords.longitude,
+              altitude:         bgLoc.coords.altitude ?? null,
+              accuracy:         bgLoc.coords.accuracy ?? null,
+              altitudeAccuracy: (bgLoc.coords as any).altitude_accuracy ?? null,
+              speed:            bgLoc.coords.speed ?? null,
+              heading:          bgLoc.coords.heading ?? null,
+              timestamp:        isNaN(ts) ? Date.now() : ts,
+              mocked:           false,
+            });
+          }
+
+          addLog('🛰️', `Transistor loc — lat:${bgLoc.coords.latitude.toFixed(5)} spd:${bgLoc.coords.speed?.toFixed(1) ?? '?'}m/s moving:${bgLoc.is_moving}`);
+
           // Fire-and-forget — onLocation must return quickly. processLocationForSend
           // has its own try/catch so errors are contained.
           processLocationForSend({
@@ -1021,13 +1018,10 @@ export const gpsService = {
         if (API_CONFIG.DEBUG) console.warn('⚠️ Transistor failed to start:', transistorErr?.message);
       }
 
-      // ✅ Foreground UI watch — drives the lat/lon display on HomeScreen.
-      // Does NOT create a notification (it's not a foreground service, just an
-      // in-process subscription) and does NOT call processLocationForSend.
-      //
-      // The watch and AppState listener are managed by the module-level
-      // attachUi / detachUi helpers so HomeScreen can re-attach the callback
-      // on remount without restarting Transistor. See attachUi below.
+      // ✅ Wire up the UI callback. Transistor's onLocation handler above reads
+      // _uiCallback on every fix to drive the HomeScreen live display — no
+      // separate expo-location watch. _registerFgAppStateListener is kept for
+      // lightweight lifecycle logging and idempotent teardown.
       _uiCallback = callback;
       _uiIntervalMs = Math.min(intervalSeconds * 1000, 5000);
       await _startFgWatch();
