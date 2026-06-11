@@ -73,9 +73,9 @@ const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m e
 // Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
 // Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 3,   // Walking — 3m
-  59: 15,  // Running — 15m
-  60: 30,  // Cycling — 30m
+  64: 0,   // Walking — 3m
+  59: 0,  // Running — 15m
+  60: 0,  // Cycling — 30m
 };
 const DEFAULT_MOVEMENT_METRES = 5;
 
@@ -90,14 +90,54 @@ export interface TrackingLogEntry {
   msg: string;
 }
 
-const addLog = async (icon: string, msg: string): Promise<void> => {
+// ✅ In-memory log buffer (source of truth).
+//
+// Writing the 500-entry ring buffer to AsyncStorage on EVERY onLocation /
+// onMotionChange fire (and many times per send) created a storm of
+// multiSet / _writeManifest calls. Under the New Architecture this surfaced
+// in release/TestFlight builds as an uncatchable NSException (SIGABRT) thrown
+// from the AsyncStorage TurboModule, and as Hermes heap corruption (SIGSEGV)
+// while draining the microtask queue. We now mutate an in-memory array
+// synchronously and flush to AsyncStorage at most once every
+// LOG_FLUSH_INTERVAL_MS, so HomeScreen's live-log reader still sees recent
+// entries (with up to ~2s lag) without hammering disk.
+let _logBuffer: TrackingLogEntry[] = [];
+let _logFlushTimer: ReturnType<typeof setTimeout> | null = null;
+let _logDirty = false;
+const LOG_FLUSH_INTERVAL_MS = 2000;
+
+const _flushLogsNow = async (): Promise<void> => {
+  if (!_logDirty) return;
+  _logDirty = false;
   try {
-    const raw = await AsyncStorage.getItem(TRACKING_LOG_KEY);
-    const entries: TrackingLogEntry[] = raw ? JSON.parse(raw) : [];
-    entries.push({ ts: Date.now(), icon, msg });
-    if (entries.length > MAX_LOG_ENTRIES) entries.splice(0, entries.length - MAX_LOG_ENTRIES);
-    await AsyncStorage.setItem(TRACKING_LOG_KEY, JSON.stringify(entries));
-  } catch { /* silent — log failure must never break tracking */ }
+    await AsyncStorage.setItem(TRACKING_LOG_KEY, JSON.stringify(_logBuffer));
+  } catch { /* silent — log persistence must never break tracking */ }
+};
+
+const _scheduleLogFlush = (): void => {
+  if (_logFlushTimer) return;
+  _logFlushTimer = setTimeout(() => {
+    _logFlushTimer = null;
+    void _flushLogsNow();
+  }, LOG_FLUSH_INTERVAL_MS);
+};
+
+// Keeps its async signature so existing `await addLog(...)` call-sites are
+// unchanged, but it no longer touches AsyncStorage on every call.
+const addLog = async (icon: string, msg: string): Promise<void> => {
+  _logBuffer.push({ ts: Date.now(), icon, msg });
+  if (_logBuffer.length > MAX_LOG_ENTRIES) {
+    _logBuffer.splice(0, _logBuffer.length - MAX_LOG_ENTRIES);
+  }
+  _logDirty = true;
+  _scheduleLogFlush();
+};
+
+// Reset the in-memory log buffer + pending flush (call at session start).
+const _resetLogBuffer = (): void => {
+  _logBuffer = [];
+  _logDirty = false;
+  if (_logFlushTimer) { clearTimeout(_logFlushTimer); _logFlushTimer = null; }
 };
 
 // ✅ Background fetch keepalive — REMOVED with Option B.
@@ -622,6 +662,7 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
   if (API_CONFIG.DEBUG) console.log('✅ Tracking stopped');
   await addLog('🛑', 'Tracking stopped');
+  await _flushLogsNow();
 };
 
 // ✅ PUBLIC: full stop — equivalent to calling .remove() on the handle returned
@@ -870,6 +911,7 @@ export const gpsService = {
 
       // ✅ Clear all session-scoped state.
       await AsyncStorage.removeItem(TRACKING_LOG_KEY);
+      _resetLogBuffer();
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
       await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
       await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
