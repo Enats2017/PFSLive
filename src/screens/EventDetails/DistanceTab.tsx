@@ -256,7 +256,7 @@ const DistanceTab = ({
         selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
 
     return (
-      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
+      <View style={[detailsStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
         <View style={detailsStyles.distance}>
           <View style={detailsStyles.distanceInfo}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
@@ -265,28 +265,28 @@ const DistanceTab = ({
 
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.race_date_formatted}
               </Text>
             </View>
 
             <View style={detailsStyles.metaRow}>
               <Ionicons name="time-outline" size={15} color={colors.gray600} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {formatClockTime(item.race_time)} 
               </Text>
             </View>
 
             <View style={detailsStyles.metaRow}>
               <Feather name="users" size={16} color={colors.gray500} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.participant_started_count} {t('details:athletes')}
               </Text>
             </View>
 
             <View style={detailsStyles.metaRow}>
               <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.finished_count} {t('details:finished')}
               </Text>
             </View>
@@ -315,16 +315,13 @@ const DistanceTab = ({
             {isRegistering ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={[commonStyles.primaryButtonText,{fontSize:12.5}]}>
+              <Text style={[commonStyles.primaryButtonText,{fontSize:11.5}]}>
                 {item.registration_status === 'registered'
                   ? t('details:undo')
                   : t('details:button')}
               </Text>
             )}
           </TouchableOpacity>
-
-
-
         </View>
       </View>
     );
