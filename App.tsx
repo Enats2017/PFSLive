@@ -17,14 +17,22 @@ import { API_CONFIG } from './src/constants/config';
 
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 
-// ✅ SUPPRESS ERROR OVERLAY IN DEVELOPMENT (EXPO)
+// ✅ Global JS error backstop — runs in BOTH dev AND production.
+// Under the New Architecture (RN 0.81+) an uncaught JS error becomes a fatal
+// SIGABRT crash (these were silently swallowed on the old architecture). This
+// logs any stray error and keeps it from hard-crashing the app. It MUST live
+// at module top-level, NOT inside `if (__DEV__)`, or production gets no cover.
+const _defaultHandler = (ErrorUtils as any).getGlobalHandler?.();
+(ErrorUtils as any).setGlobalHandler((error: any, isFatal: boolean) => {
+  console.log('🌐 Global JS error:', isFatal, error?.message, '\n', error?.stack);
+  // Swallowing (not calling _defaultHandler) keeps a single stray error from
+  // killing the app. To restore hard-crash-on-fatal, uncomment:
+  // if (isFatal && _defaultHandler) _defaultHandler(error, isFatal);
+});
+
+// ✅ Dev-only: silence the redbox overlay and route console.error to log.
 if (__DEV__) {
   LogBox.ignoreAllLogs(true);
-
-  ErrorUtils.setGlobalHandler((error, isFatal) => {
-    console.log('🚫 Error overlay suppressed:', error.message);
-  });
-
   console.error = (...args: any[]) => {
     console.log('[ERROR]', ...args);
   };

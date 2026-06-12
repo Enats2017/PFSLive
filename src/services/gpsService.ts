@@ -543,6 +543,7 @@ TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) =>
   } catch { /* silent */ }
 
   const raw = data.locations[data.locations.length - 1];
+  if (!raw?.coords || typeof raw.coords.latitude !== 'number') return;
   await processLocationForSend({
     latitude:         raw.coords.latitude,
     longitude:        raw.coords.longitude,
@@ -954,17 +955,42 @@ export const gpsService = {
         });
 
         BackgroundGeolocation.onLocation((bgLoc) => {
-          const ts = typeof bgLoc.timestamp === 'string'
-            ? new Date(bgLoc.timestamp).getTime()
-            : (bgLoc.timestamp as unknown as number);
+          try {
+            // ✅ GUARD: a location event can arrive without a valid coords
+            // object (sample/heartbeat events or a malformed payload). Reading
+            // bgLoc.coords.latitude on undefined threw a TypeError — and under
+            // the New Architecture (RN 0.81+) an uncaught JS error inside a
+            // native callback is FATAL (it was silently swallowed on the old
+            // architecture). Bail out safely instead of crashing.
+            if (!bgLoc?.coords || typeof bgLoc.coords.latitude !== 'number') {
+              addLog('⚠️', 'onLocation fired without valid coords — skipped');
+              return;
+            }
 
-          // ✅ Drive the HomeScreen live display straight from Transistor.
-          // This replaces the separate expo-location watchPositionAsync watch —
-          // one location engine, one native→JS callback stream. Running two
-          // CLLocationManager streams into JS at once doubled the callback
-          // pressure that corrupted Hermes under the New Architecture.
-          if (_uiCallback) {
-            _uiCallback({
+            const ts = typeof bgLoc.timestamp === 'string'
+              ? new Date(bgLoc.timestamp).getTime()
+              : (bgLoc.timestamp as unknown as number);
+
+            // ✅ Drive the HomeScreen live display straight from Transistor.
+            if (_uiCallback) {
+              _uiCallback({
+                latitude:         bgLoc.coords.latitude,
+                longitude:        bgLoc.coords.longitude,
+                altitude:         bgLoc.coords.altitude ?? null,
+                accuracy:         bgLoc.coords.accuracy ?? null,
+                altitudeAccuracy: (bgLoc.coords as any).altitude_accuracy ?? null,
+                speed:            bgLoc.coords.speed ?? null,
+                heading:          bgLoc.coords.heading ?? null,
+                timestamp:        isNaN(ts) ? Date.now() : ts,
+                mocked:           false,
+              });
+            }
+
+            addLog('🛰️', `Transistor loc — lat:${bgLoc.coords.latitude.toFixed(5)} spd:${bgLoc.coords.speed?.toFixed(1) ?? '?'}m/s moving:${bgLoc.is_moving}`);
+
+            // Fire-and-forget — onLocation must return quickly. processLocationForSend
+            // has its own try/catch so errors are contained.
+            processLocationForSend({
               latitude:         bgLoc.coords.latitude,
               longitude:        bgLoc.coords.longitude,
               altitude:         bgLoc.coords.altitude ?? null,
@@ -974,24 +1000,12 @@ export const gpsService = {
               heading:          bgLoc.coords.heading ?? null,
               timestamp:        isNaN(ts) ? Date.now() : ts,
               mocked:           false,
-            });
+            }, 'transistor');
+          } catch (cbErr: any) {
+            // Never let an error escape a native callback — that would be a
+            // fatal uncaught exception under the New Architecture.
+            addLog('❌', `onLocation handler error: ${cbErr?.message ?? 'unknown'}`);
           }
-
-          addLog('🛰️', `Transistor loc — lat:${bgLoc.coords.latitude.toFixed(5)} spd:${bgLoc.coords.speed?.toFixed(1) ?? '?'}m/s moving:${bgLoc.is_moving}`);
-
-          // Fire-and-forget — onLocation must return quickly. processLocationForSend
-          // has its own try/catch so errors are contained.
-          processLocationForSend({
-            latitude:         bgLoc.coords.latitude,
-            longitude:        bgLoc.coords.longitude,
-            altitude:         bgLoc.coords.altitude ?? null,
-            accuracy:         bgLoc.coords.accuracy ?? null,
-            altitudeAccuracy: (bgLoc.coords as any).altitude_accuracy ?? null,
-            speed:            bgLoc.coords.speed ?? null,
-            heading:          bgLoc.coords.heading ?? null,
-            timestamp:        isNaN(ts) ? Date.now() : ts,
-            mocked:           false,
-          }, 'transistor');
         });
 
         BackgroundGeolocation.onMotionChange((event) => {
