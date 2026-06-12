@@ -37,6 +37,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const isInitialMount = useRef(true);
 
     const { error, hasError, handleApiError, clearError } = useScreenError();
+    const onFollowSuccessRef = useRef<(() => void) | null>(null);
 
     // ✅ Same follow plumbing as ResultListScreen — single source of truth
     const {
@@ -49,7 +50,8 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         passwordError,
         handlePasswordSubmit,
         handlePasswordModalClose,
-    } = useFollowManager(t, product_app_id);
+    } = useFollowManager(t, product_app_id,                                   // ✅ productAppId — not needed in this screen
+        () => onFollowSuccessRef.current?.(), );
 
     const fetchFavourites = useCallback(async () => {
         if (isFetching.current) {
@@ -85,7 +87,8 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             isInitialMount.current = false;
         }
     }, [product_app_id]);
-
+    
+       onFollowSuccessRef.current = fetchFavourites;
     useFocusEffect(
         useCallback(() => {
             setFavourites([]);

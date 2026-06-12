@@ -385,13 +385,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
 
   const checkPowerSavingMode = useCallback(async (): Promise<boolean> => {
-    try {
-      const isLowPower = await Battery.isLowPowerModeEnabledAsync();
-      return isLowPower;
-    } catch {
-      return false;
+    if (Platform.OS !== 'android') {
+        try {
+            return await Battery.isLowPowerModeEnabledAsync();
+        } catch {
+            return false;
+        }
     }
-  }, []);
+
+    try {
+        // getPowerStateAsync is more reliable than isLowPowerModeEnabledAsync
+        // on MIUI — it reads the full power state object
+        const powerState = await Battery.getPowerStateAsync();
+        console.log('🔋 Full power state:', powerState);
+        return powerState.lowPowerMode === true;
+    } catch {
+        return false;
+    }
+}, []);
 
   const openPowerSavingSettings = useCallback(async () => {
     if (Platform.OS !== 'android') return;
@@ -1366,14 +1377,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         />
       )}
 
-      {/* ✅ Battery optimization explanation modal — Android only, shown once on first install */}
       {Platform.OS === 'android' && (
         <Modal
           transparent
           visible={showBatteryModal}
           animationType="fade"
           statusBarTranslucent
-          onRequestClose={handleBatterySkip}
         >
           <View style={homeStyles.notifBackdrop}>
             <View style={homeStyles.notifWrapper}>
@@ -1391,13 +1400,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   >
                     <Text style={commonStyles.primaryButtonText}>{t('home:battery.allow')}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={commonStyles.secondaryButton}
-                    onPress={handleBatterySkip}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={commonStyles.secondaryButtonText}>{t('home:battery.skip')}</Text>
-                  </TouchableOpacity>
+                 
                 </View>
               </View>
             </View>
@@ -1450,7 +1453,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         visible={showPowerSavingModal}
         animationType="fade"
         statusBarTranslucent
-        onRequestClose={() => setShowPowerSavingModal(false)}
       >
         <View style={homeStyles.notifBackdrop}>
           <View style={homeStyles.notifWrapper}>
@@ -1471,15 +1473,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   <Text style={commonStyles.primaryButtonText}>
                     {t('home:powerSaving.disable')}
                   </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={commonStyles.secondaryButton}
-                  onPress={() => setShowPowerSavingModal(false)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={commonStyles.secondaryButtonText}>{t('home:battery.skip')}</Text>
-
-                </TouchableOpacity>
+                </TouchableOpacity>               
               </View>
             </View>
           </View>

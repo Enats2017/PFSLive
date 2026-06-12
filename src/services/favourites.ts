@@ -1,4 +1,4 @@
-import { API_CONFIG, getApiEndpoint } from "../constants/config";
+import { API_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
 import { apiClient } from "./api";
 import { getCurrentLanguageId } from "../i18n";
 import { getFollowedUsers, getFollowedBibs } from "../utils/followStorage";
@@ -113,6 +113,8 @@ export const favouritesApi = {
       const customer_app_id_string = followedUserIds.join(",");
       const bib_number_string = followedBibsMap.join(",");
 
+      const deviceId = await getDeviceId();
+
       if (customer_app_id_string === "" && bib_number_string === "") {
         if (API_CONFIG.DEBUG) {
           console.log(
@@ -129,6 +131,7 @@ export const favouritesApi = {
         customer_app_id_string,
         language_id,
         page: params.page ?? 1,
+         device_id: deviceId,
       };
 
       if (API_CONFIG.DEBUG) {

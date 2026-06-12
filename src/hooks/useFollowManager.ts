@@ -49,6 +49,7 @@ interface UseFollowManagerResult {
 export function useFollowManager(
   t: any,
   productAppId?: number,
+  onFollowSuccess?: () => void, 
 ): UseFollowManagerResult {
   const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set());
   const [followedBibs, setFollowedBibs] = useState<Map<number, Set<string>>>(
@@ -232,11 +233,13 @@ export function useFollowManager(
             );
           } else {
             await unfollowUser(numericId);
+            onFollowSuccess?.();
             toastSuccess(
               t("follower:success.unfollowTitle"),
               t("follower:success.unfollowMessage"),
             );
           }
+          
 
           const updatedUsers = await getFollowedUsers();
           setFollowedUsers(new Set(updatedUsers));
@@ -326,17 +329,20 @@ export function useFollowManager(
       try {
         if (willFollow) {
           await smartFollow(productId, bib, customerAppId);
+          onFollowSuccess?.();
           toastSuccess(
             t("follower:success.followTitle"),
             t("follower:success.followMessage"),
           );
         } else {
           await smartUnfollow(productId, bib, customerAppId);
+          onFollowSuccess?.();
           toastSuccess(
             t("follower:success.unfollowTitle"),
             t("follower:success.unfollowMessage"),
           );
         }
+        
 
         const updatedUsers = await getFollowedUsers();
         setFollowedUsers(new Set(updatedUsers));
@@ -512,6 +518,7 @@ export function useFollowManager(
         };
 
         await executeToggle();
+        
         setPasswordModalVisible(false);
         setPendingFollow(null);
       } catch (error: any) {
