@@ -606,6 +606,123 @@ const _registerFgAppStateListener = (): void => {
   });
 };
 
+// ════════════════════════════════════════════════════════════════════════
+// ✅ TRANSISTOR LISTENER REGISTRATION — single source of truth.
+//
+// The native engine (start/stop) and these JS listeners have SEPARATE
+// lifecycles. A running engine with NO listeners attached still samples GPS but
+// never calls into JS — processLocationForSend never runs, nothing is sent, and
+// getState().enabled still reads true, so it looks healthy while being
+// functionally deaf. Registering only inside startWatchingPosition left two
+// paths exposed to exactly that:
+//   1. Watchdog restart after a full stop (stop() also calls removeListeners()).
+//   2. Cold relaunch onto an active session — a fresh JS context where
+//      startWatchingPosition never ran, so zero listeners, while the native
+//      service survived (stopOnTerminate:false) and getState().enabled === true.
+//
+// This helper registers all three listeners in one place so EVERY path that
+// brings the engine up can (re)attach them. removeListeners() first makes it
+// idempotent: calling it again detaches the old handlers and attaches fresh
+// ones instead of double-firing.
+// ════════════════════════════════════════════════════════════════════════
+const _registerTransistorListeners = (): void => {
+  try { BackgroundGeolocation.removeListeners(); } catch { /* silent */ }
+
+  BackgroundGeolocation.onLocation((bgLoc) => {
+    try {
+      // ✅ GUARD: a location event can arrive without a valid coords object
+      // (sample/heartbeat events or a malformed payload). Reading
+      // bgLoc.coords.latitude on undefined threw a TypeError — and under the New
+      // Architecture (RN 0.81+) an uncaught JS error inside a native callback is
+      // FATAL (it was silently swallowed on the old architecture). Bail out
+      // safely instead of crashing.
+      if (!bgLoc?.coords || typeof bgLoc.coords.latitude !== 'number') {
+        addLog('⚠️', 'onLocation fired without valid coords — skipped');
+        return;
+      }
+
+      const ts = typeof bgLoc.timestamp === 'string'
+        ? new Date(bgLoc.timestamp).getTime()
+        : (bgLoc.timestamp as unknown as number);
+
+      // ✅ Drive the HomeScreen live display straight from Transistor.
+      if (_uiCallback) {
+        _uiCallback({
+          latitude:         bgLoc.coords.latitude,
+          longitude:        bgLoc.coords.longitude,
+          altitude:         bgLoc.coords.altitude ?? null,
+          accuracy:         bgLoc.coords.accuracy ?? null,
+          altitudeAccuracy: (bgLoc.coords as any).altitude_accuracy ?? null,
+          speed:            bgLoc.coords.speed ?? null,
+          heading:          bgLoc.coords.heading ?? null,
+          timestamp:        isNaN(ts) ? Date.now() : ts,
+          mocked:           false,
+        });
+      }
+
+      addLog('🛰️', `Transistor loc — lat:${bgLoc.coords.latitude.toFixed(5)} spd:${bgLoc.coords.speed?.toFixed(1) ?? '?'}m/s moving:${bgLoc.is_moving}`);
+
+      // Fire-and-forget — onLocation must return quickly. processLocationForSend
+      // has its own try/catch so errors are contained.
+      processLocationForSend({
+        latitude:         bgLoc.coords.latitude,
+        longitude:        bgLoc.coords.longitude,
+        altitude:         bgLoc.coords.altitude ?? null,
+        accuracy:         bgLoc.coords.accuracy ?? null,
+        altitudeAccuracy: (bgLoc.coords as any).altitude_accuracy ?? null,
+        speed:            bgLoc.coords.speed ?? null,
+        heading:          bgLoc.coords.heading ?? null,
+        timestamp:        isNaN(ts) ? Date.now() : ts,
+        mocked:           false,
+      }, 'transistor');
+    } catch (cbErr: any) {
+      // Never let an error escape a native callback — that would be a fatal
+      // uncaught exception under the New Architecture.
+      addLog('❌', `onLocation handler error: ${cbErr?.message ?? 'unknown'}`);
+    }
+  });
+
+  BackgroundGeolocation.onMotionChange((event) => {
+    addLog(event.isMoving ? '🏃' : '🧍', `Motion: ${event.isMoving ? 'moving' : 'stationary'}`);
+  });
+
+  // ✅ HEARTBEAT — the ONLY non-foreground wake path while stationary.
+  //
+  // disableStopDetection:true is supposed to keep the SDK moving, but on Android
+  // it can still drop to stationary when the device is genuinely motionless for
+  // a while (OS-level location batching). Once stationary, onLocation goes quiet
+  // AND — because activity.disableMotionActivityUpdates:true removes the
+  // motion-sensor wake — nothing brings it back until the app is foregrounded.
+  // That is exactly the long silent gap we saw after a runner stopped.
+  //
+  // heartbeatInterval:60 + preventSuspend:true fire this every 60s even while
+  // stationary/asleep (battery unrestricted). We pull a fresh fix;
+  // getCurrentPosition fires onLocation, so it flows through the same
+  // onLocation → processLocationForSend pipeline (throttle + movement filter
+  // still apply, so a genuinely-stopped runner produces NO send — only real
+  // movement gets through).
+  BackgroundGeolocation.onHeartbeat(async () => {
+    try {
+      const hbState = await BackgroundGeolocation.getState();
+      // While moving, onLocation already fires every locationUpdateInterval, so a
+      // heartbeat fix would just be a redundant network call. Only act when
+      // stationary — the exact state where onLocation has gone quiet.
+      if (hbState.isMoving) return;
+
+      await addLog('💓', 'Heartbeat — stationary, pulling keepalive fix');
+      await BackgroundGeolocation.getCurrentPosition({
+        samples:         2,
+        timeout:         30,
+        desiredAccuracy: 10,
+        persist:         false,   // we send via our own pipeline, not the SDK DB
+      });
+    } catch (hbErr: any) {
+      // Heartbeat must never throw — a beat with no fix is fine; retry next beat.
+      addLog('💓', `Heartbeat fix failed: ${hbErr?.message ?? 'unknown'}`);
+    }
+  });
+};
+
 // ✅ Internal: full teardown — stops Transistor, the AppState listener, and
 // clears all session-scoped AsyncStorage keys. Called by stopWatching() below
 // and indirectly by the remove() handle returned from startWatchingPosition.
@@ -729,9 +846,16 @@ export const ensureBackgroundTaskAlive = async (
   notificationBody: string,
 ): Promise<boolean> => {
   try {
+    // ✅ Always (re)attach the JS listeners FIRST. The native engine and these
+    // listeners have separate lifecycles: on a cold relaunch the engine can be
+    // alive (enabled===true) while THIS JS context has none attached, so it
+    // samples GPS but never calls processLocationForSend. Re-registering is
+    // idempotent (removeListeners first), so it's safe on a healthy session too.
+    _registerTransistorListeners();
+
     const bgState = await BackgroundGeolocation.getState();
     if (bgState.enabled) {
-      await addLog('💚', 'Watchdog check — transistor alive');
+      await addLog('💚', 'Watchdog check — transistor alive (listeners re-attached)');
       return true;
     }
 
@@ -954,63 +1078,10 @@ export const gpsService = {
           reset: true,
         });
 
-        BackgroundGeolocation.onLocation((bgLoc) => {
-          try {
-            // ✅ GUARD: a location event can arrive without a valid coords
-            // object (sample/heartbeat events or a malformed payload). Reading
-            // bgLoc.coords.latitude on undefined threw a TypeError — and under
-            // the New Architecture (RN 0.81+) an uncaught JS error inside a
-            // native callback is FATAL (it was silently swallowed on the old
-            // architecture). Bail out safely instead of crashing.
-            if (!bgLoc?.coords || typeof bgLoc.coords.latitude !== 'number') {
-              addLog('⚠️', 'onLocation fired without valid coords — skipped');
-              return;
-            }
-
-            const ts = typeof bgLoc.timestamp === 'string'
-              ? new Date(bgLoc.timestamp).getTime()
-              : (bgLoc.timestamp as unknown as number);
-
-            // ✅ Drive the HomeScreen live display straight from Transistor.
-            if (_uiCallback) {
-              _uiCallback({
-                latitude:         bgLoc.coords.latitude,
-                longitude:        bgLoc.coords.longitude,
-                altitude:         bgLoc.coords.altitude ?? null,
-                accuracy:         bgLoc.coords.accuracy ?? null,
-                altitudeAccuracy: (bgLoc.coords as any).altitude_accuracy ?? null,
-                speed:            bgLoc.coords.speed ?? null,
-                heading:          bgLoc.coords.heading ?? null,
-                timestamp:        isNaN(ts) ? Date.now() : ts,
-                mocked:           false,
-              });
-            }
-
-            addLog('🛰️', `Transistor loc — lat:${bgLoc.coords.latitude.toFixed(5)} spd:${bgLoc.coords.speed?.toFixed(1) ?? '?'}m/s moving:${bgLoc.is_moving}`);
-
-            // Fire-and-forget — onLocation must return quickly. processLocationForSend
-            // has its own try/catch so errors are contained.
-            processLocationForSend({
-              latitude:         bgLoc.coords.latitude,
-              longitude:        bgLoc.coords.longitude,
-              altitude:         bgLoc.coords.altitude ?? null,
-              accuracy:         bgLoc.coords.accuracy ?? null,
-              altitudeAccuracy: (bgLoc.coords as any).altitude_accuracy ?? null,
-              speed:            bgLoc.coords.speed ?? null,
-              heading:          bgLoc.coords.heading ?? null,
-              timestamp:        isNaN(ts) ? Date.now() : ts,
-              mocked:           false,
-            }, 'transistor');
-          } catch (cbErr: any) {
-            // Never let an error escape a native callback — that would be a
-            // fatal uncaught exception under the New Architecture.
-            addLog('❌', `onLocation handler error: ${cbErr?.message ?? 'unknown'}`);
-          }
-        });
-
-        BackgroundGeolocation.onMotionChange((event) => {
-          addLog(event.isMoving ? '🏃' : '🧍', `Motion: ${event.isMoving ? 'moving' : 'stationary'}`);
-        });
+        // ✅ Register onLocation / onMotionChange / onHeartbeat via the shared
+        // helper so the watchdog + cold-relaunch paths can re-attach them too.
+        // (ready() above already cleared listeners; the helper does too — safe.)
+        _registerTransistorListeners();
 
         await BackgroundGeolocation.start();
 
