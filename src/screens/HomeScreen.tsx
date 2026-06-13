@@ -995,6 +995,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       } catch { /* silent */ }
     }
 
+    fetchHomeData();
+
     toastSuccess(
       t('home:tracking.gpsStopped'),
       t('home:tracking.trackingStopped', {

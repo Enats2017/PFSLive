@@ -65,8 +65,9 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
 
     const elevationRange = maxElevation - minElevation;
     const topBuffer = elevationRange * 0.15;
+    const bottomBuffer = elevationRange * 0.05;
 
-    const yDomain: [number, number] = [minElevation, maxElevation + topBuffer];
+    const yDomain: [number, number] = [minElevation - bottomBuffer, maxElevation + topBuffer];
 
     const checkpointChartPoints = React.useMemo(() => {
         if (apiCheckpoints.length > 0) {
@@ -189,7 +190,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     // One flat list so taps are resolved by nearest-hit, not by which absolute
     // overlay happens to sit on top — fixes occlusion when participants cluster.
     const tapTargets = React.useMemo(() => {
-        const PAD_TOP = 20, PAD_BOTTOM = 0;   // must match VictoryChart padding
+        const PAD_TOP = 20, PAD_BOTTOM = 20;   // must match VictoryChart padding
         const plotHeight = chartHeight - PAD_TOP - PAD_BOTTOM;
         const toScreenY = (yVal: number) => {
             const yPct = (yVal - yDomain[0]) / (yDomain[1] - yDomain[0]);
@@ -256,7 +257,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     <VictoryChart
                         width={chartWidth}
                         height={chartHeight}
-                        padding={{ top: 20, bottom: 0, left: 0, right: 0 }}
+                        padding={{ top: 20, bottom: 20, left: 0, right: 0 }}
                         domain={{ x: [0, totalDistance] as [number, number], y: yDomain }}
                     >
                         <VictoryAxis
