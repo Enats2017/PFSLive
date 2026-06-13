@@ -46,7 +46,13 @@
     "backgroundNotificationTitle": "Live Tracking Actief",
     "backgroundNotificationBody": "Je locatie wordt bijgehouden voor de race.",
     "retryQueue": "{{count}} niet-verzonden locatie(s) versturen",
-    "queueRetryFailed": "Geen netwerk — probeer het later opnieuw"
+    "queueRetryFailed": "Geen netwerk — probeer het later opnieuw",
+    "bgPermission": {
+      "title": "{applicationName} toestaan om de locatie van dit apparaat te gebruiken, zelfs als de app gesloten of niet in gebruik is?",
+      "message": "{applicationName} deelt je live positie met je volgers tijdens een wedstrijd, zelfs als de app gesloten of niet in gebruik is. Kies \"{backgroundPermissionOptionLabel}\" om dit in te schakelen.",
+      "positiveAction": "Wijzig naar \"{backgroundPermissionOptionLabel}\"",
+      "negativeAction": "Annuleren"
+    }
   },
   "battery": {
     "title": "Achtergrondtracking inschakelen",

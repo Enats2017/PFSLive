@@ -46,7 +46,13 @@
     "backgroundNotificationTitle": "Live Tracking Active",
     "backgroundNotificationBody": "Your location is being tracked for the race.",
     "retryQueue": "Send {{count}} unsent location(s)",
-    "queueRetryFailed": "No network — try again later"
+    "queueRetryFailed": "No network — try again later",
+    "bgPermission": {
+      "title": "Allow {applicationName} to access this device's location even when closed or not in use?",
+      "message": "{applicationName} shares your live position with your followers during a race, even when the app is closed or not in use. To enable this, please choose \"{backgroundPermissionOptionLabel}\".",
+      "positiveAction": "Change to \"{backgroundPermissionOptionLabel}\"",
+      "negativeAction": "Cancel"
+    }
   },
   "battery": {
     "title": "Enable Background Tracking",

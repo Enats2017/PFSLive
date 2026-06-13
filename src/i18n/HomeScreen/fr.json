@@ -46,7 +46,13 @@
     "backgroundNotificationTitle": "Suivi en direct actif",
     "backgroundNotificationBody": "Votre position est suivie pour la course.",
     "retryQueue": "Envoyer {{count}} position(s) non envoyée(s)",
-    "queueRetryFailed": "Pas de réseau — réessayez plus tard"
+    "queueRetryFailed": "Pas de réseau — réessayez plus tard",
+    "bgPermission": {
+      "title": "Autoriser {applicationName} à accéder à la localisation de cet appareil même lorsqu'elle est fermée ou inutilisée ?",
+      "message": "{applicationName} partage votre position en direct avec vos abonnés pendant une course, même lorsque l'application est fermée ou inutilisée. Pour l'activer, choisissez « {backgroundPermissionOptionLabel} ».",
+      "positiveAction": "Passer à « {backgroundPermissionOptionLabel} »",
+      "negativeAction": "Annuler"
+    }
   },
   "battery": {
     "title": "Activer le suivi en arrière-plan",

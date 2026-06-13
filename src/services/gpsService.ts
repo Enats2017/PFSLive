@@ -6,6 +6,7 @@ import { AppState } from 'react-native';
 import * as Battery from 'expo-battery';
 import { LocationData } from './locationService';
 import { API_CONFIG } from '../constants/config';
+import i18n from '../i18n'; // adjust to wherever your configured i18next instance lives
 
 export interface GPSPosition {
   latitude: number;
@@ -1067,6 +1068,13 @@ export const gpsService = {
               title: notificationTitle ?? 'Live Tracking Active',
               text:  notificationBody  ?? 'Your location is being tracked.',
               color: '#1a73e8',
+            },
+            // ✅ rationale goes here, in the app (AppConfig) domain
+            backgroundPermissionRationale: {
+              title:          i18n.t('home:tracking.bgPermission.title'),
+              message:        i18n.t('home:tracking.bgPermission.message'),
+              positiveAction: i18n.t('home:tracking.bgPermission.positiveAction'),
+              negativeAction: i18n.t('home:tracking.bgPermission.negativeAction'),
             },
           },
           logger: {
