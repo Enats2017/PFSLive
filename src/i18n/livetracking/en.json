@@ -25,6 +25,6 @@
     "chooseMapApp": "Choose your preferred map app",
     "poweredBy": "Powered by",
     "livio": "Livio",
-    "availableServices": "Available Services"
-
+    "availableServices": "Available Services",
+    "lowBattery": "⚠️ Battery low ({{level}}%) — live tracking may pause or stop soon."
 }

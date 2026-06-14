@@ -25,5 +25,6 @@
     "chooseMapApp": "Choisissez votre application de carte",
     "poweredBy": "Propulsé par",
     "livio": "Livio",
-    "availableServices": "Services disponibles"
+    "availableServices": "Services disponibles",
+    "lowBattery": "⚠️ Batterie faible ({{level}}%) — le suivi en direct peut bientôt s'interrompre."
 }

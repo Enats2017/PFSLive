@@ -25,5 +25,6 @@
     "chooseMapApp": "Kies je kaart-app",
     "poweredBy": "Mogelijk gemaakt door",
     "livio": "Livio",
-    "availableServices": "Beschikbare diensten"
+    "availableServices": "Beschikbare diensten",
+    "lowBattery": "⚠️ Batterij bijna leeg ({{level}}%) — live tracking kan binnenkort pauzeren of stoppen."
 }

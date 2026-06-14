@@ -47,6 +47,11 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
     const showPosition = participant.source === 'race_result' && participant.last_checkpoint_name;
     const showFemalePosition = participant.gender === 'f' && participant.position_gender;
 
+    const LOW_BATTERY_THRESHOLD = 80; // % — warn at/below this
+
+    const battery = participant.battery_level;
+    const showLowBattery = battery != null && battery <= LOW_BATTERY_THRESHOLD;
+
     return (
         <View style={liveTrackingStyles.popupOverlay}>
             <View style={liveTrackingStyles.popup}>
@@ -78,6 +83,19 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                         )}
                     </View>
                 </View>
+
+                {showLowBattery && (
+                    <View style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        backgroundColor: '#FEE2E2', borderColor: '#EF4444', borderWidth: 1,
+                        borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10, marginBottom: 12,
+                    }}>
+                        <Ionicons name="battery-dead-outline" size={18} color="#DC2626" />
+                        <Text style={{ color: '#B91C1C', fontSize: 13, fontWeight: '600', flex: 1 }}>
+                            {t('livetracking:lowBattery', { level: battery })}
+                        </Text>
+                    </View>
+                )}
 
                 {showPosition && (
                     <View style={liveTrackingStyles.popupSection}>

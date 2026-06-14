@@ -53,6 +53,7 @@ export interface LiveTrackingParticipant {
     longitude: number;
     altitude: number;
     speed: number | null;
+    battery_level: number | null;
     last_update: string;
     last_update_time: number;
     last_update_type: string;

@@ -661,6 +661,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     profile_picture: p.profile_picture,
                     source: p.source,
                     initials: p.initials,
+                    battery_level: p.battery_level ?? null,
                 },
                 geometry: { type: 'Point', coordinates: [lon, lat] },
             })),
@@ -847,6 +848,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 last_update_type: props.last_update_type,
                 profile_picture: props.profile_picture,
                 source: props.source,
+                battery_level: props.battery_level ?? null,
             };
             onParticipantPress(participant);
         }
