@@ -1526,15 +1526,34 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <Text style={homeStyles.notifTitle}>{t('home:powerSaving.title')}</Text>
               <Text style={homeStyles.notifBody}>{t('home:powerSaving.message')}</Text>
               <View style={homeStyles.notifButtonContainer}>
-                <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
-                  onPress={openPowerSavingSettings}
-                  activeOpacity={0.8}
-                >
-                  <Text style={commonStyles.primaryButtonText}>
-                    {t('home:powerSaving.disable')}
-                  </Text>
-                </TouchableOpacity>               
+                {Platform.OS === 'android' ? (
+                  <>
+                    <TouchableOpacity
+                      style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                      onPress={openPowerSavingSettings}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={commonStyles.primaryButtonText}>{t('home:powerSaving.disable')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={commonStyles.secondaryButton}
+                      onPress={() => setShowPowerSavingModal(false)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={commonStyles.secondaryButtonText}>{t('common:buttons.close')}</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  // iOS: no deep link to Low Power Mode exists, so a Settings button is
+                  // pointless. Instruction text does the work; this only acknowledges.
+                  <TouchableOpacity
+                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                    onPress={() => setShowPowerSavingModal(false)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={commonStyles.primaryButtonText}>{t('common:buttons.gotIt')}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>

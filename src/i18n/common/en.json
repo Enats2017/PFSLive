@@ -13,7 +13,8 @@
     "retry": "Retry",
     "refresh": "Refresh",
     "view": "View",
-    "done": "Done"
+    "done": "Done",
+    "gotIt": "Got it"
   },
   "nav": {
     "home": "Home",

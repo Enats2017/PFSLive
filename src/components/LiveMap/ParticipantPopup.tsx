@@ -47,7 +47,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
     const showPosition = participant.source === 'race_result' && participant.last_checkpoint_name;
     const showFemalePosition = participant.gender === 'f' && participant.position_gender;
 
-    const LOW_BATTERY_THRESHOLD = 80; // % — warn at/below this
+    const LOW_BATTERY_THRESHOLD = 15; // % — warn at/below this
 
     const battery = participant.battery_level;
     const showLowBattery = battery != null && battery <= LOW_BATTERY_THRESHOLD;

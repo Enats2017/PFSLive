@@ -458,7 +458,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const hasCheckpoints = apiCheckpoints != null && apiCheckpoints.length > 0;
     const showRouteLine = hasGpx;
     const showCheckpoints = hasGpx && hasCheckpoints;
-    const showElevationProfile = isCustomEvent ? (hasGpx && hasCheckpoints) : hasGpx;
+    const showElevationProfile = hasGpx;
     const hasValidCoords = participantMarkers.some(p => p.lat !== 0 && p.lon !== 0);
     const showParticipants = isCustomEvent ? (hasGpx || hasValidCoords) : hasValidCoords;
     const showDistanceDropdown = !isCustomEvent;

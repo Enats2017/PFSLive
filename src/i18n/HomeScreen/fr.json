@@ -86,9 +86,10 @@
     "no": "Non, annuler"
   },
   "powerSaving": {
-    "title": "Avertissement batterie",
-    "message": "Le mode économie d'énergie est activé. Cela bloque le GPS et le suivi en arrière-plan. Veuillez le désactiver d'abord.",
-    "disable": "Ouvrir les paramètres de batterie"
+    "title": "L'économiseur de batterie est activé",
+    "messageAndroid": "L'économiseur de batterie peut interrompre le suivi GPS en arrière-plan. Veuillez le désactiver avant de démarrer le suivi.",
+    "messageIos": "Le mode économie d'énergie peut interrompre le suivi GPS en arrière-plan. Ouvrez l'app Réglages → Batterie → désactivez le mode économie d'énergie, puis revenez et appuyez de nouveau sur DÉMARRER LE SUIVI.",
+    "disable": "Ouvrir les réglages de batterie"
   },
   "followingEvents": {
     "sectionTitle": "ÉVÉNEMENTS QUE VOUS SUIVEZ",

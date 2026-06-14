@@ -86,9 +86,10 @@
     "no": "No, Cancel"
   },
   "powerSaving": {
-    "title": "Battery Warning",
-    "message": "Power Saving Mode is ON. This blocks GPS and background tracking. Please disable it first.",
-    "disable": "Open Battery Settings"
+    "title": "Battery saver is on",
+    "messageAndroid": "Battery Saver can stop GPS tracking in the background. Please turn it off before you start tracking.",
+    "messageIos": "Low Power Mode can interrupt GPS tracking in the background. Open the Settings app → Battery → turn off Low Power Mode, then come back and tap START TRACKING again.",
+    "disable": "Open battery settings"
   },
   "followingEvents": {
     "sectionTitle": "EVENTS YOU FOLLOW",

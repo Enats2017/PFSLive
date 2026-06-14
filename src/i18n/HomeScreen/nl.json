@@ -14,8 +14,8 @@
     "title": "Naam evenement",
     "Date": "Datum",
     "description": "Je kunt je live tracking starten vanaf 1 uur voor je start. Zorg ervoor dat je deze app altijd open houdt en niet sluit!",
-    "buttonText": "START TRACKING",
-    "button": "STOP TRACKING"
+    "buttonText": "START VOLGEN",
+    "button": "STOP VOLGEN"
   },
   "status": {
     "gpsActive": "GPS Actief - Wachten op start race",
@@ -86,9 +86,10 @@
     "no": "Nee, annuleren"
   },
   "powerSaving": {
-    "title": "Batterijwaarschuwing",
-    "message": "De energiebesparingsmodus is ingeschakeld. Dit blokkeert GPS en tracking op de achtergrond. Schakel deze eerst uit.",
-    "disable": "Batterijinstellingen openen"
+    "title": "Batterijbesparing staat aan",
+    "messageAndroid": "Batterijbesparing kan het gps-volgen op de achtergrond stopzetten. Schakel het uit voordat je begint met volgen.",
+    "messageIos": "De energiebesparingsmodus kan het gps-volgen op de achtergrond onderbreken. Open de app Instellingen → Batterij → schakel de energiebesparingsmodus uit, kom dan terug en tik opnieuw op START VOLGEN.",
+    "disable": "Batterij-instellingen openen"
   },
   "followingEvents": {
     "sectionTitle": "EVENEMENTEN DIE U VOLGT",
