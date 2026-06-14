@@ -705,10 +705,13 @@ const _registerTransistorListeners = (): void => {
   BackgroundGeolocation.onHeartbeat(async () => {
     try {
       const hbState = await BackgroundGeolocation.getState();
-      // While moving, onLocation already fires every locationUpdateInterval, so a
-      // heartbeat fix would just be a redundant network call. Only act when
-      // stationary — the exact state where onLocation has gone quiet.
-      if (hbState.isMoving) return;
+      // ✅ Log EVERY beat so the panel confirms the heartbeat is alive — even
+      // while moving, when onLocation is already doing the work and a heartbeat
+      // fix would just be a redundant network call.
+      if (hbState.isMoving) {
+        await addLog('💓', 'Heartbeat — moving, onLocation active (no extra fix)');
+        return;
+      }
 
       await addLog('💓', 'Heartbeat — stationary, pulling keepalive fix');
       await BackgroundGeolocation.getCurrentPosition({

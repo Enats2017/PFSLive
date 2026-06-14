@@ -27,6 +27,9 @@ const ROUTE_IN_COLOR  = '#3B82F6'; // purple — inbound ("coming back")
 // const INBOUND_OFFSET_M = 15; // metres the inbound lane is shifted sideways from outbound
 const LANE_SEPARATION_M = 5;
 
+const END_NUDGE_THRESHOLD_M = 15;  // within 15m of the finish → push the dot aside
+const END_NUDGE_M           = 1;  // how far to the side (metres)
+
 // Haversine distance in km between two lat/lon points.
 const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371;
@@ -156,6 +159,28 @@ const offsetPolylineMeters = (coords: [number, number][], offsetM: number): [num
         out.push([coords[i][0] + dLon, coords[i][1] + dLat]);
     }
     return out;
+};
+
+// Nudge a point perpendicular to the segment a→b by `metres`, always to the
+// SOUTH side. South is deliberate: the Finish checkpoint is nudged north on loop
+// courses, so pushing participants south guarantees they never land on it, and
+// the Start checkpoint isn't nudged at all, so any sideways move clears it too.
+const nudgeAsidePerp = (
+    lon: number, lat: number,
+    a: [number, number], b: [number, number],
+    metres: number,
+): [number, number] => {
+    const cosLat = Math.cos((lat * Math.PI) / 180) || 1e-6;
+    const dE = (b[0] - a[0]) * 111320 * cosLat;   // east metres
+    const dN = (b[1] - a[1]) * 111320;            // north metres
+    const len = Math.hypot(dE, dN);
+    let pe = len > 0 ? -dN / len : 0;             // perpendicular to travel
+    let pn = len > 0 ?  dE / len : -1;            // (fallback: due south)
+    if (pn > 0) { pe = -pe; pn = -pn; }           // force southern side
+    return [
+        lon + (pe * metres) / (111320 * cosLat),
+        lat + (pn * metres) / 111320,
+    ];
 };
 
 // Walk a polyline placing a marker at each integer-km boundary. distanceCoords
@@ -587,8 +612,23 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 }
             }
 
+            const total = cum[cum.length - 1];
+
             placed = snapped.map(({ p, distM }) => {
-                const [lon, lat] = pointAtDistance(distM, route, cum);
+                let [lon, lat] = pointAtDistance(distM, route, cum);
+
+                if (route.length >= 2) {
+                    if (total - distM <= END_NUDGE_THRESHOLD_M) {
+                        // Near the FINISH → nudge aside from the last segment.
+                        [lon, lat] = nudgeAsidePerp(
+                            lon, lat, route[route.length - 2], route[route.length - 1], END_NUDGE_M,
+                        );
+                    } else if (distM <= END_NUDGE_THRESHOLD_M) {
+                        // Near the START → nudge aside from the first segment.
+                        [lon, lat] = nudgeAsidePerp(lon, lat, route[0], route[1], END_NUDGE_M);
+                    }
+                }
+
                 return { p, lon, lat };
             });
         } else {

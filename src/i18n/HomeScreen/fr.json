@@ -86,14 +86,20 @@
     "no": "Non, annuler"
   },
   "powerSaving": {
-  "title": "Avertissement batterie",
-  "message": "Le mode économie d'énergie est activé. Cela bloque le GPS et le suivi en arrière-plan. Veuillez le désactiver d'abord.",
-  "disable": "Ouvrir les paramètres de batterie"
-},
-"followingEvents": {
-  "sectionTitle": "ÉVÉNEMENTS QUE VOUS SUIVEZ",
-  "startsIn": "COMMENCE DANS",
-  "live": "EN DIRECT",
-  "routeButton": "Suivre L'Événement"
-}
+    "title": "Avertissement batterie",
+    "message": "Le mode économie d'énergie est activé. Cela bloque le GPS et le suivi en arrière-plan. Veuillez le désactiver d'abord.",
+    "disable": "Ouvrir les paramètres de batterie"
+  },
+  "followingEvents": {
+    "sectionTitle": "ÉVÉNEMENTS QUE VOUS SUIVEZ",
+    "startsIn": "COMMENCE DANS",
+    "live": "EN DIRECT",
+    "routeButton": "Suivre L'Événement"
+  },
+  "startConfirm": {
+    "title": "Démarrer le suivi en direct ?",
+    "message": "Votre position en direct sera partagée avec vos abonnés pendant toute la course. Gardez Livio ouvert et votre téléphone avec vous jusqu'à l'arrivée. Prêt à démarrer ?",
+    "yes": "Oui, démarrer le suivi",
+    "no": "Pas encore"
+  }
 }

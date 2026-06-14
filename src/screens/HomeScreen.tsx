@@ -179,6 +179,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ✅ Early tracking warning modal — shown when race is more than 24h away
   const [showEarlyTrackingModal, setShowEarlyTrackingModal] = useState(false);
 
+  const [showStartConfirmModal, setShowStartConfirmModal] = useState(false);
+
   // Version check states
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
@@ -915,6 +917,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     await doStartGPSTracking();
   }, [participantId, eventId, homeData, doStartGPSTracking, t]);
 
+  // Opens the confirm popup (button now calls this instead of startGPSTracking)
+  const confirmStartTracking = useCallback(() => {
+    if (!participantId || !eventId) {
+      toastError(t('home:errors.missingInfo'), t('home:errors.missingInfoDescription'));
+      return;
+    }
+    setShowStartConfirmModal(true);
+  }, [participantId, eventId, t]);
+
+  // User taps "Yes" → close popup, run the real start flow
+  const handleStartConfirmYes = useCallback(async () => {
+    setShowStartConfirmModal(false);
+    await startGPSTracking();
+  }, [startGPSTracking]);
+
+  // User taps "No" → just close, do nothing
+  const handleStartConfirmNo = useCallback(() => {
+    setShowStartConfirmModal(false);
+  }, []);
+
   // ✅ User confirms early tracking — proceed anyway
   const handleEarlyTrackingConfirm = useCallback(async () => {
     setShowEarlyTrackingModal(false);
@@ -1410,6 +1432,43 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </Modal>
       )}
 
+      {/* ✅ Start tracking confirmation */}
+      <Modal
+        transparent
+        visible={showStartConfirmModal}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={handleStartConfirmNo}
+      >
+        <View style={homeStyles.notifBackdrop}>
+          <View style={homeStyles.notifWrapper}>
+            <View style={homeStyles.notifCard}>
+              <View style={homeStyles.notifIconWrapper}>
+                <Ionicons name="navigate-circle-outline" size={36} color={colors.primary} />
+              </View>
+              <Text style={homeStyles.notifTitle}>{t('home:startConfirm.title')}</Text>
+              <Text style={homeStyles.notifBody}>{t('home:startConfirm.message')}</Text>
+              <View style={homeStyles.notifButtonContainer}>
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  onPress={handleStartConfirmYes}
+                  activeOpacity={0.8}
+                >
+                  <Text style={commonStyles.primaryButtonText}>{t('home:startConfirm.yes')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={commonStyles.secondaryButton}
+                  onPress={handleStartConfirmNo}
+                  activeOpacity={0.7}
+                >
+                  <Text style={commonStyles.secondaryButtonText}>{t('home:startConfirm.no')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* ✅ Early tracking warning modal — shown when race is more than 24h away */}
       <Modal
         transparent
@@ -1667,7 +1726,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       opacity: 0.6,
                     },
                   ]}
-                  onPress={isGPSActive ? stopGPSTracking : startGPSTracking}
+                  onPress={isGPSActive ? stopGPSTracking : confirmStartTracking}
                   disabled={!isGPSActive && (!participantId || !eventId)}
                 >
                   <Text style={homeStyles.buttonText}>

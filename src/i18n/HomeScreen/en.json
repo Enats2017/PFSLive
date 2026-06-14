@@ -85,17 +85,21 @@
     "yes": "Yes, Enable",
     "no": "No, Cancel"
   },
-
-"powerSaving": {
-  "title": "Battery Warning",
-  "message": "Power Saving Mode is ON. This blocks GPS and background tracking. Please disable it first.",
-  
-  "disable": "Open Battery Settings"
-},
-"followingEvents": {
+  "powerSaving": {
+    "title": "Battery Warning",
+    "message": "Power Saving Mode is ON. This blocks GPS and background tracking. Please disable it first.",
+    "disable": "Open Battery Settings"
+  },
+  "followingEvents": {
     "sectionTitle": "EVENTS YOU FOLLOW",
     "startsIn": "STARTS IN",
     "live": "LIVE",
     "routeButton": "Follow The Event"
+  },
+  "startConfirm": {
+    "title": "Start Live Tracking?",
+    "message": "Your live location will be shared with your followers throughout the race. Keep Livio running and your phone with you until you finish. Ready to go?",
+    "yes": "Yes, Start Tracking",
+    "no": "Not Yet"
   }
 }

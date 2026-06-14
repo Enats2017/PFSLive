@@ -86,14 +86,20 @@
     "no": "Nee, annuleren"
   },
   "powerSaving": {
-  "title": "Batterijwaarschuwing",
-  "message": "De energiebesparingsmodus is ingeschakeld. Dit blokkeert GPS en tracking op de achtergrond. Schakel deze eerst uit.",
-  "disable": "Batterijinstellingen openen"
-},
-"followingEvents": {
-  "sectionTitle": "EVENEMENTEN DIE U VOLGT",
-  "startsIn": "BEGINT OVER",
-  "live": "LIVE",
-  "routeButton": "Volg Het Evenement"
-}
+    "title": "Batterijwaarschuwing",
+    "message": "De energiebesparingsmodus is ingeschakeld. Dit blokkeert GPS en tracking op de achtergrond. Schakel deze eerst uit.",
+    "disable": "Batterijinstellingen openen"
+  },
+  "followingEvents": {
+    "sectionTitle": "EVENEMENTEN DIE U VOLGT",
+    "startsIn": "BEGINT OVER",
+    "live": "LIVE",
+    "routeButton": "Volg Het Evenement"
+  },
+  "startConfirm": {
+    "title": "Live tracking starten?",
+    "message": "Je live locatie wordt tijdens de wedstrijd met je volgers gedeeld. Houd Livio actief en je telefoon bij je tot je finisht. Klaar om te starten?",
+    "yes": "Ja, start tracking",
+    "no": "Nog niet"
+  }
 }
