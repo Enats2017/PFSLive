@@ -47,6 +47,7 @@ export interface LiveTrackingParticipant {
     last_checkpoint_name: string;
     distance_covered_km: number;
     distance_to_next_cp: number | null;
+    distance_to_finish_km: number | null;
     avg_speed_kmh: number;
     latitude: number;
     longitude: number;
