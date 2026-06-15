@@ -2,9 +2,11 @@ import React, { useRef, useEffect, useState } from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
 import Mapbox from '@rnmapbox/maps';
 import { GPXTrackPoint, GPXAidStation } from '../../services/gpxService';
+import { getCheckpointName } from '../../utils/checkpointName';
 import { ParticipantMapMarker, AidStationMapMarker, CheckpointData } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
 import { colors } from '../../styles/common.styles';
+import { useTranslation } from 'react-i18next';
 
 // ── Map marker colors ────────────────────────────────────────────────────────
 // Each marker type has a distinct color so they're easy to tell apart at a glance.
@@ -280,6 +282,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
     const mapViewRef = useRef<Mapbox.MapView>(null);
     const [mapReady, setMapReady] = useState(false);
     const mapReadyRef = useRef(false);
+    const { t } = useTranslation(['livetracking', 'common']);
 
     // ✅ camera fit-once tracking.
     //
@@ -769,7 +772,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         type: 'Feature' as const,
                         properties: {
                             id: `checkpoint-${idx}`,
-                            name: checkpoint.name,
+                            name: getCheckpointName(t, checkpoint.name, checkpoint.is_start, checkpoint.is_finish),
                             distance_km: checkpoint.distance,
                             ele: checkpoint.elevation,
                             accessible_by_car: checkpoint.accessible_by_car,
