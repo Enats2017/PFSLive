@@ -84,6 +84,19 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                     </View>
                 </View>
 
+                {participant.is_estimated && (
+                <View style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 6,
+                    backgroundColor: '#FEF3C7', borderRadius: 8,
+                    paddingVertical: 6, paddingHorizontal: 10, marginBottom: 10,
+                }}>
+                    <Ionicons name="cellular-outline" size={14} color="#B45309" />
+                    <Text style={{ flex: 1, color: '#92400E', fontSize: 12 }}>
+                    {t('livetracking:estimatedNotice')}
+                    </Text>
+                </View>
+                )}
+
                 {showLowBattery && (
                     <View style={{
                         flexDirection: 'row', alignItems: 'center', gap: 6,

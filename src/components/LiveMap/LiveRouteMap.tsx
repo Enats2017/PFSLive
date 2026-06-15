@@ -662,6 +662,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     source: p.source,
                     initials: p.initials,
                     battery_level: p.battery_level ?? null,
+                    is_estimated: p.is_estimated ?? false,
                 },
                 geometry: { type: 'Point', coordinates: [lon, lat] },
             })),
@@ -849,6 +850,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 profile_picture: props.profile_picture,
                 source: props.source,
                 battery_level: props.battery_level ?? null,
+                is_estimated: props.is_estimated ?? false,
             };
             onParticipantPress(participant);
         }
@@ -1022,7 +1024,8 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                 circleStrokeWidth: 2,
                                 circleStrokeColor: '#FFFFFF',
                                 circlePitchAlignment: 'map',
-                                circleOpacity: 1,
+                                // Estimated (weak signal) → translucent so it reads as provisional.
+                                circleOpacity: ['case', ['==', ['get', 'is_estimated'], true], 0.55, 1] as any,
                             }}
                         />
                         <Mapbox.SymbolLayer

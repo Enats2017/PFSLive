@@ -23,6 +23,7 @@ export interface ParticipantMapMarker {
     last_update_type: string;
     profile_picture: string | null;
     source: string;
+    is_estimated?: boolean;
     battery_level?: number | null;
 }
 

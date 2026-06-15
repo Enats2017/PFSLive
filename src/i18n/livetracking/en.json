@@ -26,5 +26,7 @@
     "poweredBy": "Powered by",
     "livio": "Livio",
     "availableServices": "Available Services",
-    "lowBattery": "⚠️ Battery low ({{level}}%) — live tracking may pause or stop soon."
+    "lowBattery": "⚠️ Battery low ({{level}}%) — live tracking may pause or stop soon.",
+    "estimatedNotice": "Approximate position — weak signal. Updates automatically when the connection returns.",
+    "estimatedBadge": "Approximate"
 }

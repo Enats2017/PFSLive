@@ -58,6 +58,7 @@ export interface LiveTrackingParticipant {
     last_update_time: number;
     last_update_type: string;
     location_source: string;
+    is_estimated?: boolean;
     checkpoints: LiveTrackingCheckpoint[];
 }
 
