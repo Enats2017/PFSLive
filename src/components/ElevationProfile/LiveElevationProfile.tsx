@@ -51,22 +51,33 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     // on every device. Tune: DISTANCE_DIVISOR = fit-width for short/medium
     // routes; MAX_KM_PER_CM = worst-case zoom (lower = less compression, more
     // scroll on ultras).
-    const DISTANCE_DIVISOR = 10;            // short/medium routes span this many cm
-    const MAX_KM_PER_CM    = 10;            // compression ceiling — never cram more than this per cm
-    const DP_PER_CM = 160 / 2.54;           // ≈ 63 dp per physical cm in RN layout units
+    const DISTANCE_DIVISOR = 10;
+    const MAX_KM_PER_CM    = 10;
+    const DP_PER_CM        = 160 / 2.54;
 
-    const kmPerCm = totalDistance > 0
+    // Raw target: ~DISTANCE_DIVISOR cm wide, capped for ultras.
+    const rawKmPerCm = totalDistance > 0
         ? Math.min(totalDistance / DISTANCE_DIVISOR, MAX_KM_PER_CM)
         : 1;
-    const routeWidthCm = kmPerCm > 0 ? totalDistance / kmPerCm : DISTANCE_DIVISOR;
-    // Never narrower than the screen: fills wide screens, scrolls when longer.
-    const chartWidth = Math.max(screenWidth, routeWidthCm * DP_PER_CM);
+
+    // ✅ Snap to a round spacing so every gridline lands on a clean km
+    // (0.5, 1, 2, 5, 10). e.g. 0.6494 → 0.5. Used for BOTH width and markers,
+    // so "one line per cm" still holds and labels are always round.
+    const NICE_STEPS = [0.5, 1, 2, 5, 10];
+    const kmPerCm = totalDistance > 0
+        ? NICE_STEPS.reduce((best, s) =>
+            Math.abs(s - rawKmPerCm) < Math.abs(best - rawKmPerCm) ? s : best, NICE_STEPS[0])
+        : 1;
+
+    const routeWidthCm = totalDistance / kmPerCm;
+    const chartWidth   = Math.max(screenWidth, routeWidthCm * DP_PER_CM);
     const chartHeight = 220;
 
     const elevationRange = maxElevation - minElevation;
     const topBuffer = elevationRange * 0.15;
+    const bottomBuffer = elevationRange * 0.05;
 
-    const yDomain: [number, number] = [minElevation, maxElevation + topBuffer];
+    const yDomain: [number, number] = [minElevation - bottomBuffer, maxElevation + topBuffer];
 
     const checkpointChartPoints = React.useMemo(() => {
         if (apiCheckpoints.length > 0) {
@@ -144,12 +155,10 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     // which would otherwise draw a clipped "100 km" line at the very edge).
     const distanceMarkers = React.useMemo(() => {
         const markers: number[] = [];
-        const interval = kmPerCm;
-        if (interval <= 0) return markers;
-        const limit = totalDistance - interval * 0.5;
-        for (let i = interval; i < limit; i += interval) {
-            markers.push(i);
-        }
+        if (kmPerCm <= 0 || totalDistance <= 0) return markers;
+        const limit = totalDistance - kmPerCm * 0.5;   // stop before the finish
+        const count = Math.floor(limit / kmPerCm);
+        for (let n = 1; n <= count; n++) markers.push(Number((kmPerCm * n).toFixed(2)));
         return markers;
     }, [totalDistance, kmPerCm]);
 
@@ -189,7 +198,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     // One flat list so taps are resolved by nearest-hit, not by which absolute
     // overlay happens to sit on top — fixes occlusion when participants cluster.
     const tapTargets = React.useMemo(() => {
-        const PAD_TOP = 20, PAD_BOTTOM = 0;   // must match VictoryChart padding
+        const PAD_TOP = 20, PAD_BOTTOM = 20;   // must match VictoryChart padding
         const plotHeight = chartHeight - PAD_TOP - PAD_BOTTOM;
         const toScreenY = (yVal: number) => {
             const yPct = (yVal - yDomain[0]) / (yDomain[1] - yDomain[0]);
@@ -256,7 +265,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     <VictoryChart
                         width={chartWidth}
                         height={chartHeight}
-                        padding={{ top: 20, bottom: 0, left: 0, right: 0 }}
+                        padding={{ top: 20, bottom: 20, left: 0, right: 0 }}
                         domain={{ x: [0, totalDistance] as [number, number], y: yDomain }}
                     >
                         <VictoryAxis
@@ -357,9 +366,9 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                             return (
                                 <VictoryLabel
                                     key={`distance-label-${idx}`}
-                                    x={xPosition + 4}
+                                    x={(distance / totalDistance) * chartWidth + 4}
                                     y={14}
-                                    text={`${Math.round(distance)} km`}
+                                    text={`${distance} km`}
                                     style={{
                                         fontSize: 10,
                                         fill: colors.gray700,

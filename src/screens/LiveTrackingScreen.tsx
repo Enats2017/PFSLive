@@ -103,9 +103,42 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     profile_picture: p.profile_picture,
                     last_update_time: p.last_update_time,
                     last_update_type: p.last_update_type,
+                    battery_level: p.battery_level ?? null,
+                    is_estimated: p.is_estimated ?? (p.location_source === 'estimated'),
                 };
             });
     }, [participants]);
+
+    // Refresh cadence: speed up to 10s when any tracked runner is within 1km of
+    // the finish, so the finish moment is caught promptly; otherwise 60s.
+    const FINISH_APPROACH_KM = 1.0;
+    const NORMAL_REFRESH_MS  = 60000;
+    const FAST_REFRESH_MS    = 10000;
+
+    const refreshMs = useMemo(() => {
+        const total = routeData?.totalDistance ?? 0;
+
+        const nearFinish = participants.some(p => {
+            // Prefer the stored distance-to-finish from the API; fall back to
+            // total − covered only when it's absent (e.g. an RR-only partner
+            // runner with no stored GPS fix).
+            let remaining: number | null =
+                p.distance_to_finish_km != null ? safeParseFloat(p.distance_to_finish_km) : null;
+
+            if (remaining == null) {
+                if (total <= 0) return false;
+                const covered = safeParseFloat(p.distance_covered_km);
+                if (covered <= 0) return false;
+                remaining = total - covered;
+            }
+
+            // 0 < remaining < 1km → final approach. Negative (mid-race overlap on a
+            // looping route) and 0 (finished) both correctly stay at normal cadence.
+            return remaining > 0 && remaining < FINISH_APPROACH_KM;
+        }, );
+
+        return nearFinish ? FAST_REFRESH_MS : NORMAL_REFRESH_MS;
+    }, [participants, routeData?.totalDistance]);
 
     // ✅ Follower's own position — watched on mount, never written to DB.
     // Uses Balanced accuracy (battery friendly) since precision isn't critical.
@@ -173,21 +206,20 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         };
     }, [followedUsers, product_option_value_app_id]);
 
-    // ✅ Auto-refresh interval
     useEffect(() => {
         if (!hasLoadedInitialData.current || loading) return;
 
-        console.log('⏰ Setting up 60-second refresh interval');
+        console.log(`⏰ Setting up ${refreshMs / 1000}s refresh interval`);
         const interval = setInterval(() => {
             console.log('🔄 Auto-refresh triggered');
             loadLiveTrackingData(true);
-        }, 60000);
+        }, refreshMs);
 
         return () => {
             console.log('🛑 Clearing refresh interval');
             clearInterval(interval);
         };
-    }, [hasLoadedInitialData.current, loading, selectedDistance, followedUsers]);
+    }, [hasLoadedInitialData.current, loading, selectedDistance, followedUsers, refreshMs]);
 
     const loadLiveTrackingData = async (autoRefresh: boolean, overrideDistance?: DistanceOption | null) => {
         try {
@@ -427,7 +459,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const hasCheckpoints = apiCheckpoints != null && apiCheckpoints.length > 0;
     const showRouteLine = hasGpx;
     const showCheckpoints = hasGpx && hasCheckpoints;
-    const showElevationProfile = isCustomEvent ? (hasGpx && hasCheckpoints) : hasGpx;
+    const showElevationProfile = hasGpx;
     const hasValidCoords = participantMarkers.some(p => p.lat !== 0 && p.lon !== 0);
     const showParticipants = isCustomEvent ? (hasGpx || hasValidCoords) : hasValidCoords;
     const showDistanceDropdown = !isCustomEvent;

@@ -14,8 +14,8 @@
     "title": "Naam evenement",
     "Date": "Datum",
     "description": "Je kunt je live tracking starten vanaf 1 uur voor je start. Zorg ervoor dat je deze app altijd open houdt en niet sluit!",
-    "buttonText": "START TRACKING",
-    "button": "STOP TRACKING"
+    "buttonText": "START VOLGEN",
+    "button": "STOP VOLGEN"
   },
   "status": {
     "gpsActive": "GPS Actief - Wachten op start race",
@@ -46,7 +46,13 @@
     "backgroundNotificationTitle": "Live Tracking Actief",
     "backgroundNotificationBody": "Je locatie wordt bijgehouden voor de race.",
     "retryQueue": "{{count}} niet-verzonden locatie(s) versturen",
-    "queueRetryFailed": "Geen netwerk — probeer het later opnieuw"
+    "queueRetryFailed": "Geen netwerk — probeer het later opnieuw",
+    "bgPermission": {
+      "title": "{applicationName} toestaan om de locatie van dit apparaat te gebruiken, zelfs als de app gesloten of niet in gebruik is?",
+      "message": "{applicationName} deelt je live positie met je volgers tijdens een wedstrijd, zelfs als de app gesloten of niet in gebruik is. Kies \"{backgroundPermissionOptionLabel}\" om dit in te schakelen.",
+      "positiveAction": "Wijzig naar \"{backgroundPermissionOptionLabel}\"",
+      "negativeAction": "Annuleren"
+    }
   },
   "battery": {
     "title": "Achtergrondtracking inschakelen",
@@ -80,14 +86,21 @@
     "no": "Nee, annuleren"
   },
   "powerSaving": {
-  "title": "Batterijwaarschuwing",
-  "message": "De energiebesparingsmodus is ingeschakeld. Dit blokkeert GPS en tracking op de achtergrond. Schakel deze eerst uit.",
-  "disable": "Batterijinstellingen openen"
-},
-"followingEvents": {
-  "sectionTitle": "EVENEMENTEN DIE U VOLGT",
-  "startsIn": "BEGINT OVER",
-  "live": "LIVE",
-  "routeButton": "Volg Het Evenement"
-}
+    "title": "Batterijbesparing staat aan",
+    "messageAndroid": "Batterijbesparing kan het gps-volgen op de achtergrond stopzetten. Schakel het uit voordat je begint met volgen.",
+    "messageIos": "De energiebesparingsmodus kan het gps-volgen op de achtergrond onderbreken. Open de app Instellingen → Batterij → schakel de energiebesparingsmodus uit, kom dan terug en tik opnieuw op START VOLGEN.",
+    "disable": "Batterij-instellingen openen"
+  },
+  "followingEvents": {
+    "sectionTitle": "EVENEMENTEN DIE U VOLGT",
+    "startsIn": "BEGINT OVER",
+    "live": "LIVE",
+    "routeButton": "Volg Het Evenement"
+  },
+  "startConfirm": {
+    "title": "Live tracking starten?",
+    "message": "Je live locatie wordt tijdens de wedstrijd met je volgers gedeeld. Houd Livio actief en je telefoon bij je tot je finisht. Klaar om te starten?",
+    "yes": "Ja, start tracking",
+    "no": "Nog niet"
+  }
 }

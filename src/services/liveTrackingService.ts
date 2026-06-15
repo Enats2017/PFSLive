@@ -47,15 +47,18 @@ export interface LiveTrackingParticipant {
     last_checkpoint_name: string;
     distance_covered_km: number;
     distance_to_next_cp: number | null;
+    distance_to_finish_km: number | null;
     avg_speed_kmh: number;
     latitude: number;
     longitude: number;
     altitude: number;
     speed: number | null;
+    battery_level: number | null;
     last_update: string;
     last_update_time: number;
     last_update_type: string;
     location_source: string;
+    is_estimated?: boolean;
     checkpoints: LiveTrackingCheckpoint[];
 }
 

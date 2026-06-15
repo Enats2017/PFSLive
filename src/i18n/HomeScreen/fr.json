@@ -46,7 +46,13 @@
     "backgroundNotificationTitle": "Suivi en direct actif",
     "backgroundNotificationBody": "Votre position est suivie pour la course.",
     "retryQueue": "Envoyer {{count}} position(s) non envoyée(s)",
-    "queueRetryFailed": "Pas de réseau — réessayez plus tard"
+    "queueRetryFailed": "Pas de réseau — réessayez plus tard",
+    "bgPermission": {
+      "title": "Autoriser {applicationName} à accéder à la localisation de cet appareil même lorsqu'elle est fermée ou inutilisée ?",
+      "message": "{applicationName} partage votre position en direct avec vos abonnés pendant une course, même lorsque l'application est fermée ou inutilisée. Pour l'activer, choisissez « {backgroundPermissionOptionLabel} ».",
+      "positiveAction": "Passer à « {backgroundPermissionOptionLabel} »",
+      "negativeAction": "Annuler"
+    }
   },
   "battery": {
     "title": "Activer le suivi en arrière-plan",
@@ -80,14 +86,21 @@
     "no": "Non, annuler"
   },
   "powerSaving": {
-  "title": "Avertissement batterie",
-  "message": "Le mode économie d'énergie est activé. Cela bloque le GPS et le suivi en arrière-plan. Veuillez le désactiver d'abord.",
-  "disable": "Ouvrir les paramètres de batterie"
-},
-"followingEvents": {
-  "sectionTitle": "ÉVÉNEMENTS QUE VOUS SUIVEZ",
-  "startsIn": "COMMENCE DANS",
-  "live": "EN DIRECT",
-  "routeButton": "Suivre L'Événement"
-}
+    "title": "L'économiseur de batterie est activé",
+    "messageAndroid": "L'économiseur de batterie peut interrompre le suivi GPS en arrière-plan. Veuillez le désactiver avant de démarrer le suivi.",
+    "messageIos": "Le mode économie d'énergie peut interrompre le suivi GPS en arrière-plan. Ouvrez l'app Réglages → Batterie → désactivez le mode économie d'énergie, puis revenez et appuyez de nouveau sur DÉMARRER LE SUIVI.",
+    "disable": "Ouvrir les réglages de batterie"
+  },
+  "followingEvents": {
+    "sectionTitle": "ÉVÉNEMENTS QUE VOUS SUIVEZ",
+    "startsIn": "COMMENCE DANS",
+    "live": "EN DIRECT",
+    "routeButton": "Suivre L'Événement"
+  },
+  "startConfirm": {
+    "title": "Démarrer le suivi en direct ?",
+    "message": "Votre position en direct sera partagée avec vos abonnés pendant toute la course. Gardez Livio ouvert et votre téléphone avec vous jusqu'à l'arrivée. Prêt à démarrer ?",
+    "yes": "Oui, démarrer le suivi",
+    "no": "Pas encore"
+  }
 }

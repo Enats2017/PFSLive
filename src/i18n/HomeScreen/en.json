@@ -46,7 +46,13 @@
     "backgroundNotificationTitle": "Live Tracking Active",
     "backgroundNotificationBody": "Your location is being tracked for the race.",
     "retryQueue": "Send {{count}} unsent location(s)",
-    "queueRetryFailed": "No network — try again later"
+    "queueRetryFailed": "No network — try again later",
+    "bgPermission": {
+      "title": "Allow {applicationName} to access this device's location even when closed or not in use?",
+      "message": "{applicationName} shares your live position with your followers during a race, even when the app is closed or not in use. To enable this, please choose \"{backgroundPermissionOptionLabel}\".",
+      "positiveAction": "Change to \"{backgroundPermissionOptionLabel}\"",
+      "negativeAction": "Cancel"
+    }
   },
   "battery": {
     "title": "Enable Background Tracking",
@@ -79,17 +85,22 @@
     "yes": "Yes, Enable",
     "no": "No, Cancel"
   },
-
-"powerSaving": {
-  "title": "Battery Warning",
-  "message": "Power Saving Mode is ON. This blocks GPS and background tracking. Please disable it first.",
-  
-  "disable": "Open Battery Settings"
-},
-"followingEvents": {
+  "powerSaving": {
+    "title": "Battery saver is on",
+    "messageAndroid": "Battery Saver can stop GPS tracking in the background. Please turn it off before you start tracking.",
+    "messageIos": "Low Power Mode can interrupt GPS tracking in the background. Open the Settings app → Battery → turn off Low Power Mode, then come back and tap START TRACKING again.",
+    "disable": "Open battery settings"
+  },
+  "followingEvents": {
     "sectionTitle": "EVENTS YOU FOLLOW",
     "startsIn": "STARTS IN",
     "live": "LIVE",
     "routeButton": "Follow The Event"
+  },
+  "startConfirm": {
+    "title": "Start Live Tracking?",
+    "message": "Your live location will be shared with your followers throughout the race. Keep Livio running and your phone with you until you finish. Ready to go?",
+    "yes": "Yes, Start Tracking",
+    "no": "Not Yet"
   }
 }

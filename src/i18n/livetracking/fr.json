@@ -25,5 +25,8 @@
     "chooseMapApp": "Choisissez votre application de carte",
     "poweredBy": "Propulsé par",
     "livio": "Livio",
-    "availableServices": "Services disponibles"
+    "availableServices": "Services disponibles",
+    "lowBattery": "⚠️ Batterie faible ({{level}}%) — le suivi en direct peut bientôt s'interrompre.",
+    "estimatedNotice": "Position approximative — signal faible. Mise à jour automatique dès le retour de la connexion.",
+    "estimatedBadge": "Approximatif"
 }
