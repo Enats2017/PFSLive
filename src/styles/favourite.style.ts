@@ -1,5 +1,8 @@
-import { Platform, StyleSheet } from "react-native";
+import { Platform, StyleSheet,Dimensions } from "react-native";
 import { colors, spacing, typography } from "../styles/common.styles";
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isTablet = SCREEN_WIDTH >= 600 && SCREEN_WIDTH <= 768; 
+const DIAG_SIZE = isTablet ? 162 : 140;
 
 export const favstyle = StyleSheet.create({
 
@@ -231,7 +234,7 @@ export const favstyle = StyleSheet.create({
   // ── Add button (FAB) ─────────────────────────────────────
   addButtonContainer: {
     position: "absolute",
-    bottom: 140,
+    bottom: DIAG_SIZE,
     right: 25,
   },
 

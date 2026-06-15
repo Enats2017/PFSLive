@@ -32,7 +32,7 @@ import { useScreenError } from '../../hooks/useApiError';
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
 const { width, height } = Dimensions.get('window');
-const TAB_CONTENT_HEIGHT = height * 0.39;
+const TAB_CONTENT_HEIGHT = height * 0.19;
 
 const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
     const { t } = useTranslation(['follower', 'common']);
