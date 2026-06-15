@@ -82,5 +82,6 @@ iconButtonBlue: {
   height: 40,
   alignItems: 'center',
   justifyContent: 'center',
+    flexShrink: 0,
 },
 });

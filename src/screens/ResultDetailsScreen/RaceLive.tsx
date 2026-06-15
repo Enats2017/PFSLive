@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView,Dimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
 import { commonStyles, spacing } from '../../styles/common.styles';
@@ -9,6 +9,8 @@ import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/re
 import ElevationChart from '../../components/ElevationChart';
 import { useGpxElevation } from '../../hooks/useGpxElevation';
 import { formatClockTime } from '../../utils/timeFormat';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isTablet = SCREEN_WIDTH >= 768;
 
 const parseTimeToSeconds = (time: string): number => {
     if (!time) return 0;

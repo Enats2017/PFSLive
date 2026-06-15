@@ -20,6 +20,9 @@ import type { followerDetailspops } from '../../types/navigation';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 
 const { width } = Dimensions.get('window');
+const isTablet = width >= 600 && width <= 768; 
+const DIAG_SIZE = isTablet ? 280 : 200;
+
 
 type Tab = 'Participant' | 'Distance';
 const TABS: Tab[] = ['Participant', 'Distance'];
@@ -92,7 +95,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
           source={{ uri: event_image }}
           style={{
             width: '100%',
-            height: 200,
+            height: DIAG_SIZE,
             resizeMode: 'cover',
             marginBottom: spacing.sm,
           }}

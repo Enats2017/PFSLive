@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, ActivityIndicator,
   TouchableOpacity,
   StatusBar,
+  Dimensions
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather,MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isTablet = SCREEN_WIDTH >= 768;
 
 
 interface DistanceTabProps {
@@ -53,7 +56,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
 
     return (
       <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
-        <View style={detailsStyles.distance}>
+        <View style={[detailsStyles.distance, isTablet && { flexDirection: 'column', alignItems: 'flex-start', gap: spacing.md }]}>
           <View style={detailsStyles.distanceInfo}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
               {item.distance_name}
@@ -98,7 +101,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
             )}
           </View>
 
-          <View style={{ flexDirection: 'column', gap: spacing.md }}>
+          <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: spacing.md, alignSelf: isTablet ? 'flex-end' : 'auto' }}>
             <TouchableOpacity
               style={detailsStyles.resultsButton}
               onPress={() => navigation.navigate('ResultList', {

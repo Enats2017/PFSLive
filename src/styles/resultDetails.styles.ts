@@ -2,8 +2,10 @@
 import { StyleSheet, Dimensions } from "react-native";
 import { colors, spacing, typography } from "./common.styles";
 
-const { width } = Dimensions.get("window");
+const { width, } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.88;
+const isTablet = width >= 600;
+const DIAG_SIZE = isTablet ? 55 : 35;
 
 export const resultInfoStyles = StyleSheet.create({
   scrollContent: {
@@ -99,8 +101,8 @@ export const resultInfoStyles = StyleSheet.create({
     width: 0,
     height: 0,
     borderStyle: "solid",
-    borderTopWidth: 35,
-    borderRightWidth: 18,
+    borderTopWidth: DIAG_SIZE,
+    borderRightWidth: 20,
     borderBottomWidth: 0,
     borderLeftWidth: 0,
     borderTopColor: colors.primary,
@@ -109,14 +111,14 @@ export const resultInfoStyles = StyleSheet.create({
     borderLeftColor: "transparent",
     
   },
-  diagRight: {
+  diagRight:{
     width: 0,
     height: 0,
     borderStyle: "solid",
-    borderTopWidth: 35,
+    borderTopWidth: DIAG_SIZE,
     borderRightWidth: 0,
     borderBottomWidth: 0,
-    borderLeftWidth: 18,
+    borderLeftWidth: 20,
     borderTopColor: colors.primaryLight,
     borderRightColor: "transparent",
     borderBottomColor: "transparent",
