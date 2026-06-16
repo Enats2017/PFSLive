@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { FollowerItem } from '../../services/followerListService';
 import { commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
@@ -9,17 +9,12 @@ import { useNavigation } from '@react-navigation/native';
 
 interface FollowerCardProps {
     item: FollowerItem;
-    isFollowed: boolean;
-    isLoading: boolean;
-    onToggleFollow: () => void;
-    password_protected?: 0 | 1;
+   
 }
 
 const FollowerListCard: React.FC<FollowerCardProps> = ({
     item,
-    isFollowed,
-    isLoading,
-    onToggleFollow,
+   
 }) => {
     const { t } = useTranslation(['follower', 'common']);
     const navigation = useNavigation<any>();
@@ -102,10 +97,9 @@ const FollowerListCard: React.FC<FollowerCardProps> = ({
                 </View>
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-                {/* VIEW button — same as FanEventCard */}
+             <View style={{ flexDirection: 'row' }}>
                 <TouchableOpacity
-                    style={[commonStyles.favoriteButton, { borderRadius: 0 }]}
+                    style={[commonStyles.favoriteButton, { borderRadius: 0, flex: 1 }]}
                     activeOpacity={0.8}
                     onPress={() =>
                         navigation.navigate('ProfileScreen', {
@@ -116,32 +110,6 @@ const FollowerListCard: React.FC<FollowerCardProps> = ({
                     <Text style={commonStyles.primaryButtonText}>
                         {t('follower:button.viewprofile')}
                     </Text>
-                </TouchableOpacity>
-
-                {/* REMOVE button — replaces unfollow for followers screen */}
-                <TouchableOpacity
-                    style={[
-                        commonStyles.livetracking,
-                        {
-                            borderRadius: 0,
-                            opacity: isLoading ? 0.6 : 1,
-                        },
-                    ]}
-                    onPress={onToggleFollow}
-                    disabled={isLoading}
-                    activeOpacity={0.8}
-                >
-                    {isLoading ? (
-                        <ActivityIndicator size="small" color="#ffffff" />
-                    ) : (
-                        <Text style={commonStyles.primaryButtonText}>
-                            {isFollowed
-                                ? t('follower:button.remove')
-                                : item?.password_protected === 1
-                                    ? `🔒 ${t('follower:button.followback')}`
-                                    : t('follower:button.followback')}
-                        </Text>
-                    )}
                 </TouchableOpacity>
             </View>
         </View>

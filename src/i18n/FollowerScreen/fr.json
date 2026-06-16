@@ -19,6 +19,10 @@
     "emptySubtitle": "Recherchez par nom ou numéro de dossard pour trouver et suivre des participants",
     "favouriteEmptyTitle": "Aucun Favori Pour L'instant",
     "favouriteEmptySubtitle": "Nous n'avons trouvé aucun favori correspondant",
-    "favouriteSearchEmpty": "Aucun Athlète Trouvé"
+    "favouriteSearchEmpty": "Aucun Athlète Trouvé",
+    "no_followers_title": "Aucun Abonné",
+    "no_followers_msg": "Personne ne vous suit encore. Partagez votre profil pour obtenir des abonnés.",
+    "no_following_title": "Aucun Abonnement",
+    "no_following_msg": "Vous ne suivez encore personne. Recherchez des athlètes à suivre."
   }
 }

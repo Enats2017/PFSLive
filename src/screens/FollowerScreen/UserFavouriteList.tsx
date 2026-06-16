@@ -17,6 +17,7 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import { userfavouriteService, FavouriteItem } from '../../services/userfavouriteService';
 import { UserFavouriteListpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
+import ErrorScreen from '../../components/ErrorScreen';
 
 interface PaginationState {
     page: number;
@@ -185,25 +186,33 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
         [isFollowed, isLoading, handleFollowPress],
     );
 
-    const renderEmpty = useCallback(() => {
-        if (initialLoading || searching) {
-            return (
-                <ActivityIndicator
-                    size="small"
-                    color={colors.primary}
-                    style={{ marginTop: spacing.lg }}
-                />
-            );
-        }
-        if (searchText.trim().length > 0) {
-            return (
-                <Text style={[commonStyles.errorText, { textAlign: 'center', marginTop: 40 }]}>
-                    {t('follow:empty.favouriteSearchEmpty')}
-                </Text>
-            );
-        }
-        return null;
-    }, [initialLoading, searching, searchText, t]);
+   const renderEmpty = useCallback(() => {
+    if (initialLoading || searching) {
+        return (
+            <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={{ marginTop: spacing.lg }}
+            />
+        );
+    }
+    if (searchText.trim().length > 0) {
+        return (
+            <Text style={[commonStyles.errorText, { textAlign: 'center', marginTop: 40 }]}>
+                {t('follow:empty.favouriteSearchEmpty')}
+            </Text>
+        );
+    }
+    // ✅ No following at all
+    return (
+        <ErrorScreen
+            type="empty"
+            title={t('follow:empty.no_following_title')}
+            message={t('follow:empty.no_following_msg')}
+            onRetry={() => {}}
+        />
+    );
+}, [initialLoading, searching, searchText, t]);
 
     const displayList = searchText.trim().length > 0 ? searchResults : favourites;
 

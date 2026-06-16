@@ -13,10 +13,9 @@ import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
 import { userFollowersService, FollowerItem } from '../../services/followerListService';
-import { useFollowManager } from '../../hooks/useFollowManager';
-import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
-import FanEventCard from '../FollowerEventList/FollowerCard';
+
 import FollowerListCard from './FollowerListCard';
+import ErrorScreen from '../../components/ErrorScreen';
 
 interface PaginationState {
     page: number;
@@ -41,26 +40,10 @@ const FollowersList: React.FC = () => {
     const isLoadingMoreSearch = useRef(false);
 
     // ✅ Stable ref to break circular dependency between useFollowManager and loadInitial
-    const onFollowSuccessRef = useRef<(() => void) | null>(null);
-
-    const {
-        isFollowed,
-        isLoading,
-        handleFollowPress,
-        passwordModalVisible,
-        isVerifying,
-        passwordError,
-        handlePasswordSubmit,
-        handlePasswordModalClose,
-    } = useFollowManager(
-        t,
-        undefined,                                   // ✅ productAppId — not needed here
-        () => onFollowSuccessRef.current?.(),        // ✅ onFollowSuccess callback via ref
-    );
+    
 
     // ✅ useCallback so the ref always holds a stable, up-to-date reference
     const loadInitial = useCallback(async () => {
-        console.log("1111111111111111111111");
         
         try {
             setInitialLoading(true);
@@ -75,7 +58,6 @@ const FollowersList: React.FC = () => {
     }, []);
 
     // ✅ Keep ref in sync with latest loadInitial
-    onFollowSuccessRef.current = loadInitial;
 
     useEffect(() => {
         loadInitial();
@@ -172,40 +154,38 @@ const FollowersList: React.FC = () => {
 
     const renderCard = useCallback(
         ({ item }: { item: FollowerItem }) => (
-            <FollowerListCard
-                item={item}
-                isFollowed={isFollowed(item.customer_app_id)}
-                isLoading={isLoading(item.customer_app_id)}
-                onToggleFollow={() =>
-                    handleFollowPress({
-                        customer_app_id: item.customer_app_id,
-                        password_protected: item.password_protected ?? 0,
-                    })
-                }
-            />
+            <FollowerListCard item={item} />
         ),
-        [isFollowed, isLoading, handleFollowPress],
+        [ ],
     );
 
     const renderEmpty = useCallback(() => {
-        if (initialLoading || searching) {
-            return (
-                <ActivityIndicator
-                    size="small"
-                    color={colors.primary}
-                    style={{ marginTop: spacing.lg }}
-                />
-            );
-        }
-        if (searchText.trim().length > 0) {
-            return (
-                <Text style={[commonStyles.errorText, { textAlign: 'center', marginTop: 40 }]}>
-                    {t('follow:empty.followerSearchEmpty')}
-                </Text>
-            );
-        }
-        return null;
-    }, [initialLoading, searching, searchText, t]);
+    if (initialLoading || searching) {
+        return (
+            <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={{ marginTop: spacing.lg }}
+            />
+        );
+    }
+    if (searchText.trim().length > 0) {
+        return (
+            <Text style={[commonStyles.errorText, { textAlign: 'center', marginTop: 40 }]}>
+                {t('follow:empty.followerSearchEmpty')}
+            </Text>
+        );
+    }
+    // ✅ No followers at all
+    return (
+        <ErrorScreen
+            type="empty"
+            title={t('follow:empty.no_followers_title')}
+            message={t('follow:empty.no_followers_msg')}
+            onRetry={() => {}}
+        />
+    );
+}, [initialLoading, searching, searchText, t]);
 
     const displayList = searchText.trim().length > 0 ? searchResults : followers;
 
@@ -247,13 +227,6 @@ const FollowersList: React.FC = () => {
                 ListFooterComponent={listFooter}
             />
 
-            <TrackingPasswordModal
-                visible={passwordModalVisible}
-                isVerifying={isVerifying}
-                passwordError={passwordError}
-                onSubmit={handlePasswordSubmit}
-                onClose={handlePasswordModalClose}
-            />
         </SafeAreaView>
     );
 };
