@@ -124,6 +124,8 @@ export const AppNavigator: React.FC = () => {
           {/* ── Login-required screens — only when logged in ─────────── */}
           {isLoggedIn && (
             <>
+              <Stack.Screen name="LoginScreen"           component={LoginScreen}           options={noGesture} />
+              <Stack.Screen name="RegisterScreen"        component={RegisterScreen}        options={noGesture} />
               <Stack.Screen name="EditProfileScreen"    component={EditProfileScreen}    options={noGesture} />
               <Stack.Screen name="EditPersonalEvent"    component={EditPersonalEvent}    options={noGesture} />
               <Stack.Screen name="LiveTrackingSettings" component={LiveTrackingSettings} options={noGesture} />

@@ -133,7 +133,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             <View style={loginStyles.headerSection}>
               <View style={loginStyles.cardscetion}>
                 <Image
-                  source={require('../../../assets/livio_logo.png')}
+                  source={require('../../../assets/livio_logo_transparent.png')}
                   style={loginStyles.logo}
                   resizeMode="contain"
                 />
