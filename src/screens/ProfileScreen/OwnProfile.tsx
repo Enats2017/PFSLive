@@ -344,14 +344,14 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                     <View style={ownProfile.profileInfo}>
                         <Text style={commonStyles.title}>{fullName || '—'}</Text>
                         <View style={ownProfile.statsRow}>
-                            <View style={ownProfile.statItem}>
+                            <TouchableOpacity style={ownProfile.statItem} onPress={() => navigation.navigate('FollowersList' as never)}>
                                 <Text style={ownProfile.statNumber}>{profile?.followers_count}</Text>
                                 <Text style={ownProfile.statLabel}>{t('ownProfile:profile.followers')}</Text>
-                            </View>
-                            <View style={ownProfile.statItem}>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={ownProfile.statItem} onPress={() => navigation.navigate('UserFavouriteList' as never)}>
                                 <Text style={ownProfile.statNumber}>{profile?.following_count}</Text>
                                 <Text style={ownProfile.statLabel}>{t('ownProfile:profile.following')}</Text>
-                            </View>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </View>

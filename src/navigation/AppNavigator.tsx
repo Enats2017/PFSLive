@@ -24,6 +24,7 @@ import FollowerSrceen from '../screens/FollowerScreen/FollowerScreen';
 import AthleteSearchScreen from '../screens/FollowerScreen/AthleteSearchScreen';
 import OwnProfile from '../screens/ProfileScreen/OwnProfile';
 import UserFavouriteList from '../screens/FollowerScreen/UserFavouriteList';
+import FollowersList from '../screens/ProfileScreen/FollowersList';
 
 
 // ✅ AUTH SCREENS
@@ -100,6 +101,7 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen name="FollowerSrceen" component={FollowerSrceen} options={noGesture} />
           <Stack.Screen name="AthleteSearchScreen" component={AthleteSearchScreen} options={noGesture} />
           <Stack.Screen name="UserFavouriteList" component={UserFavouriteList} options={noGesture} />
+          <Stack.Screen name="FollowersList" component={FollowersList} options={noGesture} />
 
           <Stack.Screen
             name="LiveTracking"

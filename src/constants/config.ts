@@ -100,9 +100,8 @@ export const API_CONFIG = {
     GET_FAVOURITES: "/get_favourite_api.php",
     SAVE_PUSH_TOKEN: "/register_follower_api.php",
     GET_ALL_FAVOURITES: "/get_favourite_all_api.php",
+    GET_MY_FOLLOWERS: "/get_my_favourites_all_api.php",
     
-    
-
     // Participants
     DELETE_PARTICIPANT: "/delete_participant_app_api.php",
     PARTICIPANT_LOCATION: "/insert_participant_location_api.php",

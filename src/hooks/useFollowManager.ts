@@ -412,7 +412,7 @@ export function useFollowManager(
         });
       }
     },
-    [followedUsers, followedBibs, followingInProgress, t],
+    [followedUsers, followedBibs, followingInProgress, t, onFollowSuccess],
   );
 
   const handleFollowPress = useCallback(

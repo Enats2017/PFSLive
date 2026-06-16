@@ -40,6 +40,8 @@
     "follower": "SUIVRE",
     "show_event": "AFFICHER L'ÉVÉNEMENT",
     "unfollow": "NE PLUS SUIVRE",
-    "favourite": "AJOUTER AUX FAVORIS"
+    "favourite": "AJOUTER AUX FAVORIS",
+    "remove": "SUPPRIMER",
+    "followback": "SUIVRE EN RETOUR"
   }
 }

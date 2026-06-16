@@ -94,6 +94,7 @@ export type RootStackParamList = {
   };
 
   UserFavouriteList:undefined;
+  FollowersList:undefined;
 
 };
 
@@ -211,6 +212,10 @@ export type AthleteSearchScreenpops = NativeStackScreenProps<
 export type UserFavouriteListpops = NativeStackScreenProps<
   RootStackParamList,
   "UserFavouriteList"
+>;
+export type FollowersListpops = NativeStackScreenProps<
+  RootStackParamList,
+  "FollowersList"
 >;
 
 export type AuthStackParamList = {

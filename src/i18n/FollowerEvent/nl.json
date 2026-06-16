@@ -40,6 +40,8 @@
     "follower": "VOLGEN",
     "show_event": "TOON EVENEMENT",
     "unfollow": "ONTVOLGEN",
-    "favourite": "TOEVOEGEN AAN FAVORIETEN"
+    "favourite": "TOEVOEGEN AAN FAVORIETEN",
+    "remove": "VERWIJDEREN",
+    "followback": "TERUGVOLGEN"
   }
 }

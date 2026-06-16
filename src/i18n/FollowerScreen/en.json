@@ -3,12 +3,16 @@
     "pastrace":"FIND A PAST RACE",
     "athlete":"FIND AN ATHLETE",
     "favourite":"FAVOURITE ATHLETES ",
+    "followers":"My Followers List",
     
     "button":{
         "upcoming":"SHOW ALL UPCOMING EVENTS",
         "past":"SHOW ALL RESULTS",
          "athlete":"Search Athlete",
-         "favourite":"LIST OF  FAVOURITE"
+        "favourite":"LIST OF  FAVOURITE",
+        "remove": "REMOVE",
+        "followback": "FOLLOW BACK"
+
     },
     "search":{
         "upcomgsearch":"Search Race By Event Name",

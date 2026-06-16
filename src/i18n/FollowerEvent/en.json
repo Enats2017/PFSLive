@@ -40,6 +40,8 @@
     "follower": "FOLLOW",
     "show_event": "SHOW EVENT",
     "unfollow": "UNFOLLOW",
-    "favourite": "ADD TO FAVOURITE"
+    "favourite": "ADD TO FAVOURITE",
+    "remove": "REMOVE",
+    "followback": "FOLLOW BACK"
   }
 }
