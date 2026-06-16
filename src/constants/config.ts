@@ -132,10 +132,16 @@ export const API_CONFIG = {
    */
   async getHeaders(): Promise<Record<string, string>> {
     const token = await tokenService.getToken();
-    return {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
+    if(token) {
+      return {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+    } else {
+      return {
+        "Content-Type": "application/json"
+      };
+    }
   },
 
   async getMutiForm(): Promise<Record<string, string>> {
