@@ -3,6 +3,7 @@ import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { Platform, Linking } from 'react-native';
 import Constants from 'expo-constants';
 import { getCurrentLanguageId } from '../i18n';
+import * as Application from 'expo-application';
 
 /**
  * Version data returned from API
@@ -47,13 +48,13 @@ export const versionService = {
    * Get current app version from expo config (cached)
    */
   getCurrentVersion(): string {
-    // ✅ Return cached version if available
-    if (cachedVersion) {
-      return cachedVersion;
-    }
-
-    // ✅ Read and cache version
-    cachedVersion = Constants.expoConfig?.version || Constants.manifest?.version || '1.0.0';
+    if (cachedVersion) return cachedVersion;
+    cachedVersion =
+    // Native app version: CFBundleShortVersionString on iOS, versionName on Android
+    Application.nativeApplicationVersion ??
+    // JS fallback (Expo Go / unlinked native module) — both platforms
+    Constants.expoConfig?.version ??
+    '1.0.0';
     return cachedVersion;
   },
 

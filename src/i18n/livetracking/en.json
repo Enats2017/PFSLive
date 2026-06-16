@@ -28,5 +28,7 @@
     "availableServices": "Available Services",
     "lowBattery": "⚠️ Battery low ({{level}}%) — live tracking may pause or stop soon.",
     "estimatedNotice": "Approximate position — weak signal. Updates automatically when the connection returns.",
-    "estimatedBadge": "Approximate"
+    "estimatedBadge": "Approximate",
+    "start": "Start",
+    "finish": "Finish"
 }

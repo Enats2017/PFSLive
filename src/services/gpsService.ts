@@ -76,9 +76,9 @@ const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m e
 // Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
 // Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 3,   // Walking — 3m
-  59: 15,  // Running — 15m
-  60: 30,  // Cycling — 30m
+  64: 0,   // Walking — 3m
+  59: 0,  // Running — 15m
+  60: 0,  // Cycling — 30m
 };
 const DEFAULT_MOVEMENT_METRES = 5;
 
