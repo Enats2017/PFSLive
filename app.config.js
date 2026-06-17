@@ -11,7 +11,7 @@ export default ({ config }) => {
     slug: "livio",
     scheme: "livio",
     version: "1.0.0",
-    orientation: "default",
+    orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,
