@@ -56,7 +56,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
 
     return (
       <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
-        <View style={[detailsStyles.distance, isTablet && { flexDirection: 'column', alignItems: 'flex-start', gap: spacing.md }]}>
+        <View style={[detailsStyles.distance]}>
           <View style={detailsStyles.distanceInfo}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
               {item.distance_name}
@@ -101,7 +101,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
             )}
           </View>
 
-          <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: spacing.md, alignSelf: isTablet ? 'flex-end' : 'auto' }}>
+          <View style={{ gap:spacing.md}}>
             <TouchableOpacity
               style={detailsStyles.resultsButton}
               onPress={() => navigation.navigate('ResultList', {

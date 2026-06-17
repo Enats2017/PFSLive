@@ -7,6 +7,7 @@ import {
     ActivityIndicator,
     Dimensions,
     StatusBar,
+    useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,12 +27,12 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 
-const { width, height } = Dimensions.get('window');
+
 
 type Tab = 'Past' | 'Live';
 const TABS: Tab[] = ['Past', 'Live'];
 const LIVE_INDEX = TABS.indexOf('Live');
-const TAB_CONTENT_HEIGHT = height * 0.5;
+
 
 interface PaginationState {
     live: { page: number; total_pages: number };
@@ -45,6 +46,7 @@ const INITIAL_PAGINATION: PaginationState = {
 
 const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const { t } = useTranslation(['profile', 'common', 'follower']);
+    const { width } = useWindowDimensions();
     const flatListRef = useRef<FlatList>(null);
 
     // ✅ USE FOLLOW MANAGER (CUSTOMER-ONLY MODE)
@@ -302,13 +304,14 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         flatListRef.current?.scrollToIndex({ index, animated: true });
     }, []);
 
-    const handleSwipe = useCallback((e: any) => {
-        const index = Math.round(e.nativeEvent.contentOffset.x / width);
-        if (TABS[index] && TABS[index] !== activeTab) {
-            setActiveTab(TABS[index]);
-            activeTabRef.current = TABS[index];         // ✅ keep ref in sync
-        }
-    }, [activeTab]);
+   const handleSwipe = useCallback((e: any) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / width);
+    const swipedTab = TABS[index];
+    if (swipedTab && swipedTab !== activeTabRef.current) {
+        activeTabRef.current = swipedTab;  // ✅ sync ref
+        setActiveTab(swipedTab);
+    }
+}, [width]);
 
     const renderTabContent = useCallback(({ item }: { item: Tab }) => (
         <View style={{ width }}>
@@ -331,6 +334,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             )}
         </View>
     ), [
+        width,
         liveEvents, pastEvents,
         loadMoreLive, loadMorePast,
         loadingMoreLive, loadingMorePast,
@@ -416,12 +420,16 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             </View>
 
             {/* TAB CONTENT */}
-            <View style={{ height: TAB_CONTENT_HEIGHT }}>
+            <View style={{ flex:1 }}>
                 <FlatList
                     ref={flatListRef}
                     data={TABS}
                     horizontal
                     pagingEnabled
+                    onLayout={() => {   // ✅ ADD — re-syncs after rotation
+            const index = TABS.indexOf(activeTabRef.current);
+            flatListRef.current?.scrollToIndex({ index, animated: false });
+        }}
                     showsHorizontalScrollIndicator={false}
                     keyExtractor={item => item}
                     onMomentumScrollEnd={handleSwipe}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
     View,
     Text,
@@ -8,6 +8,7 @@ import {
     Dimensions,
     StatusBar,
     ScrollView,
+    useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,23 +29,20 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import FanEventCard from '../FollowerEventList/FollowerCard';
 
-
-const { width, height } = Dimensions.get('window');
-
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
-const TAB_CONTENT_HEIGHT = height * 0.5;
 
 const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     const { t } = useTranslation(['event', 'common']);
+    const { width } = useWindowDimensions();
     const flatListRef = useRef<FlatList>(null);
+    const activeTabRef = useRef<Tab>('Live');
     const [activeTab, setActiveTab] = useState<Tab>('Live');
     const [pastEvents, setPastEvents] = useState<EventItem[]>([]);
     const [liveEvents, setLiveEvents] = useState<EventItem[]>([]);
     const [upcomingEvents, setUpcomingEvents] = useState<EventItem[]>([]);
     const [loading, setLoading] = useState(true);
     //const [error, setError] = useState<string | null>(null);
-
     const [loadingMorePast, setLoadingMorePast] = useState(false);
     const [loadingMoreLive, setLoadingMoreLive] = useState(false);
     const [loadingMoreUpcoming, setLoadingMoreUpcoming] = useState(false);
@@ -101,6 +99,14 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         }, [activeTab]) // ✅ Depend on activeTab to preserve selection
     );
 
+    useEffect(() => {
+        const index = TABS.indexOf(activeTabRef.current);
+        const timer = setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index, animated: false });
+        }, 80);
+        return () => clearTimeout(timer);
+    }, [width]);
+
     const fetchEvents = useCallback(async () => {
         if (isFetching.current) {
             if (API_CONFIG.DEBUG) {
@@ -111,7 +117,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
 
         try {
             isFetching.current = true;
-
             // ✅ ONLY SHOW LOADING ON INITIAL MOUNT
             if (isInitialMount.current) {
                 setLoading(true);
@@ -305,16 +310,24 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     // ✅ TAB HANDLERS
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
+        activeTabRef.current = tab;   // ✅ update ref first
         setActiveTab(tab);
         flatListRef.current?.scrollToIndex({ index, animated: true });
     }, []);
 
     const handleSwipe = useCallback((e: any) => {
-        const index = Math.round(e.nativeEvent.contentOffset.x / width);
-        if (TABS[index] && TABS[index] !== activeTab) {
-            setActiveTab(TABS[index]);
+        const index = Math.round(e.nativeEvent.contentOffset.x / width); // ✅ width is reactive
+        const swipedTab = TABS[index];
+        if (swipedTab && swipedTab !== activeTabRef.current) {
+            activeTabRef.current = swipedTab;  // ✅ update ref
+            setActiveTab(swipedTab);
         }
-    }, [activeTab]);
+    }, [width]);
+
+    const handleLayout = useCallback(() => {
+        const index = TABS.indexOf(activeTabRef.current);
+        flatListRef.current?.scrollToIndex({ index, animated: false });
+    }, []);
 
     // ✅ LOADING STATE
     if (loading) {
@@ -392,6 +405,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                         horizontal
                         pagingEnabled
                         showsHorizontalScrollIndicator={false}
+                        onLayout={handleLayout}
                         keyExtractor={(item) => item}
                         onMomentumScrollEnd={handleSwipe}
                         initialScrollIndex={TABS.indexOf('Live')}

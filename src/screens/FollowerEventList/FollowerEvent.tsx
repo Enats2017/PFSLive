@@ -11,6 +11,7 @@ import {
     KeyboardEvent,
     Platform,
     Animated,
+    useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -31,12 +32,14 @@ import { useScreenError } from '../../hooks/useApiError';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
-const { width, height } = Dimensions.get('window');
-const TAB_CONTENT_HEIGHT = height * 0.19;
+
+
 
 const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
     const { t } = useTranslation(['follower', 'common']);
+    const { width } = useWindowDimensions();
     const initialTab = (route.params?.initialTab) as Tab;
+
 
     const {
         isFollowed,
@@ -50,6 +53,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
         handlePasswordModalClose,
     } = useFollowManager(t);
 
+    
     const [activeTab, setActiveTab] = useState(initialTab);
     const [loading, setLoading] = useState(true);
     const [searchResults, setSearchResults] = useState<ParticipantItem[]>([]);
@@ -292,15 +296,25 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
 
 
     const handleTabPress = useCallback((tab: Tab) => {
-        const index = TABS.indexOf(tab);
-        setActiveTab(tab);
-        flatListRef.current?.scrollToIndex({ index, animated: true });
-    }, []);
+    const index = TABS.indexOf(tab);
+    activeTabRef.current = tab;   // ✅ ADD THIS
+    setActiveTab(tab);
+    flatListRef.current?.scrollToIndex({ index, animated: true });
+}, []);
 
-    const handleSwipe = useCallback((e: any) => {
-        const index = Math.round(e.nativeEvent.contentOffset.x / width);
-        if (TABS[index] && TABS[index] !== activeTab) setActiveTab(TABS[index]);
-    }, [activeTab]);
+   const handleSwipe = useCallback((e: any) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / width);
+    const swipedTab = TABS[index];
+    if (swipedTab && swipedTab !== activeTabRef.current) {
+        activeTabRef.current = swipedTab;  // ✅ sync ref
+        setActiveTab(swipedTab);
+    }
+}, [width]);
+
+ const handleLayout = useCallback(() => {
+        const index = TABS.indexOf(activeTabRef.current);
+        flatListRef.current?.scrollToIndex({ index, animated: false });
+    }, []);
 
     useEffect(() => {
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -417,6 +431,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                         horizontal
                         pagingEnabled
                         showsHorizontalScrollIndicator={false}
+                        onLayout={handleLayout}
                         keyExtractor={(item) => item}
                         onMomentumScrollEnd={handleSwipe}
                         initialScrollIndex={TABS.indexOf('Live')}

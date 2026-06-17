@@ -1,5 +1,6 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StatusBar, Dimensions, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StatusBar, ScrollView, ActivityIndicator } from 'react-native';
+// ✅ REMOVE Dimensions from import
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,14 +19,17 @@ import UpcomingRace from './UpcomingRace';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { AppHeader } from '../../components/common/AppHeader';
+import { useDimensions } from '../../hooks/useDimensions'; // ✅ your custom hook
 
 type TabKey = 'raceInfo' | 'timingPoint' | 'runnerInfo';
 const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo'];
 
-const { width } = Dimensions.get('window');
+// ✅ REMOVE: const { width } = Dimensions.get('window');
 
 const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
-    const { t } = useTranslation(['resultdetails','common']);
+    const { t } = useTranslation(['resultdetails', 'common']);
+    const { width } = useDimensions(); // ✅ reactive
+
     const {
         raceStatus,
         product_app_id,
@@ -42,18 +46,14 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     );
 
     const {
-        isFollowed,
-        isLoading,
-        refreshFollowedUsers,
-        handleFollowPress,
-        passwordModalVisible,
-        isVerifying,
-        passwordError,
-        handlePasswordSubmit,
-        handlePasswordModalClose,
+        isFollowed, isLoading, refreshFollowedUsers,
+        handleFollowPress, passwordModalVisible,
+        isVerifying, passwordError,
+        handlePasswordSubmit, handlePasswordModalClose,
     } = useFollowManager(t, product_app_id);
 
     const [activeTab, setActiveTab] = useState<TabKey>('raceInfo');
+    const activeTabRef = useRef<TabKey>('raceInfo'); // ✅ stale closure fix
     const flatListRef = useRef<FlatList<TabKey>>(null);
     const tabScrollRef = useRef<ScrollView>(null);
 
@@ -62,18 +62,21 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         (data?.race_info?.bib && product_app_id)
     );
 
-    // ✅ FIX: Call isFollowed as a function
-    const Followed = isFollowed(
-        product_app_id,
-        data?.race_info?.bib ?? '',
-        data?.race_info?.customer_app_id
-    );
+    const Followed = isFollowed(product_app_id, data?.race_info?.bib ?? '', data?.race_info?.customer_app_id);
+    const Loading = isLoading(product_app_id, data?.race_info?.bib ?? '', data?.race_info?.customer_app_id);
 
-    const Loading = isLoading(
-        product_app_id,
-        data?.race_info?.bib ?? '',
-        data?.race_info?.customer_app_id
-    );
+    // ✅ re-sync scroll + tab indicator on rotation
+    useEffect(() => {
+        const index = TAB_KEYS.indexOf(activeTabRef.current);
+        const timer = setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index, animated: false });
+            tabScrollRef.current?.scrollTo({
+                x: index * (width / 3) - width / 6,
+                animated: false,
+            });
+        }, 80);
+        return () => clearTimeout(timer);
+    }, [width]);
 
     const handleFollow = () => {
         if (!canFollow) return;
@@ -84,51 +87,46 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         });
     };
 
+    // ✅ sync both state and ref
     const handleTabPress = useCallback((tab: TabKey) => {
         const index = TAB_KEYS.indexOf(tab);
+        activeTabRef.current = tab; // ✅ sync ref
         setActiveTab(tab);
         flatListRef.current?.scrollToIndex({ index, animated: true });
         tabScrollRef.current?.scrollTo({
             x: index * (width / 3) - width / 6,
             animated: true,
         });
-    }, []);
+    }, [width]);
 
+    // ✅ width in deps, ref for comparison
     const handleSwipe = useCallback((e: any) => {
         const index = Math.round(e.nativeEvent.contentOffset.x / width);
         if (index >= 0 && index < TAB_KEYS.length) {
             const tab = TAB_KEYS[index];
-            setActiveTab(tab);
-            tabScrollRef.current?.scrollTo({
-                x: index * (width / 3) - width / 6,
-                animated: true,
-            });
+            if (tab !== activeTabRef.current) {  // ✅ use ref, not state
+                activeTabRef.current = tab;       // ✅ sync ref
+                setActiveTab(tab);
+                tabScrollRef.current?.scrollTo({
+                    x: index * (width / 3) - width / 6,
+                    animated: true,
+                });
+            }
         }
-    }, []);
+    }, [width]); // ✅ was [] — stale width
 
+    // ✅ width in deps so renderItem updates on rotation
     const renderTabPage = useCallback(({ item }: { item: TabKey }) => {
         const participantStatus = data?.race_info?.participant_status;
-
         return (
-            <View style={s.page}>
+            <View style={[s.page, { width }]}>  {/* ✅ reactive width */}
                 {item === 'raceInfo' && (
                     raceStatus === 'in_progress' && (participantStatus === 'in_progress' || participantStatus === 'not_started') ? (
-                        <RaceLive
-                            raceInfo={data?.race_info}
-                            event={data?.event}
-                            checkpoints={data?.checkpoints}
-                        />
+                        <RaceLive raceInfo={data?.race_info} event={data?.event} checkpoints={data?.checkpoints} />
                     ) : raceStatus === 'finished' || (raceStatus === 'in_progress' && participantStatus !== 'not_started' && participantStatus !== 'in_progress') ? (
-                        <RaceInfoTab
-                            raceInfo={data?.race_info}
-                            event={data?.event}
-                            checkpoints={data?.checkpoints}
-                        />
+                        <RaceInfoTab raceInfo={data?.race_info} event={data?.event} checkpoints={data?.checkpoints} />
                     ) : raceStatus === 'not_started' || participantStatus === 'not_started' ? (
-                        <UpcomingRace
-                            raceInfo={data?.race_info}
-                            event={data?.event}
-                        />
+                        <UpcomingRace raceInfo={data?.race_info} event={data?.event} />
                     ) : null
                 )}
                 {item === 'timingPoint' && (
@@ -138,14 +136,13 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     <RunnerInfoTab runnerInfo={data?.runner_info} />
                 )}
             </View>
-        )
-    }, [data, raceStatus]);
+        );
+    }, [data, raceStatus, width]); // ✅ width added
 
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
                 <StatusBar barStyle="dark-content" />
-                {/* Keep header visible with back button during load */}
                 <View style={s.header}>
                     <TouchableOpacity
                         style={s.headerBackBtn}
@@ -165,11 +162,11 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         );
     }
 
-   if (hasError && !loading) {
+    if (hasError && !loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader/>
+                <AppHeader />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -183,6 +180,8 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
+
+            {/* HEADER */}
             <View style={s.header}>
                 <TouchableOpacity
                     style={s.headerBackBtn}
@@ -191,26 +190,18 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                 >
                     <Ionicons name="chevron-back" size={32} color={colors.gray900} />
                 </TouchableOpacity>
-
                 <View style={s.headerCenter}>
                     <Text style={commonStyles.title}>{data?.race_info?.name ?? '...'}</Text>
                     <Text style={commonStyles.text}>{data?.race_info?.bib ?? ''}</Text>
                 </View>
-
                 {canFollow && (
-                    <TouchableOpacity
-                        onPress={handleFollow}
-                        disabled={Loading}
-                    >
-                        <Entypo
-                            name={Followed ? "star" : "star-outlined"}
-                            size={33}
-                            color="black"
-                        />
+                    <TouchableOpacity onPress={handleFollow} disabled={Loading}>
+                        <Entypo name={Followed ? 'star' : 'star-outlined'} size={33} color="black" />
                     </TouchableOpacity>
                 )}
             </View>
 
+            {/* TAB BAR */}
             <View>
                 <ScrollView
                     ref={tabScrollRef}
@@ -226,13 +217,9 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                             onPress={() => handleTabPress(tabKey)}
                             activeOpacity={0.7}
                         >
-                            <Text style={[
-                                commonStyles.text,
-                                activeTab === tabKey && s.tabTextActive,
-                            ]}>
+                            <Text style={[commonStyles.text, activeTab === tabKey && s.tabTextActive]}>
                                 {t(`tabs.${tabKey}`)}
                             </Text>
-
                             {activeTab === tabKey && (
                                 <LinearGradient
                                     colors={['#e8341a', '#f4a100', '#1a73e8']}
@@ -246,6 +233,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                 </ScrollView>
             </View>
 
+            {/* TAB CONTENT */}
             <FlatList
                 ref={flatListRef}
                 data={TAB_KEYS}
@@ -256,9 +244,13 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                 renderItem={renderTabPage}
                 onMomentumScrollEnd={handleSwipe}
                 initialScrollIndex={0}
+                onLayout={() => {  // ✅ re-sync after rotation
+                    const index = TAB_KEYS.indexOf(activeTabRef.current);
+                    flatListRef.current?.scrollToIndex({ index, animated: false });
+                }}
                 getItemLayout={(_, index) => ({
-                    length: width,
-                    offset: width * index,
+                    length: width,          // ✅ reactive
+                    offset: width * index,  // ✅ reactive
                     index,
                 })}
                 style={s.pageList}

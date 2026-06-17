@@ -5,7 +5,7 @@ import { colors, spacing, typography } from "./common.styles";
 const { width, } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.88;
 const isTablet = width >= 600;
-const DIAG_SIZE = isTablet ? 55 : 35;
+const DIAG_SIZE = isTablet ? 70 : 35;
 
 export const resultInfoStyles = StyleSheet.create({
   scrollContent: {
