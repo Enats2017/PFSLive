@@ -76,9 +76,9 @@ const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m e
 // Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
 // Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 0,   // Walking — 3m
-  59: 0,  // Running — 15m
-  60: 0,  // Cycling — 30m
+  64: 3,   // Walking — 3m
+  59: 15,  // Running — 15m
+  60: 30,  // Cycling — 30m
 };
 const DEFAULT_MOVEMENT_METRES = 5;
 
@@ -468,10 +468,27 @@ const _processLocationForSendInternal = async (
       await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
       await AsyncStorage.setItem(NEAR_FINISH_KEY, '1');
       if (!wasActive) {
+        try {
+          await BackgroundGeolocation.setConfig({
+            geolocation: {
+              locationUpdateInterval:        FINISH_APPROACH_INTERVAL * 1000,  // 5000
+              fastestLocationUpdateInterval: FINISH_APPROACH_INTERVAL * 1000,  // 5000
+              distanceFilter:                0,
+            },
+          });
+        } catch { /* silent — config change must never break the send */ }
         await addLog('🏁', `Finish approach activated — ${distToFinish.toFixed(2)}km to finish, sending every 5s${tag}`);
       }
     } else if (distToFinish !== null && distToFinish > FINISH_APPROACH_THRESHOLD) {
       if (finishApproach === '1') {
+        try {
+          await BackgroundGeolocation.setConfig({
+            geolocation: {
+              locationUpdateInterval:        (intervalSeconds ?? 30) * 1000,
+              fastestLocationUpdateInterval: 5000,
+            },
+          });
+        } catch { /* silent */ }
         await addLog('🔄', `Finish approach reset — now ${distToFinish.toFixed(2)}km from finish${tag}`);
       }
       await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
