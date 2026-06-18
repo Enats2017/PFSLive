@@ -109,6 +109,11 @@ let _logFlushTimer: ReturnType<typeof setTimeout> | null = null;
 let _logDirty = false;
 const LOG_FLUSH_INTERVAL_MS = 2000;
 
+// Sample ~3× per send window so the throttle always has a candidate near the
+// target — keeps cadence at the interval (30s/60s/4min/5min) instead of doubling.
+const fixIntervalMs = (sendIntervalSec?: number): number =>
+  Math.max(10000, Math.round((sendIntervalSec ?? 30) / 3) * 1000);
+
 const _flushLogsNow = async (): Promise<void> => {
   if (!_logDirty) return;
   _logDirty = false;
@@ -476,6 +481,7 @@ const _processLocationForSendInternal = async (
               distanceFilter:                0,
             },
           });
+          try { await BackgroundGeolocation.changePace(true); } catch {}
         } catch { /* silent — config change must never break the send */ }
         await addLog('🏁', `Finish approach activated — ${distToFinish.toFixed(2)}km to finish, sending every 5s${tag}`);
       }
@@ -484,7 +490,7 @@ const _processLocationForSendInternal = async (
         try {
           await BackgroundGeolocation.setConfig({
             geolocation: {
-              locationUpdateInterval:        (intervalSeconds ?? 30) * 1000,
+              locationUpdateInterval:        fixIntervalMs(intervalSeconds),
               fastestLocationUpdateInterval: 5000,
             },
           });
@@ -1066,7 +1072,7 @@ export const gpsService = {
             desiredAccuracy:              BackgroundGeolocation.DesiredAccuracy.High,
             locationAuthorizationRequest: 'Always',
             distanceFilter:               0,
-            locationUpdateInterval:       intervalSeconds * 1000,
+            locationUpdateInterval:       fixIntervalMs(intervalSeconds),
             fastestLocationUpdateInterval: 5000,
             disableStopDetection:         true,
             stopTimeout:                  5,
