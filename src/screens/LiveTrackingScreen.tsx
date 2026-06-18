@@ -285,6 +285,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     is_start: cp.is_start,
                     is_finish: cp.is_finish,
                     features: cp.features ?? [],
+                    description: cp.description ?? '',
                 }));
                 console.log('📍 Checkpoints from participant:', checkpoints.length);
                 setApiCheckpoints(checkpoints);
@@ -302,6 +303,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     is_start: cp.is_start,
                     is_finish: cp.is_finish,
                     features: cp.features ?? [],
+                    description: cp.description ?? '',
 
                 }));
                 console.log('📍 Checkpoints from separate array:', checkpoints.length);

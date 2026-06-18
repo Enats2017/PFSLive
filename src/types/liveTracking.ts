@@ -30,6 +30,7 @@ export interface ParticipantMapMarker {
 export interface AidStationMapMarker {
     id: string;
     name: string;
+    description: string;
     lat: number;
     lon: number;
     ele: number;
@@ -41,6 +42,7 @@ export interface AidStationMapMarker {
 
 export interface CheckpointData {
     name: string;
+    description: string;
     distance: number;
     segment_distance: number;
     elevation: number;

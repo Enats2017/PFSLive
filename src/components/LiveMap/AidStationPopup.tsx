@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Linking, Alert, Platform } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, TouchableOpacity, Linking, Alert, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { AidStationMapMarker } from '../../types/liveTracking';
@@ -7,6 +7,34 @@ import { liveTrackingStyles } from '../../styles/liveTracking.styles';
 import { colors } from '../../styles/common.styles';
 import { getFeatureIcon } from '../../utils/featureIcons';
 
+// GPX <wpt> descriptions arrive as HTML (RouteYou exports use <br/>, <p>, <ul>/<li>,
+// <a href>, &#13;, &amp;, …). React Native <Text> can't render markup, so we flatten
+// it to readable plain text: block tags become line breaks / bullets, every other tag
+// is stripped, and the handful of entities GPX uses are decoded. Defensive against
+// both real tags (already entity-decoded server-side) and any leftover &lt; encoding.
+const stripHtml = (raw?: string | null): string => {
+    if (!raw) return '';
+    let s = String(raw);
+    s = s.replace(/<\s*br\s*\/?>/gi, '\n');                       // <br> → newline
+    s = s.replace(/<\/\s*(p|div|h[1-6]|li|ul|ol|tr)\s*>/gi, '\n'); // block close → newline
+    s = s.replace(/<\s*li[^>]*>/gi, '\u2022 ');                   // <li> → bullet
+    s = s.replace(/<[^>]+>/g, '');                                // strip remaining tags
+    s = s.replace(/&lt;/g, '<')
+         .replace(/&gt;/g, '>')
+         .replace(/&quot;/g, '"')
+         .replace(/&#39;/g, "'")
+         .replace(/&nbsp;/g, ' ')
+         .replace(/&#13;/g, '')
+         .replace(/&amp;/g, '&');                                 // decode &amp; last
+    s = s.replace(/[ \t]+/g, ' ')
+         .replace(/ *\n */g, '\n')
+         .replace(/\n{3,}/g, '\n\n')
+         .trim();
+    return s;
+};
+
+// Show the Read more / less toggle only when the text is long enough to be clipped.
+const LONG_DESC_CHARS = 140;
 
 interface AidStationPopupProps {
     station: AidStationMapMarker;
@@ -20,6 +48,11 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
 }) => {
     const { t } = useTranslation(['livetracking', 'common']);
     const features = station.features ?? [];
+
+    // Clean the HTML description once per station, and gate the expand toggle.
+    const description = useMemo(() => stripHtml(station.description), [station.description]);
+    const isLongDesc = description.length > LONG_DESC_CHARS;
+    const [descExpanded, setDescExpanded] = useState(false);
 
     const openDirections = async () => {
         const lat = station.lat;
@@ -73,6 +106,46 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                     </View>
 
                 </View>
+
+                {/* ── Description (from GPX <wpt> <desc>) ─────────────────────
+                    Sits right under the name. Collapsed to a few lines by
+                    default; long text expands into a bounded, scrollable area so
+                    the popup never grows past the screen. Hidden when empty
+                    (e.g. Start/Finish or checkpoints without a description). */}
+                {description.length > 0 && (
+                    <View style={{ paddingTop: 15, paddingBottom: 15 }}>
+                        {descExpanded ? (
+                            <ScrollView
+                                style={{ maxHeight: 180 }}
+                                nestedScrollEnabled
+                                showsVerticalScrollIndicator
+                            >
+                                <Text style={{ fontSize: 13, lineHeight: 19, color: '#374151' }}>
+                                    {description}
+                                </Text>
+                            </ScrollView>
+                        ) : (
+                            <Text
+                                style={{ fontSize: 13, lineHeight: 19, color: '#374151' }}
+                                numberOfLines={4}
+                            >
+                                {description}
+                            </Text>
+                        )}
+
+                        {isLongDesc && (
+                            <TouchableOpacity
+                                onPress={() => setDescExpanded(v => !v)}
+                                style={{ marginTop: 6 }}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>
+                                    {descExpanded ? t('livetracking:readLess') : t('livetracking:readMore')}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                )}
 
                 <View style={liveTrackingStyles.popupSection}>
                     <View style={liveTrackingStyles.aidStationInfoRow}>

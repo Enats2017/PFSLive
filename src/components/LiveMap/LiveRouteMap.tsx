@@ -779,6 +779,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                             is_start: checkpoint.is_start,
                             is_finish: checkpoint.is_finish,
                             features: JSON.stringify(checkpoint.features ?? []),
+                            description: checkpoint.description ?? '',
                         },
                         geometry: {
                             type: 'Point' as const,
@@ -874,6 +875,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 features: typeof props.features === 'string'
                     ? JSON.parse(props.features)
                     : props.features ?? [],
+                description: props.description ?? '',
             };
 
             onAidStationPress(station);

@@ -4,6 +4,7 @@ import { getCurrentLanguageId } from '../i18n';
 
 export interface LiveTrackingCheckpoint {
     name: string;
+    description: string;
     day_name: string;
     distance: number | string;
     segment_distance: string;

@@ -85,20 +85,20 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
 
   // ✅ Pre-select GPX file when opened via share intent
   // fileName resolved by MainActivity at intent time so it's always correct
-  // useEffect(() => {
-  //   if (!sharedFileUri) return;
+  useEffect(() => {
+    if (!sharedFileUri) return;
 
-  //   const name = sharedFileName
-  //     ?? sharedFileUri.split('/').pop()?.split('?')[0]
-  //     ?? 'shared.gpx';
+    const name = sharedFileName
+      ?? sharedFileUri.split('/').pop()?.split('?')[0]
+      ?? 'shared.gpx';
 
-  //   setSelectedFile({
-  //     uri: sharedFileUri,
-  //     name: name.toLowerCase().endsWith('.gpx') ? name : 'shared.gpx',
-  //     mimeType: 'application/gpx+xml',
-  //     size: undefined,
-  //   });
-  // }, [sharedFileUri, sharedFileName]);
+    setSelectedFile({
+      uri: sharedFileUri,
+      name: name.toLowerCase().endsWith('.gpx') ? name : 'shared.gpx',
+      mimeType: 'application/gpx+xml',
+      size: undefined,
+    });
+  }, [sharedFileUri, sharedFileName]);
 
   const showErrorModal = useCallback((titleKey: string, messageKey: string) => {
     setErrorTitleKey(titleKey);

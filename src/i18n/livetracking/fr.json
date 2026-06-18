@@ -30,5 +30,7 @@
     "estimatedNotice": "Position approximative — signal faible. Mise à jour automatique dès le retour de la connexion.",
     "estimatedBadge": "Approximatif",
     "start": "Départ",
-    "finish": "Arrivée"
+    "finish": "Arrivée",
+    "readMore": "Lire plus",
+    "readLess": "Lire moins"
 }

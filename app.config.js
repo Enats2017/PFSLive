@@ -11,7 +11,7 @@ export default ({ config }) => {
     slug: "livio",
     scheme: "livio",
     version: "1.0.0",
-    orientation: "default",
+    orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
     newArchEnabled: true,
@@ -97,11 +97,12 @@ export default ({ config }) => {
       intentFilters: [
         {
           action: "VIEW",
-          category: ["BROWSABLE", "DEFAULT"],
+          category: ["DEFAULT"],
           data: [
             { mimeType: "application/gpx+xml" },
             { mimeType: "text/xml" },
             { mimeType: "application/xml" },
+            { mimeType: "application/octet-stream" },
           ]
         },
         {
@@ -111,6 +112,7 @@ export default ({ config }) => {
             { mimeType: "application/gpx+xml" },
             { mimeType: "text/xml" },
             { mimeType: "application/xml" },
+            { mimeType: "application/octet-stream" },
           ]
         }
       ],

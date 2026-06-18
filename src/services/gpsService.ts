@@ -76,9 +76,9 @@ const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m e
 // Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
 // Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 0,   // Walking — 3m
-  59: 0,  // Running — 15m
-  60: 0,  // Cycling — 30m
+  64: 3,   // Walking — 3m
+  59: 15,  // Running — 15m
+  60: 30,  // Cycling — 30m
 };
 const DEFAULT_MOVEMENT_METRES = 5;
 
@@ -108,6 +108,11 @@ let _logBuffer: TrackingLogEntry[] = [];
 let _logFlushTimer: ReturnType<typeof setTimeout> | null = null;
 let _logDirty = false;
 const LOG_FLUSH_INTERVAL_MS = 2000;
+
+// Sample ~3× per send window so the throttle always has a candidate near the
+// target — keeps cadence at the interval (30s/60s/4min/5min) instead of doubling.
+const fixIntervalMs = (sendIntervalSec?: number): number =>
+  Math.max(10000, Math.round((sendIntervalSec ?? 30) / 3) * 1000);
 
 const _flushLogsNow = async (): Promise<void> => {
   if (!_logDirty) return;
@@ -468,10 +473,29 @@ const _processLocationForSendInternal = async (
       await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
       await AsyncStorage.setItem(NEAR_FINISH_KEY, '1');
       if (!wasActive) {
+        try {
+          await BackgroundGeolocation.setConfig({
+            geolocation: {
+              locationUpdateInterval:        FINISH_APPROACH_INTERVAL * 1000,  // 5000
+              fastestLocationUpdateInterval: FINISH_APPROACH_INTERVAL * 1000,  // 5000
+              distanceFilter:                0,
+            },
+          });
+          try { await BackgroundGeolocation.changePace(true); } catch {}
+        } catch { /* silent — config change must never break the send */ }
         await addLog('🏁', `Finish approach activated — ${distToFinish.toFixed(2)}km to finish, sending every 5s${tag}`);
       }
     } else if (distToFinish !== null && distToFinish > FINISH_APPROACH_THRESHOLD) {
       if (finishApproach === '1') {
+        try {
+          await BackgroundGeolocation.setConfig({
+            geolocation: {
+              locationUpdateInterval:        fixIntervalMs(intervalSeconds),
+              fastestLocationUpdateInterval: 5000,
+            },
+          });
+          try { await BackgroundGeolocation.changePace(true); } catch {}
+        } catch { /* silent */ }
         await addLog('🔄', `Finish approach reset — now ${distToFinish.toFixed(2)}km from finish${tag}`);
       }
       await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
@@ -1049,7 +1073,7 @@ export const gpsService = {
             desiredAccuracy:              BackgroundGeolocation.DesiredAccuracy.High,
             locationAuthorizationRequest: 'Always',
             distanceFilter:               0,
-            locationUpdateInterval:       intervalSeconds * 1000,
+            locationUpdateInterval:       fixIntervalMs(intervalSeconds),
             fastestLocationUpdateInterval: 5000,
             disableStopDetection:         true,
             stopTimeout:                  5,
