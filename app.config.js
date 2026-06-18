@@ -102,6 +102,7 @@ export default ({ config }) => {
             { mimeType: "application/gpx+xml" },
             { mimeType: "text/xml" },
             { mimeType: "application/xml" },
+            { mimeType: "application/octet-stream" },
           ]
         },
         {
@@ -111,6 +112,7 @@ export default ({ config }) => {
             { mimeType: "application/gpx+xml" },
             { mimeType: "text/xml" },
             { mimeType: "application/xml" },
+            { mimeType: "application/octet-stream" },
           ]
         }
       ],
