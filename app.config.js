@@ -97,7 +97,7 @@ export default ({ config }) => {
       intentFilters: [
         {
           action: "VIEW",
-          category: ["BROWSABLE", "DEFAULT"],
+          category: ["DEFAULT"],
           data: [
             { mimeType: "application/gpx+xml" },
             { mimeType: "text/xml" },

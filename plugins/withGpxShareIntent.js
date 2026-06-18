@@ -2,6 +2,7 @@ const {
   withMainActivity,
   withMainApplication,
   withDangerousMod,
+  withAndroidManifest,
 } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
@@ -52,22 +53,25 @@ const withGpxMainActivity = (config) => {
 
   private fun handleGpxIntent(intent: Intent) {
     val action = intent.action ?: return
+
+    val uri: android.net.Uri? = when (action) {
+      Intent.ACTION_SEND -> intent.getParcelableExtra(Intent.EXTRA_STREAM)
+      Intent.ACTION_VIEW -> intent.data
+      else -> null
+    }
+    if (uri == null) return
+
+    val name = resolveFileName(uri)            // content:// providers report the real name
     val type = intent.type ?: ""
-    if (
-      action == Intent.ACTION_SEND &&
-      (type == "application/gpx+xml" || type == "text/xml" || type == "application/xml")
-    ) {
-      val uri = intent.getParcelableExtra<android.net.Uri>(Intent.EXTRA_STREAM)
-      if (uri != null) {
-        GpxShareHolder.uri = uri.toString()
-        GpxShareHolder.fileName = resolveFileName(uri)
-      }
-    } else if (action == Intent.ACTION_VIEW) {
-      val uri = intent.data
-      if (uri != null && uri.toString().lowercase().endsWith(".gpx")) {
-        GpxShareHolder.uri = uri.toString()
-        GpxShareHolder.fileName = resolveFileName(uri)
-      }
+
+    val isGpx =
+      (name?.lowercase()?.endsWith(".gpx") == true) ||
+      uri.toString().lowercase().endsWith(".gpx") ||
+      type == "application/gpx+xml" || type == "text/xml" || type == "application/xml"
+
+    if (isGpx) {
+      GpxShareHolder.uri = uri.toString()
+      GpxShareHolder.fileName = name ?: "shared.gpx"
     }
   }
 
@@ -174,9 +178,31 @@ const withGpxMainApplication = (config) => {
   });
 };
 
+// ✅ 4. Strip the dev-client's exp+livio scheme from the GPX VIEW filter so
+//    content:// (WhatsApp/Drive) matches in dev builds too. Harmless in release.
+const withGpxCleanViewFilter = (config) => {
+  return withAndroidManifest(config, (mod) => {
+    const app = mod.modResults.manifest.application?.[0];
+    const mainActivity = (app?.activity || []).find(
+      (a) => a.$?.['android:name'] === '.MainActivity'
+    );
+    for (const f of (mainActivity?.['intent-filter'] || [])) {
+      const data = f.data || [];
+      const isGpxView =
+        (f.action || []).some((a) => a.$?.['android:name'] === 'android.intent.action.VIEW') &&
+        data.some((d) => d.$?.['android:mimeType'] === 'application/gpx+xml');
+      if (isGpxView) {
+        f.data = data.filter((d) => !d.$?.['android:scheme']); // keep only mimeType <data>
+      }
+    }
+    return mod;
+  });
+};
+
 module.exports = (config) => {
   config = withGpxMainActivity(config);
   config = withGpxNativeFiles(config);
   config = withGpxMainApplication(config);
+  config = withGpxCleanViewFilter(config);
   return config;
 };
