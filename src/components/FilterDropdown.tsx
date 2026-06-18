@@ -13,7 +13,7 @@ import Entypo from '@expo/vector-icons/Entypo';
 import { resultListStyle } from '../styles/ResultList.styles';
 import { useTranslation } from 'react-i18next';
 
-const { width: SCREEN_W } = Dimensions.get('window');
+
 
 export interface DropPos {
   top: number;
@@ -50,9 +50,10 @@ const Dropdown: React.FC<DropdownProps> = ({
     if (!btnRef.current) return;
 
     btnRef.current.measureInWindow((x, y, w, h) => {
+      const screenW = Dimensions.get('window').width;
       setPos({
         top: y + h,
-        left: Math.min(x, SCREEN_W - w - 8),
+        left: Math.min(x, screenW - w - 8),
         width: Math.max(w, 160),
       });
 

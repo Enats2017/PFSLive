@@ -26,34 +26,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { API_CONFIG } from '../../constants/config';
 import { FollowerEventpops } from '../../types/navigation';
-import { useFollowManager } from '../../hooks/useFollowManager';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
+import { useDimensions } from '../../hooks/useDimensions';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
 
-
-
 const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
     const { t } = useTranslation(['follower', 'common']);
-    const { width } = useWindowDimensions();
+    const { width: windowWidth } = useDimensions();
+    const [containerWidth, setContainerWidth] = useState(0);
+    const width = containerWidth || windowWidth;
     const initialTab = (route.params?.initialTab) as Tab;
-
-
-    const {
-        isFollowed,
-        isLoading,
-        refreshFollowedUsers,
-        handleFollowPress,
-        passwordModalVisible,
-        isVerifying,
-        passwordError,
-        handlePasswordSubmit,
-        handlePasswordModalClose,
-    } = useFollowManager(t);
-
-    
     const [activeTab, setActiveTab] = useState(initialTab);
     const [loading, setLoading] = useState(true);
     const [searchResults, setSearchResults] = useState<ParticipantItem[]>([]);
@@ -114,20 +99,16 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
         };
     }, [keyboardOffset]);
 
-    // ✅ FETCH EVENTS
     const fetchEvents = useCallback(async (search: string) => {
         if (isFetching.current) {
             if (API_CONFIG.DEBUG) console.log('⏸️ Fetch already in progress');
             return;
         }
-
         try {
             isFetching.current = true;
             if (isInitialMount.current) setLoading(true);
             clearError();
-
             if (API_CONFIG.DEBUG) console.log('📡 Fetching events');
-
             const result = await eventService.getEvents({
                 page_past: 1,
                 page_live: 1,
@@ -189,8 +170,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                 if (API_CONFIG.DEBUG) console.log('⏸️ Already fetching, skipping duplicate call');
                 return;
             }
-            const fetchAndSync = async () => {
-                await refreshFollowedUsers();
+            const fetchAndSync = async () => {                
                 await fetchEvents('');
                 if (!isInitialMount.current) {
                     if (API_CONFIG.DEBUG) console.log('🔄 Syncing scroll to:', activeTab);
@@ -203,7 +183,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
             fetchAndSync();
             if (isInitialMount.current) isInitialMount.current = false;
             return () => { isFetching.current = false; };
-        }, [fetchEvents,  refreshFollowedUsers])
+        }, [fetchEvents])
     );
 
     const loadMorePast = useCallback(async () => {
@@ -296,22 +276,22 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
 
 
     const handleTabPress = useCallback((tab: Tab) => {
-    const index = TABS.indexOf(tab);
-    activeTabRef.current = tab;   // ✅ ADD THIS
-    setActiveTab(tab);
-    flatListRef.current?.scrollToIndex({ index, animated: true });
-}, []);
+        const index = TABS.indexOf(tab);
+        activeTabRef.current = tab;   
+        setActiveTab(tab);
+        flatListRef.current?.scrollToIndex({ index, animated: true });
+    }, []);
 
-   const handleSwipe = useCallback((e: any) => {
-    const index = Math.round(e.nativeEvent.contentOffset.x / width);
-    const swipedTab = TABS[index];
-    if (swipedTab && swipedTab !== activeTabRef.current) {
-        activeTabRef.current = swipedTab;  // ✅ sync ref
-        setActiveTab(swipedTab);
-    }
-}, [width]);
+    const handleSwipe = useCallback((e: any) => {
+        const index = Math.round(e.nativeEvent.contentOffset.x / width);
+        const swipedTab = TABS[index];
+        if (swipedTab && swipedTab !== activeTabRef.current) {
+            activeTabRef.current = swipedTab;  
+            setActiveTab(swipedTab);
+        }
+    }, [width]);
 
- const handleLayout = useCallback(() => {
+    const handleLayout = useCallback(() => {
         const index = TABS.indexOf(activeTabRef.current);
         flatListRef.current?.scrollToIndex({ index, animated: false });
     }, []);
@@ -329,7 +309,6 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
             try {
                 setSearching(true);
                 if (API_CONFIG.DEBUG) console.log('🔍 Searching participants:', searchText);
-
                 const result = await eventService.getEvents({
                     is_participant: '1',
                     page_participant: 1,
@@ -351,8 +330,6 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
     }, [searchText]);
 
-    
-     // LOADING STATE
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -365,7 +342,6 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
         );
     }
 
-    // ERROR STATE
     if (hasError && !loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -390,8 +366,8 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                     flex: 1,
                     transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }],
                 }}
+                onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
             >
-                {/* SECTION TITLE */}
                 <View style={eventStyles.section}>
                     <Text style={eventStyles.textCenter}>{t('follower:official.title')}</Text>
                 </View>
@@ -423,7 +399,6 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                     ))}
                 </View>
 
-                {/* TAB CONTENT */}
                 <View>
                     <FlatList
                         ref={flatListRef}
@@ -435,7 +410,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                         keyExtractor={(item) => item}
                         onMomentumScrollEnd={handleSwipe}
                         initialScrollIndex={TABS.indexOf('Live')}
-                        contentContainerStyle={{paddingBottom:spacing.xxxxl}}
+                        contentContainerStyle={{ paddingBottom: spacing.xxxxl }}
                         scrollEnabled={true}
                         getItemLayout={(_, index) => ({
                             length: width,

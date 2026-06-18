@@ -53,66 +53,74 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader />
-            <View style={particpant.yellowHeader}>
-                <Feather name="radio" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                <Text style={commonStyles.title}>
-                    {t('participant:liveTracking.title')}
-                </Text>
-            </View>
-            <View style={particpant.section}>
-                <View style={{ zIndex: 10 }}>
-                    <SearchInput
-                        placeholder={t('event:search')}
-                        value={liveUpcoming.query}
-                        onChangeText={liveUpcoming.handleSearch}
-                        icon="search"
-                    />
-                    <SuggestionDropdown
-                        suggestions={liveUpcoming.suggestions}
-                        loading={liveUpcoming.loading}
-                        visible={liveUpcoming.dropdownVisible}
-                        onSelect={handleEventSelect}
-                    />
+            <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: spacing.xl }}
+            >
+                <View style={{ zIndex: 50, elevation: 30 }}>
+                    <View style={particpant.yellowHeader}>
+                        <Feather name="radio" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
+                        <Text style={commonStyles.title}>
+                            {t('participant:liveTracking.title')}
+                        </Text>
+                    </View>
+                    <View style={particpant.section}>
+                        <View style={{ zIndex: 10 }}>
+                            <SearchInput
+                                placeholder={t('event:search')}
+                                value={liveUpcoming.query}
+                                onChangeText={liveUpcoming.handleSearch}
+                                icon="search"
+                            />
+                            <SuggestionDropdown
+                                suggestions={liveUpcoming.suggestions}
+                                loading={liveUpcoming.loading}
+                                visible={liveUpcoming.dropdownVisible}
+                                onSelect={handleEventSelect}
+                            />
+                        </View>
+                        <TouchableOpacity
+                            style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.md }]}
+                            onPress={() => navigation.navigate('ParticipantEvent')}
+                            activeOpacity={0.8}
+                        >
+                            <Feather name="calendar" size={15} color="#fff" style={{ marginRight: 8 }} />
+                            <Text style={commonStyles.primaryButtonText}>
+                                {t('participant:liveTracking.showAll')}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
-                <TouchableOpacity
-                    style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.md }]}
-                    onPress={() => navigation.navigate('ParticipantEvent')}
-                    activeOpacity={0.8}
-                >
-                    <Feather name="calendar" size={15} color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={commonStyles.primaryButtonText}>
-                        {t('participant:liveTracking.showAll')}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-            <View style={particpant.dividerRow}>
-                <View style={particpant.dividerLine} />
-                
-            </View>
-            <View style={particpant.yellowHeader}>
-                <Feather name="plus-circle" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                <Text style={commonStyles.title}>
-                    {t('participant:personalRace.title')}
-                </Text>
-            </View>
-            <View style={particpant.section}>
-                <View style={particpant.infoCard}>
-                    <MaterialCommunityIcons name="map-marker-path" size={22} color={colors.themeiColor} />
-                    <Text style={[commonStyles.text, { lineHeight: 20 }]}>
-                        {t('participant:personalRace.description')}
+                <View style={particpant.dividerRow}>
+                    <View style={particpant.dividerLine} />
+
+                </View>
+                <View style={particpant.yellowHeader}>
+                    <Feather name="plus-circle" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
+                    <Text style={commonStyles.title}>
+                        {t('participant:personalRace.title')}
                     </Text>
                 </View>
-                <TouchableOpacity
-                    style={[commonStyles.primaryButton, { flexDirection: 'row' }]}
-                    onPress={handlePersonalEventPress}
-                    activeOpacity={0.8}
-                >
-                    <Feather name="plus" size={15} color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={commonStyles.primaryButtonText}>
-                        {t('participant:personalRace.createButton')}
-                    </Text>
-                </TouchableOpacity>
-            </View>
+                <View style={particpant.section}>
+                    <View style={particpant.infoCard}>
+                        <MaterialCommunityIcons name="map-marker-path" size={22} color={colors.themeiColor} />
+                        <Text style={[commonStyles.text, { lineHeight: 20 }]}>
+                            {t('participant:personalRace.description')}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={[commonStyles.primaryButton, { flexDirection: 'row' }]}
+                        onPress={handlePersonalEventPress}
+                        activeOpacity={0.8}
+                    >
+                        <Feather name="plus" size={15} color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={commonStyles.primaryButtonText}>
+                            {t('participant:personalRace.createButton')}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };

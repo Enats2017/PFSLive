@@ -28,13 +28,16 @@ import { tokenService } from '../../services/tokenService';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import FanEventCard from '../FollowerEventList/FollowerCard';
+import { useDimensions } from '../../hooks/useDimensions';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
 
 const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     const { t } = useTranslation(['event', 'common']);
-    const { width } = useWindowDimensions();
+    const { width: windowWidth } = useDimensions(); // ← tablet/iPad fallback
+    const [containerWidth, setContainerWidth] = useState(0);
+    const width = containerWidth || windowWidth;
     const flatListRef = useRef<FlatList>(null);
     const activeTabRef = useRef<Tab>('Live');
     const [activeTab, setActiveTab] = useState<Tab>('Live');
@@ -52,14 +55,10 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         live: { page: 1, total_pages: 1 },
         upcoming: { page: 1, total_pages: 1 },
     });
-
-    // ✅ PREVENT DUPLICATE CALLS
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
-
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
-    // ✅ FETCH DATA AND SYNC SCROLL
     useFocusEffect(
         useCallback(() => {
             // Skip if already fetching
@@ -69,12 +68,8 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 }
                 return;
             }
-
-            // ✅ FETCH DATA (BOTH INITIAL AND ON RETURN)
             const fetchAndSync = async () => {
                 await fetchEvents();
-
-                // ✅ AFTER FETCH, SYNC SCROLL TO ACTIVE TAB
                 if (!isInitialMount.current) {
                     if (API_CONFIG.DEBUG) {
                         console.log('🔄 Syncing scroll to:', activeTab);
@@ -82,21 +77,17 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                     const index = TABS.indexOf(activeTab);
                     setTimeout(() => {
                         flatListRef.current?.scrollToIndex({ index, animated: false });
-                    }, 100); // ✅ Slightly longer delay to ensure data is rendered
+                    }, 100); 
                 }
             };
-
             fetchAndSync();
-
             if (isInitialMount.current) {
                 isInitialMount.current = false;
             }
-
             return () => {
-                // Cleanup
                 isFetching.current = false;
             };
-        }, [activeTab]) // ✅ Depend on activeTab to preserve selection
+        }, [activeTab]) 
     );
 
     useEffect(() => {
@@ -114,30 +105,23 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             }
             return;
         }
-
         try {
             isFetching.current = true;
-            // ✅ ONLY SHOW LOADING ON INITIAL MOUNT
             if (isInitialMount.current) {
                 setLoading(true);
             }
-
             clearError();
-
             if (API_CONFIG.DEBUG) {
                 console.log('📡 Fetching events');
             }
-
             const result = await eventService.getEvents({
                 page_past: 1,
                 page_live: 1,
                 page_upcoming: 1,
             });
-
             setPastEvents(result.tabs.past);
             setLiveEvents(result.tabs.live);
             setUpcomingEvents(result.tabs.upcoming);
-
             if (result.pagination) {
                 setPaginationInfo({
                     past: {
@@ -156,7 +140,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             }
 
             if (API_CONFIG.DEBUG) {
-                console.log('✅ Events loaded:', {
+                console.log('Events loaded:', {
                     past: result.tabs.past.length,
                     live: result.tabs.live.length,
                     upcoming: result.tabs.upcoming.length,
@@ -171,7 +155,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         }
     }, [t]);
 
-    // ✅ LOAD MORE PAST
     const loadMorePast = useCallback(async () => {
         if (loadingMorePast || paginationInfo.past.page >= paginationInfo.past.total_pages) {
             return;
@@ -216,7 +199,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         }
     }, [loadingMorePast, paginationInfo.past.page, paginationInfo.past.total_pages]);
 
-    // ✅ LOAD MORE LIVE
     const loadMoreLive = useCallback(async () => {
         if (loadingMoreLive || paginationInfo.live.page >= paginationInfo.live.total_pages) {
             return;
@@ -260,8 +242,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
             setLoadingMoreLive(false);
         }
     }, [loadingMoreLive, paginationInfo.live.page, paginationInfo.live.total_pages]);
-
-    // ✅ LOAD MORE UPCOMING
 
     const loadMoreUpcoming = useCallback(async () => {
         if (loadingMoreUpcoming || paginationInfo.upcoming.page >= paginationInfo.upcoming.total_pages) {
@@ -307,10 +287,9 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         }
     }, [loadingMoreUpcoming, paginationInfo.upcoming.page, paginationInfo.upcoming.total_pages]);
 
-    // ✅ TAB HANDLERS
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
-        activeTabRef.current = tab;   // ✅ update ref first
+        activeTabRef.current = tab;  
         setActiveTab(tab);
         flatListRef.current?.scrollToIndex({ index, animated: true });
     }, []);
@@ -319,7 +298,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         const index = Math.round(e.nativeEvent.contentOffset.x / width); // ✅ width is reactive
         const swipedTab = TABS[index];
         if (swipedTab && swipedTab !== activeTabRef.current) {
-            activeTabRef.current = swipedTab;  // ✅ update ref
+            activeTabRef.current = swipedTab;  
             setActiveTab(swipedTab);
         }
     }, [width]);
@@ -329,7 +308,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         flatListRef.current?.scrollToIndex({ index, animated: false });
     }, []);
 
-    // ✅ LOADING STATE
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -342,7 +320,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         );
     }
 
-    // ✅ ERROR STATE
     if (hasError && !loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -362,8 +339,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
-
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1 }} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
                 <View style={eventStyles.section}>
                     <Text style={eventStyles.textCenter}>{t('event:official.title')}</Text>
                 </View>
@@ -451,7 +427,6 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                     />
                 </View>
             </View>
-
         </SafeAreaView>
     );
 };

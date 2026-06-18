@@ -177,6 +177,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
           data={results}
           keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
           showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
           contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.md, paddingBottom: 10, paddingTop: spacing.md }}
           renderItem={renderItem}
         />

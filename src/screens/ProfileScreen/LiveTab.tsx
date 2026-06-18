@@ -85,6 +85,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
             keyExtractor={keyExtractor}
             renderItem={renderItem}
             onEndReached={handleLoadMore}
+            nestedScrollEnabled={true}
             onEndReachedThreshold={0.5}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{

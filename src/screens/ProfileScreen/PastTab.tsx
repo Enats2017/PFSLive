@@ -14,11 +14,14 @@ interface PastTabProps {
     onLoadMore: () => void;
     loadingMore: boolean;
     hasMore: boolean;
-    profile?: AthleteProfile
+    profile?: AthleteProfile;
+    
 }
 
 const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasMore, profile }) => {
     const { t } = useTranslation(['profile']);
+
+    
 
     const handleLoadMore = useCallback(() => {
         if (API_CONFIG.DEBUG) {
@@ -84,6 +87,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
             renderItem={renderItem}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
+            nestedScrollEnabled={true}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
                 paddingHorizontal: spacing.md,

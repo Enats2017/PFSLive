@@ -5,9 +5,8 @@ import {
     TouchableOpacity,
     FlatList,
     ActivityIndicator,
-    Dimensions,
     StatusBar,
-    useWindowDimensions,
+    ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,13 +25,11 @@ import { useFollowManager } from '../../hooks/useFollowManager';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
-
-
+import { useDimensions } from '../../hooks/useDimensions';
 
 type Tab = 'Past' | 'Live';
 const TABS: Tab[] = ['Past', 'Live'];
 const LIVE_INDEX = TABS.indexOf('Live');
-
 
 interface PaginationState {
     live: { page: number; total_pages: number };
@@ -46,10 +43,12 @@ const INITIAL_PAGINATION: PaginationState = {
 
 const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const { t } = useTranslation(['profile', 'common', 'follower']);
-    const { width } = useWindowDimensions();
+    const { width: windowWidth, height } = useDimensions(); 
+    const [containerWidth, setContainerWidth] = useState(0);
+    const TAB_CONTENT_HEIGHT = height * 0.6;
+    const width = containerWidth || windowWidth;
     const flatListRef = useRef<FlatList>(null);
 
-    // ✅ USE FOLLOW MANAGER (CUSTOMER-ONLY MODE)
     const {
         isFollowed,
         isLoading,
@@ -156,7 +155,6 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         }
     }, [targetId, t]);
 
-    // ✅ FETCH INITIAL DATA
     useFocusEffect(
         useCallback(() => {
             if (!targetId || targetId === 0) {
@@ -171,12 +169,9 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             }
 
             const fetchData = async () => {
-                // ✅ Refresh follow state first
                 await refreshFollowedUsers();
-
-                // ✅ REPLACE WITH
                 if (fromEdit && !fromEditFetched.current) {
-                    fromEditFetched.current = true;                 // gate: runs exactly once
+                    fromEditFetched.current = true;                 
                     if (API_CONFIG.DEBUG) {
                         console.log('🔄 Coming from edit screen - busting cache');
                     }
@@ -194,16 +189,13 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                     }, 50);
                 }
             };
-
             fetchData();
-
             return () => {
                 isFetching.current = false;
             };
         }, [fetchProfile, fromEdit, targetId, refreshFollowedUsers])
     );
 
-    // ✅ LOAD MORE LIVE
     const loadMoreLive = useCallback(async () => {
         if (!targetId || targetId === 0) return;
         if (loadingMoreLive || pagination.live.page >= pagination.live.total_pages) return;
@@ -249,7 +241,6 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         }
     }, [loadingMoreLive, pagination.live.page, pagination.live.total_pages, targetId]);
 
-    // ✅ LOAD MORE PAST
     const loadMorePast = useCallback(async () => {
         if (!targetId || targetId === 0) return;
         if (loadingMorePast || pagination.past.page >= pagination.past.total_pages) return;
@@ -295,23 +286,21 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         }
     }, [loadingMorePast, pagination.past.page, pagination.past.total_pages, targetId]);
 
-    // ✅ TAB HANDLERS
-    // ✅ REPLACE WITH
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
         setActiveTab(tab);
-        activeTabRef.current = tab;                     // ✅ keep ref in sync
+        activeTabRef.current = tab;                    
         flatListRef.current?.scrollToIndex({ index, animated: true });
     }, []);
 
-   const handleSwipe = useCallback((e: any) => {
-    const index = Math.round(e.nativeEvent.contentOffset.x / width);
-    const swipedTab = TABS[index];
-    if (swipedTab && swipedTab !== activeTabRef.current) {
-        activeTabRef.current = swipedTab;  // ✅ sync ref
-        setActiveTab(swipedTab);
-    }
-}, [width]);
+    const handleSwipe = useCallback((e: any) => {
+        const index = Math.round(e.nativeEvent.contentOffset.x / width);
+        const swipedTab = TABS[index];
+        if (swipedTab && swipedTab !== activeTabRef.current) {
+            activeTabRef.current = swipedTab;  
+            setActiveTab(swipedTab);
+        }
+    }, [width]);
 
     const renderTabContent = useCallback(({ item }: { item: Tab }) => (
         <View style={{ width }}>
@@ -341,7 +330,6 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         pagination, profile,
     ]);
 
-    // ✅ LOADING STATE
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
@@ -354,8 +342,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         );
     }
 
-    // ✅ ERROR STATE
-     if (hasError && !loading) {
+    if (hasError && !loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
@@ -370,87 +357,91 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         );
     }
 
-
     return (
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
 
-            {/* ✅ PROFILE CARD - CUSTOMER-ONLY FOLLOW */}
-            <ProfileCard
-                profile={profile}
-                customer_app_id={targetId}
-                isFollowed={isFollowed(targetId)}
-                isFollowLoading={isLoading(targetId)}
-                password_protected={profile?.password_protected ?? 0}  // ✅ add
-                onToggleFollow={() => {
-                    handleFollowPress({
-                        customer_app_id: targetId,
-                        password_protected: profile?.password_protected ?? 0,  // ✅ add
-                        bib_number: null,  // ✅ no bib on profile screen
-                    });
+            <ScrollView                
+                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{
+                    flexGrow: 1,
                 }}
-            />
+            >
+                <ProfileCard
+                    profile={profile}
+                    customer_app_id={targetId}
+                    isFollowed={isFollowed(targetId)}
+                    isFollowLoading={isLoading(targetId)}
+                    password_protected={profile?.password_protected ?? 0}  
+                    onToggleFollow={() => {
+                        handleFollowPress({
+                            customer_app_id: targetId,
+                            password_protected: profile?.password_protected ?? 0,  
+                            bib_number: null,  
+                        });
+                    }}
+                />
 
-            {/* TAB BAR */}
-            <View style={detailsStyles.tabBar}>
-                {TABS.map(tab => {
-                    const isActive = activeTab === tab;
-                    return (
-                        <TouchableOpacity
-                            key={tab}
-                            style={detailsStyles.tabItem}
-                            onPress={() => handleTabPress(tab)}
-                            activeOpacity={0.7}
-                        >
-                            <Text style={[commonStyles.subtitle, isActive && detailsStyles.activeTabText]}>
-                                {t(`profile:tab.${tab}`)}
-                            </Text>
-                            {isActive && (
-                                <LinearGradient
-                                    colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={detailsStyles.underline}
-                                />
-                            )}
-                        </TouchableOpacity>
-                    );
-                })}
-            </View>
-
-            {/* TAB CONTENT */}
-            <View style={{ flex:1 }}>
-                <FlatList
-                    ref={flatListRef}
-                    data={TABS}
-                    horizontal
-                    pagingEnabled
-                    onLayout={() => {   // ✅ ADD — re-syncs after rotation
-            const index = TABS.indexOf(activeTabRef.current);
-            flatListRef.current?.scrollToIndex({ index, animated: false });
-        }}
-                    showsHorizontalScrollIndicator={false}
-                    keyExtractor={item => item}
-                    onMomentumScrollEnd={handleSwipe}
-                    initialScrollIndex={LIVE_INDEX}
-                    scrollEnabled={true}
-                    getItemLayout={(_, index) => ({
-                        length: width,
-                        offset: width * index,
-                        index,
+                <View style={detailsStyles.tabBar}>
+                    {TABS.map(tab => {
+                        const isActive = activeTab === tab;
+                        return (
+                            <TouchableOpacity
+                                key={tab}
+                                style={detailsStyles.tabItem}
+                                onPress={() => handleTabPress(tab)}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={[commonStyles.subtitle, isActive && detailsStyles.activeTabText]}>
+                                    {t(`profile:tab.${tab}`)}
+                                </Text>
+                                {isActive && (
+                                    <LinearGradient
+                                        colors={['#e8341a', '#f4a100', '#1a73e8']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                        style={detailsStyles.underline}
+                                    />
+                                )}
+                            </TouchableOpacity>
+                        );
                     })}
-                    renderItem={renderTabContent}
-                />
+                </View>
 
-                <TrackingPasswordModal
-                    visible={passwordModalVisible}
-                    isVerifying={isVerifying}
-                    passwordError={passwordError}
-                    onSubmit={handlePasswordSubmit}
-                    onClose={handlePasswordModalClose}
-                />
-            </View>
+                <View style={{ height: TAB_CONTENT_HEIGHT }}>
+                    <FlatList
+                        ref={flatListRef}
+                        data={TABS}
+                        horizontal
+                        pagingEnabled
+                        onLayout={() => {
+                            const index = TABS.indexOf(activeTabRef.current);
+                            flatListRef.current?.scrollToIndex({ index, animated: false });
+                        }}
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={item => item}
+                        onMomentumScrollEnd={handleSwipe}
+                        initialScrollIndex={LIVE_INDEX}
+                        scrollEnabled={true}
+                        getItemLayout={(_, index) => ({
+                            length: width,
+                            offset: width * index,
+                            index,
+                        })}
+                        renderItem={renderTabContent}
+                    />
+
+                    <TrackingPasswordModal
+                        visible={passwordModalVisible}
+                        isVerifying={isVerifying}
+                        passwordError={passwordError}
+                        onSubmit={handlePasswordSubmit}
+                        onClose={handlePasswordModalClose}
+                    />
+                </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };

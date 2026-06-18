@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -18,13 +18,14 @@ import PastTab from './PastTab';
 import { AthleteEvent, AthleteProfile, eventService } from '../../services/athleteProfileService';
 import { API_CONFIG } from '../../constants/config';
 import { ownProfile } from '../../styles/ownProfile.styles';
+import { useDimensions } from '../../hooks/useDimensions';
 
 const { width, height } = Dimensions.get('window');
 
 type Tab = 'Past' | 'Live';
 const TABS: Tab[] = ['Past', 'Live'];
 const LIVE_INDEX = TABS.indexOf('Live');
-const TAB_CONTENT_HEIGHT = height * 0.5;
+const TAB_CONTENT_HEIGHT = height * 0.56;
 
 interface PaginationState {
     live: { page: number; total_pages: number };
@@ -55,9 +56,20 @@ const EventsContent: React.FC<EventsContentProps> = ({
     pagination,
 }) => {
     const { t } = useTranslation(['profile','ownProfile']);
+    const { width: windowWidth } = useDimensions(); // ← tablet/iPad fallback
+    const [containerWidth, setContainerWidth] = useState(0);
+    const width = containerWidth || windowWidth;
     const flatListRef = useRef<FlatList>(null);
     const activeTabRef = useRef<Tab>('Live');
     const [activeTab, setActiveTab] = React.useState<Tab>('Live');
+
+    useEffect(() => {
+            const index = TABS.indexOf(activeTabRef.current);
+            const timer = setTimeout(() => {
+                flatListRef.current?.scrollToIndex({ index, animated: false });
+            }, 80);
+            return () => clearTimeout(timer);
+        }, [width]);
 
     const handleTabPress = useCallback((tab: Tab) => {
         const index = TABS.indexOf(tab);
@@ -72,7 +84,7 @@ const EventsContent: React.FC<EventsContentProps> = ({
             setActiveTab(TABS[index]);
             activeTabRef.current = TABS[index];
         }
-    }, []);
+    }, [width]); 
 
     const renderTabContent = useCallback(({ item }: { item: Tab }) => (
         <View style={{ width }}>
@@ -95,6 +107,7 @@ const EventsContent: React.FC<EventsContentProps> = ({
             )}
         </View>
     ), [
+        width,
         liveEvents, pastEvents,
         loadMoreLive, loadMorePast,
         loadingMoreLive, loadingMorePast,
@@ -102,8 +115,7 @@ const EventsContent: React.FC<EventsContentProps> = ({
     ]);
 
     return (
-        <View style={{ flex: 1 }}>
-
+        <View style={{ flex: 1 }} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
             <TouchableOpacity style={ownProfile.backRow} onPress={onBack} activeOpacity={0.7}>
                 <Ionicons name="arrow-back" size={22} color={colors.gray900} />
                 <Text style={ownProfile.backLabel}>{t('ownProfile:backbtn.events')}</Text>
@@ -142,6 +154,9 @@ const EventsContent: React.FC<EventsContentProps> = ({
                     data={TABS}
                     horizontal
                     pagingEnabled
+                    onLayout={() => { const index = TABS.indexOf(activeTabRef.current); 
+                        flatListRef.current?.scrollToIndex({ index, animated: false });
+                    }}
                     showsHorizontalScrollIndicator={false}
                     keyExtractor={item => item}
                     onMomentumScrollEnd={handleSwipe}
