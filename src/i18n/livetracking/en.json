@@ -30,5 +30,7 @@
     "estimatedNotice": "Approximate position — weak signal. Updates automatically when the connection returns.",
     "estimatedBadge": "Approximate",
     "start": "Start",
-    "finish": "Finish"
+    "finish": "Finish",
+    "readMore": "Read more",
+    "readLess": "Read less"
 }

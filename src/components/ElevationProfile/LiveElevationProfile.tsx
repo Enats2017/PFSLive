@@ -170,6 +170,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                 station = {
                     id: `checkpoint-${idx}`,
                     name: data.checkpoint.name,
+                    description: data.checkpoint.description,
                     lat: data.checkpoint.latitude,
                     lon: data.checkpoint.longitude,
                     ele: data.checkpoint.elevation,
@@ -181,6 +182,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                 station = {
                     id: `aid-${idx}`,
                     name: data.station.name,
+                    description: data.checkpoint.description,
                     lat: data.station.lat,
                     lon: data.station.lon,
                     ele: data.station.ele,

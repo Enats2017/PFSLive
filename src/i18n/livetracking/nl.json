@@ -30,5 +30,7 @@
     "estimatedNotice": "Geschatte positie — zwak signaal. Wordt automatisch bijgewerkt zodra de verbinding terug is.",
     "estimatedBadge": "Geschat",
     "start": "Start",
-    "finish": "Finish"    
+    "finish": "Finish",
+    "readMore": "Meer lezen",
+    "readLess": "Minder lezen"    
 }
