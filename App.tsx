@@ -93,6 +93,13 @@ export default function App() {
   // ✅ Handle deep link from email verification — livio://registration-confirmed
   useEffect(() => {
     const handleDeepLink = ({ url }: { url: string }) => {
+      // ✅ iOS document open: WhatsApp/Files deliver a file:// URL to the app Inbox
+      if (url && /\.gpx(\?|$)/i.test(url)) {
+        const fileName = decodeURIComponent(url.split('/').pop()?.split('?')[0] ?? 'shared.gpx');
+        navigateToPersonalEvent(url, fileName);
+        return;
+      }
+      
       if (url?.startsWith('livio://registration-confirmed')) {
         if (API_CONFIG.DEBUG) console.log('✅ Deep link: registration confirmed', url);
           // Parse query params from deep link URL
