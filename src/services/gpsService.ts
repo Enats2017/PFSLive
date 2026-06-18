@@ -494,6 +494,7 @@ const _processLocationForSendInternal = async (
               fastestLocationUpdateInterval: 5000,
             },
           });
+          try { await BackgroundGeolocation.changePace(true); } catch {}
         } catch { /* silent */ }
         await addLog('🔄', `Finish approach reset — now ${distToFinish.toFixed(2)}km from finish${tag}`);
       }
