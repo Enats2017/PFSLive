@@ -9,7 +9,8 @@ import {
     View,
     Keyboard,
     KeyboardEvent,
-    ActivityIndicator,
+    useWindowDimensions,
+    FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -24,6 +25,7 @@ import SuggestionDropdown from '../../components/SuggestionDropdown';
 import useSearchSuggestions from '../../hooks/useSearchSuggestions';
 import { eventService, ParticipantItem } from '../../services/followerEvent';
 import AthleteSuggestionDropdown from '../../components/AthleteSuggestionDropdown';
+import { useDimensions } from '../../hooks/useDimensions';
 
 const Divider = () => (
     <View style={follow.dividerRow}>
@@ -69,6 +71,7 @@ const FollowerScreen = () => {
                 useNativeDriver: true,
             }).start();
         };
+
         const showSub = Keyboard.addListener(showEvent, onShow);
         const hideSub = Keyboard.addListener(hideEvent, onHide);
         return () => {
@@ -150,36 +153,30 @@ const FollowerScreen = () => {
         setAthleteSuggestions([]);
         setAthleteQuery('');
         navigation.navigate('ProfileScreen', {
-
             customer_app_id: item.customer_app_id,
         });
     }, [navigation]);
 
-    return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader />
-
-            <Animated.View style={{ flex: 1, transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }] }} >
+    const renderContent = () => (
+        <>
+            <View style={{ zIndex: 30, elevation: 30 }}>
                 <View style={follow.yellowHeader}>
                     <Feather name="radio" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
                     <Text style={commonStyles.title}>{t('follow:upcomingrace')}</Text>
                 </View>
-                <View style={follow.section} >
-                    <View style={{ zIndex: 20 }}>
-                        <SearchInput
-                            placeholder={t('follow:search.upcomgsearch')}
-                            value={upcoming.query}
-                            onChangeText={upcoming.handleSearch}
-                            icon="search"
-                        />
-                        <SuggestionDropdown
-                            suggestions={upcoming.suggestions}
-                            loading={upcoming.loading}
-                            visible={upcoming.dropdownVisible}
-                            onSelect={handleUpcomingSelect}
-                        />
-                    </View>
+                <View style={follow.section}>
+                    <SearchInput
+                        placeholder={t('follow:search.upcomgsearch')}
+                        value={upcoming.query}
+                        onChangeText={upcoming.handleSearch}
+                        icon="search"
+                    />
+                    <SuggestionDropdown
+                        suggestions={upcoming.suggestions}
+                        loading={upcoming.loading}
+                        visible={upcoming.dropdownVisible}
+                        onSelect={handleUpcomingSelect}
+                    />
                     <TouchableOpacity
                         style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.md }]}
                         onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Live' })}
@@ -189,26 +186,26 @@ const FollowerScreen = () => {
                         <Text style={commonStyles.primaryButtonText}>{t('follow:button.upcoming')}</Text>
                     </TouchableOpacity>
                 </View>
-                <Divider />
+            </View>
+            <Divider />
+            <View style={{ zIndex: 20, elevation: 20 }}>
                 <View style={follow.yellowHeader}>
                     <Feather name="radio" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
                     <Text style={commonStyles.title}>{t('follow:pastrace')}</Text>
                 </View>
                 <View style={follow.section}>
-                    <View style={{ zIndex: 10 }}>
-                        <SearchInput
-                            placeholder={t('follow:search.upcomgsearch')}
-                            value={past.query}
-                            onChangeText={past.handleSearch}
-                            icon="search"
-                        />
-                        <SuggestionDropdown
-                            suggestions={past.suggestions}
-                            loading={past.loading}
-                            visible={past.dropdownVisible}
-                            onSelect={handlePastSelect}
-                        />
-                    </View>
+                    <SearchInput
+                        placeholder={t('follow:search.upcomgsearch')}
+                        value={past.query}
+                        onChangeText={past.handleSearch}
+                        icon="search"
+                    />
+                    <SuggestionDropdown
+                        suggestions={past.suggestions}
+                        loading={past.loading}
+                        visible={past.dropdownVisible}
+                        onSelect={handlePastSelect}
+                    />
                     <TouchableOpacity
                         style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.md }]}
                         onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Past' })}
@@ -218,55 +215,78 @@ const FollowerScreen = () => {
                         <Text style={commonStyles.primaryButtonText}>{t('follow:button.past')}</Text>
                     </TouchableOpacity>
                 </View>
-                <Divider />
+            </View>
+            <Divider />
+            <View style={{ zIndex: 10, elevation: 10 }}>
                 <View style={follow.yellowHeader}>
                     <Feather name="plus-circle" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
                     <Text style={commonStyles.title}>{t('follow:athlete')}</Text>
                 </View>
                 <View style={follow.section}>
-                    <View style={{ zIndex: 5 }}>
-                        <SearchInput
-                            placeholder={t('follow:search.athletesearch')}
-                            value={athleteQuery}
-                            onChangeText={handleAthleteSearch}
-                            icon="search"
-                            onFocus={() => { participantSearchFocused.current = true; }}
-                            onBlur={() => { participantSearchFocused.current = false; }}
-                        />
-                        <AthleteSuggestionDropdown
-                            suggestions={athleteSuggestions}
-                            loading={athleteLoading}
-                            loadingMore={athleteLoadingMore}
-                            visible={athleteDropdownVisible}
-                            onSelect={handleAthleteSelect}
-                            onLoadMore={handleAthleteLoadMore}
-                            hasMore={athletePage < athleteTotalPages}
-                        />
-
-                        <TouchableOpacity
-                            style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.xl }]}
-                            onPress={() => navigation.navigate('AthleteSearchScreen', {})}
-                            activeOpacity={0.8}
-                        >
-                            <Feather name="search" size={15} color="#fff" style={{ marginRight: 8 }} />
-                            <Text style={commonStyles.primaryButtonText}>
-                                {t('follow:button.athlete')}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-                <View style={follow.section}>
+                    <SearchInput
+                        placeholder={t('follow:search.athletesearch')}
+                        value={athleteQuery}
+                        onChangeText={handleAthleteSearch}
+                        icon="search"
+                        onFocus={() => { participantSearchFocused.current = true; }}
+                        onBlur={() => { participantSearchFocused.current = false; }}
+                    />
+                    <AthleteSuggestionDropdown
+                        suggestions={athleteSuggestions}
+                        loading={athleteLoading}
+                        loadingMore={athleteLoadingMore}
+                        visible={athleteDropdownVisible}
+                        onSelect={handleAthleteSelect}
+                        onLoadMore={handleAthleteLoadMore}
+                        hasMore={athletePage < athleteTotalPages}
+                    />
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.xl, gap: 8 }]}
-                        onPress={() => navigation.navigate('UserFavouriteList')}
+                        style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.xl }]}
+                        onPress={() => navigation.navigate('AthleteSearchScreen', {})}
                         activeOpacity={0.8}
                     >
-                        <MaterialIcons name="favorite-outline" size={18} color={colors.white} />
+                        <Feather name="search" size={15} color="#fff" style={{ marginRight: 8 }} />
                         <Text style={commonStyles.primaryButtonText}>
-                            {t('follow:button.favourite')}
+                            {t('follow:button.athlete')}
                         </Text>
                     </TouchableOpacity>
                 </View>
+            </View>
+            <View style={[follow.section, { zIndex: 1, elevation: 1 }]}>
+                <TouchableOpacity
+                    style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.xl, gap: 8 }]}
+                    onPress={() => navigation.navigate('UserFavouriteList')}
+                    activeOpacity={0.8}
+                >
+                    <MaterialIcons name="favorite-outline" size={18} color={colors.white} />
+                    <Text style={commonStyles.primaryButtonText}>
+                        {t('follow:button.favourite')}
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        </>
+    );
+
+    return (
+        <SafeAreaView style={commonStyles.container} edges={['top']}>
+            <StatusBar barStyle="dark-content" />
+            <AppHeader />
+
+            <Animated.View
+                style={{
+                    flex: 1,
+                    transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }],
+                }}
+            >
+                {/* ✅ FlatList as root — no more nested VirtualizedList warning */}
+                <FlatList
+                    data={[]}                          // empty, content is in header
+                    renderItem={null}
+                    ListHeaderComponent={renderContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: spacing.xl }}
+                />
             </Animated.View>
         </SafeAreaView>
     );

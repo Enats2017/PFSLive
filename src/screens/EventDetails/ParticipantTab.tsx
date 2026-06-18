@@ -25,7 +25,6 @@ interface ParticipantTabProps {
 const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
   const { t } = useTranslation(['details', 'follower']);
 
-  // ✅ PASS product_app_id TO HOOK
   const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
   const {
     isFollowed,
@@ -122,7 +121,6 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     [productId, t]
   );
 
-  // ✅ INITIAL LOAD
   useFocusEffect(
     useCallback(() => {
       refreshFollowedUsers();
@@ -168,7 +166,6 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     fetchParticipants(page + 1, searchText);
   }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
-  // ✅ RENDER WITH DUAL FOLLOW SYSTEM
   const renderParticipant = useCallback(
     ({ item }: { item: Participant }) => {
       // Use bib_number as fallback if bib doesn't exist
@@ -283,6 +280,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
           }
           renderItem={renderParticipant}
           showsVerticalScrollIndicator={false}
+           nestedScrollEnabled={true}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           contentContainerStyle={{

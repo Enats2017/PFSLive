@@ -6,7 +6,7 @@ import {
   FlatList,
   StatusBar,
   Image,
-  // ✅ REMOVE Dimensions
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,24 +18,22 @@ import DistanceTab from './DistanceTab';
 import ParticipantTab from '../EventDetails/ParticipantTab';
 import type { followerDetailspops } from '../../types/navigation';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
-import { useDimensions } from '../../hooks/useDimensions';  // ✅ your custom hook
-
-// ✅ REMOVE: const { width } = Dimensions.get('window');
+import { useDimensions } from '../../hooks/useDimensions';  
 
 type Tab = 'Participant' | 'Distance';
 const TABS: Tab[] = ['Participant', 'Distance'];
 
 const FollowerDetails = ({ route }: followerDetailspops) => {
   const { t } = useTranslation(['details']);
-  const { width } = useDimensions();  // ✅ reactive
-
+  const { width: windowWidth, height } = useDimensions(); // ← tablet/iPad fallback
+  const [containerWidth, setContainerWidth] = useState(0);
+  const width = containerWidth || windowWidth;  
+  const TAB_CONTENT_HEIGHT = height * 0.7;
   const [activeTab, setActiveTab] = useState<Tab>('Distance');
-  const activeTabRef = useRef<Tab>('Distance');  // ✅ stale closure fix
+  const activeTabRef = useRef<Tab>('Distance');  
   const flatListRef = useRef<FlatList>(null);
-
   const { product_app_id, event_name, sourceTab, event_image } = route.params;
 
-  // ✅ re-sync scroll on rotation
   useEffect(() => {
     const index = TABS.indexOf(activeTabRef.current);
     const timer = setTimeout(() => {
@@ -62,7 +60,6 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
     }
   }, [product_app_id, sourceTab, event_name, t]);
 
-  // ✅ sync both state and ref
   const handleTabPress = useCallback((tab: Tab) => {
     const index = TABS.indexOf(tab);
     activeTabRef.current = tab;
@@ -70,7 +67,6 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
     flatListRef.current?.scrollToIndex({ index, animated: true });
   }, []);
 
-  // ✅ width in deps, ref for comparison
   const handleSwipe = useCallback((e: any) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / width);
     const swipedTab = TABS[index];
@@ -84,62 +80,69 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
     <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={true} />
+      <View style={{ flex: 1 }} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
+      <ScrollView
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+        
+      >
+        <View style={detailsStyles.section}>
+          <Text style={commonStyles.title}>{event_name}</Text>
+        </View>
 
-      <View style={detailsStyles.section}>
-        <Text style={commonStyles.title}>{event_name}</Text>
-      </View>
+        {event_image ? (
+          <Image
+            source={{ uri: event_image }}
+            style={{ width: '100%', aspectRatio: 2.3, resizeMode: 'cover', marginBottom: spacing.sm }}
+          />
+        ) : null}
 
-      {event_image ? (
-        <Image
-          source={{ uri: event_image }}
-          style={{ width: '100%', aspectRatio: 2.3, resizeMode: 'cover', marginBottom: spacing.sm }}
-        />
-      ) : null}
+        <View style={detailsStyles.tabBar}>
+          {TABS.map((tab) => (
+            <TouchableOpacity key={tab} style={detailsStyles.tabItem} onPress={() => handleTabPress(tab)}>
+              <Text style={[commonStyles.subtitle, activeTab === tab && detailsStyles.activeTabText]}>
+                {t(`details:details.${tab}`)}
+              </Text>
+              {activeTab === tab && (
+                <LinearGradient
+                  colors={['#e8341a', '#f4a100', '#1a73e8']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={detailsStyles.underline}
+                />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      {/* TAB BAR */}
-      <View style={detailsStyles.tabBar}>
-        {TABS.map((tab) => (
-          <TouchableOpacity key={tab} style={detailsStyles.tabItem} onPress={() => handleTabPress(tab)}>
-            <Text style={[commonStyles.subtitle, activeTab === tab && detailsStyles.activeTabText]}>
-              {t(`details:details.${tab}`)}
-            </Text>
-            {activeTab === tab && (
-              <LinearGradient
-                colors={['#e8341a', '#f4a100', '#1a73e8']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={detailsStyles.underline}
-              />
+        <View style={{ height: TAB_CONTENT_HEIGHT }}>
+          <FlatList
+            ref={flatListRef}
+            data={TABS}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item}
+            onMomentumScrollEnd={handleSwipe}
+            initialScrollIndex={TABS.indexOf('Distance')}
+            onLayout={() => {  
+              const index = TABS.indexOf(activeTabRef.current);
+              flatListRef.current?.scrollToIndex({ index, animated: false });
+            }}
+            getItemLayout={(_, index) => ({
+              length: width,          
+              offset: width * index,  
+              index,
+            })}
+            renderItem={({ item }) => (
+              <View style={{ width, flex: 1 }}>{renderContent(item)}</View>  // ✅ reactive
             )}
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* TAB CONTENT */}
-      <View style={{ flex: 1 }}>
-        <FlatList
-          ref={flatListRef}
-          data={TABS}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item}
-          onMomentumScrollEnd={handleSwipe}
-          initialScrollIndex={TABS.indexOf('Distance')}
-          onLayout={() => {  // ✅ re-sync after rotation
-            const index = TABS.indexOf(activeTabRef.current);
-            flatListRef.current?.scrollToIndex({ index, animated: false });
-          }}
-          getItemLayout={(_, index) => ({
-            length: width,          // ✅ reactive
-            offset: width * index,  // ✅ reactive
-            index,
-          })}
-          renderItem={({ item }) => (
-            <View style={{ width, flex: 1 }}>{renderContent(item)}</View>  // ✅ reactive
-          )}
-          scrollEnabled
-        />
+            scrollEnabled
+          />
+        </View>
+      </ScrollView>
       </View>
 
       <BottomNavigationFollower

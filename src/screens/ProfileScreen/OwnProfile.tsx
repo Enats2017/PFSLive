@@ -320,45 +320,53 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
             <TouchableOpacity style={{ paddingHorizontal: spacing.xl, alignSelf: 'flex-start', marginTop: spacing.md, }} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' as never }], })}>
                 <Ionicons name="arrow-back" size={28} color={colors.primaryDark} />
             </TouchableOpacity>
-            <View style={ownProfile.scrollContent}>
-                <View style={ownProfile.header} />
-                <View style={ownProfile.profileRow}>
-                    <View style={ownProfile.avatarWrapper}>
-                        {profile?.profile_picture ? (
-                            <Image
-                                source={{ uri: profile.profile_picture || undefined }}
-                                style={ownProfile.avatar}
-                            />
-                        ) : (
-                            <View style={[ownProfile.avatar, ownProfile.initialsWrapper]}>
-                                <Text style={ownProfile.initialsText}>
-                                    {`${profile?.firstname?.charAt(0) ?? ''}${profile?.lastname?.charAt(0) ?? ''}`.toUpperCase() || '?'}
-                                </Text>
-                            </View>
-                        )}
-                        <TouchableOpacity style={ownProfile.cameraBadge}
-                            onPress={() => navigation.navigate('EditProfileScreen' as never)} >
-                            <Ionicons name="camera-sharp" size={16} color={colors.gray900} />
-                        </TouchableOpacity>
-                    </View>
-                    <View style={ownProfile.profileInfo}>
-                        <Text style={commonStyles.title}>{fullName || '—'}</Text>
-                        <View style={ownProfile.statsRow}>
-                            <TouchableOpacity style={ownProfile.statItem} onPress={() => navigation.navigate('FollowersList' as never)}>
-                                <Text style={ownProfile.statNumber}>{profile?.followers_count}</Text>
-                                <Text style={ownProfile.statLabel}>{t('ownProfile:profile.followers')}</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={ownProfile.statItem} onPress={() => navigation.navigate('UserFavouriteList' as never)}>
-                                <Text style={ownProfile.statNumber}>{profile?.following_count}</Text>
-                                <Text style={ownProfile.statLabel}>{t('ownProfile:profile.following')}</Text>
+            <ScrollView
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ flexGrow: 1 }}
+            >
+                <View style={ownProfile.scrollContent}>
+                    <View style={ownProfile.header} />
+                    <View style={ownProfile.profileRow}>
+                        <View style={ownProfile.avatarWrapper}>
+                            {profile?.profile_picture ? (
+                                <Image
+                                    source={{ uri: profile.profile_picture || undefined }}
+                                    style={ownProfile.avatar}
+                                />
+                            ) : (
+                                <View style={[ownProfile.avatar, ownProfile.initialsWrapper]}>
+                                    <Text style={ownProfile.initialsText}>
+                                        {`${profile?.firstname?.charAt(0) ?? ''}${profile?.lastname?.charAt(0) ?? ''}`.toUpperCase() || '?'}
+                                    </Text>
+                                </View>
+                            )}
+                            <TouchableOpacity style={ownProfile.cameraBadge}
+                                onPress={() => navigation.navigate('EditProfileScreen' as never)} >
+                                <Ionicons name="camera-sharp" size={16} color={colors.gray900} />
                             </TouchableOpacity>
                         </View>
+                        <View style={ownProfile.profileInfo}>
+                            <Text style={commonStyles.title}>{fullName || '—'}</Text>
+                            <View style={ownProfile.statsRow}>
+                                <TouchableOpacity style={ownProfile.statItem} onPress={() => navigation.navigate('FollowersList' as never)}>
+                                    <Text style={ownProfile.statNumber}>{profile?.followers_count}</Text>
+                                    <Text style={ownProfile.statLabel}>{t('ownProfile:profile.followers')}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={ownProfile.statItem} onPress={() => navigation.navigate('UserFavouriteList' as never)}>
+                                    <Text style={ownProfile.statNumber}>{profile?.following_count}</Text>
+                                    <Text style={ownProfile.statLabel}>{t('ownProfile:profile.following')}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={ownProfile.whiteBody}>
+                        {renderContent()}
                     </View>
                 </View>
-                <View style={ownProfile.whiteBody}>
-                    {renderContent()}
-                </View>
-            </View>
+            </ScrollView>
         </SafeAreaView>
     )
 }

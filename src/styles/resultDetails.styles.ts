@@ -46,12 +46,13 @@ export const resultInfoStyles = StyleSheet.create({
     paddingBottom: 6,
   },
   tabItem: {
+     flex: 1,
     paddingHorizontal: 18,
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
     minWidth: width / 3,
-    position: "relative",
+    
   },
   tabTextActive: {
     color: colors.black,
