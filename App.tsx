@@ -2,7 +2,7 @@
 import 'react-native-gesture-handler';
 
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, LogBox, NativeModules, AppState, Linking } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, LogBox, NativeModules, AppState, Linking, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Mapbox from '@rnmapbox/maps';
@@ -93,8 +93,10 @@ export default function App() {
   // ✅ Handle deep link from email verification — livio://registration-confirmed
   useEffect(() => {
     const handleDeepLink = ({ url }: { url: string }) => {
-      // ✅ iOS document open: WhatsApp/Files deliver a file:// URL to the app Inbox
-      if (url && /\.gpx(\?|$)/i.test(url)) {
+      // ✅ iOS document open: WhatsApp/Files deliver a file:// URL to the app Inbox.
+      // Android handles GPX opens via the GpxShare native module (separate effect),
+      // so restrict this to iOS to avoid double-firing navigation.
+      if (Platform.OS === 'ios' && url && /\.gpx(\?|$)/i.test(url)) {
         const fileName = decodeURIComponent(url.split('/').pop()?.split('?')[0] ?? 'shared.gpx');
         navigateToPersonalEvent(url, fileName);
         return;
