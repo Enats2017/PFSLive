@@ -111,8 +111,11 @@ const LOG_FLUSH_INTERVAL_MS = 2000;
 
 // Sample ~3× per send window so the throttle always has a candidate near the
 // target — keeps cadence at the interval (30s/60s/4min/5min) instead of doubling.
-const fixIntervalMs = (sendIntervalSec?: number): number =>
-  Math.max(10000, Math.round((sendIntervalSec ?? 30) / 3) * 1000);
+const fixIntervalMs = (sendIntervalSec?: number): number => {
+  const s = sendIntervalSec ?? 30;
+  const divisor = s <= 90 ? 3 : 2;   // dense for race intervals, easier on long battery-saver ones
+  return Math.max(10000, Math.round(s / divisor) * 1000);
+};
 
 const _flushLogsNow = async (): Promise<void> => {
   if (!_logDirty) return;
