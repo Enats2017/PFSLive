@@ -169,6 +169,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     navigation.navigate('RaceResultScreen', {
                         product_app_id: Number(item.product_app_id),
                         event_name: item.name,
+                        event_image: item.event_image ?? '',
                         sourceTab: 'past',
                     })
                 }
@@ -190,6 +191,8 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         navigation.navigate('RaceResultScreen', {
                             product_app_id: item.product_app_id,
                             event_name: item.name,
+                            event_image: item.event_image ?? '',
+                            sourceTab: 'past',
                         })
                     }
                     activeOpacity={0.8}

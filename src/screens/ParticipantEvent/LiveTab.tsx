@@ -62,6 +62,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     navigation.navigate('EventDetails', {
                         product_app_id: Number(item.product_app_id),
                         event_name: item.name,
+                        event_image: item.event_image ?? '',
                         auto_register_id: null,
                     })
                 }
@@ -83,6 +84,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         navigation.navigate('EventDetails', {
                             product_app_id: item.product_app_id,
                             event_name: item.name,
+                            event_image: item.event_image ?? '',
                             auto_register_id: null,
                         })
                     }

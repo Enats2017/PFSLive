@@ -6,6 +6,7 @@ import {
   FlatList,
   ActivityIndicator,
   StatusBar,
+  Image
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +33,7 @@ import { formatClockTime } from '../../utils/timeFormat';
 interface DistanceTabProps {
   product_app_id: string | number;
   event_name: string;
+  event_image?: string | null;
   auto_register_id?: number | null;
   onRefresh?: () => void;
 }
@@ -39,6 +41,7 @@ interface DistanceTabProps {
 const DistanceTab = ({
   product_app_id,
   event_name,
+  event_image,
   auto_register_id,
   onRefresh,
 }: DistanceTabProps) => {
@@ -249,6 +252,22 @@ const DistanceTab = ({
     setSelectedUndoItem(null);
   }, [selectedUndoItem, handleDelete]);
 
+  const renderListHeader = useCallback(() => (
+  <View>
+    {event_image ? (
+      <Image
+        source={{ uri: event_image }}
+        style={{
+          width: '100%',
+          aspectRatio: 612 / 300,
+          marginBottom: spacing.sm,
+        }}
+        resizeMode="contain"
+      />
+    ) : null}
+  </View>
+), [event_name, event_image]);
+
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isRegistering =
       registerLoading &&
@@ -361,8 +380,10 @@ const DistanceTab = ({
         data={distances}
         keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
         showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 50,  }}
         renderItem={renderItem}
+        ListHeaderComponent={renderListHeader}
       />
 
       <RegistrationModal

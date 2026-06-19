@@ -62,6 +62,7 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                     navigation.navigate('EventDetails', {
                         product_app_id: Number(item.product_app_id),
                         event_name: item.name,
+                        event_image: item.event_image ?? '',
                         auto_register_id: null,
                         
                     })
@@ -85,6 +86,7 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                         navigation.navigate('EventDetails', {
                             product_app_id: item.product_app_id,
                             event_name: item.name,
+                            event_image: item.event_image ?? '',
                             auto_register_id: null,
                         })
                     }

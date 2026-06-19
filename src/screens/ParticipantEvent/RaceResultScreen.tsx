@@ -6,8 +6,9 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   StatusBar,
+  Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
@@ -21,10 +22,18 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { useDimensions } from '../../hooks/useDimensions';
 
 const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }) => {
-  const { product_app_id, event_name } = route.params;
+  const { product_app_id, event_name, event_image } = route.params;
   const { t } = useTranslation(['result', 'details', 'common']);
+  const { width: windowWidth, height } = useDimensions();
+  const insets = useSafeAreaInsets();
+  const [containerWidth, setContainerWidth] = useState(0);
+  const isGestureNav = insets.bottom > 0;
+  const isLandscape = windowWidth > height;
+  const width = containerWidth || windowWidth;
+
 
   const [results, setResults] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,11 +87,24 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
     }, [fetchResults])
   );
 
+  const renderListHeader = useCallback(() => (
+    <View>
 
+      {event_image ? (
+        <Image
+          source={{ uri: event_image }}
+          style={{
+            width: '100%',
+            aspectRatio: 612 / 300,
+          }}
+          resizeMode="contain"
+        />
+      ) : null}
+    </View>
+  ), [event_name, event_image]);
 
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
-
     return (
       <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
         <View style={detailsStyles.distance}>
@@ -114,7 +136,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
                 {item.finished_count} {t('details:finished')}
               </Text>
             </View>
-            
+
           </View>
           <TouchableOpacity
             style={detailsStyles.resultsButton}
@@ -178,7 +200,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   }
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}>
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={false} />
 
@@ -202,6 +224,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             paddingHorizontal: spacing.md,
             paddingBottom: 80,
           }}
+          ListHeaderComponent={renderListHeader}
           renderItem={renderItem}
         />
       )}

@@ -18,6 +18,7 @@ export type RootStackParamList = {
   EventDetails: {
     product_app_id: string | number;
     event_name: string;
+    event_image?: string; 
     auto_register_id: number | null;
   };
   ParticipantResult: {
@@ -34,6 +35,7 @@ export type RootStackParamList = {
   RaceResultScreen: {
     product_app_id: number;
     product_option_value_app_id: number;
+    event_image: string; 
     event_name: string;
   };
   ResultList: {
