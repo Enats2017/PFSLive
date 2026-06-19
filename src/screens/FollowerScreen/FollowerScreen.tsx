@@ -288,7 +288,7 @@ const FollowerScreen = () => {
                     ListHeaderComponent={renderContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: spacing.xl }}
+                    contentContainerStyle={{ paddingBottom: spacing.xxxxl}}
                 />
             </Animated.View>
         </SafeAreaView>
