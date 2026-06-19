@@ -8,7 +8,7 @@ import {
     StatusBar,
     ScrollView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
@@ -44,7 +44,11 @@ const INITIAL_PAGINATION: PaginationState = {
 const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const { t } = useTranslation(['profile', 'common', 'follower']);
     const { width: windowWidth, height } = useDimensions(); 
+    const insets = useSafeAreaInsets();
     const [containerWidth, setContainerWidth] = useState(0);
+    const isLandscape = windowWidth ;
+    const isGestureNav = insets.bottom > 0;
+
     const TAB_CONTENT_HEIGHT = height * 0.6;
     const width = containerWidth || windowWidth;
     const flatListRef = useRef<FlatList>(null);
@@ -358,7 +362,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
 

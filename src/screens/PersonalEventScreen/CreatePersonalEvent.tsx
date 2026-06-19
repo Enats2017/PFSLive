@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets  } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
@@ -29,6 +29,7 @@ import {
 import { API_CONFIG } from '../../constants/config';
 import { usePersonalEventForm } from '../../hooks/usePersonalEventForm';
 import { useFileUpload } from '../../hooks/useFileUpload';
+import { useDimensions } from '../../hooks/useDimensions';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -36,6 +37,10 @@ type RegistrationStatus = 'membership_required' | 'limit_reached' | 'membership_
 
 const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }) => {
   const { t } = useTranslation(['personal', 'common']);
+  const { width } = useDimensions();
+    const insets = useSafeAreaInsets(); 
+    const isGestureNav = insets.bottom > 0;
+    const isLandscape = width 
 
   // ✅ GPX file URI and filename passed from share intent (may be undefined)
   const sharedFileUri = route?.params?.sharedFileUri;
@@ -244,7 +249,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
   ]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={true} />
 

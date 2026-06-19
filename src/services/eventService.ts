@@ -9,6 +9,7 @@ export interface EventItem {
   race_time: string;
   country: string;
   city: string;
+  event_image: string; 
   result_url: string;
   race_result_api_url: string;
 }

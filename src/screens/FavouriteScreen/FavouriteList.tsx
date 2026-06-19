@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { FlatList, ActivityIndicator, View, Text, TouchableOpacity, StatusBar } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -17,6 +17,7 @@ import { favstyle } from '../../styles/favourite.style';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useFollowManager } from '../../hooks/useFollowManager';
+import { useDimensions } from '../../hooks/useDimensions';
 
 const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const {
@@ -27,6 +28,11 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         sourceTab,
         product_option_value_app_id
     } = route.params;
+
+    const { width } = useDimensions();
+    const insets = useSafeAreaInsets(); 
+    const isGestureNav = insets.bottom > 0;
+    const isLandscape = width 
 
     const { t } = useTranslation(['favourite', 'common']);
     const [favourites, setFavourites] = useState<FavouriteItem[]>([]);
@@ -204,7 +210,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
             <AppHeader title={t('favourite:title')} />
 
             <FlatList
@@ -224,7 +230,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
 
             <View style={favstyle.addButtonContainer}>
                 <TouchableOpacity
-                    style={favstyle.addButton}
+                    style={[favstyle.addButton,{right: isLandscape && !isGestureNav ? insets.right : 0,}]}
                     activeOpacity={0.8}
                     onPress={handleAddPress}
                 >

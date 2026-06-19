@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StatusBar, ScrollView, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, Entypo } from '@expo/vector-icons';
@@ -28,6 +28,9 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     const { width: windowWidth } = useDimensions();
     const [containerWidth, setContainerWidth] = useState(0);
     const width = containerWidth || windowWidth;
+    const insets = useSafeAreaInsets();
+    const isGestureNav = insets.bottom > 0;
+    const isLandscape = windowWidth
     const {
         raceStatus,
         product_app_id,
@@ -172,7 +175,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
             <StatusBar barStyle="dark-content" />
             <View
                 style={{ flex: 1 }}

@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
@@ -23,6 +23,7 @@ import { toastSuccess, toastError } from '../../../utils/toast';
 import { useAuthForm } from '../../hooks/useAuthForm';
 import { usePendingRegistration } from '../../hooks/usePendingRegistration';
 import { useAuth } from '../../context/AuthContext';
+import { useDimensions } from '../../hooks/useDimensions';
 
 const INITIAL_FORM_DATA = {
   email: '',
@@ -32,6 +33,10 @@ const INITIAL_FORM_DATA = {
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['login', 'common']);
   const { login } = useAuth(); // ✅ get login() from context
+  const { width } = useDimensions();
+  const insets = useSafeAreaInsets(); 
+  const isGestureNav = insets.bottom > 0;
+  const isLandscape = width 
 
   const { formData, errors, setField, setErrors, clearAllErrors } =
     useAuthForm(INITIAL_FORM_DATA);
@@ -114,7 +119,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   }, [formData, clearAllErrors, setErrors, handleAfterAuth, login, t]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={true} />
 

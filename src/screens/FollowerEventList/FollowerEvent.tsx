@@ -5,15 +5,13 @@ import {
     TouchableOpacity,
     FlatList,
     StatusBar,
-    Dimensions,
     ActivityIndicator,
     Keyboard,
     KeyboardEvent,
     Platform,
     Animated,
-    useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
@@ -35,9 +33,12 @@ const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
 
 const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
     const { t } = useTranslation(['follower', 'common']);
+    const insets = useSafeAreaInsets();
     const { width: windowWidth } = useDimensions();
     const [containerWidth, setContainerWidth] = useState(0);
     const width = containerWidth || windowWidth;
+    const isLandscape = windowWidth ;
+    const isGestureNav = insets.bottom > 0;
     const initialTab = (route.params?.initialTab) as Tab;
     const [activeTab, setActiveTab] = useState(initialTab);
     const [loading, setLoading] = useState(true);
@@ -358,7 +359,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
             <Animated.View

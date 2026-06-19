@@ -7,7 +7,7 @@ import {
     StatusBar,
     RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
@@ -25,9 +25,14 @@ import ResultCardLive from './ResultCardLive';
 import ResultCardBeforeRace from './ResultCardBeforeRace';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
+import { useDimensions } from '../../hooks/useDimensions';
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
+      const { width } = useDimensions();
+    const insets = useSafeAreaInsets(); 
+    const isGestureNav = insets.bottom > 0;
+    const isLandscape = width 
     const {
         product_app_id,
         product_option_value_app_id,
@@ -161,10 +166,9 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     );
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
             <StatusBar barStyle="dark-content" />
 
-            {/* ✅ currentPovId — the resolved selected distance id, not the raw route param */}
             <AppHeader
                 showLogo={true}
                 showSearch={true}

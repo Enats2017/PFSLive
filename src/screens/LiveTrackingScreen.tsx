@@ -24,6 +24,7 @@ import ErrorScreen from '../components/ErrorScreen';
 import { useScreenError } from '../hooks/useApiError';
 import { tokenService } from '../services/tokenService';
 import * as Location from 'expo-location';
+import { useDimensions } from '../hooks/useDimensions';
 
 const safeParseFloat = (value: any): number => {
     if (value === null || value === undefined) return 0;
@@ -34,8 +35,10 @@ const safeParseFloat = (value: any): number => {
 const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigation }) => {
     const { t } = useTranslation(['livetracking', 'common']);
     const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab, event_source, selectedDistanceLabel } = route.params;
-
+    const { width, height } = useDimensions(); // make sure height is destructured
+     const isLandscape = width > height; 
     const insets = useSafeAreaInsets();
+    const isGestureNav = insets.bottom > 0;
     const profileBottom = insets.bottom;
     const collapseBtnBottom = profileBottom + 240;
     const isCustomEvent = event_source === 'custom';
@@ -517,9 +520,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         );
     }
 
-
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader title={event_name} showLogo={true} />
             {showDistanceDropdown && selectedDistance && (
@@ -542,15 +544,15 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     followerLocation={followerLocation}
                 />
             </View>
-
+ 
             {showElevationProfile && !profileCollapsed && (
                 <View
                     style={[
                     liveTrackingStyles.chartContainer,
                     {
                         position: 'absolute',
-                        left: 0,
-                        right: 0,
+                        left: isLandscape && !isGestureNav ? insets.left : 0,
+                        right: isLandscape && !isGestureNav ? insets.right : 0,
                         bottom: profileBottom,   // sit above the bottom nav; tweak to taste
                         backgroundColor: 'transparent',
                         zIndex: 5,
@@ -577,7 +579,10 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 <TouchableOpacity
                     style={[
                         liveTrackingStyles.collapseBtn,
-                        { bottom: collapseBtnBottom, zIndex: 10, elevation: 10 },   // follow the bottom:0 profile + sit above the overlay
+                        { 
+                            bottom: collapseBtnBottom,                              
+                            right: isLandscape && !isGestureNav ? insets.right : 0,
+                            zIndex: 10, elevation: 10 },   // follow the bottom:0 profile + sit above the overlay
                     ]}
                     onPress={() => setProfileCollapsed(!profileCollapsed)}
                 >

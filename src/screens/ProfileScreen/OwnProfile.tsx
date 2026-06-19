@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, Image, StatusBar, Dimensions, TouchableOpacity, ScrollView } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, commonStyles, spacing } from '../../styles/common.styles'
 import { Ionicons, FontAwesome5, FontAwesome6 } from '@expo/vector-icons'
 import { eventService, AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
@@ -13,6 +13,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ownProfile } from '../../styles/ownProfile.styles';
 import EventsContent from './EventsContent';
 import TrainingContent from './TrainingContent';
+import { useDimensions } from '../../hooks/useDimensions';
 
 type SectionKey = 'menu' | 'events' | 'training' | 'account'
 interface MenuContentProps {
@@ -34,6 +35,7 @@ const TABS: Tab[] = ['Past', 'Live'];
 
 const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile }) => {
     const { t } = useTranslation('ownProfile');
+    
     return (
         <View style={ownProfile.menuSection}>
             {profile?.is_own_profile === 1 && profile?.membership_info?.has_membership && (
@@ -113,6 +115,10 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
 
 const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const { t } = useTranslation('ownProfile');
+    const { width } = useDimensions();
+    const insets = useSafeAreaInsets(); 
+    const isGestureNav = insets.bottom > 0;
+    const isLandscape = width
     const [activeSection, setActiveSection] = useState<SectionKey>('menu')
     const flatListRef = useRef<FlatList>(null);
     const [profile, setProfile] = useState<AthleteProfile | null>(null);
@@ -315,7 +321,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
         : '';
 
     return (
-        <SafeAreaView style={ownProfile.safeArea} edges={['top']}>
+        <SafeAreaView style={ownProfile.safeArea} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" backgroundColor={colors.themeiColor} />
             <TouchableOpacity style={{ paddingHorizontal: spacing.xl, alignSelf: 'flex-start', marginTop: spacing.md, }} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' as never }], })}>
                 <Ionicons name="arrow-back" size={28} color={colors.primaryDark} />

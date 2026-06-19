@@ -6,7 +6,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -19,10 +19,15 @@ import { tokenService } from '../../services/tokenService';
 import { SuggestionItem } from '../../services/followerScreenService';
 import SuggestionDropdown from '../../components/SuggestionDropdown';
 import useSearchSuggestions from '../../hooks/useSearchSuggestions';
+import { useDimensions } from '../../hooks/useDimensions';
 
 const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['participant']);
+    const { width } = useDimensions();
+    const insets = useSafeAreaInsets(); 
+    const isGestureNav = insets.bottom > 0;
+    const isLandscape = width 
 
     const liveUpcoming = useSearchSuggestions('filter_name', ['live', 'upcoming']);
 
@@ -50,7 +55,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
     }, [navigation, liveUpcoming]);
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader />
             <ScrollView

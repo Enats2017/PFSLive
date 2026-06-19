@@ -14,7 +14,7 @@ import {
   Modal,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
@@ -47,6 +47,7 @@ import { syncFollowDataFromAPI } from '../utils/followStorage';
 import { colors, spacing, typography, commonStyles } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
 import FollowingLiveEventsSection from './FollowingLiveEventsSection';
+import { useDimensions } from '../hooks/useDimensions';
 
 // ==================== TYPES ====================
 
@@ -142,6 +143,10 @@ const requestBatteryOptimizationExemption = async (): Promise<void> => {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['home', 'common']);
+  const { width } = useDimensions();
+  const insets = useSafeAreaInsets(); 
+  const isGestureNav = insets.bottom > 0;
+  const isLandscape = width 
 
   // ✅ Notifications hook
   const {
@@ -1383,7 +1388,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     : `${Math.round(hoursUntilRace)}h`;
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <AppHeader showLogo={true} />
 

@@ -6,7 +6,7 @@ import {
     Text,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Feather } from '@expo/vector-icons';
 import { commonStyles, colors, spacing } from '../../styles/common.styles';
@@ -18,6 +18,7 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import { eventService, ParticipantItem } from '../../services/followerEvent';
 import { AthleteSearchScreenpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
+import { useDimensions } from '../../hooks/useDimensions';
 
 interface PaginationState {
     page: number;
@@ -26,6 +27,11 @@ interface PaginationState {
 
 const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
     const { t } = useTranslation(['follow', 'follower']);
+    const { width } = useDimensions();
+    const insets = useSafeAreaInsets(); 
+    const isGestureNav = insets.bottom > 0;
+    const isLandscape = width 
+
     const [searchText, setSearchText] = useState('');
     const [participants, setParticipants] = useState<ParticipantItem[]>([]);
     const [searchResults, setSearchResults] = useState<ParticipantItem[]>([]);
@@ -209,7 +215,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
     }, [searching, searchText, t]);
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader />
 

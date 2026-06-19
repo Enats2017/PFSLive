@@ -11,7 +11,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
@@ -26,6 +26,7 @@ import { validateRegisterForm } from '../../services/validation/authValidation';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { useAuthForm } from '../../hooks/useAuthForm';
 import { API_CONFIG } from '../../constants/config';
+import { useDimensions } from '../../hooks/useDimensions';
 
 // ✅ CONSTANTS
 const INITIAL_FORM_DATA = {
@@ -68,6 +69,10 @@ const FIELD_ERROR_MAP: Record<string, { field: string; i18nKey: string }> = {
 
 const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
   const { t } = useTranslation(['register', 'common']);
+  const insets = useSafeAreaInsets();
+  const { width } = useDimensions();
+    const isGestureNav = insets.bottom > 0;
+    const isLandscape = width 
 
   // ✅ FORM STATE (CUSTOM HOOK)
   const { formData, errors, setField, setErrors, clearAllErrors } =
@@ -341,7 +346,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
   }, [formData, clearAllErrors, setErrors, applyApiFieldErrors, navigation, t]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={true} />
 

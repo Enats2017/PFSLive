@@ -8,7 +8,7 @@ import {
   Image,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
@@ -25,9 +25,13 @@ const TABS: Tab[] = ['Participant', 'Distance'];
 
 const FollowerDetails = ({ route }: followerDetailspops) => {
   const { t } = useTranslation(['details']);
-  const { width: windowWidth, height } = useDimensions(); // ← tablet/iPad fallback
+  const { width: windowWidth, height } = useDimensions();
+  const insets = useSafeAreaInsets(); 
   const [containerWidth, setContainerWidth] = useState(0);
+  const isGestureNav = insets.bottom > 0;
+  const isLandscape = windowWidth > height;
   const width = containerWidth || windowWidth;
+
   const TAB_CONTENT_HEIGHT = height * 0.7;
   const [activeTab, setActiveTab] = useState<Tab>('Distance');
   const activeTabRef = useRef<Tab>('Distance');
@@ -77,16 +81,21 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   }, [width]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={commonStyles.container}
+      edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top', 'bottom']}
+    >
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={true} />
-      <View style={{ flex: 1 }} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
+      <View
+        style={{ flex: 1 }}
+        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+      >
         <ScrollView
           nestedScrollEnabled={true}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1 }}
-
         >
           <View style={detailsStyles.section}>
             <Text style={commonStyles.title}>{event_name}</Text>
@@ -97,9 +106,9 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
               source={{ uri: event_image }}
               style={{
                 width: '100%',
-                aspectRatio: 612 / 300,             
+                aspectRatio: 612 / 300,
               }}
-             resizeMode="contain"
+              resizeMode="contain"
             />
           ) : null}
 
@@ -141,21 +150,22 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
                 index,
               })}
               renderItem={({ item }) => (
-                <View style={{ width, flex: 1 }}>{renderContent(item)}</View>  // ✅ reactive
+                <View style={{ width, flex: 1 }}>{renderContent(item)}</View>
               )}
               scrollEnabled
             />
           </View>
         </ScrollView>
       </View>
-
-      <BottomNavigationFollower
-        activeTab="Home"
-        product_app_id={product_app_id}
-        event_name={event_name}
-        product_option_value_app_id={0}
-        sourceTab={sourceTab}
-      />
+          <BottomNavigationFollower
+          activeTab="Home"
+          product_app_id={product_app_id}
+          event_name={event_name}
+          product_option_value_app_id={0}
+          sourceTab={sourceTab}
+        />
+     
+      
     </SafeAreaView>
   );
 };

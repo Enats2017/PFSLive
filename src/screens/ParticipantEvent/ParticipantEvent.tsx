@@ -10,7 +10,7 @@ import {
     ScrollView,
     useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView,useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
@@ -35,9 +35,12 @@ const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
 
 const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     const { t } = useTranslation(['event', 'common']);
+    const insets = useSafeAreaInsets(); 
     const { width: windowWidth } = useDimensions(); // ← tablet/iPad fallback
     const [containerWidth, setContainerWidth] = useState(0);
     const width = containerWidth || windowWidth;
+    const isLandscape = windowWidth ;
+    const isGestureNav = insets.bottom > 0;
     const flatListRef = useRef<FlatList>(null);
     const activeTabRef = useRef<Tab>('Live');
     const [activeTab, setActiveTab] = useState<Tab>('Live');
@@ -336,7 +339,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader showLogo={true} />
             <View style={{ flex: 1 }} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>

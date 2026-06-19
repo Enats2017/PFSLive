@@ -12,7 +12,7 @@ import {
     useWindowDimensions,
     FlatList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView,useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -36,6 +36,10 @@ const Divider = () => (
 const FollowerScreen = () => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['follow']);
+    const { width } = useDimensions();
+    const insets = useSafeAreaInsets(); 
+    const isGestureNav = insets.bottom > 0;
+    const isLandscape = width 
     const upcoming = useSearchSuggestions('filter_name', ['upcoming', 'live']);
     const past = useSearchSuggestions('filter_name_past_suggestion', ['past']);
     const [athleteQuery, setAthleteQuery] = useState('');
@@ -268,7 +272,7 @@ const FollowerScreen = () => {
     );
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader />
 
@@ -278,9 +282,8 @@ const FollowerScreen = () => {
                     transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }],
                 }}
             >
-                {/* ✅ FlatList as root — no more nested VirtualizedList warning */}
                 <FlatList
-                    data={[]}                          // empty, content is in header
+                    data={[]}                         
                     renderItem={null}
                     ListHeaderComponent={renderContent}
                     keyboardShouldPersistTaps="handled"

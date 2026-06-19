@@ -6,7 +6,7 @@ import {
     Text,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, colors, spacing } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
@@ -18,6 +18,7 @@ import { userfavouriteService, FavouriteItem } from '../../services/userfavourit
 import { UserFavouriteListpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import ErrorScreen from '../../components/ErrorScreen';
+import { useDimensions } from '../../hooks/useDimensions';
 
 interface PaginationState {
     page: number;
@@ -28,6 +29,10 @@ const INITIAL_PAGINATION: PaginationState = { page: 1, total_pages: 1 };
 
 const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
     const { t } = useTranslation(['follow', 'follower']);
+    const { width } = useDimensions();
+    const insets = useSafeAreaInsets(); 
+    const isGestureNav = insets.bottom > 0;
+    const isLandscape = width 
 
     const [searchText, setSearchText]           = useState('');
     const [favourites, setFavourites]           = useState<FavouriteItem[]>([]);
@@ -221,7 +226,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
         : null;
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader />
 

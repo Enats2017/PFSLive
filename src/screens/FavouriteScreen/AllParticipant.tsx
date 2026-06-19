@@ -7,7 +7,7 @@ import {
     TouchableOpacity,
     StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,10 +22,15 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { AppHeader } from '../../components/common/AppHeader';
+import { useDimensions } from '../../hooks/useDimensions';
 
 const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => {
     const { product_app_id } = route.params;
     const { t } = useTranslation(['details', 'follower']);
+    const { width } = useDimensions();
+    const insets = useSafeAreaInsets(); 
+    const isGestureNav = insets.bottom > 0;
+    const isLandscape = width
     const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
     const {
         isFollowed,
@@ -237,7 +242,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
             <StatusBar barStyle="dark-content" />
 
             <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom:spacing.sm }}>
