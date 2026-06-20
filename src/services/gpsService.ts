@@ -750,12 +750,26 @@ const _registerTransistorListeners = (): void => {
       }
 
       await addLog('💓', 'Heartbeat — stationary, pulling keepalive fix');
-      await BackgroundGeolocation.getCurrentPosition({
+      const hbLoc = await BackgroundGeolocation.getCurrentPosition({
         samples:         2,
         timeout:         30,
         desiredAccuracy: 10,
         persist:         false,   // we send via our own pipeline, not the SDK DB
       });
+
+      // ✅ Re-wake the MOVING stream if the "stationary" rider is actually moving.
+      // With disableMotionActivityUpdates:true the SDK can sit in STATIONARY for a
+      // whole ride (observed: moving:false at 44km/h on a client ride), so the
+      // locationUpdateInterval onLocation stream never runs and every fix comes
+      // from this 60s heartbeat — which the OS stretches to ~100s (the 1min/2min
+      // cadence). changePace(true) flips it to MOVING so the dense onLocation
+      // stream takes over and the send throttle holds ~60s. Speed guard so a
+      // genuinely stopped rider stays stationary (no false wake / battery burn).
+      const hbSpeed = hbLoc?.coords?.speed ?? 0;
+      if (hbSpeed > 2) {   // > ~7 km/h
+        try { await BackgroundGeolocation.changePace(true); } catch { /* silent */ }
+        await addLog('🏃', `Heartbeat — moving (${hbSpeed.toFixed(1)}m/s), re-waking onLocation stream`);
+      }
     } catch (hbErr: any) {
       // Heartbeat must never throw — a beat with no fix is fine; retry next beat.
       addLog('💓', `Heartbeat fix failed: ${hbErr?.message ?? 'unknown'}`);
@@ -895,6 +909,15 @@ export const ensureBackgroundTaskAlive = async (
 
     const bgState = await BackgroundGeolocation.getState();
     if (bgState.enabled) {
+      // ✅ Engine alive — but it may have dropped to STATIONARY mid-ride (nothing
+      // wakes it back with motion-activity updates disabled). Re-assert MOVING on
+      // this foreground check so the onLocation stream resumes instead of leaning
+      // on the 60s heartbeat. Skipped after finish so we don't resurrect tracking.
+      const wdFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
+      if (wdFinished !== '1' && !bgState.isMoving) {
+        try { await BackgroundGeolocation.changePace(true); } catch { /* silent */ }
+        await addLog('🏃', 'Watchdog — engine was stationary, re-asserted moving');
+      }
       await addLog('💚', 'Watchdog check — transistor alive (listeners re-attached)');
       return true;
     }
@@ -1096,7 +1119,7 @@ export const gpsService = {
           },
           activity: {
             activityRecognitionInterval:  10000,
-            disableMotionActivityUpdates: true,
+            disableMotionActivityUpdates: false,
           },
           app: {
             stopOnTerminate:   false,
