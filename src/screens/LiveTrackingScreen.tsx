@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ActivityIndicator, StatusBar, Alert, TouchableOpacity } from 'react-native';
-import { SafeAreaView,useSafeAreaInsets  } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../components/common/AppHeader';
@@ -36,11 +36,12 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const { t } = useTranslation(['livetracking', 'common']);
     const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab, event_source, selectedDistanceLabel } = route.params;
     const { width, height } = useDimensions(); // make sure height is destructured
-     const isLandscape = width > height; 
+    const isLandscape = width > height;
     const insets = useSafeAreaInsets();
+    const TAB_BAR_HEIGHT = 87;
     const isGestureNav = insets.bottom > 0;
-    const profileBottom = insets.bottom;
-    const collapseBtnBottom = profileBottom + 240;
+    const profileBottom = TAB_BAR_HEIGHT + insets.bottom;
+    const collapseBtnBottom = profileBottom + 100;
     const isCustomEvent = event_source === 'custom';
     const { followedUsers } = useFollowManager(t);
     const [routeData, setRouteData] = useState<GPXRouteData | null>(null);
@@ -115,8 +116,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     // Refresh cadence: speed up to 10s when any tracked runner is within 1km of
     // the finish, so the finish moment is caught promptly; otherwise 60s.
     const FINISH_APPROACH_KM = 1.0;
-    const NORMAL_REFRESH_MS  = 60000;
-    const FAST_REFRESH_MS    = 10000;
+    const NORMAL_REFRESH_MS = 60000;
+    const FAST_REFRESH_MS = 10000;
 
     const refreshMs = useMemo(() => {
         const total = routeData?.totalDistance ?? 0;
@@ -138,7 +139,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             // 0 < remaining < 1km → final approach. Negative (mid-race overlap on a
             // looping route) and 0 (finished) both correctly stay at normal cadence.
             return remaining > 0 && remaining < FINISH_APPROACH_KM;
-        }, );
+        },);
 
         return nearFinish ? FAST_REFRESH_MS : NORMAL_REFRESH_MS;
     }, [participants, routeData?.totalDistance]);
@@ -438,14 +439,19 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
     const handleDistanceChange = async (distance: DistanceOption) => {
         console.log('📊 Distance changed to:', distance.distance_name);
-        setRouteData(null);
-        setChartData([]);
-        setLoadedGpxUrl(null);
+
+        const isSameDistance = selectedDistance?.product_option_value_app_id === distance.product_option_value_app_id;
+
+        if (!isSameDistance) {
+            setRouteData(null);
+            setChartData([]);
+            setLoadedGpxUrl(null);
+        }
+
         setSelectedDistance(distance);
         setLoading(true);
         await loadLiveTrackingData(false, distance);
     };
-
     const handleParticipantPress = (participant: ParticipantMapMarker) => {
         setPopupState({ type: 'participant', data: participant });
     };
@@ -521,7 +527,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader title={event_name} showLogo={true} />
             {showDistanceDropdown && selectedDistance && (
@@ -531,85 +537,86 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     onSelect={handleDistanceChange}
                 />
             )}
+            <View style={{ flex: 1 }}>
 
-            <View style={liveTrackingStyles.mapContainer}>
-                <LiveRouteMap
-                    trackPoints={showRouteLine ? (routeData?.trackPoints ?? []) : []}
-                    aidStations={showCheckpoints ? (routeData?.aidStations ?? []) : []}
-                    participants={showParticipants ? participantMarkers : []}
-                    apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
-                    onAidStationPress={handleAidStationPress}
-                    onParticipantPress={handleParticipantPress}
-                    isLoadingParticipants={participantsLoading}
-                    followerLocation={followerLocation}
-                />
-            </View>
- 
-            {showElevationProfile && !profileCollapsed && (
-                <View
-                    style={[
-                    liveTrackingStyles.chartContainer,
-                    {
-                        position: 'absolute',
-                        left: isLandscape && !isGestureNav ? insets.left : 0,
-                        right: isLandscape && !isGestureNav ? insets.right : 0,
-                        bottom: profileBottom,   // sit above the bottom nav; tweak to taste
-                        backgroundColor: 'transparent',
-                        zIndex: 5,
-                        elevation: 5,
-                    },
-                    ]}
-                    pointerEvents="box-none"
-                >
-                    <LiveElevationProfile
-                        chartData={chartData}
+                <View style={liveTrackingStyles.mapContainer}>
+                    <LiveRouteMap
+                        trackPoints={showRouteLine ? (routeData?.trackPoints ?? []) : []}
                         aidStations={showCheckpoints ? (routeData?.aidStations ?? []) : []}
-                        apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
                         participants={showParticipants ? participantMarkers : []}
-                        totalDistance={routeData?.totalDistance ?? 0}
-                        minElevation={routeData?.minElevation ?? 0}
-                        maxElevation={routeData?.maxElevation ?? 0}
+                        apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
                         onAidStationPress={handleAidStationPress}
                         onParticipantPress={handleParticipantPress}
+                        isLoadingParticipants={participantsLoading}
+                        followerLocation={followerLocation}
                     />
                 </View>
-            )}
 
-            {showElevationProfile && (
-                <TouchableOpacity
-                    style={[
-                        liveTrackingStyles.collapseBtn,
-                        { 
-                            bottom: collapseBtnBottom,                              
-                            right: isLandscape && !isGestureNav ? insets.right : 0,
-                            zIndex: 10, elevation: 10 },   // follow the bottom:0 profile + sit above the overlay
-                    ]}
-                    onPress={() => setProfileCollapsed(!profileCollapsed)}
-                >
-                    <Ionicons
-                        name={profileCollapsed ? 'chevron-up' : 'chevron-down'}
-                        size={24}
-                        color={colors.gray900}
+                {showElevationProfile && !profileCollapsed && (
+                    <View
+                        style={[
+                            liveTrackingStyles.chartContainer,
+                            {
+                                position: 'absolute',
+                                bottom: 0,   
+                                backgroundColor: 'transparent',
+                                elevation: 5,
+                            },
+                        ]}
+                        pointerEvents="box-none"
+                    >
+                        <LiveElevationProfile
+                            chartData={chartData}
+                            aidStations={showCheckpoints ? (routeData?.aidStations ?? []) : []}
+                            apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
+                            participants={showParticipants ? participantMarkers : []}
+                            totalDistance={routeData?.totalDistance ?? 0}
+                            minElevation={routeData?.minElevation ?? 0}
+                            maxElevation={routeData?.maxElevation ?? 0}
+                            onAidStationPress={handleAidStationPress}
+                            onParticipantPress={handleParticipantPress}
+                        />
+                    </View>
+                )}
+
+                {showElevationProfile && (
+                    <TouchableOpacity
+                        style={[
+                            liveTrackingStyles.collapseBtn,
+                            {
+                                bottom: collapseBtnBottom,
+                                
+                                zIndex: 10, elevation: 10
+                            },   // follow the bottom:0 profile + sit above the overlay
+                        ]}
+                        onPress={() => setProfileCollapsed(!profileCollapsed)}
+                    >
+                        <Ionicons
+                            name={profileCollapsed ? 'chevron-up' : 'chevron-down'}
+                            size={24}
+                            color={colors.gray900}
+                        />
+                    </TouchableOpacity>
+                )}
+
+                {popupState.type === 'participant' && popupState.data && (
+                    <ParticipantPopup
+                        participant={popupState.data as ParticipantMapMarker}
+                        event_source={event_source}
+                        onClose={handleClosePopup}
                     />
-                </TouchableOpacity>
-            )}
+                )}
 
-            {popupState.type === 'participant' && popupState.data && (
-                <ParticipantPopup
-                    participant={popupState.data as ParticipantMapMarker}
-                    event_source={event_source}
-                    onClose={handleClosePopup}
-                />
-            )}
+                {popupState.type === 'aidstation' && popupState.data && (
+                    <AidStationPopup
+                        station={popupState.data as AidStationMapMarker}
+                        onClose={handleClosePopup}
+                    />
+                )}
 
-            {popupState.type === 'aidstation' && popupState.data && (
-                <AidStationPopup
-                    station={popupState.data as AidStationMapMarker}
-                    onClose={handleClosePopup}
-                />
-            )}
+            </View>
 
-            {/* {showBottomNav && (
+            {showBottomNav && (
                 sectionType === 'follower' ? (
                     <BottomNavigationFollower
                         activeTab="Map"
@@ -627,7 +634,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         sourceScreen={sourceScreen}
                     />
                 )
-            )} */}
+            )}
         </SafeAreaView>
     );
 };

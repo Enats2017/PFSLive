@@ -22,6 +22,7 @@
   "filter": {
     "results": "Résultats",
     "live": "En direct",
+    "liveTracking": "Suivi en direct",
     "favourite": "Favoris",
     "noFavourites": "Pas encore de favoris. Appuyez sur ☆ sur un résultat pour l'enregistrer."
   }

@@ -18,6 +18,8 @@ export const TYPE_OPTIONS: FilterOption[] = [
   { label: "allrace:filter.live", value: "1" },
 ];
 
+const PRESERVED_CATEGORIES = ["favourite", "live_tracking"];
+
 type FetchMode = "initial" | "filter" | "paginate" | "refresh";
 
 interface FetchOpts {
@@ -234,8 +236,9 @@ export const useResultList = (
       //setSelectedCategory("scratch");
       setFavBibs(new Set());
 
-      const categoryToSend = selectedCategory === "favourite" ? "favourite" : "scratch";
-      if (selectedCategory !== "favourite") setSelectedCategory("scratch");
+      const shouldPreserve = PRESERVED_CATEGORIES.includes(selectedCategory);
+      const categoryToSend = shouldPreserve ? selectedCategory : "scratch";
+      if (!shouldPreserve) setSelectedCategory("scratch");
 
       fetchData({
         povId: newId,
@@ -262,8 +265,9 @@ export const useResultList = (
       //if (opt.value === "fav") return;
 
       const newLive: 0 | 1 = opt.value === "1" ? 1 : 0;
-      const categoryToSend = selectedCategory === "favourite" ? "favourite" : "scratch";
-      if (selectedCategory !== "favourite") setSelectedCategory("scratch");
+      const shouldPreserve = PRESERVED_CATEGORIES.includes(selectedCategory);
+      const categoryToSend = shouldPreserve ? selectedCategory : "scratch";
+      if (!shouldPreserve) setSelectedCategory("scratch");
 
       fetchData({
         povId: selectedPovId,
@@ -379,12 +383,16 @@ export const useResultList = (
         value: c.key,
       })),
       {
-        label: t("allrace:filter.favourite"), // ✅ now actually translates
+        label: t("allrace:filter.favourite"),
         value: "favourite",
+      },
+      {
+        label: t("allrace:filter.liveTracking"),
+        value: "live_tracking",
       },
     ],
     [categories, t],
-  );
+);
 
   const selectedDistanceLabel = useMemo(
     () =>
@@ -409,11 +417,12 @@ export const useResultList = (
   }, [distances]);
 
   const selectedCategoryLabel = useMemo(() => {
-    if (selectedCategory === "favourite") return t("allrace:filter.favourite"); // ✅ add this
+    if (selectedCategory === "favourite") return t("allrace:filter.favourite");
+    if (selectedCategory === "live_tracking") return t("allrace:filter.liveTracking");
     return (
       categories.find((c) => c.key === selectedCategory)?.label ?? "Scratch"
     );
-  }, [categories, selectedCategory, t]);
+}, [categories, selectedCategory, t]);
 
   // ✅ FILTER RESULTS BASED ON FOLLOW STATUS
   const displayResults = useMemo<RaceResult[]>(() => {

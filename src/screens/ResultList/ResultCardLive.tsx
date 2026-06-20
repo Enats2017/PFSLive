@@ -74,6 +74,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     const isFemale = item.gender === 'female';
     // ✅ Live stats for bottom row: last crossed CP, next CP ETA, finish ETA
     const { lastCrossed, nextCp, finishCp } = getLiveStats(item.checkpoints);
+    
 
     // ✅ Gender rank only for female, and only when it's a numeric rank (hide "DNF" etc.)
     const genderRank = isFemale && /^\d+$/.test(item.finish_rank_gender ?? '')
@@ -96,7 +97,6 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     return (
         <View style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: colors.pinkcolor }]}>
 
-            {/* ✅ Badge: star left | overall rank top + gender rank bottom */}
             <TouchableOpacity
                 style={[
                     resultListStyle.cornerBadge,
@@ -123,7 +123,6 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                 </View>
             </TouchableOpacity>
 
-            {/* Card Content */}
             <TouchableOpacity onPress={handleCardPress} activeOpacity={0.7}>
                 <View style={resultListStyle.cardTop}>
                     <View style={resultListStyle.cardTopLeft}>
@@ -136,7 +135,6 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     {t('allrace:race.bibNumber')} {item.bib}
                 </Text>
 
-                {/* ✅ Flag + country + age row */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                     {item.nation_flag ? (
                         <SvgUri
@@ -174,11 +172,11 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
 
                     {fromLive === 0 ? (
                         <>
-                            <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
+                            {/* <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                 <Text style={resultListStyle.statLabel}>{t('allrace:race.diffFirst')}</Text>
                                 <Text style={resultListStyle.statVal}>{item.diff}</Text>
-                            </View>
-                            <View style={resultListStyle.statCol}>
+                            </View> */}
+                            <View style={[resultListStyle.statCol, resultListStyle.statColLeft]}>
                                 <Text style={resultListStyle.statLabel}>
                                     {t('allrace:race.ranking')}{'\n'}{item.category_name}
                                 </Text>
@@ -187,7 +185,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         </>
                     ) : (
                         <>
-                            {/* ✅ Col 2: Next CP ETA — if race finished (no next), show lastCrossed name only (no ETA prefix) */}
+                           
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                 <Text style={resultListStyle.statLabel} numberOfLines={2}>
                                     {nextCp

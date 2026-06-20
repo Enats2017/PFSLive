@@ -337,7 +337,7 @@ const EditProfileScreen = () => {
                         onChangeText={(v) => setField('dob', v)}
                         iconName="calendar-outline"
                         isDatePicker
-                        maximumDate={new Date()}                    // ← block future DOBs
+                                        // ← block future DOBs
                         pickerDoneLabel={t('common:buttons.done')}
                         pickerCancelLabel={t('common:buttons.cancel')}
                         editable={!loading}

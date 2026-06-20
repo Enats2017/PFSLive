@@ -486,8 +486,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               onChangeText={(value) => setField('dob', value)}
               iconName="calendar-outline"
               isDatePicker
-              datePickerPlaceholder={t('common:datePicker.placeholder')}
-              maximumDate={new Date()}               // ← block future DOBs
+              datePickerPlaceholder={t('common:datePicker.placeholder')}    
               pickerDoneLabel={t('common:buttons.done')}
               pickerCancelLabel={t('common:buttons.cancel')}
               required

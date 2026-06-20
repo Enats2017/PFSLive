@@ -24,6 +24,7 @@
   "filter": {
     "results": "Results",
     "live": "Live",
+    "liveTracking": "Live Tracking",
     "favourite": "Favourite",
     "noFavourites": "No favourites yet. Tap ☆ on any result to save it."
   }
