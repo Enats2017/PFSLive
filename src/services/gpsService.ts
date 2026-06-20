@@ -113,8 +113,11 @@ const LOG_FLUSH_INTERVAL_MS = 2000;
 // target — keeps cadence at the interval (30s/60s/4min/5min) instead of doubling.
 const fixIntervalMs = (sendIntervalSec?: number): number => {
   const s = sendIntervalSec ?? 30;
-  const divisor = s <= 90 ? 3 : 2;   // dense for race intervals, easier on long battery-saver ones
-  return Math.max(10000, Math.round(s / divisor) * 1000);
+  const fix = Math.round(s / 4) * 1000;
+  // /4 for race intervals; on long battery-saver intervals (>90s) don't sample
+  // faster than ~half the interval, so 4-5min stays battery-light.
+  const floor = s > 90 ? Math.round(s / 2) * 1000 : 0;
+  return Math.max(10000, floor, fix);
 };
 
 const _flushLogsNow = async (): Promise<void> => {
@@ -311,7 +314,13 @@ const _processLocationForSendInternal = async (
     const effectiveInterval = finishApproach === '1'
       ? FINISH_APPROACH_INTERVAL
       : (intervalSeconds ?? 30);
-    const minGapMs = (effectiveInterval - 5) * 1000;
+    // Tolerance scales with the interval instead of a flat 5s. Transistor's
+    // background fire cadence is irregular — the OS stretches the requested rate,
+    // so for a 60s target a fix often lands at ~50s. Under the old 55s gate that
+    // fix was skipped and the send slipped to the next one ~100s out (the 1min/2min
+    // mix). Accepting a fix from ~75% of the interval onward lets the ~50s fix
+    // through and holds the cadence near the target.
+    const minGapMs = Math.round(effectiveInterval * 0.75) * 1000;
     const lastSentStr = await AsyncStorage.getItem(LAST_SENT_KEY);
     const lastSentAt = lastSentStr ? parseInt(lastSentStr) : 0;
 
