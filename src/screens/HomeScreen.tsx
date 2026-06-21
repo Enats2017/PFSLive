@@ -32,6 +32,7 @@ import {
   ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry,
   startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive,
   isTracking, getTrackingParams, stopWatching, attachUi, detachUi,
+  LOG_UPLOADED_KEY,
 } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -1008,16 +1009,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     if (participantId && eventId) {
       try {
-        const logsStr = await AsyncStorage.getItem(TRACKING_LOG_KEY);
-        const logs: TrackingLogEntry[] = logsStr ? JSON.parse(logsStr) : [];
-        if (logs.length > 0) {
-          await locationService.saveTrackingLog(
-            participantId,
-            eventId,
-            logs,
-            actualSentCount,   // ✅ was: locationUpdateCount
-            remaining,
-          );
+        // ✅ If the background auto-stop path already uploaded the log when the
+        // finish was crossed (LOG_UPLOADED_KEY === '1'), skip re-uploading. For a
+        // manual stop, or a finish crossed while foregrounded, the flag is unset
+        // and we upload here as before.
+        const alreadyUploaded = await AsyncStorage.getItem(LOG_UPLOADED_KEY);
+        if (alreadyUploaded !== '1') {
+          const logsStr = await AsyncStorage.getItem(TRACKING_LOG_KEY);
+          const logs: TrackingLogEntry[] = logsStr ? JSON.parse(logsStr) : [];
+          if (logs.length > 0) {
+            await locationService.saveTrackingLog(
+              participantId,
+              eventId,
+              logs,
+              actualSentCount,   // ✅ was: locationUpdateCount
+              remaining,
+            );
+          }
         }
       } catch { /* silent */ }
     }

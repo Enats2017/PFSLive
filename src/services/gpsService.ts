@@ -59,6 +59,12 @@ const NEAR_FINISH_KEY = '@PFSLive:nearFinish';
 // sends, but this flag still prevents any leftover expo-location task path
 // (from an old app install) from sending duplicate coordinates.
 const TRANSISTOR_ACTIVE_KEY = '@PFSLive:transistorActive';
+// ✅ Per-session latch — set to '1' once the tracking log has been uploaded for
+// this session. The background auto-stop path sets it after a successful upload;
+// HomeScreen.stopGPSTracking checks it and skips re-uploading. Cleared ONLY at
+// session start (not in _doFullStop), so a finish-in-background upload survives
+// until the user foregrounds and stops cleanly.
+export const LOG_UPLOADED_KEY = '@PFSLive:logUploaded';
 // ✅ Last onLocation/onMotionChange fire timestamp. Used by the freeze
 // diagnostic to distinguish a real OS freeze (Transistor not firing at all)
 // from a false-positive (Transistor firing normally but every event suppressed
@@ -152,6 +158,48 @@ const _resetLogBuffer = (): void => {
   _logBuffer = [];
   _logDirty = false;
   if (_logFlushTimer) { clearTimeout(_logFlushTimer); _logFlushTimer = null; }
+};
+
+// ✅ Upload the tracking log from the BACKGROUND auto-stop path so it doesn't
+// wait for the user to foreground the app. Runs inside the same Transistor wake
+// that detected the finish.
+//
+// Dedup: on SUCCESS we set LOG_UPLOADED_KEY='1' so HomeScreen.stopGPSTracking
+// skips its own upload. On failure (no network, etc.) we leave the flag unset
+// and the log in place, so the foreground stop still retries — that's why the
+// flag is only written after a successful saveTrackingLog.
+const _uploadTrackingLogOnFinish = async (
+  participantId: string,
+  eventId: string,
+  sentCount: number,
+): Promise<void> => {
+  try {
+    if (!participantId || !eventId) return;
+    // Only the BACKGROUND path needs this. When foregrounded, HomeScreen's 1s
+    // timer reads RACE_FINISHED_KEY and runs stopGPSTracking, which uploads the
+    // log — so skipping here avoids both uploaders racing on a foreground finish.
+    if (AppState.currentState === 'active') return;
+    // Persist the in-memory buffer first so the 🏆 / 🛑 finish entries are in it.
+    await _flushLogsNow();
+    const logsStr = await AsyncStorage.getItem(TRACKING_LOG_KEY);
+    const logs: TrackingLogEntry[] = logsStr ? JSON.parse(logsStr) : _logBuffer.slice();
+    if (!logs || logs.length === 0) return;
+
+    let remaining = 0;
+    try {
+      const { QUEUE_COUNT_KEY } = require('./locationQueueService');
+      const qStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
+      remaining = qStr ? (parseInt(qStr) || 0) : 0;
+    } catch { /* silent */ }
+
+    const { locationService } = require('./locationService');
+    await locationService.saveTrackingLog(participantId, eventId, logs, sentCount, remaining);
+
+    await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');
+    if (API_CONFIG.DEBUG) console.log('📤 Tracking log uploaded from background after finish');
+  } catch {
+    // Silent — leave LOG_UPLOADED_KEY unset so the foreground stop retries.
+  }
 };
 
 // ✅ Background fetch keepalive — REMOVED with Option B.
@@ -547,6 +595,12 @@ const _processLocationForSendInternal = async (
         BackgroundGeolocation.removeListeners();
       } catch { /* silent */ }
       await addLog('🛑', `GPS engines stopped — finish line reached${tag}`);
+
+      // ✅ Upload the tracking log NOW, in this same background wake, instead of
+      // waiting for the app to be foregrounded. Done last so the log includes the
+      // 🏆 / 🛑 finish entries above. LOG_UPLOADED_KEY prevents a double upload
+      // when HomeScreen.stopGPSTracking later runs on foreground.
+      await _uploadTrackingLogOnFinish(participantId, eventId, sentCount);
     }
 
   } catch (err: any) {
@@ -1083,6 +1137,7 @@ export const gpsService = {
       await AsyncStorage.removeItem(RACE_FINISHED_KEY);
       await AsyncStorage.removeItem(NEAR_FINISH_KEY);
       await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
+      await AsyncStorage.removeItem(LOG_UPLOADED_KEY);
       // ✅ Critical: clear stale flag so this session's task path acts as
       // fallback until Transistor.start() succeeds.
       await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
