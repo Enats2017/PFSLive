@@ -339,6 +339,7 @@ const _processLocationForSendInternal = async (
     // receiving ascending device_timestamps. Placed before the throttle gate
     // so a flush is attempted on every fire, even if the current fix is
     // itself throttled.
+    let _backlogRemains = false;
     try {
       const { QUEUE_COUNT_KEY } = require('./locationQueueService');
       const qCountStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
@@ -352,8 +353,44 @@ const _processLocationForSendInternal = async (
           await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(c + flushed));
           await addLog('📤', `Drained ${flushed} queued fix(es) before live send${tag}`);
         }
+        // processQueue drains at most batchSize per call — re-read to see if a
+        // larger backlog is still pending.
+        const qLeftStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
+        _backlogRemains = (qLeftStr ? parseInt(qLeftStr) : 0) > 0;
       }
     } catch { /* silent — drain failure must never block the live send */ }
+
+    // ✅ ORDER GUARD. The server snaps distance forward against the LATEST stored
+    // device_timestamp and rejects anything older. So a newer live fix must NEVER
+    // be stored while older fixes are still queued — that would advance the stored
+    // timestamp past the backlog, and the server would stale-drop every remaining
+    // queued fix (and the lone out-of-order fix mis-snaps off the large time gap:
+    // the 13:18→13:40 / +12km false-finish bug). If the queue isn't empty yet, push
+    // THIS fix to the tail and return — it flushes in order behind the older fixes
+    // on a later fire / the 10s queue processor. Nothing is lost; timestamps stay
+    // ascending. Only when the queue is empty do we send the live fix below.
+    if (_backlogRemains) {
+      try {
+        const { locationQueueService } = require('./locationQueueService');
+        await locationQueueService.addToQueue({
+          latitude:         raw.latitude,
+          longitude:        raw.longitude,
+          altitude:         raw.altitude ?? undefined,
+          accuracy:         raw.accuracy ?? undefined,
+          altitudeAccuracy: raw.altitudeAccuracy ?? undefined,
+          timestamp:        new Date(raw.timestamp).toISOString(),
+          speed:            raw.speed ?? undefined,
+          heading:          raw.heading ?? undefined,
+          isMock:           raw.mocked || false,
+          participantId,
+          eventId,
+          queuedAt:         new Date().toISOString(),
+          retryCount:       0,
+        });
+        await addLog('📥', `Backlog still draining — current fix queued behind it for order${tag}`);
+      } catch { /* silent */ }
+      return;
+    }
 
     const categoryIdNum = Number(categoryId);
     const minMovementMetres = MOVEMENT_THRESHOLD[categoryIdNum] ?? DEFAULT_MOVEMENT_METRES;
