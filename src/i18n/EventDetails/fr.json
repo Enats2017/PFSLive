@@ -3,8 +3,9 @@
     "Distance": "Distance",
     "Participant": "Participant"
   },
-  "button": "S'INSCRIRE AU SUIVI EN DIRECT",
+  "button": "S'INSCRIRE",
   "undo": "ANNULER L'INSCRIPTION",
+  "gpx": "TÉLÉCHARGER GPX",
   "live": "EN DIRECT",
   "countdown": {
     "live": "EN DIRECT",
@@ -76,12 +77,13 @@
     "membership_required": {
       "icon": "◆",
       "title": "Votre Accès Premium a Expiré",
-      "description": "Votre période d'essai gratuite est terminée. Connectez-vous à votre compte via notre site Web pour gérer votre accès."
+      "description": "Votre période d'essai gratuite est terminée. Connectez-vous à votre compte via notre site web liviolive.com pour gérer votre accès."
+
     },
     "limit_reached": {
       "icon": "↑",
       "title": "Votre Accès Premium A Expiré",
-      "description": "Vous avez atteint votre limite annuelle de {{limit}} sessions de suivi. Votre abonnement actuel ne permet pas d'activations supplémentaires. Gérez votre abonnement via notre site web."
+      "description": "Vous avez atteint votre limite annuelle de {{limit}} sessions de suivi. Votre abonnement actuel ne permet pas d'activations supplémentaires. Gérez votre abonnement via notre site web liviolive.com ."
     },
     "membership_upcoming": {
       "icon": "⏳",
@@ -103,5 +105,8 @@
       "title": "Quelque Chose S'est Mal Passé",
       "description": "Veuillez réessayer plus tard."
     }
-  }
+  },
+  "infoMessage": "Importez le fichier GPX dans votre montre connectée ou appareil GPS. Seuls les participants inscrits peuvent télécharger.",
+  "gpxInfo": "Si vous souhaitez importer le fichier GPX dans votre montre connectée ou appareil GPS, seuls les participants inscrits sont autorisés à télécharger le fichier GPX."
+
 }

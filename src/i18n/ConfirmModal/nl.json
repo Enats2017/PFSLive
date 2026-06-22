@@ -1,6 +1,6 @@
 {
   "title": "Registratie Bevestigen",
-  "subtitle": "We hebben uw gegevens gevonden in het wedstrijdresultaat. Bevestig hieronder uw informatie.",
+  "subtitle": "Als jij dit bent, klik dan op de knop Bevestigen. Je ontvangt vervolgens een e-mail en nadat je op de link in die e-mail hebt geklikt, ben je helemaal klaar!",
   "fields": {
     "bibNumber": "Startnummer",
     "firstName": "Voornaam",
@@ -15,6 +15,7 @@
   },
   "buttons": {
     "confirm": "Bevestigen & Registreren",
+    "confirmOnly": "Bevestigen",
     "cancel": "Annuleren"
   },
   "error": {

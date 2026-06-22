@@ -1,6 +1,6 @@
 {
   "title": "Confirmer l'Inscription",
-  "subtitle": "Nous avons trouvé vos informations dans le résultat de la course. Veuillez confirmer vos informations ci-dessous.",
+  "subtitle": "Si c'est bien vous, veuillez appuyer sur le bouton Confirmer. Vous recevrez ensuite un e-mail et, après avoir cliqué sur le lien contenu dans cet e-mail, tout sera prêt !",
   "fields": {
     "bibNumber": "Numéro de Dossard",
     "firstName": "Prénom",
@@ -15,6 +15,7 @@
   },
   "buttons": {
     "confirm": "Confirmer & S'inscrire",
+    "confirmOnly": "Confirmer",
     "cancel": "Annuler"
   },
   "error": {

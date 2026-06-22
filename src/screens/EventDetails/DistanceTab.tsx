@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -27,7 +27,7 @@ import { useScreenError } from '../../hooks/useApiError';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/common/AppHeader';
 import CountdownBadge from '../../components/CountdownBadge';
-import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 
 interface DistanceTabProps {
@@ -252,21 +252,36 @@ const DistanceTab = ({
     setSelectedUndoItem(null);
   }, [selectedUndoItem, handleDelete]);
 
+  const isAnyRegistered = useMemo(
+    () => distances?.some((d) => d.registration_status === 'registered') ?? false,
+    [distances]
+  );
+  console.log(isAnyRegistered);
+
+
   const renderListHeader = useCallback(() => (
-  <View>
-    {event_image ? (
-      <Image
-        source={{ uri: event_image }}
-        style={{
-          width: '100%',
-          aspectRatio: 612 / 300,
-          marginBottom: spacing.sm,
-        }}
-        resizeMode="contain"
-      />
-    ) : null}
-  </View>
-), [event_name, event_image]);
+    <View>
+      {event_image ? (
+        <Image
+          source={{ uri: event_image }}
+          style={{
+            width: '100%',
+            aspectRatio: 612 / 300,
+            marginBottom: spacing.sm,
+          }}
+          resizeMode="contain"
+        />
+      ) : null}
+      <View style={detailsStyles.infoBox}>
+        <View style={detailsStyles.infoIconWrapper}>
+          <AntDesign name="link" size={20} color={colors.primaryDark} />
+        </View>
+        <Text style={detailsStyles.infoBoxText}>
+          {t(isAnyRegistered ? 'details:gpxInfo' : 'details:infoMessage')}
+        </Text>
+      </View>
+    </View>
+  ), [event_name, event_image, isAnyRegistered, t]);
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isRegistering =
@@ -275,7 +290,7 @@ const DistanceTab = ({
         selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
 
     return (
-      <View style={[detailsStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
+      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm, marginHorizontal: spacing.md }]}>
         <View style={detailsStyles.distance}>
           <View style={detailsStyles.distanceInfo}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
@@ -292,7 +307,7 @@ const DistanceTab = ({
             <View style={detailsStyles.metaRow}>
               <Ionicons name="time-outline" size={15} color={colors.gray600} />
               <Text style={detailsStyles.metaText} numberOfLines={1}>
-                {formatClockTime(item.race_time)} 
+                {formatClockTime(item.race_time)}
               </Text>
             </View>
 
@@ -320,27 +335,40 @@ const DistanceTab = ({
               />
             </View>
           </View>
+          <View style={detailsStyles.verticalDivider} />
 
-          <TouchableOpacity
-            style={[detailsStyles.resultsButton]}
-            onPress={() =>
-              item.registration_status === 'registered'
-                ? handleUndoClick(item)
-                : handleRegister(item)
-            }
-            disabled={isRegistering}
-            activeOpacity={0.8}
-          >
-            {isRegistering ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={[commonStyles.primaryButtonText,{fontSize:11.5}]}>
-                {item.registration_status === 'registered'
-                  ? t('details:undo')
-                  : t('details:button')}
-              </Text>
+          <View style={{ gap: spacing.sm }} >
+            <TouchableOpacity
+              style={[detailsStyles.resultsButton]}
+              onPress={() =>
+                item.registration_status === 'registered'
+                  ? handleUndoClick(item)
+                  : handleRegister(item)
+              }
+              disabled={isRegistering}
+              activeOpacity={0.8}
+            >
+              {isRegistering ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
+                  {item.registration_status === 'registered'
+                    ? t('details:undo')
+                    : t('details:button')}
+                </Text>
+              )}
+            </TouchableOpacity>
+            {item.registration_status === 'registered' && (
+              <>
+                <TouchableOpacity
+                  style={detailsStyles.routeButton}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>{t('details:gpx')}</Text>
+                </TouchableOpacity>
+              </>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -381,7 +409,7 @@ const DistanceTab = ({
         keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 50,  }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 50, }}
         renderItem={renderItem}
         ListHeaderComponent={renderListHeader}
       />

@@ -3,8 +3,9 @@
     "Distance": "Afstand",
     "Participant": "Deelnemer"
   },
-  "button": "MELD AAN VOOR LIVE TRACKING",
+  "button": "INSCHRIJVEN",
   "undo": "AFMELDEN",
+  "gpx": "DOWNLOAD GPX",
   "live": "LIVE",
   "countdown": {
     "live": "LIVE",
@@ -76,12 +77,13 @@
     "membership_required": {
       "icon": "◆",
       "title": "Je Premium Toegang Is Verlopen",
-      "description": "Je gratis proefperiode is afgelopen. Log in op je account via onze website om je toegang te beheren."
+      "description": "Uw gratis proefperiode is verlopen. Log in op uw account via onze website liviolive.com om uw toegang te beheren."
+
     },
     "limit_reached": {
       "icon": "↑",
       "title": "Uw Premium Toegang Is Verlopen",
-      "description": "U heeft uw jaarlijkse limiet van {{limit}} tracking sessies bereikt. Uw huidige abonnement staat geen extra activaties toe. Beheer uw abonnement via onze website."
+      "description": "U heeft uw jaarlijkse limiet van {{limit}} tracking sessies bereikt. Uw huidige abonnement staat geen extra activaties toe. Beheer uw abonnement via onze website liviolive.com."
     },
     "membership_upcoming": {
       "icon": "⏳",
@@ -103,5 +105,7 @@
       "title": "Er Ging Iets Mis",
       "description": "Probeer het later opnieuw."
     }
-  }
+  },
+  "infoMessage": "Importeer het GPX-bestand in uw smartwatch of GPS-apparaat. Alleen geregistreerde deelnemers kunnen downloaden.",
+  "gpxInfo": "Als u het GPX-bestand wilt importeren in uw smartwatch of GPS-apparaat, mogen alleen geregistreerde deelnemers het GPX-bestand downloaden."
 }
