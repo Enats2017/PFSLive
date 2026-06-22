@@ -146,9 +146,9 @@ const requestBatteryOptimizationExemption = async (): Promise<void> => {
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['home', 'common']);
   const { width } = useDimensions();
-  const insets = useSafeAreaInsets(); 
+  const insets = useSafeAreaInsets();
   const isGestureNav = insets.bottom > 0;
-  const isLandscape = width 
+  const isLandscape = width
 
   // ✅ Notifications hook
   const {
@@ -395,23 +395,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const checkPowerSavingMode = useCallback(async (): Promise<boolean> => {
     if (Platform.OS !== 'android') {
-        try {
-            return await Battery.isLowPowerModeEnabledAsync();
-        } catch {
-            return false;
-        }
+      try {
+        return await Battery.isLowPowerModeEnabledAsync();
+      } catch {
+        return false;
+      }
     }
 
     try {
-        // getPowerStateAsync is more reliable than isLowPowerModeEnabledAsync
-        // on MIUI — it reads the full power state object
-        const powerState = await Battery.getPowerStateAsync();
-        console.log('🔋 Full power state:', powerState);
-        return powerState.lowPowerMode === true;
+      // getPowerStateAsync is more reliable than isLowPowerModeEnabledAsync
+      // on MIUI — it reads the full power state object
+      const powerState = await Battery.getPowerStateAsync();
+      console.log('🔋 Full power state:', powerState);
+      return powerState.lowPowerMode === true;
     } catch {
-        return false;
+      return false;
     }
-}, []);
+  }, []);
 
   const openPowerSavingSettings = useCallback(async () => {
     if (Platform.OS !== 'android') return;
@@ -1401,9 +1401,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     : `${Math.round(hoursUntilRace)}h`;
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <AppHeader showLogo={true} />
+      <AppHeader />
 
       {/* Update Modal */}
       {updateInfo && (
@@ -1442,7 +1442,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   >
                     <Text style={commonStyles.primaryButtonText}>{t('home:battery.allow')}</Text>
                   </TouchableOpacity>
-                 
+
                 </View>
               </View>
             </View>
@@ -1827,7 +1827,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </TouchableOpacity>
                 )*/}
             </>
-            
+
           ) : (
             <>
               {/*homeData?.following_live_events && homeData.following_live_events.length > 0 && (
@@ -1854,12 +1854,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <FollowingLiveEventsSection
               events={homeData.following_live_events}
               onRoutePress={(event) => {
-                navigation.navigate('FollowDetails', {
-                  product_app_id: event.product_app_id,
-                  event_image: event.event_image ?? '',
-                  event_name: event.event_name,
-                  sourceTab: 'live', 
-                });
+                console.log("11111111111111",event);
+                
+                if (event.event_source == "custom") {
+                   navigation.navigate('LiveTracking', {
+                      product_app_id: event.product_app_id,
+                      product_option_value_app_id: event.product_option_value_app_id,
+                      event_name: event.event_name,
+                      sourceScreen: 'HomeScreen',
+                      sectionType: 'follower',
+                      sourceTab: 'live',
+                      event_source: event.event_source,
+                    });
+                } else {
+                  navigation.navigate('FollowDetails', {
+                    product_app_id: event.product_app_id,
+                    event_image: event.event_image ?? '',
+                    event_name: event.event_name,
+                    sourceTab: 'live',
+                  });
+                }
               }}
             />
           )}
