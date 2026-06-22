@@ -6,6 +6,7 @@ import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../styles/common.styles';
+import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 
 interface ResultCardBeforeRaceProps {
     item: RaceResult;
@@ -32,6 +33,8 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
 }) => {
     const { t } = useTranslation(['allrace', 'common']);
     const navigation = useNavigation<any>();
+
+    const isLive = item.live_tracking_activated === 1;
 
     const hasUtmbIndex = showUtmbIndex &&
         item.utmb_index &&
@@ -85,6 +88,12 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                 <Text style={resultListStyle.teamText} numberOfLines={1}>
                     {[item.club, item.nation].filter(Boolean).join(' · ')}
                 </Text>
+
+                {isLive && (
+                    <View style={{ marginTop: 6 }}>
+                        <LiveTrackingBar />
+                    </View>
+                )}
 
                 <View style={resultListStyle.statsRow}>
                     <View style={resultListStyle.statCol}>

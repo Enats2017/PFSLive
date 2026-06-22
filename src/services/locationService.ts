@@ -239,7 +239,9 @@ export const locationService = {
     }
 
     let sentCount = 0;
-    const batchSize = 10;
+    // 50 (was 10): a multi-minute outage buffers >10 fixes; draining only 10 per
+    // call let the live fix overtake the rest, which the server then stale-dropped.
+    const batchSize = 50;
 
     try {
       for (let i = 0; i < Math.min(queue.length, batchSize); i++) {
