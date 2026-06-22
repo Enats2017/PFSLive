@@ -88,10 +88,21 @@ const MOVEMENT_THRESHOLD: Record<number, number> = {
 };
 const DEFAULT_MOVEMENT_METRES = 5;
 
-// ✅ Tracking log — ring buffer of recent events. Written by engine handlers,
-// read by HomeScreen 1s timer for live display.
+// ✅ Tracking log — written by engine handlers, read by HomeScreen 1s timer for
+// live display. TRACKING_LOG_KEY holds the CURRENT (unsealed) segment; older
+// entries are archived into immutable numbered segment keys so the whole ride is
+// retained on disk without holding it all in memory or rewriting one giant
+// value. _readFullLog() stitches segments + current back together for upload.
 export const TRACKING_LOG_KEY = '@PFSLive:trackingLog';
-const MAX_LOG_ENTRIES = 500;
+const TRACKING_LOG_SEG_PREFIX    = '@PFSLive:trackingLogSeg:';
+const TRACKING_LOG_SEG_COUNT_KEY = '@PFSLive:trackingLogSegCount';
+// Entries per archived segment. When the in-memory buffer reaches this it's
+// sealed to its own key (written once, never rewritten) and the buffer resets.
+const LOG_SEGMENT_SIZE = 500;
+// Retention ceiling: LOG_SEGMENT_SIZE * MAX_LOG_SEGMENTS entries archived
+// (20 000 here ≈ a very long event). Past this the current segment becomes a
+// rolling window so memory/disk stay bounded; earlier segments are kept.
+const MAX_LOG_SEGMENTS = 40;
 
 export interface TrackingLogEntry {
   ts: number;
@@ -110,9 +121,11 @@ export interface TrackingLogEntry {
 // synchronously and flush to AsyncStorage at most once every
 // LOG_FLUSH_INTERVAL_MS, so HomeScreen's live-log reader still sees recent
 // entries (with up to ~2s lag) without hammering disk.
-let _logBuffer: TrackingLogEntry[] = [];
+let _logBuffer: TrackingLogEntry[] = [];      // current (unsealed) segment, in memory
 let _logFlushTimer: ReturnType<typeof setTimeout> | null = null;
 let _logDirty = false;
+let _logSegCount = 0;                           // number of sealed segments on disk
+let _segCountLoaded = false;                    // synced from disk on first seal (cold-relaunch safety)
 const LOG_FLUSH_INTERVAL_MS = 2000;
 
 // Sample ~3× per send window so the throttle always has a candidate near the
@@ -142,22 +155,126 @@ const _scheduleLogFlush = (): void => {
   }, LOG_FLUSH_INTERVAL_MS);
 };
 
-// Keeps its async signature so existing `await addLog(...)` call-sites are
-// unchanged, but it no longer touches AsyncStorage on every call.
-const addLog = async (icon: string, msg: string): Promise<void> => {
-  _logBuffer.push({ ts: Date.now(), icon, msg });
-  if (_logBuffer.length > MAX_LOG_ENTRIES) {
-    _logBuffer.splice(0, _logBuffer.length - MAX_LOG_ENTRIES);
-  }
-  _logDirty = true;
-  _scheduleLogFlush();
-};
+// Archive the current in-memory segment to its own immutable key, then reset the
+// buffer for the next segment. Written exactly once per segment and never
+// rewritten, so cost stays flat no matter how long the ride runs.
+const _sealCurrentSegment = async (): Promise<void> => {
+  if (_logBuffer.length === 0) return;
 
-// Reset the in-memory log buffer + pending flush (call at session start).
-const _resetLogBuffer = (): void => {
+  // Cold-relaunch safety: if the OS killed us mid-ride and Transistor restarted
+  // this JS context, _logSegCount is 0 in memory while disk already holds sealed
+  // segments — sync from disk first so we don't overwrite segment 0.
+  if (!_segCountLoaded) {
+    try {
+      const cntStr = await AsyncStorage.getItem(TRACKING_LOG_SEG_COUNT_KEY);
+      _logSegCount = cntStr ? (parseInt(cntStr) || 0) : 0;
+    } catch { /* silent */ }
+    _segCountLoaded = true;
+  }
+
+  try {
+    await AsyncStorage.setItem(TRACKING_LOG_SEG_PREFIX + _logSegCount, JSON.stringify(_logBuffer));
+    _logSegCount += 1;
+    await AsyncStorage.setItem(TRACKING_LOG_SEG_COUNT_KEY, String(_logSegCount));
+  } catch {
+    // Seal failed (disk full / transient) — keep entries in memory and retry on
+    // the next entry. Do NOT reset the buffer, so nothing is lost.
+    return;
+  }
+
   _logBuffer = [];
   _logDirty = false;
   if (_logFlushTimer) { clearTimeout(_logFlushTimer); _logFlushTimer = null; }
+  try { await AsyncStorage.setItem(TRACKING_LOG_KEY, '[]'); } catch { /* silent */ }
+};
+
+// Stitch all sealed segments (in order) + the current in-memory segment back
+// into one array for upload. Uses the in-memory buffer for the current part so
+// it's current even if the last flush hasn't landed.
+const _readFullLog = async (): Promise<TrackingLogEntry[]> => {
+  const all: TrackingLogEntry[] = [];
+  let segCount = _logSegCount;
+  if (!_segCountLoaded) {
+    try {
+      const cntStr = await AsyncStorage.getItem(TRACKING_LOG_SEG_COUNT_KEY);
+      segCount = cntStr ? (parseInt(cntStr) || 0) : 0;
+    } catch { /* silent */ }
+  }
+  for (let i = 0; i < segCount; i++) {
+    try {
+      const segStr = await AsyncStorage.getItem(TRACKING_LOG_SEG_PREFIX + i);
+      if (segStr) {
+        const seg = JSON.parse(segStr);
+        if (Array.isArray(seg)) all.push(...seg);
+      }
+    } catch { /* skip a corrupt/missing segment */ }
+  }
+  if (_logBuffer.length > 0) {
+    all.push(..._logBuffer);
+  } else {
+    try {
+      const curStr = await AsyncStorage.getItem(TRACKING_LOG_KEY);
+      if (curStr) {
+        const cur = JSON.parse(curStr);
+        if (Array.isArray(cur)) all.push(...cur);
+      }
+    } catch { /* silent */ }
+  }
+  return all;
+};
+
+// Keeps its async signature so existing `await addLog(...)` call-sites are
+// unchanged.
+const addLog = async (icon: string, msg: string): Promise<void> => {
+  _logBuffer.push({ ts: Date.now(), icon, msg });
+  _logDirty = true;
+
+  // Seal the segment once it fills so the whole ride is retained on disk in
+  // bounded chunks. The seal persists, so it doubles as the flush.
+  if (_logBuffer.length >= LOG_SEGMENT_SIZE) {
+    if (_logSegCount < MAX_LOG_SEGMENTS) {
+      await _sealCurrentSegment();
+    } else {
+      // Retention ceiling reached (very long session): keep the current segment
+      // as a rolling window of the most recent entries. Earlier segments stay.
+      _logBuffer.splice(0, _logBuffer.length - LOG_SEGMENT_SIZE);
+      if (AppState.currentState !== 'active') await _flushLogsNow();
+      else _scheduleLogFlush();
+    }
+    return;
+  }
+
+  // ✅ Background persistence. The 2s setTimeout flush only fires while the JS
+  // runtime keeps running — i.e. foreground. Once the phone is pocketed the app
+  // is backgrounded, each Transistor wake returns in well under 2s, and the OS
+  // suspends the pending timer before _flushLogsNow runs — so during-race
+  // entries never reached disk (the "439 sent but only the startup entries
+  // logged" bug). When NOT active, write synchronously inside this wake.
+  // Background log cadence is sparse, so this can't recreate the foreground
+  // AsyncStorage write-storm the throttle was added to prevent.
+  if (AppState.currentState !== 'active') {
+    await _flushLogsNow();
+  } else {
+    _scheduleLogFlush();
+  }
+};
+
+// Reset the in-memory log buffer + pending flush + any archived segments from a
+// previous session (call at session start).
+const _resetLogBuffer = async (): Promise<void> => {
+  _logBuffer = [];
+  _logDirty = false;
+  if (_logFlushTimer) { clearTimeout(_logFlushTimer); _logFlushTimer = null; }
+  try {
+    const cntStr = await AsyncStorage.getItem(TRACKING_LOG_SEG_COUNT_KEY);
+    const cnt = cntStr ? (parseInt(cntStr) || 0) : 0;
+    const keys: string[] = [];
+    for (let i = 0; i < cnt; i++) keys.push(TRACKING_LOG_SEG_PREFIX + i);
+    if (keys.length) await AsyncStorage.multiRemove(keys);
+    await AsyncStorage.removeItem(TRACKING_LOG_SEG_COUNT_KEY);
+  } catch { /* silent */ }
+  _logSegCount = 0;
+  _segCountLoaded = true;   // we just authoritatively cleared — no disk sync needed
 };
 
 // ✅ Upload the tracking log from the BACKGROUND auto-stop path so it doesn't
@@ -179,10 +296,10 @@ const _uploadTrackingLogOnFinish = async (
     // timer reads RACE_FINISHED_KEY and runs stopGPSTracking, which uploads the
     // log — so skipping here avoids both uploaders racing on a foreground finish.
     if (AppState.currentState === 'active') return;
-    // Persist the in-memory buffer first so the 🏆 / 🛑 finish entries are in it.
+    // Persist the in-memory buffer first so the 🏆 / 🛑 finish entries are in it,
+    // then stitch the whole ride (all sealed segments + current) for upload.
     await _flushLogsNow();
-    const logsStr = await AsyncStorage.getItem(TRACKING_LOG_KEY);
-    const logs: TrackingLogEntry[] = logsStr ? JSON.parse(logsStr) : _logBuffer.slice();
+    const logs: TrackingLogEntry[] = await _readFullLog();
     if (!logs || logs.length === 0) return;
 
     let remaining = 0;
@@ -908,6 +1025,13 @@ const _doFullStop = async (): Promise<void> => {
 // (losing the JS handle), and the user now taps Stop. Idempotent.
 export const stopWatching = (): Promise<void> => _doFullStop();
 
+// ✅ PUBLIC: full tracking log (all sealed segments + current) and a direct
+// flush, for HomeScreen's foreground stop. It must read via getFullTrackingLog()
+// instead of AsyncStorage.getItem(TRACKING_LOG_KEY) — the key now holds only the
+// current segment, so a raw read would miss the archived ones.
+export const getFullTrackingLog = async (): Promise<TrackingLogEntry[]> => _readFullLog();
+export const flushTrackingLog   = async (): Promise<void> => _flushLogsNow();
+
 // ✅ PUBLIC: check whether a tracking session is currently active.
 // Returns true if TRACKING_PARAMS_KEY exists in AsyncStorage. Used by
 // HomeScreen on mount to detect tracking-in-progress after screen unmount.
@@ -1166,7 +1290,7 @@ export const gpsService = {
 
       // ✅ Clear all session-scoped state.
       await AsyncStorage.removeItem(TRACKING_LOG_KEY);
-      _resetLogBuffer();
+      await _resetLogBuffer();
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
       await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
       await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);

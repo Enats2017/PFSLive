@@ -32,7 +32,7 @@ import {
   ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry,
   startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive,
   isTracking, getTrackingParams, stopWatching, attachUi, detachUi,
-  LOG_UPLOADED_KEY,
+  LOG_UPLOADED_KEY, getFullTrackingLog,
 } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -200,7 +200,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }>({ visible: false, title: '', body: '', data: null });
 
   // Refs
-  const gpsWatchRef = useRef<{ remove: () => void } | null>(null);
+  const gpsWatchRef = useRef<{ remove: () => void | Promise<void> } | null>(null);
   const queueProcessorRef = useRef<NodeJS.Timeout | null>(null);
   const raceStartCheckRef = useRef<NodeJS.Timeout | null>(null);
   const appState = useRef(AppState.currentState);
@@ -971,7 +971,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     } catch { /* silent — fall back to React state */ }
 
     if (gpsWatchRef.current) {
-      gpsWatchRef.current.remove();
+      // ✅ Await full teardown before the log upload below. remove() →
+      // _doFullStop() stops Transistor, appends the "🛑 Tracking stopped" entry,
+      // and flushes — awaiting it guarantees that entry is in the buffer before
+      // getFullTrackingLog() reads it, and that no late fix lands mid-upload.
+      // try/catch so a teardown hiccup can't block the upload/toast.
+      try { await gpsWatchRef.current.remove(); } catch { /* silent */ }
       gpsWatchRef.current = null;
     }
 
@@ -1015,8 +1020,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // and we upload here as before.
         const alreadyUploaded = await AsyncStorage.getItem(LOG_UPLOADED_KEY);
         if (alreadyUploaded !== '1') {
-          const logsStr = await AsyncStorage.getItem(TRACKING_LOG_KEY);
-          const logs: TrackingLogEntry[] = logsStr ? JSON.parse(logsStr) : [];
+          const logs = await getFullTrackingLog();
           if (logs.length > 0) {
             await locationService.saveTrackingLog(
               participantId,
