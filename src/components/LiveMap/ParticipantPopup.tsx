@@ -84,18 +84,31 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                     </View>
                 </View>
 
-                {participant.is_estimated && (
-                <View style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 6,
-                    backgroundColor: '#FEF3C7', borderRadius: 8,
-                    paddingVertical: 6, paddingHorizontal: 10, marginBottom: 10,
-                }}>
-                    <Ionicons name="cellular-outline" size={14} color="#B45309" />
-                    <Text style={{ flex: 1, color: '#92400E', fontSize: 12 }}>
-                    {t('livetracking:estimatedNotice')}
-                    </Text>
-                </View>
-                )}
+                {participant.connection_status === 'offline' ? (
+                    <View style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        backgroundColor: '#F1F5F9', borderColor: '#CBD5E1', borderWidth: 1,
+                        borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10, marginBottom: 12,
+                    }}>
+                        <Ionicons name="cloud-offline-outline" size={16} color="#475569" />
+                        <Text style={{ flex: 1, color: '#334155', fontSize: 12 }}>
+                            {t('livetracking:offlineNotice', {
+                                time: formatLastUpdate(participant.last_update_time, participant.last_update_type),
+                            })}
+                        </Text>
+                    </View>
+                ) : participant.is_estimated ? (
+                    <View style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        backgroundColor: '#FEF3C7', borderRadius: 8,
+                        paddingVertical: 6, paddingHorizontal: 10, marginBottom: 10,
+                    }}>
+                        <Ionicons name="cellular-outline" size={14} color="#B45309" />
+                        <Text style={{ flex: 1, color: '#92400E', fontSize: 12 }}>
+                            {t('livetracking:estimatedNotice')}
+                        </Text>
+                    </View>
+                ) : null}
 
                 {showLowBattery && (
                     <View style={{

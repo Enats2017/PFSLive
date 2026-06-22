@@ -109,6 +109,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     last_update_type: p.last_update_type,
                     battery_level: p.battery_level ?? null,
                     is_estimated: p.is_estimated ?? (p.location_source === 'estimated'),
+                    connection_status: p.connection_status ?? null,
                 };
             });
     }, [participants]);
