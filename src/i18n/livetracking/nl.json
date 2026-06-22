@@ -28,6 +28,7 @@
     "availableServices": "Beschikbare diensten",
     "lowBattery": "⚠️ Batterij bijna leeg ({{level}}%) — live tracking kan binnenkort pauzeren of stoppen.",
     "estimatedNotice": "Geschatte positie — zwak signaal. Wordt automatisch bijgewerkt zodra de verbinding terug is.",
+    "offlineNotice": "Offline — laatst gezien {{time}}. Laatst bekende positie wordt getoond.",
     "estimatedBadge": "Geschat",
     "start": "Start",
     "finish": "Finish",

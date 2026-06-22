@@ -28,6 +28,7 @@
     "availableServices": "Services disponibles",
     "lowBattery": "⚠️ Batterie faible ({{level}}%) — le suivi en direct peut bientôt s'interrompre.",
     "estimatedNotice": "Position approximative — signal faible. Mise à jour automatique dès le retour de la connexion.",
+    "offlineNotice": "Hors ligne — vu pour la dernière fois {{time}}. Affichage de la dernière position connue.",
     "estimatedBadge": "Approximatif",
     "start": "Départ",
     "finish": "Arrivée",

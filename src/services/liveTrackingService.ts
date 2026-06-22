@@ -60,6 +60,8 @@ export interface LiveTrackingParticipant {
     last_update_type: string;
     location_source: string;
     is_estimated?: boolean;
+    connection_status?: 'live' | 'delayed' | 'offline' | 'finished' | null;
+    seconds_since_update?: number | null;
     checkpoints: LiveTrackingCheckpoint[];
 }
 

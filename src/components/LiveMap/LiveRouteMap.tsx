@@ -16,6 +16,7 @@ const MARKER_COLORS = {
     checkpoint: '#1a1a2e', // dark   — intermediate checkpoints
     participant: '#F97316', // orange — tracked athletes
     follower: '#6366F1', // indigo — "you are here" marker (viewer's own position)
+    offline: '#94A3B8', // slate  — frozen "no signal" position (offline)
 } as const;
 
 // ── Distance-marker styling ───────────────────────────────────────────────────
@@ -666,6 +667,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                     initials: p.initials,
                     battery_level: p.battery_level ?? null,
                     is_estimated: p.is_estimated ?? false,
+                    connection_status: p.connection_status ?? 'live',
                 },
                 geometry: { type: 'Point', coordinates: [lon, lat] },
             })),
@@ -855,6 +857,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 source: props.source,
                 battery_level: props.battery_level ?? null,
                 is_estimated: props.is_estimated ?? false,
+                connection_status: props.connection_status ?? 'live',
             };
             onParticipantPress(participant);
         }
@@ -1158,12 +1161,24 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         <Mapbox.CircleLayer
                             id="participant-dots"
                             style={{
-                                circleColor: MARKER_COLORS.participant,
+                                // Offline → slate grey: no live signal, dot is frozen on the
+                                // last received position. Everything else → orange.
+                                circleColor: [
+                                    'case',
+                                    ['==', ['get', 'connection_status'], 'offline'], MARKER_COLORS.offline,
+                                    MARKER_COLORS.participant,
+                                ] as any,
                                 circleRadius: 13,
                                 circleStrokeWidth: 4,
                                 circleStrokeColor: '#FFFFFF',
                                 circlePitchAlignment: 'map',
-                                circleOpacity: 1,
+                                // Delayed (dead-reckoned / approximate) → translucent so it
+                                // reads as provisional; live / finished / offline → solid.
+                                circleOpacity: [
+                                    'case',
+                                    ['==', ['get', 'connection_status'], 'delayed'], 0.55,
+                                    1,
+                                ] as any,
                             }}
                         />
                         <Mapbox.SymbolLayer

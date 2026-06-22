@@ -24,6 +24,7 @@ export interface ParticipantMapMarker {
     profile_picture: string | null;
     source: string;
     is_estimated?: boolean;
+    connection_status?: 'live' | 'delayed' | 'offline' | 'finished' | null;
     battery_level?: number | null;
 }
 
