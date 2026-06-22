@@ -354,12 +354,19 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                 size={11}
                                 style={{
                                     data: {
-                                        fill: '#F97316',
+                                        // Match the map: offline → slate grey (frozen);
+                                        // translucent ONLY when actually dead-reckoned
+                                        // (is_estimated); live / stale-but-real / finished → solid.
+                                        fill: ({ datum }: any) =>
+                                            datum?.participant?.connection_status === 'offline'
+                                                ? '#94A3B8'
+                                                : '#F97316',
+                                        opacity: ({ datum }: any) =>
+                                            datum?.participant?.is_estimated ? 0.55 : 1,
                                         stroke: colors.white,
                                         strokeWidth: 2.5,
                                     },
                                 }}
-
                             />
                         )}
 

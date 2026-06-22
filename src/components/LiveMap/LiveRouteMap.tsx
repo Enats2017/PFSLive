@@ -223,6 +223,83 @@ const placeKmMarkers = (
     return cumulative;
 };
 
+// Fan out any cluster of participant dots sitting on (almost) the same point so
+// finishers — or runners physically together — render as separate, tappable dots.
+// Clustering is by straight-line metres (not a grid), so a dot NEAR the finish,
+// not exactly on it, is still caught. The spread is deliberately SMALL: a cluster
+// still reads as "together here" when zoomed out and fans apart as you zoom in;
+// the radius grows with crowd size so big groups don't crush together. Pure +
+// deterministic (slots keyed by id → stable across refreshes). Counts are tiny,
+// so the O(n²) proximity check is free, and the shift is a few metres — below GPS
+// accuracy — so distance / speed / next-CP are untouched, only the screen dot.
+const fanOutOverlaps = (
+    placed: Array<{ p: ParticipantMapMarker; lon: number; lat: number }>,
+    routeEnd: [number, number] | null = null,
+): Array<{ p: ParticipantMapMarker; lon: number; lat: number }> => {
+    if (placed.length < 2) return placed;
+
+    const CLUSTER_EPS_M = 4;   // within ~4m → same spot (covers near-finish neighbours)
+    const FAN_MIN_M     = 2;   // small base radius → subtle, reveals on zoom-in
+    const FAN_GAP_M     = 3;   // arc gap between neighbours → drives growth with count
+    const FINISH_PULL_M = 20;  // a cluster this close to the route end fans AROUND the
+                               // end coordinate (finishers gather on the line) instead
+                               // of around their own centroid.
+
+    const cosLat = Math.cos((placed[0].lat * Math.PI) / 180) || 1e-6;
+    const distM = (a: { lon: number; lat: number }, b: { lon: number; lat: number }) => {
+        const dx = (a.lon - b.lon) * 111320 * cosLat;
+        const dy = (a.lat - b.lat) * 111320;
+        return Math.hypot(dx, dy);
+    };
+
+    const N = placed.length;
+    const assigned = new Array(N).fill(false);
+
+    for (let s = 0; s < N; s++) {
+        if (assigned[s]) continue;
+
+        // Grow a cluster: anything within EPS of ANY member joins (transitive).
+        const g = [s];
+        assigned[s] = true;
+        for (let qi = 0; qi < g.length; qi++) {
+            for (let j = 0; j < N; j++) {
+                if (!assigned[j] && distM(placed[g[qi]], placed[j]) <= CLUSTER_EPS_M) {
+                    assigned[j] = true;
+                    g.push(j);
+                }
+            }
+        }
+        if (g.length < 2) continue;   // lone dot → leave it exactly where it is
+
+        // Stable slot order so a given runner always gets the same angle.
+        g.sort((a, b) => placed[a].p.id - placed[b].p.id);
+
+        // Cluster centre = mean of the stacked points …
+        let cLon = 0, cLat = 0;
+        for (const i of g) { cLon += placed[i].lon; cLat += placed[i].lat; }
+        cLon /= g.length; cLat /= g.length;
+
+        // … but if this cluster is right at the route end, fan AROUND the end
+        // coordinate instead, so finishers gather on the finish line rather than
+        // a metre or two before it.
+        if (routeEnd && distM({ lon: cLon, lat: cLat }, { lon: routeEnd[0], lat: routeEnd[1] }) <= FINISH_PULL_M) {
+            cLon = routeEnd[0];
+            cLat = routeEnd[1];
+        }
+
+        // Radius grows with crowd so dots keep ~FAN_GAP_M of arc between them.
+        const radiusM = Math.max(FAN_MIN_M, (FAN_GAP_M * g.length) / (2 * Math.PI));
+
+        g.forEach((i, k) => {
+            const angle = (2 * Math.PI * k) / g.length - Math.PI / 2;  // first slot at top
+            placed[i].lon = cLon + (radiusM * Math.cos(angle)) / (111320 * cosLat);
+            placed[i].lat = cLat + (radiusM * Math.sin(angle)) / 111320;
+        });
+    }
+
+    return placed;
+};
+
 interface LiveRouteMapProps {
     trackPoints: GPXTrackPoint[];
     aidStations: GPXAidStation[];
@@ -638,6 +715,13 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
         } else {
             placed = valid.map(p => ({ p, lon: p.lon, lat: p.lat }));
         }
+
+        // De-overlap: fan out participants that resolved to the same point
+        // (several finishers at the line, or runners physically together) so each
+        // dot stays visible + tappable. Pass the route end so a finish cluster
+        // gathers ON the end coordinate. Runs for both the snapped and raw paths.
+        const routeEnd: [number, number] | null = route.length >= 2 ? route[route.length - 1] : null;
+        placed = fanOutOverlaps(placed, routeEnd);
 
         return {
             type: 'FeatureCollection',
@@ -1172,11 +1256,13 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                 circleStrokeWidth: 4,
                                 circleStrokeColor: '#FFFFFF',
                                 circlePitchAlignment: 'map',
-                                // Delayed (dead-reckoned / approximate) → translucent so it
-                                // reads as provisional; live / finished / offline → solid.
+                                // Translucent ONLY when the dot is an actual dead-reckoned
+                                // estimate. A merely-stale fix still showing the real last
+                                // position stays solid — it's real, just a bit old (the popup
+                                // conveys "last seen X ago"). offline → solid grey.
                                 circleOpacity: [
                                     'case',
-                                    ['==', ['get', 'connection_status'], 'delayed'], 0.55,
+                                    ['==', ['get', 'is_estimated'], true], 0.55,
                                     1,
                                 ] as any,
                             }}
