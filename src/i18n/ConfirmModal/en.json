@@ -1,6 +1,6 @@
 {
   "title": "Confirm Registration",
-  "subtitle": "We found your details in the race result. Please confirm your information below.",
+  "subtitle": "If this is you, please hit the Confirm button. Then you will receive an email, and after clicking the link in that email, you are all good to go!",
   "fields": {
     "bibNumber": "Bib Number",
     "firstName": "First Name",

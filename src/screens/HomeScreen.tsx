@@ -72,6 +72,7 @@ export interface FollowingLiveEvent {
   product_option_value_app_id: number;
   event_name: string;
   event_source: string;
+  event_image: string;
   race_date: string;
   race_distance: string;
   race_time: string;
@@ -1853,14 +1854,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <FollowingLiveEventsSection
               events={homeData.following_live_events}
               onRoutePress={(event) => {
-                navigation.navigate('LiveTracking', {
+                navigation.navigate('FollowDetails', {
                   product_app_id: event.product_app_id,
-                  product_option_value_app_id: event.product_option_value_app_id,
+                  event_image: event.event_image ?? '',
                   event_name: event.event_name,
-                  sourceScreen: 'HomeScreen',
-                  sectionType: 'follower',
-                  sourceTab: 'live',
-                  event_source: event.event_source,
+                  sourceTab: 'live', 
                 });
               }}
             />

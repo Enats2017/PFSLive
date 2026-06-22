@@ -3,8 +3,9 @@
     "Distance": "Distance",
     "Participant": "Participant"
   },
-  "button": "SIGN UP LIVE TRACKING",
+  "button": "SIGN UP",
   "undo": "UNDO FOR SIGNUP",
+  "gpx": "DOWNLOAD GPX",
   "live": "LIVE",
   "countdown": {
     "live": "LIVE",
@@ -77,12 +78,12 @@
     "membership_required": {
       "icon": "◆",
       "title": "Your Premium Access Has Expired",
-      "description": "Your free trial period has ended. Log in to your account via our website to manage your access."
+      "description": "Your free trial period has ended. Log in to your account via our website liviolive.com to manage your access."
     },
     "limit_reached": {
       "icon": "↑",
       "title": "Your Premium Access Has Expired",
-      "description": "You've reached your yearly limit of {{limit}} tracking sessions. Your current plan does not allow additional activations. Manage your subscription via our website."
+      "description": "You've reached your yearly limit of {{limit}} tracking sessions. Your current plan does not allow additional activations. Manage your subscription via our website liviolive.com."
     },
     "membership_upcoming": {
       "icon": "⏳",
@@ -104,5 +105,7 @@
       "title": "Something Went Wrong",
       "description": "Please try again later."
     }
-  }
+  },
+  "infoMessage": "Choose the distance you will be participating in to link your live results (bib number) with your live tracking.",
+  "gpxInfo": "Import GPX into your smartwatch or GPS device. Only registered participants can download."
 }

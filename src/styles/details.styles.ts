@@ -18,6 +18,7 @@ export const detailsStyles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
   },
+  
   card: {
       backgroundColor: colors.white,
       borderRadius: 12,
@@ -56,6 +57,8 @@ export const detailsStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+   
+    gap:10,
    
   },
   topRow: {
@@ -166,23 +169,59 @@ export const detailsStyles = StyleSheet.create({
     resultsButton: {
     backgroundColor: colors.primaryLight,
     borderRadius: spacing.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    minWidth: 120,
+    minWidth: 130,
+    minHeight: 40, 
     
   },
 
   routeButton: {
     backgroundColor: colors.primary,
     borderRadius: spacing.sm,
-    paddingVertical: spacing.md,
+   
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    minWidth: 120,
+    minWidth: 130,
+    minHeight: 40, 
   },
+  verticalDivider: {
+    width: 1,
+    height:130,
+    alignSelf: 'center',
+    backgroundColor: colors.gray200,
+  },
+
+  infoBox: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#EDF2F7',       // light blue tint like the screenshot
+  borderRadius: 12,
+  padding: spacing.sm,
+  marginHorizontal: spacing.md,
+  marginBottom: spacing.sm,
+  gap: spacing.sm,
+},
+
+infoIconWrapper: {
+  width: 40,
+  height: 40,
+  borderRadius: 21,
+  backgroundColor: '#CBD5E0',       // slightly darker circle behind icon
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+},
+
+infoBoxText: {
+  flex: 1,
+  fontSize: typography.sizes.xs,
+  color: colors.primaryLight,
+  fontWeight: typography.weights.semibold,
+  lineHeight: 18,
+},
 });
