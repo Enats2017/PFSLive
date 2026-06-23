@@ -38,11 +38,11 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
     
     return (
         <View style={ownProfile.menuSection}>
-            {profile?.is_own_profile === 1 && profile?.membership_info?.has_membership && (
+            {profile?.is_own_profile === 1 && (
                 <TouchableOpacity style={ownProfile.trackingBanner} activeOpacity={0.85}>
                     <Ionicons name="cube" size={40} color="black" />
                     <View style={ownProfile.trackingTextWrapper}>
-                        {profile.membership_info.unlimited ? (
+                        {profile?.membership_info?.unlimited ? (
                             <>
                                 <Text style={ownProfile.title}>
                                     {t('ownProfile:tracking.unlimited')}
@@ -51,10 +51,10 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                                     {t('ownProfile:tracking.subtitle')}
                                 </Text>
                             </>
-                        ) : (profile.membership_info.remaining ?? 0) > 0 ? (
+                        ) : (profile?.membership_info?.remaining ?? 0) > 0 ? (
                             <>
                                 <Text style={ownProfile.title}>
-                                    {t('ownProfile:tracking.remaining', { count: profile.membership_info.remaining ?? 0 })}
+                                    {t('ownProfile:tracking.remaining', { count: profile?.membership_info?.remaining ?? 0 })}
                                 </Text>
                                 <Text style={ownProfile.subtitle}>
                                     {t('ownProfile:tracking.subtitle')}

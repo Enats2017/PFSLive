@@ -77,13 +77,13 @@
     },
     "membership_required": {
       "icon": "◆",
-      "title": "Your Premium Access Has Expired",
-      "description": "Your free trial period has ended. Log in to your account via our website liviolive.com to manage your access."
+      "title": "Live Tracking Unavailable",
+      "description": "Your current tracking sessions are not active. Live tracking isn't available right now."
     },
     "limit_reached": {
       "icon": "↑",
-      "title": "Your Premium Access Has Expired",
-      "description": "You've reached your yearly limit of {{limit}} tracking sessions. Your current plan does not allow additional activations. Manage your subscription via our website liviolive.com."
+      "title": "No Tracking Sessions Left",
+      "description": "You've used all the live tracking sessions currently available to you."
     },
     "membership_upcoming": {
       "icon": "⏳",
