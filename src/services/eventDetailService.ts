@@ -21,6 +21,7 @@ export interface Distance {
   participant_count: number;
   finished_count: number;
   participant_started_count: number;
+  dnf_count: number;
   gpx_url: string | null;
 }
 

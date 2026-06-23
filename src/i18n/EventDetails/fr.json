@@ -19,6 +19,7 @@
   },
   "athletes": "Athlètes démarrés",
   "finished": "Athlètes Terminés",
+  "dnf": "Abandons",
   "distance": {
     "empty": "Aucune distance disponible"
   },

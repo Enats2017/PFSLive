@@ -22,6 +22,7 @@
   },
   "athletes": "Athletes Started",
   "finished": "Athletes Finished",
+  "dnf": "Did Not Finish",
   "participant": {
     "empty": "Search participants by name or bib number",
     "search": "Search participants by name, bib number",

@@ -356,6 +356,15 @@ const renderListHeader = useCallback(() => {
               </Text>
             </View>
 
+            {item.dnf_count > 0 && (
+              <View style={detailsStyles.metaRow}>
+                <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
+                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                  {item.dnf_count} {t('details:dnf')}
+                </Text>
+              </View>
+            )}
+
             <View style={detailsStyles.metaRow}>
               <MaterialCommunityIcons name="timer-sand" size={15} color={colors.gray600} />
               <CountdownBadge
