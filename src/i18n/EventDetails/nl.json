@@ -106,14 +106,18 @@
     }
   },
   "infoMessage": "Importeer het GPX-bestand in uw smartwatch of GPS-apparaat. Alleen geregistreerde deelnemers kunnen downloaden.",
-  "gpxInfo": "Als u het GPX-bestand wilt importeren in uw smartwatch of GPS-apparaat, mogen alleen geregistreerde deelnemers het GPX-bestand downloaden.",
-  "gpxDownload": {
-  "permissionDeniedTitle": "Toestemming geweigerd",
-  "permissionDeniedMessage": "Toegang tot de map is vereist om het GPX-bestand op te slaan.",
-  "successTitle": "Gedownload",
-  "successMessage": "Succesvol opgeslagen.",
-  "errorMessage": "Kan het GPX-bestand niet downloaden.",
-  "noFileTitle": "Geen GPX-bestand",
-  "noFileMessage": "Geen GPX-bestand beschikbaar."
+    "gpxInfo": "Als u het GPX-bestand wilt importeren in uw smartwatch of GPS-apparaat, mogen alleen geregistreerde deelnemers het GPX-bestand downloaden.",
+    "gpxDownload": {
+    "permissionDeniedTitle": "Toestemming geweigerd",
+    "permissionDeniedMessage": "Toegang tot de map is vereist om het GPX-bestand op te slaan.",
+    "successTitle": "Gedownload",
+    "successMessage": "Succesvol opgeslagen.",
+    "errorMessage": "Kan het GPX-bestand niet downloaden.",
+    "noFileTitle": "Geen GPX-bestand",
+    "noFileMessage": "Geen GPX-bestand beschikbaar."
+  },
+  "gpxRestricted": {
+    "title": "Registratie Vereist",
+    "message": "Alleen geregistreerde deelnemers kunnen het GPX-bestand downloaden. Schrijf je eerst in voor deze afstand."
   }
 }
