@@ -29,6 +29,8 @@ import { AppHeader } from '../../components/common/AppHeader';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import useGpxDownload from '../../hooks/useGpxDownload';
+
 
 interface DistanceTabProps {
   product_app_id: string | number;
@@ -54,6 +56,7 @@ const DistanceTab = ({
   const [undoModalVisible, setUndoModalVisible] = useState(false);
   const [selectedUndoItem, setSelectedUndoItem] = useState<Distance | null>(null);
   const [pendingRefresh, setPendingRefresh] = useState(false);
+  const { downloadGpx, downloadingId } = useGpxDownload();
 
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -362,6 +365,7 @@ const DistanceTab = ({
               <>
                 <TouchableOpacity
                   style={detailsStyles.routeButton}
+                   onPress={() => downloadGpx(item)}
                   activeOpacity={0.8}
                 >
                   <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>{t('details:gpx')}</Text>
