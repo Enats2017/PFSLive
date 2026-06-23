@@ -72,11 +72,17 @@ export const editProfileApi = async (
     // Use FormData to support optional file upload
     const formData = new FormData();
 
+    // Fields where an EMPTY value is meaningful ("clear this") and must be sent,
+    // not skipped. dob is optional + clearable: '' tells the API to blank it in
+    // both tables. Everything else keeps the "skip empty" behaviour so untouched
+    // fields aren't needlessly sent.
+    const ALWAYS_SEND = new Set<keyof EditProfilePayload>(['dob']);
+
     (Object.keys(payload) as (keyof EditProfilePayload)[]).forEach((key) => {
         const val = payload[key];
-        if (val !== undefined && val !== '') {
-            formData.append(key, String(val));
-        }
+        if (val === undefined) return;                       // truly not provided → skip
+        if (val === '' && !ALWAYS_SEND.has(key)) return;     // empty + not clearable → skip
+        formData.append(key, String(val));                   // send (incl. dob='')
     });
 
     if (profilePicture) {

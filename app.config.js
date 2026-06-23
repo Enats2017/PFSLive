@@ -34,6 +34,8 @@ export default ({ config }) => {
         NSLocationAlwaysAndWhenInUseUsageDescription: "Livio needs background location access to track your race even when the app is minimized.",
         NSLocationAlwaysUsageDescription: "Livio requires continuous location access to provide accurate race tracking.",
         NSMotionUsageDescription: "Livio uses motion data during active race tracking to improve location accuracy and optimize battery usage.",
+        NSCameraUsageDescription: "Livio uses your camera to take a profile photo, for example to set or update your athlete profile picture.",
+        NSPhotoLibraryUsageDescription: "Livio accesses your photo library so you can select a profile picture, for example to personalize your athlete profile.",
         UIBackgroundModes: ["remote-notification", "location", "fetch"],
         TSLocationManagerLicense: process.env.TSLOCATIONMANAGER_LICENSE ?? "",
         LSSupportsOpeningDocumentsInPlace: true,

@@ -27,7 +27,10 @@
     "toastSuccess": "Paramètres enregistrés avec succès !",
     "toastErrorLoad": "Impossible de charger les paramètres.",
     "toastErrorSave": "Échec de l'enregistrement des paramètres.",
-    "chars": "caractères"
+    "chars": "caractères",
+    "deleteAccount": "Supprimer mon compte",
+    "deleteAccountHint": "Ouvre la page de demande de suppression de compte dans votre navigateur",
+    "deleteAccountError": "Impossible d'ouvrir la page de suppression. Veuillez réessayer plus tard."
   },
   "passwordModal": {
     "title": "🔒 Profil privé",

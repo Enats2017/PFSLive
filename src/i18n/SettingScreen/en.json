@@ -27,7 +27,10 @@
     "toastSuccess": "Settings saved successfully!",
     "toastErrorLoad": "Could not load settings.",
     "toastErrorSave": "Failed to save settings.",
-    "chars": "characters"
+    "chars": "characters",
+    "deleteAccount": "Delete my account",
+    "deleteAccountHint": "Opens the account deletion request page in your browser",
+    "deleteAccountError": "Couldn't open the deletion page. Please try again later."
   },
   "passwordModal": {
       "title": "🔒 Private Profile",

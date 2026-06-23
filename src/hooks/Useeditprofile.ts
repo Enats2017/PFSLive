@@ -82,7 +82,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             lastname: initialProfile.lastname ?? '',
             email: initialProfile.email ?? '',
             city: initialProfile.city ?? '',
-            dob: initialProfile.dob ?? '',
+            dob: normalizeDob(initialProfile.dob),
             gender: initialProfile.gender ?? '',
             countryName: initialProfile.country ?? '',
             country_id: String(initialProfile.country_id ?? ''),
@@ -159,7 +159,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             firstname: form.firstname.trim(),
             lastname: form.lastname.trim(),
             city: form.city.trim(),
-            dob: form.dob || undefined,
+            dob: form.dob.trim(),
             gender: form.gender || undefined,
             country_id: form.country_id ? Number(form.country_id) : undefined,
             // ✅ Use language selected in form instead of getCurrentLanguageId()
@@ -200,6 +200,16 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             setLoading(false)
         }
     }, [form, picture, removePicture, t])
+
+    // MySQL returns an unset DATE as '0000-00-00' (and some drivers as '0000-00-00 00:00:00').
+    // Treat those — and any all-zero variant — as empty so the DOB field renders blank.
+    const normalizeDob = (dob?: string | null): string => {
+        const v = (dob ?? '').trim();
+        if (v === '') return '';
+        // strip time part if present, then check for the zero-date sentinel
+        const datePart = v.split(' ')[0];
+        return /^0{4}-0{2}-0{2}$/.test(datePart) ? '' : datePart;
+    };
 
     return {
         form,
