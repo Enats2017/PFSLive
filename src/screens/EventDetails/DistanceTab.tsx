@@ -255,14 +255,13 @@ const DistanceTab = ({
     setSelectedUndoItem(null);
   }, [selectedUndoItem, handleDelete]);
 
-  const isAnyRegistered = useMemo(
-    () => distances?.some((d) => d.registration_status === 'registered') ?? false,
-    [distances]
+  
+const renderListHeader = useCallback(() => {
+  const isAnyRegistered = distances.some(
+    (d) => d.registration_status === 'registered'
   );
-  console.log(isAnyRegistered);
 
-
-  const renderListHeader = useCallback(() => (
+  return (
     <View>
       {event_image ? (
         <Image
@@ -275,16 +274,29 @@ const DistanceTab = ({
           resizeMode="contain"
         />
       ) : null}
+
       <View style={detailsStyles.infoBox}>
         <View style={detailsStyles.infoIconWrapper}>
           <AntDesign name="link" size={20} color={colors.primaryDark} />
         </View>
         <Text style={detailsStyles.infoBoxText}>
-          {t(isAnyRegistered ? 'details:gpxInfo' : 'details:infoMessage')}
+          {t('details:infoMessage')}
         </Text>
       </View>
+
+      {isAnyRegistered && (
+        <View style={detailsStyles.infoBox}>
+          <View style={detailsStyles.infoIconWrapper}>
+          <AntDesign name="link" size={20} color={colors.primaryDark} />
+          </View>
+          <Text style={detailsStyles.infoBoxText}>
+            {t('details:gpxInfo')}
+          </Text>
+        </View>
+      )}
     </View>
-  ), [event_name, event_image, isAnyRegistered, t]);
+  );
+}, [event_name, event_image, distances]);
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isRegistering =
@@ -293,7 +305,7 @@ const DistanceTab = ({
         selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
 
     return (
-      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm, marginHorizontal: spacing.md }]}>
+      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.md, marginHorizontal: spacing.md }]}>
         <View style={detailsStyles.distance}>
           <View style={detailsStyles.distanceInfo}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>

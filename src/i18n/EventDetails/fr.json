@@ -107,6 +107,15 @@
     }
   },
   "infoMessage": "Importez le fichier GPX dans votre montre connectée ou appareil GPS. Seuls les participants inscrits peuvent télécharger.",
-  "gpxInfo": "Si vous souhaitez importer le fichier GPX dans votre montre connectée ou appareil GPS, seuls les participants inscrits sont autorisés à télécharger le fichier GPX."
+  "gpxInfo": "Si vous souhaitez importer le fichier GPX dans votre montre connectée ou appareil GPS, seuls les participants inscrits sont autorisés à télécharger le fichier GPX.",
+  "gpxDownload": {
+  "permissionDeniedTitle": "Permission refusée",
+  "permissionDeniedMessage": "L'accès au dossier est requis pour enregistrer le fichier GPX.",
+  "successTitle": "Téléchargé",
+  "successMessage": "Enregistré avec succès.",
+  "errorMessage": "Impossible de télécharger le fichier GPX.",
+  "noFileTitle": "Aucun fichier GPX",
+  "noFileMessage": "Aucun fichier GPX disponible."
+  }
 
 }

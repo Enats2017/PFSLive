@@ -107,5 +107,14 @@
     }
   },
   "infoMessage": "Choose the distance you will be participating in to link your live results (bib number) with your live tracking.",
-  "gpxInfo": "Import GPX into your smartwatch or GPS device. Only registered participants can download."
+  "gpxInfo": "Import GPX into your smartwatch or GPS device. Only registered participants can download.",
+  "gpxDownload": {
+  "permissionDeniedTitle": "Permission Denied",
+  "permissionDeniedMessage": "Folder access is required to save the GPX file.",
+  "successTitle": "Downloaded",
+  "successMessage": "saved successfully.",
+  "errorMessage": "Could not download GPX file.",
+  "noFileTitle": "No GPX File",
+  "noFileMessage": "No GPX file available."
+  }
 }

@@ -5,7 +5,8 @@ export const detailsStyles = StyleSheet.create({
   section: {
     alignItems: "center",
     backgroundColor: colors.themeiColor,
-     paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md, 
     
   },
   tabBar: {
@@ -24,6 +25,8 @@ export const detailsStyles = StyleSheet.create({
       borderRadius: 12,
       padding: spacing.md,
       shadowColor: colors.black,
+      marginHorizontal: spacing.md,      // FIX: added — aligns cards with infoBox gutters
+      marginBottom: spacing.md,    
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 10,
@@ -57,14 +60,13 @@ export const detailsStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-   
-    gap:10,
+    gap:spacing.md,
    
   },
   topRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: spacing.md,
+   
   },
   
     distanceInfo: {
@@ -75,17 +77,20 @@ export const detailsStyles = StyleSheet.create({
    metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
     marginTop: spacing.sm,
   },
 
   metaIcon: {
-    fontSize: 13,
+    fontSize: 15,                         // FIX: was 13 — synced with metaText; prevents misalignment
+    lineHeight: 20,                       // FIX: added — stabilises vertical alignment
   },
-  metaText: {
-    fontSize: typography.sizes.sm,
+
+ metaText: {
+    fontSize: typography.sizes.sm,        // keep — but ensure sm >= 13px in common.styles
     color: colors.gray500,
     fontWeight: typography.weights.medium,
+    lineHeight: 20,                       // FIX: added — matches metaIcon lineHeight
     flexShrink: 1,
   },
   // ✅ AVATAR CONTAINER
@@ -150,6 +155,7 @@ export const detailsStyles = StyleSheet.create({
     backgroundColor: '#f0fdf4',
     paddingVertical: 6,
     paddingHorizontal: 12,
+    
     gap: 6,
   },
   
@@ -161,7 +167,7 @@ export const detailsStyles = StyleSheet.create({
   },
 
   title: {
-    fontSize: typography.sizes.xl,
+    fontSize: 22,
     fontWeight: typography.weights.bold,
     color: colors.themeblue,
   },
@@ -169,25 +175,24 @@ export const detailsStyles = StyleSheet.create({
     resultsButton: {
     backgroundColor: colors.primaryLight,
     borderRadius: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     minWidth: 130,
-    minHeight: 40, 
+    minHeight: 44, 
     
   },
 
   routeButton: {
     backgroundColor: colors.primary,
     borderRadius: spacing.sm,
-   
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     minWidth: 130,
-    minHeight: 40, 
+    minHeight: 44, 
   },
   verticalDivider: {
     width: 1,
@@ -203,14 +208,14 @@ export const detailsStyles = StyleSheet.create({
   borderRadius: 12,
   padding: spacing.sm,
   marginHorizontal: spacing.md,
-  marginBottom: spacing.sm,
+  marginBottom: spacing.md, 
   gap: spacing.sm,
 },
 
 infoIconWrapper: {
   width: 40,
   height: 40,
-  borderRadius: 21,
+  borderRadius: 20,
   backgroundColor: '#CBD5E0',       // slightly darker circle behind icon
   alignItems: 'center',
   justifyContent: 'center',
