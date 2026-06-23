@@ -489,7 +489,6 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               datePickerPlaceholder={t('common:datePicker.placeholder')}    
               pickerDoneLabel={t('common:buttons.done')}
               pickerCancelLabel={t('common:buttons.cancel')}
-              required
               editable={!loading}
               error={!!errors.dob}
               errorMessage={errors.dob}

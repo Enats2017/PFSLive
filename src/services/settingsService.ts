@@ -9,13 +9,13 @@ export interface Settings {
 
 interface GetSettingsResponse {
     success: boolean;
-    data: { settings: Settings };
+    data: { settings: Settings; account_deletion_url?: string };
     error: string | null;
 }
 
 interface UpdateSettingsResponse {
     success: boolean;
-    data: { updated: number; settings: Settings };
+    data: { updated: number; settings: Settings; account_deletion_url?: string };
     errors?: string[];
     error: string | null;
 }
@@ -48,9 +48,12 @@ class SettingsService {
     }
 
     // ✅ Returns Settings directly — screen doesn't need to dig into response
-    async getSettings(): Promise<Settings> {
+    async getSettings(): Promise<{ settings: Settings; accountDeletionUrl: string }> {
         const json = await this.request<GetSettingsResponse>({ action: 'get' });
-        return json.data.settings;
+        return {
+            settings: json.data.settings,
+            accountDeletionUrl: json.data.account_deletion_url ?? '',
+        };
     }
 
     // ✅ Returns Settings directly — public always gets empty password

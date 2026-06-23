@@ -1,6 +1,6 @@
 // styles/liveTrackingSettings.styles.ts
 import { StyleSheet } from 'react-native';
-import { colors } from './common.styles';
+import { colors, typography } from './common.styles';
 
 export const styles = StyleSheet.create({
     // Layout
@@ -38,4 +38,25 @@ export const styles = StyleSheet.create({
     // Password
     errorText:      { fontSize: 13, color: '#FF3B30', marginBottom: 6 },
     hintText:       { fontSize: 12, color: colors.black, marginBottom: 14 },
+
+    deleteAccountBtn: {
+        marginTop: 20,
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.error,
+        backgroundColor: '#FEF2F2',
+        alignItems: 'center',
+    },
+    deleteAccountText: {
+        color: colors.error,
+        fontSize: typography.sizes.md,
+        fontWeight: typography.weights.semibold,
+    },
+    deleteAccountHint: {
+        color: colors.gray500,
+        fontSize: typography.sizes.xs,
+        marginTop: 4,
+        textAlign: 'center',
+    },
 });

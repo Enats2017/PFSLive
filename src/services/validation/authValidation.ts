@@ -56,9 +56,13 @@ export const validateRegisterForm = (
     errors.city = t('register:errors.cityRequired');
   }
 
-  if (!data.dob) {
-    errors.dob = t('register:errors.dobRequired');
-  }
+  // DOB is optional (Apple guideline — don't require more personal data than
+  // necessary). No client-side requirement; when a date IS picked the date
+  // picker already guarantees a valid format.
+  
+  // if (!data.dob) {
+  //   errors.dob = t('register:errors.dobRequired');
+  // }
 
   if (!data.gender) {
     errors.gender = t('register:errors.genderRequired');

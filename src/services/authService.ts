@@ -86,7 +86,8 @@ const buildRegisterFormData = async (
   formData.append("password", data.password);
   formData.append("country_id", data.country_id);
   formData.append("city", data.city.trim());
-  formData.append("dob", data.dob);
+  // edit-profile form build — always send dob so an empty value clears it
+  formData.append('dob', data.dob ?? '');
   formData.append("language_id", String(languageId));
   formData.append("gender", data.gender.toLowerCase());
   formData.append("i_agree", I_AGREE_VALUE);

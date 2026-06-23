@@ -128,6 +128,7 @@ export const AppNavigator: React.FC = () => {
             <>
               <Stack.Screen name="LoginScreen"           component={LoginScreen}           options={noGesture} />
               <Stack.Screen name="RegisterScreen"        component={RegisterScreen}        options={noGesture} />
+              <Stack.Screen name="OTPVerificationScreen" component={OTPVerificationScreen} options={noGesture} />
               <Stack.Screen name="EditProfileScreen"    component={EditProfileScreen}    options={noGesture} />
               <Stack.Screen name="EditPersonalEvent"    component={EditPersonalEvent}    options={noGesture} />
               <Stack.Screen name="LiveTrackingSettings" component={LiveTrackingSettings} options={noGesture} />

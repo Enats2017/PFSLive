@@ -27,7 +27,10 @@
     "toastSuccess": "Instellingen succesvol opgeslagen!",
     "toastErrorLoad": "Kon instellingen niet laden.",
     "toastErrorSave": "Opslaan van instellingen mislukt.",
-    "chars": "tekens"
+    "chars": "tekens",
+    "deleteAccount": "Mijn account verwijderen",
+    "deleteAccountHint": "Opent de pagina voor accountverwijdering in je browser",
+    "deleteAccountError": "Kon de verwijderingspagina niet openen. Probeer het later opnieuw."
   },
   "passwordModal": {
     "title": "🔒 Privéprofiel",

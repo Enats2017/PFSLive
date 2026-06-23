@@ -11,6 +11,7 @@ import {
     KeyboardEvent,
     StatusBar,
     ActivityIndicator,
+    Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -49,6 +50,7 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
     const [modalVisible,  setModalVisible]  = useState(false);
     const [isLoading,     setIsLoading]     = useState(true);
     const [isUpdating,    setIsUpdating]    = useState(false);
+    const [deletionUrl,   setDeletionUrl]   = useState('');
 
     // slideAnim      sheet entrance/exit: 400=off-screen, 0=resting
     // keyboardOffset additional lift when keyboard is visible
@@ -104,8 +106,9 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
     const loadSettings = async () => {
         try {
             setIsLoading(true);
-            const settings = await settingsService.getSettings();
+            const { settings, accountDeletionUrl } = await settingsService.getSettings();
             syncState(settings);
+            setDeletionUrl(accountDeletionUrl);
         } catch (e: any) {
             console.error('❌ [Settings] Load error:', e?.message);
             toastError(t('setting:liveTrackingSettings.toastErrorLoad'));
@@ -178,6 +181,20 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
         if (len < 6) return t('setting:liveTrackingSettings.strengthWeak');
         if (len < 8) return t('setting:liveTrackingSettings.strengthModerate');
         return t('setting:liveTrackingSettings.strengthStrong');
+    };
+
+    const handleOpenDeletion = async () => {
+        if (!deletionUrl) return;
+        try {
+            const ok = await Linking.canOpenURL(deletionUrl);
+            if (ok) {
+                await Linking.openURL(deletionUrl);
+            } else {
+                toastError(t('setting:liveTrackingSettings.deleteAccountError'));
+            }
+        } catch {
+            toastError(t('setting:liveTrackingSettings.deleteAccountError'));
+        }
     };
 
     if (isLoading) {
@@ -264,6 +281,21 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
                         </TouchableOpacity>
                     )}
                 </Animated.View>
+
+                {!!deletionUrl && (
+                    <TouchableOpacity
+                        style={styles.deleteAccountBtn}
+                        onPress={handleOpenDeletion}
+                        activeOpacity={0.85}
+                    >
+                        <Text style={styles.deleteAccountText}>
+                            🗑️  {t('setting:liveTrackingSettings.deleteAccount')}
+                        </Text>
+                        <Text style={styles.deleteAccountHint}>
+                            {t('setting:liveTrackingSettings.deleteAccountHint')}
+                        </Text>
+                    </TouchableOpacity>
+                )}
             </ScrollView>
 
             <Modal
