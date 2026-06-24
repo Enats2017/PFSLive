@@ -379,23 +379,39 @@ interface NormalizedRawLocation {
 // Server-side dedup catches the duplicate (same row ID returned), but the
 // device still made 2 network requests it shouldn't have.
 //
-// The mutex below ensures only one processLocationForSend runs at a time. If
-// a second fire arrives while the first is in-flight, it's dropped — the next
-// fire (8s later, well after the first completes) will handle whatever needs
-// handling. Same pattern as _isProcessingQueue in locationService.ts.
+
 let _isProcessingSend = false;
+let _sendStartedAt = 0;
+// Hard ceiling on how long the mutex may stay held. A network send/drain that
+// hangs (half-open TCP socket on flaky cell — no response, no error, just a
+// stalled socket the OS won't kill for minutes) would otherwise keep the mutex
+// locked, and EVERY onLocation fire during that window would be dropped at the
+// guard below — silent total tracking loss until the app is next foregrounded.
+// If the mutex has been held longer than this, a prior send is presumed hung;
+// force-release so the current fire can proceed. 120s comfortably exceeds any
+// legitimate send (which should itself be timeout-bounded — see note in
+// locationService.sendLocation / processQueue).
+const SEND_MUTEX_MAX_MS = 120000;
 
 const processLocationForSend = async (
   raw: NormalizedRawLocation,
   source: 'task' | 'transistor',
 ): Promise<void> => {
   if (_isProcessingSend) {
-    if (API_CONFIG.DEBUG) {
-      console.log(`⏭️ processLocationForSend already running — skipping concurrent fire (${source})`);
+    const heldFor = Date.now() - _sendStartedAt;
+    if (heldFor < SEND_MUTEX_MAX_MS) {
+      if (API_CONFIG.DEBUG) {
+        console.log(`⏭️ processLocationForSend already running — skipping concurrent fire (${source})`);
+      }
+      return;
     }
-    return;
+    // Mutex stuck — the previous send/drain hung. Force-release and continue so
+    // tracking can't be silently frozen by one stalled socket.
+    await addLog('⚠️', `Send mutex held ${(heldFor / 1000).toFixed(0)}s — forcing release (prior send hung) [${source}]`);
+    _isProcessingSend = false;
   }
   _isProcessingSend = true;
+  _sendStartedAt = Date.now();
   try {
     return await _processLocationForSendInternal(raw, source);
   } finally {
@@ -441,39 +457,51 @@ const _processLocationForSendInternal = async (
       }
     }
 
-    // ── DRAIN OFFLINE QUEUE FIRST (FIFO, oldest → newest) ──────────────
-    // Runs inside the Transistor onLocation handler — the ONLY code that
-    // executes while the phone is in a pocket (the React 10s queue interval
-    // and the AppState 'active' drain are both suspended in background).
-    // onLocation wakes JS for every fix, so this flushes the queue within
-    // one fire-cycle of network returning, no app-open needed.
-    //
-    // We MUST drain before sending the current (newer) fix: the server
-    // computes distance as a cumulative haversine against the latest stored
-    // fix and rejects anything older than what's stored. Sending the new fix
-    // first would store it ahead of the queued ones, and the queued (older)
-    // fixes would then be dropped as stale. Drain-then-send keeps the server
-    // receiving ascending device_timestamps. Placed before the throttle gate
-    // so a flush is attempted on every fire, even if the current fix is
-    // itself throttled.
+    // ── BOUNDED MULTI-BATCH DRAIN ──────────────────────────────────────────
+    // processQueue drains at most batchSize (50) per call. After a long outage
+    // the backlog can be hundreds deep; draining ONE batch per onLocation fire
+    // meant ~30s of wall time per 50 fixes, so the live dot stayed frozen for
+    // minutes after network returned (everything queued behind the backlog).
+    // Loop the drain so a backlog clears within a single wake instead — but cap
+    // it two ways so we never blow the iOS background-wake budget (~30s, often
+    // less): MAX_DRAIN_BATCHES iterations AND DRAIN_TIME_BUDGET_MS wall time.
+    // Whichever hits first stops the loop; the order guard below then queues the
+    // current fix behind whatever's left, and the next wake / 10s processor
+    // picks up the remainder. Nothing is lost; timestamps stay ascending.
+    const MAX_DRAIN_BATCHES   = 5;       // 5 × batchSize(50) = up to 250 fixes/wake
+    const DRAIN_TIME_BUDGET_MS = 12000;  // stay well under the iOS wake kill timer
     let _backlogRemains = false;
     try {
       const { QUEUE_COUNT_KEY } = require('./locationQueueService');
       const qCountStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
-      const qCount = qCountStr ? parseInt(qCountStr) : 0;
+      let qCount = qCountStr ? parseInt(qCountStr) : 0;
       if (qCount > 0) {
         const { locationService } = require('./locationService');
-        const flushed = await locationService.processQueue(participantId, eventId);
-        if (flushed > 0) {
+        const drainStart = Date.now();
+        let totalFlushed = 0;
+
+        for (let batch = 0; batch < MAX_DRAIN_BATCHES; batch++) {
+          const flushed = await locationService.processQueue(participantId, eventId);
+          if (flushed > 0) totalFlushed += flushed;
+
+          const leftStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
+          qCount = leftStr ? parseInt(leftStr) : 0;
+
+          // Stop when drained, when a batch made no progress (network failed
+          // again — don't spin), or when the wake-time budget is spent.
+          if (qCount === 0) break;
+          if (flushed === 0) break;
+          if (Date.now() - drainStart >= DRAIN_TIME_BUDGET_MS) break;
+        }
+
+        if (totalFlushed > 0) {
           const cStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
           const c = cStr ? parseInt(cStr) : 0;
-          await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(c + flushed));
-          await addLog('📤', `Drained ${flushed} queued fix(es) before live send${tag}`);
+          await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(c + totalFlushed));
+          await addLog('📤', `Drained ${totalFlushed} queued fix(es) (${qCount} still pending) before live send${tag}`);
         }
-        // processQueue drains at most batchSize per call — re-read to see if a
-        // larger backlog is still pending.
-        const qLeftStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
-        _backlogRemains = (qLeftStr ? parseInt(qLeftStr) : 0) > 0;
+
+        _backlogRemains = qCount > 0;
       }
     } catch { /* silent — drain failure must never block the live send */ }
 
@@ -536,49 +564,9 @@ const _processLocationForSendInternal = async (
       return;
     }
 
-    // ✅ Elevation gain from previous altitude.
-    let elevationGain: number | undefined;
     const currentAltitude = raw.altitude;
-    if (currentAltitude !== null) {
-      const lastAltStr = await AsyncStorage.getItem(LAST_ALTITUDE_KEY);
-      if (lastAltStr) {
-        const lastAlt = parseFloat(lastAltStr);
-        if (!isNaN(lastAlt) && currentAltitude > lastAlt) {
-          elevationGain = parseFloat((currentAltitude - lastAlt).toFixed(1));
-        }
-      }
-      await AsyncStorage.setItem(LAST_ALTITUDE_KEY, String(currentAltitude));
-    }
-
-    // ✅ Battery info — best-effort.
-    let batteryLevel: number | undefined;
-    let batteryCharging: boolean | undefined;
-    try {
-      const level = await Battery.getBatteryLevelAsync();
-      const state = await Battery.getBatteryStateAsync();
-      batteryLevel = Math.round(level * 100);
-      batteryCharging = state === Battery.BatteryState.CHARGING ||
-                        state === Battery.BatteryState.FULL;
-    } catch { /* silent */ }
-
     const speed = raw.speed;
     const isMoving = speed !== null ? speed > 0.5 : undefined;
-
-    const location: LocationData = {
-      latitude: raw.latitude,
-      longitude: raw.longitude,
-      altitude: currentAltitude ?? undefined,
-      accuracy: raw.accuracy ?? undefined,
-      altitudeAccuracy: raw.altitudeAccuracy ?? undefined,
-      timestamp: new Date(raw.timestamp).toISOString(),
-      speed: speed ?? undefined,
-      heading: raw.heading ?? undefined,
-      isMock: raw.mocked || false,
-      elevationGain,
-      batteryLevel,
-      batteryCharging,
-      isMoving,
-    };
 
     // ✅ Movement check — skip if participant hasn't moved enough since last send.
     //
@@ -600,14 +588,14 @@ const _processLocationForSendInternal = async (
     if (!lastPosStr) {
       // First fire of the session — just record the position, don't send.
       await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
-        lat: location.latitude,
-        lon: location.longitude,
+        lat: raw.latitude,
+        lon: raw.longitude,
       }));
       await addLog('📌', `First position recorded — waiting for movement${tag}`);
       return;
     }
     const lastPos = JSON.parse(lastPosStr);
-    const moved = distanceMetres(lastPos.lat, lastPos.lon, location.latitude, location.longitude);
+    const moved = distanceMetres(lastPos.lat, lastPos.lon, raw.latitude, raw.longitude);
     const movementFloor = (finishApproach === '1') ? FINISH_APPROACH_MIN_MOVE_METRES : minMovementMetres;
     if (moved < movementFloor) {
       const label = (finishApproach === '1')
@@ -616,6 +604,46 @@ const _processLocationForSendInternal = async (
       await addLog('🚶', `${label}${tag}`);
       return;
     }
+
+    // ✅ Enrichment AFTER the movement gate — elevation + battery reads only run
+    // for a fix we're actually going to send, not on every suppressed fire.
+    let elevationGain: number | undefined;
+    if (currentAltitude !== null) {
+      const lastAltStr = await AsyncStorage.getItem(LAST_ALTITUDE_KEY);
+      if (lastAltStr) {
+        const lastAlt = parseFloat(lastAltStr);
+        if (!isNaN(lastAlt) && currentAltitude > lastAlt) {
+          elevationGain = parseFloat((currentAltitude - lastAlt).toFixed(1));
+        }
+      }
+      await AsyncStorage.setItem(LAST_ALTITUDE_KEY, String(currentAltitude));
+    }
+
+    let batteryLevel: number | undefined;
+    let batteryCharging: boolean | undefined;
+    try {
+      const level = await Battery.getBatteryLevelAsync();
+      const state = await Battery.getBatteryStateAsync();
+      batteryLevel = Math.round(level * 100);
+      batteryCharging = state === Battery.BatteryState.CHARGING ||
+                        state === Battery.BatteryState.FULL;
+    } catch { /* silent */ }
+
+    const location: LocationData = {
+      latitude: raw.latitude,
+      longitude: raw.longitude,
+      altitude: currentAltitude ?? undefined,
+      accuracy: raw.accuracy ?? undefined,
+      altitudeAccuracy: raw.altitudeAccuracy ?? undefined,
+      timestamp: new Date(raw.timestamp).toISOString(),
+      speed: speed ?? undefined,
+      heading: raw.heading ?? undefined,
+      isMock: raw.mocked || false,
+      elevationGain,
+      batteryLevel,
+      batteryCharging,
+      isMoving,
+    };
 
     // ✅ Commit throttle + position BEFORE the network call. Future fires that
     // arrive before our network round-trip completes will see this timestamp
@@ -973,10 +1001,17 @@ const _registerTransistorListeners = (): void => {
       // cadence). changePace(true) flips it to MOVING so the dense onLocation
       // stream takes over and the send throttle holds ~60s. Speed guard so a
       // genuinely stopped rider stays stationary (no false wake / battery burn).
+      
+      // In the finish zone we want the dense 5s stream regardless of speed — a
+      // sub-7km/h finisher walking across the line would otherwise stay on the
+      // 60s heartbeat and lose plotting precision exactly where it matters most.
+      const hbFinishApproach = await AsyncStorage.getItem(FINISH_APPROACH_KEY);
       const hbSpeed = hbLoc?.coords?.speed ?? 0;
-      if (hbSpeed > 2) {   // > ~7 km/h
+      if (hbSpeed > 2 || hbFinishApproach === '1') {
         try { await BackgroundGeolocation.changePace(true); } catch { /* silent */ }
-        await addLog('🏃', `Heartbeat — moving (${hbSpeed.toFixed(1)}m/s), re-waking onLocation stream`);
+        await addLog('🏃', hbFinishApproach === '1'
+          ? `Heartbeat — finish approach active, re-waking 5s stream`
+          : `Heartbeat — moving (${hbSpeed.toFixed(1)}m/s), re-waking onLocation stream`);
       }
     } catch (hbErr: any) {
       // Heartbeat must never throw — a beat with no fix is fine; retry next beat.

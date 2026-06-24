@@ -4,6 +4,23 @@ import { locationQueueService, QueuedLocation } from './locationQueueService';
 import { Platform } from 'react-native';
 import { TrackingLogEntry } from './gpsService';
 
+// Absolute wall-clock timeout. axios's own `timeout` does NOT reliably fire on
+// a half-open socket (cell drops mid-request, no FIN/RST) — the request can hang
+// for minutes. Promise.race against a real timer guarantees the await resolves
+// within `ms` no matter what the socket does, so the send/drain/mutex budgets
+// downstream actually hold.
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+    promise.then(
+      (val) => { clearTimeout(timer); resolve(val); },
+      (err) => { clearTimeout(timer); reject(err); }
+    );
+  });
+}
+
 export interface LocationData {
   latitude: number;
   longitude: number;
@@ -132,8 +149,15 @@ export const locationService = {
         console.log("🌍 location object:", location);
       }
 
-      // ✅ Short timeout — don't block GPS callback on slow race-day networks
-      const apiResponse = await apiClient.post<StandardApiResponse>(url, requestBody, { headers, timeout: 8000 });
+      // ✅ Short timeout — don't block GPS callback on slow race-day networks.
+      // axios `timeout` is the first line, but it doesn't reliably fire on a
+      // half-open socket, so withTimeout() enforces a HARD ceiling (10s) that
+      // always rejects — keeping the send/drain/mutex budgets honest.
+      const apiResponse = await withTimeout(
+        apiClient.post<StandardApiResponse>(url, requestBody, { headers, timeout: 8000 }),
+        10000,
+        'sendLocation'
+      );
 
       if (API_CONFIG.DEBUG) console.log("📥 API RAW RESPONSE:", apiResponse);
 
@@ -302,14 +326,18 @@ export const locationService = {
     try {
       const url     = getApiEndpoint(API_CONFIG.ENDPOINTS.SAVE_TRACKING_LOG);
       const headers = await API_CONFIG.getHeaders();
-      await apiClient.post(url, {
-        participantId,
-        eventId,
-        logs,
-        totalSent,
-        totalQueued,
-        deviceInfo: `${Platform.OS} ${Platform.Version}`,
-      }, { headers, timeout: 10000 });
+      await withTimeout(
+        apiClient.post(url, {
+          participantId,
+          eventId,
+          logs,
+          totalSent,
+          totalQueued,
+          deviceInfo: `${Platform.OS} ${Platform.Version}`,
+        }, { headers, timeout: 10000 }),
+        12000,
+        'saveTrackingLog'
+      );
       if (API_CONFIG.DEBUG) console.log('✅ Tracking log saved to server');
     } catch (err: any) {
       if (API_CONFIG.DEBUG) console.log('⚠️ Tracking log save failed (non-fatal):', err?.message);
