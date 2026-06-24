@@ -260,7 +260,6 @@ const renderListHeader = useCallback(() => {
   const isAnyRegistered = distances.some(
     (d) => d.registration_status === 'registered'
   );
-
   return (
     <View>
       {event_image ? (
@@ -271,7 +270,7 @@ const renderListHeader = useCallback(() => {
             aspectRatio: 612 / 300,
             marginBottom: spacing.sm,
           }}
-          resizeMode="contain"
+           resizeMode="cover"
         />
       ) : null}
 

@@ -66,12 +66,14 @@ export const detailsStyles = StyleSheet.create({
   topRow: {
     flexDirection: "row",
     alignItems: "center",
+     padding: spacing.md,
    
   },
   
     distanceInfo: {
     flex: 1,
     minWidth: 0,
+    
   },
 
    metaRow: {
@@ -106,8 +108,8 @@ export const detailsStyles = StyleSheet.create({
 
   // ✅ AVATAR IMAGE STYLE
   avatarImage: {
-    width: 60,
-    height: 60,
+    width: 65,
+    height: 65,
     borderRadius: 30,
   },
 
@@ -155,6 +157,7 @@ export const detailsStyles = StyleSheet.create({
     backgroundColor: '#f0fdf4',
     paddingVertical: 6,
     paddingHorizontal: 12,
+    
     
     gap: 6,
   },

@@ -108,7 +108,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
                 width: '100%',
                 aspectRatio: 612 / 300,
               }}
-              resizeMode="contain"
+              resizeMode="cover"
             />
           ) : null}
 

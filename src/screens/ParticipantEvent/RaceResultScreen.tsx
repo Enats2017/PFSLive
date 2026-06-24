@@ -88,16 +88,16 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   );
 
   const renderListHeader = useCallback(() => (
-    <View>
-
+    <View style={{marginBottom: spacing.md}}>
       {event_image ? (
         <Image
           source={{ uri: event_image }}
           style={{
             width: '100%',
             aspectRatio: 612 / 300,
+            
           }}
-          resizeMode="contain"
+          resizeMode="cover"
         />
       ) : null}
     </View>
@@ -106,7 +106,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     return (
-      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
+      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.md, marginHorizontal: spacing.md }]}>
         <View style={detailsStyles.distance}>
           <View style={detailsStyles.distanceInfo}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
@@ -114,30 +114,30 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             </Text>
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.race_date_formatted}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>
               <Ionicons name="time-outline" size={15} color={colors.gray600} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {formatClockTime(item.race_time)}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>
               <Feather name="users" size={16} color={colors.gray500} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.participant_started_count} {t('details:athletes')}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>
               <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.finished_count} {t('details:finished')}
               </Text>
             </View>
-
           </View>
+          <View style={detailsStyles.verticalDivider} />
           <TouchableOpacity
             style={detailsStyles.resultsButton}
             onPress={() =>
@@ -204,7 +204,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={false} />
 
-      <View style={detailsStyles.section}>
+      <View style={[detailsStyles.section]}>
         <Text style={commonStyles.title}>{event_name}</Text>
       </View>
 
@@ -221,7 +221,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             flexGrow: 1,
-            paddingHorizontal: spacing.md,
+          
             paddingBottom: 80,
           }}
           ListHeaderComponent={renderListHeader}

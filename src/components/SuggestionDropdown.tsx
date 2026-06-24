@@ -2,6 +2,7 @@ import React from 'react';
 import {
     ActivityIndicator,
     FlatList,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -54,33 +55,38 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
 
     return (
         <View style={styles.container}>
-            <FlatList
-                data={suggestions}
-                keyExtractor={(item) => String(item.product_app_id)}
+             <ScrollView
+                style={{ maxHeight: 220 }}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled
-                style={{ maxHeight: 220 }}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
-                renderItem={({ item }) => (
-                    <TouchableOpacity
-                        style={styles.row}
-                        onPress={() => onSelect(item)}
-                        activeOpacity={0.7}
-                    >
-                        <Feather name="flag" size={14} color="#888" style={styles.rowIcon} />
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.name} numberOfLines={1}>
-                                {item.name}
-                            </Text>
-                            <Text style={styles.date}>
-                                {formatEventDate(item.race_date,t)}{item.city ? `  ·  ${item.city}` : ''}
-                            </Text>
-                        </View>
-                        <Feather name="chevron-right" size={14} color="#bbb" />
-                    </TouchableOpacity>
-                )}
-            />
+                scrollEventThrottle={100}
+            >
+                {suggestions.map((item, index) => (
+                    <React.Fragment key={String(item.product_app_id)}>
+                        {index > 0 && <View style={styles.separator} />}
+                        <TouchableOpacity
+                            style={styles.row}
+                            onPress={() => onSelect(item)}
+                            activeOpacity={0.7}
+                        >
+                            <Feather name="flag" size={14} color="#888" style={styles.rowIcon} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.name} numberOfLines={1}>
+                                    {item.name}
+                                </Text>
+                                <Text style={styles.date}>
+                                    {formatEventDate(item.race_date, t)}{item.city ? `  ·  ${item.city}` : ''}
+                                </Text>
+                            </View>
+                            
+                            <Feather name="chevron-right" size={14} color="#bbb" style={{ marginLeft: 6 }} />
+                        </TouchableOpacity>
+                    </React.Fragment>
+                ))}
+
+            </ScrollView>
+            
         </View>
     );
 };

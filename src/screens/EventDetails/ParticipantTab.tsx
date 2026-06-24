@@ -243,7 +243,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
         style={{
           paddingHorizontal: spacing.md,
           paddingTop: spacing.md,
-          paddingBottom:spacing.sm
+          paddingBottom:spacing.xs
         }}
       >
         <SearchInput
@@ -284,7 +284,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           contentContainerStyle={{
-            paddingHorizontal: spacing.lg,
+            paddingHorizontal: spacing.md,
             paddingBottom: spacing.xxxl,
             flexGrow: 1,
             paddingTop:spacing.sm,

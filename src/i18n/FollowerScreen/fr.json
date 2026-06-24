@@ -24,5 +24,11 @@
     "no_followers_msg": "Personne ne vous suit encore. Partagez votre profil pour obtenir des abonnés.",
     "no_following_title": "Aucun Abonnement",
     "no_following_msg": "Vous ne suivez encore personne. Recherchez des athlètes à suivre."
-  }
+  },
+  "nav":{
+    "upcomingsub":"Découvrez et parcourez les courses à venir",
+    "pastsub":"Recherchez et consultez les résultats des courses passées",
+    "athletesub":"Recherchez un athlète par nom ou e-mail",
+    "favouritesub":"Consultez vos athlètes favoris"
+}
 }
