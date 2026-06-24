@@ -55,7 +55,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
     const isLiveOrUpcoming = sourceTab === 'live' || sourceTab === 'upcoming';
 
     return (
-      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.md }]}>
+      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
         <View style={[detailsStyles.distance]}>
           <View style={detailsStyles.distanceInfo}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
@@ -64,41 +64,30 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
 
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {item.race_date_formatted}
               </Text>
             </View>
 
             <View style={detailsStyles.metaRow}>
               <Ionicons name="time-outline" size={15} color={colors.gray600} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {formatClockTime(item.race_time)} 
               </Text>
             </View>
 
             <View style={detailsStyles.metaRow}>
               <Feather name="users" size={16} color={colors.gray500} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {item.participant_started_count} {t('details:athletes')}
               </Text>
             </View>
-
             <View style={detailsStyles.metaRow}>
               <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {item.finished_count} {t('details:finished')}
               </Text>
             </View>
-
-            {item.dnf_count > 0 && (
-              <View style={detailsStyles.metaRow}>
-                <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
-                <Text style={detailsStyles.metaText} numberOfLines={1}>
-                  {item.dnf_count} {t('details:dnf')}
-                </Text>
-              </View>
-            )}
-            
             {!isPast && (
               <View style={detailsStyles.metaRow}>
                 <MaterialCommunityIcons name="timer-sand" size={15} color={colors.gray600} />
@@ -111,7 +100,6 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
               </View>
             )}
           </View>
-          <View style={detailsStyles.verticalDivider} />
 
           <View style={{ gap:spacing.md}}>
             <TouchableOpacity

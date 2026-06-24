@@ -32,7 +32,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   const isLandscape = windowWidth > height;
   const width = containerWidth || windowWidth;
 
-  const TAB_CONTENT_HEIGHT = height * 0.7;
+  const TAB_CONTENT_HEIGHT = height * 0.4;
   const [activeTab, setActiveTab] = useState<Tab>('Distance');
   const activeTabRef = useRef<Tab>('Distance');
   const flatListRef = useRef<FlatList>(null);
@@ -108,7 +108,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
                 width: '100%',
                 aspectRatio: 612 / 300,
               }}
-              resizeMode="cover"
+              resizeMode="contain"
             />
           ) : null}
 
