@@ -19,6 +19,7 @@
   },
   "athletes": "Athlètes démarrés",
   "finished": "Athlètes Terminés",
+  "dnf": "Abandons",
   "distance": {
     "empty": "Aucune distance disponible"
   },
@@ -76,14 +77,13 @@
     },
     "membership_required": {
       "icon": "◆",
-      "title": "Votre Accès Premium a Expiré",
-      "description": "Votre période d'essai gratuite est terminée. Connectez-vous à votre compte via notre site web liviolive.com pour gérer votre accès."
-
+      "title": "Suivi en direct indisponible",
+      "description": "Vos sessions de suivi actuelles ne sont pas actives. Le suivi en direct n'est pas disponible pour le moment."
     },
     "limit_reached": {
       "icon": "↑",
-      "title": "Votre Accès Premium A Expiré",
-      "description": "Vous avez atteint votre limite annuelle de {{limit}} sessions de suivi. Votre abonnement actuel ne permet pas d'activations supplémentaires. Gérez votre abonnement via notre site web liviolive.com ."
+      "title": "Plus de sessions de suivi",
+      "description": "Vous avez utilisé toutes les sessions de suivi en direct actuellement disponibles."
     },
     "membership_upcoming": {
       "icon": "⏳",
@@ -109,13 +109,16 @@
   "infoMessage": "Importez le fichier GPX dans votre montre connectée ou appareil GPS. Seuls les participants inscrits peuvent télécharger.",
   "gpxInfo": "Si vous souhaitez importer le fichier GPX dans votre montre connectée ou appareil GPS, seuls les participants inscrits sont autorisés à télécharger le fichier GPX.",
   "gpxDownload": {
-  "permissionDeniedTitle": "Permission refusée",
-  "permissionDeniedMessage": "L'accès au dossier est requis pour enregistrer le fichier GPX.",
-  "successTitle": "Téléchargé",
-  "successMessage": "Enregistré avec succès.",
-  "errorMessage": "Impossible de télécharger le fichier GPX.",
-  "noFileTitle": "Aucun fichier GPX",
-  "noFileMessage": "Aucun fichier GPX disponible."
+    "permissionDeniedTitle": "Permission refusée",
+    "permissionDeniedMessage": "L'accès au dossier est requis pour enregistrer le fichier GPX.",
+    "successTitle": "Téléchargé",
+    "successMessage": "Enregistré avec succès.",
+    "errorMessage": "Impossible de télécharger le fichier GPX.",
+    "noFileTitle": "Aucun fichier GPX",
+    "noFileMessage": "Aucun fichier GPX disponible."
+  },
+  "gpxRestricted": {
+    "title": "Inscription Requise",
+    "message": "Seuls les participants inscrits peuvent télécharger le fichier GPX. Veuillez d'abord vous inscrire à cette distance."
   }
-
 }

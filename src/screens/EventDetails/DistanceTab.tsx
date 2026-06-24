@@ -57,6 +57,8 @@ const DistanceTab = ({
   const [selectedUndoItem, setSelectedUndoItem] = useState<Distance | null>(null);
   const [pendingRefresh, setPendingRefresh] = useState(false);
   const { downloadGpx, downloadingId } = useGpxDownload();
+  const [gpxRestrictedVisible, setGpxRestrictedVisible] = useState(false);
+  const [gpxRestrictedItem, setGpxRestrictedItem] = useState<Distance | null>(null);
 
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -233,6 +235,21 @@ const DistanceTab = ({
     handleRegister(distanceItem);
   }, [auto_register_id, distances, loading, handleRegister, navigation]);
 
+  // ✅ GPX CLICK HANDLER — check registration first
+  const handleGpxClick = useCallback(
+    (item: Distance) => {
+      if (item.registration_status === 'registered') {
+        // Registered → download directly
+        downloadGpx(item);
+      } else {
+        // Not registered → show popup
+        setGpxRestrictedItem(item);
+        setGpxRestrictedVisible(true);
+      }
+    },
+    [downloadGpx]
+  );
+
   // ✅ UNDO HANDLER
   const handleUndoClick = useCallback((item: Distance) => {
     if (API_CONFIG.DEBUG) {
@@ -283,16 +300,15 @@ const renderListHeader = useCallback(() => {
         </Text>
       </View>
 
-      {isAnyRegistered && (
-        <View style={detailsStyles.infoBox}>
-          <View style={detailsStyles.infoIconWrapper}>
-          <AntDesign name="link" size={20} color={colors.primaryDark} />
-          </View>
-          <Text style={detailsStyles.infoBoxText}>
-            {t('details:gpxInfo')}
-          </Text>
+      <View style={detailsStyles.infoBox}>
+        <View style={detailsStyles.infoIconWrapper}>
+        <AntDesign name="link" size={20} color={colors.primaryDark} />
         </View>
-      )}
+        <Text style={detailsStyles.infoBoxText}>
+          {t('details:gpxInfo')}
+        </Text>
+      </View>
+
     </View>
   );
 }, [event_name, event_image, distances]);
@@ -339,6 +355,15 @@ const renderListHeader = useCallback(() => {
               </Text>
             </View>
 
+            {item.dnf_count > 0 && (
+              <View style={detailsStyles.metaRow}>
+                <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
+                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                  {item.dnf_count} {t('details:dnf')}
+                </Text>
+              </View>
+            )}
+
             <View style={detailsStyles.metaRow}>
               <MaterialCommunityIcons name="timer-sand" size={15} color={colors.gray600} />
               <CountdownBadge
@@ -372,17 +397,17 @@ const renderListHeader = useCallback(() => {
                 </Text>
               )}
             </TouchableOpacity>
-            {item.registration_status === 'registered' && (
-              <>
-                <TouchableOpacity
-                  style={detailsStyles.routeButton}
-                   onPress={() => downloadGpx(item)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>{t('details:gpx')}</Text>
-                </TouchableOpacity>
-              </>
-            )}
+
+            {/* ✅ GPX button ALWAYS visible */}
+            <TouchableOpacity
+              style={detailsStyles.routeButton}
+              onPress={() => handleGpxClick(item)}
+              activeOpacity={0.8}
+            >
+              <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
+                {t('details:gpx')}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -470,6 +495,16 @@ const renderListHeader = useCallback(() => {
         messageKey={errorMessageKey}
         onClose={handleErrorModalClose}
         onRetry={handleErrorRetry}
+      />
+
+      <ErrorModal
+        visible={gpxRestrictedVisible}
+        titleKey="details:gpxRestricted.title"
+        messageKey="details:gpxRestricted.message"
+        onClose={() => {
+          setGpxRestrictedVisible(false);
+          setGpxRestrictedItem(null);
+        }}
       />
     </>
   );

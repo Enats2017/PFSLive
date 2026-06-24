@@ -22,6 +22,7 @@
   },
   "athletes": "Athletes Started",
   "finished": "Athletes Finished",
+  "dnf": "Did Not Finish",
   "participant": {
     "empty": "Search participants by name or bib number",
     "search": "Search participants by name, bib number",
@@ -77,13 +78,13 @@
     },
     "membership_required": {
       "icon": "◆",
-      "title": "Your Premium Access Has Expired",
-      "description": "Your free trial period has ended. Log in to your account via our website liviolive.com to manage your access."
+      "title": "Live Tracking Unavailable",
+      "description": "Your current tracking sessions are not active. Live tracking isn't available right now."
     },
     "limit_reached": {
       "icon": "↑",
-      "title": "Your Premium Access Has Expired",
-      "description": "You've reached your yearly limit of {{limit}} tracking sessions. Your current plan does not allow additional activations. Manage your subscription via our website liviolive.com."
+      "title": "No Tracking Sessions Left",
+      "description": "You've used all the live tracking sessions currently available to you."
     },
     "membership_upcoming": {
       "icon": "⏳",
@@ -109,12 +110,16 @@
   "infoMessage": "Choose the distance you will be participating in to link your live results (bib number) with your live tracking.",
   "gpxInfo": "Import GPX into your smartwatch or GPS device. Only registered participants can download.",
   "gpxDownload": {
-  "permissionDeniedTitle": "Permission Denied",
-  "permissionDeniedMessage": "Folder access is required to save the GPX file.",
-  "successTitle": "Downloaded",
-  "successMessage": "saved successfully.",
-  "errorMessage": "Could not download GPX file.",
-  "noFileTitle": "No GPX File",
-  "noFileMessage": "No GPX file available."
+    "permissionDeniedTitle": "Permission Denied",
+    "permissionDeniedMessage": "Folder access is required to save the GPX file.",
+    "successTitle": "Downloaded",
+    "successMessage": "saved successfully.",
+    "errorMessage": "Could not download GPX file.",
+    "noFileTitle": "No GPX File",
+    "noFileMessage": "No GPX file available."
+  },
+  "gpxRestricted": {
+    "title": "Registration Required",
+    "message": "Only registered participants can download the GPX file. Please sign up for this distance first."
   }
 }

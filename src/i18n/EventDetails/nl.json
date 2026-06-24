@@ -17,8 +17,9 @@
     "minutes": "M",
     "seconds": "S" 
   },
-   "athletes": "Gestarte atleten",
-   "finished": "Atleten Gefinisht",
+  "athletes": "Gestarte atleten",
+  "finished": "Atleten Gefinisht",
+  "dnf": "Niet gefinisht",
   "distance": {
     "empty": "Geen afstanden beschikbaar"
   },
@@ -76,14 +77,13 @@
     },
     "membership_required": {
       "icon": "◆",
-      "title": "Je Premium Toegang Is Verlopen",
-      "description": "Uw gratis proefperiode is verlopen. Log in op uw account via onze website liviolive.com om uw toegang te beheren."
-
+      "title": "Live tracking niet beschikbaar",
+      "description": "Uw huidige trackingsessies zijn niet actief. Live tracking is momenteel niet beschikbaar."
     },
     "limit_reached": {
       "icon": "↑",
-      "title": "Uw Premium Toegang Is Verlopen",
-      "description": "U heeft uw jaarlijkse limiet van {{limit}} tracking sessies bereikt. Uw huidige abonnement staat geen extra activaties toe. Beheer uw abonnement via onze website liviolive.com."
+      "title": "Geen trackingsessies meer",
+      "description": "U heeft alle momenteel beschikbare live trackingsessies gebruikt."
     },
     "membership_upcoming": {
       "icon": "⏳",
@@ -107,14 +107,18 @@
     }
   },
   "infoMessage": "Importeer het GPX-bestand in uw smartwatch of GPS-apparaat. Alleen geregistreerde deelnemers kunnen downloaden.",
-  "gpxInfo": "Als u het GPX-bestand wilt importeren in uw smartwatch of GPS-apparaat, mogen alleen geregistreerde deelnemers het GPX-bestand downloaden.",
-  "gpxDownload": {
-  "permissionDeniedTitle": "Toestemming geweigerd",
-  "permissionDeniedMessage": "Toegang tot de map is vereist om het GPX-bestand op te slaan.",
-  "successTitle": "Gedownload",
-  "successMessage": "Succesvol opgeslagen.",
-  "errorMessage": "Kan het GPX-bestand niet downloaden.",
-  "noFileTitle": "Geen GPX-bestand",
-  "noFileMessage": "Geen GPX-bestand beschikbaar."
+    "gpxInfo": "Als u het GPX-bestand wilt importeren in uw smartwatch of GPS-apparaat, mogen alleen geregistreerde deelnemers het GPX-bestand downloaden.",
+    "gpxDownload": {
+    "permissionDeniedTitle": "Toestemming geweigerd",
+    "permissionDeniedMessage": "Toegang tot de map is vereist om het GPX-bestand op te slaan.",
+    "successTitle": "Gedownload",
+    "successMessage": "Succesvol opgeslagen.",
+    "errorMessage": "Kan het GPX-bestand niet downloaden.",
+    "noFileTitle": "Geen GPX-bestand",
+    "noFileMessage": "Geen GPX-bestand beschikbaar."
+  },
+  "gpxRestricted": {
+    "title": "Registratie Vereist",
+    "message": "Alleen geregistreerde deelnemers kunnen het GPX-bestand downloaden. Schrijf je eerst in voor deze afstand."
   }
 }

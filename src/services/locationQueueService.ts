@@ -19,7 +19,15 @@ export interface QueuedLocation extends LocationData {
 export const locationQueueService = {
   async hasNetwork(): Promise<boolean> {
     try {
-      const state = await NetInfo.fetch();
+      // NetInfo.fetch() runs an active reachability probe that can itself stall
+      // for seconds in a dead-zone. Race it against a short timer so a hung probe
+      // can't hold the send mutex — fall back to optimistic (attempt the send).
+      const state = await Promise.race([
+        NetInfo.fetch(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('NetInfo timeout')), 3000)
+        ),
+      ]);
       // ✅ isInternetReachable can be null on Android while still determining.
       // Treat null as true (optimistic) — better to attempt a send and fail
       // than to queue unnecessarily when connectivity is likely fine.
