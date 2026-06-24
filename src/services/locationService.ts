@@ -2,7 +2,8 @@ import { apiClient } from './api';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { locationQueueService, QueuedLocation } from './locationQueueService';
 import { Platform } from 'react-native';
-import { TrackingLogEntry } from './gpsService';
+import { TrackingLogEntry, RACE_FINISHED_KEY } from './gpsService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Absolute wall-clock timeout. axios's own `timeout` does NOT reliably fire on
 // a half-open socket (cell drops mid-request, no FIN/RST) — the request can hang
@@ -263,6 +264,7 @@ export const locationService = {
     }
 
     let sentCount = 0;
+    let alreadyRemoved = false; // set when the finish-during-drain path removes early
     // 50 (was 10): a multi-minute outage buffers >10 fixes; draining only 10 per
     // call let the live fix overtake the rest, which the server then stale-dropped.
     const batchSize = 50;
@@ -272,7 +274,7 @@ export const locationService = {
         const queuedLocation = queue[i];
 
         try {
-          await this.sendLocation(
+          const qResult = await this.sendLocation(
             queuedLocation.participantId,
             queuedLocation.eventId,
             {
@@ -292,6 +294,45 @@ export const locationService = {
           );
 
           sentCount++;
+
+          // ✅ FINISH-DURING-DRAIN — full background teardown.
+          // A finish can cross while we're draining the offline backlog (runner
+          // crossed the line with no signal; the queue flushes on reconnect in a
+          // background Transistor wake). The live-path auto-stop in
+          // processLocationForSend never sees this, and if the runner stopped at
+          // the line no live fix will come to trigger it — so we must do the WHOLE
+          // stop here, in the background, without waiting for foreground:
+          //   1. set RACE_FINISHED_KEY  (so HomeScreen's poll is a no-op-safe
+          //      second stop if/when it ever foregrounds, and the watchdog won't
+          //      resurrect the engine),
+          //   2. remove the fixes we've drained so far from the queue (BEFORE
+          //      teardown — _doFullStop doesn't touch the queue, and we're about
+          //      to break),
+          //   3. upload the tracking log from the background (finishBackgroundStop),
+          //   4. tear down the engine + listeners.
+          // The finish may NOT land on the fix you'd expect (the server's
+          // MIN_FIXES_FOR_FINISH guard can hold it to a later backlog fix), so we
+          // check EVERY drained fix. Idempotent: if the foreground stop later runs,
+          // LOG_UPLOADED_KEY prevents a double upload and _doFullStop is safe twice.
+          if (qResult && (qResult.finished === 1 || (qResult.finished as any) === '1')) {
+            if (API_CONFIG.DEBUG) console.log('🏆 Finish detected during queue drain — stopping in background');
+            try { await AsyncStorage.setItem(RACE_FINISHED_KEY, '1'); } catch { /* silent */ }
+
+            // Remove what we've drained so far, here, since we're breaking out and
+            // the post-loop removeFromQueue would otherwise run after teardown.
+            if (sentCount > 0) {
+              try { await locationQueueService.removeFromQueue(sentCount); } catch { /* silent */ }
+              alreadyRemoved = true;
+            }
+
+            // Upload log + full teardown, all in this background wake.
+            try {
+              const { finishBackgroundStop } = require('./gpsService');
+              await finishBackgroundStop(participantId, eventId);
+            } catch { /* silent */ }
+
+            break; // session over — stop draining
+          }
         } catch (error) {
           if (API_CONFIG.DEBUG) {
             console.error('❌ Failed to send queued location');
@@ -300,7 +341,7 @@ export const locationService = {
         }
       }
 
-      if (sentCount > 0) {
+      if (sentCount > 0 && !alreadyRemoved) {
         await locationQueueService.removeFromQueue(sentCount);
         if (API_CONFIG.DEBUG) {
           console.log(`✅ Processed ${sentCount} queued locations`);

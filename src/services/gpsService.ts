@@ -492,13 +492,24 @@ const _processLocationForSendInternal = async (
           if (qCount === 0) break;
           if (flushed === 0) break;
           if (Date.now() - drainStart >= DRAIN_TIME_BUDGET_MS) break;
+          // Finish was detected & the engine torn down inside processQueue —
+          // stop draining; the session is over and params are already cleared.
+          try {
+            const fin = await AsyncStorage.getItem(RACE_FINISHED_KEY);
+            if (fin === '1') break;
+          } catch { /* silent */ }
         }
 
         if (totalFlushed > 0) {
           const cStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
           const c = cStr ? parseInt(cStr) : 0;
           await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(c + totalFlushed));
-          await addLog('📤', `Drained ${totalFlushed} queued fix(es) (${qCount} still pending) before live send${tag}`);
+          let fin = '0';
+          try { fin = (await AsyncStorage.getItem(RACE_FINISHED_KEY)) ?? '0'; } catch {}
+          const pendingNote = fin === '1'
+            ? `(${qCount} post-finish fix(es) discarded — race over)`
+            : `(${qCount} still pending)`;
+          await addLog('📤', `Drained ${totalFlushed} queued fix(es) ${pendingNote} before live send${tag}`);
         }
 
         _backlogRemains = qCount > 0;
@@ -1060,6 +1071,51 @@ const _doFullStop = async (): Promise<void> => {
 // (losing the JS handle), and the user now taps Stop. Idempotent.
 export const stopWatching = (): Promise<void> => _doFullStop();
 
+// ✅ PUBLIC: background finish-and-stop. Called from locationService.processQueue
+// when a finish is detected WHILE DRAINING the offline backlog — i.e. the runner
+// crossed the line with no signal and the queue flushed in a background wake.
+// Unlike stopWatching(), this UPLOADS the tracking log first (so the whole ride,
+// including the 🏆 finish marker, reaches the server without waiting for the user
+// to foreground the app), THEN tears the engine down. Order matters: the log must
+// be assembled and sent before _doFullStop() flushes-and-clears session state.
+//
+// Reuses _uploadTrackingLogOnFinish (which sets LOG_UPLOADED_KEY on success so the
+// later foreground stop in HomeScreen.stopGPSTracking skips a duplicate upload) and
+// _doFullStop (idempotent — safe even if the foreground poll also fires later).
+export const finishBackgroundStop = async (
+  participantId?: string,
+  eventId?: string,
+): Promise<void> => {
+  try {
+    await addLog('🏆', 'Finish detected during background queue drain — stopping');
+  } catch { /* silent */ }
+
+  // Read the real sent-count for the log payload before we clear it.
+  let sentCount = 0;
+  try {
+    const cStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+    sentCount = cStr ? (parseInt(cStr) || 0) : 0;
+  } catch { /* silent */ }
+
+  // Upload first (no-op if foregrounded — HomeScreen's stop will handle it then).
+  try {
+    await _uploadTrackingLogOnFinish(participantId ?? '', eventId ?? '', sentCount);
+  } catch { /* silent */ }
+
+  // Then full teardown: stops Transistor, removes listeners, clears session keys,
+  // appends "🛑 Tracking stopped", flushes the log buffer.
+  await _doFullStop();
+
+  // The runner finished — any fixes still queued are post-finish stragglers
+  // that belong to a session that's now over. Clear them so they can't be
+  // drained into the server by the Retry-Queue button (which would record
+  // points past the finish line), nor carried into a later race.
+  try {
+    const { locationQueueService } = require('./locationQueueService');
+    await locationQueueService.clearQueue();
+  } catch { /* silent */ }
+};
+
 // ✅ PUBLIC: full tracking log (all sealed segments + current) and a direct
 // flush, for HomeScreen's foreground stop. It must read via getFullTrackingLog()
 // instead of AsyncStorage.getItem(TRACKING_LOG_KEY) — the key now holds only the
@@ -1313,6 +1369,12 @@ export const gpsService = {
         if (API_CONFIG.DEBUG) console.log('♻️ Stopped leftover expo-location task from previous session/install');
       } catch { /* not running */ }
 
+      // Snapshot whether a session was already active BEFORE we overwrite params.
+      // A fresh start (no prior session) means any queued fixes are stale
+      // post-finish stragglers — safe to clear. A relaunch onto an existing
+      // session may have a real mid-race offline backlog — must NOT be wiped.
+      const _hadPriorSession = (await AsyncStorage.getItem(TRACKING_PARAMS_KEY)) !== null;
+
       // ✅ Store tracking params for the engine handlers.
       await AsyncStorage.setItem(TRACKING_PARAMS_KEY, JSON.stringify({
         participantId,
@@ -1334,6 +1396,17 @@ export const gpsService = {
       await AsyncStorage.removeItem(NEAR_FINISH_KEY);
       await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
       await AsyncStorage.removeItem(LOG_UPLOADED_KEY);
+      // Clear stale queue ONLY on a fresh start. On a fresh start any queued
+      // fixes are post-finish stragglers from a prior offline finish — safe to
+      // wipe. On a relaunch onto an existing session the queue may hold a real
+      // mid-race offline backlog the user recorded in a tunnel, so we must NOT
+      // delete it — it has to drain into this race.
+      if (!_hadPriorSession) {
+        try {
+          const { locationQueueService } = require('./locationQueueService');
+          await locationQueueService.clearQueue();
+        } catch { /* silent */ }
+      }
       // ✅ Critical: clear stale flag so this session's task path acts as
       // fallback until Transistor.start() succeeds.
       await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
