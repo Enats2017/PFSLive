@@ -1001,11 +1001,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     await stopBackgroundFetchKeepalive();
 
-    if (participantId && eventId) {
+    // Skip the stop-path drain if the race already finished — the background
+    // finish path (or the live finish path) already drained and tore down, so
+    // re-draining here would only re-detect finished=1 and trigger a redundant
+    // finishBackgroundStop/_doFullStop (idempotent, but produces a stray 🏆/🛑).
+    let raceAlreadyFinished = false;
+    try { raceAlreadyFinished = (await AsyncStorage.getItem(RACE_FINISHED_KEY)) === '1'; } catch { /* silent */ }
+
+    if (participantId && eventId && !raceAlreadyFinished) {
       try {
-        const sentCount = await locationService.processQueue(participantId, eventId);
-        if (API_CONFIG.DEBUG && sentCount > 0) {
-          console.log(`✅ Drained ${sentCount} queued locations on stop`);
+        const drained = await locationService.processQueue(participantId, eventId);
+        if (drained > 0) {
+          actualSentCount += drained;   // include stop-path drained fixes in the total
+          if (API_CONFIG.DEBUG) console.log(`✅ Drained ${drained} queued locations on stop`);
         }
       } catch { /* silent */ }
     }
