@@ -88,7 +88,8 @@ export type RootStackParamList = {
   },
   LiveTrackingSettings:undefined,
   ParticipantScreen:undefined,
-  FollowerSrceen:undefined
+  FollowerSrceen:undefined,
+  FanScreen:undefined
 
   AthleteSearchScreen: {
       initialQuery?: string;
@@ -206,6 +207,10 @@ export type ParticipantScreenpops = NativeStackScreenProps<
 export type FollowerScreenpops = NativeStackScreenProps<
   RootStackParamList,
   "FollowerSrceen"
+>;
+export type FanScreenpops = NativeStackScreenProps<
+  RootStackParamList,
+  "FanScreen"
 >;
 export type AthleteSearchScreenpops = NativeStackScreenProps<
   RootStackParamList,

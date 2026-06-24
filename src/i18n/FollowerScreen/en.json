@@ -4,6 +4,13 @@
     "athlete":"FIND AN ATHLETE",
     "favourite":"FAVOURITE ATHLETES ",
     "followers":"My Followers List",
+
+    "nav":{
+        "upcomingsub":"Discover and browse upcoming races",
+        "pastsub":"Find and view results from past races",
+        "athletesub":"Search for an athlete by name or email",
+        "favouritesub":"View your favorite athletes"
+    },
     
     "button":{
         "upcoming":"SHOW ALL UPCOMING EVENTS",

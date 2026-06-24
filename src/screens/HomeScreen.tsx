@@ -1862,7 +1862,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <FollowingLiveEventsSection
               events={homeData.following_live_events}
               onRoutePress={(event) => {
-                console.log("11111111111111",event);
+               
                 
                 if (event.event_source == "custom") {
                    navigation.navigate('LiveTracking', {
@@ -1896,7 +1896,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={homeStyles.button}
-            onPress={() => navigation.navigate('FollowerSrceen')}
+            onPress={() => navigation.navigate('FanScreen')}
           >
             <Text style={homeStyles.buttonText}>{t('home:button.Fan')}</Text>
           </TouchableOpacity>

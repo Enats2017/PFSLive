@@ -24,5 +24,11 @@
     "no_followers_msg": "Niemand volgt je nog. Deel je profiel om volgers te krijgen.",
     "no_following_title": "Niemand Gevolgd",
     "no_following_msg": "Je volgt nog niemand. Zoek naar atleten om te volgen."
-  }
+  },
+  "nav":{
+    "upcomingsub":"Ontdek en bekijk komende wedstrijden",
+    "pastsub":"Zoek en bekijk resultaten van eerdere wedstrijden",
+    "athletesub":"Zoek een atleet op naam of e-mailadres",
+    "favouritesub":"Bekijk je favoriete atleten"
+}
 }

@@ -34,11 +34,15 @@ export const headerStyles = StyleSheet.create({
   },
   
   logo: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
+    width: 100,
+    height: 50,
+    alignItems: 'flex-start',
     justifyContent: 'center',
   },
+  centerLogo: {
+  width: "100%",
+  height: 45,
+},
   
   // ✅ ADD THIS: Logo Image Style
   logoImage: {

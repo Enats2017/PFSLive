@@ -4,7 +4,7 @@ import { colors, spacing } from "./common.styles";
  export const follow = StyleSheet.create({
 
     section: {
-        paddingHorizontal: spacing.sm,
+        paddingHorizontal: spacing.md, 
         gap: spacing.md,
     },
 
@@ -14,7 +14,7 @@ import { colors, spacing } from "./common.styles";
         paddingVertical: spacing.sm,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: spacing.xl
+        marginBottom: spacing.md
     },
     yellowHeaderText: {
         fontSize: 16,
@@ -37,11 +37,12 @@ import { colors, spacing } from "./common.styles";
   
     infoCard: {
         flexDirection: 'row',
-        backgroundColor: '#f8f8f8',
+        backgroundColor: colors.white,
         borderRadius: 10,
         padding: spacing.lg,
         gap: spacing.sm,
         borderLeftWidth: 3,
+         borderWidth: 0.5, 
         borderLeftColor: colors.themeiColor,
     },
 

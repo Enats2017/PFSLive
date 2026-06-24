@@ -11,6 +11,7 @@ export interface SuggestionItem {
   race_time: string | null;
   country: string;
   city: string;
+  event_image:string,
   tab?: "past" | "live" | "upcoming";
 }
 
@@ -39,7 +40,7 @@ export const suggestionService = {
         page_past: 0,
         page_live: 0,
         page_upcoming: 0,
-        is_participant: "1",
+        is_participant: "0",
         filter_name_past: "",
         filter_name_live: "",
         filter_name_upcoming: "",
@@ -57,6 +58,8 @@ export const suggestionService = {
         requestBody,
         { headers },
       );
+
+      console.log('RAW RESPONSE:', JSON.stringify(response.data));
 
       if (response.success && response.data) {
         const results = response.data.suggestions ?? [];

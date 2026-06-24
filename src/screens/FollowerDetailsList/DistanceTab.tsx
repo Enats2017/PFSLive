@@ -55,7 +55,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
     const isLiveOrUpcoming = sourceTab === 'live' || sourceTab === 'upcoming';
 
     return (
-      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
+      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.md }]}>
         <View style={[detailsStyles.distance]}>
           <View style={detailsStyles.distanceInfo}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
@@ -64,28 +64,28 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
 
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.race_date_formatted}
               </Text>
             </View>
 
             <View style={detailsStyles.metaRow}>
               <Ionicons name="time-outline" size={15} color={colors.gray600} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {formatClockTime(item.race_time)} 
               </Text>
             </View>
 
             <View style={detailsStyles.metaRow}>
               <Feather name="users" size={16} color={colors.gray500} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.participant_started_count} {t('details:athletes')}
               </Text>
             </View>
 
             <View style={detailsStyles.metaRow}>
               <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.finished_count} {t('details:finished')}
               </Text>
             </View>
@@ -111,6 +111,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
               </View>
             )}
           </View>
+          <View style={detailsStyles.verticalDivider} />
 
           <View style={{ gap:spacing.md}}>
             <TouchableOpacity
@@ -189,7 +190,7 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
           keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.md, paddingBottom: 10, paddingTop: spacing.md }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.md, paddingBottom: spacing.xxxl, paddingTop: spacing.md }}
           renderItem={renderItem}
         />
       )}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { headerStyles } from '../../styles/header.styles';
 import { useNavigation } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { colors } from '../../styles/common.styles';
 interface AppHeaderProps {
   title?: string;
   showLogo?: boolean;
+  logoimg?:boolean;
   showSearch?: boolean;
   product_app_id?: number;
   product_option_value_app_id?: number | null;
@@ -19,6 +20,7 @@ interface AppHeaderProps {
 export const AppHeader: React.FC<AppHeaderProps> = ({
   title,
   showLogo = true,
+  logoimg = false,
   showSearch = false,
   product_app_id,
   product_option_value_app_id,
@@ -76,6 +78,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           />
         </TouchableOpacity>
       </View>
+      {logoimg  && (  
+        <View style={headerStyles.centerSection}>
+          <Image
+                source={require('../../../assets/livio_logo_transparent.png')}
+                style={headerStyles.centerLogo}
+                resizeMode="contain"
+              />
+              </View>
+        )
+      }
 
       {/* Center — Title */}
       {title && (
