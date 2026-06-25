@@ -510,7 +510,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   }, []);
 
-  const fetchHomeData = useCallback(async () => {
+  const fetchHomeData = useCallback(async (fresh: boolean = false): Promise<HomeData | null> => {
     try {
       const token = await tokenService.getToken();
       const deviceId = await getDeviceId();
@@ -528,9 +528,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const headers = token
         ? await API_CONFIG.getHeaders()
         : { 'Content-Type': 'application/json' };
-      const requestBody = {
+      const requestBody: { device_id: string; fresh?: number } = {
         device_id: deviceId,
       };
+      // ✅ When pressing Start, request a cache-bypassed read so a just-edited
+      // race start time is reflected (the home response is cached ~45s server-side).
+      if (fresh) requestBody.fresh = 1;
 
       if (API_CONFIG.DEBUG) console.log('📤 Fetching home data');
 
@@ -556,7 +559,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setHasToken(false);
         setHomeData(null);
         setLoading(false);
-        return;
+        return null;
       }
 
       // ✅ Normal success flow
@@ -591,6 +594,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             if (API_CONFIG.DEBUG) console.error('Error calculating offset:', error);
           }
         }
+
+        // ✅ Return the fresh data so callers (doStartGPSTracking) can use it
+        // synchronously without waiting for the state update to land.
+        return response.data.data as HomeData;
       }
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
@@ -606,7 +613,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         await tokenService.removeToken();
         setHasToken(false);
         setHomeData(null);
-        return;
+        return null;
       }
 
       // ✅ Handle other errors silently
@@ -616,6 +623,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
+    return null;
   }, []);
 
   // ==================== GPS TRACKING ====================
@@ -727,8 +735,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setHasPermission(true);
       }
 
+      // ✅ Re-fetch home data FRESH (cache-bypassed) at the moment Start is
+      // pressed. The organiser can edit the race start_hour right before the
+      // gun; the home response is cached ~45s server-side, and the session
+      // captures the race start time ONCE below — so a stale value makes the
+      // race-start gate hold every fix as "not started yet" against the wrong
+      // time (the missed-start incident). Use the RETURNED value directly:
+      // reading the homeData state right after the await won't reflect the
+      // update yet. Fall back to existing state if the fresh fetch fails, so an
+      // offline start still works.
+      const fresh = await fetchHomeData(true);
+      const raceData = fresh ?? homeData;
+
       // Parse race start time
-      if (homeData?.next_race_date && homeData?.next_race_time) {
+      if (raceData?.next_race_date && raceData?.next_race_time) {
         try {
           // ✅ Both server_datetime and race_time are in the event timezone.
           // Parse both as fake-UTC (appending 'Z') so JS doesn't apply any
@@ -739,20 +759,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // race_datetime   (fake-UTC ms) = actual event-tz race start
           // diff = race_ms - server_ms = how far in the future the race is (in ms)
           // raceTime = Date.now() + diff  ← correct UTC race start time
-          //
-          // Example:
-          //   server_datetime = "2026-05-20 07:24:43" Brussels (UTC+2) = 05:24 UTC
-          //   race_time       = "2026-05-20 05:00:00" Brussels (UTC+2) = 03:00 UTC
-          //   serverFakeMs = parse("2026-05-20T07:24:43Z") = 07:24 fake-UTC
-          //   raceFakeMs   = parse("2026-05-20T05:00:00Z") = 05:00 fake-UTC
-          //   diff = 05:00 - 07:24 = -2h24m (race was 2h24m ago in event tz)
-          //   raceTime = Date.now() + (-2h24m) = 2h24m ago in UTC ✅ correct
 
-          const serverDatetimeStr = homeData?.server_datetime;
+          const serverDatetimeStr = raceData?.server_datetime;
 
           if (serverDatetimeStr) {
             const serverFakeMs = new Date(serverDatetimeStr.replace(' ', 'T') + 'Z').getTime();
-            const raceFakeMs = new Date(`${homeData.next_race_date}T${homeData.next_race_time}Z`).getTime();
+            const raceFakeMs = new Date(`${raceData.next_race_date}T${raceData.next_race_time}Z`).getTime();
 
             // How many ms from event-tz now until race start (negative = already started)
             const msUntilRace = raceFakeMs - serverFakeMs;
@@ -766,7 +778,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
               if (API_CONFIG.DEBUG) {
                 console.log('✅ server_datetime (event tz):', serverDatetimeStr);
-                console.log('✅ race_time (event tz):', `${homeData.next_race_date} ${homeData.next_race_time}`);
+                console.log('✅ race_time (event tz):', `${raceData.next_race_date} ${raceData.next_race_time}`);
                 console.log('✅ ms until race:', msUntilRace, '→', (msUntilRace / 3600000).toFixed(2), 'h');
                 console.log('✅ raceTime (UTC):', raceTime.toISOString());
               }
@@ -788,8 +800,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       // Get sending interval
       let intervalValue = 30;
-      if (homeData?.next_race_interval_for_location) {
-        const rawInterval = homeData.next_race_interval_for_location;
+      if (raceData?.next_race_interval_for_location) {
+        const rawInterval = raceData.next_race_interval_for_location;
         const parsed = typeof rawInterval === 'number' ? rawInterval : parseInt(String(rawInterval));
         if (!isNaN(parsed) && parsed > 0) intervalValue = parsed;
       }
@@ -809,6 +821,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         isSendingDataRef.current = true;
         setIsSendingData(true);
       }
+
+      // ✅ participant/event ids — prefer the fresh fetch (an edit could in
+      // principle change them) but fall back to the derived state values.
+      const startParticipantId = raceData?.next_race_participant_app_id ?? participantId;
+      const startEventId = raceData?.next_race_id ?? eventId;
 
       const gpsWatch = await gpsService.startWatchingPosition(
         async (gpsPosition) => {
@@ -838,13 +855,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           toastError(t('home:errors.gpsError'), t('home:errors.gpsErrorDescription'));
         },
         intervalValue,
-        participantId!,  // ✅ passed to background task via AsyncStorage
-        eventId!,        // ✅ passed to background task via AsyncStorage
+        String(startParticipantId)!,  // ✅ passed to background task via AsyncStorage
+        String(startEventId)!,        // ✅ passed to background task via AsyncStorage
         t('home:tracking.backgroundNotificationTitle'),       // ✅ from language file
         t('home:tracking.backgroundNotificationBody'),        // ✅ from language file
-        homeData?.next_race_category_id,                      // ✅ movement threshold per sport
+        raceData?.next_race_category_id,                      // ✅ movement threshold per sport
         raceStartTimeRef.current?.toISOString() ?? null,      // ✅ background task race check
-        homeData?.manual_start,                               // ✅ skip race check if manual
+        raceData?.manual_start,                               // ✅ skip race check if manual
       );
 
       gpsWatchRef.current = gpsWatch;
@@ -862,12 +879,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       startQueueProcessor();
 
-      if (homeData?.manual_start !== 1) {
+      if (raceData?.manual_start !== 1) {
         startRaceStartChecker();
       }
 
       let message = '';
-      if (homeData?.manual_start === 1) {
+      if (raceData?.manual_start === 1) {
         message = t('home:tracking.manualStartEnabled');
       } else if (raceAlreadyStarted) {
         message = t('home:tracking.dataSendingStarted');
@@ -895,6 +912,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     hasRaceStarted,
     startQueueProcessor,
     startRaceStartChecker,
+    fetchHomeData,
     t,
   ]);
 
@@ -1699,8 +1717,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     </View>
                   </View>
                 )}
-                {/* GPS Status (DEBUG only) */}
-                {isGPSActive && API_CONFIG.DEBUG && (
+                {/* ✅ Tracking status — PRODUCTION visible (not DEBUG-gated).
+                    A runner who starts before race time sees GPS active but no
+                    data is sent until the start time passes. Without this they
+                    assume it's broken (it isn't) and stop it — exactly the
+                    missed-start incident. Show a clear pre-race / sending state. */}
+                {isGPSActive && (
                   <View style={homeStyles.trackingStatus}>
                     <Text style={homeStyles.trackingStatusIcon}>{isSendingData ? '🟢' : '🟡'}</Text>
                     <View style={{ flex: 1 }}>
