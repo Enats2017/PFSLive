@@ -19,6 +19,7 @@ interface ResultCardProps {
     currentPovId: number;
     isWomen?: boolean;
     showUtmbIndex: boolean;
+    isCheckpointMode?: boolean;   // ← new
 }
 
 const ResultCard: React.FC<ResultCardProps> = memo(({
@@ -31,7 +32,8 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     product_app_id,
     onToggleFollow,
     isWomen,
-    showUtmbIndex
+    showUtmbIndex,
+    isCheckpointMode = false,   // ← new
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
@@ -45,8 +47,19 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     const isLive = item.live_tracking_activated === 1;
     const isFemale = item.gender === 'female';
     const hasFinished = item.status === 'finished';
-    console.log("hasFinished",hasFinished);
-    
+
+    // ✅ Pick the right source fields depending on checkpoint mode
+    const displayRanking = isCheckpointMode
+        ? (item as any).checkpointRanking ?? '-'
+        : item.position.replace('.', '');
+
+    const displayTime = isCheckpointMode
+        ? (item as any).checkpointActualTime ?? '-'
+        : item.time;
+
+    const displayDiff = isCheckpointMode
+        ? (item as any).checkpointDiff ?? ''   // empty for now, backend will fill later
+        : item.diff;
 
     // ✅ Gender rank only for female, and only when it's a numeric rank (hide "DNF" etc.)
     const genderRank = isFemale && /^\d+$/.test(item.finish_rank_gender ?? '')
@@ -66,18 +79,26 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
         if (!isLoading) onToggleFollow();
     }, [isLoading, onToggleFollow]);
 
+ const displayAgeGroupRank = isCheckpointMode
+  ? displayRanking
+  : !item.finish_rank_agegroup ||
+    item.finish_rank_agegroup === 'DNF'
+    ? '-'
+    : item.finish_rank_agegroup;
+
+
+
     return (
         <View style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: colors.pinkcolor }]}>
 
-            {/* ✅ Badge: star left | overall rank top + gender rank bottom */}
             <TouchableOpacity
                 style={[
                     resultListStyle.cornerBadge,
                     isWomen
-                        ? { backgroundColor: colors.pinkcolor }  
+                        ? { backgroundColor: colors.pinkcolor }
                         : hasFinished
-                            ? { backgroundColor: "#028A77" } 
-                            : null, 
+                            ? { backgroundColor: "#028A77" }
+                            : null,
                 ]}
                 onPress={handleStarPress}
                 activeOpacity={0.8}
@@ -88,9 +109,9 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 </Text>
                 <View style={resultListStyle.cornerBadgeRight}>
                     <Text style={resultListStyle.cornerNum}>
-                        {item.position.replace('.', '')}
+                        {displayRanking}
                     </Text>
-                    {genderRank && (
+                    {!isCheckpointMode && genderRank && (
                         <Text style={resultListStyle.cornerGenderRank}>{genderRank}</Text>
                     )}
                 </View>
@@ -121,20 +142,22 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 <View style={resultListStyle.statsRow}>
                     <View style={resultListStyle.statCol}>
                         <Text style={resultListStyle.statLabel}>{t('allrace:race.time')}</Text>
-                        <Text style={resultListStyle.statVal}>{item.time}</Text>
+                        <Text style={resultListStyle.statVal}>{displayTime}</Text>
                     </View>
 
                     {fromLive === 0 ? (
                         <>
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                 <Text style={resultListStyle.statLabel}>{t('allrace:race.diffFirst')}</Text>
-                                <Text style={resultListStyle.statVal}>{item.diff}</Text>
+                                <Text style={resultListStyle.statVal}>{displayDiff}</Text>
                             </View>
                             <View style={resultListStyle.statCol}>
                                 <Text style={resultListStyle.statLabel}>
                                     {t('allrace:race.ranking')}{'\n'}{item.category_name}
                                 </Text>
-                                <Text style={resultListStyle.statVal}>{item.finish_rank_agegroup}</Text>
+                                <Text style={resultListStyle.statVal}>
+                                     {displayAgeGroupRank}
+                                </Text>
                             </View>
                         </>
                     ) : (
@@ -188,7 +211,10 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     prev.isFollowed === next.isFollowed &&
     prev.isLoading === next.isLoading &&
     prev.item.position === next.item.position &&
-    prev.item.live_tracking_activated === next.item.live_tracking_activated
+    prev.item.live_tracking_activated === next.item.live_tracking_activated &&
+    prev.isCheckpointMode === next.isCheckpointMode &&                              // ← add
+    (prev.item as any).checkpointRanking === (next.item as any).checkpointRanking &&  // ← add
+    (prev.item as any).checkpointActualTime === (next.item as any).checkpointActualTime // ← add
 );
 
 ResultCard.displayName = 'ResultCard';

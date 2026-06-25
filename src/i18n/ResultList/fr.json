@@ -24,6 +24,7 @@
     "live": "En direct",
     "liveTracking": "Suivi en direct",
     "favourite": "Favoris",
-    "noFavourites": "Pas encore de favoris. Appuyez sur ☆ sur un résultat pour l'enregistrer."
+    "noFavourites": "Pas encore de favoris. Appuyez sur ☆ sur un résultat pour l'enregistrer.",
+    "checkpoint": "Point de contrôle"
   }
 }

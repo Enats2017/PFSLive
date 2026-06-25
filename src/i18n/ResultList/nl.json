@@ -24,6 +24,7 @@
     "live": "Live",
     "favourite": "Favorieten",
     "liveTracking": "Live tracking",
-    "noFavourites": "Nog geen favorieten. Tik op ☆ bij een resultaat om het op te slaan."
+    "noFavourites": "Nog geen favorieten. Tik op ☆ bij een resultaat om het op te slaan.",
+    "checkpoint": "Controlepunt"
   }
 }

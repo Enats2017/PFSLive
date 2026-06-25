@@ -20,6 +20,8 @@ interface ResultCardLiveProps {
     onToggleFollow: () => void;
     isWomen?: boolean;
     showUtmbIndex?: boolean;
+    isCheckpointMode?: boolean;              // true when a checkpoint is selected in the dropdown
+    selectedCheckpointIndex?: number | null; // index into the no-START checkpoints array
 }
 
 const getActiveCheckpoints = (checkpoints: RaceResult['checkpoints']) => {
@@ -28,10 +30,6 @@ const getActiveCheckpoints = (checkpoints: RaceResult['checkpoints']) => {
     return crossedCheckpoints.slice(-2);
 };
 
-// ✅ Returns { lastCrossed, nextCp, finishCp } for the live stats row
-// lastCrossed — most recently crossed checkpoint (race_time = elapsed)
-// nextCp      — first not-yet-crossed checkpoint (actual_time = ETA)
-// finishCp    — last checkpoint in array (always finish, actual_time = ETA finish)
 const getLiveStats = (checkpoints: RaceResult['checkpoints']) => {
     if (!checkpoints || checkpoints.length === 0) {
         return { lastCrossed: null, nextCp: null, finishCp: null };
@@ -44,6 +42,9 @@ const getLiveStats = (checkpoints: RaceResult['checkpoints']) => {
     const finishCp = checkpoints[checkpoints.length - 1];
     return { lastCrossed, nextCp, finishCp };
 };
+
+const getDisplayCheckpoints = (cps: RaceResult['checkpoints']) =>
+    (cps ?? []).filter(cp => !cp.is_start);
 
 const truncateCheckpointName = (name: string, maxLength: number = 12): string => {
     if (!name) return '';
@@ -62,6 +63,8 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     product_app_id,
     isWomen,
     showUtmbIndex,
+    isCheckpointMode = false,           
+    selectedCheckpointIndex = null,      
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
@@ -69,17 +72,30 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     const isLive = item.live_tracking_activated === 1;
     const activeCheckpoints = getActiveCheckpoints(item.checkpoints);
     const hasFinished = item.status === 'finished';
-    console.log("11111finshed", hasFinished);
 
     const isFemale = item.gender === 'female';
-    // ✅ Live stats for bottom row: last crossed CP, next CP ETA, finish ETA
     const { lastCrossed, nextCp, finishCp } = getLiveStats(item.checkpoints);
-    
 
-    // ✅ Gender rank only for female, and only when it's a numeric rank (hide "DNF" etc.)
+    const displayCps = getDisplayCheckpoints(item.checkpoints);
+    const maxIdx = Math.max(displayCps.length - 1, 0);
+
+    const idx1 = isCheckpointMode && selectedCheckpointIndex !== null
+        ? Math.min(selectedCheckpointIndex, maxIdx)
+        : null;
+    const idx2 = idx1 !== null ? Math.min(idx1 + 1, maxIdx) : null;
+    const idx3 = idx2 !== null ? Math.min(idx2 + 1, maxIdx) : null;
+
+    const cp1 = idx1 !== null ? displayCps[idx1] : null;
+    const cp2 = idx2 !== null ? displayCps[idx2] : null;
+    const cp3 = idx3 !== null ? displayCps[idx3] : null;
+
     const genderRank = isFemale && /^\d+$/.test(item.finish_rank_gender ?? '')
         ? `F ${item.finish_rank_gender}`
         : null;
+
+    const badgeNumber = isCheckpointMode
+        ? (cp1?.is_crossed ? (cp1?.ranking || '-') : '-')
+        : item.position.replace('.', '');
 
     const handleCardPress = useCallback(() => {
         navigation.navigate('ResultDetails', {
@@ -93,6 +109,31 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     const handleStarPress = useCallback(() => {
         if (!isLoading) onToggleFollow();
     }, [isLoading, onToggleFollow]);
+
+    const renderCpColumn = (cp: RaceResult['checkpoints'][number] | null, style?: any) => (
+        <View style={[resultListStyle.statCol, style]}>
+            <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                {cp ? truncateCheckpointName(cp.name) : '-'}
+            </Text>
+            <Text style={[
+                resultListStyle.statVal,
+                { color: cp?.is_crossed ? '#22C55E' : '#9CA3AF' }
+            ]}>
+                {cp ? (cp.is_crossed ? (cp.race_time || '-') : t('allrace:race.notYet')) : '-'}
+            </Text>
+        </View>
+    );
+
+    const renderCpClockColumn = (cp: RaceResult['checkpoints'][number] | null, style?: any) => (
+        <View style={[resultListStyle.statCol, style]}>
+            <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                {cp ? truncateCheckpointName(cp.name) : '-'}
+            </Text>
+            <Text style={resultListStyle.statVal}>
+                {cp ? (cp.is_crossed ? (formatClockTime(cp.race_time) || '-') : t('allrace:race.notYet')) : '-'}
+            </Text>
+        </View>
+    );
 
     return (
         <View style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: colors.pinkcolor }]}>
@@ -115,9 +156,9 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                 </Text>
                 <View style={resultListStyle.cornerBadgeRight}>
                     <Text style={resultListStyle.cornerNum}>
-                        {item.position.replace('.', '')}
+                        {badgeNumber}
                     </Text>
-                    {genderRank && (
+                    {!isCheckpointMode && genderRank && (
                         <Text style={resultListStyle.cornerGenderRank}>{genderRank}</Text>
                     )}
                 </View>
@@ -148,44 +189,62 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     </Text>
                 </View>
 
-                {isLive && (
+                {isLive && !isCheckpointMode && (
                     <View style={{ marginTop: 6 }}>
                         <LiveTrackingBar />
                     </View>
                 )}
 
                 <View style={resultListStyle.statsRow}>
-                    <View style={[
-                        resultListStyle.statCol,
-                        fromLive === 1 && !lastCrossed && { alignItems: 'flex-start' },
-                    ]}>
-                        {/* ✅ Col 1: Last crossed CP race time (green) — always shown */}
-                        <Text style={resultListStyle.statLabel} numberOfLines={2}>
-                            {lastCrossed
-                                ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
-                                : t('allrace:race.raceTime')}
-                        </Text>
-                        <Text style={[resultListStyle.statVal, { color: lastCrossed?.race_time ? '#22C55E' : '#9CA3AF' }]}>
-                            {lastCrossed?.race_time || item.time || '-'}
-                        </Text>
-                    </View>
+                    {isCheckpointMode ? (
+                        // ── NEW: Col 1 in checkpoint mode — selected checkpoint's race_time
+                        renderCpColumn(cp1, fromLive === 1 && !cp1?.is_crossed ? { alignItems: 'flex-start' } : undefined)
+                    ) : (
+                        // ORIGINAL: Col 1 — last crossed CP race time (green) — always shown
+                        <View style={[
+                            resultListStyle.statCol,
+                            fromLive === 1 && !lastCrossed && { alignItems: 'flex-start' },
+                        ]}>
+                            <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                                {lastCrossed
+                                    ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
+                                    : t('allrace:race.raceTime')}
+                            </Text>
+                            <Text style={[resultListStyle.statVal, { color: lastCrossed?.race_time ? '#22C55E' : '#9CA3AF' }]}>
+                                {lastCrossed?.race_time || item.time || '-'}
+                            </Text>
+                        </View>
+                    )}
 
                     {fromLive === 0 ? (
-                        <>
-                            {/* <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
-                                <Text style={resultListStyle.statLabel}>{t('allrace:race.diffFirst')}</Text>
-                                <Text style={resultListStyle.statVal}>{item.diff}</Text>
-                            </View> */}
+                        isCheckpointMode ? (
+                            // ── NEW: checkpoint mode — column 2 shows the SELECTED checkpoint's ranking
+                            <View style={[resultListStyle.statCol, resultListStyle.statColLeft]}>
+                                <Text style={resultListStyle.statLabel}>
+                                    {t('allrace:race.ranking')}{'\n'}{cp1 ? truncateCheckpointName(cp1.name) : ''}
+                                </Text>
+                                <Text style={resultListStyle.statVal}>
+                                    {cp1?.is_crossed ? (cp1?.ranking || '-') : '-'}
+                                </Text>
+                            </View>
+                        ) : (
+                            // ORIGINAL: category ranking — untouched
                             <View style={[resultListStyle.statCol, resultListStyle.statColLeft]}>
                                 <Text style={resultListStyle.statLabel}>
                                     {t('allrace:race.ranking')}{'\n'}{item.category_name}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>{item.finish_rank_agegroup}</Text>
                             </View>
+                        )
+                    ) : isCheckpointMode ? (
+                        <>
+                            {/* ── NEW: Col 2 & 3 — next checkpoint(s) after the selected one */}
+                            {renderCpClockColumn(cp2, resultListStyle.statColMid)}
+                            {renderCpClockColumn(cp3)}
                         </>
                     ) : (
                         <>
-                           
+                            {/* ORIGINAL: Col 2 — next CP ETA (or last crossed name if no next) */}
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                 <Text style={resultListStyle.statLabel} numberOfLines={2}>
                                     {nextCp
@@ -199,7 +258,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                 </Text>
                             </View>
 
-                            {/* ✅ Col 3: Finish — 'FINISH' once crossed (actual time), else 'ETA FINISH' */}
+                            {/* ORIGINAL: Col 3 — Finish: 'FINISH' once crossed (actual time), else 'ETA FINISH' */}
                             <View style={resultListStyle.statCol}>
                                 <Text style={resultListStyle.statLabel} numberOfLines={1}>
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
@@ -221,9 +280,10 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     prev.isLoading === next.isLoading &&
     prev.item.position === next.item.position &&
     prev.item.live_tracking_activated === next.item.live_tracking_activated &&
-    // ✅ Re-render when checkpoints change — live stats depend on them
     prev.item.status === next.item.status &&
-    prev.item.checkpoints === next.item.checkpoints
+    prev.item.checkpoints === next.item.checkpoints &&
+    prev.isCheckpointMode === next.isCheckpointMode &&
+    prev.selectedCheckpointIndex === next.selectedCheckpointIndex
 );
 
 ResultCardLive.displayName = 'ResultCardLive';
