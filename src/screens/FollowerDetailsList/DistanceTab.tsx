@@ -25,9 +25,23 @@ interface DistanceTabProps {
   product_app_id: number;
   sourceTab?: 'past' | 'live' | 'upcoming';
   event_name: string;
+  // ✅ Landscape: the OUTER ScrollView owns vertical scrolling, so the inner
+  // list must NOT scroll itself (scrollEnabled=false) and must render at full
+  // content height. Portrait: the inner list scrolls (scrollEnabled=true).
+  scrollEnabled?: boolean;
+  // ✅ Landscape only: report measured content height so the parent can size
+  // the horizontal pager to fit all rows (a paged FlatList needs a fixed page
+  // height; in landscape that height = the full list content).
+  onContentHeight?: (h: number) => void;
 }
 
-const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: DistanceTabProps) => {
+const DistanceTab = ({
+  product_app_id,
+  sourceTab = 'past',
+  event_name,
+  scrollEnabled = true,
+  onContentHeight,
+}: DistanceTabProps) => {
   const navigation = useNavigation<any>();
   const { t } = useTranslation(['result', 'details', 'common']);
   const [results, setResults] = useState<Distance[]>([]);
@@ -177,7 +191,15 @@ const DistanceTab = ({ product_app_id, sourceTab = 'past', event_name }: Distanc
           data={results}
           keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
           showsVerticalScrollIndicator={false}
+          // ✅ Off in landscape so only the outer ScrollView scrolls (no nested
+          // vertical scrollers → iOS reaches the last row). On in portrait.
+          scrollEnabled={scrollEnabled}
           nestedScrollEnabled={true}
+          // ✅ Landscape: measure full content height so the parent sizes the
+          // pager to fit every row. Portrait: not needed (list scrolls itself).
+          onContentSizeChange={
+            onContentHeight ? (_, h) => onContentHeight(h) : undefined
+          }
           contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.md, paddingBottom: spacing.xxxl, paddingTop: spacing.md }}
           renderItem={renderItem}
         />

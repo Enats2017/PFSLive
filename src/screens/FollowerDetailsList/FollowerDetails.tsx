@@ -32,11 +32,12 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   const isLandscape = windowWidth > height;
   const width = containerWidth || windowWidth;
 
-  const TAB_CONTENT_HEIGHT = height * 0.4;
   const [activeTab, setActiveTab] = useState<Tab>('Distance');
   const activeTabRef = useRef<Tab>('Distance');
   const flatListRef = useRef<FlatList>(null);
   const { product_app_id, event_name, sourceTab, event_image } = route.params;
+
+  const [tabContentHeight, setTabContentHeight] = useState(0);
 
   useEffect(() => {
     const index = TABS.indexOf(activeTabRef.current);
@@ -45,6 +46,24 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
     }, 80);
     return () => clearTimeout(timer);
   }, [width]);
+
+  // Title + event image. Rendered as a FIXED bar in portrait (in the parent,
+  // above the pager) and as a SCROLL-AWAY ListHeaderComponent in landscape
+  // (passed into DistanceTab). Extracted so both paths render the same markup.
+  const renderHeader = useCallback(() => (
+    <>
+      <View style={detailsStyles.section}>
+        <Text style={commonStyles.title}>{event_name}</Text>
+      </View>
+      {event_image ? (
+        <Image
+          source={{ uri: event_image }}
+          style={{ width: '100%', aspectRatio: 612 / 300 }}
+          resizeMode="contain"
+        />
+      ) : null}
+    </>
+  ), [event_name, event_image]);
 
   const renderContent = useCallback((tab: Tab) => {
     if (!product_app_id) {
@@ -56,13 +75,23 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
     }
     switch (tab) {
       case 'Distance':
-        return <DistanceTab product_app_id={product_app_id} sourceTab={sourceTab} event_name={event_name} />;
+        return (
+          <DistanceTab
+            product_app_id={product_app_id}
+            sourceTab={sourceTab}
+            event_name={event_name}
+            // ✅ Landscape: inner list does NOT scroll (outer ScrollView does);
+            // report its height so the pager can be sized to fit all rows.
+            scrollEnabled={!isLandscape}
+            onContentHeight={isLandscape ? setTabContentHeight : undefined}
+          />
+        );
       case 'Participant':
         return <ParticipantTab product_app_id={product_app_id} />;
       default:
         return null;
     }
-  }, [product_app_id, sourceTab, event_name, t]);
+  }, [product_app_id, sourceTab, event_name, isLandscape, t]);
 
   const handleTabPress = useCallback((tab: Tab) => {
     const index = TABS.indexOf(tab);
@@ -83,7 +112,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   return (
     <SafeAreaView
       style={commonStyles.container}
-      edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top', 'bottom']}
+      edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}
     >
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={true} />
@@ -91,81 +120,112 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
         style={{ flex: 1 }}
         onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
       >
-        <ScrollView
-          nestedScrollEnabled={true}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}
-        >
-          <View style={detailsStyles.section}>
-            <Text style={commonStyles.title}>{event_name}</Text>
-          </View>
+        {isLandscape ? (
+          // ───────── LANDSCAPE: one OUTER vertical ScrollView ─────────
+          // Header (image+title) is OUTSIDE the tabs and scrolls away with the
+          // page. The tab bar scrolls with it too. The pager is given an EXPLICIT
+          // height (= measured content of the active tab) and its inner list is
+          // non-scrolling, so the OUTER ScrollView is the ONLY vertical scroller
+          // → no nested-scroll conflict, last row reachable on iOS.
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ flexGrow: 1 }}
+          >
+            {renderHeader()}
 
-          {event_image ? (
-            <Image
-              source={{ uri: event_image }}
-              style={{
-                width: '100%',
-                aspectRatio: 612 / 300,
-              }}
-              resizeMode="contain"
-            />
-          ) : null}
+            <View style={detailsStyles.tabBar}>
+              {TABS.map((tab) => (
+                <TouchableOpacity key={tab} style={detailsStyles.tabItem} onPress={() => handleTabPress(tab)}>
+                  <Text style={[commonStyles.subtitle, activeTab === tab && detailsStyles.activeTabText]}>
+                    {t(`details:details.${tab}`)}
+                  </Text>
+                  {activeTab === tab && (
+                    <LinearGradient
+                      colors={['#e8341a', '#f4a100', '#1a73e8']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={detailsStyles.underline}
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
 
-          <View style={detailsStyles.tabBar}>
-            {TABS.map((tab) => (
-              <TouchableOpacity key={tab} style={detailsStyles.tabItem} onPress={() => handleTabPress(tab)}>
-                <Text style={[commonStyles.subtitle, activeTab === tab && detailsStyles.activeTabText]}>
-                  {t(`details:details.${tab}`)}
-                </Text>
-                {activeTab === tab && (
-                  <LinearGradient
-                    colors={['#e8341a', '#f4a100', '#1a73e8']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={detailsStyles.underline}
-                  />
+            {/* Pager height = measured active-tab content (fallback to a sane
+                min until the first measure lands). Inner list is non-scrolling. */}
+            <View style={{ height: tabContentHeight || height * 0.5 }}>
+              <FlatList
+                ref={flatListRef}
+                data={TABS}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item}
+                onMomentumScrollEnd={handleSwipe}
+                initialScrollIndex={TABS.indexOf('Distance')}
+                getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+                renderItem={({ item }) => (
+                  <View style={{ width, flex: 1 }}>{renderContent(item)}</View>
                 )}
-              </TouchableOpacity>
-            ))}
-          </View>
+                scrollEnabled
+              />
+            </View>
+          </ScrollView>
+        ) : (
+          // ───────── PORTRAIT: fixed header + flex pager ─────────
+          // Header is FIXED above the pager; the inner list is the SOLE vertical
+          // scroller and fills the remaining space. No outer ScrollView → no
+          // nested conflict, last row reachable on iOS.
+          <>
+            {renderHeader()}
 
-          <View style={{ height: TAB_CONTENT_HEIGHT }}>
-            <FlatList
-              ref={flatListRef}
-              data={TABS}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item}
-              onMomentumScrollEnd={handleSwipe}
-              initialScrollIndex={TABS.indexOf('Distance')}
-              onLayout={() => {
-                const index = TABS.indexOf(activeTabRef.current);
-                flatListRef.current?.scrollToIndex({ index, animated: false });
-              }}
-              getItemLayout={(_, index) => ({
-                length: width,
-                offset: width * index,
-                index,
-              })}
-              renderItem={({ item }) => (
-                <View style={{ width, flex: 1 }}>{renderContent(item)}</View>
-              )}
-              scrollEnabled
-            />
-          </View>
-        </ScrollView>
+            <View style={detailsStyles.tabBar}>
+              {TABS.map((tab) => (
+                <TouchableOpacity key={tab} style={detailsStyles.tabItem} onPress={() => handleTabPress(tab)}>
+                  <Text style={[commonStyles.subtitle, activeTab === tab && detailsStyles.activeTabText]}>
+                    {t(`details:details.${tab}`)}
+                  </Text>
+                  {activeTab === tab && (
+                    <LinearGradient
+                      colors={['#e8341a', '#f4a100', '#1a73e8']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={detailsStyles.underline}
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <FlatList
+                ref={flatListRef}
+                data={TABS}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item}
+                onMomentumScrollEnd={handleSwipe}
+                initialScrollIndex={TABS.indexOf('Distance')}
+                getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+                renderItem={({ item }) => (
+                  <View style={{ width, flex: 1 }}>{renderContent(item)}</View>
+                )}
+                scrollEnabled
+              />
+            </View>
+          </>
+        )}
       </View>
-          <BottomNavigationFollower
-          activeTab="Home"
-          product_app_id={product_app_id}
-          event_name={event_name}
-          product_option_value_app_id={0}
-          sourceTab={sourceTab}
-        />
-     
-      
+
+      <BottomNavigationFollower
+        activeTab="Home"
+        product_app_id={product_app_id}
+        event_name={event_name}
+        product_option_value_app_id={0}
+        sourceTab={sourceTab}
+      />
     </SafeAreaView>
   );
 };
