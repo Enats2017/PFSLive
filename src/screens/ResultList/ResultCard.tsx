@@ -149,14 +149,14 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                         <>
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                 <Text style={resultListStyle.statLabel}>{t('allrace:race.diffFirst')}</Text>
-                                <Text style={resultListStyle.statVal}>{displayDiff}</Text>
+                                <Text style={resultListStyle.statVal}> {item.position === 'DNF' ? '-' : displayDiff}</Text>
                             </View>
                             <View style={resultListStyle.statCol}>
                                 <Text style={resultListStyle.statLabel}>
                                     {t('allrace:race.ranking')}{'\n'}{item.category_name}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
-                                     {displayAgeGroupRank}
+                                    {item.finish_rank_agegroup || "-"}
                                 </Text>
                             </View>
                         </>
