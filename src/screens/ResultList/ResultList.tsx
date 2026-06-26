@@ -110,7 +110,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             product_app_id,
             isFollowed: isFollowed(product_app_id, item.bib, item.customer_app_id),
             isLoading: isLoading(product_app_id, item.bib, item.customer_app_id),
-            isCheckpointMode: !!selectedCheckpoint, 
+            isCheckpointMode: !!selectedCheckpoint,
             selectedCheckpointIndex: selectedCheckpoint ? Number(selectedCheckpoint.value) : null,
             onToggleFollow: () => handleFollowPress({
                 customer_app_id: item.customer_app_id,
@@ -205,12 +205,19 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     selected={{ label: selectedCategoryLabel, value: selectedCategory }}
                     onSelect={onCategorySelect}
                 />
-                <Dropdown
-                    label={selectedCheckpoint?.label ?? t('allrace:filter.checkpoint')}
-                    options={checkpointOptions}
-                    selected={selectedCheckpoint ?? { label: t('allrace:filter.checkpoint'), value: '' }}
-                    onSelect={onCheckpointSelect}
-                />
+                {(raceStatus === 'in_progress' || raceStatus === 'finished') && (
+                    <Dropdown
+                        label={selectedCheckpoint?.label ?? t('allrace:filter.checkpoint')}
+                        options={checkpointOptions}
+                        selected={
+                            selectedCheckpoint ?? {
+                                label: t('allrace:filter.checkpoint'),
+                                value: '',
+                            }
+                        }
+                        onSelect={onCheckpointSelect}
+                    />
+                )}
             </View>
 
 
