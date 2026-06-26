@@ -96,7 +96,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
             <ScrollView
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: spacing.xl }}
+                contentContainerStyle={{ paddingBottom: spacing.xxxxl }}
             >
                 <View style={{ zIndex: 50, elevation: 30 }}>
                     <View style={particpant.yellowHeader}>
