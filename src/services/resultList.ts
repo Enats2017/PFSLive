@@ -23,8 +23,11 @@ export interface RaceResult {
   customer_app_id: number | null;
   checkpoints: Checkpoint[];
   utmb_index?: string;
-  finish_rank_agegroup?: number | null;
+  finish_rank_agegroup?: string | number | null;
   password_protected: 0|1,
+  checkpointActualTime?: string;
+  checkpointRanking?: string;
+  checkpointDiff?: string;
 }
 
 export interface Checkpoint {
@@ -36,6 +39,8 @@ export interface Checkpoint {
   rank_agegroup: string;
   day_name: string;
   is_crossed: boolean;
+   is_start: boolean;
+   diff: string;   
 }
 
 export interface FilterOption {

@@ -29,10 +29,10 @@ import { useDimensions } from '../../hooks/useDimensions';
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
-      const { width } = useDimensions();
-    const insets = useSafeAreaInsets(); 
+    const { width } = useDimensions();
+    const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    const isLandscape = width
     const {
         product_app_id,
         product_option_value_app_id,
@@ -92,6 +92,9 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         showUtmbIndex,
         hasError,
         clearError,
+        selectedCheckpoint,      // ← new: currently selected checkpoint FilterOption
+        checkpointOptions,       // ← new: dropdown options derived from results[0].checkpoints
+        onCheckpointSelect,
     } = useResultList(
         product_app_id,
         product_option_value_app_id,
@@ -99,7 +102,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         initialType,
         followedBibs
     );
-    
+
 
     const renderItem = useCallback(({ item }: { item: RaceResult }) => {
         const commonProps = {
@@ -107,6 +110,8 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             product_app_id,
             isFollowed: isFollowed(product_app_id, item.bib, item.customer_app_id),
             isLoading: isLoading(product_app_id, item.bib, item.customer_app_id),
+            isCheckpointMode: !!selectedCheckpoint, 
+            selectedCheckpointIndex: selectedCheckpoint ? Number(selectedCheckpoint.value) : null,
             onToggleFollow: () => handleFollowPress({
                 customer_app_id: item.customer_app_id,
                 password_protected: item.password_protected ?? 0,
@@ -151,14 +156,15 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     }, [
         isFollowed, isLoading, handleFollowPress,
         raceStatus, raceProgressStatus, sourceTab, fromLive,
-        product_app_id, currentPovId, showUtmbIndex,selectedCategory,
+        product_app_id, currentPovId, showUtmbIndex, selectedCategory,
+        selectedCheckpoint, selectedCheckpoint
     ]);
 
     const ListFooter = useCallback(() =>
         pageLoad
             ? <ActivityIndicator size="small" color={colors.primary} style={{ paddingVertical: 16 }} />
             : null
-    , [pageLoad]);
+        , [pageLoad]);
 
     const keyExtractor = useCallback(
         (item: RaceResult, index: number) => `${item.bib}_${item.position}_${index}`,
@@ -166,7 +172,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     );
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
 
             <AppHeader
@@ -199,7 +205,14 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     selected={{ label: selectedCategoryLabel, value: selectedCategory }}
                     onSelect={onCategorySelect}
                 />
+                <Dropdown
+                    label={selectedCheckpoint?.label ?? t('allrace:filter.checkpoint')}
+                    options={checkpointOptions}
+                    selected={selectedCheckpoint ?? { label: t('allrace:filter.checkpoint'), value: '' }}
+                    onSelect={onCheckpointSelect}
+                />
             </View>
+
 
             {initialLoad ? (
                 <View style={resultListStyle.center}>
@@ -267,7 +280,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     event_name={event_name}
                     product_option_value_app_id={product_option_value_app_id}
                     sourceTab={sourceTab}
-                    selectedDistanceLabel={selectedDistanceLabel} 
+                    selectedDistanceLabel={selectedDistanceLabel}
                 />
             ) : (
                 <BottomNavigation
@@ -276,7 +289,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     event_name={event_name}
                     product_option_value_app_id={product_option_value_app_id}
                     sourceScreen={sourceScreen}
-                    selectedDistanceLabel={selectedDistanceLabel} 
+                    selectedDistanceLabel={selectedDistanceLabel}
                 />
             )}
 
