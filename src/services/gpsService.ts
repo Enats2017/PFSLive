@@ -71,6 +71,8 @@ export const LOG_UPLOADED_KEY = '@PFSLive:logUploaded';
 // by the movement filter because the participant is stopped at a light).
 const LAST_LOC_FIRE_KEY = '@PFSLive:lastLocFireAt';
 
+const LAST_QUEUED_KEY = '@PFSLive:lastQueuedAt';
+
 const FINISH_APPROACH_INTERVAL = 5;                            // seconds
 const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 const FINISH_LINE_THRESHOLD_KM = 0.05;                         // 50m for auto-stop
@@ -542,7 +544,7 @@ const _processLocationForSendInternal = async (
           eventId,
           queuedAt:         new Date().toISOString(),
           retryCount:       0,
-        });
+        }, false);
         await addLog('📥', `Backlog still draining — current fix queued behind it for order${tag}`);
       } catch { /* silent */ }
       return;
@@ -697,11 +699,17 @@ const _processLocationForSendInternal = async (
     // Import here to avoid circular deps at module level.
     const { locationService } = require('./locationService');
 
+    // ✅ Queue-on-fail is always allowed here; the OFFLINE-QUEUE throttle now
+    // lives in locationQueueService.addToQueue (single chokepoint), so a failed
+    // send hands the fix to addToQueue, which drops it if we already queued one
+    // this interval. That keeps the offline backlog at the interval rate without
+    // this path needing its own throttle — and the order-guard re-queue above is
+    // covered by the same chokepoint.
     let result: any = { success: false };
     try {
       result = await locationService.sendLocation(participantId, eventId, location, true);
     } catch (sendErr: any) {
-      await addLog('📦', `Send failed — queued. Error: ${sendErr?.message ?? 'unknown'}${tag}`);
+      await addLog('📦', `Send failed — queued (subject to queue throttle). Error: ${sendErr?.message ?? 'unknown'}${tag}`);
       return;
     }
 
@@ -1060,6 +1068,7 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(NEAR_FINISH_KEY);
   await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
   await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
+  await AsyncStorage.removeItem(LAST_QUEUED_KEY);
   if (API_CONFIG.DEBUG) console.log('✅ Tracking stopped');
   await addLog('🛑', 'Tracking stopped');
   await _flushLogsNow();
@@ -1396,6 +1405,7 @@ export const gpsService = {
       await AsyncStorage.removeItem(NEAR_FINISH_KEY);
       await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
       await AsyncStorage.removeItem(LOG_UPLOADED_KEY);
+      await AsyncStorage.removeItem(LAST_QUEUED_KEY);
       // Clear stale queue ONLY on a fresh start. On a fresh start any queued
       // fixes are post-finish stragglers from a prior offline finish — safe to
       // wipe. On a relaunch onto an existing session the queue may hold a real
