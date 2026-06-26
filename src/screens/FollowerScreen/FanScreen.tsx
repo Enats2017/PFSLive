@@ -20,6 +20,7 @@ import { suggestionService, SuggestionItem } from '../../services/followerScreen
 import SuggestionDropdown from '../../components/SuggestionDropdown';
 import { eventService, EventItem } from '../../services/followerEvent';
 import { formatEventDate } from '../../utils/dateFormatter';
+import EventCard from '../../components/EventCard';
 
 
 
@@ -41,22 +42,7 @@ const NavCard: React.FC<NavCardProps> = ({ icon, title, subtitle, onPress }) => 
     </TouchableOpacity>
 );
 
-const EventCard: React.FC<{ item: EventItem; t: any; }> = ({ item, t }) => (
-    <View style={fanstyle.eventCard}>
-        <Image
-            source={{ uri: item.event_image }}
-            style={fanstyle.eventImg}
-            resizeMode="cover"
-        />
-        <View style={fanstyle.eventInfo}>
-            <Text style={fanstyle.eventName} numberOfLines={1}>{item.name}</Text>
-            <View style={fanstyle.eventDateRow}>
-                <Text style={fanstyle.eventDate}>{formatEventDate(item.race_date, t)}</Text>
-                <Ionicons name="calendar-outline" size={15} color={colors.primaryDark} />
-            </View>
-        </View>
-    </View>
-);
+
 
 
 const FanScreen = () => {

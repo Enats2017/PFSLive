@@ -190,6 +190,7 @@ export interface NotificationData {
   race_id: string | number;
   product_option_value_app_id: string | number;
   event_name: string;
+  event_image?:string;
   checkpoint_key: string;
   bib: string | number;
   race_status: string;

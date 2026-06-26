@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ScrollView,
     StatusBar,
@@ -20,16 +20,45 @@ import { SuggestionItem } from '../../services/followerScreenService';
 import SuggestionDropdown from '../../components/SuggestionDropdown';
 import useSearchSuggestions from '../../hooks/useSearchSuggestions';
 import { useDimensions } from '../../hooks/useDimensions';
+import { eventService, EventItem } from '../../services/followerEvent';
+import { fanstyle } from '../../styles/fan.styles';
+import EventCard from '../../components/EventCard';
 
 const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['participant']);
     const { width } = useDimensions();
-    const insets = useSafeAreaInsets(); 
+    const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    const isLandscape = width
+    const [events, setEvents] = useState<EventItem[]>([]);
+    const [visibleCount, setVisibleCount] = useState(3);
 
     const liveUpcoming = useSearchSuggestions('filter_name', ['live', 'upcoming']);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const [page1, page2] = await Promise.all([
+                    eventService.getEvents({ page_live: 1, page_upcoming: 1 }),
+                    eventService.getEvents({ page_live: 2, page_upcoming: 2 }),
+                ]);
+                const seen = new Set<string>();
+                const unique = [
+                    ...page1.tabs.live,
+                    ...page2.tabs.live,
+                    ...page1.tabs.upcoming,
+                    ...page2.tabs.upcoming,
+                ].filter(e => {
+                    if (seen.has(e.product_app_id)) return false;
+                    seen.add(e.product_app_id);
+                    return true;
+                });
+                setEvents(unique.slice(0, 6));
+            } catch { }
+        };
+        load();
+    }, []);
 
     const handlePersonalEventPress = useCallback(async () => {
         try {
@@ -54,8 +83,14 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
         });
     }, [navigation, liveUpcoming]);
 
+    const handleSliderScrollEnd = useCallback(() => {
+        setVisibleCount(prev => Math.min(prev + 3, events.length));
+    }, [events.length]);
+
+
+
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
             <AppHeader />
             <ScrollView
@@ -125,6 +160,37 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                         </Text>
                     </TouchableOpacity>
                 </View>
+                <View style={particpant.dividerRow}>
+                    <View style={particpant.dividerLine} />
+
+                </View>
+
+                <ScrollView
+                    horizontal
+                    style={particpant.section}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{
+                        gap: 10,
+                        paddingRight: 4,
+                        paddingBottom: 4,
+                    }}
+                    onMomentumScrollEnd={handleSliderScrollEnd}
+                >
+                    {events.slice(0, visibleCount).map(item => (
+                        <TouchableOpacity
+                            key={item.product_app_id}
+                            activeOpacity={0.85}
+                            onPress={() => navigation.navigate('EventDetails', {
+                                product_app_id: Number(item.product_app_id),
+                                event_name: item.name,
+                                event_image: item.event_image,
+                               auto_register_id: null,
+                            })}
+                        >
+                            <EventCard item={item} t={t} />
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
             </ScrollView>
         </SafeAreaView>
     );

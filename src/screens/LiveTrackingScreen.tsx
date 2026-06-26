@@ -34,7 +34,7 @@ const safeParseFloat = (value: any): number => {
 
 const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigation }) => {
     const { t } = useTranslation(['livetracking', 'common']);
-    const { product_app_id, product_option_value_app_id, event_name, sourceScreen, sectionType, sourceTab, event_source, selectedDistanceLabel } = route.params;
+    const { product_app_id, product_option_value_app_id, event_name, event_image, sourceScreen, sectionType, sourceTab, event_source, selectedDistanceLabel } = route.params;
     const { width, height } = useDimensions(); // make sure height is destructured
     const isLandscape = width > height;
     const insets = useSafeAreaInsets();
@@ -623,6 +623,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         activeTab="Map"
                         product_app_id={product_app_id}
                         event_name={event_name}
+                        event_image={event_image}
                         product_option_value_app_id={product_option_value_app_id}
                         sourceTab={sourceTab}
                     />
@@ -631,6 +632,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         activeTab="Map"
                         product_app_id={product_app_id}
                         event_name={event_name}
+                        event_image={event_image}
                         product_option_value_app_id={product_option_value_app_id}
                         sourceScreen={sourceScreen}
                     />

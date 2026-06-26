@@ -23,11 +23,15 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const {
         product_app_id,
         event_name,
+        event_image,
         sectionType,
         sourceScreen,
         sourceTab,
         product_option_value_app_id
     } = route.params;
+
+    console.log("eventImage",event_image);
+    
 
     const { width } = useDimensions();
     const insets = useSafeAreaInsets(); 
@@ -245,6 +249,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     activeTab='Favorites'
                     product_app_id={product_app_id}
                     event_name={event_name}
+                    event_image={event_image}
                     sourceTab={sourceTab}
                     product_option_value_app_id={product_option_value_app_id}
                 />
@@ -253,6 +258,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     activeTab="Favorites"
                     product_app_id={product_app_id}
                     event_name={event_name}
+                    event_image={event_image}
                     sourceScreen={sourceScreen}
                     product_option_value_app_id={product_option_value_app_id}
                 />

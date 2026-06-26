@@ -59,7 +59,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
         <Image
           source={{ uri: event_image }}
           style={{ width: '100%', aspectRatio: 612 / 300 }}
-          resizeMode="contain"
+          resizeMode="cover"
         />
       ) : null}
     </>
@@ -223,6 +223,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
         activeTab="Home"
         product_app_id={product_app_id}
         event_name={event_name}
+        event_image={event_image}
         product_option_value_app_id={0}
         sourceTab={sourceTab}
       />

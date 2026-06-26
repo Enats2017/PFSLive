@@ -78,6 +78,7 @@ export interface EventRankingParams {
   from_live: 0 | 1;
   filter_category: string;
   page: number;
+   checkpoint_index?: number | null;
 }
 
 export interface EventRankingResponse {
@@ -128,6 +129,9 @@ export const resultList = {
         device_id: deviceId,
 
       };
+      if (params.checkpoint_index !== undefined && params.checkpoint_index !== null) {
+        requestBody.checkpoint_index = params.checkpoint_index;
+      }
 
 
       if (params.product_option_value_app_id !== undefined && params.product_option_value_app_id != 0) {

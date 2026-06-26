@@ -10,6 +10,7 @@ interface BottomNavigationProps {
   activeTab?: TabName;
   product_app_id?: string | number;
   event_name?: string;
+  event_image?: string | null;
   product_option_value_app_id?: string | number;
   sourceScreen?: string;
   selectedDistanceLabel?: string | number;
@@ -27,6 +28,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   activeTab = 'Home',
   product_app_id,
   event_name,
+  event_image,
   product_option_value_app_id,
   sourceScreen,
   selectedDistanceLabel,
@@ -54,6 +56,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             product_app_id,
             product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
+            event_image:event_image || '',
             sourceScreen: route.name,
             sectionType: 'participant',
             sourceTab: 'live',
@@ -67,6 +70,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             product_app_id,
             product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
+            event_image:event_image || '',
             sourceScreen: route.name,
             sectionType: 'participant',
             sourceTab: 'live',
@@ -80,6 +84,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           navigation.navigate('FavouriteList', {
             product_app_id,
             event_name: event_name || '',
+            event_image:event_image || '',
             sectionType: 'participant',
             sourceScreen: route.name,
             sourceTab: 'live',
@@ -98,18 +103,21 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         navigation.navigate('EventDetails', {
           product_app_id,
           event_name: event_name || '',
+          event_image:event_image || '',
           auto_register_id: null,
         });
       } else if (sourceScreen === 'RaceResultScreen') {
         navigation.navigate('RaceResultScreen', {
           product_app_id,
           event_name: event_name || '',
+          event_image:event_image || '',
         });
       } else {
         if (product_app_id) {
           navigation.navigate('EventDetails', {
             product_app_id,
             event_name: event_name || '',
+            event_image:event_image || '',
             auto_register_id: null,
           });
         } else {
@@ -121,11 +129,13 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         navigation.navigate('RaceResultScreen', {
           product_app_id,
           event_name: event_name || '',
+          event_image:event_image || '',
         });
       } else {
         navigation.navigate('EventDetails', {
           product_app_id,
           event_name: event_name || '',
+          event_image:event_image || '',
           auto_register_id: null,
         });
       }
@@ -136,6 +146,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         navigation.navigate('EventDetails', {
           product_app_id,
           event_name: event_name || '',
+          event_image:event_image || '',
           auto_register_id: null,
         });
       } else {

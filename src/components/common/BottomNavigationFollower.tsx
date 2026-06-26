@@ -10,6 +10,7 @@ interface BottomNavigationFollowerProps {
   activeTab?: TabName;
   product_app_id?: string | number;
   event_name?: string;
+  event_image?: string | null;
   product_option_value_app_id?: string | number;
   sourceTab?: 'past' | 'live' | 'upcoming';
   selectedDistanceLabel?: string | number; 
@@ -30,6 +31,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
   product_option_value_app_id,
   sourceTab,
   selectedDistanceLabel,
+  event_image
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute();
@@ -54,6 +56,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
             product_app_id,
             product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
+            event_image: event_image || '',
             sourceScreen: route.name,
             sectionType: 'follower',
             sourceTab,
@@ -67,6 +70,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
             product_app_id,
             product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
+            event_image: event_image || '',
             sourceScreen: route.name,
             sectionType: 'follower',
             sourceTab,
@@ -80,6 +84,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
           navigation.navigate('FavouriteList', {
             product_app_id,
             event_name: event_name || '',
+            event_image: event_image || '',
             sectionType: 'follower',
             sourceScreen: route.name,
             sourceTab,
@@ -100,6 +105,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
         navigation.navigate('FollowDetails', {
           product_app_id,
           event_name: event_name || '',
+          event_image: event_image || '',
           sourceTab,
         });
       } else {

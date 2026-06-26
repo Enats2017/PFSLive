@@ -7,6 +7,7 @@ export type RootStackParamList = {
     product_app_id: number;
     product_option_value_app_id?: number;
     event_name: string;
+    event_image?: string | null;
     sourceScreen?: string;
     sectionType?: string;
     sourceTab?: "past" | "live" | "upcoming";
@@ -42,6 +43,7 @@ export type RootStackParamList = {
     product_app_id: number;
     product_option_value_app_id: number;
     event_name?: string;
+    event_image?: string;
     sourceScreen?: string;
     sectionType: string;
     sourceTab?: "past" | "live" | "upcoming";
@@ -74,6 +76,7 @@ export type RootStackParamList = {
     product_app_id:number;
     product_option_value_app_id?: number;
     event_name?: string;
+    event_image?: string;
     sourceScreen?: string;
     sectionType: string;
     sourceTab?: "past" | "live" | "upcoming";

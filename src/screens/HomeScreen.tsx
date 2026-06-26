@@ -237,6 +237,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         product_app_id: Number(data.race_id),
         product_option_value_app_id: Number(data.product_option_value_app_id),
         event_name: data.event_name,
+        event_image: data.event_image,
         sourceScreen: 'FollowerDistanceScreen',
         sectionType: 'follower',
         sourceTab: 'live',
