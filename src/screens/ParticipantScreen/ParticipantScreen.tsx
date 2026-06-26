@@ -164,10 +164,20 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                     <View style={particpant.dividerLine} />
 
                 </View>
-
+                <View style={{paddingHorizontal:spacing.md}}>
+                <View style={fanstyle.nextEventsHeader}>
+                    <Text style={fanstyle.nextEventsTitle}>NEXT EVENTS</Text>
+                    <TouchableOpacity
+                        style={fanstyle.viewAllBtn}
+                        onPress={() => navigation.navigate('ParticipantEvent')}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={fanstyle.viewAllText}>View all</Text>
+                        <Feather name="chevron-right" size={14} color={colors.primary} />
+                    </TouchableOpacity>
+                </View>
                 <ScrollView
                     horizontal
-                    style={particpant.section}
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={{
                         gap: 10,
@@ -184,13 +194,14 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                                 product_app_id: Number(item.product_app_id),
                                 event_name: item.name,
                                 event_image: item.event_image,
-                               auto_register_id: null,
+                                auto_register_id: null,
                             })}
                         >
                             <EventCard item={item} t={t} />
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
+                </View>
             </ScrollView>
         </SafeAreaView>
     );
