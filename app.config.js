@@ -179,6 +179,7 @@ export default ({ config }) => {
       "expo-font",
       "expo-localization",
       "expo-secure-store",
+      "expo-iap",
       "@react-native-community/datetimepicker",
       [
         "expo-notifications",
