@@ -6,6 +6,7 @@ import {
   Category,
   Pagination,
   FilterOption,
+  Statistics,
 } from "../services/resultList";
 import { API_CONFIG } from "../constants/config";
 // ADD these two imports
@@ -28,6 +29,7 @@ interface FetchOpts {
   category: string;
   page: number;
   mode: FetchMode;
+  checkpointIndex?: number | null;
 }
 
 export const useResultList = (
@@ -72,6 +74,12 @@ export const useResultList = (
   const [raceStatus, setRaceStatus] = useState<string>("");
   const [raceProgressStatus, setRaceProgressStatus] = useState<string>("");
   const [showUtmbIndex, setShowUtmbIndex] = useState(false);
+  const [statistics, setStatistics] = useState<Statistics>({
+    crossed: 0,
+    expected: 0,
+    started: 0,
+    dnf: 0,
+  });
 
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -96,7 +104,7 @@ export const useResultList = (
 
       requestLock.current = true;
 
-      const { povId, live, category, page, mode } = opts;
+      const { povId, live, category, page, mode, checkpointIndex } = opts;
 
       try {
         if (mode === "initial") setInitialLoad(true);
@@ -112,6 +120,7 @@ export const useResultList = (
             product_option_value_app_id: povId,
             from_live: live,
             filter_category: category,
+            checkpoint_index: checkpointIndex,
             page,
             mode,
           });
@@ -122,6 +131,7 @@ export const useResultList = (
           product_option_value_app_id: povId,
           from_live: live,
           filter_category: category === "scratch" ? "" : category,
+          checkpoint_index: checkpointIndex ?? null,
           page,
         });
 
@@ -172,6 +182,8 @@ export const useResultList = (
           mode === "paginate" ? [...prev, ...data.results] : data.results,
         );
 
+        setStatistics(data.statistics);
+
         setPagination(data.pagination);
         currentPage.current = page;
 
@@ -217,6 +229,7 @@ export const useResultList = (
         category: "scratch",
         page: 1,
         mode: "initial",
+        checkpointIndex: null,
       });
     }
 
@@ -237,7 +250,7 @@ export const useResultList = (
       setSelectedPovId(newId);
       //setSelectedCategory("scratch");
       setFavBibs(new Set());
-     
+      setSelectedCheckpoint(null);
 
       const shouldPreserve = PRESERVED_CATEGORIES.includes(selectedCategory);
       const categoryToSend = shouldPreserve ? selectedCategory : "scratch";
@@ -249,6 +262,7 @@ export const useResultList = (
         category: categoryToSend,
         page: 1,
         mode: "filter",
+        checkpointIndex: null,
       });
     },
     [selectedPovId, fromLive, selectedCategory, fetchData],
@@ -266,7 +280,6 @@ export const useResultList = (
       //setSelectedCategory("scratch");
 
       //if (opt.value === "fav") return;
-  
 
       const newLive: 0 | 1 = opt.value === "1" ? 1 : 0;
       const shouldPreserve = PRESERVED_CATEGORIES.includes(selectedCategory);
@@ -279,9 +292,18 @@ export const useResultList = (
         category: categoryToSend,
         page: 1,
         mode: "filter",
+        checkpointIndex: selectedCheckpoint
+          ? Number(selectedCheckpoint.value)
+          : null,
       });
     },
-    [selectedType.value, selectedPovId, selectedCategory, fetchData],
+    [
+      selectedType.value,
+      selectedPovId,
+      selectedCategory,
+      selectedCheckpoint,
+      fetchData,
+    ],
   );
 
   const onCategorySelect = useCallback(
@@ -293,7 +315,7 @@ export const useResultList = (
       }
 
       setSelectedCategory(opt.value);
-      
+
       //if (opt.value === 'favourite') return;
 
       fetchData({
@@ -302,9 +324,12 @@ export const useResultList = (
         category: opt.value,
         page: 1,
         mode: "filter",
+        checkpointIndex: selectedCheckpoint
+          ? Number(selectedCheckpoint.value)
+          : null,
       });
     },
-    [selectedCategory, selectedPovId, fromLive, fetchData],
+    [selectedCategory, selectedPovId, fromLive, selectedCheckpoint, fetchData],
   );
 
   const onEndReached = useCallback((): void => {
@@ -329,6 +354,9 @@ export const useResultList = (
       category: selectedCategory,
       page: currentPage.current + 1,
       mode: "paginate",
+      checkpointIndex: selectedCheckpoint
+        ? Number(selectedCheckpoint.value)
+        : null,
     });
   }, [
     pageLoad,
@@ -339,6 +367,7 @@ export const useResultList = (
     selectedPovId,
     fromLive,
     selectedCategory,
+    selectedCheckpoint,
     fetchData,
   ]);
 
@@ -355,8 +384,18 @@ export const useResultList = (
       category: selectedCategory,
       page: 1,
       mode: "refresh",
+      checkpointIndex: selectedCheckpoint
+        ? Number(selectedCheckpoint.value)
+        : null,
     });
-  }, [isFavTab, selectedPovId, fromLive, selectedCategory, fetchData]);
+  }, [
+    isFavTab,
+    selectedPovId,
+    fromLive,
+    selectedCategory,
+    selectedCheckpoint,
+    fetchData,
+  ]);
 
   const retry = useCallback((): void => {
     if (API_CONFIG.DEBUG) {
@@ -369,8 +408,17 @@ export const useResultList = (
       category: selectedCategory,
       page: 1,
       mode: "initial",
+      checkpointIndex: selectedCheckpoint
+        ? Number(selectedCheckpoint.value)
+        : null,
     });
-  }, [selectedPovId, fromLive, selectedCategory, fetchData]);
+  }, [
+    selectedPovId,
+    fromLive,
+    selectedCategory,
+    selectedCheckpoint,
+    fetchData,
+  ]);
 
   const distanceOptions = useMemo<FilterOption[]>(
     () =>
@@ -430,49 +478,19 @@ export const useResultList = (
     );
   }, [categories, selectedCategory, t]);
 
-  // ✅ FILTER RESULTS BASED ON FOLLOW STATUS
-  const getDisplayCheckpoints = (cps: any[] = []) =>
-    cps.filter((cp) => !cp.is_start);
-
-  const checkpointResults = useMemo(() => {
-  if (!selectedCheckpoint) return null;
-
-  const idx = Number(selectedCheckpoint.value);
-
-  const crossed = results
-    .map(item => {
-      const cp = getDisplayCheckpoints(item.checkpoints)[idx];
-      return cp?.is_crossed ? { item, cp } : null;
-    })
-    .filter((x): x is { item: RaceResult; cp: any } => x !== null);
-
-  crossed.sort((a, b) => (Number(a.cp.ranking) || 9999) - (Number(b.cp.ranking) || 9999));
-
-  const mapped = crossed.map(({ item, cp }, index) => ({
-    ...item,
-    category_rank: String(index + 1),
-    checkpointActualTime: cp.race_time,
-    checkpointRanking: cp.ranking,
-    checkpointDiff: cp.diff,
-  }));
-
-  // 🔍 TEMP DEBUG
-  console.log('🚩 checkpoint idx:', idx, 'selected:', selectedCheckpoint.label);
-
-
-  return mapped;
-}, [results, selectedCheckpoint]);
-
-  const displayResults = useMemo<RaceResult[]>(() => {
-    if (checkpointResults) return checkpointResults;
-    return results.map((item, index) => ({
-      ...item,
-      category_rank: String(index + 1),
-    }));
-  }, [results, checkpointResults]);
+  // category_rank is now assigned by the backend based on checkpoint_index,
+  // so the list is rendered directly from results without re-deriving rank/order client-side.
+  const displayResults = useMemo<RaceResult[]>(() => results, [results]);
 
   const checkpointOptions = useMemo<FilterOption[]>(() => {
-    if (results.length === 0) return [];
+    if (results.length === 0) {
+      return [
+        {
+          label: t("allrace:filter.all"),
+          value: "",
+        },
+      ];
+    }
 
     const representative = results.reduce(
       (best, r) =>
@@ -482,32 +500,71 @@ export const useResultList = (
       results[0],
     );
 
-    const checkpoints = (representative.checkpoints ?? []).filter(
-      (cp) => !cp.is_start,
-    );
+    const allCheckpoints = representative.checkpoints ?? [];
 
-    return checkpoints.map((cp, index) => ({
-      label: cp.name?.trim() ? cp.name : `Checkpoint ${index + 1}`,
-      value: String(index), // index is now relative to the filtered (no-START) list
-    }));
-  }, [results]);
+    return [
+      {
+        label: t("allrace:filter.all"),
+        value: "",
+      },
+
+      ...allCheckpoints
+        .map((cp, index) => ({ cp, index }))
+        .filter(({ cp }) => !cp.is_start)
+        .map(({ cp, index }, displayIndex) => ({
+          label: cp.name?.trim() ? cp.name : `Checkpoint ${displayIndex + 1}`,
+          value: String(index),
+        })),
+    ];
+  }, [results, t]);
 
   const onCheckpointSelect = useCallback(
-  (opt: FilterOption): void => {
-    if (opt.value === selectedCheckpoint?.value) {
-      // ✅ tapping the already-selected checkpoint again clears it
-      setSelectedCheckpoint(null);
-      return;
-    }
+    (opt: FilterOption): void => {
+      // "All" selected
+      if (opt.value === "") {
+        if (API_CONFIG.DEBUG) {
+          console.log("📍 All checkpoints selected");
+        }
 
-    if (API_CONFIG.DEBUG) {
-      console.log("🚩 Checkpoint selected:", opt.label);
-    }
+        setSelectedCheckpoint(null);
 
-    setSelectedCheckpoint(opt);
-  },
-  [selectedCheckpoint],
-);
+        fetchData({
+          povId: selectedPovId,
+          live: fromLive,
+          category: selectedCategory,
+          page: 1,
+          mode: "filter",
+          checkpointIndex: null,
+        });
+
+        return;
+      }
+
+      // Same checkpoint clicked again -> reset to All
+      const isClearing = opt.value === selectedCheckpoint?.value;
+      const nextCheckpoint = isClearing ? null : opt;
+
+      if (API_CONFIG.DEBUG) {
+        console.log(
+          isClearing
+            ? "📍 Checkpoint cleared"
+            : `📍 Checkpoint selected: ${opt.label}`,
+        );
+      }
+
+      setSelectedCheckpoint(nextCheckpoint);
+
+      fetchData({
+        povId: selectedPovId,
+        live: fromLive,
+        category: selectedCategory,
+        page: 1,
+        mode: "filter",
+        checkpointIndex: nextCheckpoint ? Number(nextCheckpoint.value) : null,
+      });
+    },
+    [selectedCheckpoint, selectedPovId, fromLive, selectedCategory, fetchData],
+  );
 
   return {
     results,
@@ -541,8 +598,9 @@ export const useResultList = (
     showUtmbIndex,
     hasError,
     clearError,
-    selectedCheckpoint, // ← new: currently selected checkpoint FilterOption
-    checkpointOptions, // ← new: dropdown options derived from results[0].checkpoints
+    selectedCheckpoint, // ← currently selected checkpoint FilterOption
+    checkpointOptions, // ← dropdown options derived from results[0].checkpoints
     onCheckpointSelect,
+    statistics,
   };
 };

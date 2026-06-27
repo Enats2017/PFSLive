@@ -72,13 +72,20 @@ export interface Pagination {
   total_pages: number;
 }
 
+export interface Statistics {
+  crossed: number;
+  expected: number;
+  started: number;
+  dnf: number;
+}
+
 export interface EventRankingParams {
   product_app_id: number;
   product_option_value_app_id?: number;
   from_live: 0 | 1;
   filter_category: string;
   page: number;
-   checkpoint_index?: number | null;
+  checkpoint_index?: number | null;
 }
 
 export interface EventRankingResponse {
@@ -86,6 +93,7 @@ export interface EventRankingResponse {
   categories: Category[];
   results: RaceResult[];
   pagination: Pagination;
+   statistics: Statistics;  
   event?: {
     race_name: string;
     distance_name: string;

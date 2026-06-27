@@ -29,7 +29,7 @@ export interface FilterOption {
 export interface DropdownProps {
   label: string;
   options: FilterOption[];
-  selected: FilterOption;
+   selected?: FilterOption;  
   onSelect: (o: FilterOption) => void;
 }
 
@@ -148,7 +148,7 @@ const Dropdown: React.FC<DropdownProps> = ({
               keyboardShouldPersistTaps="handled"
             >
               {options.map((opt, i) => {
-                const active = opt.value === selected.value;
+                const active = opt.value === selected?.value;
 
                 return (
                   <TouchableOpacity

@@ -11,6 +11,7 @@ export const resultListStyle = StyleSheet.create({
     paddingHorizontal: 15,
   },
 
+
   filterTab: {
     flex: 1,
     flexDirection: "row",
@@ -34,6 +35,61 @@ export const resultListStyle = StyleSheet.create({
     fontWeight: typography.weights.bold,
     color: colors.black,
   },
+
+
+statisticsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    marginHorizontal: 10,
+     marginTop:3,
+    marginBottom: 3,
+    backgroundColor: "#fff",
+    borderRadius: 10,
+   shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 10,
+     borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+},
+
+statItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+},
+
+statValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.gray900,
+    marginBottom: 2,
+},
+
+statValueHighlight: {
+    color: "#E14B4B", // make DNF stand out, e.g. red/orange
+},
+
+statLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: colors.gray500 ,
+    textAlign: "center",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+   marginBottom: 4,
+},
+
+divider: {
+    width: 1,
+    height: "100%",
+    backgroundColor: colors.gray400,
+},
+
 
   filterArrow: { fontSize: 13, color: colors.black, marginLeft: 6 },
   filterArrowOpen: { color: colors.success },
@@ -264,15 +320,6 @@ export const resultListStyle = StyleSheet.create({
     paddingLeft: 8,
   },
 
-  statLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: colors.gray500,
-    textAlign: "center",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
 
   statVal: {
     fontSize: typography.sizes.md,

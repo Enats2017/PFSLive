@@ -27,6 +27,17 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useDimensions } from '../../hooks/useDimensions';
 
+const StatItem = ({ label, value, highlight }: { label: string; value: number | string; highlight?: boolean }) => (
+    <View style={resultListStyle.statItem}>
+        <Text style={resultListStyle.statLabel}>{label}</Text>
+        <Text style={[resultListStyle.statValue, highlight && resultListStyle.statValueHighlight]}>
+            {value}
+        </Text>
+    </View>
+);
+
+const Divider = () => <View style={resultListStyle.divider} />;
+
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
     const { width } = useDimensions();
@@ -40,6 +51,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         sourceScreen,
         sectionType,
         sourceTab,
+        event_image,
     } = route.params;
 
     const {
@@ -95,6 +107,8 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         selectedCheckpoint,      // ← new: currently selected checkpoint FilterOption
         checkpointOptions,       // ← new: dropdown options derived from results[0].checkpoints
         onCheckpointSelect,
+        statistics,
+
     } = useResultList(
         product_app_id,
         product_option_value_app_id,
@@ -102,7 +116,6 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         initialType,
         followedBibs
     );
-
 
     const renderItem = useCallback(({ item }: { item: RaceResult }) => {
         const commonProps = {
@@ -207,20 +220,41 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 />
                 {(raceStatus === 'in_progress' || raceStatus === 'finished') && (
                     <Dropdown
-                        label={selectedCheckpoint?.label ?? t('allrace:filter.checkpoint')}
+                        label={selectedCheckpoint?.label ?? t("allrace:filter.checkpoint")}
                         options={checkpointOptions}
                         selected={
                             selectedCheckpoint ?? {
-                                label: t('allrace:filter.checkpoint'),
-                                value: '',
+                                label: t("allrace:filter.all"),
+                                value: "",
                             }
                         }
                         onSelect={onCheckpointSelect}
                     />
                 )}
             </View>
-
-
+            {(raceStatus === 'in_progress' || raceStatus === 'finished') && (
+                <View style={resultListStyle.statisticsContainer}>
+                    {selectedCheckpoint ? (
+                        <>
+                            <StatItem label={t("allrace:filter.stat_started")} value={statistics.started} />
+                            <Divider />
+                            <StatItem label={t("allrace:filter.stat_crossed")} value={statistics.crossed} />
+                            <Divider />
+                            <StatItem label={t("allrace:filter.stat_expected")} value={statistics.expected} />
+                            <Divider />
+                            <StatItem label={t("allrace:filter.stat_dnf")} value={statistics.dnf} highlight />
+                        </>
+                    ) : (
+                        <>
+                            <StatItem label={t("allrace:filter.stat_started")} value={statistics.started} />
+                            <Divider />
+                            <StatItem label={t("allrace:filter.stat_crossed")} value={statistics.crossed} />
+                            <Divider />
+                            <StatItem label={t("allrace:filter.stat_dnf")} value={statistics.dnf} highlight />
+                        </>
+                    )}
+                </View>
+            )}
             {initialLoad ? (
                 <View style={resultListStyle.center}>
                     <ActivityIndicator size="large" color={colors.primary} />
@@ -285,6 +319,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     activeTab="Results"
                     product_app_id={product_app_id}
                     event_name={event_name}
+                    event_image={event_image}
                     product_option_value_app_id={product_option_value_app_id}
                     sourceTab={sourceTab}
                     selectedDistanceLabel={selectedDistanceLabel}
@@ -294,6 +329,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     activeTab="Results"
                     product_app_id={product_app_id}
                     event_name={event_name}
+                    event_image={event_image}
                     product_option_value_app_id={product_option_value_app_id}
                     sourceScreen={sourceScreen}
                     selectedDistanceLabel={selectedDistanceLabel}

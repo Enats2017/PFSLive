@@ -25,6 +25,13 @@
     "liveTracking": "Suivi en direct",
     "favourite": "Favoris",
     "noFavourites": "Pas encore de favoris. Appuyez sur ☆ sur un résultat pour l'enregistrer.",
-    "checkpoint": "Point de contrôle"
+    "checkpoint": "Point de contrôle",
+     "statistics": "Statistiques",
+    "stat_all": "Tous",
+    "stat_started": "Partis",
+    "stat_crossed": "Passés",
+    "stat_expected": "Attendus",
+    "stat_dnf": "Non terminé",
+    "all": "Tous"
   }
 }

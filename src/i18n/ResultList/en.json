@@ -27,6 +27,13 @@
     "liveTracking": "Live Tracking",
     "favourite": "Favourite",
     "noFavourites": "No favourites yet. Tap ☆ on any result to save it.",
-    "checkpoint":"Checkpoint"
+    "checkpoint":"Checkpoint",
+    "statistics":    "Statistics",
+    "stat_all":      "All",
+    "stat_started":  "Started",
+    "stat_crossed":  "Passed",
+    "stat_expected": "Expected",
+    "stat_dnf":      "DNF",
+    "all": "All"
   }
 }

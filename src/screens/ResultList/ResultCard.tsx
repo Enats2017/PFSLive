@@ -19,7 +19,6 @@ interface ResultCardProps {
     currentPovId: number;
     isWomen?: boolean;
     showUtmbIndex: boolean;
-    isCheckpointMode?: boolean;   // ← new
 }
 
 const ResultCard: React.FC<ResultCardProps> = memo(({
@@ -33,7 +32,6 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     onToggleFollow,
     isWomen,
     showUtmbIndex,
-    isCheckpointMode = false,   // ← new
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
@@ -48,20 +46,8 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     const isFemale = item.gender === 'female';
     const hasFinished = item.status === 'finished';
 
-    // ✅ Pick the right source fields depending on checkpoint mode
-    const displayRanking = isCheckpointMode
-        ? (item as any).checkpointRanking ?? '-'
-        : item.position.replace('.', '');
+    const displayDiff = item.diff;
 
-    const displayTime = isCheckpointMode
-        ? (item as any).checkpointActualTime ?? '-'
-        : item.time;
-
-    const displayDiff = isCheckpointMode
-        ? (item as any).checkpointDiff ?? ''   // empty for now, backend will fill later
-        : item.diff;
-
-    // ✅ Gender rank only for female, and only when it's a numeric rank (hide "DNF" etc.)
     const genderRank = isFemale && /^\d+$/.test(item.finish_rank_gender ?? '')
         ? `F ${item.finish_rank_gender}`
         : null;
@@ -78,14 +64,6 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     const handleStarPress = useCallback(() => {
         if (!isLoading) onToggleFollow();
     }, [isLoading, onToggleFollow]);
-
- const displayAgeGroupRank = isCheckpointMode
-  ? displayRanking
-  : !item.finish_rank_agegroup ||
-    item.finish_rank_agegroup === 'DNF'
-    ? '-'
-    : item.finish_rank_agegroup;
-
 
 
     return (
@@ -109,9 +87,9 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 </Text>
                 <View style={resultListStyle.cornerBadgeRight}>
                     <Text style={resultListStyle.cornerNum}>
-                        {displayRanking}
+                        {item.position || "-"}
                     </Text>
-                    {!isCheckpointMode && genderRank && (
+                    {genderRank && (
                         <Text style={resultListStyle.cornerGenderRank}>{genderRank}</Text>
                     )}
                 </View>
@@ -142,7 +120,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 <View style={resultListStyle.statsRow}>
                     <View style={resultListStyle.statCol}>
                         <Text style={resultListStyle.statLabel}>{t('allrace:race.time')}</Text>
-                        <Text style={resultListStyle.statVal}>{displayTime}</Text>
+                        <Text style={resultListStyle.statVal}>{item.time || "-"}</Text>
                     </View>
 
                     {fromLive === 0 ? (
@@ -156,7 +134,9 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                                     {t('allrace:race.ranking')}{'\n'}{item.category_name}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
-                                    {item.finish_rank_agegroup || "-"}
+                                    <Text style={resultListStyle.statVal}>
+                                        {item.finish_rank_agegroup || "-"}
+                                    </Text>
                                 </Text>
                             </View>
                         </>
@@ -211,10 +191,10 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     prev.isFollowed === next.isFollowed &&
     prev.isLoading === next.isLoading &&
     prev.item.position === next.item.position &&
-    prev.item.live_tracking_activated === next.item.live_tracking_activated &&
-    prev.isCheckpointMode === next.isCheckpointMode &&                              // ← add
-    (prev.item as any).checkpointRanking === (next.item as any).checkpointRanking &&  // ← add
-    (prev.item as any).checkpointActualTime === (next.item as any).checkpointActualTime // ← add
+    prev.item.time === next.item.time &&
+    prev.item.diff === next.item.diff &&
+    prev.item.finish_rank_agegroup === next.item.finish_rank_agegroup &&
+    prev.item.live_tracking_activated === next.item.live_tracking_activated
 );
 
 ResultCard.displayName = 'ResultCard';

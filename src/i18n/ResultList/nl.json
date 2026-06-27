@@ -25,6 +25,13 @@
     "favourite": "Favorieten",
     "liveTracking": "Live tracking",
     "noFavourites": "Nog geen favorieten. Tik op ☆ bij een resultaat om het op te slaan.",
-    "checkpoint": "Controlepunt"
+    "checkpoint": "Controlepunt",
+    "statistics": "Statistieken",
+    "stat_all": "Alle",
+    "stat_started": "Gestart",
+    "stat_crossed": "Gepasseerd",
+    "stat_expected": "Verwacht",
+    "stat_dnf": "DNF",
+    "all": "Alle"
   }
 }
