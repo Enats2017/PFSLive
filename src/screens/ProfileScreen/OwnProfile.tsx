@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, Image, StatusBar, Dimensions, TouchableOpacity, ScrollView } from 'react-native'
+import { View, Text, Image, StatusBar, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, commonStyles, spacing } from '../../styles/common.styles'
 import { Ionicons, FontAwesome5, FontAwesome6 } from '@expo/vector-icons'
@@ -35,43 +35,62 @@ const TABS: Tab[] = ['Past', 'Live'];
 
 const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile }) => {
     const { t } = useTranslation('ownProfile');
-    
+
+
     return (
         <View style={ownProfile.menuSection}>
             {profile?.is_own_profile === 1 && (
-                <TouchableOpacity style={ownProfile.trackingBanner} activeOpacity={0.85}>
-                    <Ionicons name="cube" size={40} color="black" />
-                    <View style={ownProfile.trackingTextWrapper}>
-                        {profile?.membership_info?.unlimited ? (
-                            <>
-                                <Text style={ownProfile.title}>
-                                    {t('ownProfile:tracking.unlimited')}
-                                </Text>
-                                <Text style={ownProfile.subtitle}>
-                                    {t('ownProfile:tracking.subtitle')}
-                                </Text>
-                            </>
-                        ) : (profile?.membership_info?.remaining ?? 0) > 0 ? (
-                            <>
-                                <Text style={ownProfile.title}>
-                                    {t('ownProfile:tracking.remaining', { count: profile?.membership_info?.remaining ?? 0 })}
-                                </Text>
-                                <Text style={ownProfile.subtitle}>
-                                    {t('ownProfile:tracking.subtitle')}
-                                </Text>
-                            </>
-                        ) : (
-                            <>
-                                <Text style={ownProfile.title}>
-                                    {t('ownProfile:tracking.exhausted')}
-                                </Text>
-                                <Text style={ownProfile.subtitle}>
-                                    {t('ownProfile:tracking.subtitle')}
-                                </Text>
-                            </>
-                        )}
+                Platform.OS === 'ios' ? (
+                    <View style={ownProfile.ioscard}>
+                        <View style={ownProfile.iosheader}>
+                            <Ionicons name="cube-outline" size={18} color = {colors.themeiColor} />
+                            <Text style={ownProfile.iostitle}>{t('ownProfile:membershipCard.liteTitle')}</Text>
+                        </View>
+
+                        <Text style={ownProfile.iossubtitle}>
+                            <Text style={ownProfile.iosbold}>2</Text> {t('ownProfile:membershipCard.sessionsLeft')}
+                        </Text>
+
+                        <TouchableOpacity style={ownProfile.iosbutton} activeOpacity={0.8} onPress={() => onNavigate('MembershipPlansScreen')}>
+                            <Text style={ownProfile.iosbuttonText}>{t('ownProfile:membershipCard.viewPlans')}</Text>
+                            <Ionicons name="chevron-forward" size={18} color="#1A2233" />
+                        </TouchableOpacity>
                     </View>
-                </TouchableOpacity>
+                ) : (
+                    <TouchableOpacity style={ownProfile.trackingBanner} activeOpacity={0.85}>
+                        <Ionicons name="cube" size={40} color="black" />
+                        <View style={ownProfile.trackingTextWrapper}>
+                            {profile?.membership_info?.unlimited ? (
+                                <>
+                                    <Text style={ownProfile.title}>
+                                        {t('ownProfile:tracking.unlimited')}
+                                    </Text>
+                                    <Text style={ownProfile.subtitle}>
+                                        {t('ownProfile:tracking.subtitle')}
+                                    </Text>
+                                </>
+                            ) : (profile?.membership_info?.remaining ?? 0) > 0 ? (
+                                <>
+                                    <Text style={ownProfile.title}>
+                                        {t('ownProfile:tracking.remaining', { count: profile?.membership_info?.remaining ?? 0 })}
+                                    </Text>
+                                    <Text style={ownProfile.subtitle}>
+                                        {t('ownProfile:tracking.subtitle')}
+                                    </Text>
+                                </>
+                            ) : (
+                                <>
+                                    <Text style={ownProfile.title}>
+                                        {t('ownProfile:tracking.exhausted')}
+                                    </Text>
+                                    <Text style={ownProfile.subtitle}>
+                                        {t('ownProfile:tracking.subtitle')}
+                                    </Text>
+                                </>
+                            )}
+                        </View>
+                    </TouchableOpacity>
+                )
             )}
             <TouchableOpacity
                 style={[commonStyles.card, ownProfile.menuRow]}
@@ -116,7 +135,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
 const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const { t } = useTranslation('ownProfile');
     const { width } = useDimensions();
-    const insets = useSafeAreaInsets(); 
+    const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
     const isLandscape = width
     const [activeSection, setActiveSection] = useState<SectionKey>('menu')
@@ -321,7 +340,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
         : '';
 
     return (
-        <SafeAreaView style={ownProfile.safeArea} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
+        <SafeAreaView style={ownProfile.safeArea} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}>
             <StatusBar barStyle="dark-content" backgroundColor={colors.themeiColor} />
             <TouchableOpacity style={{ paddingHorizontal: spacing.xl, alignSelf: 'flex-start', marginTop: spacing.md, }} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' as never }], })}>
                 <Ionicons name="arrow-back" size={28} color={colors.primaryDark} />
@@ -378,3 +397,5 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
 }
 
 export default OwnProfile
+
+

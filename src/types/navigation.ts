@@ -84,6 +84,7 @@ export type RootStackParamList = {
   AllParticipant:{
     product_app_id:number 
   },
+   MembershipPlansScreen:undefined;
   SearchParticipant:{
     product_app_id:number,
     product_option_value_app_id: number;

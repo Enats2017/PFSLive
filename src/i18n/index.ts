@@ -113,6 +113,13 @@ import OwnProfileEN from "./OwnProfile/en.json";
 import OwnProfileFR from "./OwnProfile/fr.json";
 import OwnProfileNL from "./OwnProfile/nl.json";
 
+import MembershipEN from './Membership/en.json';
+import MembershipFR from './Membership/fr.json';
+import MembershipNL from './Membership/nl.json';
+
+
+
+
 const LANGUAGE_STORAGE_KEY = '@PFSLive:language';
 
 export const LANGUAGES = {
@@ -244,7 +251,7 @@ const getInitialLanguage = (): LanguageCode => {
   }
 };
 
-const initialLanguage = getInitialLanguage();
+const initialLanguage : LanguageCode="en";
 
 i18n.use(initReactI18next).init({
   compatibilityJSON: 'v3',
@@ -274,7 +281,8 @@ i18n.use(initReactI18next).init({
       errorScreen:ErrorScreenEN,
       participant:participantScreenEN,
       follow:FollowerSrceenEN, 
-      ownProfile:OwnProfileEN
+      ownProfile:OwnProfileEN,
+      membership:MembershipEN
     },
     fr: {
       common: commonFR,
@@ -302,6 +310,7 @@ i18n.use(initReactI18next).init({
       participant:participantScreenFR,
       follow:FollowerSrceenFR, 
       ownProfile:OwnProfileFR,
+      membership:MembershipFR
     },
     nl: {
       common: commonNL,
@@ -328,7 +337,8 @@ i18n.use(initReactI18next).init({
       errorScreen:ErrorScreenNL,
       participant:participantScreenNL,
       follow:FollowerSrceenNL,
-      ownProfile:OwnProfileNL, 
+      ownProfile:OwnProfileNL,
+      membership:MembershipNL 
     },
   },
   lng: initialLanguage,
@@ -358,7 +368,8 @@ i18n.use(initReactI18next).init({
     'setting',
     'errorScreen',
     'follow',
-    'ownProfile'
+    'ownProfile',
+    'membership'
   ],
   interpolation: {
     escapeValue: false,

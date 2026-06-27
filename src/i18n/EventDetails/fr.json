@@ -78,12 +78,16 @@
     "membership_required": {
       "icon": "◆",
       "title": "Suivi en direct indisponible",
-      "description": "Vos sessions de suivi actuelles ne sont pas actives. Le suivi en direct n'est pas disponible pour le moment."
+      "description": "Vos sessions de suivi actuelles ne sont pas actives. Le suivi en direct n'est pas disponible pour le moment.",
+      "iosDescription": "Vous avez utilisé toutes vos sessions de suivi en direct. Obtenez-en plus pour vous inscrire à cet événement.",
+       "button": "Obtenir plus de sessions"
     },
     "limit_reached": {
       "icon": "↑",
       "title": "Plus de sessions de suivi",
-      "description": "Vous avez utilisé toutes les sessions de suivi en direct actuellement disponibles."
+      "description": "Vous avez utilisé toutes les sessions de suivi en direct actuellement disponibles.",
+       "iosDescription": "Votre abonnement n'est pas actif actuellement. Renouvelez-le pour suivre à nouveau en direct.",
+       "button": "Renouveler l'abonnement"
     },
     "membership_upcoming": {
       "icon": "⏳",

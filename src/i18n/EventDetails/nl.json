@@ -78,12 +78,16 @@
     "membership_required": {
       "icon": "◆",
       "title": "Live tracking niet beschikbaar",
-      "description": "Uw huidige trackingsessies zijn niet actief. Live tracking is momenteel niet beschikbaar."
+      "description": "Uw huidige trackingsessies zijn niet actief. Live tracking is momenteel niet beschikbaar.",
+      "iosDescription": "Je hebt al je live trackingsessies gebruikt. Koop er meer om je voor dit evenement in te schrijven.",
+       "button": "Meer sessies kopen"
     },
     "limit_reached": {
       "icon": "↑",
       "title": "Geen trackingsessies meer",
-      "description": "U heeft alle momenteel beschikbare live trackingsessies gebruikt."
+      "description": "U heeft alle momenteel beschikbare live trackingsessies gebruikt.",
+      "iosDescription": "Je abonnement is momenteel niet actief. Verleng het om weer live te kunnen volgen.",
+      "button": "Abonnement verlengen"
     },
     "membership_upcoming": {
       "icon": "⏳",

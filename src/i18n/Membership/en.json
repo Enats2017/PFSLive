@@ -1,0 +1,48 @@
+{
+  "header": {
+    "label": "MEMBERSHIP",
+    "title": "Choose your plan",
+    "subtitle": "Keep tracking your athletes live."
+  },
+  "infoBanner": {
+    "text": "You've used your free session. Pick a plan to register and track on race day."
+  },
+  "plans": {
+    "lite": {
+      "name": "LITE",
+      "badge": "2 sessions / year",
+      "price": "€14.99",
+      "period": "/ year",
+      "features": [
+        "2 live tracking sessions",
+        "Live GPS map & results"
+      ]
+    },
+    "basic": {
+      "name": "BASIC",
+      "badge": "5 sessions / year",
+      "price": "€29.99",
+      "period": "/ year",
+      "features": [
+        "5 live tracking sessions",
+        "Live GPS map & results",
+        "Priority for popular events"
+      ],
+      "popularLabel": "MOST POPULAR"
+    },
+    "pro": {
+      "name": "PRO",
+      "badge": "Unlimited",
+      "price": "€59.99",
+      "period": "/ year",
+      "features": [
+        "Unlimited tracking sessions",
+        "Live GPS map & results"
+      ]
+    }
+  },
+  "footerNote": "Yearly subscription, renews automatically.\nCancel anytime. Price shown by the App Store.",
+  "cta": {
+    "continueWith": "Continue with {{planName}}"
+  }
+}

@@ -26,6 +26,7 @@ import OwnProfile from '../screens/ProfileScreen/OwnProfile';
 import UserFavouriteList from '../screens/FollowerScreen/UserFavouriteList';
 import FollowersList from '../screens/ProfileScreen/FollowersList';
 import FanScreen from '../screens/FollowerScreen/FanScreen';
+import MembershipPlansScreen from '../screens/ProfileScreen/MembershipPlansScreen';
 
 
 // ✅ AUTH SCREENS
@@ -104,8 +105,9 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen name="UserFavouriteList" component={UserFavouriteList} options={noGesture} />
           <Stack.Screen name="FollowersList" component={FollowersList} options={noGesture} />
           <Stack.Screen name="FanScreen" component={FanScreen} options={noGesture} />
+          <Stack.Screen name="MembershipPlansScreen" component={MembershipPlansScreen} options={noGesture} />
 
-          <Stack.Screen
+           <Stack.Screen
             name="LiveTracking"
             component={LiveTrackingScreen}
             options={{
@@ -114,7 +116,7 @@ export const AppNavigator: React.FC = () => {
               // ✅ FIXED: gestureResponseDistance expects an object not a number
               gestureResponseDistance: { start: 50 },
             }}
-          /> 
+          />  
 
           {!isLoggedIn && (
             <>

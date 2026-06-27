@@ -1,0 +1,48 @@
+{
+  "header": {
+    "label": "LIDMAATSCHAP",
+    "title": "Kies je abonnement",
+    "subtitle": "Blijf je atleten live volgen."
+  },
+  "infoBanner": {
+    "text": "Je hebt je gratis sessie al gebruikt. Kies een abonnement om je in te schrijven en op wedstrijddag te volgen."
+  },
+  "plans": {
+    "lite": {
+      "name": "LITE",
+      "badge": "2 sessies / jaar",
+      "price": "€ 14,99",
+      "period": "/ jaar",
+      "features": [
+        "2 live trackingsessies",
+        "Live GPS-kaart en resultaten"
+      ]
+    },
+    "basic": {
+      "name": "BASIC",
+      "badge": "5 sessies / jaar",
+      "price": "€ 29,99",
+      "period": "/ jaar",
+      "features": [
+        "5 live trackingsessies",
+        "Live GPS-kaart en resultaten",
+        "Voorrang bij populaire evenementen"
+      ],
+      "popularLabel": "MEEST GEKOZEN"
+    },
+    "pro": {
+      "name": "PRO",
+      "badge": "Onbeperkt",
+      "price": "€ 59,99",
+      "period": "/ jaar",
+      "features": [
+        "Onbeperkt aantal trackingsessies",
+        "Live GPS-kaart en resultaten"
+      ]
+    }
+  },
+  "footerNote": "Jaarlijks abonnement, wordt automatisch verlengd.\nOp elk moment opzegbaar. Prijs weergegeven door de App Store.",
+  "cta": {
+    "continueWith": "Doorgaan met {{planName}}"
+  }
+}
