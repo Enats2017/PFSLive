@@ -77,6 +77,17 @@ const FINISH_APPROACH_INTERVAL = 5;                            // seconds
 const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 const FINISH_LINE_THRESHOLD_KM = 0.05;                         // 50m for auto-stop
 const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m even in finish zone
+// Base distanceFilter (metres). On iOS this is the ONLY rate control — the
+// locationUpdateInterval keys are Android-only — so 0 meant CLLocationManager
+// delivered ~1 fix/second while moving (battery + per-second AsyncStorage churn),
+// of which the 45s send throttle discarded ~44 of 45. 5m still yields several
+// fixes per send window even at walking pace, and the server only snaps the SENT
+// fixes, so the discarded ones never affected distance accuracy. A genuinely
+// stopped runner pauses fixes (intended idle) and is re-woken by the motion
+// sensor (disableMotionActivityUpdates:false) + 60s heartbeat — NOT the old
+// expo-location freeze, which was a different engine entirely.
+// MUST be restored anywhere finish-approach (which sets distanceFilter:0) resets.
+const BASE_DISTANCE_FILTER_M = 5;
 
 // ✅ Movement thresholds per sport category.
 // Must be LESS than (min_speed × timeInterval) so the check passes at minimum walking pace.
@@ -126,6 +137,7 @@ export interface TrackingLogEntry {
 let _logBuffer: TrackingLogEntry[] = [];      // current (unsealed) segment, in memory
 let _logFlushTimer: ReturnType<typeof setTimeout> | null = null;
 let _logDirty = false;
+let _lastBgFlushAt = 0;
 let _logSegCount = 0;                           // number of sealed segments on disk
 let _segCountLoaded = false;                    // synced from disk on first seal (cold-relaunch safety)
 let _bufferHydrated = false;                    // ✅ current-segment buffer rehydrated from disk in THIS JS context
@@ -270,14 +282,25 @@ const addLog = async (icon: string, msg: string): Promise<void> => {
 
   // ✅ Background persistence. The 2s setTimeout flush only fires while the JS
   // runtime keeps running — i.e. foreground. Once the phone is pocketed the app
-  // is backgrounded, each Transistor wake returns in well under 2s, and the OS
-  // suspends the pending timer before _flushLogsNow runs — so during-race
-  // entries never reached disk (the "439 sent but only the startup entries
-  // logged" bug). When NOT active, write synchronously inside this wake.
-  // Background log cadence is sparse, so this can't recreate the foreground
-  // AsyncStorage write-storm the throttle was added to prevent.
+  // is backgrounded, the OS suspends the pending timer before _flushLogsNow runs,
+  // so we must persist inside the wake itself. But doing it on EVERY entry meant a
+  // synchronous disk write per fix (~1×/s while moving) — a real iOS battery cost.
+  //
+  // Throttle instead: flush at most once every BG_FLUSH_THROTTLE_MS in background.
+  // The buffer is in memory (and capped/sealed elsewhere), so a suspension can
+  // lose at most the entries from the last throttle window — seconds of logs, not
+  // the ride. This keeps the "logs survive a background-only ride" property that
+  // the synchronous flush was added for, at ~1/15th the disk writes. Logs are NOT
+  // DEBUG-gated, so TestFlight/production iOS still captures the full ride.
   if (AppState.currentState !== 'active') {
-    await _flushLogsNow();
+    const BG_FLUSH_THROTTLE_MS = 15000;
+    const nowMs = Date.now();
+    if (nowMs - _lastBgFlushAt >= BG_FLUSH_THROTTLE_MS) {
+      _lastBgFlushAt = nowMs;
+      await _flushLogsNow();
+    }
+    // else: entry stays in the in-memory buffer; the next wake past the window
+    // (or a seal, or a finish-time _flushLogsNow / _readFullLog) persists it.
   } else {
     _scheduleLogFlush();
   }
@@ -300,6 +323,7 @@ const _resetLogBuffer = async (): Promise<void> => {
   _logSegCount = 0;
   _segCountLoaded = true;   // we just authoritatively cleared — no disk sync needed
   _bufferHydrated = true;   // ✅ fresh session — buffer is authoritatively empty, skip disk rehydrate
+  _lastBgFlushAt = 0;
 };
 
 // ✅ Upload the tracking log from the BACKGROUND auto-stop path so it doesn't
@@ -776,6 +800,7 @@ const _processLocationForSendInternal = async (
             geolocation: {
               locationUpdateInterval:        fixIntervalMs(intervalSeconds),
               fastestLocationUpdateInterval: 5000,
+              distanceFilter:                BASE_DISTANCE_FILTER_M,
             },
           });
           try { await BackgroundGeolocation.changePace(true); } catch {}
@@ -1001,14 +1026,14 @@ const _registerTransistorListeners = (): void => {
     addLog(event.isMoving ? '🏃' : '🧍', `Motion: ${event.isMoving ? 'moving' : 'stationary'}`);
   });
 
-  // ✅ HEARTBEAT — the ONLY non-foreground wake path while stationary.
+  // ✅ HEARTBEAT — defense-in-depth wake path while stationary.
   //
   // disableStopDetection:true is supposed to keep the SDK moving, but on Android
   // it can still drop to stationary when the device is genuinely motionless for
-  // a while (OS-level location batching). Once stationary, onLocation goes quiet
-  // AND — because activity.disableMotionActivityUpdates:true removes the
-  // motion-sensor wake — nothing brings it back until the app is foregrounded.
-  // That is exactly the long silent gap we saw after a runner stopped.
+  // a while (OS-level location batching). With activity.disableMotionActivityUpdates
+  // now FALSE the motion sensor is the primary thing that re-wakes the engine when
+  // movement resumes — the heartbeat is the backup for when the sensor is slow or
+  // the device is asleep, so a stopped runner is never left silent indefinitely.
   //
   // heartbeatInterval:60 + preventSuspend:true fire this every 60s even while
   // stationary/asleep (battery unrestricted). We pull a fresh fix;
@@ -1069,9 +1094,8 @@ const _registerTransistorListeners = (): void => {
       });
 
       // ✅ Re-wake the MOVING stream if the "stationary" rider is actually moving.
-      // With disableMotionActivityUpdates:true the SDK can sit in STATIONARY for a
-      // whole ride (observed: moving:false at 44km/h on a client ride), so the
-      // locationUpdateInterval onLocation stream never runs and every fix comes
+      // Even with disableMotionActivityUpdates:false the SDK can briefly sit in
+      // STATIONARY (OS batching / a slow classifier read), so every fix would come
       // from this 60s heartbeat — which the OS stretches to ~100s (the 1min/2min
       // cadence). changePace(true) flips it to MOVING so the dense onLocation
       // stream takes over and the send throttle holds ~60s. Speed guard so a
@@ -1497,7 +1521,7 @@ export const gpsService = {
           geolocation: {
             desiredAccuracy:              BackgroundGeolocation.DesiredAccuracy.High,
             locationAuthorizationRequest: 'Always',
-            distanceFilter:               0,
+            distanceFilter:               BASE_DISTANCE_FILTER_M,
             locationUpdateInterval:       fixIntervalMs(intervalSeconds),
             fastestLocationUpdateInterval: 5000,
             disableStopDetection:         true,
@@ -1508,7 +1532,7 @@ export const gpsService = {
             allowIdenticalLocations:      true,
           },
           activity: {
-            activityRecognitionInterval:  10000,
+            activityRecognitionInterval:  20000,
             disableMotionActivityUpdates: false,
           },
           app: {
@@ -1545,9 +1569,11 @@ export const gpsService = {
 
         await BackgroundGeolocation.start();
 
-        // ✅ Force MOVING state immediately after start. Required because we set
-        // activity.disableMotionActivityUpdates: true — without changePace(true)
-        // the SDK stays in STATIONARY state and onLocation never fires.
+        // ✅ Force MOVING state immediately after start so the onLocation stream
+        // begins right away instead of waiting for the activity classifier's first
+        // read to lift the SDK out of its initial STATIONARY state. Defense-in-depth
+        // alongside disableMotionActivityUpdates:false, which now handles ongoing
+        // motion detection during the ride.
         try { await BackgroundGeolocation.changePace(true); } catch { /* already moving */ }
 
         // Mark Transistor as the active sender.
