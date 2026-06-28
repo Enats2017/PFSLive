@@ -128,6 +128,7 @@ let _logFlushTimer: ReturnType<typeof setTimeout> | null = null;
 let _logDirty = false;
 let _logSegCount = 0;                           // number of sealed segments on disk
 let _segCountLoaded = false;                    // synced from disk on first seal (cold-relaunch safety)
+let _bufferHydrated = false;                    // ✅ current-segment buffer rehydrated from disk in THIS JS context
 const LOG_FLUSH_INTERVAL_MS = 2000;
 
 // Sample ~3× per send window so the throttle always has a candidate near the
@@ -225,9 +226,30 @@ const _readFullLog = async (): Promise<TrackingLogEntry[]> => {
   return all;
 };
 
+// ✅ Rehydrate the current (unsealed) segment buffer from disk ONCE per JS
+// context. On iOS the OS tears down and recreates the JS context between
+// background wakes; the module-level _logBuffer resets to [] in the new
+// context, and _flushLogsNow then OVERWRITES TRACKING_LOG_KEY with that empty
+// buffer — clobbering the in-progress segment (why a 2h ride logged only its
+// first ~500 startup entries and the freeze window was invisible). Loading the
+// on-disk current segment before the first append makes a teardown non-destructive.
+const _hydrateBufferOnce = async (): Promise<void> => {
+  if (_bufferHydrated) return;
+  _bufferHydrated = true;                       // set BEFORE await so concurrent first-calls don't double-load
+  try {
+    const cur = await AsyncStorage.getItem(TRACKING_LOG_KEY);
+    if (cur) {
+      const arr = JSON.parse(cur);
+      // Prepend disk entries before anything pushed during the await (race-safe).
+      if (Array.isArray(arr)) _logBuffer = arr.concat(_logBuffer);
+    }
+  } catch { /* silent */ }
+};
+
 // Keeps its async signature so existing `await addLog(...)` call-sites are
 // unchanged.
 const addLog = async (icon: string, msg: string): Promise<void> => {
+  await _hydrateBufferOnce();
   _logBuffer.push({ ts: Date.now(), icon, msg });
   _logDirty = true;
 
@@ -277,6 +299,7 @@ const _resetLogBuffer = async (): Promise<void> => {
   } catch { /* silent */ }
   _logSegCount = 0;
   _segCountLoaded = true;   // we just authoritatively cleared — no disk sync needed
+  _bufferHydrated = true;   // ✅ fresh session — buffer is authoritatively empty, skip disk rehydrate
 };
 
 // ✅ Upload the tracking log from the BACKGROUND auto-stop path so it doesn't
@@ -995,7 +1018,40 @@ const _registerTransistorListeners = (): void => {
   // movement gets through).
   BackgroundGeolocation.onHeartbeat(async () => {
     try {
+      // ✅ Server-side liveness ping — fire on EVERY beat, BEFORE any early
+      // return, so the server confirms the heartbeat is alive even when the beat
+      // produces no coordinate (stationary, or moving-with-no-extra-fix). Reads
+      // session ids from params; no-op if the session was already cleared.
+      try {
+        const hbParams = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+        if (hbParams) {
+          const { participantId: hbPid, eventId: hbEid, manualStart: hbManual, raceStartTime: hbRaceStart } = JSON.parse(hbParams);
+          if (hbPid && hbEid) {
+            const raceStartedOk = hbManual === 1 ||
+              (hbRaceStart && Date.now() >= new Date(hbRaceStart).getTime());
+            if (raceStartedOk) {
+              const { locationService } = require('./locationService');
+              void locationService.sendHeartbeatPing(String(hbPid), String(hbEid));
+            }
+          }
+        }
+      } catch { /* silent */ }
+
       const hbState = await BackgroundGeolocation.getState();
+
+      // ✅ Re-assert MOVING on every beat (unless finished) so the dense
+      // onLocation stream resumes instead of the ride running on the 60s
+      // heartbeat. Skipped after finish so we don't resurrect a torn-down
+      // session. This is the unconditional re-wake — the speed/finish-gated
+      // changePace below stays as-is for its logging, but this guarantees the
+      // nudge happens even when getCurrentPosition can't get a fix.
+      try {
+        const hbFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
+        if (hbFinished !== '1') {
+          await BackgroundGeolocation.changePace(true);
+        }
+      } catch { /* silent */ }
+
       // ✅ Log EVERY beat so the panel confirms the heartbeat is alive — even
       // while moving, when onLocation is already doing the work and a heartbeat
       // fix would just be a redundant network call.
