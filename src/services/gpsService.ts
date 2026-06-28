@@ -1587,3 +1587,61 @@ export const gpsService = {
     }
   },
 };
+
+// ════════════════════════════════════════════════════════════════════════
+// ✅ HEADLESS TASK — closes the cold-relaunch / background-jetsam listener gap.
+//
+// THE GAP: the native engine and the JS listeners have separate lifecycles.
+// When the OS kills the app mid-race and the native location service relaunches
+// it IN THE BACKGROUND (stopOnTerminate:false), a FRESH JS context comes up in
+// which startWatchingPosition never ran — so zero listeners are attached, while
+// getState().enabled === true. The engine samples GPS but never calls into JS:
+// functionally deaf, looks healthy. The watchdog (ensureBackgroundTaskAlive)
+// fixes this, but it's FOREGROUND-GATED — it only runs when the app returns to
+// foreground. A pocketed phone that's killed and relaunched in the background,
+// never foregrounded, would sit in listeners-detached limbo = a silent freeze
+// of the exact bib-129 shape, reached through a different door.
+//
+// THE FIX: registerHeadlessTask runs in that fresh background context on every
+// SDK event (location / heartbeat / motionchange / etc). We re-attach the
+// listeners there. _registerTransistorListeners is idempotent (removeListeners
+// first), so this is safe even when listeners already exist.
+//
+// PLATFORM NOTE: fully effective on ANDROID (the OS relaunches the process
+// headlessly and runs this task). On iOS, headless relaunch-after-termination
+// is constrained to significant-location-change / region-monitoring triggers
+// (a separate, backlogged piece) — but registering this is harmless on iOS and
+// readies the handler half for when that trigger is added.
+//
+// MUST be module-level (registered as the bundle loads) and MUST NOT touch any
+// React tree, navigation, or hooks — there is no mounted app in this context.
+// Everything it calls (the listeners, processLocationForSend, AsyncStorage,
+// the lazy require of locationService) is already React-free.
+// ════════════════════════════════════════════════════════════════════════
+const _headlessTask = async (event: { name: string; params: any }): Promise<void> => {
+  try {
+    // Only bother for an actually-active session — if params are gone the race
+    // is over / never started and there's nothing to re-attach for.
+    const params = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!params) return;
+
+    // Re-attach listeners into THIS fresh context so the engine's events start
+    // routing through onLocation → processLocationForSend again.
+    _registerTransistorListeners();
+    await addLog('🧟', `Headless wake (${event.name}) — listeners re-attached in background context`);
+
+    // The 'terminate' event fires just before the OS tears the app down; the
+    // 'location'/'heartbeat' events will now flow through the re-attached
+    // listeners on their own, so nothing more is needed here.
+  } catch {
+    // Headless task must never throw — an unhandled throw here can crash the
+    // background relaunch.
+  }
+};
+
+try {
+  BackgroundGeolocation.registerHeadlessTask(_headlessTask);
+} catch {
+  // Older SDK / platform without headless support — silent, the watchdog still
+  // covers the foreground-return path.
+}
