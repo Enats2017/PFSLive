@@ -9,7 +9,8 @@ import {
   Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors } from '../styles/common.styles';
+import { colors, commonStyles, spacing } from '../styles/common.styles';
+import { useNavigation } from '@react-navigation/native';
 
 type RegistrationStatus =
   | 'registered'
@@ -33,7 +34,10 @@ interface ModalConfig {
   title: string;
   description: string;
   accentColor: string;
+  buttonLabel: string | null;
 }
+
+const UPGRADE_STATUSES: RegistrationStatus[] = ['membership_required', 'limit_reached'];
 
 const RegistrationModal: React.FC<RegistrationModalProps> = ({
   visible,
@@ -44,7 +48,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation(['details']);
-
+  const navigation = useNavigation<any>();
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const cardTranslateY = useRef(new Animated.Value(80)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
@@ -53,6 +57,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   // ✅ GET MODAL CONFIG FROM i18n
   const getModalConfig = (status: RegistrationStatus): ModalConfig => {
     const baseKey = `details:registrationModal.${status}`;
+     const showUpgradeButton = false;//Platform.OS === 'ios' && UPGRADE_STATUSES.includes(status);
 
     const accentColors: Record<RegistrationStatus, string> = {
       registered:           colors.primaryLight,
@@ -62,15 +67,25 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
       unavailable:          '#6b7280',
       available:            '#f4a100',
     };
+     const descriptionKey = showUpgradeButton
+      ? `${baseKey}.iosDescription`
+      : `${baseKey}.description`;
 
-    return {
+     return {
       icon:        t(`${baseKey}.icon`),
       title:       t(`${baseKey}.title`),
-      description: t(`${baseKey}.description`, {
+      description: t(descriptionKey, {
         limit: membershipLimit ?? 3,
         date:  membershipStartDate ?? '',
+        defaultValue: t(`${baseKey}.description`, {
+          limit: membershipLimit ?? 3,
+          date:  membershipStartDate ?? '',
+        }),
       }),
       accentColor: accentColors[status],
+      buttonLabel: showUpgradeButton
+        ? t(`${baseKey}.button`, { defaultValue: t('details:registrationModal.viewPlansButton') })
+        : null,
     };
   };
 
@@ -126,6 +141,11 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   if (!status) return null;
 
   const config = getModalConfig(status);
+   const handleUpgradePress = () => {
+    onClose();
+    navigation.navigate('MembershipPlansScreen');
+  };
+
 
   return (
     <Modal
@@ -195,6 +215,18 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
           {/* Description */}
           <Text style={styles.description}>{config.description}</Text>
+          {config.buttonLabel && (
+          <View style = {{width:"100%", paddingTop:spacing.md}} >
+            <TouchableOpacity
+              style={[commonStyles.primaryButton, { backgroundColor: config.accentColor }]}
+              activeOpacity={0.85}
+              onPress={handleUpgradePress}
+            >
+              <Text style={commonStyles.primaryButtonText}>{config.buttonLabel}</Text>
+            </TouchableOpacity>
+            <Text style={[styles.description,{marginTop:spacing.sm}]}>{t('details:iosnotnow')}</Text>
+          </View>
+          )}
         </Animated.View>
       </View>
     </Modal>

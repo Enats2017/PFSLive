@@ -138,4 +138,49 @@ export const ownProfile = StyleSheet.create({
         fontWeight: '700',
         color: colors.gray900,
     },
+
+     ioscard: {
+        backgroundColor: '#16283A',
+        borderRadius: 14,
+        padding: 16,
+        marginBottom:spacing.lg
+        
+    },
+    iosheader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    iostitle: {
+        marginLeft: 6,
+        color: '#A6B1BE',
+        fontSize: 11,
+        fontWeight: '600',
+        letterSpacing: 0.5,
+    },
+    iossubtitle: {
+        color: '#FFFFFF',
+        fontSize: 18,
+        fontWeight: '500',
+        marginBottom: 14,
+    },
+    iosbold: {
+        fontWeight: '700',
+    },
+    iosbutton: {
+        backgroundColor: colors.themeiColor,
+        borderRadius: 8,
+        height: 44,
+        paddingHorizontal: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    iosbuttonText: {
+        color: '#16283A',
+        fontSize: 15,
+        fontWeight: '700',
+    },
+
+
 });

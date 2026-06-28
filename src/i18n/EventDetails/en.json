@@ -79,12 +79,17 @@
     "membership_required": {
       "icon": "◆",
       "title": "Live Tracking Unavailable",
-      "description": "Your current tracking sessions are not active. Live tracking isn't available right now."
+      "description": "Your current tracking sessions are not active. Live tracking isn't available right now.",
+      "iosDescription": "You've used all your live tracking sessions. Get more to sign up for this event.",
+     "button": "Get more sessions"
+
     },
     "limit_reached": {
       "icon": "↑",
       "title": "No Tracking Sessions Left",
-      "description": "You've used all the live tracking sessions currently available to you."
+      "description": "You've used all the live tracking sessions currently available to you.",
+      "iosDescription": "Your membership isn't active right now. Renew it to track live again.",
+       "button": "Renew membership"
     },
     "membership_upcoming": {
       "icon": "⏳",
@@ -121,5 +126,6 @@
   "gpxRestricted": {
     "title": "Registration Required",
     "message": "Only registered participants can download the GPX file. Please sign up for this distance first."
-  }
+  },
+   "iosnotnow":"Not Now"
 }

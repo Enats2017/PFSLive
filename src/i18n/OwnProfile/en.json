@@ -26,7 +26,14 @@
     "backbtn":{
         "events":"Your Events",
         "training": "Training Sessions"
+    },
 
-    }
+    "membershipCard": {
+    "liteTitle": "LITE MEMBERSHIP",
+    "sessionsLeft": "live tracking sessions left",
+    "viewPlans": "View plans & upgrade"
+  }
+
+
     
 }
