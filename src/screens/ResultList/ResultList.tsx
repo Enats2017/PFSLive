@@ -152,6 +152,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     raceStatus={raceStatus}
                     currentPovId={currentPovId}
                     isWomen={selectedCategory === 'women' || item.gender === 'female'}
+                    
                 />
             );
         }
@@ -164,6 +165,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 currentPovId={currentPovId}
                 isWomen={selectedCategory === 'women' || item.gender === 'female'}
                 showUtmbIndex={showUtmbIndex}
+                 selectedCheckpoint={selectedCheckpoint} 
             />
         );
     }, [

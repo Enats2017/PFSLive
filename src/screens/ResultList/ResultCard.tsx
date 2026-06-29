@@ -7,6 +7,7 @@ import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { colors } from '../../styles/common.styles';
+import { FilterOption } from '../../components/FilterDropdown';
 
 interface ResultCardProps {
     item: RaceResult;
@@ -19,6 +20,7 @@ interface ResultCardProps {
     currentPovId: number;
     isWomen?: boolean;
     showUtmbIndex: boolean;
+    selectedCheckpoint?: FilterOption | null;
 }
 
 const ResultCard: React.FC<ResultCardProps> = memo(({
@@ -32,6 +34,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     onToggleFollow,
     isWomen,
     showUtmbIndex,
+    selectedCheckpoint,
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
@@ -45,12 +48,31 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     const isLive = item.live_tracking_activated === 1;
     const isFemale = item.gender === 'female';
     const hasFinished = item.status === 'finished';
+    console.log(hasFinished);
+
 
     const displayDiff = item.diff;
 
-    const genderRank = isFemale && /^\d+$/.test(item.finish_rank_gender ?? '')
-        ? `F ${item.finish_rank_gender}`
+    const selectedCp = selectedCheckpoint
+    ? item.checkpoints?.[Number(selectedCheckpoint.value)]
+    : null;
+
+    const displayPosition =
+    selectedCp?.ranking || item.position || "-";
+
+    const displayAgeGroupRank =
+    selectedCp?.rank_agegroup || item.finish_rank_agegroup || "-";
+
+    const displayFinishGenderRank =
+    selectedCp?.rank_agegroup || item.finish_rank_gender;
+
+   const genderRank =
+    isFemale && /^\d+$/.test(displayFinishGenderRank ?? "")
+        ? `F ${displayFinishGenderRank}`
         : null;
+
+    const displayRankingLabel =
+    selectedCp?.name || item.category_name;
 
     const handleCardPress = useCallback(() => {
         navigation.navigate('ResultDetails', {
@@ -87,7 +109,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 </Text>
                 <View style={resultListStyle.cornerBadgeRight}>
                     <Text style={resultListStyle.cornerNum}>
-                        {item.position || "-"}
+                         {displayPosition || "-"}
                     </Text>
                     {genderRank && (
                         <Text style={resultListStyle.cornerGenderRank}>{genderRank}</Text>
@@ -131,11 +153,11 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                             </View>
                             <View style={resultListStyle.statCol}>
                                 <Text style={resultListStyle.statLabel}>
-                                    {t('allrace:race.ranking')}{'\n'}{item.category_name}
+                                    {t('allrace:race.ranking')}{'\n'}{displayRankingLabel}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
                                     <Text style={resultListStyle.statVal}>
-                                        {item.finish_rank_agegroup || "-"}
+                                       {displayAgeGroupRank}
                                     </Text>
                                 </Text>
                             </View>
@@ -194,7 +216,8 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     prev.item.time === next.item.time &&
     prev.item.diff === next.item.diff &&
     prev.item.finish_rank_agegroup === next.item.finish_rank_agegroup &&
-    prev.item.live_tracking_activated === next.item.live_tracking_activated
+    prev.item.live_tracking_activated === next.item.live_tracking_activated &&
+    prev.selectedCheckpoint?.value === next.selectedCheckpoint?.value
 );
 
 ResultCard.displayName = 'ResultCard';

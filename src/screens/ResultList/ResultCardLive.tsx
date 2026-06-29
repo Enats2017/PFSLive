@@ -85,8 +85,12 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     const cp2 = idx2 !== null ? checkpoints[idx2] : null;
     const cp3 = idx3 !== null ? checkpoints[idx3] : null;
 
-    const genderRank = isFemale && /^\d+$/.test(item.finish_rank_gender ?? '')
-        ? `F ${item.finish_rank_gender}`
+    const displayGenderRank =
+    cp1?.rank_agegroup || item.finish_rank_gender;
+
+  const genderRank =
+    isFemale && /^\d+$/.test(displayGenderRank ?? "")
+        ? `F ${displayGenderRank}`
         : null;
 
     const badgeNumber = isCheckpointMode
@@ -143,8 +147,8 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     <Text style={resultListStyle.cornerNum}>
                         {badgeNumber}
                     </Text>
-                    {!isCheckpointMode && genderRank && (
-                        <Text style={resultListStyle.cornerGenderRank}>{genderRank}</Text>
+                    {genderRank && (
+                        <Text style={resultListStyle.cornerGenderRank}> {genderRank}</Text>
                     )}
                 </View>
             </TouchableOpacity>
