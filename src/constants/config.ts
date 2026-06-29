@@ -114,7 +114,8 @@ export const API_CONFIG = {
     update_customer_setting: '/update_customer_setting_api.php',
     VERIFY_TRACKING_PASSWORD: '/verify_tracking_password_api.php',
     GET_FOLLOWER_DATA: '/get_follower_data_api.php',
-    SAVE_TRACKING_LOG: '/save_tracking_log_api.php'
+    SAVE_TRACKING_LOG: '/save_tracking_log_api.php',
+    HEARTBEAT_PING: '/heartbeat_ping_api.php',
   },
 
   TIMEOUT: 15000,

@@ -173,7 +173,8 @@ export default ({ config }) => {
       [
         "react-native-background-geolocation",
         {
-          license: process.env.TRANSISTOR_LICENSE_KEY ?? ""  // ← empty for DEBUG/development, add key for preview/production
+          license: process.env.TRANSISTOR_LICENSE_KEY ?? "",  // ← empty for DEBUG/development, add key for preview/production
+          enableHeadless: true
         }
       ],
       "expo-font",

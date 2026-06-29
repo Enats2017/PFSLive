@@ -384,5 +384,30 @@ export const locationService = {
       if (API_CONFIG.DEBUG) console.log('⚠️ Tracking log save failed (non-fatal):', err?.message);
       // Silent — log upload failure must never block stop tracking
     }
+  },
+
+  // ✅ Lightweight liveness ping from the background heartbeat. Confirms
+  // SERVER-SIDE that the iOS background heartbeat is still firing across a long
+  // pocketed run — the device log can't be trusted for that (a suspended context
+  // stops writing). Sends NO coordinate and never touches the queue/mutex; it
+  // only stamps "this device's heartbeat is alive at T" so a frozen marker can be
+  // told apart from a dead heartbeat. Fire-and-forget, hard-timeout-bounded.
+  async sendHeartbeatPing(participantId: string, eventId: string): Promise<void> {
+    try {
+      const url     = getApiEndpoint(API_CONFIG.ENDPOINTS.HEARTBEAT_PING);
+      const headers = await API_CONFIG.getHeaders();
+      await withTimeout(
+        apiClient.post(url, {
+          participantId,
+          eventId,
+          ts: new Date().toISOString(),
+          deviceInfo: `${Platform.OS} ${Platform.Version}`,
+        }, { headers, timeout: 8000 }),
+        10000,
+        'heartbeatPing'
+      );
+    } catch {
+      // Silent — a missed ping must never affect tracking.
+    }
   }
 };

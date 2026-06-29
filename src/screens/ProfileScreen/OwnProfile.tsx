@@ -40,23 +40,23 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
     return (
         <View style={ownProfile.menuSection}>
             {profile?.is_own_profile === 1 && (
-                Platform.OS === 'ios' ? (
-                    <View style={ownProfile.ioscard}>
-                        <View style={ownProfile.iosheader}>
-                            <Ionicons name="cube-outline" size={18} color = {colors.themeiColor} />
-                            <Text style={ownProfile.iostitle}>{t('ownProfile:membershipCard.liteTitle')}</Text>
-                        </View>
+                // Platform.OS === 'ios' ? (
+                //     <View style={ownProfile.ioscard}>
+                //         <View style={ownProfile.iosheader}>
+                //             <Ionicons name="cube-outline" size={18} color = {colors.themeiColor} />
+                //             <Text style={ownProfile.iostitle}>{t('ownProfile:membershipCard.liteTitle')}</Text>
+                //         </View>
 
-                        <Text style={ownProfile.iossubtitle}>
-                            <Text style={ownProfile.iosbold}>2</Text> {t('ownProfile:membershipCard.sessionsLeft')}
-                        </Text>
+                //         <Text style={ownProfile.iossubtitle}>
+                //             <Text style={ownProfile.iosbold}>2</Text> {t('ownProfile:membershipCard.sessionsLeft')}
+                //         </Text>
 
-                        <TouchableOpacity style={ownProfile.iosbutton} activeOpacity={0.8} onPress={() => onNavigate('MembershipPlansScreen')}>
-                            <Text style={ownProfile.iosbuttonText}>{t('ownProfile:membershipCard.viewPlans')}</Text>
-                            <Ionicons name="chevron-forward" size={18} color="#1A2233" />
-                        </TouchableOpacity>
-                    </View>
-                ) : (
+                //         <TouchableOpacity style={ownProfile.iosbutton} activeOpacity={0.8} onPress={() => onNavigate('MembershipPlansScreen')}>
+                //             <Text style={ownProfile.iosbuttonText}>{t('ownProfile:membershipCard.viewPlans')}</Text>
+                //             <Ionicons name="chevron-forward" size={18} color="#1A2233" />
+                //         </TouchableOpacity>
+                //     </View>
+                // ) : (
                     <TouchableOpacity style={ownProfile.trackingBanner} activeOpacity={0.85}>
                         <Ionicons name="cube" size={40} color="black" />
                         <View style={ownProfile.trackingTextWrapper}>
@@ -90,7 +90,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                             )}
                         </View>
                     </TouchableOpacity>
-                )
+                // )
             )}
             <TouchableOpacity
                 style={[commonStyles.card, ownProfile.menuRow]}

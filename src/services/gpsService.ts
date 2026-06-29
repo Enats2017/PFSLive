@@ -77,6 +77,17 @@ const FINISH_APPROACH_INTERVAL = 5;                            // seconds
 const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 const FINISH_LINE_THRESHOLD_KM = 0.05;                         // 50m for auto-stop
 const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m even in finish zone
+// Base distanceFilter (metres). On iOS this is the ONLY rate control — the
+// locationUpdateInterval keys are Android-only — so 0 meant CLLocationManager
+// delivered ~1 fix/second while moving (battery + per-second AsyncStorage churn),
+// of which the 45s send throttle discarded ~44 of 45. 5m still yields several
+// fixes per send window even at walking pace, and the server only snaps the SENT
+// fixes, so the discarded ones never affected distance accuracy. A genuinely
+// stopped runner pauses fixes (intended idle) and is re-woken by the motion
+// sensor (disableMotionActivityUpdates:false) + 60s heartbeat — NOT the old
+// expo-location freeze, which was a different engine entirely.
+// MUST be restored anywhere finish-approach (which sets distanceFilter:0) resets.
+const BASE_DISTANCE_FILTER_M = 5;
 
 // ✅ Movement thresholds per sport category.
 // Must be LESS than (min_speed × timeInterval) so the check passes at minimum walking pace.
@@ -126,8 +137,10 @@ export interface TrackingLogEntry {
 let _logBuffer: TrackingLogEntry[] = [];      // current (unsealed) segment, in memory
 let _logFlushTimer: ReturnType<typeof setTimeout> | null = null;
 let _logDirty = false;
+let _lastBgFlushAt = 0;
 let _logSegCount = 0;                           // number of sealed segments on disk
 let _segCountLoaded = false;                    // synced from disk on first seal (cold-relaunch safety)
+let _bufferHydrated = false;                    // ✅ current-segment buffer rehydrated from disk in THIS JS context
 const LOG_FLUSH_INTERVAL_MS = 2000;
 
 // Sample ~3× per send window so the throttle always has a candidate near the
@@ -225,9 +238,30 @@ const _readFullLog = async (): Promise<TrackingLogEntry[]> => {
   return all;
 };
 
+// ✅ Rehydrate the current (unsealed) segment buffer from disk ONCE per JS
+// context. On iOS the OS tears down and recreates the JS context between
+// background wakes; the module-level _logBuffer resets to [] in the new
+// context, and _flushLogsNow then OVERWRITES TRACKING_LOG_KEY with that empty
+// buffer — clobbering the in-progress segment (why a 2h ride logged only its
+// first ~500 startup entries and the freeze window was invisible). Loading the
+// on-disk current segment before the first append makes a teardown non-destructive.
+const _hydrateBufferOnce = async (): Promise<void> => {
+  if (_bufferHydrated) return;
+  _bufferHydrated = true;                       // set BEFORE await so concurrent first-calls don't double-load
+  try {
+    const cur = await AsyncStorage.getItem(TRACKING_LOG_KEY);
+    if (cur) {
+      const arr = JSON.parse(cur);
+      // Prepend disk entries before anything pushed during the await (race-safe).
+      if (Array.isArray(arr)) _logBuffer = arr.concat(_logBuffer);
+    }
+  } catch { /* silent */ }
+};
+
 // Keeps its async signature so existing `await addLog(...)` call-sites are
 // unchanged.
 const addLog = async (icon: string, msg: string): Promise<void> => {
+  await _hydrateBufferOnce();
   _logBuffer.push({ ts: Date.now(), icon, msg });
   _logDirty = true;
 
@@ -248,14 +282,25 @@ const addLog = async (icon: string, msg: string): Promise<void> => {
 
   // ✅ Background persistence. The 2s setTimeout flush only fires while the JS
   // runtime keeps running — i.e. foreground. Once the phone is pocketed the app
-  // is backgrounded, each Transistor wake returns in well under 2s, and the OS
-  // suspends the pending timer before _flushLogsNow runs — so during-race
-  // entries never reached disk (the "439 sent but only the startup entries
-  // logged" bug). When NOT active, write synchronously inside this wake.
-  // Background log cadence is sparse, so this can't recreate the foreground
-  // AsyncStorage write-storm the throttle was added to prevent.
+  // is backgrounded, the OS suspends the pending timer before _flushLogsNow runs,
+  // so we must persist inside the wake itself. But doing it on EVERY entry meant a
+  // synchronous disk write per fix (~1×/s while moving) — a real iOS battery cost.
+  //
+  // Throttle instead: flush at most once every BG_FLUSH_THROTTLE_MS in background.
+  // The buffer is in memory (and capped/sealed elsewhere), so a suspension can
+  // lose at most the entries from the last throttle window — seconds of logs, not
+  // the ride. This keeps the "logs survive a background-only ride" property that
+  // the synchronous flush was added for, at ~1/15th the disk writes. Logs are NOT
+  // DEBUG-gated, so TestFlight/production iOS still captures the full ride.
   if (AppState.currentState !== 'active') {
-    await _flushLogsNow();
+    const BG_FLUSH_THROTTLE_MS = 15000;
+    const nowMs = Date.now();
+    if (nowMs - _lastBgFlushAt >= BG_FLUSH_THROTTLE_MS) {
+      _lastBgFlushAt = nowMs;
+      await _flushLogsNow();
+    }
+    // else: entry stays in the in-memory buffer; the next wake past the window
+    // (or a seal, or a finish-time _flushLogsNow / _readFullLog) persists it.
   } else {
     _scheduleLogFlush();
   }
@@ -277,6 +322,8 @@ const _resetLogBuffer = async (): Promise<void> => {
   } catch { /* silent */ }
   _logSegCount = 0;
   _segCountLoaded = true;   // we just authoritatively cleared — no disk sync needed
+  _bufferHydrated = true;   // ✅ fresh session — buffer is authoritatively empty, skip disk rehydrate
+  _lastBgFlushAt = 0;
 };
 
 // ✅ Upload the tracking log from the BACKGROUND auto-stop path so it doesn't
@@ -753,6 +800,7 @@ const _processLocationForSendInternal = async (
             geolocation: {
               locationUpdateInterval:        fixIntervalMs(intervalSeconds),
               fastestLocationUpdateInterval: 5000,
+              distanceFilter:                BASE_DISTANCE_FILTER_M,
             },
           });
           try { await BackgroundGeolocation.changePace(true); } catch {}
@@ -978,14 +1026,14 @@ const _registerTransistorListeners = (): void => {
     addLog(event.isMoving ? '🏃' : '🧍', `Motion: ${event.isMoving ? 'moving' : 'stationary'}`);
   });
 
-  // ✅ HEARTBEAT — the ONLY non-foreground wake path while stationary.
+  // ✅ HEARTBEAT — defense-in-depth wake path while stationary.
   //
   // disableStopDetection:true is supposed to keep the SDK moving, but on Android
   // it can still drop to stationary when the device is genuinely motionless for
-  // a while (OS-level location batching). Once stationary, onLocation goes quiet
-  // AND — because activity.disableMotionActivityUpdates:true removes the
-  // motion-sensor wake — nothing brings it back until the app is foregrounded.
-  // That is exactly the long silent gap we saw after a runner stopped.
+  // a while (OS-level location batching). With activity.disableMotionActivityUpdates
+  // now FALSE the motion sensor is the primary thing that re-wakes the engine when
+  // movement resumes — the heartbeat is the backup for when the sensor is slow or
+  // the device is asleep, so a stopped runner is never left silent indefinitely.
   //
   // heartbeatInterval:60 + preventSuspend:true fire this every 60s even while
   // stationary/asleep (battery unrestricted). We pull a fresh fix;
@@ -995,7 +1043,40 @@ const _registerTransistorListeners = (): void => {
   // movement gets through).
   BackgroundGeolocation.onHeartbeat(async () => {
     try {
+      // ✅ Server-side liveness ping — fire on EVERY beat, BEFORE any early
+      // return, so the server confirms the heartbeat is alive even when the beat
+      // produces no coordinate (stationary, or moving-with-no-extra-fix). Reads
+      // session ids from params; no-op if the session was already cleared.
+      try {
+        const hbParams = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+        if (hbParams) {
+          const { participantId: hbPid, eventId: hbEid, manualStart: hbManual, raceStartTime: hbRaceStart } = JSON.parse(hbParams);
+          if (hbPid && hbEid) {
+            const raceStartedOk = hbManual === 1 ||
+              (hbRaceStart && Date.now() >= new Date(hbRaceStart).getTime());
+            if (raceStartedOk) {
+              const { locationService } = require('./locationService');
+              void locationService.sendHeartbeatPing(String(hbPid), String(hbEid));
+            }
+          }
+        }
+      } catch { /* silent */ }
+
       const hbState = await BackgroundGeolocation.getState();
+
+      // ✅ Re-assert MOVING on every beat (unless finished) so the dense
+      // onLocation stream resumes instead of the ride running on the 60s
+      // heartbeat. Skipped after finish so we don't resurrect a torn-down
+      // session. This is the unconditional re-wake — the speed/finish-gated
+      // changePace below stays as-is for its logging, but this guarantees the
+      // nudge happens even when getCurrentPosition can't get a fix.
+      try {
+        const hbFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
+        if (hbFinished !== '1') {
+          await BackgroundGeolocation.changePace(true);
+        }
+      } catch { /* silent */ }
+
       // ✅ Log EVERY beat so the panel confirms the heartbeat is alive — even
       // while moving, when onLocation is already doing the work and a heartbeat
       // fix would just be a redundant network call.
@@ -1013,9 +1094,8 @@ const _registerTransistorListeners = (): void => {
       });
 
       // ✅ Re-wake the MOVING stream if the "stationary" rider is actually moving.
-      // With disableMotionActivityUpdates:true the SDK can sit in STATIONARY for a
-      // whole ride (observed: moving:false at 44km/h on a client ride), so the
-      // locationUpdateInterval onLocation stream never runs and every fix comes
+      // Even with disableMotionActivityUpdates:false the SDK can briefly sit in
+      // STATIONARY (OS batching / a slow classifier read), so every fix would come
       // from this 60s heartbeat — which the OS stretches to ~100s (the 1min/2min
       // cadence). changePace(true) flips it to MOVING so the dense onLocation
       // stream takes over and the send throttle holds ~60s. Speed guard so a
@@ -1441,7 +1521,7 @@ export const gpsService = {
           geolocation: {
             desiredAccuracy:              BackgroundGeolocation.DesiredAccuracy.High,
             locationAuthorizationRequest: 'Always',
-            distanceFilter:               0,
+            distanceFilter:               BASE_DISTANCE_FILTER_M,
             locationUpdateInterval:       fixIntervalMs(intervalSeconds),
             fastestLocationUpdateInterval: 5000,
             disableStopDetection:         true,
@@ -1452,7 +1532,7 @@ export const gpsService = {
             allowIdenticalLocations:      true,
           },
           activity: {
-            activityRecognitionInterval:  10000,
+            activityRecognitionInterval:  20000,
             disableMotionActivityUpdates: false,
           },
           app: {
@@ -1489,9 +1569,11 @@ export const gpsService = {
 
         await BackgroundGeolocation.start();
 
-        // ✅ Force MOVING state immediately after start. Required because we set
-        // activity.disableMotionActivityUpdates: true — without changePace(true)
-        // the SDK stays in STATIONARY state and onLocation never fires.
+        // ✅ Force MOVING state immediately after start so the onLocation stream
+        // begins right away instead of waiting for the activity classifier's first
+        // read to lift the SDK out of its initial STATIONARY state. Defense-in-depth
+        // alongside disableMotionActivityUpdates:false, which now handles ongoing
+        // motion detection during the ride.
         try { await BackgroundGeolocation.changePace(true); } catch { /* already moving */ }
 
         // Mark Transistor as the active sender.
@@ -1531,3 +1613,61 @@ export const gpsService = {
     }
   },
 };
+
+// ════════════════════════════════════════════════════════════════════════
+// ✅ HEADLESS TASK — closes the cold-relaunch / background-jetsam listener gap.
+//
+// THE GAP: the native engine and the JS listeners have separate lifecycles.
+// When the OS kills the app mid-race and the native location service relaunches
+// it IN THE BACKGROUND (stopOnTerminate:false), a FRESH JS context comes up in
+// which startWatchingPosition never ran — so zero listeners are attached, while
+// getState().enabled === true. The engine samples GPS but never calls into JS:
+// functionally deaf, looks healthy. The watchdog (ensureBackgroundTaskAlive)
+// fixes this, but it's FOREGROUND-GATED — it only runs when the app returns to
+// foreground. A pocketed phone that's killed and relaunched in the background,
+// never foregrounded, would sit in listeners-detached limbo = a silent freeze
+// of the exact bib-129 shape, reached through a different door.
+//
+// THE FIX: registerHeadlessTask runs in that fresh background context on every
+// SDK event (location / heartbeat / motionchange / etc). We re-attach the
+// listeners there. _registerTransistorListeners is idempotent (removeListeners
+// first), so this is safe even when listeners already exist.
+//
+// PLATFORM NOTE: fully effective on ANDROID (the OS relaunches the process
+// headlessly and runs this task). On iOS, headless relaunch-after-termination
+// is constrained to significant-location-change / region-monitoring triggers
+// (a separate, backlogged piece) — but registering this is harmless on iOS and
+// readies the handler half for when that trigger is added.
+//
+// MUST be module-level (registered as the bundle loads) and MUST NOT touch any
+// React tree, navigation, or hooks — there is no mounted app in this context.
+// Everything it calls (the listeners, processLocationForSend, AsyncStorage,
+// the lazy require of locationService) is already React-free.
+// ════════════════════════════════════════════════════════════════════════
+const _headlessTask = async (event: { name: string; params: any }): Promise<void> => {
+  try {
+    // Only bother for an actually-active session — if params are gone the race
+    // is over / never started and there's nothing to re-attach for.
+    const params = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!params) return;
+
+    // Re-attach listeners into THIS fresh context so the engine's events start
+    // routing through onLocation → processLocationForSend again.
+    _registerTransistorListeners();
+    await addLog('🧟', `Headless wake (${event.name}) — listeners re-attached in background context`);
+
+    // The 'terminate' event fires just before the OS tears the app down; the
+    // 'location'/'heartbeat' events will now flow through the re-attached
+    // listeners on their own, so nothing more is needed here.
+  } catch {
+    // Headless task must never throw — an unhandled throw here can crash the
+    // background relaunch.
+  }
+};
+
+try {
+  BackgroundGeolocation.registerHeadlessTask(_headlessTask);
+} catch {
+  // Older SDK / platform without headless support — silent, the watchdog still
+  // covers the foreground-return path.
+}

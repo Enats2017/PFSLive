@@ -14,22 +14,38 @@ export async function parseGPX(gpxContent: string): Promise<RouteData> {
 		// Extract metadata
 		const name = gpx.metadata?.name || gpx.trk?.name || 'Unknown Route';
 
-		// Extract track points
+		// Extract track points.
+		// fast-xml-parser collapses a single <trkseg> to an object but expands
+		// multiple <trkseg> (or multiple <trk>) to an array, so we normalise both
+		// to arrays and walk every track → every segment → every point. Also skips
+		// the duplicate point each segment repeats at the seam (last of prev seg
+		// == first of next seg). Falls back to <rte>/<rtept> for route-based GPX.
 		const trackPoints: TrackPoint[] = [];
-		const trkseg = gpx.trk?.trkseg;
 
-		if (trkseg) {
-			const trkpts = Array.isArray(trkseg.trkpt) ? trkseg.trkpt : [trkseg.trkpt];
-			
-			trkpts.forEach((pt: any) => {
-				if (pt && pt['@_lat'] && pt['@_lon']) {
-					trackPoints.push({
-						lat: parseFloat(pt['@_lat']),
-						lon: parseFloat(pt['@_lon']),
-						ele: pt.ele ? parseFloat(pt.ele) : 0,
-					});
-				}
-			});
+		const toArray = <T>(v: T | T[] | undefined | null): T[] =>
+			v == null ? [] : Array.isArray(v) ? v : [v];
+
+		const pushPt = (pt: any) => {
+			if (pt && pt['@_lat'] != null && pt['@_lon'] != null) {
+				const lat = parseFloat(pt['@_lat']);
+				const lon = parseFloat(pt['@_lon']);
+				const last = trackPoints[trackPoints.length - 1];
+				if (last && last.lat === lat && last.lon === lon) return; // seam dupe
+				trackPoints.push({ lat, lon, ele: pt.ele != null ? parseFloat(pt.ele) : 0 });
+			}
+		};
+
+		for (const trk of toArray(gpx.trk)) {
+			for (const seg of toArray(trk?.trkseg)) {
+				for (const pt of toArray(seg?.trkpt)) pushPt(pt);
+			}
+		}
+
+		// Fallback: route-based GPX (<rte><rtept>), mirroring the PHP backend.
+		if (trackPoints.length === 0) {
+			for (const rte of toArray(gpx.rte)) {
+				for (const pt of toArray(rte?.rtept)) pushPt(pt);
+			}
 		}
 
 		// Extract waypoints (stations)
