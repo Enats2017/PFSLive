@@ -86,7 +86,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             event_name: event_name || '',
             event_image:event_image || '',
             sectionType: 'participant',
-            sourceScreen: route.name,
+            sourceScreen: sourceScreen || route.name,
             sourceTab: 'live',
             product_option_value_app_id: product_option_value_app_id || 0,
           });
@@ -97,7 +97,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
   const handleHomeNavigation = () => {
     const currentRoute = route.name;
-
+    
     if (currentRoute === 'ResultList') {
       if (sourceScreen === 'EventDetails') {
         navigation.navigate('EventDetails', {

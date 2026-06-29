@@ -25,6 +25,7 @@ interface DistanceTabProps {
   product_app_id: number;
   sourceTab?: 'past' | 'live' | 'upcoming';
   event_name: string;
+  event_image?: string;
   // ✅ Landscape: the OUTER ScrollView owns vertical scrolling, so the inner
   // list must NOT scroll itself (scrollEnabled=false) and must render at full
   // content height. Portrait: the inner list scrolls (scrollEnabled=true).
@@ -41,6 +42,7 @@ const DistanceTab = ({
   event_name,
   scrollEnabled = true,
   onContentHeight,
+  event_image
 }: DistanceTabProps) => {
   const navigation = useNavigation<any>();
   const { t } = useTranslation(['result', 'details', 'common']);
@@ -129,6 +131,7 @@ const DistanceTab = ({
                 product_app_id,
                 product_option_value_app_id: Number(item.product_option_value_app_id),
                 event_name: event_name,
+                event_image: event_image,
                 sourceScreen: 'FollowerDistanceScreen',
                 sectionType: 'follower',
                 sourceTab,
@@ -146,6 +149,7 @@ const DistanceTab = ({
                   product_app_id,
                   product_option_value_app_id: item.product_option_value_app_id || '',
                   event_name: event_name,
+                  event_image: event_image,
                   sourceScreen: 'FollowerDistanceScreen',
                   sectionType: 'follower',
                   sourceTab,

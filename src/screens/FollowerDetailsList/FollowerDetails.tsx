@@ -81,6 +81,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
             product_app_id={product_app_id}
             sourceTab={sourceTab}
             event_name={event_name}
+            event_image={event_image}
             // ✅ Landscape: inner list does NOT scroll (outer ScrollView does);
             // report its height so the pager can be sized to fit all rows.
             scrollEnabled={!isLandscape}
