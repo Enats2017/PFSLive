@@ -181,6 +181,21 @@ export const ownProfile = StyleSheet.create({
         fontSize: 15,
         fontWeight: '700',
     },
-
+    createBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: colors.themeiColor,
+        borderRadius: 10,
+        height: 48,
+        marginHorizontal: spacing.md,
+        marginBottom: spacing.md,
+    },
+    createBtnText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: colors.gray900,
+    },
 
 });

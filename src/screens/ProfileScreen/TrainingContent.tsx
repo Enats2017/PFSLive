@@ -14,6 +14,7 @@ import { EventCard } from './EventCardLive';
 import { ownProfile } from '../../styles/ownProfile.styles';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 
 interface TrainingContentProps {
     onBack: () => void;
@@ -37,6 +38,15 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
     const hasMore = pagination.live.page < pagination.live.total_pages;
     const { t } = useTranslation(['profile', "ownProfile"]);
     // Add this line before the return
+
+    const navigation = useNavigation();
+
+    // Only the profile owner can create a personal event (matches the edit/own-profile gating).
+    const isOwnProfile = profile?.is_own_profile === 1;
+
+    const handleCreatePersonalEvent = useCallback(() => {
+        navigation.navigate('PersonalEvent' as never);
+    }, [navigation]);
 
     const handleLoadMore = useCallback(() => {
         if (hasMore && !loadingMoreLive) {
@@ -83,6 +93,17 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
                 <Ionicons name="arrow-back" size={22} color={colors.gray900} />
                 <Text style={ownProfile.backLabel}>{t('ownProfile:backbtn.training')}</Text>
             </TouchableOpacity>
+
+            {isOwnProfile && (
+                <TouchableOpacity
+                    style={ownProfile.createBtn}
+                    onPress={handleCreatePersonalEvent}
+                    activeOpacity={0.85}
+                >
+                    <Ionicons name="add-circle-outline" size={20} color={colors.gray900} />
+                    <Text style={ownProfile.createBtnText}>{t('ownProfile:training.create')}</Text>
+                </TouchableOpacity>
+            )}
 
             <FlatList
                 data={liveEvents}

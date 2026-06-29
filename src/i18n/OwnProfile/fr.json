@@ -24,12 +24,15 @@
         "following": "Abonnements"
     },
     "backbtn": {
-  "events": "Vos Événements",
-  "training": "Sessions d'Entraînement"
-},
-"membershipCard": {
-  "liteTitle": "ABONNEMENT LITE",
-  "sessionsLeft": "sessions de suivi en direct restantes",
-  "viewPlans": "Voir les forfaits et passer à un niveau supérieur"
-}
+        "events": "Vos Événements",
+        "training": "Sessions d'Entraînement"
+    },
+    "membershipCard": {
+        "liteTitle": "ABONNEMENT LITE",
+        "sessionsLeft": "sessions de suivi en direct restantes",
+        "viewPlans": "Voir les forfaits et passer à un niveau supérieur"
+    },
+    "training": {
+        "create": "CRÉER UN ÉVÉNEMENT PERSONNEL"
+    }
 }

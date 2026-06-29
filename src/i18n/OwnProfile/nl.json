@@ -24,12 +24,15 @@
         "following": "Volgend"
     },
     "backbtn": {
-  "events": "Uw Evenementen",
-  "training": "Trainingssessies"
-},
-"membershipCard": {
-  "liteTitle": "LITE LIDMAATSCHAP",
-  "sessionsLeft": "live trackingsessies over",
-  "viewPlans": "Bekijk abonnementen en upgrade"
-}
+        "events": "Uw Evenementen",
+        "training": "Trainingssessies"
+    },
+    "membershipCard": {
+        "liteTitle": "LITE LIDMAATSCHAP",
+        "sessionsLeft": "live trackingsessies over",
+        "viewPlans": "Bekijk abonnementen en upgrade"
+    },
+    "training": {
+        "create": "PERSOONLIJK EVENEMENT MAKEN"
+    }
 }
