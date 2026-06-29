@@ -14,8 +14,8 @@
     "title": "Naam evenement",
     "Date": "Datum",
     "description": "Je kunt je live tracking starten vanaf 1 uur voor je start. Zorg ervoor dat je deze app altijd open houdt en niet sluit!",
-    "buttonText": "START VOLGEN",
-    "button": "STOP VOLGEN"
+    "buttonText": "START TRACKING",
+    "button": "STOP TRACKING"
   },
   "status": {
     "gpsActive": "GPS Actief - Wachten op start race",
