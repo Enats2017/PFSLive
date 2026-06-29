@@ -35,6 +35,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   const [activeTab, setActiveTab] = useState<Tab>('Distance');
   const activeTabRef = useRef<Tab>('Distance');
   const flatListRef = useRef<FlatList>(null);
+  const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set(['Distance']));
   const { product_app_id, event_name, sourceTab, event_image } = route.params;
 
   const [tabContentHeight, setTabContentHeight] = useState(0);
@@ -87,16 +88,18 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
           />
         );
       case 'Participant':
+        if (!visitedTabs.has('Participant')) return null;
         return <ParticipantTab product_app_id={product_app_id} />;
       default:
         return null;
     }
-  }, [product_app_id, sourceTab, event_name, isLandscape, t]);
+  }, [product_app_id, sourceTab, event_name, isLandscape, visitedTabs, t]);
 
   const handleTabPress = useCallback((tab: Tab) => {
     const index = TABS.indexOf(tab);
     activeTabRef.current = tab;
     setActiveTab(tab);
+    setVisitedTabs(prev => new Set(prev).add(tab));  // ← add this
     flatListRef.current?.scrollToIndex({ index, animated: true });
   }, []);
 
@@ -106,6 +109,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
     if (swipedTab && swipedTab !== activeTabRef.current) {
       activeTabRef.current = swipedTab;
       setActiveTab(swipedTab);
+      setVisitedTabs(prev => new Set(prev).add(swipedTab));  // ← add this
     }
   }, [width]);
 
