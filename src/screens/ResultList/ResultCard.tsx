@@ -48,9 +48,6 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     const isLive = item.live_tracking_activated === 1;
     const isFemale = item.gender === 'female';
     const hasFinished = item.status === 'finished';
-    console.log(hasFinished);
-
-
     const displayDiff = item.diff;
 
     const selectedCp = selectedCheckpoint
