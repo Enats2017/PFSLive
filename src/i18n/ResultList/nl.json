@@ -32,6 +32,7 @@
     "stat_crossed": "Gepasseerd",
     "stat_expected": "Verwacht",
     "stat_dnf": "DNF",
-    "all": "Alle"
+    "all": "Alle",
+    "is_finshed": "VOLTOOID"
   }
 }

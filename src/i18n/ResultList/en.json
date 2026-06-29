@@ -33,6 +33,7 @@
     "stat_started":  "Started",
     "stat_crossed":  "Passed",
     "stat_expected": "Expected",
+    "is_finshed": "FINISHED",
     "stat_dnf":      "DNF",
     "all": "All"
   }

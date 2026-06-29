@@ -234,6 +234,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         activeTab="Home"
         product_app_id={product_app_id}
         event_name={event_name}
+        event_image={event_image}
       />
     </SafeAreaView>
   );

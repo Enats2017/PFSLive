@@ -250,7 +250,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                         <>
                             <StatItem label={t("allrace:filter.stat_started")} value={statistics.started} />
                             <Divider />
-                            <StatItem label={t("allrace:filter.stat_crossed")} value={statistics.crossed} />
+                            <StatItem label={t("allrace:filter.is_finshed")} value={statistics.crossed} />
                             <Divider />
                             <StatItem label={t("allrace:filter.stat_dnf")} value={statistics.dnf} highlight />
                         </>
