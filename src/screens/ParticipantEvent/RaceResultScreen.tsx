@@ -145,6 +145,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
                 product_app_id,
                 product_option_value_app_id: Number(item.product_option_value_app_id),
                 event_name: event_name,
+                event_image: event_image,
                 sourceScreen: 'RaceResultScreen',
                 sectionType: 'participant',
                 sourceTab: 'past',
@@ -174,6 +175,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           activeTab="Home"
           product_app_id={product_app_id}
           event_name={event_name}
+          event_image={event_image}
         />
       </SafeAreaView>
     );
@@ -194,6 +196,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           activeTab="Home"
           product_app_id={product_app_id}
           event_name={event_name}
+          event_image={event_image}
         />
       </SafeAreaView>
     );
