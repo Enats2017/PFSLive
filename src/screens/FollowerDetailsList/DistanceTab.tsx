@@ -120,6 +120,7 @@ const DistanceTab = ({
               </View>
             )}
           </View>
+          <View style={detailsStyles.verticalDivider} />
 
           <View style={{ gap:spacing.md}}>
             <TouchableOpacity
