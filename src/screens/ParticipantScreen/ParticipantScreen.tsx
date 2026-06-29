@@ -166,13 +166,13 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                 </View>
                 <View style={{paddingHorizontal:spacing.md}}>
                 <View style={fanstyle.nextEventsHeader}>
-                    <Text style={fanstyle.nextEventsTitle}>NEXT EVENTS</Text>
+                    <Text style={fanstyle.nextEventsTitle}>{t('participant:nextevetn')}</Text>
                     <TouchableOpacity
                         style={fanstyle.viewAllBtn}
                         onPress={() => navigation.navigate('ParticipantEvent')}
                         activeOpacity={0.7}
                     >
-                        <Text style={fanstyle.viewAllText}>View all</Text>
+                        <Text style={fanstyle.viewAllText}>{t('participant:viewAll')}</Text>
                         <Feather name="chevron-right" size={14} color={colors.primary} />
                     </TouchableOpacity>
                 </View>

@@ -4,6 +4,8 @@
     "athlete":"FIND AN ATHLETE",
     "favourite":"FAVOURITE ATHLETES ",
     "followers":"My Followers List",
+    "nextevetn": "NEXT EVENTS",
+    "viewAll": "View all",
 
     "nav":{
         "upcomingsub":"Discover and browse upcoming races",

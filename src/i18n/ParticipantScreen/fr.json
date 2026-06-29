@@ -4,6 +4,8 @@
     "hint": "OU",
     "showAll": "AFFICHER TOUS LES ÉVÉNEMENTS À VENIR"
   },
+   "nextevetn": "ÉVÉNEMENTS À VENIR",
+  "viewAll": "Voir tout",
   "personalRace": {
     "title": "CRÉER UNE COURSE PERSONNELLE",
     "description": "Vous participez à un événement qui ne figure pas sur notre calendrier officiel ou vous planifiez une séance d'entraînement ? Créez votre session de suivi en direct ci-dessous. Le téléchargement GPX est facultatif.",

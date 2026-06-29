@@ -184,13 +184,13 @@ const FanScreen = () => {
 
                 <View style={fanstyle.nextEventsSection}>
                     <View style={fanstyle.nextEventsHeader}>
-                        <Text style={fanstyle.nextEventsTitle}>NEXT EVENTS</Text>
+                        <Text style={fanstyle.nextEventsTitle}>{t('follow:nextevetn')}</Text>
                         <TouchableOpacity
                             style={fanstyle.viewAllBtn}
                             onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Live' })}
                             activeOpacity={0.7}
                         >
-                            <Text style={fanstyle.viewAllText}>View all</Text>
+                            <Text style={fanstyle.viewAllText}>{t('follow:viewAll')}</Text>
                             <Feather name="chevron-right" size={14} color={colors.primary} />
                         </TouchableOpacity>
                     </View>

@@ -5,6 +5,10 @@
     "hint": "OR",
     "showAll": "SHOW ALL UPCOMING EVENTS"
   },
+
+   "nextevetn": "NEXT EVENTS",
+  "viewAll": "View all",
+
   "personalRace": {
     "title": "CREATE PERSONAL RACE",
     "description": "Racing an event not on our official calendar or planning a training session? Create your live tracking session below. GPX upload is optional.",
