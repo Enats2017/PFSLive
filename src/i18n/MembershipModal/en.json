@@ -1,0 +1,24 @@
+{
+  "actionModal": {
+    "upgrade": {
+      "title": "Upgrade your membership?",
+      "description": "Your current plan will be upgraded to {{planName}} once you confirm.",
+      "confirm": "Confirm Upgrade"
+    },
+    "disabled": {
+      "title": "Downgrade not allowed",
+      "description": "You can't switch to a lower-tier plan while your current membership is active.",
+      "confirm": "Got it"
+    },
+    "locked": {
+      "title": "Use your remaining sessions first",
+      "description": "You still have sessions left on your current plan. Use them before upgrading.",
+      "confirm": "Got it"
+    },
+    "hidden": {
+  "title": "You already have an active membership",
+  "description": "You're currently subscribed through the web. Manage your membership from there.",
+  "confirm": "Got it"
+}
+  }
+}

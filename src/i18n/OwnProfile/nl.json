@@ -28,9 +28,10 @@
         "training": "Trainingssessies"
     },
     "membershipCard": {
-        "liteTitle": "LITE LIDMAATSCHAP",
+        "liteTitle": "LIDMAATSCHAP",
         "sessionsLeft": "live trackingsessies over",
-        "viewPlans": "Bekijk abonnementen en upgrade"
+        "viewPlans": "Bekijk abonnementen en upgrade",
+        "noMembershipTitle": "Geen actief lidmaatschap"
     },
     "training": {
         "create": "PERSOONLIJK EVENEMENT MAKEN"

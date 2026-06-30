@@ -10,6 +10,7 @@ export interface MembershipInfo {
     total_limit: number | null;
     total_used: number | null;
     memberships_count: number;
+    membership_name: string;
 }
 
 export interface AthleteProfile {

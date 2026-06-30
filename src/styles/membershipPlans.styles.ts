@@ -105,10 +105,10 @@ export const membershipPlansStyle = StyleSheet.create({
     },
     checkCircle: {
         position: 'absolute',
-        top: 10,
-        right: 10,
-        width: 20,
-        height: 20,
+        top: 8,
+        right: 8,
+        width: 17,
+        height: 17,
         borderRadius: 12,
         backgroundColor: colors.themeiColor,
         alignItems: 'center',
@@ -120,7 +120,7 @@ export const membershipPlansStyle = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 12,
         marginTop: 6,
-        paddingRight: 32,
+       
     },
     planName: {
         fontSize: 24,

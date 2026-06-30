@@ -28,9 +28,11 @@
         "training": "Training Sessions"
     },
     "membershipCard": {
-        "liteTitle": "LITE MEMBERSHIP",
+        "liteTitle": "MEMBERSHIP",
         "sessionsLeft": "live tracking sessions left",
-        "viewPlans": "View plans & upgrade"
+        "viewPlans": "View plans & upgrade",
+        "noMembershipTitle": "No Active Membership",
+        "noMembershipSubtitle": "Subscribe to a plan to start live tracking your sessions."
     },
     "training": {
         "create": "CREATE PERSONAL EVENT"

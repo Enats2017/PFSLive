@@ -116,6 +116,7 @@ export const API_CONFIG = {
     GET_FOLLOWER_DATA: '/get_follower_data_api.php',
     SAVE_TRACKING_LOG: '/save_tracking_log_api.php',
     HEARTBEAT_PING: '/heartbeat_ping_api.php',
+    APPLE_MEMBERSHIP_PLANS: '/apple_get_plans_api.php',
   },
 
   TIMEOUT: 15000,

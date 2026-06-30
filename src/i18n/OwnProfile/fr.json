@@ -28,9 +28,10 @@
         "training": "Sessions d'Entraînement"
     },
     "membershipCard": {
-        "liteTitle": "ABONNEMENT LITE",
+        "liteTitle": "ABONNEMENT",
         "sessionsLeft": "sessions de suivi en direct restantes",
-        "viewPlans": "Voir les forfaits et passer à un niveau supérieur"
+        "viewPlans": "Voir les forfaits et passer à un niveau supérieur",
+        "noMembershipTitle": "Aucun abonnement actif"
     },
     "training": {
         "create": "CRÉER UN ÉVÉNEMENT PERSONNEL"

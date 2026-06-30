@@ -7,10 +7,14 @@
   "infoBanner": {
     "text": "You've used your free session. Pick a plan to register and track on race day."
   },
+   "sessions": {
+    "unlimited": "Unlimited",
+    "count": "{{count}} sessions / year"
+  },
   "plans": {
     "lite": {
       "name": "LITE",
-      "badge": "2 sessions / year",
+      "badge": "{{count}} sessions / year",
       "price": "€14.99",
       "period": "/ year",
       "features": [

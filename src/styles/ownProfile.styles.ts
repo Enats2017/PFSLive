@@ -157,6 +157,7 @@ export const ownProfile = StyleSheet.create({
         fontSize: 11,
         fontWeight: '600',
         letterSpacing: 0.5,
+        textTransform: 'uppercase'
     },
     iossubtitle: {
         color: '#FFFFFF',
