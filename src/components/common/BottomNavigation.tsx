@@ -57,7 +57,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
             event_image:event_image || '',
-            sourceScreen: route.name,
+            sourceScreen: sourceScreen || route.name,
             sectionType: 'participant',
             sourceTab: 'live',
           });
@@ -71,7 +71,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
             event_image:event_image || '',
-            sourceScreen: route.name,
+            sourceScreen: sourceScreen || route.name,
             sectionType: 'participant',
             sourceTab: 'live',
             selectedDistanceLabel,
