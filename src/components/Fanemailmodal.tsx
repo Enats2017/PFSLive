@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform, Animated, KeyboardEvent, Keyboard } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -11,9 +11,9 @@ import { fanEmailApi } from '../services/Fanemailservice';
 
 
 interface FanEmailModalProps {
-  visible: boolean;
-  onSave: (email: string) => void | Promise<void>;
-  onSkip: () => void | Promise<void>;
+    visible: boolean;
+    onSave: (email: string) => void | Promise<void>;
+    onSkip: () => void | Promise<void>;
 }
 
 
@@ -26,6 +26,38 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
     const [email, setEmail] = useState('');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+
+
+    const keyboardOffset = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const onShow = (e: KeyboardEvent) => {
+            Animated.timing(keyboardOffset, {
+                toValue: e.endCoordinates.height / 2,
+                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
+                useNativeDriver: true,
+            }).start();
+        };
+
+        const onHide = (e: KeyboardEvent) => {
+            Animated.timing(keyboardOffset, {
+                toValue: 0,
+                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
+                useNativeDriver: true,
+            }).start();
+        };
+
+        const showSub = Keyboard.addListener(showEvent, onShow);
+        const hideSub = Keyboard.addListener(hideEvent, onHide);
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, [keyboardOffset]);
 
     const handleChangeText = useCallback((value: string) => {
         setEmail(value);
@@ -72,13 +104,19 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
         <Modal transparent visible={visible} animationType="fade" statusBarTranslucent onRequestClose={handleSkipPress}>
             <View style={homeStyles.notifBackdrop}>
                 <View style={homeStyles.notifWrapper}>
-                    <View style={homeStyles.notifCard}>
+                    <Animated.View
+                        style={[
+                            homeStyles.notifCard,
+                            { transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }] },
+                        ]}
+                    >
+
                         <View style={homeStyles.notifIconWrapper}>
                             <Ionicons name="mail-outline" size={36} color={colors.primary} />
                         </View>
 
                         <Text style={homeStyles.notifTitle}>{t('home:fanEmail.title')}</Text>
-                        <Text style={[homeStyles.notifBody,{marginBottom: spacing.md,}]}>{t('home:fanEmail.description')}</Text>
+                        <Text style={[homeStyles.notifBody, { marginBottom: spacing.md, }]}>{t('home:fanEmail.description')}</Text>
 
                         <View style={styles.inputWrapper}>
                             <FloatingLabelInput
@@ -115,7 +153,9 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
                                 <Text style={commonStyles.secondaryButtonText}>{t('home:fanEmail.maybeLater')}</Text>
                             </TouchableOpacity>
                         </View>
-                    </View>
+
+                    </Animated.View>
+
                 </View>
             </View>
         </Modal>

@@ -5,6 +5,7 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -20,9 +21,10 @@ import { useScreenError } from '../../hooks/useApiError';
 
 interface ParticipantTabProps {
   product_app_id: string | number;
+   event_image?: string;
 }
 
-const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
+const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_image  }) => {
   const { t } = useTranslation(['details', 'follower']);
 
   const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
@@ -191,6 +193,20 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
     [productId, isFollowed, isLoading, handleFollowPress]
   );
 
+
+  const renderListHeader = useCallback(() => (
+      <>
+        {event_image ? (
+        <Image
+          source={{ uri: event_image }}
+          style={{ width: '100%', aspectRatio: 612 / 300 }}
+          resizeMode="cover"
+        />
+      ) : null}
+        
+      </>
+  ), [event_image]);
+
   const renderFooter = useCallback(() => {
     if (loadingMore) {
       return (
@@ -292,6 +308,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id }) => {
           keyboardShouldPersistTaps="handled"
           removeClippedSubviews={false}
           ListFooterComponent={renderFooter}
+          ListHeaderComponent={renderListHeader}
         />
       )}
 

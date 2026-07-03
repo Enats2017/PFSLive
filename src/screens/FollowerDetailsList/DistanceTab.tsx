@@ -3,7 +3,8 @@ import {
   View, Text, FlatList, ActivityIndicator,
   TouchableOpacity,
   StatusBar,
-  Dimensions
+  Dimensions,
+  Image
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -26,22 +27,13 @@ interface DistanceTabProps {
   sourceTab?: 'past' | 'live' | 'upcoming';
   event_name: string;
   event_image?: string;
-  // ✅ Landscape: the OUTER ScrollView owns vertical scrolling, so the inner
-  // list must NOT scroll itself (scrollEnabled=false) and must render at full
-  // content height. Portrait: the inner list scrolls (scrollEnabled=true).
-  scrollEnabled?: boolean;
-  // ✅ Landscape only: report measured content height so the parent can size
-  // the horizontal pager to fit all rows (a paged FlatList needs a fixed page
-  // height; in landscape that height = the full list content).
-  onContentHeight?: (h: number) => void;
+
 }
 
 const DistanceTab = ({
   product_app_id,
   sourceTab = 'past',
   event_name,
-  scrollEnabled = true,
-  onContentHeight,
   event_image
 }: DistanceTabProps) => {
   const navigation = useNavigation<any>();
@@ -65,6 +57,19 @@ const DistanceTab = ({
   }, [product_app_id, t]);
 
   useFocusEffect(useCallback(() => { fetchResults(); }, [fetchResults]));
+
+  const renderListHeader = useCallback(() => (
+    <>
+      {event_image ? (
+      <Image
+        source={{ uri: event_image }}
+        style={{ width: '100%', aspectRatio: 612 / 300 }}
+        resizeMode="cover"
+      />
+    ) : null}
+      
+    </>
+  ), [event_image]);
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isPast = sourceTab === 'past';
@@ -202,17 +207,10 @@ const DistanceTab = ({
           data={results}
           keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
           showsVerticalScrollIndicator={false}
-          // ✅ Off in landscape so only the outer ScrollView scrolls (no nested
-          // vertical scrollers → iOS reaches the last row). On in portrait.
-          scrollEnabled={scrollEnabled}
           nestedScrollEnabled={true}
-          // ✅ Landscape: measure full content height so the parent sizes the
-          // pager to fit every row. Portrait: not needed (list scrolls itself).
-          onContentSizeChange={
-            onContentHeight ? (_, h) => onContentHeight(h) : undefined
-          }
           contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.md, paddingBottom: spacing.xxxl, paddingTop: spacing.md }}
           renderItem={renderItem}
+          ListHeaderComponent={renderListHeader}
         />
       )}
     </View>
