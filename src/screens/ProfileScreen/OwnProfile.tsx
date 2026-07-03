@@ -14,8 +14,8 @@ import { ownProfile } from '../../styles/ownProfile.styles';
 import EventsContent from './EventsContent';
 import TrainingContent from './TrainingContent';
 import { useDimensions } from '../../hooks/useDimensions';
-import { appleVerifyService } from '../../services/appleverifyservice';
-import PurchaseStatusModal from '../../components/PurchaseStatusModal';
+// import { appleVerifyService } from '../../services/appleverifyservice';
+// import PurchaseStatusModal from '../../components/PurchaseStatusModal';
 
 type SectionKey = 'menu' | 'events' | 'training' | 'account'
 interface MenuContentProps {
