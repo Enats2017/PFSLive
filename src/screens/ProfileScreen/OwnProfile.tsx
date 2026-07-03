@@ -1,8 +1,8 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, Image, StatusBar, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, commonStyles, spacing } from '../../styles/common.styles'
-import { Ionicons, FontAwesome5, FontAwesome6 } from '@expo/vector-icons'
+import { Ionicons, FontAwesome5, FontAwesome6, FontAwesome } from '@expo/vector-icons'
 import { eventService, AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { FlatList } from 'react-native-gesture-handler'
 import { OwnProfileprops } from '../../types/navigation';
@@ -14,6 +14,8 @@ import { ownProfile } from '../../styles/ownProfile.styles';
 import EventsContent from './EventsContent';
 import TrainingContent from './TrainingContent';
 import { useDimensions } from '../../hooks/useDimensions';
+import { appleVerifyService } from '../../services/appleverifyservice';
+import PurchaseStatusModal from '../../components/PurchaseStatusModal';
 
 type SectionKey = 'menu' | 'events' | 'training' | 'account'
 interface MenuContentProps {
@@ -35,15 +37,13 @@ const TABS: Tab[] = ['Past', 'Live'];
 
 const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile }) => {
     const { t } = useTranslation('ownProfile');
-
-
     return (
         <View style={ownProfile.menuSection}>
             {profile?.is_own_profile === 1 && (
                 Platform.OS === 'ios' ? (
                     <View style={ownProfile.ioscard}>
                         <View style={ownProfile.iosheader}>
-                            <Ionicons name="cube-outline" size={18} color={colors.themeiColor} />
+                            <Ionicons name="navigate-circle-outline" size={24} color={colors.themeiColor} />
                             <Text style={ownProfile.iostitle}>
                                 {profile?.membership_info?.has_membership && profile?.membership_info?.membership_name
                                     ? `${profile?.membership_info?.membership_name} ${t('ownProfile:membershipCard.liteTitle')}`
@@ -78,7 +78,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                     </View>
                 ) : (
                     <TouchableOpacity style={ownProfile.trackingBanner} activeOpacity={0.85}>
-                        <Ionicons name="cube" size={40} color="black" />
+                        <Ionicons name="navigate-circle-outline" size={30} color="black" />
                         <View style={ownProfile.trackingTextWrapper}>
                             {profile?.membership_info?.unlimited ? (
                                 <>
@@ -174,10 +174,39 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const navigation = useNavigation();
     const targetId = route.params?.customer_app_id ?? 0;
     const fromEdit = route.params?.fromEdit;
+    //const { pendingTransactionId } = (route.params as any) ?? {};
+    //console.log(pendingTransactionId);
+
+    // const [purchaseModalVisible, setPurchaseModalVisible] = useState(false);
+    // const [purchaseStatus, setPurchaseStatus] = useState<'processing' | 'success' | 'error'>('processing');
+    // const [purchaseErrorMsg, setPurchaseErrorMsg] = useState<string | null>(null);
+
 
     const goBack = useCallback(() => setActiveSection('menu'), [])
 
     const { error, hasError, handleApiError, clearError } = useScreenError();
+
+    // useEffect(() => {
+    //     if (!pendingTransactionId) return;
+
+    //     const verify = async () => {
+    //         setPurchaseStatus('processing');
+    //         setPurchaseModalVisible(true);
+    //         try {
+    //             await appleVerifyService.verifyPurchase(pendingTransactionId);
+    //             setPurchaseStatus('success');
+    //             setTimeout(() => {
+    //                 setPurchaseModalVisible(false);
+    //                 // call your profile refetch here if you have one
+    //             }, 3000);
+    //         } catch (error: any) {
+    //             setPurchaseStatus('error');
+    //             setPurchaseErrorMsg(error?.message || 'Verification failed');
+    //         }
+    //     };
+
+    //     verify();
+    // }, [pendingTransactionId]);
 
     React.useEffect(() => {
         if (!targetId || targetId === 0) {
@@ -412,6 +441,13 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                     </View>
                 </View>
             </ScrollView>
+
+            {/* <PurchaseStatusModal
+            visible={purchaseModalVisible}
+            status={purchaseStatus}
+            errorMessage={purchaseErrorMsg}
+            onClose={() => setPurchaseModalVisible(false)}
+        /> */}
         </SafeAreaView>
     )
 }
