@@ -28,6 +28,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   const [containerWidth, setContainerWidth] = useState(0);
   const isGestureNav = insets.bottom > 0;
   const width = containerWidth || windowWidth;
+  const isLandscape = width
 
   const [activeTab, setActiveTab] = useState<Tab>('Distance');
   const activeTabRef = useRef<Tab>('Distance');
@@ -102,7 +103,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   return (
     <SafeAreaView
       style={commonStyles.container}
-      edges={isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}
+      edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}
     >
       <StatusBar barStyle="dark-content" />
       <AppHeader showLogo={true} />
