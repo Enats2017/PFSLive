@@ -207,7 +207,8 @@ export default ({ config }) => {
 
     // ✅ Updates Configuration
     updates: {
-      url: "https://u.expo.dev/e72144dd-72cd-47f1-8409-125734130233"
+      url: "https://u.expo.dev/e72144dd-72cd-47f1-8409-125734130233",
+      fallbackToCacheTimeout: 5000,  // ← add this line
     },
     runtimeVersion: {
       policy: "appVersion"
