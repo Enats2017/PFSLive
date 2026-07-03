@@ -1,4 +1,5 @@
 import axios from "axios";
+import { Platform } from "react-native";
 import { API_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
 import { tokenService } from "./tokenService";
 import { getCurrentLanguageId } from "../i18n";
@@ -92,6 +93,10 @@ const buildRegisterFormData = async (
   formData.append("gender", data.gender.toLowerCase());
   formData.append("i_agree", I_AGREE_VALUE);
   formData.append("device_id", deviceId);
+  // OS the account was created on. Platform.OS is 'ios' | 'android' in RN;
+  // on web it can be 'web' — the backend clamps to an allowed set and defaults
+  // to 'android' for anything unexpected, matching the column default.
+  formData.append("platform", Platform.OS);
 
   // Attach profile picture if provided
   if (data.profileImage) {
