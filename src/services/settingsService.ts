@@ -1,4 +1,5 @@
-import { API_CONFIG, getApiEndpoint } from '../constants/config';
+import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
+import { getCurrentLanguageId } from '../i18n';
 import { tokenService } from './tokenService';
 
 // ── Interfaces ────────────────────────────────────────────────────
@@ -9,13 +10,18 @@ export interface Settings {
 
 interface GetSettingsResponse {
     success: boolean;
-    data: { settings: Settings; account_deletion_url?: string };
+    data: { settings: Settings; account_deletion_url?: string,  language_id: number; };
     error: string | null;
 }
 
 interface UpdateSettingsResponse {
     success: boolean;
-    data: { updated: number; settings: Settings; account_deletion_url?: string };
+    data: {
+        updated: number;
+        settings: Settings;
+        account_deletion_url?: string;
+        language_id: number;
+    };
     errors?: string[];
     error: string | null;
 }
@@ -48,17 +54,20 @@ class SettingsService {
     }
 
     // ✅ Returns Settings directly — screen doesn't need to dig into response
-    async getSettings(): Promise<{ settings: Settings; accountDeletionUrl: string }> {
+    async getSettings(): Promise<{ settings: Settings; accountDeletionUrl: string, languageId: number }> {
         const json = await this.request<GetSettingsResponse>({ action: 'get' });
         return {
             settings: json.data.settings,
             accountDeletionUrl: json.data.account_deletion_url ?? '',
+            languageId: json.data.language_id,
         };
     }
 
     // ✅ Returns Settings directly — public always gets empty password
-    async updateSettings(settings: Settings): Promise<Settings> {
-        const json = await this.request<UpdateSettingsResponse>({
+   async updateSettings(settings: Settings): Promise<{ settings: Settings; languageId: number }> {
+        const deviceId = await getDeviceId();
+        const language_id = getCurrentLanguageId();
+        const body: Record<string, unknown> = {
             action: 'update',
             settings: {
                 live_tracking_visibility: settings.live_tracking_visibility,
@@ -67,8 +76,24 @@ class SettingsService {
                         ? ''
                         : settings.live_tracking_password.trim(),
             },
-        });
-        return json.data.settings;
+        };
+
+        // top-level, siblings of `action`/`settings` — backend reads these
+        // directly off $post_data, not from inside settings
+        if (language_id) {
+            body.language_id = language_id;
+        }
+        if (deviceId) {
+            body.device_id = deviceId;
+        }
+         console.log('[SettingsService.updateSettings] Outgoing body:', JSON.stringify(body, null, 2))
+
+        const json = await this.request<UpdateSettingsResponse>(body);
+        console.log('[SettingsService.updateSettings] Response json:', JSON.stringify(json, null, 2));
+        return {
+            settings: json.data.settings,
+            languageId: json.data.language_id,
+        };
     }
 }
 
