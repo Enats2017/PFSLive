@@ -49,6 +49,8 @@ import { colors, spacing, typography, commonStyles } from '../styles/common.styl
 import { homeStyles } from '../styles/home.styles';
 import FollowingLiveEventsSection from './FollowingLiveEventsSection';
 import { useDimensions } from '../hooks/useDimensions';
+import { FanEmailModal } from '../components/Fanemailmodal';
+import { fanEmailStorage } from '../utils/fanEmailStorage';
 
 // ==================== TYPES ====================
 
@@ -149,6 +151,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const isGestureNav = insets.bottom > 0;
   const isLandscape = width
+  const [showFanEmailModal, setShowFanEmailModal] = useState(false);
+
+
 
   // ✅ Notifications hook
   const {
@@ -1347,6 +1352,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, [isGPSActive, participantId, eventId, loadQueueSize, stopGPSTracking, showPowerSavingModal, homeData?.next_race_category_id, homeData?.manual_start]);
 
   // Smart polling with version check
+  const handleFanPress = useCallback(async () => {
+    const alreadyPrompted = await fanEmailStorage.hasBeenPrompted();
+
+    if (alreadyPrompted) {
+      // Already asked once on this device — skip modal, go straight in
+      navigation.navigate('FanScreen'); // swap for your real fan destination
+      return;
+    }
+
+    setShowFanEmailModal(true);
+  }, [navigation]);
+
   useFocusEffect(
     useCallback(() => {
       checkAppVersion();
@@ -1885,18 +1902,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <FollowingLiveEventsSection
               events={homeData.following_live_events}
               onRoutePress={(event) => {
-               
-                
+
+
                 if (event.event_source == "custom") {
-                   navigation.navigate('LiveTracking', {
-                      product_app_id: event.product_app_id,
-                      product_option_value_app_id: event.product_option_value_app_id,
-                      event_name: event.event_name,
-                      sourceScreen: 'HomeScreen',
-                      sectionType: 'follower',
-                      sourceTab: 'live',
-                      event_source: event.event_source,
-                    });
+                  navigation.navigate('LiveTracking', {
+                    product_app_id: event.product_app_id,
+                    product_option_value_app_id: event.product_option_value_app_id,
+                    event_name: event.event_name,
+                    sourceScreen: 'HomeScreen',
+                    sectionType: 'follower',
+                    sourceTab: 'live',
+                    event_source: event.event_source,
+                  });
                 } else {
                   navigation.navigate('FollowDetails', {
                     product_app_id: event.product_app_id,
@@ -1919,7 +1936,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity
             style={homeStyles.button}
-            onPress={() => navigation.navigate('FanScreen')}
+            onPress={handleFanPress}
           >
             <Text style={homeStyles.buttonText}>{t('home:button.Fan')}</Text>
           </TouchableOpacity>
@@ -1948,6 +1965,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           </View>
         </View> */}
       </ScrollView>
+      <FanEmailModal
+        visible={showFanEmailModal}
+        onSave={async (email) => {
+          if (API_CONFIG.DEBUG) console.log('📧 email saved:', email);
+          await fanEmailStorage.markPrompted();
+          setShowFanEmailModal(false);
+          navigation.navigate('FanScreen');
+        }}
+        onSkip={async () => {
+          await fanEmailStorage.markPrompted();
+          setShowFanEmailModal(false);
+          navigation.navigate('FanScreen');
+        }}
+      />
     </SafeAreaView>
   );
 };
