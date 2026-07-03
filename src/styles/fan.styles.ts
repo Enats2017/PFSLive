@@ -92,6 +92,9 @@ export const fanstyle = StyleSheet.create({
     width: 160,
     height: 112, // was: 100
     resizeMode: "cover",
+    
+    position: 'relative',   // 👈 add this
+    overflow: 'hidden',
   },
   // favBadge: {
   //     position: 'absolute',
