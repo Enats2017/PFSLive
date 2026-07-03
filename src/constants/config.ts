@@ -117,6 +117,8 @@ export const API_CONFIG = {
     SAVE_TRACKING_LOG: '/save_tracking_log_api.php',
     HEARTBEAT_PING: '/heartbeat_ping_api.php',
     APPLE_MEMBERSHIP_PLANS: '/apple_get_plans_api.php',
+    APPLE_VERIFY_PURCHASE: '/apple_verify_purchase_api.php',
+    UPDATE_FOLLOWER_EMAIL: '/update_follower_email_api.php',
   },
 
   TIMEOUT: 15000,

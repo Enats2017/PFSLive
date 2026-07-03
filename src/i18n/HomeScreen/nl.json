@@ -102,5 +102,15 @@
     "message": "Je live locatie wordt tijdens de wedstrijd met je volgers gedeeld. Houd Livio actief en je telefoon bij je tot je finisht. Klaar om te starten?",
     "yes": "Ja, start tracking",
     "no": "Nog niet"
-  }
+  },
+  "fanEmail": {
+  "title": "Blijf op de hoogte",
+  "description": "Voer je e-mailadres in en we sturen je race-updates, resultaten en af en toe Livio-nieuws. Geen account nodig, alleen je e-mailadres.",
+  "emailPlaceholder": "naam@voorbeeld.com",
+  "invalidEmail": "Voer een geldig e-mailadres in.",
+  "save": "Opslaan",
+  "maybeLater": "Misschien later",
+  "savedTitle": "E-mailadres opgeslagen",
+  "savedMessage": "We houden je op de hoogte van race-updates."
+}
 }

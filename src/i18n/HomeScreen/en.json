@@ -102,5 +102,15 @@
     "message": "Your live location will be shared with your followers throughout the race. Keep Livio running and your phone with you until you finish. Ready to go?",
     "yes": "Yes, Start Tracking",
     "no": "Not Yet"
+  },
+   "fanEmail": {
+    "title": "Stay in the loop",
+    "description": "Enter your email and we'll send you race updates, results, and the occasional Livio news. No account needed—just your email.",
+    "emailPlaceholder": "name@example.com",
+    "invalidEmail": "Enter a valid email address.",
+    "save": "Save",
+    "maybeLater": "Maybe later",
+    "savedTitle": "Email saved",
+    "savedMessage": "We'll keep you posted on race updates."
   }
 }
