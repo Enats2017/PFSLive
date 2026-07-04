@@ -238,9 +238,11 @@ export const eventService = {
     try {
       const headers = await API_CONFIG.getHeaders();
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.DELETE_CUSTOM_EVENT);
-
+      const deviceId = await getDeviceId();
+      
       const requestBody = {
         product_custom_app_id: productCustomAppId,
+        device_id: deviceId,
       };
 
       if (API_CONFIG.DEBUG) {
