@@ -6,6 +6,7 @@ import { tokenService } from './tokenService';
 export interface Settings {
     live_tracking_visibility: 'public' | 'private';
     live_tracking_password: string;
+
 }
 
 interface GetSettingsResponse {
@@ -64,9 +65,9 @@ class SettingsService {
     }
 
     // ✅ Returns Settings directly — public always gets empty password
-   async updateSettings(settings: Settings): Promise<{ settings: Settings; languageId: number }> {
+   async updateSettings(settings: Settings, languageId?: number): Promise<{ settings: Settings; languageId: number }> {
         const deviceId = await getDeviceId();
-        const language_id = getCurrentLanguageId();
+        const language_id = languageId ?? getCurrentLanguageId();
         const body: Record<string, unknown> = {
             action: 'update',
             settings: {
