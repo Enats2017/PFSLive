@@ -78,12 +78,27 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     const lastIdx = Math.max(checkpoints.length - 1, 0);
     const idx1 = isCheckpointMode && selectedCheckpointIndex !== null ? Math.min(selectedCheckpointIndex, lastIdx): null;
     const idx2 = idx1 !== null ? Math.min(idx1 + 1, lastIdx) : null;
-    const idx3 = idx2 !== null ? Math.min(idx2 + 1, lastIdx) : null;
     
+    // cp3 = the FINISH checkpoint (is_finish is true only on the last one), so the
+    // third column always shows finish data. Falls back to the last checkpoint if
+    // none is flagged. Only shown when the finish is genuinely beyond cp2, so it
+    // doesn't duplicate cp2 near the end of the course.
+    const finishIdx = (() => {
+        if (checkpoints.length === 0) return null;
+        const fi = checkpoints.findIndex(cp => cp.is_finish === true);
+        return fi >= 0 ? fi : lastIdx;
+    })();
+    const idx3 = (finishIdx !== null) ? finishIdx : null;
+    
+    console.log('idx3');
+    console.log(idx3);
 
     const cp1 = idx1 !== null ? checkpoints[idx1] : null;
     const cp2 = idx2 !== null ? checkpoints[idx2] : null;
     const cp3 = idx3 !== null ? checkpoints[idx3] : null;
+
+    console.log('cp3');
+    console.log(cp3);
 
     const displayGenderRank =
     cp1?.rank_agegroup || item.finish_rank_gender;
@@ -224,7 +239,15 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     ) : isCheckpointMode ? (
                         <>
                             {renderCpColumn(cp2, resultListStyle.statColMid)}
-                            {renderCpColumn(cp3)}
+                            {/* {renderCpColumn(cp3)} */}
+                            <View style={resultListStyle.statCol}>
+                                <Text style={resultListStyle.statLabel} numberOfLines={1}>
+                                    {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
+                                </Text>
+                                <Text style={resultListStyle.statVal}>
+                                    {formatClockTime(finishCp?.actual_time) || '-'}
+                                </Text>
+                            </View>
                         </>
                     ) : (
                         <>

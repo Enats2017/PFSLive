@@ -115,6 +115,7 @@ export const API_CONFIG = {
     VERIFY_TRACKING_PASSWORD: '/verify_tracking_password_api.php',
     GET_FOLLOWER_DATA: '/get_follower_data_api.php',
     SAVE_TRACKING_LOG: '/save_tracking_log_api.php',
+    SAVE_TRACKING_START: '/save_tracking_start_api.php',
     HEARTBEAT_PING: '/heartbeat_ping_api.php',
     APPLE_MEMBERSHIP_PLANS: '/apple_get_plans_api.php',
     APPLE_VERIFY_PURCHASE: '/apple_verify_purchase_api.php',

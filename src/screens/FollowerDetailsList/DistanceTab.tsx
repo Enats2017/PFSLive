@@ -111,7 +111,7 @@ const DistanceTab = ({
             </View>
             <View style={detailsStyles.metaRow}>
               <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
+              <Text style={commonStyles.subtitlered} numberOfLines={1}>
                 {item.dnf_count} {t('details:dnf')}
               </Text>
             </View>

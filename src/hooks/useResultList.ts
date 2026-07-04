@@ -7,6 +7,7 @@ import {
   Pagination,
   FilterOption,
   Statistics,
+  CheckpointListItem,
 } from "../services/resultList";
 import { API_CONFIG } from "../constants/config";
 // ADD these two imports
@@ -65,6 +66,7 @@ export const useResultList = (
   const [distances, setDistances] = useState<Distance[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [results, setResults] = useState<RaceResult[]>([]);
+  const [checkpointsList, setCheckpointsList] = useState<CheckpointListItem[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [favBibs, setFavBibs] = useState<Set<string>>(new Set());
   const [initialLoad, setInitialLoad] = useState(true);
@@ -181,6 +183,14 @@ export const useResultList = (
         setResults((prev) =>
           mode === "paginate" ? [...prev, ...data.results] : data.results,
         );
+
+        // Keep the checkpoint list from the backend. It's event-level and always
+        // populated when a start list exists, so the filter survives an empty
+        // results set. Only update when the backend sends a non-empty list, so a
+        // zero-crossing checkpoint response (empty results) doesn't wipe it.
+        if (Array.isArray(data.checkpoints_list) && data.checkpoints_list.length > 0) {
+          setCheckpointsList(data.checkpoints_list);
+        }
 
         setStatistics(data.statistics);
 
@@ -483,13 +493,27 @@ export const useResultList = (
   const displayResults = useMemo<RaceResult[]>(() => results, [results]);
 
   const checkpointOptions = useMemo<FilterOption[]>(() => {
-    if (results.length === 0) {
+    const allOption: FilterOption = {
+      label: t("allrace:filter.all"),
+      value: "",
+    };
+
+    // Prefer the backend event-level list (survives empty results).
+    if (checkpointsList.length > 0) {
       return [
-        {
-          label: t("allrace:filter.all"),
-          value: "",
-        },
+        allOption,
+        ...checkpointsList
+          .filter((cp) => !cp.is_start)
+          .map((cp, displayIndex) => ({
+            label: cp.name?.trim() ? cp.name : `Checkpoint ${displayIndex + 1}`,
+            value: String(cp.checkpoint_index),
+          })),
       ];
+    }
+
+    // Fallback: derive from results (older backend without checkpoints_list).
+    if (results.length === 0) {
+      return [allOption];
     }
 
     const representative = results.reduce(
@@ -503,11 +527,7 @@ export const useResultList = (
     const allCheckpoints = representative.checkpoints ?? [];
 
     return [
-      {
-        label: t("allrace:filter.all"),
-        value: "",
-      },
-
+      allOption,
       ...allCheckpoints
         .map((cp, index) => ({ cp, index }))
         .filter(({ cp }) => !cp.is_start)
@@ -516,7 +536,7 @@ export const useResultList = (
           value: String(index),
         })),
     ];
-  }, [results, t]);
+  }, [checkpointsList, results, t]);
 
   const onCheckpointSelect = useCallback(
     (opt: FilterOption): void => {
