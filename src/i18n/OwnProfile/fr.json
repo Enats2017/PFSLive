@@ -35,5 +35,12 @@
     },
     "training": {
         "create": "CRÉER UN ÉVÉNEMENT PERSONNEL"
-    }
+    },
+    "deleteEvent": {
+    "confirmTitle": "Supprimer cet événement ?",
+    "confirmMessage": "\"{{name}}\" sera supprimé définitivement. Cette action est irréversible.",
+    "cancel": "Annuler",
+    "confirm": "Supprimer",
+    "trackingStartedError": "Cet événement ne peut plus être supprimé, car le suivi a déjà commencé."
+}
 }

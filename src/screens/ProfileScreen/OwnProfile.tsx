@@ -14,6 +14,7 @@ import { ownProfile } from '../../styles/ownProfile.styles';
 import EventsContent from './EventsContent';
 import TrainingContent from './TrainingContent';
 import { useDimensions } from '../../hooks/useDimensions';
+import { DeleteEventModal } from '../../components/DeleteEventModal';
 // import { appleVerifyService } from '../../services/appleverifyservice';
 // import PurchaseStatusModal from '../../components/PurchaseStatusModal';
 
@@ -174,6 +175,8 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const navigation = useNavigation();
     const targetId = route.params?.customer_app_id ?? 0;
     const fromEdit = route.params?.fromEdit;
+    const [deleteTarget, setDeleteTarget] = useState<AthleteEvent | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     //const { pendingTransactionId } = (route.params as any) ?? {};
     //console.log(pendingTransactionId);
 
@@ -350,6 +353,40 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
         }
     }, [loadingMorePast, pagination.past, targetId]);
 
+    const handleDeleteRequest = useCallback((event: AthleteEvent) => {
+        if (event.can_delete !== 1 || !event.product_custom_app_id) return;
+        setDeleteTarget(event);
+    }, []);
+
+
+    const handleCancelDelete = useCallback(() => {
+        if (isDeleting) return;
+        setDeleteTarget(null);
+    }, [isDeleting]);
+
+
+    const handleConfirmDelete = useCallback(async () => {
+        if (!deleteTarget?.product_custom_app_id) return;
+        try {
+            setIsDeleting(true);
+            const { action } = await eventService.deleteCustomEvent(deleteTarget.product_custom_app_id);
+
+            if (action === 'custom_event_deleted' || action === 'custom_event_not_found') {
+                setDeleteTarget(null);
+            // Same pattern as fromEdit — force a fresh fetch, bypassing the backend cache
+            await fetchProfile(true);
+                
+            } else if (action === 'tracking_already_started') {
+                setDeleteTarget(null);
+                handleApiError(t('ownProfile:deleteEvent.trackingStartedError'));
+            }
+        } catch (err) {
+            handleApiError(err);
+        } finally {
+            setIsDeleting(false);
+        }
+    }, [deleteTarget, handleApiError, t]);
+
     const renderContent = (): React.ReactNode => {
 
         if (activeSection === 'menu') return <MenuContent onSelect={setActiveSection} onNavigate={(screen) => navigation.navigate(screen as never)} profile={profile} />;
@@ -379,6 +416,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
             loadMoreLive={loadMoreLive}
             loadingMoreLive={loadingMoreLive}
             pagination={pagination}
+            onDeleteEvent={handleDeleteRequest}
         />;
 
         return null;
@@ -448,6 +486,14 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
             errorMessage={purchaseErrorMsg}
             onClose={() => setPurchaseModalVisible(false)}
         /> */}
+
+        <DeleteEventModal
+            visible={!!deleteTarget}
+            event={deleteTarget}
+            isDeleting={isDeleting}
+            onCancel={handleCancelDelete}
+            onConfirm={handleConfirmDelete}
+        />
         </SafeAreaView>
     )
 }

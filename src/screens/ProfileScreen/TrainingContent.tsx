@@ -25,6 +25,7 @@ interface TrainingContentProps {
     pagination: {
         live: { page: number; total_pages: number };
     };
+    onDeleteEvent: (event: AthleteEvent) => void;
 }
 
 const TrainingContent: React.FC<TrainingContentProps> = ({
@@ -34,6 +35,7 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
     loadingMoreLive,
     pagination,
     profile,
+    onDeleteEvent,
 }) => {
     const hasMore = pagination.live.page < pagination.live.total_pages;
     const { t } = useTranslation(['profile', "ownProfile"]);
@@ -58,6 +60,7 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
         <EventCard
             item={item}
             isOwnProfile={profile?.is_own_profile === 1} 
+            onDelete={onDeleteEvent}
         />
 
     ), []);
@@ -112,6 +115,8 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
                 showsVerticalScrollIndicator={false}
+                scrollEnabled={false}          // NEW — outer ScrollView handles scrolling instead
+    nestedScrollEnabled={true} 
                 contentContainerStyle={{
                     paddingHorizontal: spacing.md,
                     paddingTop: spacing.xs,
