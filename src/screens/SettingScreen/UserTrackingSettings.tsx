@@ -11,6 +11,8 @@ import { settingsService, Settings } from '../../services/settingsService';
 import { toastSuccess, toastError } from '../../../utils/toast';
 import { styles } from '../../styles/liveTrackingSettings.styles';
 import { LanguageSelector, LanguageOption, LANGUAGE_OPTIONS } from './LanguageSelector';
+import { saveLanguage, getLanguageCodeFromId } from '../../i18n';
+import { useLanguageStore } from '../../store/useLanguageStore';
 
 type Visibility = 'public' | 'private';
 
@@ -47,6 +49,8 @@ export const UserTrackingSettings: React.FC = () => {
     const slideAnim = useRef(new Animated.Value(400)).current;
     const keyboardOffset = useRef(new Animated.Value(0)).current;
     const cardScale = useRef(new Animated.Value(1)).current;
+
+    const { changeLanguage } = useLanguageStore();
 
     useEffect(() => { loadSettings(); }, []);
 
@@ -95,6 +99,11 @@ export const UserTrackingSettings: React.FC = () => {
             syncState(settings);
             setDeletionUrl(accountDeletionUrl);
             syncLanguage(languageId);
+            const langCode = getLanguageCodeFromId(languageId);
+        if (langCode) {
+            await saveLanguage(langCode);
+            await changeLanguage(langCode);
+        }
         } catch (e: any) {
             console.error('❌ [Settings] Load error:', e?.message);
             toastError(t('setting:liveTrackingSettings.toastErrorLoad'));
@@ -148,6 +157,12 @@ export const UserTrackingSettings: React.FC = () => {
             );
             syncState(settings);
             syncLanguage(languageId);
+             const langCode = getLanguageCodeFromId(option.value);
+        if (langCode) {
+            await saveLanguage(langCode);
+            await changeLanguage(langCode);
+        }
+        toastSuccess(t('setting:liveTrackingSettings.toastSuccess'));
         } catch (e: any) {
             console.error('❌ [Settings] Language update error:', e?.message);
             toastError(t('setting:liveTrackingSettings.toastErrorSave'));

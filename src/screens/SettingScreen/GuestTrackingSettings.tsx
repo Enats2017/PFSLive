@@ -3,9 +3,11 @@ import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector, LANGUAGE_OPTIONS, LanguageOption } from './LanguageSelector';
 import { guestSettingsService } from '../../services/guestSettingsService';
-import { toastError } from '../../../utils/toast';
+import { toastError, toastSuccess } from '../../../utils/toast';
 import { commonStyles } from '../../styles/common.styles';
 import { styles } from '../../styles/liveTrackingSettings.styles';
+import { saveLanguage, getLanguageCodeFromId } from '../../i18n';
+import { useLanguageStore } from '../../store/useLanguageStore';
 
 export const GuestTrackingSettings: React.FC = () => {
     const { t } = useTranslation(['setting']);
@@ -14,14 +16,25 @@ export const GuestTrackingSettings: React.FC = () => {
 
     useEffect(() => { loadLanguage(); }, []);
 
+    const { changeLanguage } = useLanguageStore();
+
     const loadLanguage = async () => {
         try {
             const { languageId } = await guestSettingsService.getLanguage();
             const match = LANGUAGE_OPTIONS.find(o => o.value === languageId);
-            if (match) setSelectedLanguage(match);
+            if (match) {
+                setSelectedLanguage(match);
+                const langCode = getLanguageCodeFromId(languageId);
+                if (langCode) {
+                    await saveLanguage(langCode);
+                    await changeLanguage(langCode);
+                }
+            }
+        
         } catch (e: any) {
             console.error('❌ [GuestSettings] Load error:', e?.message);
             toastError(t('setting:liveTrackingSettings.toastErrorLoad'));
+
         }
     };
 
@@ -31,6 +44,12 @@ export const GuestTrackingSettings: React.FC = () => {
         try {
             setIsUpdating(true);
             await guestSettingsService.updateLanguage(option.value);
+             const langCode = getLanguageCodeFromId(option.value);
+        if (langCode) {
+            await saveLanguage(langCode);
+            await changeLanguage(langCode);
+        }
+        toastSuccess(t('setting:liveTrackingSettings.toastSuccess'));
         } catch (e: any) {
             console.error('❌ [GuestSettings] Update error:', e?.message);
             toastError(t('setting:liveTrackingSettings.toastErrorSave'));
