@@ -40,6 +40,7 @@ export interface Checkpoint {
   day_name: string;
   is_crossed: boolean;
   is_start: boolean;
+  is_finish: boolean;
   diff: string;   
 }
 
@@ -50,8 +51,8 @@ export interface CheckpointListItem {
   checkpoint_index: number;
   name: string;
   distance: string;
-  is_start: number;
-  is_finish: number;
+  is_start: boolean;
+  is_finish: boolean;
 }
 
 export interface FilterOption {
