@@ -90,10 +90,15 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     })();
     const idx3 = (finishIdx !== null) ? finishIdx : null;
     
+    console.log('idx3');
+    console.log(idx3);
 
     const cp1 = idx1 !== null ? checkpoints[idx1] : null;
     const cp2 = idx2 !== null ? checkpoints[idx2] : null;
     const cp3 = idx3 !== null ? checkpoints[idx3] : null;
+
+    console.log('cp3');
+    console.log(cp3);
 
     const displayGenderRank =
     cp1?.rank_agegroup || item.finish_rank_gender;
@@ -234,7 +239,15 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     ) : isCheckpointMode ? (
                         <>
                             {renderCpColumn(cp2, resultListStyle.statColMid)}
-                            {renderCpColumn(cp3)}
+                            {/* {renderCpColumn(cp3)} */}
+                            <View style={resultListStyle.statCol}>
+                                <Text style={resultListStyle.statLabel} numberOfLines={1}>
+                                    {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
+                                </Text>
+                                <Text style={resultListStyle.statVal}>
+                                    {formatClockTime(finishCp?.actual_time) || '-'}
+                                </Text>
+                            </View>
                         </>
                     ) : (
                         <>
