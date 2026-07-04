@@ -43,14 +43,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     }
   };
 
-  const handleSettingPress = async () => {
-    const isValid = await tokenService.isTokenValid();
-    if (isValid) {
-      navigation.navigate('LiveTrackingSettings');
-    } else {
-      navigation.navigate('LoginScreen');
-    }
-  };
+ const handleSettingPress = () => {
+  navigation.navigate('LiveTrackingSettings');
+};
 
   // ✅ Guard: only navigate if product_app_id is defined
   const handleSearchPress = () => {
