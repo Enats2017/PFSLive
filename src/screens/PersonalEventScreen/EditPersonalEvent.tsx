@@ -189,7 +189,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
       const customer_app_id = await tokenService.getCustomerId();
       if (API_CONFIG.DEBUG) console.log('🔑 Customer ID from storage:', customer_app_id);
 
-      navigation.navigate('ProfileScreen', {
+      navigation.navigate('OwnProfile', {
         customer_app_id: customer_app_id || 0,
         fromEdit: true,
       });
