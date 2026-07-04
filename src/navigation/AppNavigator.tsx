@@ -106,6 +106,7 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen name="FollowersList" component={FollowersList} options={noGesture} />
           <Stack.Screen name="FanScreen" component={FanScreen} options={noGesture} />
           <Stack.Screen name="MembershipPlansScreen" component={MembershipPlansScreen} options={noGesture} />
+          <Stack.Screen name="LiveTrackingSettings" component={LiveTrackingSettings} options={noGesture} />
 
            <Stack.Screen
             name="LiveTracking"
@@ -135,7 +136,7 @@ export const AppNavigator: React.FC = () => {
               <Stack.Screen name="OTPVerificationScreen" component={OTPVerificationScreen} options={noGesture} />
               <Stack.Screen name="EditProfileScreen"    component={EditProfileScreen}    options={noGesture} />
               <Stack.Screen name="EditPersonalEvent"    component={EditPersonalEvent}    options={noGesture} />
-              <Stack.Screen name="LiveTrackingSettings" component={LiveTrackingSettings} options={noGesture} />
+              
               <Stack.Screen name="OwnProfile" component={OwnProfile} options={noGesture} />
             </>
           )}
