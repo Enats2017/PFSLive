@@ -35,5 +35,12 @@
     },
     "training": {
         "create": "PERSOONLIJK EVENEMENT MAKEN"
-    }
+    },
+    "deleteEvent": {
+    "confirmTitle": "Dit evenement verwijderen?",
+    "confirmMessage": "\"{{name}}\" wordt permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
+    "cancel": "Annuleren",
+    "confirm": "Verwijderen",
+    "trackingStartedError": "Dit evenement kan niet meer worden verwijderd omdat de tracking al is gestart."
+}
 }

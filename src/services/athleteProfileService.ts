@@ -40,6 +40,19 @@ export interface AthleteEvent {
   product_custom_app_id?: number;
 }
 
+interface DeleteCustomEventResponse {
+    success: boolean;
+    data: {
+        action: 'custom_event_deleted' | 'custom_event_not_found' | 'tracking_already_started';
+        deleted?: {
+            product_custom_app_id: number;
+            name: string;
+            race_date: string;
+        };
+    };
+    error: string | null;
+}
+
 export interface EventTabs {
   past: AthleteEvent[];
   live: AthleteEvent[];
@@ -211,6 +224,52 @@ export const eventService = {
     } catch (error: any) {
       if (API_CONFIG.DEBUG) {
         console.error("❌ Error fetching athlete profile:", {
+          message: error.message,
+          response: error.response?.data,
+        });
+      }
+      throw error;
+    }
+  },
+
+  async deleteCustomEvent(
+    productCustomAppId: number,
+  ): Promise<DeleteCustomEventResponse["data"]> {
+    try {
+      const headers = await API_CONFIG.getHeaders();
+      const url = getApiEndpoint(API_CONFIG.ENDPOINTS.DELETE_CUSTOM_EVENT);
+
+      const requestBody = {
+        product_custom_app_id: productCustomAppId,
+      };
+
+      if (API_CONFIG.DEBUG) {
+        console.log("📡 Deleting custom event:", requestBody);
+      }
+
+      const response = await apiClient.post<DeleteCustomEventResponse["data"]>(
+        url,
+        requestBody,
+        {
+          headers,
+          timeout: API_CONFIG.TIMEOUT,
+        },
+      );
+
+      if (response.success && response.data) {
+        if (API_CONFIG.DEBUG) {
+          console.log("✅ Delete custom event result:", response.data);
+        }
+        return response.data;
+      }
+
+      if (API_CONFIG.DEBUG) {
+        console.error("❌ API error:", response.error);
+      }
+      throw new Error(response.error || "Failed to delete custom event");
+    } catch (error: any) {
+      if (API_CONFIG.DEBUG) {
+        console.error("❌ Error deleting custom event:", {
           message: error.message,
           response: error.response?.data,
         });

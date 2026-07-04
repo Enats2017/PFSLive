@@ -11,11 +11,13 @@ import { Feather, MaterialCommunityIcons,Ionicons} from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditPersonalEvent'>;
-
-export const EventCard = React.memo(({ item, isOwnProfile = true }: {
+interface EventCardProps {
     item: AthleteEvent;
     isOwnProfile?: boolean;
-}) => {
+    onDelete?: (event: AthleteEvent) => void;
+}
+
+export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: EventCardProps) => {
     const { t } = useTranslation(['profile']);
     const navigation = useNavigation<NavigationProp>();
 
@@ -47,6 +49,12 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
         ? t('profile:buttons.edit_personal_event')
         : t('profile:buttons.edit_live_tracking_event');
 
+    const handleDeletePress = useCallback(() => {
+        onDelete?.(item);
+    }, [item, onDelete]);
+
+    const canDelete = item.event_source === 'custom' && item.can_delete === 1 && !!onDelete;
+
     const trackingLabel = useCallback((): string => {
         switch (item.race_status) {
             case 'in_progress': return t('profile:buttons.live_tracking_progress');
@@ -72,6 +80,11 @@ export const EventCard = React.memo(({ item, isOwnProfile = true }: {
 
             {isOwnProfile ? (
                 <View style = {{flexDirection:'row', alignItems:'center', gap:6}}>
+                    {canDelete && (
+                        <TouchableOpacity style={styles.iconBtn} onPress={handleDeletePress} activeOpacity={0.8}>
+                            <Ionicons name="trash-outline" size={22} color={colors.primaryDark} />
+                        </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                         style={[styles.iconBtn, isEditDisabled && styles.disabledBtn]}
                         onPress={isEditDisabled ? undefined : handleEditPress}

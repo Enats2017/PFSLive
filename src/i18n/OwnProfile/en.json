@@ -36,5 +36,12 @@
     },
     "training": {
         "create": "CREATE PERSONAL EVENT"
+    },
+    "deleteEvent": {
+        "confirmTitle": "Delete this event?",
+        "confirmMessage": "\"{{name}}\" will be permanently removed. This can't be undone.",
+        "cancel": "Cancel",
+        "confirm": "Delete",
+        "trackingStartedError": "This event can no longer be deleted because tracking has already started."
     }
 }

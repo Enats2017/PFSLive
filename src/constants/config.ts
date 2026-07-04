@@ -119,7 +119,8 @@ export const API_CONFIG = {
     APPLE_MEMBERSHIP_PLANS: '/apple_get_plans_api.php',
     APPLE_VERIFY_PURCHASE: '/apple_verify_purchase_api.php',
     UPDATE_FOLLOWER_EMAIL: '/update_follower_email_api.php',
-    follower_language: '/update_follower_language_api.php'
+    follower_language: '/update_follower_language_api.php',
+    DELETE_CUSTOM_EVENT: '/delete_custom_event_api.php'
   },
 
   TIMEOUT: 15000,

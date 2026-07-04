@@ -159,6 +159,7 @@ const EventsContent: React.FC<EventsContentProps> = ({
                     }}
                     showsHorizontalScrollIndicator={false}
                     keyExtractor={item => item}
+                   nestedScrollEnabled={true}
                     onMomentumScrollEnd={handleSwipe}
                     initialScrollIndex={LIVE_INDEX}
                     scrollEnabled={true}
