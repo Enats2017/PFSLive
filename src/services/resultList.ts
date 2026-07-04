@@ -39,8 +39,19 @@ export interface Checkpoint {
   rank_agegroup: string;
   day_name: string;
   is_crossed: boolean;
-   is_start: boolean;
-   diff: string;   
+  is_start: boolean;
+  diff: string;   
+}
+
+// Event-level checkpoint list item from the backend `checkpoints_list`.
+// Used to build the checkpoint filter dropdown independently of results,
+// so the dropdown survives when a selected checkpoint has zero crossings.
+export interface CheckpointListItem {
+  checkpoint_index: number;
+  name: string;
+  distance: string;
+  is_start: number;
+  is_finish: number;
 }
 
 export interface FilterOption {
@@ -93,7 +104,8 @@ export interface EventRankingResponse {
   categories: Category[];
   results: RaceResult[];
   pagination: Pagination;
-   statistics: Statistics;  
+  statistics: Statistics;
+  checkpoints_list?: CheckpointListItem[];  
   event?: {
     race_name: string;
     distance_name: string;

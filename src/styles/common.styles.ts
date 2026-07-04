@@ -135,7 +135,11 @@ export const commonStyles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: colors.gray500,
     fontWeight: typography.weights.medium,
-     
+  },
+  subtitlered: {
+    fontSize: typography.sizes.md,
+    color: colors.error,
+    fontWeight: typography.weights.medium,
   },
   
   // Loading

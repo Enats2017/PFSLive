@@ -833,6 +833,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const startParticipantId = raceData?.next_race_participant_app_id ?? participantId;
       const startEventId = raceData?.next_race_id ?? eventId;
 
+      // ✅ START PING — notify the backend that tracking started, the instant the
+      // user taps start. Written to oc_tracking_starts_app independently of
+      // coordinates, so Home detects a restart-after-stop even if the network
+      // drops and no coordinates flow for a while. Fire-and-forget: it must never
+      // block or fail the start of tracking.
+      (async () => {
+        try {
+          if (!startParticipantId || !startEventId) return;
+          const headers = await API_CONFIG.getHeaders();
+          await axios.post(
+            getApiEndpoint(API_CONFIG.ENDPOINTS.SAVE_TRACKING_START),
+            { participantId: startParticipantId, eventId: startEventId },
+            { headers, timeout: API_CONFIG.TIMEOUT },
+          );
+          if (API_CONFIG.DEBUG) console.log('✅ start ping sent', startParticipantId, startEventId);
+        } catch (e) {
+          if (API_CONFIG.DEBUG) console.log('⚠️ start ping failed (non-blocking)', e);
+        }
+      })();
+
       const gpsWatch = await gpsService.startWatchingPosition(
         async (gpsPosition) => {
           if (!isGPSActiveRef.current) {

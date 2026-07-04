@@ -88,9 +88,17 @@ export const detailsStyles = StyleSheet.create({
     lineHeight: 20,                       // FIX: added — stabilises vertical alignment
   },
 
- metaText: {
+  metaText: {
     fontSize: typography.sizes.sm,        // keep — but ensure sm >= 13px in common.styles
     color: colors.gray500,
+    fontWeight: typography.weights.medium,
+    lineHeight: 20,                       // FIX: added — matches metaIcon lineHeight
+    flexShrink: 1,
+  },
+
+  metaTextRed: {
+    fontSize: typography.sizes.sm,        // keep — but ensure sm >= 13px in common.styles
+    color: colors.error,
     fontWeight: typography.weights.medium,
     lineHeight: 20,                       // FIX: added — matches metaIcon lineHeight
     flexShrink: 1,
