@@ -30,7 +30,11 @@
     "chars": "characters",
     "deleteAccount": "Delete my account",
     "deleteAccountHint": "Opens the account deletion request page in your browser",
-    "deleteAccountError": "Couldn't open the deletion page. Please try again later."
+    "deleteAccountError": "Couldn't open the deletion page. Please try again later.",
+     "guestTitle": "Language Preference",
+    "guestSubtitle": "Choose the language you'd like to see event updates in.",
+    "guestNote": "Sign in to unlock live tracking visibility, password protection, and more.",
+    "languagePlaceholder": "Select your language"
   },
   "passwordModal": {
       "title": "🔒 Private Profile",

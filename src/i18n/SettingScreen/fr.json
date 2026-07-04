@@ -30,7 +30,11 @@
     "chars": "caractères",
     "deleteAccount": "Supprimer mon compte",
     "deleteAccountHint": "Ouvre la page de demande de suppression de compte dans votre navigateur",
-    "deleteAccountError": "Impossible d'ouvrir la page de suppression. Veuillez réessayer plus tard."
+    "deleteAccountError": "Impossible d'ouvrir la page de suppression. Veuillez réessayer plus tard.",
+    "guestTitle": "Préférence de langue",
+    "guestSubtitle": "Choisissez la langue dans laquelle vous souhaitez recevoir les mises à jour de l'événement.",
+    "guestNote": "Connectez-vous pour accéder au suivi en direct, à la protection par mot de passe et à d'autres fonctionnalités.",
+    "languagePlaceholder": "Sélectionnez votre langue"
   },
   "passwordModal": {
     "title": "🔒 Profil privé",

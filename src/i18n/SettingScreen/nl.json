@@ -30,7 +30,11 @@
     "chars": "tekens",
     "deleteAccount": "Mijn account verwijderen",
     "deleteAccountHint": "Opent de pagina voor accountverwijdering in je browser",
-    "deleteAccountError": "Kon de verwijderingspagina niet openen. Probeer het later opnieuw."
+    "deleteAccountError": "Kon de verwijderingspagina niet openen. Probeer het later opnieuw.",
+    "guestTitle": "Taalvoorkeur",
+    "guestSubtitle": "Kies de taal waarin je evenementupdates wilt ontvangen.",
+    "guestNote": "Meld je aan om live tracking, wachtwoordbeveiliging en meer functies te ontgrendelen.",
+    "languagePlaceholder": "Selecteer je taal"
   },
   "passwordModal": {
     "title": "🔒 Privéprofiel",
