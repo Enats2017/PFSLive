@@ -42,6 +42,7 @@ export const UserTrackingSettings: React.FC = () => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [deletionUrl, setDeletionUrl] = useState('');
     const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption | null>(null);
+    const [isLanguageUpdating, setIsLanguageUpdating] = useState(false);
 
     const slideAnim = useRef(new Animated.Value(400)).current;
     const keyboardOffset = useRef(new Animated.Value(0)).current;
@@ -132,7 +133,29 @@ export const UserTrackingSettings: React.FC = () => {
         if (ok && vis === 'private') closeModal();
     };
 
-    const handleLanguageChange = (option: LanguageOption) => setSelectedLanguage(option);
+    const handleLanguageChange = async (option: LanguageOption) => {
+        const previous = selectedLanguage;
+        setSelectedLanguage(option);
+
+        try {
+            setIsLanguageUpdating(true);   // ← changed from setIsUpdating
+            const { settings, languageId } = await settingsService.updateSettings(
+                {
+                    live_tracking_visibility: visibility,
+                    live_tracking_password: visibility === 'private' ? password.trim() : '',
+                },
+                option.value
+            );
+            syncState(settings);
+            syncLanguage(languageId);
+        } catch (e: any) {
+            console.error('❌ [Settings] Language update error:', e?.message);
+            toastError(t('setting:liveTrackingSettings.toastErrorSave'));
+            setSelectedLanguage(previous);
+        } finally {
+            setIsLanguageUpdating(false);   // ← changed from setIsUpdating
+        }
+    };
 
     const handleTabSwitch = (val: Visibility) => {
         if (val === visibility || isUpdating) return;
@@ -198,7 +221,7 @@ export const UserTrackingSettings: React.FC = () => {
                 <LanguageSelector
                     selectedLanguage={selectedLanguage}
                     onSelect={handleLanguageChange}
-                    disabled={isUpdating}
+                     disabled={isUpdating || isLanguageUpdating}
                 />
 
                 <Animated.View style={[commonStyles.card, { transform: [{ scale: cardScale }] }]}>
