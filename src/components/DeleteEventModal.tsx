@@ -8,10 +8,9 @@ import {
     StyleSheet,
     ActivityIndicator,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, spacing } from '../styles/common.styles';
+import { colors, commonStyles, spacing } from '../styles/common.styles';
 import { AthleteEvent } from '../services/athleteProfileService';
 
 interface Props {
@@ -24,25 +23,39 @@ interface Props {
 
 export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, onCancel, onConfirm }) => {
     const { t } = useTranslation(['ownProfile']);
-    const insets = useSafeAreaInsets();
-    const slideAnim = useRef(new Animated.Value(400)).current;
+    const scaleAnim = useRef(new Animated.Value(0.85)).current;
+    const opacityAnim = useRef(new Animated.Value(0)).current;
     const [internalVisible, setInternalVisible] = useState(visible);
 
     useEffect(() => {
         if (visible) {
             setInternalVisible(true);
-            Animated.spring(slideAnim, {
-                toValue: 0,
-                useNativeDriver: true,
-                tension: 65,
-                friction: 11,
-            }).start();
+            Animated.parallel([
+                Animated.spring(scaleAnim, {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    tension: 80,
+                    friction: 10,
+                }),
+                Animated.timing(opacityAnim, {
+                    toValue: 1,
+                    duration: 200,
+                    useNativeDriver: true,
+                }),
+            ]).start();
         } else if (internalVisible) {
-            Animated.timing(slideAnim, {
-                toValue: 500,
-                duration: 250,
-                useNativeDriver: true,
-            }).start(() => setInternalVisible(false));
+            Animated.parallel([
+                Animated.timing(scaleAnim, {
+                    toValue: 0.85,
+                    duration: 180,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(opacityAnim, {
+                    toValue: 0,
+                    duration: 180,
+                    useNativeDriver: true,
+                }),
+            ]).start(() => setInternalVisible(false));
         }
     }, [visible]);
 
@@ -56,16 +69,14 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
                 <Animated.View
                     style={[
                         styles.sheet,
-                        { paddingBottom: insets.bottom + 24, transform: [{ translateY: slideAnim }] },
+                        { opacity: opacityAnim, transform: [{ scale: scaleAnim }] },
                     ]}
                 >
-                    <View style={styles.handle} />
-
                     <View style={styles.iconWrap}>
                         <Ionicons name="trash-outline" size={30} color={colors.participantColor ?? '#E53935'} />
                     </View>
 
-                    <Text style={styles.title}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
+                    <Text style={commonStyles.title}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
                     <Text style={styles.message}>
                         {t('ownProfile:deleteEvent.confirmMessage', { name: event?.name ?? '' })}
                     </Text>
@@ -98,28 +109,35 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
 };
 
 const styles = StyleSheet.create({
-    overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },
+    overlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        paddingHorizontal: spacing.lg,   // NEW — keeps the card off the screen edges
+    },
     backdrop: { ...StyleSheet.absoluteFillObject },
     sheet: {
+        width: '100%',
         backgroundColor: '#fff',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        borderRadius: 24,    
+                // NEW — all corners rounded now that it's centered
         paddingHorizontal: spacing.lg,
-        paddingTop: spacing.md,
+        paddingTop: spacing.lg,
+        paddingBottom: spacing.lg,
         alignItems: 'center',
     },
-    handle: { width: 42, height: 5, borderRadius: 3, backgroundColor: '#E0E0E0', marginBottom: spacing.md },
     iconWrap: {
         width: 60, height: 60, borderRadius: 30,
         backgroundColor: '#FDECEA', alignItems: 'center', justifyContent: 'center',
         marginBottom: spacing.md,
     },
-    title: { fontSize: 18, fontWeight: '700', color: colors.gray900, marginBottom: 6, textAlign: 'center' },
-    message: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
+    title: { fontSize: 18, fontWeight: '700', color: colors.gray900, marginBottom: 10, textAlign: 'center' },
+    message: { fontSize: 15, color: '#666', textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
     actions: { flexDirection: 'row', width: '100%', gap: 12 },
     btn: { flex: 1, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
     cancelBtn: { backgroundColor: '#F2F2F2' },
     cancelText: { color: colors.gray900, fontWeight: '600', fontSize: 15 },
-    deleteBtn: { backgroundColor: '#E53935' },
+    deleteBtn: { backgroundColor: colors.primary },
     deleteText: { color: '#fff', fontWeight: '600', fontSize: 15 },
 });
