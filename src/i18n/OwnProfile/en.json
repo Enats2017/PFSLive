@@ -38,6 +38,8 @@
         "create": "CREATE PERSONAL EVENT"
     },
     "deleteEvent": {
+        "deleteSuccess": "Event deleted successfully",
+         "deleteFailed": "Failed to delete event",
         "confirmTitle": "Delete this event?",
         "confirmMessage": "\"{{name}}\" will be permanently removed. This can't be undone.",
         "cancel": "Cancel",

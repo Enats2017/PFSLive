@@ -116,7 +116,7 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
                 onEndReachedThreshold={0.5}
                 showsVerticalScrollIndicator={false}
                 scrollEnabled={false}          // NEW — outer ScrollView handles scrolling instead
-    nestedScrollEnabled={true} 
+                nestedScrollEnabled={true} 
                 contentContainerStyle={{
                     paddingHorizontal: spacing.md,
                     paddingTop: spacing.xs,

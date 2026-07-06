@@ -106,7 +106,8 @@ export const eventService = {
       page_live: 1,
     },
     targetId?: number,
-    bustCache: boolean = false, // ✅ CACHE BUSTING PARAMETER
+    bustCache: boolean = false, 
+    filterEventSource: 'partner' | 'custom' | '' = '',
   ): Promise<AthleteProfileResponse> {
     try {
       const language_id = getCurrentLanguageId();
@@ -136,6 +137,10 @@ export const eventService = {
         page_live: pagination.page_live || 1,
       };
 
+       if (filterEventSource) {
+        requestBody.filter_event_source = filterEventSource; // ✅ only sent when set
+      }
+
       // ✅ ADD CACHE BUSTING TIMESTAMP
       if (bustCache) {
         requestBody._t = Date.now();
@@ -147,6 +152,9 @@ export const eventService = {
           );
         }
       }
+
+      console.log("atheleterequest",requestBody);
+      
 
       const response = await apiClient.post<EventsData>(url, requestBody, {
         headers,

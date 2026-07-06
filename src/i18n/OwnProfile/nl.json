@@ -37,6 +37,8 @@
         "create": "PERSOONLIJK EVENEMENT MAKEN"
     },
     "deleteEvent": {
+      "deleteSuccess": "Evenement succesvol verwijderd",
+     "deleteFailed": "Verwijderen van evenement mislukt",  
     "confirmTitle": "Dit evenement verwijderen?",
     "confirmMessage": "\"{{name}}\" wordt permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
     "cancel": "Annuleren",

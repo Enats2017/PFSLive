@@ -15,6 +15,7 @@ import EventsContent from './EventsContent';
 import TrainingContent from './TrainingContent';
 import { useDimensions } from '../../hooks/useDimensions';
 import { DeleteEventModal } from '../../components/DeleteEventModal';
+import { toastError, toastSuccess } from '../../../utils/toast';
 // import { appleVerifyService } from '../../services/appleverifyservice';
 // import PurchaseStatusModal from '../../components/PurchaseStatusModal';
 
@@ -162,12 +163,17 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const [activeSection, setActiveSection] = useState<SectionKey>('menu')
     const flatListRef = useRef<FlatList>(null);
     const [profile, setProfile] = useState<AthleteProfile | null>(null);
-    const [liveEvents, setLiveEvents] = useState<AthleteEvent[]>([]);
-    const [pastEvents, setPastEvents] = useState<AthleteEvent[]>([]);
+    const [partnerLive, setPartnerLive] = useState<AthleteEvent[]>([]);
+    const [partnerPast, setPartnerPast] = useState<AthleteEvent[]>([]);
+    const [customLive, setCustomLive] = useState<AthleteEvent[]>([]);
     const [loading, setLoading] = useState(true);
-    const [loadingMoreLive, setLoadingMoreLive] = useState(false);
-    const [loadingMorePast, setLoadingMorePast] = useState(false);
-    const [pagination, setPagination] = useState<PaginationState>(INITIAL_PAGINATION);
+
+    const [partnerPagination, setPartnerPagination] = useState<PaginationState>(INITIAL_PAGINATION);
+    const [customPagination, setCustomPagination] = useState<PaginationState>(INITIAL_PAGINATION);
+
+    const [loadingMorePartnerLive, setLoadingMorePartnerLive] = useState(false);
+    const [loadingMorePartnerPast, setLoadingMorePartnerPast] = useState(false);
+    const [loadingMoreCustomLive, setLoadingMoreCustomLive] = useState(false);
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);
     const fromEditFetched = useRef(false);
@@ -219,60 +225,41 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     }, [targetId, t]);
 
     const fetchProfile = useCallback(async (bustCache: boolean = false) => {
-        if (!targetId || targetId === 0) {
-            if (API_CONFIG.DEBUG) {
-                console.error('Invalid targetId:', targetId);
-            }
-            return;
+    if (!targetId || targetId === 0) return;
+    if (isFetching.current) return;
+    try {
+        isFetching.current = true;
+        setLoading(true);
+        clearError();
+
+        const [partnerResult, customResult] = await Promise.all([
+            eventService.getAthleteProfile({ page_live: 1, page_past: 1 }, targetId, bustCache, 'partner'),
+            eventService.getAthleteProfile({ page_live: 1, page_past: 1 }, targetId, bustCache, 'custom'),
+        ]);
+
+        setProfile(partnerResult.profile); // same profile either call, partner's is fine
+        setPartnerLive(partnerResult.tabs.live);
+        setPartnerPast(partnerResult.tabs.past);
+        setCustomLive(customResult.tabs.live);
+
+        if (partnerResult.pagination) {
+            setPartnerPagination({
+                live: { page: partnerResult.pagination.live.page, total_pages: partnerResult.pagination.live.total_pages },
+                past: { page: partnerResult.pagination.past.page, total_pages: partnerResult.pagination.past.total_pages },
+            });
         }
-        if (isFetching.current) {
-            if (API_CONFIG.DEBUG) {
-                console.log('⏸Already fetching, skipping duplicate call');
-            }
-            return;
+        if (customResult.pagination) {
+            setCustomPagination({
+                live: { page: customResult.pagination.live.page, total_pages: customResult.pagination.live.total_pages },
+                past: { page: customResult.pagination.past.page, total_pages: customResult.pagination.past.total_pages },
+            });
         }
-        try {
-            isFetching.current = true;
-            setLoading(true);
-            clearError();
-            if (API_CONFIG.DEBUG) {
-                console.log('📡 Fetching profile:', { targetId, bustCache });
-            }
-            const result = await eventService.getAthleteProfile(
-                { page_live: 1, page_past: 1 },
-                targetId,
-                bustCache
-            );
-            setProfile(result.profile);
-            setLiveEvents(result.tabs.live);
-            setPastEvents(result.tabs.past);
-            if (result.pagination) {
-                setPagination({
-                    live: {
-                        page: result.pagination.live.page,
-                        total_pages: result.pagination.live.total_pages,
-                    },
-                    past: {
-                        page: result.pagination.past.page,
-                        total_pages: result.pagination.past.total_pages,
-                    },
-                });
-            }
-            if (API_CONFIG.DEBUG) {
-                console.log('Profile loaded:', {
-                    live: result.tabs.live.length,
-                    past: result.tabs.past.length,
-                });
-            }
-        } catch (err: any) {
-            if (API_CONFIG.DEBUG) {
-                console.error('Profile fetch failed:', err);
-            }
-            handleApiError(err);
-        } finally {
-            setLoading(false);
-            isFetching.current = false;
-        }
+    } catch (err: any) {
+        handleApiError(err);
+    } finally {
+        setLoading(false);
+        isFetching.current = false;
+    }
     }, [targetId, t]);
 
     useFocusEffect(
@@ -313,45 +300,65 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
         }, [fetchProfile, fromEdit, targetId])
     );
 
-    const loadMoreLive = useCallback(async () => {
-        if (!targetId || loadingMoreLive || pagination.live.page >= pagination.live.total_pages) return;
-        const nextPage = pagination.live.page + 1;
-        setLoadingMoreLive(true);
-        try {
-            const result = await eventService.getAthleteProfile({ page_live: nextPage }, targetId);
-            setLiveEvents(prev => {
-                const existingIds = new Set(prev.map(e => e.participant_app_id));
-                return [...prev, ...result.tabs.live.filter(e => !existingIds.has(e.participant_app_id))];
-            });
-            if (result.pagination?.live) {
-                setPagination(prev => ({ ...prev, live: { page: nextPage, total_pages: result.pagination.live.total_pages } }));
-            }
-        } catch (err) {
-            handleApiError(err);
-        } finally {
-            setLoadingMoreLive(false);
+    const loadMorePartnerLive = useCallback(async () => {
+    if (!targetId || loadingMorePartnerLive || partnerPagination.live.page >= partnerPagination.live.total_pages) return;
+    const nextPage = partnerPagination.live.page + 1;
+    setLoadingMorePartnerLive(true);
+    try {
+        const result = await eventService.getAthleteProfile({ page_live: nextPage }, targetId, false, 'partner');
+        setPartnerLive(prev => {
+            const existingIds = new Set(prev.map(e => e.participant_app_id));
+            return [...prev, ...result.tabs.live.filter(e => !existingIds.has(e.participant_app_id))];
+        });
+        if (result.pagination?.live) {
+            setPartnerPagination(prev => ({ ...prev, live: { page: nextPage, total_pages: result.pagination.live.total_pages } }));
         }
-    }, [loadingMoreLive, pagination.live, targetId]);
+    } catch (err) {
+        handleApiError(err);
+    } finally {
+        setLoadingMorePartnerLive(false);
+    }
+    }, [loadingMorePartnerLive, partnerPagination.live, targetId]);
 
-    const loadMorePast = useCallback(async () => {
-        if (!targetId || loadingMorePast || pagination.past.page >= pagination.past.total_pages) return;
-        const nextPage = pagination.past.page + 1;
-        setLoadingMorePast(true);
+    const loadMorePartnerPast = useCallback(async () => {
+        if (!targetId || loadingMorePartnerPast || partnerPagination.past.page >= partnerPagination.past.total_pages) return;
+        const nextPage = partnerPagination.past.page + 1;
+        setLoadingMorePartnerPast(true);
         try {
-            const result = await eventService.getAthleteProfile({ page_past: nextPage }, targetId);
-            setPastEvents(prev => {
+            const result = await eventService.getAthleteProfile({ page_past: nextPage }, targetId, false, 'partner');
+            setPartnerPast(prev => {
                 const existingIds = new Set(prev.map(e => e.participant_app_id));
                 return [...prev, ...result.tabs.past.filter(e => !existingIds.has(e.participant_app_id))];
             });
             if (result.pagination?.past) {
-                setPagination(prev => ({ ...prev, past: { page: nextPage, total_pages: result.pagination.past.total_pages } }));
+                setPartnerPagination(prev => ({ ...prev, past: { page: nextPage, total_pages: result.pagination.past.total_pages } }));
             }
         } catch (err) {
             handleApiError(err);
         } finally {
-            setLoadingMorePast(false);
+            setLoadingMorePartnerPast(false);
         }
-    }, [loadingMorePast, pagination.past, targetId]);
+    }, [loadingMorePartnerPast, partnerPagination.past, targetId]);
+
+    const loadMoreCustomLive = useCallback(async () => {
+        if (!targetId || loadingMoreCustomLive || customPagination.live.page >= customPagination.live.total_pages) return;
+        const nextPage = customPagination.live.page + 1;
+        setLoadingMoreCustomLive(true);
+        try {
+            const result = await eventService.getAthleteProfile({ page_live: nextPage }, targetId, false, 'custom');
+            setCustomLive(prev => {
+                const existingIds = new Set(prev.map(e => e.participant_app_id));
+                return [...prev, ...result.tabs.live.filter(e => !existingIds.has(e.participant_app_id))];
+            });
+            if (result.pagination?.live) {
+                setCustomPagination(prev => ({ ...prev, live: { page: nextPage, total_pages: result.pagination.live.total_pages } }));
+            }
+        } catch (err) {
+            handleApiError(err);
+        } finally {
+            setLoadingMoreCustomLive(false);
+        }
+    }, [loadingMoreCustomLive, customPagination.live, targetId]);
 
     const handleDeleteRequest = useCallback((event: AthleteEvent) => {
         if (event.can_delete !== 1 || !event.product_custom_app_id) return;
@@ -375,10 +382,11 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                 setDeleteTarget(null);
             // Same pattern as fromEdit — force a fresh fetch, bypassing the backend cache
             await fetchProfile(true);
-                
+             toastSuccess(t('ownProfile:deleteEvent.deleteSuccess'));  
             } else if (action === 'tracking_already_started') {
                 setDeleteTarget(null);
                 handleApiError(t('ownProfile:deleteEvent.trackingStartedError'));
+                 toastSuccess(t('ownProfile:deleteEvent.deleteSuccess'));
             }
         } catch (err) {
             handleApiError(err);
@@ -393,29 +401,23 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
         if (activeSection === 'events') return (
             <EventsContent
                 onBack={goBack}
-                liveEvents={liveEvents.filter(
-                    event => event.event_source === 'partner'
-                )}
-                pastEvents={pastEvents.filter(
-                    event => event.event_source === 'partner'
-                )}
+                liveEvents={partnerLive}
+                pastEvents={partnerPast}
                 profile={profile}
-                loadMoreLive={loadMoreLive}
-                loadMorePast={loadMorePast}
-                loadingMoreLive={loadingMoreLive}
-                loadingMorePast={loadingMorePast}
-                pagination={pagination}
+                loadMoreLive={loadMorePartnerLive}
+                loadMorePast={loadMorePartnerPast}
+                loadingMoreLive={loadingMorePartnerLive}
+                loadingMorePast={loadingMorePartnerPast}
+                pagination={partnerPagination}
             />
         );
         if (activeSection === 'training') return <TrainingContent
             onBack={goBack}
-            liveEvents={liveEvents.filter(
-                event => event.event_source === 'custom'
-            )}
+            liveEvents={customLive}
             profile={profile}
-            loadMoreLive={loadMoreLive}
-            loadingMoreLive={loadingMoreLive}
-            pagination={pagination}
+            loadMoreLive={loadMoreCustomLive}
+            loadingMoreLive={loadingMoreCustomLive}
+            pagination={customPagination}
             onDeleteEvent={handleDeleteRequest}
         />;
 

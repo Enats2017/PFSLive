@@ -37,6 +37,8 @@
         "create": "CRÉER UN ÉVÉNEMENT PERSONNEL"
     },
     "deleteEvent": {
+    "deleteSuccess": "Événement supprimé avec succès",
+     "deleteFailed": "Échec de la suppression de l'événement",
     "confirmTitle": "Supprimer cet événement ?",
     "confirmMessage": "\"{{name}}\" sera supprimé définitivement. Cette action est irréversible.",
     "cancel": "Annuler",
