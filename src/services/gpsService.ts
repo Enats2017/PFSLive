@@ -87,7 +87,7 @@ const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m e
 // sensor (disableMotionActivityUpdates:false) + 60s heartbeat — NOT the old
 // expo-location freeze, which was a different engine entirely.
 // MUST be restored anywhere finish-approach (which sets distanceFilter:0) resets.
-const BASE_DISTANCE_FILTER_M = 0;
+const BASE_DISTANCE_FILTER_M = 5;
 
 // ✅ Movement thresholds per sport category.
 // Must be LESS than (min_speed × timeInterval) so the check passes at minimum walking pace.
@@ -95,9 +95,9 @@ const BASE_DISTANCE_FILTER_M = 0;
 // Running min ~6 km/h   → moves 50m in 30s  → threshold must be < 50m  → use 15m
 // Cycling min ~10 km/h  → moves 83m in 30s  → threshold must be < 83m  → use 30m
 const MOVEMENT_THRESHOLD: Record<number, number> = {
-  64: 0,   // Walking — 3m
-  59: 0,  // Running — 15m
-  60: 0,  // Cycling — 30m
+  64: 3,   // Walking — 3m
+  59: 15,  // Running — 15m
+  60: 30,  // Cycling — 30m
 };
 const DEFAULT_MOVEMENT_METRES = 5;
 
