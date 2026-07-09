@@ -150,6 +150,23 @@ let _segCountLoaded = false;                    // synced from disk on first sea
 let _bufferHydrated = false;                    // ✅ current-segment buffer rehydrated from disk in THIS JS context
 const LOG_FLUSH_INTERVAL_MS = 2000;
 
+// changePace triggers the SDK's ChangePaceTask. If BACKGROUND permission is
+// missing, that task can try to show the rationale dialog from a background
+// thread → Dialog/Handler off the main thread → RuntimeException crash
+// (TSBackgroundPermissionRationale.onStartActivity). This wrapper skips
+// changePace when background permission isn't granted, so foreground-only
+// sessions still track (the engine lifts out of STATIONARY on its own) without
+// ever entering the crash path. Use this everywhere instead of calling
+// BackgroundGeolocation.changePace directly.
+const safeChangePace = async (isMoving: boolean): Promise<void> => {
+  try {
+    const bg = await Location.getBackgroundPermissionsAsync();
+    if (bg.status === 'granted') {
+      await BackgroundGeolocation.changePace(isMoving);
+    }
+  } catch { /* silent — never let a pace change crash tracking */ }
+};
+
 // Sample ~3× per send window so the throttle always has a candidate near the
 // target — keeps cadence at the interval (30s/60s/4min/5min) instead of doubling.
 const fixIntervalMs = (sendIntervalSec?: number): number => {
@@ -819,7 +836,7 @@ const _processLocationForSendInternal = async (
               distanceFilter:                0,
             },
           });
-          try { await BackgroundGeolocation.changePace(true); } catch {}
+          await safeChangePace(true);
         } catch { /* silent — config change must never break the send */ }
         await addLog('🏁', `Finish approach activated — ${distToFinish.toFixed(2)}km to finish, sending every 5s${tag}`);
       }
@@ -833,7 +850,7 @@ const _processLocationForSendInternal = async (
               distanceFilter:                BASE_DISTANCE_FILTER_M,
             },
           });
-          try { await BackgroundGeolocation.changePace(true); } catch {}
+          await safeChangePace(true);
         } catch { /* silent */ }
         await addLog('🔄', `Finish approach reset — now ${distToFinish.toFixed(2)}km from finish${tag}`);
       }
@@ -1110,7 +1127,7 @@ const _registerTransistorListeners = (): void => {
       try {
         const hbFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
         if (hbFinished !== '1') {
-          await BackgroundGeolocation.changePace(true);
+          await safeChangePace(true);
         }
       } catch { /* silent */ }
 
@@ -1144,7 +1161,7 @@ const _registerTransistorListeners = (): void => {
       const hbFinishApproach = await AsyncStorage.getItem(FINISH_APPROACH_KEY);
       const hbSpeed = hbLoc?.coords?.speed ?? 0;
       if (hbSpeed > 2 || hbFinishApproach === '1') {
-        try { await BackgroundGeolocation.changePace(true); } catch { /* silent */ }
+        await safeChangePace(true);
         await addLog('🏃', hbFinishApproach === '1'
           ? `Heartbeat — finish approach active, re-waking 5s stream`
           : `Heartbeat — moving (${hbSpeed.toFixed(1)}m/s), re-waking onLocation stream`);
@@ -1347,7 +1364,7 @@ export const ensureBackgroundTaskAlive = async (
       // on the 60s heartbeat. Skipped after finish so we don't resurrect tracking.
       const wdFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
       if (wdFinished !== '1' && !bgState.isMoving) {
-        try { await BackgroundGeolocation.changePace(true); } catch { /* silent */ }
+        await safeChangePace(true);
         await addLog('🏃', 'Watchdog — engine was stationary, re-asserted moving');
       }
       await addLog('💚', 'Watchdog check — transistor alive (listeners re-attached)');
@@ -1367,7 +1384,12 @@ export const ensureBackgroundTaskAlive = async (
     }));
 
     await BackgroundGeolocation.start();
-    try { await BackgroundGeolocation.changePace(true); } catch { /* silent */ }
+    // changePace triggers the SDK's ChangePaceTask. If BACKGROUND permission is
+    // missing, that task tries to show the rationale dialog from a background
+    // thread → Dialog/Handler off the main thread → RuntimeException crash. Only
+    // force pace when background is granted; foreground-only sessions still track
+    // (the engine begins sampling on its own), just without this forced kick.
+    await safeChangePace(true);
     await AsyncStorage.setItem(TRANSISTOR_ACTIVE_KEY, '1');
     await addLog('♻️', 'Watchdog: transistor was dead — restarted successfully');
     return true;
@@ -1386,15 +1408,18 @@ export const gpsService = {
         return false;
       }
 
+      // Background permission is REQUESTED but NOT required to start — foreground
+      // tracking still works while the app is open. We only need to know the
+      // status so we can avoid forcing pace (changePace) when background is
+      // missing, which is what makes the SDK try to show its rationale dialog
+      // from a background thread and crash. Foreground granted = OK to track.
       const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
       if (API_CONFIG.DEBUG) {
-        if (backgroundStatus === 'granted') {
-          console.log('✅ Background location permission granted');
-        } else {
-          console.warn('⚠️ Background location permission denied');
-        }
+        console.log(backgroundStatus === 'granted'
+          ? '✅ Background location permission granted'
+          : '⚠️ Background location permission denied (foreground tracking still available)');
       }
-      return true;
+      return true;   // foreground is enough to start; background is a bonus
     } catch (error) {
       if (API_CONFIG.DEBUG) console.error('❌ Error requesting location permissions:', error);
       return false;
@@ -1631,7 +1656,11 @@ export const gpsService = {
         // read to lift the SDK out of its initial STATIONARY state. Defense-in-depth
         // alongside disableMotionActivityUpdates:false, which now handles ongoing
         // motion detection during the ride.
-        try { await BackgroundGeolocation.changePace(true); } catch { /* already moving */ }
+        // GATED on background permission: changePace triggers ChangePaceTask,
+        // which crashes if it tries to show the rationale dialog from a background
+        // thread when background permission is missing. Foreground-only sessions
+        // still track; the engine lifts out of STATIONARY on its own classifier read.
+        await safeChangePace(true);
 
         // Mark Transistor as the active sender.
         await AsyncStorage.setItem(TRANSISTOR_ACTIVE_KEY, '1');
