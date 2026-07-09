@@ -1374,8 +1374,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Smart polling with version check
   const handleFanPress = useCallback(async () => {
     const alreadyPrompted = await fanEmailStorage.hasBeenPrompted();
+    const localCustomerId = await tokenService.getCustomerId();
 
-    if (alreadyPrompted) {
+    if (alreadyPrompted || localCustomerId) {
       // Already asked once on this device — skip modal, go straight in
       navigation.navigate('FanScreen'); // swap for your real fan destination
       return;
