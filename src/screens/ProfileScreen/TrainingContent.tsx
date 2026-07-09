@@ -6,6 +6,7 @@ import {
     FlatList,
     ActivityIndicator,
     StyleSheet,
+    Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
@@ -27,6 +28,8 @@ interface TrainingContentProps {
     };
     onDeleteEvent: (event: AthleteEvent) => void;
 }
+const { width, height } = Dimensions.get('window');
+const TAB_CONTENT_HEIGHT = height * 0.56;
 
 const TrainingContent: React.FC<TrainingContentProps> = ({
     onBack,
@@ -39,6 +42,7 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
 }) => {
     const hasMore = pagination.live.page < pagination.live.total_pages;
     const { t } = useTranslation(['profile', "ownProfile"]);
+    const [listHeight, setListHeight] = React.useState(0);
     // Add this line before the return
 
     const navigation = useNavigation();
@@ -51,15 +55,16 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
     }, [navigation]);
 
     const handleLoadMore = useCallback(() => {
+      
         if (hasMore && !loadingMoreLive) {
             loadMoreLive();
         }
-    }, [hasMore, loadingMoreLive, loadMoreLive]);
+    }, [hasMore, loadingMoreLive, loadMoreLive, pagination.live.page, pagination.live.total_pages,]);
 
     const renderItem = useCallback(({ item }: { item: AthleteEvent }) => (
         <EventCard
             item={item}
-            isOwnProfile={profile?.is_own_profile === 1} 
+            isOwnProfile={profile?.is_own_profile === 1}
             onDelete={onDeleteEvent}
         />
 
@@ -82,16 +87,24 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
     }, [loadingMoreLive]);
 
     const ListEmptyComponent = useCallback(() => (
-       <ErrorScreen
-                type="empty"
-                title={t('profile:empty.no_live_events')}
-                message={t('profile:empty.no_live_events_msg')}
-                onRetry={() => { }}
-            />
+        <ErrorScreen
+            type="empty"
+            title={t('profile:empty.no_live_events')}
+            message={t('profile:empty.no_live_events_msg')}
+            onRetry={() => { }}
+        />
     ), []);
 
+
     return (
-        <View style={{ flex: 1 }}>
+        <View
+            style={{ flex: 1 }}
+            onLayout={(e) => {
+                if (listHeight === 0) {
+                    setListHeight(e.nativeEvent.layout.height);
+                }
+            }}
+        >
             <TouchableOpacity style={ownProfile.backRow} onPress={onBack} activeOpacity={0.7}>
                 <Ionicons name="arrow-back" size={22} color={colors.gray900} />
                 <Text style={ownProfile.backLabel}>{t('ownProfile:backbtn.training')}</Text>
@@ -108,25 +121,28 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
                 </TouchableOpacity>
             )}
 
-            <FlatList
-                data={liveEvents}
-                keyExtractor={keyExtractor}
-                renderItem={renderItem}
-                onEndReached={handleLoadMore}
-                onEndReachedThreshold={0.5}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}          // NEW — outer ScrollView handles scrolling instead
-                nestedScrollEnabled={true} 
-                contentContainerStyle={{
-                    paddingHorizontal: spacing.md,
-                    paddingTop: spacing.xs,
-                    paddingBottom: spacing.xxxxl,
-                    flexGrow: 1,
-                }}
-                ListFooterComponent={ListFooterComponent}
-                ListEmptyComponent={ListEmptyComponent}
-                removeClippedSubviews={false}
-            />
+            <View style={{ flex: 1, height: listHeight }}>
+                <FlatList
+                    data={liveEvents}
+                    keyExtractor={keyExtractor}
+                    renderItem={renderItem}
+                    onEndReached={handleLoadMore}
+                    onEndReachedThreshold={0.5}
+                    showsVerticalScrollIndicator={false}
+                    nestedScrollEnabled={true}
+                
+                    contentContainerStyle={{
+                        paddingHorizontal: spacing.md,
+                        paddingTop: spacing.xs,
+                        paddingBottom: spacing.xxxxl,
+                        flexGrow: 1,
+                    }}
+                    ListFooterComponent={ListFooterComponent}
+                    ListEmptyComponent={ListEmptyComponent}
+                    removeClippedSubviews={false}
+                />
+            </View>
+
         </View>
     );
 };
