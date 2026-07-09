@@ -117,6 +117,13 @@ const LOG_SEGMENT_SIZE = 500;
 // rolling window so memory/disk stay bounded; earlier segments are kept.
 const MAX_LOG_SEGMENTS = 40;
 
+// Set at finish (with participantId/eventId JSON) so the log can be uploaded by
+// whichever path runs next, EVEN after TRACKING_PARAMS_KEY is cleared. This is
+// what lets us clear the session at finish (so isTracking() correctly returns
+// false and restore() won't resurrect a finished race) while still retaining the
+// IDs needed for the log upload. Cleared once the log is uploaded.
+export const PENDING_FINISH_KEY = '@PFSLive:pendingFinish';
+
 export interface TrackingLogEntry {
   ts: number;
   icon: string;
@@ -341,10 +348,14 @@ const _uploadTrackingLogOnFinish = async (
 ): Promise<void> => {
   try {
     if (!participantId || !eventId) return;
-    // Only the BACKGROUND path needs this. When foregrounded, HomeScreen's 1s
-    // timer reads RACE_FINISHED_KEY and runs stopGPSTracking, which uploads the
-    // log — so skipping here avoids both uploaders racing on a foreground finish.
-    if (AppState.currentState === 'active') return;
+    // Dedup on whether the log was actually uploaded — NOT on AppState. The old
+    // AppState guard assumed a foreground finish would be handled by HomeScreen,
+    // but if the app is foregrounded exactly as this runs, that handoff could drop
+    // the upload entirely. LOG_UPLOADED_KEY (set only after a successful upload)
+    // means whichever path runs first uploads and the rest skip — no double, no drop.
+    try {
+      if ((await AsyncStorage.getItem(LOG_UPLOADED_KEY)) === '1') return;
+    } catch { /* fall through and attempt the upload */ };
     // Persist the in-memory buffer first so the 🏆 / 🛑 finish entries are in it,
     // then stitch the whole ride (all sealed segments + current) for upload.
     await _flushLogsNow();
@@ -577,6 +588,22 @@ const _processLocationForSendInternal = async (
     if (_backlogRemains) {
       try {
         const { locationQueueService } = require('./locationQueueService');
+
+        // The backlog-order guard exists so that when a backlog is DRAINING
+        // (network is back, we're flushing queued fixes), a freshly-arrived live
+        // fix is queued BEHIND the backlog to keep timestamps ascending, instead
+        // of racing ahead and mis-snapping. In that draining case we bypass the
+        // queue throttle (throttle=false) because ordering, not spacing, matters.
+        //
+        // BUT when we're OFFLINE, the "backlog" is just the offline queue growing
+        // — it isn't draining at all. If we bypass the throttle here too, EVERY
+        // onLocation fire (every ~5-10s while moving) gets queued unthrottled, so
+        // the offline queue balloons at the fire rate instead of the interval.
+        // So: only bypass the throttle when we actually have network (real drain).
+        // Offline → route through the normal THROTTLED insert so the queue grows
+        // at the interval rate, exactly like a first-fix offline queue would.
+        const online = await locationQueueService.hasNetwork();
+
         await locationQueueService.addToQueue({
           latitude:         raw.latitude,
           longitude:        raw.longitude,
@@ -591,8 +618,11 @@ const _processLocationForSendInternal = async (
           eventId,
           queuedAt:         new Date().toISOString(),
           retryCount:       0,
-        }, false);
-        await addLog('📥', `Backlog still draining — current fix queued behind it for order${tag}`);
+        }, /* throttle = */ !online);   // online drain → bypass (order); offline → throttle (spacing)
+
+        await addLog('📥', online
+          ? `Backlog draining — current fix queued behind it for order${tag}`
+          : `Offline — current fix queued (throttled to interval)${tag}`);
       } catch { /* silent */ }
       return;
     }
@@ -828,6 +858,13 @@ const _processLocationForSendInternal = async (
 
     if (shouldStop) {
       await AsyncStorage.setItem(RACE_FINISHED_KEY, '1');
+      // Stash the IDs so the log can still be uploaded after we clear the session
+      // below. Clearing TRACKING_PARAMS_KEY makes isTracking() correctly return
+      // false for a finished race, so restore() won't resurrect it on relaunch.
+      try {
+        await AsyncStorage.setItem(PENDING_FINISH_KEY, JSON.stringify({ participantId, eventId }));
+        await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
+      } catch { /* silent — upload paths fall back to any surviving params */ }
       await addLog(
         '🏆',
         finishSource === 'rr'
@@ -1462,7 +1499,22 @@ export const gpsService = {
       // A fresh start (no prior session) means any queued fixes are stale
       // post-finish stragglers — safe to clear. A relaunch onto an existing
       // session may have a real mid-race offline backlog — must NOT be wiped.
-      const _hadPriorSession = (await AsyncStorage.getItem(TRACKING_PARAMS_KEY)) !== null;
+      const _priorParamsRaw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+      const _hadPriorSession = _priorParamsRaw !== null;
+
+      // Is this a RESUME of the SAME race (app relaunched mid-event) rather than a
+      // new race? If so we must NOT reset the log segments below — resetting on
+      // every start wiped the accumulated segments of long events, so only the
+      // first ~500 entries ever survived to the finish upload.
+      let _isSameRaceResume = false;
+      try {
+        if (_priorParamsRaw) {
+          const _pp = JSON.parse(_priorParamsRaw);
+          _isSameRaceResume =
+            String(_pp?.participantId) === String(participantId) &&
+            String(_pp?.eventId) === String(eventId);
+        }
+      } catch { /* treat as new race */ }
 
       // ✅ Store tracking params for the engine handlers.
       await AsyncStorage.setItem(TRACKING_PARAMS_KEY, JSON.stringify({
@@ -1474,9 +1526,14 @@ export const gpsService = {
         manualStart,
       }));
 
-      // ✅ Clear all session-scoped state.
-      await AsyncStorage.removeItem(TRACKING_LOG_KEY);
-      await _resetLogBuffer();
+      // ✅ Clear session-scoped state — but preserve the LOG on a same-race resume
+      // (mid-event relaunch after an OS kill). Resetting the log on every start
+      // wiped accumulated segments of long events, leaving only the first ~500
+      // entries. A genuinely new race still gets a fresh log.
+      if (!_isSameRaceResume) {
+        await AsyncStorage.removeItem(TRACKING_LOG_KEY);
+        await _resetLogBuffer();
+      }
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
       await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
       await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);

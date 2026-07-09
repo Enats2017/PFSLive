@@ -32,7 +32,7 @@ import {
   ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry,
   startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive,
   isTracking, getTrackingParams, stopWatching, attachUi, detachUi,
-  LOG_UPLOADED_KEY, getFullTrackingLog,
+  LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY,
 } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -1425,6 +1425,59 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       };
     }, [checkAppVersion, fetchHomeData])
   );
+
+  // ✅ Drain a PENDING FINISH — runs regardless of isGPSActive, on mount and on
+  // every foreground. Covers the case where a background finish uploaded nothing
+  // (app reopened mid-finish) or the session was torn down before the normal stop
+  // path ran. Side-effect-free: uploads the log only, no toast / no GPS-state
+  // changes. Deduped by LOG_UPLOADED_KEY. IDs come from PENDING_FINISH_KEY, which
+  // survives teardown (unlike component state, empty on cold start).
+  useEffect(() => {
+    let cancelled = false;
+
+    const drainPendingFinish = async () => {
+      try {
+        const pendingStr = await AsyncStorage.getItem(PENDING_FINISH_KEY);
+        if (!pendingStr || cancelled) return;
+
+        const alreadyUploaded = (await AsyncStorage.getItem(LOG_UPLOADED_KEY)) === '1';
+        if (!alreadyUploaded) {
+          let pid = '', eid = '';
+          try {
+            const p = JSON.parse(pendingStr);
+            pid = p?.participantId ?? '';
+            eid = p?.eventId ?? '';
+          } catch { /* malformed — nothing to upload */ }
+
+          if (pid && eid) {
+            const logs = await getFullTrackingLog();
+            if (logs.length > 0) {
+              const remaining = await locationQueueService.getQueueSize();
+              const sentStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+              const sent = sentStr ? (parseInt(sentStr) || 0) : 0;
+              await locationService.saveTrackingLog(pid, eid, logs, sent, remaining);
+              await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');
+            }
+          }
+        }
+
+        if (!cancelled) {
+          // Only clear PENDING_FINISH_KEY (our concern: the log upload).
+          // Leave RACE_FINISHED_KEY for the 1s timer, which uses it to run
+          // stopGPSTracking() for the UI/engine teardown when a session is still
+          // active. Clearing it here would skip that teardown and leave the live
+          // UI showing for a finished race.
+          await AsyncStorage.removeItem(PENDING_FINISH_KEY);
+        }
+      } catch { /* silent — flag persists, a later foreground retries */ }
+    };
+
+    drainPendingFinish();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') drainPendingFinish();
+    });
+    return () => { cancelled = true; sub.remove(); };
+  }, []);
 
   const PARTNER_LOGOS = [
     'https://www-static.liviolive.com/wp-content/uploads/2026/05/fantomes-2.png',
