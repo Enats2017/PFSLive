@@ -140,7 +140,7 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
                                 disabled={isSaving}
                             >
                                 <Text style={commonStyles.primaryButtonText}>
-                                    {isSaving ? t('common:buttons.saving') : t('home:fanEmail.save')}
+                                    {isSaving ? t('home:fanEmail.saving') : t('home:fanEmail.save')}
                                 </Text>
                             </TouchableOpacity>
 
