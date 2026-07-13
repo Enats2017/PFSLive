@@ -619,7 +619,7 @@ const _processLocationForSendInternal = async (
         // So: only bypass the throttle when we actually have network (real drain).
         // Offline → route through the normal THROTTLED insert so the queue grows
         // at the interval rate, exactly like a first-fix offline queue would.
-        const online = await locationQueueService.hasNetwork();
+        //const online = await locationQueueService.hasNetwork();
 
         await locationQueueService.addToQueue({
           latitude:         raw.latitude,
@@ -635,11 +635,9 @@ const _processLocationForSendInternal = async (
           eventId,
           queuedAt:         new Date().toISOString(),
           retryCount:       0,
-        }, /* throttle = */ !online);   // online drain → bypass (order); offline → throttle (spacing)
+        }, /* throttle = */ true);   // always spaced at the interval; ordering unaffected
 
-        await addLog('📥', online
-          ? `Backlog draining — current fix queued behind it for order${tag}`
-          : `Offline — current fix queued (throttled to interval)${tag}`);
+        await addLog('📥', `Backlog present — current fix queued behind it (throttled to interval)${tag}`);
       } catch { /* silent */ }
       return;
     }
@@ -1249,13 +1247,20 @@ export const finishBackgroundStop = async (
   // appends "🛑 Tracking stopped", flushes the log buffer.
   await _doFullStop();
 
-  // The runner finished — any fixes still queued are post-finish stragglers
-  // that belong to a session that's now over. Clear them so they can't be
-  // drained into the server by the Retry-Queue button (which would record
-  // points past the finish line), nor carried into a later race.
+  // Clear the queue ONLY when it's already empty (the normal case: the drain
+  // completed, then we stopped). NEVER wipe a non-empty backlog here — those fixes
+  // are the runner's real, PRE-finish race data still waiting to upload after an
+  // outage, and deleting them lost a full 4.5h track. processQueue now defers the
+  // finish until the backlog is drained, so a non-empty queue at this point means
+  // there is still legitimate data to send: leave it for the next drain pass.
   try {
     const { locationQueueService } = require('./locationQueueService');
-    await locationQueueService.clearQueue();
+    const remaining = await locationQueueService.getQueueSize();
+    if (remaining === 0) {
+      await locationQueueService.clearQueue();   // also resets the throttle keys
+    } else if (API_CONFIG.DEBUG) {
+      console.log(`⚠️ finishBackgroundStop: ${remaining} fixes still queued — NOT clearing`);
+    }
   } catch { /* silent */ }
 };
 

@@ -86,7 +86,8 @@ export const locationService = {
     participantId: string,
     eventId: string,
     location: LocationData,
-    queueIfOffline: boolean = true
+    queueIfOffline: boolean = true,
+    isQueued: boolean = false,          // ← NEW: true when drained from the offline queue
   ): Promise<SendLocationResponse> {
     // Check network connection
     const hasNetwork = await locationQueueService.hasNetwork();
@@ -141,6 +142,7 @@ export const locationService = {
         battery_level: location.batteryLevel,
         battery_charging: location.batteryCharging,
         is_moving: location.isMoving,
+        is_queued: isQueued ? 1 : 0,
       };
 
       if (API_CONFIG.DEBUG) {
@@ -265,6 +267,7 @@ export const locationService = {
 
     let sentCount = 0;
     let alreadyRemoved = false; // set when the finish-during-drain path removes early
+    let finishDetected = false; // finish seen mid-drain — teardown deferred until the backlog is empty
     // 50 (was 10): a multi-minute outage buffers >10 fixes; draining only 10 per
     // call let the live fix overtake the rest, which the server then stale-dropped.
     const batchSize = 50;
@@ -290,7 +293,8 @@ export const locationService = {
               batteryCharging: queuedLocation.batteryCharging,
               isMoving: queuedLocation.isMoving,
             },
-            false
+            false,
+            true,          // ← this fix came from the offline queue
           );
 
           sentCount++;
@@ -315,23 +319,23 @@ export const locationService = {
           // check EVERY drained fix. Idempotent: if the foreground stop later runs,
           // LOG_UPLOADED_KEY prevents a double upload and _doFullStop is safe twice.
           if (qResult && (qResult.finished === 1 || (qResult.finished as any) === '1')) {
-            if (API_CONFIG.DEBUG) console.log('🏆 Finish detected during queue drain — stopping in background');
-            try { await AsyncStorage.setItem(RACE_FINISHED_KEY, '1'); } catch { /* silent */ }
-
-            // Remove what we've drained so far, here, since we're breaking out and
-            // the post-loop removeFromQueue would otherwise run after teardown.
-            if (sentCount > 0) {
-              try { await locationQueueService.removeFromQueue(sentCount); } catch { /* silent */ }
-              alreadyRemoved = true;
-            }
-
-            // Upload log + full teardown, all in this background wake.
-            try {
-              const { finishBackgroundStop } = require('./gpsService');
-              await finishBackgroundStop(participantId, eventId);
-            } catch { /* silent */ }
-
-            break; // session over — stop draining
+            // ⚠️ DO NOT tear down or clear the queue here while a backlog remains.
+            //
+            // The fixes still queued are NOT "post-finish stragglers". On a long
+            // outage they are the runner's ENTIRE RACE — recorded BEFORE the finish
+            // and still waiting to upload. Tearing down + clearQueue() at this point
+            // DELETED hours of real data: a runner with no signal for 4.5h had his
+            // whole track wiped 3 seconds after reconnecting, because RaceResult had
+            // already recorded his finish, so the very FIRST drained fix came back
+            // finished=1 and everything behind it was thrown away.
+            //
+            // So: remember the finish and KEEP DRAINING. Teardown happens after the
+            // loop, only once the queue is actually empty.
+            if (API_CONFIG.DEBUG) console.log('🏆 Finish detected during drain — finishing only AFTER the backlog drains');
+            finishDetected = true;
+            // RACE_FINISHED_KEY is deliberately NOT set here — setting it now makes
+            // the gpsService drain loop break out and the watchdog treat the session
+            // as over while fixes are still pending. It's set at teardown below.
           }
         } catch (error) {
           if (API_CONFIG.DEBUG) {
@@ -345,6 +349,24 @@ export const locationService = {
         await locationQueueService.removeFromQueue(sentCount);
         if (API_CONFIG.DEBUG) {
           console.log(`✅ Processed ${sentCount} queued locations`);
+        }
+      }
+
+      // Finish was seen mid-drain: only tear down once the backlog is fully sent.
+      // If fixes remain, leave the session alive so the next drain pass (the next
+      // onLocation, or the 10s queue processor) keeps flushing them — we finish on
+      // whichever pass finally empties the queue. This is what preserves a long
+      // offline backlog instead of discarding it at the finish.
+      if (finishDetected) {
+        const remaining = await locationQueueService.getQueueSize();
+        if (remaining === 0) {
+          try { await AsyncStorage.setItem(RACE_FINISHED_KEY, '1'); } catch { /* silent */ }
+          try {
+            const { finishBackgroundStop } = require('./gpsService');
+            await finishBackgroundStop(participantId, eventId);
+          } catch { /* silent */ }
+        } else if (API_CONFIG.DEBUG) {
+          console.log(`🏆 Finish pending — ${remaining} fixes still queued, keeping session alive to drain them`);
         }
       }
     } finally {
