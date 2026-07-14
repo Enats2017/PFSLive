@@ -31,7 +31,9 @@
         "liteTitle": "LIDMAATSCHAP",
         "sessionsLeft": "live trackingsessies over",
         "viewPlans": "Bekijk abonnementen en upgrade",
-        "noMembershipTitle": "Geen actief lidmaatschap"
+        "noMembershipTitle": "Geen actief lidmaatschap",
+        "paymentProcessing": "Betaling wordt verwerkt. Wacht ongeveer 1 minuut en tik dan op Vernieuwen om uw bijgewerkt lidmaatschap te bekijken.",
+        "refresh": "Vernieuwen"
     },
     "training": {
         "create": "PERSOONLIJK EVENEMENT MAKEN"

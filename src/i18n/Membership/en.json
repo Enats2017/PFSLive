@@ -4,8 +4,12 @@
     "title": "Choose your plan",
     "subtitle": "Keep tracking your athletes live."
   },
-  "infoBanner": {
-    "text": "You've used your free session. Pick a plan to register and track on race day."
+ "infoBanner": {
+    "text": "You've used your free session. Pick a plan to register and track on race day.",
+    "hasSessionsLeft": "You have {{count}} sessions remaining. Upgrade anytime to get more.",
+    "noSessionsLeft": "You've used all your sessions. Upgrade your plan to continue tracking.",
+    "webMembership": "You have an active web membership. Manage it from the website.",
+    "grace": "Your payment is being processed. Access will resume shortly."
   },
    "sessions": {
     "unlimited": "Unlimited",
@@ -19,7 +23,8 @@
       "period": "/ year",
       "features": [
         "2 live tracking sessions",
-        "Live GPS map & results"
+        "Live GPS map & results",
+        "Following your activity is always free for your fans"
       ]
     },
     "basic": {
@@ -30,7 +35,8 @@
       "features": [
         "5 live tracking sessions",
         "Live GPS map & results",
-        "Priority for popular events"
+        "Priority for popular events",
+        "Following your activity is always free for your fans"
       ],
       "popularLabel": "MOST POPULAR"
     },
@@ -41,12 +47,36 @@
       "period": "/ year",
       "features": [
         "Unlimited tracking sessions",
-        "Live GPS map & results"
+        "Live GPS map & results",
+        "Following your activity is always free for your fans"
       ]
     }
   },
   "footerNote": "Yearly subscription, renews automatically.\nCancel anytime. Price shown by the App Store.",
   "cta": {
     "continueWith": "Continue with {{planName}}"
+  },
+  "actionModal": {
+    "upgrade": {
+      "title": "Upgrade your membership?",
+      "description": "Your current plan will be upgraded to {{planName}} once you confirm.",
+      "confirm": "Confirm Upgrade"
+    },
+    "disabled": {
+      "title": "Downgrade not allowed",
+      "description": "You can't switch to a lower-tier plan while your current membership is active.",
+      "confirm": "Got it"
+    },
+    "locked": {
+      "title": "Use your remaining sessions first",
+       "description": "You still have {{count}} sessions left on your current plan. Use them before upgrading.",
+      "confirm": "Got it"
+    },
+    "hidden": {
+  "title": "You already have an active membership",
+  "description": "You're currently subscribed through the web. Manage your membership from there.",
+  "confirm": "Got it"
+}
   }
+  
 }

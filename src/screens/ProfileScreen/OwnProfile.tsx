@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, Image, StatusBar, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet } from 'react-native'
+import { View, Text, Image, StatusBar, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet, ActivityIndicator } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, commonStyles, spacing } from '../../styles/common.styles'
-import { Ionicons, FontAwesome5, FontAwesome6, FontAwesome } from '@expo/vector-icons'
+import { Ionicons, FontAwesome5, FontAwesome6, FontAwesome,Feather } from '@expo/vector-icons'
 import { eventService, AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { FlatList } from 'react-native-gesture-handler'
 import { OwnProfileprops } from '../../types/navigation';
@@ -16,14 +16,16 @@ import TrainingContent from './TrainingContent';
 import { useDimensions } from '../../hooks/useDimensions';
 import { DeleteEventModal } from '../../components/DeleteEventModal';
 import { toastError, toastSuccess } from '../../../utils/toast';
-// import { appleVerifyService } from '../../services/appleverifyservice';
-// import PurchaseStatusModal from '../../components/PurchaseStatusModal';
+import { appleVerifyService } from '../../services/appleverifyservice';
+import PurchaseStatusModal from '../../components/PurchaseStatusModal';
 
 type SectionKey = 'menu' | 'events' | 'training' | 'account'
 interface MenuContentProps {
     onSelect: (id: SectionKey) => void;
     onNavigate: (screen: string) => void;
     profile: AthleteProfile | null;
+    onRefresh: () => void; 
+    refreshLoading: boolean;
 }
 interface PaginationState {
     live: { page: number; total_pages: number };
@@ -37,88 +39,129 @@ type Tab = 'Past' | 'Live';
 const TABS: Tab[] = ['Past', 'Live'];
 
 
-const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile }) => {
+const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile, onRefresh, refreshLoading }) => {
     const { t } = useTranslation('ownProfile');
+    console.log('Platform:', Platform.OS);
+console.log('Profile:', profile);
+console.log('in_process_payment:', profile?.in_process_payment);
+console.log('Type:', typeof profile?.in_process_payment);
+
+    const renderIosCard = () => {
+        if (profile?.in_process_payment === 1) {
+            return (
+                <View style={ownProfile.ioscard}>
+                    <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+                        <Ionicons name="time-outline" size={28} color={colors.themeiColor} />
+                        <Text style={[ownProfile.iostitle, { textAlign: 'center', marginTop: 8 }]}>
+                            {t('ownProfile:membershipCard.paymentProcessing')}
+                        </Text>
+                        <TouchableOpacity
+                            onPress={onRefresh}
+                            activeOpacity={0.8}
+                            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 6 }}
+                        >
+                        {refreshLoading ? (
+                            <ActivityIndicator
+                                size="small"
+                                color={colors.themeiColor}
+                            />
+                        ) : (
+                            <>
+                                <Feather name="refresh-ccw" size={16} color={colors.themeiColor} />
+                                <Text
+                                    style={{
+                                        color: colors.themeiColor,
+                                        fontSize: 14,
+                                        fontWeight: '600',
+                                    }}
+                                >
+                                    {t('ownProfile:membershipCard.refresh')}
+                                </Text>
+                            </>
+                        )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            );
+        }
+
+        return (
+            <View style={ownProfile.ioscard}>
+                <View style={ownProfile.iosheader}>
+                    <Ionicons name="navigate-circle-outline" size={24} color={colors.themeiColor} />
+                    <Text style={ownProfile.iostitle}>
+                        {profile?.membership_info?.has_membership && profile?.membership_info?.membership_name
+                            ? `${profile?.membership_info?.membership_name} ${t('ownProfile:membershipCard.liteTitle')}`
+                            : t('ownProfile:membershipCard.noMembershipTitle')}
+                    </Text>
+                </View>
+
+                {profile?.membership_info?.has_membership ? (
+                    profile?.membership_info?.unlimited ? (
+                        <Text style={ownProfile.iossubtitle}>
+                            {t('ownProfile:tracking.unlimited')}
+                        </Text>
+                    ) : (profile?.membership_info?.remaining ?? 0) > 0 ? (
+                        <Text style={ownProfile.iossubtitle}>
+                            <Text style={ownProfile.iosbold}>{profile?.membership_info?.remaining ?? 0}</Text>
+                            {' '}{t('ownProfile:membershipCard.sessionsLeft')}
+                        </Text>
+                    ) : (
+                        <Text style={ownProfile.iossubtitle}>
+                            {t('ownProfile:tracking.exhausted')}
+                        </Text>
+                    )
+                ) : (
+                    <Text style={ownProfile.iossubtitle}>
+                        {t('ownProfile:membershipCard.noMembershipSubtitle')}
+                    </Text>
+                )}
+
+                <TouchableOpacity
+                    style={ownProfile.iosbutton}
+                    activeOpacity={0.8}
+                    onPress={() => onNavigate('MembershipPlansScreen')}
+                >
+                    <Text style={ownProfile.iosbuttonText}>
+                        {t('ownProfile:membershipCard.viewPlans')}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color="#1A2233" />
+                </TouchableOpacity>
+            </View>
+        );
+    };
+
     return (
         <View style={ownProfile.menuSection}>
             {profile?.is_own_profile === 1 && (
-                Platform.OS === 'ios' ? (
-                    <View style={ownProfile.ioscard}>
-                        <View style={ownProfile.iosheader}>
-                            <Ionicons name="navigate-circle-outline" size={24} color={colors.themeiColor} />
-                            <Text style={ownProfile.iostitle}>
-                                {profile?.membership_info?.has_membership && profile?.membership_info?.membership_name
-                                    ? `${profile?.membership_info?.membership_name} ${t('ownProfile:membershipCard.liteTitle')}`
-                                    : t('ownProfile:membershipCard.noMembershipTitle')}
-                            </Text>
-                        </View>
-
-                        {profile?.membership_info?.has_membership ? (
-                            profile?.membership_info?.unlimited ? (
-                                <Text style={ownProfile.iossubtitle}>
-                                    {t('ownProfile:tracking.unlimited')}
-                                </Text>
-                            ) : (profile?.membership_info?.remaining ?? 0) > 0 ? (
-                                <Text style={ownProfile.iossubtitle}>
-                                    <Text style={ownProfile.iosbold}>{profile?.membership_info?.remaining ?? 0}</Text> {t('ownProfile:membershipCard.sessionsLeft')}
-                                </Text>
-                            ) : (
-                                <Text style={ownProfile.iossubtitle}>
-                                    {t('ownProfile:tracking.exhausted')}
-                                </Text>
-                            )
-                        ) : (
-                            <Text style={ownProfile.iossubtitle}>
-                                {t('ownProfile:membershipCard.noMembershipSubtitle')}
-                            </Text>
-                        )}
-
-                        <TouchableOpacity style={ownProfile.iosbutton} activeOpacity={0.8} onPress={() => onNavigate('MembershipPlansScreen')}>
-                            <Text style={ownProfile.iosbuttonText}>{t('ownProfile:membershipCard.viewPlans')}</Text>
-                            <Ionicons name="chevron-forward" size={18} color="#1A2233" />
-                        </TouchableOpacity>
-                    </View>
-                ) : (
+                Platform.OS === 'ios' ? renderIosCard() : (
                     <TouchableOpacity style={ownProfile.trackingBanner} activeOpacity={0.85}>
                         <Ionicons name="navigate-circle-outline" size={30} color="black" />
                         <View style={ownProfile.trackingTextWrapper}>
                             {profile?.membership_info?.unlimited ? (
                                 <>
-                                    <Text style={ownProfile.title}>
-                                        {t('ownProfile:tracking.unlimited')}
-                                    </Text>
-                                    <Text style={ownProfile.subtitle}>
-                                        {t('ownProfile:tracking.subtitle')}
-                                    </Text>
+                                    <Text style={ownProfile.title}>{t('ownProfile:tracking.unlimited')}</Text>
+                                    <Text style={ownProfile.subtitle}>{t('ownProfile:tracking.subtitle')}</Text>
                                 </>
                             ) : (profile?.membership_info?.remaining ?? 0) > 0 ? (
                                 <>
                                     <Text style={ownProfile.title}>
                                         {t('ownProfile:tracking.remaining', { count: profile?.membership_info?.remaining ?? 0 })}
                                     </Text>
-                                    <Text style={ownProfile.subtitle}>
-                                        {t('ownProfile:tracking.subtitle')}
-                                    </Text>
+                                    <Text style={ownProfile.subtitle}>{t('ownProfile:tracking.subtitle')}</Text>
                                 </>
                             ) : (
                                 <>
-                                    <Text style={ownProfile.title}>
-                                        {t('ownProfile:tracking.exhausted')}
-                                    </Text>
-                                    <Text style={ownProfile.subtitle}>
-                                        {t('ownProfile:tracking.subtitle')}
-                                    </Text>
+                                    <Text style={ownProfile.title}>{t('ownProfile:tracking.exhausted')}</Text>
+                                    <Text style={ownProfile.subtitle}>{t('ownProfile:tracking.subtitle')}</Text>
                                 </>
                             )}
                         </View>
                     </TouchableOpacity>
                 )
             )}
-            <TouchableOpacity
-                style={[commonStyles.card, ownProfile.menuRow]}
-                activeOpacity={0.7}
-                onPress={() => onSelect('events')}
-            >
+
+            <TouchableOpacity style={[commonStyles.card, ownProfile.menuRow]} activeOpacity={0.7} onPress={() => onSelect('events')}>
                 <Ionicons name="calendar-outline" size={25} color="black" />
                 <View style={ownProfile.menuTextWrapper}>
                     <Text style={ownProfile.title}>{t('menu.events.title')}</Text>
@@ -126,11 +169,8 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                 </View>
                 <Ionicons name="chevron-forward" size={24} color="black" />
             </TouchableOpacity>
-            <TouchableOpacity
-                style={[commonStyles.card, ownProfile.menuRow]}
-                activeOpacity={0.7}
-                onPress={() => onSelect('training')}
-            >
+
+            <TouchableOpacity style={[commonStyles.card, ownProfile.menuRow]} activeOpacity={0.7} onPress={() => onSelect('training')}>
                 <FontAwesome5 name="running" size={24} color="black" />
                 <View style={ownProfile.menuTextWrapper}>
                     <Text style={ownProfile.title}>{t('menu.training.title')}</Text>
@@ -138,11 +178,8 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                 </View>
                 <Ionicons name="chevron-forward" size={24} color="black" />
             </TouchableOpacity>
-            <TouchableOpacity
-                style={[commonStyles.card, ownProfile.menuRow]}
-                activeOpacity={0.7}
-                onPress={() => onNavigate('EditProfileScreen')}
-            >
+
+            <TouchableOpacity style={[commonStyles.card, ownProfile.menuRow]} activeOpacity={0.7} onPress={() => onNavigate('EditProfileScreen')}>
                 <FontAwesome6 name="contact-card" size={24} color="black" />
                 <View style={ownProfile.menuTextWrapper}>
                     <Text style={ownProfile.title}>{t('menu.account.title')}</Text>
@@ -167,6 +204,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const [partnerPast, setPartnerPast] = useState<AthleteEvent[]>([]);
     const [customLive, setCustomLive] = useState<AthleteEvent[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshLoading, setRefreshLoading] = useState(false);
 
     const [partnerPagination, setPartnerPagination] = useState<PaginationState>(INITIAL_PAGINATION);
     const [customPagination, setCustomPagination] = useState<PaginationState>(INITIAL_PAGINATION);
@@ -183,39 +221,9 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const fromEdit = route.params?.fromEdit;
     const [deleteTarget, setDeleteTarget] = useState<AthleteEvent | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    //const { pendingTransactionId } = (route.params as any) ?? {};
-    //console.log(pendingTransactionId);
-
-    // const [purchaseModalVisible, setPurchaseModalVisible] = useState(false);
-    // const [purchaseStatus, setPurchaseStatus] = useState<'processing' | 'success' | 'error'>('processing');
-    // const [purchaseErrorMsg, setPurchaseErrorMsg] = useState<string | null>(null);
-
-
     const goBack = useCallback(() => setActiveSection('menu'), [])
 
     const { error, hasError, handleApiError, clearError } = useScreenError();
-
-    // useEffect(() => {
-    //     if (!pendingTransactionId) return;
-
-    //     const verify = async () => {
-    //         setPurchaseStatus('processing');
-    //         setPurchaseModalVisible(true);
-    //         try {
-    //             await appleVerifyService.verifyPurchase(pendingTransactionId);
-    //             setPurchaseStatus('success');
-    //             setTimeout(() => {
-    //                 setPurchaseModalVisible(false);
-    //                 // call your profile refetch here if you have one
-    //             }, 3000);
-    //         } catch (error: any) {
-    //             setPurchaseStatus('error');
-    //             setPurchaseErrorMsg(error?.message || 'Verification failed');
-    //         }
-    //     };
-
-    //     verify();
-    // }, [pendingTransactionId]);
 
     React.useEffect(() => {
         if (!targetId || targetId === 0) {
@@ -237,7 +245,8 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
             eventService.getAthleteProfile({ page_live: 1, page_past: 1 }, targetId, bustCache, 'custom'),
         ]);
 
-        setProfile(partnerResult.profile); // same profile either call, partner's is fine
+        setProfile(partnerResult.profile); 
+        console.log('partnerResult.profile', partnerResult.profile);// same profile either call, partner's is fine
         setPartnerLive(partnerResult.tabs.live);
         setPartnerPast(partnerResult.tabs.past);
         setCustomLive(customResult.tabs.live);
@@ -297,8 +306,17 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
             return () => {
                 isFetching.current = false;
             };
-        }, [fetchProfile, fromEdit, targetId])
+        }, [fetchProfile, fromEdit, targetId])   
     );
+
+    const handleRefresh = useCallback(async () => {
+        try {
+            setRefreshLoading(true);
+            await fetchProfile(true);
+        } finally {
+            setRefreshLoading(false);
+        }
+    }, [fetchProfile]);
 
     const loadMorePartnerLive = useCallback(async () => {
     if (!targetId || loadingMorePartnerLive || partnerPagination.live.page >= partnerPagination.live.total_pages) return;
@@ -397,7 +415,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
 
     const renderContent = (): React.ReactNode => {
 
-        if (activeSection === 'menu') return <MenuContent onSelect={setActiveSection} onNavigate={(screen) => navigation.navigate(screen as never)} profile={profile} />;
+        if (activeSection === 'menu') return <MenuContent onSelect={setActiveSection} onNavigate={(screen) => navigation.navigate(screen as never)} profile={profile} onRefresh={handleRefresh}  refreshLoading={refreshLoading} />;
         if (activeSection === 'events') return (
             <EventsContent
                 onBack={goBack}
@@ -481,14 +499,6 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                     </View>
                 </View>
             </ScrollView>
-
-            {/* <PurchaseStatusModal
-            visible={purchaseModalVisible}
-            status={purchaseStatus}
-            errorMessage={purchaseErrorMsg}
-            onClose={() => setPurchaseModalVisible(false)}
-        /> */}
-
         <DeleteEventModal
             visible={!!deleteTarget}
             event={deleteTarget}

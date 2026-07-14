@@ -79,7 +79,7 @@ export const ownProfile = StyleSheet.create({
   trackingBanner: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
+    gap: 8,
     backgroundColor: colors.themeiColor,
     borderRadius: 14,
     padding: 14,
@@ -173,6 +173,7 @@ export const ownProfile = StyleSheet.create({
         borderRadius: 8,
         height: 44,
         paddingHorizontal: 16,
+        
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',

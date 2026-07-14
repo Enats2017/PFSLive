@@ -4,8 +4,16 @@
     "title": "Kies je abonnement",
     "subtitle": "Blijf je atleten live volgen."
   },
-  "infoBanner": {
-    "text": "Je hebt je gratis sessie al gebruikt. Kies een abonnement om je in te schrijven en op wedstrijddag te volgen."
+ "infoBanner": {
+  "text": "Vous avez utilisé votre session gratuite. Choisissez un abonnement pour vous inscrire et suivre votre course le jour de l'événement.",
+  "hasSessionsLeft": "Il vous reste {{count}} sessions. Passez à un abonnement à tout moment pour en obtenir davantage.",
+  "noSessionsLeft": "Vous avez utilisé toutes vos sessions. Passez à un abonnement pour continuer le suivi.",
+  "webMembership": "Vous avez un abonnement Web actif. Gérez-le depuis le site web.",
+  "grace": "Votre paiement est en cours de traitement. L'accès sera rétabli sous peu."
+},
+  "sessions": {
+    "unlimited": "Illimité",
+    "count": "{{count}} sessions / an"
   },
   "plans": {
     "lite": {
@@ -15,7 +23,8 @@
       "period": "/ jaar",
       "features": [
         "2 live trackingsessies",
-        "Live GPS-kaart en resultaten"
+        "Live GPS-kaart en resultaten",
+        "Le suivi de votre activité est toujours gratuit pour vos fans"
       ]
     },
     "basic": {
@@ -26,7 +35,8 @@
       "features": [
         "5 live trackingsessies",
         "Live GPS-kaart en resultaten",
-        "Voorrang bij populaire evenementen"
+        "Voorrang bij populaire evenementen",
+        "Le suivi de votre activité est toujours gratuit pour vos fans"
       ],
       "popularLabel": "MEEST GEKOZEN"
     },
@@ -37,12 +47,35 @@
       "period": "/ jaar",
       "features": [
         "Onbeperkt aantal trackingsessies",
-        "Live GPS-kaart en resultaten"
+        "Live GPS-kaart en resultaten",
+        "Le suivi de votre activité est toujours gratuit pour vos fans"
       ]
     }
   },
   "footerNote": "Jaarlijks abonnement, wordt automatisch verlengd.\nOp elk moment opzegbaar. Prijs weergegeven door de App Store.",
   "cta": {
     "continueWith": "Doorgaan met {{planName}}"
+  },
+  "actionModal": {
+  "upgrade": {
+    "title": "Mettre à niveau votre abonnement ?",
+    "description": "Votre abonnement actuel sera mis à niveau vers {{planName}} une fois que vous aurez confirmé.",
+    "confirm": "Confirmer la mise à niveau"
+  },
+  "disabled": {
+    "title": "Rétrogradation non autorisée",
+    "description": "Vous ne pouvez pas passer à une formule de niveau inférieur tant que votre abonnement actuel est actif.",
+    "confirm": "J'ai compris"
+  },
+  "locked": {
+    "title": "Utilisez d'abord vos sessions restantes",
+    "description": "Il vous reste encore {{count}} sessions dans votre abonnement actuel. Utilisez-les avant de passer à une formule supérieure.",
+    "confirm": "J'ai compris"
+  },
+  "hidden": {
+    "title": "Vous avez déjà un abonnement actif",
+    "description": "Vous êtes actuellement abonné via le site web. Gérez votre abonnement depuis celui-ci.",
+    "confirm": "J'ai compris"
   }
+}
 }

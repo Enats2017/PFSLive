@@ -18,7 +18,7 @@ export const COLORS = {
 export const membershipPlansStyle = StyleSheet.create({
 
     header: {
-        backgroundColor: colors.primary,
+        backgroundColor: colors.themeiColor,
         paddingHorizontal: spacing.lg,
         paddingTop: 12,
         paddingBottom: 24,
@@ -30,20 +30,20 @@ export const membershipPlansStyle = StyleSheet.create({
         marginBottom: 18,
     },
     headerLabel: {
-        color: colors.white,
+        color: colors.black,
         fontSize: 13,
         fontWeight: '700',
         letterSpacing: 0.5,
         marginLeft: 4,
     },
     headerTitle: {
-        color: colors.white,
+        color: colors.black,
         fontSize: 32,
         fontWeight: '800',
         marginBottom: 6,
     },
     headerSubtitle: {
-        color: colors.themeiColor,
+        color: colors.primaryLight,
         fontSize: 16,
         fontWeight: '600',
     },
@@ -85,23 +85,32 @@ export const membershipPlansStyle = StyleSheet.create({
         borderColor: COLORS.border,
     },
     cardSelected: {
-        backgroundColor: colors.primary,
-        borderColor: colors.themeiColor,
+        borderColor: colors.primary,
+        borderWidth:1,
+        backgroundColor: colors.themeiColor,
     },
     popularBadge: {
         position: 'absolute',
         top: -13,
         left: 16,
-        backgroundColor: colors.themeiColor,
+        backgroundColor: colors.primary,
         borderRadius: 20,
         paddingHorizontal: spacing.lg,
         paddingVertical: 6,
     },
     popularBadgeText: {
-        color: colors.primaryDark,
+        color: colors.white,
         fontSize: 11.5,
         fontWeight: '800',
         letterSpacing: 0.5,
+    },
+
+    popularselectedtext:{
+        color: colors.themeiColor,
+        fontSize: 11.5,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+
     },
     checkCircle: {
         position: 'absolute',
@@ -110,7 +119,7 @@ export const membershipPlansStyle = StyleSheet.create({
         width: 17,
         height: 17,
         borderRadius: 12,
-        backgroundColor: colors.themeiColor,
+        backgroundColor: colors.primaryDark,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -128,7 +137,7 @@ export const membershipPlansStyle = StyleSheet.create({
         color: COLORS.darkText,
     },
     textLight: {
-        color: COLORS.white,
+        color: colors.primaryDark,
     },
     sessionsBadge: {
         backgroundColor: '#EFEFEF',
@@ -137,7 +146,7 @@ export const membershipPlansStyle = StyleSheet.create({
         paddingVertical: 6,
     },
     sessionsBadgeLime: {
-        backgroundColor: COLORS.lime,
+        backgroundColor: colors.primaryDark,
     },
     sessionsBadgeText: {
         fontSize: 13,
@@ -145,7 +154,7 @@ export const membershipPlansStyle = StyleSheet.create({
         fontWeight: '500',
     },
     sessionsBadgeTextSelected: {
-        color: COLORS.darkText,
+        color: colors.themeiColor,
         fontWeight: '700',
     },
     priceRow: {
@@ -163,7 +172,7 @@ export const membershipPlansStyle = StyleSheet.create({
         color: COLORS.grayText,
     },
     periodLight: {
-        color: '#A6B1BE',
+        color: colors.primaryDark,
     },
     featuresWrapper: {
         marginTop: 2,
@@ -179,7 +188,7 @@ export const membershipPlansStyle = StyleSheet.create({
         color: COLORS.grayText,
     },
     featureTextLight: {
-        color: '#D7DEE5',
+        color: colors.primaryDark,
     },
     footerNote: {
         textAlign: 'center',
@@ -198,7 +207,7 @@ export const membershipPlansStyle = StyleSheet.create({
         paddingBottom: spacing.xxl
     },
     ctaButton: {
-        backgroundColor: colors.themeiColor,
+        backgroundColor: colors.primary,
         borderRadius: 12,
         height: 52,
         flexDirection: 'row',
@@ -206,7 +215,7 @@ export const membershipPlansStyle = StyleSheet.create({
         justifyContent: 'center',
     },
     ctaButtonText: {
-        color: COLORS.darkText,
+        color: colors.white,
         fontSize: 16,
         fontWeight: '700',
         marginRight: 6,

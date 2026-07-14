@@ -31,7 +31,9 @@
         "liteTitle": "ABONNEMENT",
         "sessionsLeft": "sessions de suivi en direct restantes",
         "viewPlans": "Voir les forfaits et passer à un niveau supérieur",
-        "noMembershipTitle": "Aucun abonnement actif"
+        "noMembershipTitle": "Aucun abonnement actif",
+        "paymentProcessing": "Le paiement est en cours de traitement. Veuillez patienter environ 1 minute, puis appuyez sur Actualiser pour voir votre abonnement mis à jour.",
+         "refresh": "Actualiser"
     },
     "training": {
         "create": "CRÉER UN ÉVÉNEMENT PERSONNEL"

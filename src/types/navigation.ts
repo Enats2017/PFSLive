@@ -49,7 +49,10 @@ export type RootStackParamList = {
     sourceTab?: "past" | "live" | "upcoming";
   };
   ProfileScreen: { customer_app_id?: number; fromEdit?: boolean };
-  OwnProfile:{ customer_app_id?: number; fromEdit?: boolean };
+  OwnProfile:{ customer_app_id: number | null;
+    fromEdit?: boolean;
+    pendingTransactionId?: string;
+   };
   EditProfileScreen: undefined;
   EditPersonalEvent: {
     eventId: number;
@@ -227,6 +230,11 @@ export type UserFavouriteListpops = NativeStackScreenProps<
 export type FollowersListpops = NativeStackScreenProps<
   RootStackParamList,
   "FollowersList"
+>;
+
+export type MembershipPlansScreenpops = NativeStackScreenProps<
+  RootStackParamList,
+  "MembershipPlansScreen"
 >;
 
 export type AuthStackParamList = {

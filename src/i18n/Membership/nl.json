@@ -4,8 +4,16 @@
     "title": "Kies je abonnement",
     "subtitle": "Blijf je atleten live volgen."
   },
-  "infoBanner": {
-    "text": "Je hebt je gratis sessie al gebruikt. Kies een abonnement om je in te schrijven en op wedstrijddag te volgen."
+ "infoBanner": {
+    "text": "Je gratis sessie is gebruikt. Kies een abonnement om je te registreren en je race op de wedstrijddag te volgen.",
+    "hasSessionsLeft": "Je hebt nog {{count}} sessies over. Upgrade op elk moment om meer sessies te krijgen.",
+    "noSessionsLeft": "Je hebt al je sessies gebruikt. Upgrade je abonnement om je races te blijven volgen.",
+    "webMembership": "Je hebt een actief webabonnement. Beheer dit via de website.",
+    "grace": "Je betaling wordt verwerkt. De toegang wordt binnenkort hervat."
+  },
+  "sessions": {
+    "unlimited": "Onbeperkt",
+    "count": "{{count}} sessies / jaar"
   },
   "plans": {
     "lite": {
@@ -15,7 +23,8 @@
       "period": "/ jaar",
       "features": [
         "2 live trackingsessies",
-        "Live GPS-kaart en resultaten"
+        "Live GPS-kaart en resultaten",
+        "Het volgen van jouw activiteit is altijd gratis voor je fans"
       ]
     },
     "basic": {
@@ -26,7 +35,8 @@
       "features": [
         "5 live trackingsessies",
         "Live GPS-kaart en resultaten",
-        "Voorrang bij populaire evenementen"
+        "Voorrang bij populaire evenementen",
+        "Het volgen van jouw activiteit is altijd gratis voor je fans"
       ],
       "popularLabel": "MEEST GEKOZEN"
     },
@@ -37,12 +47,35 @@
       "period": "/ jaar",
       "features": [
         "Onbeperkt aantal trackingsessies",
-        "Live GPS-kaart en resultaten"
+        "Live GPS-kaart en resultaten",
+        "Het volgen van jouw activiteit is altijd gratis voor je fans"
       ]
     }
   },
   "footerNote": "Jaarlijks abonnement, wordt automatisch verlengd.\nOp elk moment opzegbaar. Prijs weergegeven door de App Store.",
   "cta": {
     "continueWith": "Doorgaan met {{planName}}"
+  },
+  "actionModal": {
+  "upgrade": {
+    "title": "Je lidmaatschap upgraden?",
+    "description": "Je huidige abonnement wordt geüpgraded naar {{planName}} zodra je bevestigt.",
+    "confirm": "Upgrade bevestigen"
+  },
+  "disabled": {
+    "title": "Downgraden is niet toegestaan",
+    "description": "Je kunt niet overstappen naar een lager abonnement zolang je huidige lidmaatschap actief is.",
+    "confirm": "Begrepen"
+  },
+  "locked": {
+    "title": "Gebruik eerst je resterende sessies",
+    "description": "Je hebt nog {{count}} sessies over in je huidige abonnement. Gebruik deze eerst voordat je upgradet.",
+    "confirm": "Begrepen"
+  },
+  "hidden": {
+    "title": "Je hebt al een actief lidmaatschap",
+    "description": "Je bent momenteel geabonneerd via de website. Beheer je lidmaatschap daar.",
+    "confirm": "Begrepen"
   }
+}
 }

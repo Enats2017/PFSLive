@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -6,6 +6,7 @@ import {
     ScrollView,
     StatusBar,
     ActivityIndicator,
+    Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,10 @@ import { colors, commonStyles } from '../../styles/common.styles';
 import { membershipPlansStyle as styles, COLORS } from '../../styles/membershipPlans.styles';
 import { useMembershipPlans, PlanId, PLAN_IDS } from '../../hooks/useMembershipplans';
 import MembershipPlanModel, { ModalActionType } from '../../components/MembershipPlanModel';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MembershipPlansScreenpops, RootStackParamList } from '../../types/navigation';
+import { tokenService } from '../../services/tokenService';
+import PurchaseStatusModal from '../../components/PurchaseStatusModal';
 
 interface PlanData {
     name: string;
@@ -25,12 +30,20 @@ interface PlanData {
     popularLabel?: string;
 }
 
+type MembershipPlansNavigationProp =
+    NativeStackNavigationProp<
+        RootStackParamList,
+        'MembershipPlansScreen'
+    >;
+
 const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
-    const { t } = useTranslation(['membership']);
-    const navigation = useNavigation();
+    const { t, i18n } = useTranslation(['membership']);
+    const navigation = useNavigation<MembershipPlansNavigationProp>();
     const [selected, setSelected] = useState<PlanId>('basic');
     const [modalAction, setModalAction] = useState<ModalActionType | null>(null);
     const [modalPlanId, setModalPlanId] = useState<PlanId | null>(null);
+    const customerAppIdRef = useRef<number | null>(null);
+
 
     const {
         plansData,
@@ -41,11 +54,25 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         loadingPrices,
         defaultSelectedTier,
         refetchPlans,
+        requestPurchase,
+        purchaseLoading,
+        purchaseResult,
+        purchaseError,
+        resetPurchase, 
     } = useMembershipPlans();
+
 
     useEffect(() => {
         if (defaultSelectedTier) setSelected(defaultSelectedTier);
     }, [defaultSelectedTier]);
+
+    useEffect(() => {
+        const loadCustomerId = async () => {
+            const id = await tokenService.getCustomerId();
+            customerAppIdRef.current = id;
+        };
+        loadCustomerId();
+    }, []);
 
     const getPlan = (id: PlanId): PlanData =>
         t(`membership:plans.${id}`, { returnObjects: true }) as PlanData;
@@ -57,32 +84,88 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         return t('membership:sessions.count', { count: apiPlan.sessions });
     };
 
+    const formatPriceSymbolFirst = (price: string): string => {
+        const match = price.match(/^([\d.,]+)\s*([^\d\s]+)$/);
+        if (match) {
+            const [, amount, symbol] = match;
+            return `${symbol} ${amount}`;
+        }
+        return price;
+    };
+
     const getPriceLabel = (id: PlanId): string => {
         const apiPlan = planByTier[id];
         if (!apiPlan) return getPlan(id).price;
         const storePrice = storeProducts[apiPlan.product_id];
         if (loadingPrices && !storePrice) return '...';
-        return storePrice || getPlan(id).price;
+        if (!storePrice) return getPlan(id).price;
+
+        const currentLang = i18n.language?.split('-')[0]; // handles 'fr-FR' -> 'fr'
+        if (currentLang === 'fr') {
+            return storePrice; // raw API format, no reformatting
+        }
+
+        return formatPriceSymbolFirst(storePrice);
     };
 
-   const handlePlanPress = (id: PlanId) => {
-    const apiPlan = planByTier[id];
+    const handlePlanPress = (id: PlanId) => {
+        const apiPlan = planByTier[id];
+        console.log('tapped plan:', id, '| action:', apiPlan?.action, '| planByTier keys:', Object.keys(planByTier));
+        if (!apiPlan) return;
+        //   if (apiPlan.action === 'current') {
+        //     Linking.openURL('https://apps.apple.com/account/subscriptions');
+        //     return;
+        // }
+        if (
+            apiPlan.action === 'disabled' ||
+            apiPlan.action === 'locked' ||
+            apiPlan.action === 'hidden'
+        ) {
+            setModalPlanId(id);
+            setModalAction(apiPlan.action as ModalActionType);
+            return;
+        }
 
-    if (!apiPlan) return;
+        setSelected(id);
+    };
 
-    if (
-        apiPlan.action === 'upgrade' ||
-        apiPlan.action === 'disabled' ||
-        apiPlan.action === 'locked' ||
-        apiPlan.action === 'hidden'
-    ) {
-        setModalPlanId(id);
-        setModalAction(apiPlan.action as ModalActionType);
-        return;
-    }
+    const handleContinue = async () => {
+        const apiPlan = planByTier[selected];
+        if (!apiPlan) return;
+      
+        if (apiPlan.action !== 'subscribe' && apiPlan.action !== 'upgrade'  && apiPlan.action !== 'current') {
+            setModalPlanId(selected);
+            setModalAction(apiPlan.action as ModalActionType);
+            return;
+        }
+        console.log("calling the request");
+        console.log("requestdata", apiPlan.product_id);
+        try {
+            await requestPurchase({
+                request: {
+                    apple: { sku: apiPlan.product_id },
+                },
+                type: 'subs',
+            });
 
-    setSelected(id);
-};
+        } catch (error: any) {
+            const message = error?.message ?? '';
+            if (message.includes('cancelled') || message.includes('canceled')) {
+                console.log('ℹ️ User cancelled purchase - no action needed');
+                return;
+            }
+            console.error('❌ Purchase request failed:', error);
+        }
+    };
+
+    useEffect(() => {
+            if (!purchaseResult) return;
+                navigation.replace('OwnProfile', {
+                    customer_app_id: customerAppIdRef.current ?? null,
+                    fromEdit: true,
+                });
+            resetPurchase();
+    }, [purchaseResult]);
 
     const handleConfirmUpgrade = () => {
         if (modalPlanId) setSelected(modalPlanId);
@@ -93,6 +176,23 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     const closeModal = () => {
         setModalAction(null);
         setModalPlanId(null);
+    };
+
+    const isContinueDisabled = (() => {
+        const apiPlan = planByTier[selected];
+        if (!apiPlan) return true;
+        return apiPlan.action !== 'subscribe' && apiPlan.action !== 'upgrade' && apiPlan.action !== 'current'  ;
+    })();
+
+    const getBannerText = (): string => {
+        if (!plansData) return t('membership:infoBanner.text') as string;
+        const { has_membership, source, status, sessions_remaining } = plansData.entitlement;
+        if (status === 'grace') return t('membership:infoBanner.grace') as string;
+        if (!has_membership) return t('membership:infoBanner.text') as string;
+        if (source === 'web') return t('membership:infoBanner.webMembership') as string;
+        if (sessions_remaining === null) return t('membership:infoBanner.hasSessionsLeft', { count: '∞' } as any) as string;
+        if (sessions_remaining > 0) return t('membership:infoBanner.hasSessionsLeft', { count: sessions_remaining } as any) as string;
+        return t('membership:infoBanner.noSessionsLeft') as string;
     };
 
     const renderPlanCard = (id: PlanId) => {
@@ -107,13 +207,13 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
             >
                 {plan.popularLabel && (
                     <View style={styles.popularBadge}>
-                        <Text style={styles.popularBadgeText}>{plan.popularLabel}</Text>
+                        <Text style={[styles.popularBadgeText, isSelected && styles.popularselectedtext]}>{plan.popularLabel}</Text>
                     </View>
                 )}
 
                 {isSelected && (
                     <View style={styles.checkCircle}>
-                        <Ionicons name="checkmark" size={15} color={COLORS.darkText} />
+                        <Ionicons name="checkmark" size={15} color={colors.themeiColor} />
                     </View>
                 )}
 
@@ -149,7 +249,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                             <Ionicons
                                 name="checkmark"
                                 size={18}
-                                color={isSelected ? COLORS.lime : COLORS.darkText}
+                                color={isSelected ? COLORS.navy : COLORS.darkText}
                             />
                             <Text
                                 style={[styles.featureText, isSelected && styles.featureTextLight]}
@@ -163,10 +263,10 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         );
     };
 
-    if (loadingPlans) {
+    if (loadingPlans || loadingPrices) {
         return (
-            <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.primary }]} edges={['top']}>
-                <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+            <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.themeiColor }]} edges={['top']}>
+                <StatusBar barStyle="light-content" backgroundColor={colors.themeiColor} />
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                     <ActivityIndicator size="large" color={COLORS.white} />
                 </View>
@@ -176,8 +276,8 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     if (plansError) {
         return (
-            <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.primary }]} edges={['top']}>
-                <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+            <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.themeiColor }]} edges={['top']}>
+                <StatusBar barStyle="light-content" backgroundColor={colors.themeiColor} />
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
                     <Text style={{ color: COLORS.white, textAlign: 'center', marginBottom: 16 }}>
                         {plansError}
@@ -191,12 +291,12 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     }
 
     return (
-        <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.primary }]} edges={['top']}>
-            <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+        <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.themeiColor }]} edges={['top']}>
+            <StatusBar barStyle="light-content" backgroundColor={colors.themeiColor} />
 
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="chevron-back" size={22} color={COLORS.white} />
+                    <Ionicons name="chevron-back" size={22} color={COLORS.navy} />
                     <Text style={styles.headerLabel}>{t('membership:header.label')}</Text>
                 </TouchableOpacity>
 
@@ -212,7 +312,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 <View style={styles.infoBanner}>
                     <Ionicons name="information-circle-outline" size={22} color={COLORS.infoText} />
                     <Text style={styles.infoBannerText}>
-                        {t('membership:infoBanner.text')}
+                        {getBannerText()}
                     </Text>
                 </View>
 
@@ -224,7 +324,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
             </ScrollView>
 
             <View style={styles.ctaWrapper}>
-                <TouchableOpacity style={styles.ctaButton} activeOpacity={0.85}>
+                <TouchableOpacity style={[styles.ctaButton, isContinueDisabled && { opacity: 0.4 }]} activeOpacity={0.85} onPress={handleContinue} disabled={isContinueDisabled}>
                     <Text style={styles.ctaButtonText}>
                         {t('membership:cta.continueWith', { planName: getPlan(selected).name })}
                     </Text>
@@ -239,14 +339,21 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 description={
                     modalAction
                         ? (t(`membership:actionModal.${modalAction}.description`, {
-                              planName: modalPlanId ? getPlan(modalPlanId).name : '',
-                          }) as string)
+                            planName: modalPlanId ? getPlan(modalPlanId).name : '',
+                            count: plansData?.entitlement.sessions_remaining ?? 0,
+                        }) as string)
                         : ''
                 }
                 confirmLabel={modalAction ? (t(`membership:actionModal.${modalAction}.confirm`) as string) : ''}
-                showConfirm={modalAction === 'upgrade'}
                 onClose={closeModal}
                 onConfirm={handleConfirmUpgrade}
+            />
+
+            <PurchaseStatusModal
+                visible={purchaseLoading || !!purchaseError}
+                status={purchaseLoading ? 'processing' : 'error'}
+                errorMessage={purchaseError}
+                onClose={resetPurchase}
             />
         </SafeAreaView>
     );

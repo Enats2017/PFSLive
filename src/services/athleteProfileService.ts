@@ -22,6 +22,7 @@ export interface AthleteProfile {
   followers_count: number;
   following_count: number;
    membership_info: MembershipInfo | null;
+   in_process_payment: number | null;
 }
 
 
@@ -205,6 +206,7 @@ export const eventService = {
               followers_count: 0, // ← add
               following_count: 0,
               membership_info: null,
+              in_process_payment: 0
             },
             tabs: {
               past: eventsData.past || [],

@@ -9,8 +9,9 @@ import {
     StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../styles/common.styles';
 
-export type ModalActionType = 'upgrade' | 'disabled' | 'locked' | 'hidden';
+export type ModalActionType =  'disabled' | 'locked' | 'hidden';
 
 interface MembershipActionModalProps {
     visible: boolean;
@@ -24,7 +25,6 @@ interface MembershipActionModalProps {
 }
 
 const ICON_BY_ACTION: Record<ModalActionType, { name: any; color: string; bg: string }> = {
-    upgrade: { name: 'arrow-up-circle', color: '#1A2E35', bg: '#D9F26A' },
     disabled: { name: 'lock-closed', color: '#9CA3AF', bg: '#F3F4F6' },
     locked: { name: 'time-outline', color: '#F59E0B', bg: '#FEF3C7' },
     hidden: { name: 'information-circle', color: '#3B82F6', bg: '#DBEAFE' },
@@ -189,20 +189,20 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 13,
         borderRadius: 14,
-        backgroundColor: '#D9F26A',
+        backgroundColor: colors.primary,
         alignItems: 'center',
     },
     primaryButtonFull: {
         width: '100%',
         paddingVertical: 13,
         borderRadius: 14,
-        backgroundColor: '#D9F26A',
+       backgroundColor: colors.primary,
         alignItems: 'center',
     },
     primaryButtonText: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#1A2E35',
+        color: colors.white,
     },
 });
 

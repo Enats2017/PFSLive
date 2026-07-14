@@ -32,7 +32,9 @@
         "sessionsLeft": "live tracking sessions left",
         "viewPlans": "View plans & upgrade",
         "noMembershipTitle": "No Active Membership",
-        "noMembershipSubtitle": "Subscribe to a plan to start live tracking your sessions."
+        "noMembershipSubtitle": "Subscribe to a plan to start live tracking your sessions.",
+        "paymentProcessing": "Payment is being processed. Please wait about 1 minute, then tap Refresh to view your updated membership.",
+        "refresh": "Refresh"
     },
     "training": {
         "create": "CREATE PERSONAL EVENT"
