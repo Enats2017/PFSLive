@@ -57,7 +57,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   // ✅ GET MODAL CONFIG FROM i18n
   const getModalConfig = (status: RegistrationStatus): ModalConfig => {
     const baseKey = `details:registrationModal.${status}`;
-     const showUpgradeButton = false;//Platform.OS === 'ios' && UPGRADE_STATUSES.includes(status);
+     const showUpgradeButton = Platform.OS === 'ios' && UPGRADE_STATUSES.includes(status);
 
     const accentColors: Record<RegistrationStatus, string> = {
       registered:           colors.primaryLight,
