@@ -8,7 +8,7 @@ import {
     ActivityIndicator,
     Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -43,6 +43,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     const [modalAction, setModalAction] = useState<ModalActionType | null>(null);
     const [modalPlanId, setModalPlanId] = useState<PlanId | null>(null);
     const customerAppIdRef = useRef<number | null>(null);
+    const insets = useSafeAreaInsets();
 
 
     const {
@@ -58,7 +59,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         purchaseLoading,
         purchaseResult,
         purchaseError,
-        resetPurchase, 
+        resetPurchase,
     } = useMembershipPlans();
 
 
@@ -132,8 +133,8 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     const handleContinue = async () => {
         const apiPlan = planByTier[selected];
         if (!apiPlan) return;
-      
-        if (apiPlan.action !== 'subscribe' && apiPlan.action !== 'upgrade'  && apiPlan.action !== 'current') {
+
+        if (apiPlan.action !== 'subscribe' && apiPlan.action !== 'upgrade' && apiPlan.action !== 'current') {
             setModalPlanId(selected);
             setModalAction(apiPlan.action as ModalActionType);
             return;
@@ -159,12 +160,12 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     };
 
     useEffect(() => {
-            if (!purchaseResult) return;
-                navigation.replace('OwnProfile', {
-                    customer_app_id: customerAppIdRef.current ?? null,
-                    fromEdit: true,
-                });
-            resetPurchase();
+        if (!purchaseResult) return;
+        navigation.replace('OwnProfile', {
+            customer_app_id: customerAppIdRef.current ?? null,
+            fromEdit: true,
+        });
+        resetPurchase();
     }, [purchaseResult]);
 
     const handleConfirmUpgrade = () => {
@@ -181,7 +182,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     const isContinueDisabled = (() => {
         const apiPlan = planByTier[selected];
         if (!apiPlan) return true;
-        return apiPlan.action !== 'subscribe' && apiPlan.action !== 'upgrade' && apiPlan.action !== 'current'  ;
+        return apiPlan.action !== 'subscribe' && apiPlan.action !== 'upgrade' && apiPlan.action !== 'current';
     })();
 
     const getBannerText = (): string => {
@@ -291,9 +292,8 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     }
 
     return (
-        <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.themeiColor }]} edges={['top']}>
+        <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.themeiColor }]} edges={['top' ]}>
             <StatusBar barStyle="light-content" backgroundColor={colors.themeiColor} />
-
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={22} color={COLORS.navy} />
@@ -323,7 +323,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 </Text>
             </ScrollView>
 
-            <View style={styles.ctaWrapper}>
+            <View style={[styles.ctaWrapper, { paddingBottom: insets.bottom }]}>
                 <TouchableOpacity style={[styles.ctaButton, isContinueDisabled && { opacity: 0.4 }]} activeOpacity={0.85} onPress={handleContinue} disabled={isContinueDisabled}>
                     <Text style={styles.ctaButtonText}>
                         {t('membership:cta.continueWith', { planName: getPlan(selected).name })}
