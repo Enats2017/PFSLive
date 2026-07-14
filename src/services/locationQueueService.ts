@@ -94,7 +94,11 @@ export const locationQueueService = {
       if (throttle) {
         const now = Date.now();
         const intervalSec = await _resolveQueueIntervalSec();
-        const gapMs = intervalSec * 1000;
+        // Match gpsService's send gate (0.75 × interval). Using the FULL interval
+        // here meant a fix that legitimately passed the 45s send throttle was then
+        // dropped by a 60s queue gate, pushing the next capture out to ~90s. Same
+        // factor on both gates → consistent ~interval spacing offline and online.
+        const gapMs = Math.round(intervalSec * 0.75) * 1000;
         const lastQueuedStr = await AsyncStorage.getItem(LAST_QUEUED_KEY);
         const lastQueuedAt = lastQueuedStr ? parseInt(lastQueuedStr) : 0;
         const throttleValid = !(isNaN(lastQueuedAt) || lastQueuedAt > now);

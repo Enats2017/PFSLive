@@ -104,13 +104,14 @@
     "no": "Pas encore"
   },
   "fanEmail": {
-  "title": "Restez informé",
-  "description": "Saisissez votre adresse e-mail et nous vous enverrons les mises à jour des courses, les résultats et, occasionnellement, des actualités de Livio. Aucun compte n'est nécessaire, seulement votre adresse e-mail.",
-  "emailPlaceholder": "nom@exemple.com",
-  "invalidEmail": "Veuillez saisir une adresse e-mail valide.",
-  "save": "Enregistrer",
-  "maybeLater": "Peut-être plus tard",
-  "savedTitle": "Adresse e-mail enregistrée",
-  "savedMessage": "Nous vous tiendrons informé des mises à jour des courses."
-}
+    "title": "Restez informé",
+    "description": "Saisissez votre adresse e-mail et nous vous enverrons les mises à jour des courses, les résultats et, occasionnellement, des actualités de Livio. Aucun compte n'est nécessaire, seulement votre adresse e-mail.",
+    "emailPlaceholder": "nom@exemple.com",
+    "invalidEmail": "Veuillez saisir une adresse e-mail valide.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement",
+    "maybeLater": "Peut-être plus tard",
+    "savedTitle": "Adresse e-mail enregistrée",
+    "savedMessage": "Nous vous tiendrons informé des mises à jour des courses."
+  }
 }

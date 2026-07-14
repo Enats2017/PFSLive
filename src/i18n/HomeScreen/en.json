@@ -103,12 +103,13 @@
     "yes": "Yes, Start Tracking",
     "no": "Not Yet"
   },
-   "fanEmail": {
+  "fanEmail": {
     "title": "Stay in the loop",
     "description": "Enter your email and we'll send you race updates, results, and the occasional Livio news. No account needed—just your email.",
     "emailPlaceholder": "name@example.com",
     "invalidEmail": "Enter a valid email address.",
     "save": "Save",
+    "saving": "Saving",
     "maybeLater": "Maybe later",
     "savedTitle": "Email saved",
     "savedMessage": "We'll keep you posted on race updates."
