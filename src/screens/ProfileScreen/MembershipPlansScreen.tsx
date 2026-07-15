@@ -75,6 +75,17 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         loadCustomerId();
     }, []);
 
+    // ✅ Build language-aware legal URLs (en/nl/fr)
+    const getLegalUrls = () => {
+        const lang = i18n.language?.split('-')[0]; // 'fr-FR' → 'fr'
+        const code = (lang === 'nl' || lang === 'fr') ? lang : 'en'; // fallback to en
+
+        return {
+            privacy: `https://my.liviolive.com/${code}-privacy-livio`,
+            terms: `https://www.apple.com/legal/internet-services/itunes/dev/stdeula/`,
+        };
+    };
+
     const getPlan = (id: PlanId): PlanData =>
         t(`membership:plans.${id}`, { returnObjects: true }) as PlanData;
 
@@ -321,6 +332,27 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 <Text style={styles.footerNote}>
                     {t('membership:footerNote')}
                 </Text>
+
+                {/* ✅ Subscription info + required legal links */}
+                <Text style={styles.subscriptionInfoText}>
+                    {t('membership:subscriptionInfo')}
+                </Text>
+
+                <View style={styles.legalLinksRow}>
+                    <TouchableOpacity onPress={() => Linking.openURL(getLegalUrls().privacy)}>
+                        <Text style={styles.legalLinkText}>
+                            {t('membership:legal.privacy')}
+                        </Text>
+                    </TouchableOpacity>
+
+                    <Text style={styles.legalLinkSeparator}>  •  </Text>
+
+                    <TouchableOpacity onPress={() => Linking.openURL(getLegalUrls().terms)}>
+                        <Text style={styles.legalLinkText}>
+                            {t('membership:legal.terms')}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
             </ScrollView>
 
             <View style={[styles.ctaWrapper, { paddingBottom: insets.bottom }]}>

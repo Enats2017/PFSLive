@@ -53,29 +53,34 @@
     }
   },
   "footerNote": "Jaarlijks abonnement, wordt automatisch verlengd.\nOp elk moment opzegbaar. Prijs weergegeven door de App Store.",
+  "legal": {
+    "privacy": "Privacybeleid",
+    "terms": "Gebruiksvoorwaarden (EULA)"
+  },
+  "subscriptionInfo": "Abonnementen worden jaarlijks gefactureerd en verlengen automatisch, tenzij minstens 24 uur voor het einde van de huidige periode geannuleerd. U kunt uw abonnement beheren of annuleren in de instellingen van uw App Store-account.",
   "cta": {
     "continueWith": "Doorgaan met {{planName}}"
   },
   "actionModal": {
-  "upgrade": {
-    "title": "Je lidmaatschap upgraden?",
-    "description": "Je huidige abonnement wordt geüpgraded naar {{planName}} zodra je bevestigt.",
-    "confirm": "Upgrade bevestigen"
-  },
-  "disabled": {
-    "title": "Downgraden is niet toegestaan",
-    "description": "Je kunt niet overstappen naar een lager abonnement zolang je huidige lidmaatschap actief is.",
-    "confirm": "Begrepen"
-  },
-  "locked": {
-    "title": "Gebruik eerst je resterende sessies",
-    "description": "Je hebt nog {{count}} sessies over in je huidige abonnement. Gebruik deze eerst voordat je upgradet.",
-    "confirm": "Begrepen"
-  },
-  "hidden": {
-    "title": "Je hebt al een actief lidmaatschap",
-    "description": "Je bent momenteel geabonneerd via de website. Beheer je lidmaatschap daar.",
-    "confirm": "Begrepen"
+    "upgrade": {
+      "title": "Je lidmaatschap upgraden?",
+      "description": "Je huidige abonnement wordt geüpgraded naar {{planName}} zodra je bevestigt.",
+      "confirm": "Upgrade bevestigen"
+    },
+    "disabled": {
+      "title": "Downgraden is niet toegestaan",
+      "description": "Je kunt niet overstappen naar een lager abonnement zolang je huidige lidmaatschap actief is.",
+      "confirm": "Begrepen"
+    },
+    "locked": {
+      "title": "Gebruik eerst je resterende sessies",
+      "description": "Je hebt nog {{count}} sessies over in je huidige abonnement. Gebruik deze eerst voordat je upgradet.",
+      "confirm": "Begrepen"
+    },
+    "hidden": {
+      "title": "Je hebt al een actief lidmaatschap",
+      "description": "Je bent momenteel geabonneerd via de website. Beheer je lidmaatschap daar.",
+      "confirm": "Begrepen"
   }
 }
 }

@@ -4,14 +4,14 @@
     "title": "Choose your plan",
     "subtitle": "Keep tracking your athletes live."
   },
- "infoBanner": {
+  "infoBanner": {
     "text": "You've used your free session. Pick a plan to register and track on race day.",
     "hasSessionsLeft": "You have {{count}} sessions remaining. Upgrade anytime to get more.",
     "noSessionsLeft": "You've used all your sessions. Upgrade your plan to continue tracking.",
     "webMembership": "You have an active web membership. Manage it from the website.",
     "grace": "Your payment is being processed. Access will resume shortly."
   },
-   "sessions": {
+  "sessions": {
     "unlimited": "Unlimited",
     "count": "{{count}} sessions / year"
   },
@@ -53,6 +53,11 @@
     }
   },
   "footerNote": "Yearly subscription, renews automatically.\nCancel anytime. Price shown by the App Store.",
+  "legal": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use (EULA)"
+  },
+  "subscriptionInfo": "Subscriptions are billed yearly and renew automatically unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription in your App Store account settings.",
   "cta": {
     "continueWith": "Continue with {{planName}}"
   },
@@ -73,10 +78,9 @@
       "confirm": "Got it"
     },
     "hidden": {
-  "title": "You already have an active membership",
-  "description": "You're currently subscribed through the web. Manage your membership from there.",
-  "confirm": "Got it"
-}
+      "title": "You already have an active membership",
+      "description": "You're currently subscribed through the web. Manage your membership from there.",
+      "confirm": "Got it"
+    }
   }
-  
 }

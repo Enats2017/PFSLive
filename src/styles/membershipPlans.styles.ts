@@ -198,6 +198,35 @@ export const membershipPlansStyle = StyleSheet.create({
         marginTop: 8,
         marginBottom: 16,
     },
+    // ✅ Subscription auto-renew disclosure text
+    subscriptionInfoText: {
+        textAlign: 'center',
+        color: COLORS.grayText,
+        fontSize: 12,
+        lineHeight: 18,
+        marginTop: 8,
+        marginBottom: 12,
+        paddingHorizontal: 8,
+    },
+    // ✅ Required legal links row (Privacy Policy • Terms of Use)
+    legalLinksRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        marginTop: 4,
+        marginBottom: 20,
+    },
+    legalLinkText: {
+        color: COLORS.darkText,
+        fontSize: 13,
+        fontWeight: '600',
+        textDecorationLine: 'underline',
+    },
+    legalLinkSeparator: {
+        color: COLORS.grayText,
+        fontSize: 13,
+    },
     ctaWrapper: {
         paddingHorizontal: 20,
         paddingVertical: 16,
