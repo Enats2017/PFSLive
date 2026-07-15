@@ -59,6 +59,7 @@ const DistanceTab = ({
   const { downloadGpx, downloadingId } = useGpxDownload();
   const [gpxRestrictedVisible, setGpxRestrictedVisible] = useState(false);
   const [gpxRestrictedItem, setGpxRestrictedItem] = useState<Distance | null>(null);
+  const [imageLoading, setImageLoading] = useState(true);
 
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -272,46 +273,65 @@ const DistanceTab = ({
     setSelectedUndoItem(null);
   }, [selectedUndoItem, handleDelete]);
 
-  
-const renderListHeader = useCallback(() => {
-  const isAnyRegistered = distances.some(
-    (d) => d.registration_status === 'registered'
-  );
-  return (
-    <View>
-      {event_image ? (
-        <Image
-          source={{ uri: event_image }}
-          style={{
-            width: '100%',
-            aspectRatio: 612 / 300,
-            marginBottom: spacing.sm,
-          }}
-           resizeMode="cover"
-        />
-      ) : null}
+  React.useEffect(() => {
+    setImageLoading(true);
+  }, [event_image]);
 
-      <View style={detailsStyles.infoBox}>
-        <View style={detailsStyles.infoIconWrapper}>
-          <AntDesign name="link" size={20} color={colors.primaryDark} />
+
+  const renderListHeader = useCallback(() => {
+    const isAnyRegistered = distances.some(
+      (d) => d.registration_status === 'registered'
+    );
+    return (
+      <View>
+        {event_image ? (
+          <View style={{ width: '100%', aspectRatio: 612 / 300, justifyContent: 'center', alignItems: 'center',}}>
+            {imageLoading && (
+              <ActivityIndicator
+                size="large"
+                color={colors.primary}
+                style={{ position: 'absolute', zIndex: 1 }}
+              />
+            )}
+
+            <Image
+              source={{ uri: event_image }}
+              resizeMode="cover"
+              style={{
+                width: '100%',
+                aspectRatio: 612 / 300,
+                opacity: imageLoading ? 0 : 1,
+              }}
+              onLoad={() => setImageLoading(false)}
+              onError={(e) => {
+                console.log('❌ Image failed:', event_image, e.nativeEvent?.error);
+                setImageLoading(false);
+              }}
+            />
+          </View>
+        ) : null}
+
+        <View style={detailsStyles.infoBox}>
+          <View style={detailsStyles.infoIconWrapper}>
+            <AntDesign name="link" size={20} color={colors.primaryDark} />
+          </View>
+          <Text style={detailsStyles.infoBoxText}>
+            {t('details:infoMessage')}
+          </Text>
         </View>
-        <Text style={detailsStyles.infoBoxText}>
-          {t('details:infoMessage')}
-        </Text>
-      </View>
 
-      <View style={detailsStyles.infoBox}>
-        <View style={detailsStyles.infoIconWrapper}>
-        <AntDesign name="link" size={20} color={colors.primaryDark} />
+        <View style={detailsStyles.infoBox}>
+          <View style={detailsStyles.infoIconWrapper}>
+            <AntDesign name="link" size={20} color={colors.primaryDark} />
+          </View>
+          <Text style={detailsStyles.infoBoxText}>
+            {t('details:gpxInfo')}
+          </Text>
         </View>
-        <Text style={detailsStyles.infoBoxText}>
-          {t('details:gpxInfo')}
-        </Text>
-      </View>
 
-    </View>
-  );
-}, [event_name, event_image, distances]);
+      </View>
+    );
+  }, [event_name, event_image, distances, imageLoading]);
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isRegistering =
@@ -354,7 +374,7 @@ const renderListHeader = useCallback(() => {
                 {item.finished_count} {t('details:finished')}
               </Text>
             </View>
-            
+
             <View style={detailsStyles.metaRow}>
               <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
               <Text style={detailsStyles.metaTextRed} numberOfLines={1}>

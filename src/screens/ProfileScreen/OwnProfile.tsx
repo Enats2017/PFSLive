@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, Image, StatusBar, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet, ActivityIndicator } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, commonStyles, spacing } from '../../styles/common.styles'
-import { Ionicons, FontAwesome5, FontAwesome6, FontAwesome,Feather } from '@expo/vector-icons'
+import { Ionicons, FontAwesome5, FontAwesome6, FontAwesome, Feather } from '@expo/vector-icons'
 import { eventService, AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { FlatList } from 'react-native-gesture-handler'
 import { OwnProfileprops } from '../../types/navigation';
@@ -24,7 +24,7 @@ interface MenuContentProps {
     onSelect: (id: SectionKey) => void;
     onNavigate: (screen: string) => void;
     profile: AthleteProfile | null;
-    onRefresh: () => void; 
+    onRefresh: () => void;
     refreshLoading: boolean;
 }
 interface PaginationState {
@@ -41,11 +41,6 @@ const TABS: Tab[] = ['Past', 'Live'];
 
 const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile, onRefresh, refreshLoading }) => {
     const { t } = useTranslation('ownProfile');
-    console.log('Platform:', Platform.OS);
-console.log('Profile:', profile);
-console.log('in_process_payment:', profile?.in_process_payment);
-console.log('Type:', typeof profile?.in_process_payment);
-
     const renderIosCard = () => {
         if (profile?.in_process_payment === 1) {
             return (
@@ -60,25 +55,25 @@ console.log('Type:', typeof profile?.in_process_payment);
                             activeOpacity={0.8}
                             style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 6 }}
                         >
-                        {refreshLoading ? (
-                            <ActivityIndicator
-                                size="small"
-                                color={colors.themeiColor}
-                            />
-                        ) : (
-                            <>
-                                <Feather name="refresh-ccw" size={16} color={colors.themeiColor} />
-                                <Text
-                                    style={{
-                                        color: colors.themeiColor,
-                                        fontSize: 14,
-                                        fontWeight: '600',
-                                    }}
-                                >
-                                    {t('ownProfile:membershipCard.refresh')}
-                                </Text>
-                            </>
-                        )}
+                            {refreshLoading ? (
+                                <ActivityIndicator
+                                    size="small"
+                                    color={colors.themeiColor}
+                                />
+                            ) : (
+                                <>
+                                    <Feather name="refresh-ccw" size={16} color={colors.themeiColor} />
+                                    <Text
+                                        style={{
+                                            color: colors.themeiColor,
+                                            fontSize: 14,
+                                            fontWeight: '600',
+                                        }}
+                                    >
+                                        {t('ownProfile:membershipCard.refresh')}
+                                    </Text>
+                                </>
+                            )}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -222,6 +217,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const [deleteTarget, setDeleteTarget] = useState<AthleteEvent | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const goBack = useCallback(() => setActiveSection('menu'), [])
+    const [avatarLoading, setAvatarLoading] = useState(true);
 
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -232,43 +228,47 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
         }
     }, [targetId, t]);
 
+    useEffect(() => {
+        setAvatarLoading(true);
+    }, [profile?.profile_picture]);
+
     const fetchProfile = useCallback(async (bustCache: boolean = false) => {
-    if (!targetId || targetId === 0) return;
-    if (isFetching.current) return;
-    try {
-        isFetching.current = true;
-        setLoading(true);
-        clearError();
+        if (!targetId || targetId === 0) return;
+        if (isFetching.current) return;
+        try {
+            isFetching.current = true;
+            setLoading(true);
+            clearError();
 
-        const [partnerResult, customResult] = await Promise.all([
-            eventService.getAthleteProfile({ page_live: 1, page_past: 1 }, targetId, bustCache, 'partner'),
-            eventService.getAthleteProfile({ page_live: 1, page_past: 1 }, targetId, bustCache, 'custom'),
-        ]);
+            const [partnerResult, customResult] = await Promise.all([
+                eventService.getAthleteProfile({ page_live: 1, page_past: 1 }, targetId, bustCache, 'partner'),
+                eventService.getAthleteProfile({ page_live: 1, page_past: 1 }, targetId, bustCache, 'custom'),
+            ]);
 
-        setProfile(partnerResult.profile); 
-        console.log('partnerResult.profile', partnerResult.profile);// same profile either call, partner's is fine
-        setPartnerLive(partnerResult.tabs.live);
-        setPartnerPast(partnerResult.tabs.past);
-        setCustomLive(customResult.tabs.live);
+            setProfile(partnerResult.profile);
+            console.log('partnerResult.profile', partnerResult.profile);// same profile either call, partner's is fine
+            setPartnerLive(partnerResult.tabs.live);
+            setPartnerPast(partnerResult.tabs.past);
+            setCustomLive(customResult.tabs.live);
 
-        if (partnerResult.pagination) {
-            setPartnerPagination({
-                live: { page: partnerResult.pagination.live.page, total_pages: partnerResult.pagination.live.total_pages },
-                past: { page: partnerResult.pagination.past.page, total_pages: partnerResult.pagination.past.total_pages },
-            });
+            if (partnerResult.pagination) {
+                setPartnerPagination({
+                    live: { page: partnerResult.pagination.live.page, total_pages: partnerResult.pagination.live.total_pages },
+                    past: { page: partnerResult.pagination.past.page, total_pages: partnerResult.pagination.past.total_pages },
+                });
+            }
+            if (customResult.pagination) {
+                setCustomPagination({
+                    live: { page: customResult.pagination.live.page, total_pages: customResult.pagination.live.total_pages },
+                    past: { page: customResult.pagination.past.page, total_pages: customResult.pagination.past.total_pages },
+                });
+            }
+        } catch (err: any) {
+            handleApiError(err);
+        } finally {
+            setLoading(false);
+            isFetching.current = false;
         }
-        if (customResult.pagination) {
-            setCustomPagination({
-                live: { page: customResult.pagination.live.page, total_pages: customResult.pagination.live.total_pages },
-                past: { page: customResult.pagination.past.page, total_pages: customResult.pagination.past.total_pages },
-            });
-        }
-    } catch (err: any) {
-        handleApiError(err);
-    } finally {
-        setLoading(false);
-        isFetching.current = false;
-    }
     }, [targetId, t]);
 
     useFocusEffect(
@@ -306,7 +306,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
             return () => {
                 isFetching.current = false;
             };
-        }, [fetchProfile, fromEdit, targetId])   
+        }, [fetchProfile, fromEdit, targetId])
     );
 
     const handleRefresh = useCallback(async () => {
@@ -319,23 +319,23 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     }, [fetchProfile]);
 
     const loadMorePartnerLive = useCallback(async () => {
-    if (!targetId || loadingMorePartnerLive || partnerPagination.live.page >= partnerPagination.live.total_pages) return;
-    const nextPage = partnerPagination.live.page + 1;
-    setLoadingMorePartnerLive(true);
-    try {
-        const result = await eventService.getAthleteProfile({ page_live: nextPage }, targetId, false, 'partner');
-        setPartnerLive(prev => {
-            const existingIds = new Set(prev.map(e => e.participant_app_id));
-            return [...prev, ...result.tabs.live.filter(e => !existingIds.has(e.participant_app_id))];
-        });
-        if (result.pagination?.live) {
-            setPartnerPagination(prev => ({ ...prev, live: { page: nextPage, total_pages: result.pagination.live.total_pages } }));
+        if (!targetId || loadingMorePartnerLive || partnerPagination.live.page >= partnerPagination.live.total_pages) return;
+        const nextPage = partnerPagination.live.page + 1;
+        setLoadingMorePartnerLive(true);
+        try {
+            const result = await eventService.getAthleteProfile({ page_live: nextPage }, targetId, false, 'partner');
+            setPartnerLive(prev => {
+                const existingIds = new Set(prev.map(e => e.participant_app_id));
+                return [...prev, ...result.tabs.live.filter(e => !existingIds.has(e.participant_app_id))];
+            });
+            if (result.pagination?.live) {
+                setPartnerPagination(prev => ({ ...prev, live: { page: nextPage, total_pages: result.pagination.live.total_pages } }));
+            }
+        } catch (err) {
+            handleApiError(err);
+        } finally {
+            setLoadingMorePartnerLive(false);
         }
-    } catch (err) {
-        handleApiError(err);
-    } finally {
-        setLoadingMorePartnerLive(false);
-    }
     }, [loadingMorePartnerLive, partnerPagination.live, targetId]);
 
     const loadMorePartnerPast = useCallback(async () => {
@@ -398,13 +398,13 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
 
             if (action === 'custom_event_deleted' || action === 'custom_event_not_found') {
                 setDeleteTarget(null);
-            // Same pattern as fromEdit — force a fresh fetch, bypassing the backend cache
-            await fetchProfile(true);
-             toastSuccess(t('ownProfile:deleteEvent.deleteSuccess'));  
+                // Same pattern as fromEdit — force a fresh fetch, bypassing the backend cache
+                await fetchProfile(true);
+                toastSuccess(t('ownProfile:deleteEvent.deleteSuccess'));
             } else if (action === 'tracking_already_started') {
                 setDeleteTarget(null);
                 handleApiError(t('ownProfile:deleteEvent.trackingStartedError'));
-                 toastSuccess(t('ownProfile:deleteEvent.deleteSuccess'));
+                toastSuccess(t('ownProfile:deleteEvent.deleteSuccess'));
             }
         } catch (err) {
             handleApiError(err);
@@ -414,8 +414,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     }, [deleteTarget, handleApiError, t]);
 
     const renderContent = (): React.ReactNode => {
-
-        if (activeSection === 'menu') return <MenuContent onSelect={setActiveSection} onNavigate={(screen) => navigation.navigate(screen as never)} profile={profile} onRefresh={handleRefresh}  refreshLoading={refreshLoading} />;
+        if (activeSection === 'menu') return <MenuContent onSelect={setActiveSection} onNavigate={(screen) => navigation.navigate(screen as never)} profile={profile} onRefresh={handleRefresh} refreshLoading={refreshLoading} />;
         if (activeSection === 'events') return (
             <EventsContent
                 onBack={goBack}
@@ -463,10 +462,29 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                     <View style={ownProfile.profileRow}>
                         <View style={ownProfile.avatarWrapper}>
                             {profile?.profile_picture ? (
-                                <Image
-                                    source={{ uri: profile.profile_picture || undefined }}
-                                    style={ownProfile.avatar}
-                                />
+                                <>
+                                    <Image
+                                        source={{ uri: profile.profile_picture || undefined }}
+                                        style={ownProfile.avatar}
+                                        onLoad={() => setAvatarLoading(false)}
+                                        onError={() => setAvatarLoading(false)}
+                                    />
+                                    {avatarLoading && (
+                                        <ActivityIndicator
+                                            size="small"
+                                            color={colors.themeiColor}
+                                            style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                right: 0,
+                                                bottom: 0,
+                                                justifyContent: 'center',
+                                                alignItems: 'center',
+                                            }}
+                                        />
+                                    )}
+                                </>
                             ) : (
                                 <View style={[ownProfile.avatar, ownProfile.initialsWrapper]}>
                                     <Text style={ownProfile.initialsText}>
@@ -499,13 +517,13 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                     </View>
                 </View>
             </ScrollView>
-        <DeleteEventModal
-            visible={!!deleteTarget}
-            event={deleteTarget}
-            isDeleting={isDeleting}
-            onCancel={handleCancelDelete}
-            onConfirm={handleConfirmDelete}
-        />
+            <DeleteEventModal
+                visible={!!deleteTarget}
+                event={deleteTarget}
+                isDeleting={isDeleting}
+                onCancel={handleCancelDelete}
+                onConfirm={handleConfirmDelete}
+            />
         </SafeAreaView>
     )
 }

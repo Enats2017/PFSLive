@@ -39,6 +39,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   const [loading, setLoading] = useState(true);
   //const [error, setError] = useState<string | null>(null);
   const { error, hasError, handleApiError, clearError } = useScreenError();
+  const [imageLoading, setImageLoading] = useState(true);
 
   // ✅ FETCH FINISHED DISTANCES WITH CACHE BUSTING
   const fetchResults = useCallback(
@@ -87,21 +88,46 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
     }, [fetchResults])
   );
 
+  React.useEffect(() => {
+    setImageLoading(true);
+  }, [event_image]);
+
   const renderListHeader = useCallback(() => (
-    <View style={{marginBottom: spacing.md}}>
+    <View style={{ marginBottom: spacing.md }}>
       {event_image ? (
-        <Image
-          source={{ uri: event_image }}
+        <View
           style={{
             width: '100%',
             aspectRatio: 612 / 300,
-            
+            justifyContent: 'center',
+            alignItems: 'center',
           }}
-          resizeMode="cover"
-        />
+        >
+          {imageLoading && (
+            <ActivityIndicator
+              size="large"
+              color={colors.primary}
+              style={{ position: 'absolute', zIndex: 1 }}
+            />
+          )}
+          <Image
+            source={{ uri: event_image }}
+            resizeMode="cover"
+            style={{
+              width: '100%',
+              height: '100%',
+              opacity: imageLoading ? 0 : 1,
+            }}
+            onLoad={() => setImageLoading(false)}
+            onError={(e) => {
+              console.log('❌ Image failed:', event_image, e.nativeEvent?.error);
+              setImageLoading(false);
+            }}
+          />
+        </View>
       ) : null}
     </View>
-  ), [event_name, event_image]);
+  ), [event_name, event_image, imageLoading]);
 
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
@@ -230,7 +256,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             flexGrow: 1,
-          
+
             paddingBottom: 80,
           }}
           ListHeaderComponent={renderListHeader}

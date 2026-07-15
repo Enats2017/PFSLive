@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, FlatList, ActivityIndicator,
   TouchableOpacity,
@@ -16,7 +16,7 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CountdownBadge from '../../components/CountdownBadge';
-import { Ionicons, Feather,MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
@@ -40,6 +40,7 @@ const DistanceTab = ({
   const { t } = useTranslation(['result', 'details', 'common']);
   const [results, setResults] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [imageLoading, setImageLoading] = useState(true);
   //const [error, setError] = useState<string | null>(null);
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -58,25 +59,56 @@ const DistanceTab = ({
 
   useFocusEffect(useCallback(() => { fetchResults(); }, [fetchResults]));
 
+  useEffect(() => {
+    setImageLoading(true);
+  }, [event_image]);
+
   const renderListHeader = useCallback(() => (
     <>
-      {event_image ? (
-      <Image
-        source={{ uri: event_image }}
-        style={{ width: '100%', aspectRatio: 612 / 300 }}
-        resizeMode="cover"
-      />
-    ) : null}
-      
+      <View style={{ paddingTop: 2 }}>
+        {event_image ? (
+          <View
+            style={{
+              width: '100%',
+              aspectRatio: 612 / 300,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            {imageLoading && (
+              <ActivityIndicator
+                size="large"
+                color={colors.primary}
+                style={{ position: 'absolute', zIndex: 1 }}
+              />
+            )}
+
+            <Image
+              source={{ uri: event_image }}
+              resizeMode="cover"
+              style={{
+                width: '100%',
+                height: '100%',
+                opacity: imageLoading ? 0 : 1,
+              }}
+              onLoad={() => setImageLoading(false)}
+              onError={(e) => {
+                console.log('❌ Image failed:', event_image, e.nativeEvent?.error);
+                setImageLoading(false);
+              }}
+            />
+          </View>
+        ) : null}
+      </View>
     </>
-  ), [event_image]);
+  ), [event_image, imageLoading]);
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isPast = sourceTab === 'past';
     const isLiveOrUpcoming = sourceTab === 'live' || sourceTab === 'upcoming';
 
     return (
-      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm }]}>
+      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.md }]}>
         <View style={[detailsStyles.distance]}>
           <View style={detailsStyles.distanceInfo}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
@@ -93,7 +125,7 @@ const DistanceTab = ({
             <View style={detailsStyles.metaRow}>
               <Ionicons name="time-outline" size={15} color={colors.gray600} />
               <Text style={commonStyles.subtitle} numberOfLines={1}>
-                {formatClockTime(item.race_time)} 
+                {formatClockTime(item.race_time)}
               </Text>
             </View>
 
@@ -129,7 +161,7 @@ const DistanceTab = ({
           </View>
           <View style={detailsStyles.verticalDivider} />
 
-          <View style={{ gap:spacing.md}}>
+          <View style={{ gap: spacing.md }}>
             <TouchableOpacity
               style={detailsStyles.resultsButton}
               onPress={() => navigation.navigate('ResultList', {
@@ -170,7 +202,7 @@ const DistanceTab = ({
         </View>
       </View>
     );
-  }, [navigation, product_app_id, sourceTab,  t]);
+  }, [navigation, product_app_id, sourceTab, t]);
 
   if (loading) {
     return (
@@ -208,7 +240,7 @@ const DistanceTab = ({
           keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: spacing.md, paddingBottom: spacing.xxxl, paddingTop: spacing.md }}
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 0, paddingBottom: spacing.xxxl, paddingTop: 0 }}
           renderItem={renderItem}
           ListHeaderComponent={renderListHeader}
         />

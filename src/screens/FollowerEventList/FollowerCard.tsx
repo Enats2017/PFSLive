@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { ParticipantItem } from '../../services/followerEvent';
 import { commonStyles, spacing } from '../../styles/common.styles';
@@ -24,6 +24,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
 }) => {
     const { t } = useTranslation(['follower', 'common']);
     const navigation = useNavigation<any>();
+    const [avatarLoading, setAvatarLoading] = useState(true);
 
     const fullName = useMemo(() =>
         `${item.firstname} ${item.lastname}`.trim(),
@@ -40,33 +41,56 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
 
     const profileImageUri = useMemo(() =>
         item.profile_picture && item.profile_picture.trim() !== ''
-            ?(item.profile_picture)
+            ? (item.profile_picture)
             : null,
         [item.profile_picture]
     );
 
     const flagImageUri = useMemo(() =>
         item.flag_url && item.flag_url.trim() !== ''
-            ?(item.flag_url)
+            ? (item.flag_url)
             : null,
         [item.flag_url]
     );
+
+    useEffect(() => {
+        setAvatarLoading(true);
+    }, [profileImageUri]);
 
     return (
         <View
             style={[
                 commonStyles.card,
-                { padding:0,  marginTop:spacing.md },
+                { padding: 0, marginTop: spacing.md },
             ]}
         >
             <View style={detailsStyles.topRow}>
                 <View style={detailsStyles.avatar}>
                     {profileImageUri ? (
-                        <Image
-                            source={{ uri: profileImageUri }}
-                            style={detailsStyles.avatarImage}
-                            resizeMode="cover"
-                        />
+                        <>
+                            <Image
+                                source={{ uri: profileImageUri }}
+                                style={detailsStyles.avatarImage}
+                                resizeMode="cover"
+                                onLoad={() => setAvatarLoading(false)}
+                                onError={() => setAvatarLoading(false)}
+                            />
+                            {avatarLoading && (
+                                <ActivityIndicator
+                                    size="small"
+                                    color="#999"
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                    }}
+                                />
+                            )}
+                        </>
                     ) : (
                         <View style={detailsStyles.avatarFallback}>
                             <Text style={detailsStyles.avatarInitials}>{initials}</Text>

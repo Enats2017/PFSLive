@@ -46,6 +46,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
   const [searchText, setSearchText] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [imageLoading, setImageLoading] = useState(true);
   //const [error, setError] = useState<string | null>(null);
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -168,6 +169,10 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     fetchParticipants(page + 1, searchText);
   }, [page, totalPages, loadingMore, searchText, hasMorePages, fetchParticipants]);
 
+  React.useEffect(() => {
+    setImageLoading(true);
+  }, [event_image]);
+
   const renderParticipant = useCallback(
     ({ item }: { item: Participant }) => {
       // Use bib_number as fallback if bib doesn't exist
@@ -195,17 +200,42 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
 
 
   const renderListHeader = useCallback(() => (
-      <>
-        {event_image ? (
-        <Image
-          source={{ uri: event_image }}
-          style={{ width: '100%', aspectRatio: 612 / 300 }}
-          resizeMode="cover"
-        />
+    <>
+      {event_image ? (
+        <View
+          style={{
+            width: '100%',
+            aspectRatio: 612 / 300,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          {imageLoading && (
+            <ActivityIndicator
+              size="large"
+              color={colors.primary}
+              style={{ position: 'absolute', zIndex: 1 }}
+            />
+          )}
+
+          <Image
+            source={{ uri: event_image }}
+            resizeMode="cover"
+            style={{
+              width: '100%',
+              aspectRatio: 612 / 300,
+              opacity: imageLoading ? 0 : 1,
+            }}
+            onLoad={() => setImageLoading(false)}
+            onError={(e) => {
+              console.log('❌ Image failed:', event_image, e.nativeEvent?.error);
+              setImageLoading(false);
+            }}
+          />
+        </View>
       ) : null}
-        
-      </>
-  ), [event_image]);
+    </>
+  ), [event_image, imageLoading]);
 
   const renderFooter = useCallback(() => {
     if (loadingMore) {
@@ -259,7 +289,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
         style={{
           paddingHorizontal: spacing.md,
           paddingTop: spacing.md,
-          paddingBottom:spacing.xs
+         
         }}
       >
         <SearchInput
@@ -300,7 +330,6 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           contentContainerStyle={{
-            paddingHorizontal: spacing.md,
             paddingBottom: spacing.xxxl,
             flexGrow: 1,
             paddingTop:spacing.sm,
