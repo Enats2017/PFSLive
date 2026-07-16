@@ -178,7 +178,8 @@ export const detailsStyles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 22,
+    fontSize: 20,
+    textAlign:"center",
     fontWeight: typography.weights.bold,
     color: colors.themeblue,
   },
