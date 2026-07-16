@@ -10,6 +10,7 @@ import {
   Text,
   ScrollView,
   Modal,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../styles/common.styles';
@@ -136,6 +137,12 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   const [tempTime, setTempTime] = useState<Date>(new Date());
 
   const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
+
+  const inputRef = useRef<TextInput>(null);
+
+  const focusInput = useCallback(() => {
+    inputRef.current?.focus();
+  }, []);
 
   // ✅ ANIMATION EFFECT
   useEffect(() => {
@@ -502,12 +509,15 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
           ]}
         >
           {iconName && (
-            <View style={styles.iconLeft}>
-              <Ionicons name={iconName} size={18} color={iconColor} />
-            </View>
+              <View
+                style={[styles.iconLeft, multiline && { top: 16 }]}
+                pointerEvents="none"   // ✅ add this
+              >
+                <Ionicons name={iconName} size={18} color={iconColor} />
+              </View>
           )}
 
-          <Animated.Text style={labelStyle}>
+         <Animated.Text style={labelStyle} pointerEvents="none">  {/* ✅ add this */}
             {label}
             {required && <Animated.Text style={{ color: COLORS.ERROR }}> *</Animated.Text>}
           </Animated.Text>
@@ -580,79 +590,81 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
 
   // ✅ RENDER DEFAULT TEXT INPUT MODE
   return (
-    <View style={styles.wrapper}>
-      <View
-        style={[
-          styles.container,
-          { borderColor },
-          multiline && { height: inputHeight, alignItems: 'flex-start' },
-          isFocused && styles.containerFocused,
-          error && styles.containerError,
-        ]}
-      >
-        {iconName && (
-          <View style={[styles.iconLeft, multiline && { top: 16 }]}>
-            <Ionicons name={iconName} size={18} color={iconColor} />
-          </View>
-        )}
-
-        <Animated.Text style={labelStyle}>
-          {label}
-          {required && <Animated.Text style={{ color: COLORS.ERROR }}> *</Animated.Text>}
-        </Animated.Text>
-
-        <TextInput
-          style={[
-            styles.input,
-            { paddingLeft: iconName ? 44 : 15 },
-            (isPassword || showClear) && { paddingRight: 46 },
-            multiline && { paddingTop: 20, textAlignVertical: 'top' },
-          ]}
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          secureTextEntry={isPassword && !showPassword}
-          placeholderTextColor={COLORS.GRAY_LIGHT}
-          editable={editable}
-          multiline={multiline}
-          {...props}
-          placeholder={isFocused ? props.placeholder : undefined}
-        />
-     
-        {showClear && editable && (
-          <TouchableOpacity
-            style={styles.iconRight}
-            onPress={handleClear}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="close-circle" size={20} color={COLORS.GRAY_MED} />
-          </TouchableOpacity>
-        )}
-
-        {isPassword && (
-          <TouchableOpacity
-            style={styles.iconRight}
-            onPress={togglePassword}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons
-              name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-              size={20}
-              color={iconColor}
-            />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {errorMessage && (
-        <Text style={styles.errorText}>
-          <Ionicons name="alert-circle-outline" size={11} color={COLORS.ERROR} />{' '}
-          {errorMessage}
-        </Text>
+  <View style={styles.wrapper}>
+    <Pressable
+      onPress={focusInput}
+      style={[
+        styles.container,
+        { borderColor },
+        multiline && { height: inputHeight, alignItems: 'flex-start' },
+        isFocused && styles.containerFocused,
+        error && styles.containerError,
+      ]}
+    >
+      {iconName && (
+        <View style={[styles.iconLeft, multiline && { top: 16 }]} pointerEvents="none">
+          <Ionicons name={iconName} size={18} color={iconColor} />
+        </View>
       )}
-    </View>
-  );
+
+      <Animated.Text style={labelStyle} pointerEvents="none">
+        {label}
+        {required && <Animated.Text style={{ color: COLORS.ERROR }}> *</Animated.Text>}
+      </Animated.Text>
+
+      <TextInput
+        ref={inputRef}
+        style={[
+          styles.input,
+          { paddingLeft: iconName ? 44 : 15 },
+          (isPassword || showClear) && { paddingRight: 46 },
+          multiline && { paddingTop: 20, textAlignVertical: 'top' },
+        ]}
+        value={value}
+        onChangeText={onChangeText}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        secureTextEntry={isPassword && !showPassword}
+        placeholderTextColor={COLORS.GRAY_LIGHT}
+        editable={editable}
+        multiline={multiline}
+        {...props}
+        placeholder={isFocused ? props.placeholder : undefined}
+      />
+
+      {showClear && editable && (
+        <TouchableOpacity
+          style={styles.iconRight}
+          onPress={handleClear}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="close-circle" size={20} color={COLORS.GRAY_MED} />
+        </TouchableOpacity>
+      )}
+
+      {isPassword && (
+        <TouchableOpacity
+          style={styles.iconRight}
+          onPress={togglePassword}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons
+            name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+            size={20}
+            color={iconColor}
+          />
+        </TouchableOpacity>
+      )}
+    </Pressable>
+
+    {errorMessage && (
+      <Text style={styles.errorText}>
+        <Ionicons name="alert-circle-outline" size={11} color={COLORS.ERROR} />{' '}
+        {errorMessage}
+      </Text>
+    )}
+  </View>
+);
 };
 
 // ✅ OPTIMIZED STYLES

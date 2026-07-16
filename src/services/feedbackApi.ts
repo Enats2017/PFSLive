@@ -39,15 +39,35 @@ const MESSAGE_MAX_LENGTH = 500; // UI cap shown in char-count; backend allows up
 // Backend re-validates independently (message length, topic whitelist);
 // this is purely for immediate UX feedback.
 
-export function validateFeedback(payload: SubmitFeedbackPayload): string | null {
+export interface FeedbackFieldErrors {
+    message?: string;
+    topic?: string;
+    email?: string;
+}
+
+export function validateFeedbackFields(payload: {
+    topic: TopicKey | null;
+    message: string;
+    email?: string;
+}): FeedbackFieldErrors {
+    const errors: FeedbackFieldErrors = {};
     const msg = payload.message?.trim() ?? '';
 
-    if (!msg || msg.length < MESSAGE_MIN_LENGTH) return 'message_required';
-    if (msg.length > MESSAGE_MAX_LENGTH) return 'message_too_long';
-    if (!payload.topic || !ALLOWED_TOPICS.includes(payload.topic)) return 'topic_required';
-    if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return 'invalid_email';
+    if (!msg || msg.length < MESSAGE_MIN_LENGTH) {
+        errors.message = 'message_required';
+    } else if (msg.length > MESSAGE_MAX_LENGTH) {
+        errors.message = 'message_too_long';
+    }
 
-    return null; // null = valid
+    if (!payload.topic || !ALLOWED_TOPICS.includes(payload.topic)) {
+        errors.topic = 'topic_required';
+    }
+
+    if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+        errors.email = 'invalid_email';
+    }
+
+    return errors; // {} = valid
 }
 
 // ==================== SERVICE ====================

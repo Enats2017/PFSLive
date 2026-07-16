@@ -6,17 +6,20 @@ import {
     ScrollView,
     KeyboardAvoidingView,
     Platform,
-    StatusBar,  
+    StatusBar,
+    Keyboard,
+    KeyboardEvent,
+    Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
 import FeedbackSuccessModal from '../../components/FeedbackSuccessModal';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { toastError, toastSuccess } from '../../../utils/toast';
-import {feedbackApi, validateFeedback, ALLOWED_TOPICS, TopicKey, SubmitFeedbackPayload} from '../../services/feedbackApi';
+import { feedbackApi, validateFeedbackFields, ALLOWED_TOPICS, TopicKey, SubmitFeedbackPayload } from '../../services/feedbackApi';
 import { ContactFeedbackScreenprops } from '../../types/navigation';
 import { contactStyles } from '../../services/contactFeedback.styles';
 
@@ -36,6 +39,7 @@ type FieldErrors = {
 
 const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigation, route }) => {
     const { t } = useTranslation('contact');
+    const insets = useSafeAreaInsets();
     const incomingProfile = route.params?.profile;
     const [name, setName] = useState(incomingProfile ? `${incomingProfile.firstname ?? ''} ${incomingProfile.lastname ?? ''}`.trim() : '');
     const [email, setEmail] = useState(incomingProfile?.email ?? '');
@@ -49,6 +53,42 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
         label: topicLabels[key],
         value: index,
     }));
+
+    const keyboardOffset = useRef(new Animated.Value(0)).current;
+    const scrollViewRef = useRef<ScrollView>(null);
+
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+        const onShow = (e: KeyboardEvent) => {
+            Animated.timing(keyboardOffset, {
+                toValue: Math.max(e.endCoordinates.height - insets.bottom, 0),
+                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
+                useNativeDriver: false, // paddingBottom is layout, not transform — must be false
+            }).start();
+
+            // scroll the last field above the keyboard once it's mostly open
+            setTimeout(() => {
+                scrollViewRef.current?.scrollToEnd({ animated: true });
+            }, Platform.OS === 'ios' ? (e.duration ?? 250) : 100);
+        };
+
+        const onHide = (e: KeyboardEvent) => {
+            Animated.timing(keyboardOffset, {
+                toValue: 0,
+                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
+                useNativeDriver: false,
+            }).start();
+        };
+
+        const showSub = Keyboard.addListener(showEvent, onShow);
+        const hideSub = Keyboard.addListener(hideEvent, onHide);
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, [keyboardOffset, insets.bottom]);
 
     const handleMessageChange = useCallback((text: string) => {
         setMessage(text);
@@ -75,28 +115,25 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
 
 
     const handleSubmit = useCallback(async () => {
-        if (submitting) return; // guard against double-tap
+        if (submitting) return;
+
+        const fieldErrors = validateFeedbackFields({ topic, message, email });
+
+        if (Object.keys(fieldErrors).length > 0) {
+            setErrors({
+                message: fieldErrors.message ? t(`errors.${fieldErrors.message}`) : undefined,
+                topic: fieldErrors.topic ? t(`errors.${fieldErrors.topic}`) : undefined,
+                email: fieldErrors.email ? t(`errors.${fieldErrors.email}`) : undefined,
+            });
+            return;
+        }
 
         const payload: SubmitFeedbackPayload = {
-            topic: (topic ?? 'other') as TopicKey,
+            topic: topic as TopicKey, // guaranteed non-null here — fieldErrors would have caught it otherwise
             message,
             name,
             email,
         };
-
-        const validationError = validateFeedback(payload);
-        if (validationError) {
-            const nextErrors: FieldErrors = {};
-            if (validationError === 'message_required' || validationError === 'message_too_long') {
-                nextErrors.message = t(`errors.${validationError}`);
-            } else if (validationError === 'topic_required') {
-                nextErrors.topic = t(`errors.${validationError}`);
-            } else if (validationError === 'invalid_email') {
-                nextErrors.email = t(`errors.${validationError}`);
-            }
-            setErrors(nextErrors);
-            return;
-        }
 
         setErrors({});
         setSubmitting(true);
@@ -106,7 +143,7 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
         if (result.success) {
             resetForm();
             toastSuccess(t('success.toastMessage'));
-            setShowSuccess(true); // modal still shows for the full celebratory moment
+            setShowSuccess(true);
         } else {
             toastError(
                 t(`errors.${result.error}`, { defaultValue: t('errors.generic_body') }),
@@ -132,12 +169,9 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                 </TouchableOpacity>
                 <Text style={commonStyles.title}>{t('header.title')}</Text>
             </View>
-            <KeyboardAvoidingView
-                style={contactStyles.flex}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
-            >
+            <Animated.View style={[contactStyles.flex, { paddingBottom: keyboardOffset }]}>
                 <ScrollView
+                    ref={scrollViewRef}
                     contentContainerStyle={contactStyles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -164,7 +198,7 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                             placeholder={t('fields.name.placeholder')}
                             autoCapitalize="words"
                             returnKeyType="next"
-                            editable={!submitting}
+                            editable={false}
                         />
 
                         <FloatingLabelInput
@@ -176,7 +210,7 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                             autoCapitalize="none"
                             keyboardType="email-address"
                             returnKeyType="next"
-                            editable={!submitting}
+                            editable={false}
                             error={!!errors.email}
                             errorMessage={errors.email}
                         />
@@ -235,7 +269,7 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                     </TouchableOpacity>
                     <Text style={contactStyles.footerNote}>{t('footer')}</Text>
                 </ScrollView>
-            </KeyboardAvoidingView>
+            </Animated.View>
             <FeedbackSuccessModal
                 visible={showSuccess}
                 title={t('success.title')}
