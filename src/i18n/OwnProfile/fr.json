@@ -17,6 +17,10 @@
         "account": {
             "title": "Compte",
             "subtitle": "Gérez les paramètres de votre compte"
+        },
+        "contact": {
+            "title": "Contact et retours",
+            "subtitle": "Questions, bugs ou idées"
         }
     },
     "profile": {

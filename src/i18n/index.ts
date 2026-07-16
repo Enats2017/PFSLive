@@ -117,6 +117,10 @@ import MembershipEN from './Membership/en.json';
 import MembershipFR from './Membership/fr.json';
 import MembershipNL from './Membership/nl.json';
 
+import ContactEN from './Contactfeedbackscreen/en.json';
+import ContactFR from './Contactfeedbackscreen/fr.json';
+import ContactNL from './Contactfeedbackscreen/nl.json';
+
 
 
 
@@ -212,9 +216,7 @@ export const getLanguageId = (languageCode: string): number | null => {
   return LANGUAGES[code]?.id ?? null;
 };
 
-/**
- * Get current language ID from i18n
- */
+
 export const getCurrentLanguageId = (): number => {
   const currentLanguage = i18n.language as LanguageCode;
   return LANGUAGES[currentLanguage]?.id ?? LANGUAGES.en.id;
@@ -251,6 +253,8 @@ const getInitialLanguage = (): LanguageCode => {
   }
 };
 
+//const initialLanguage = getInitialLanguage();
+
 const initialLanguage : LanguageCode="en";
 
 i18n.use(initReactI18next).init({
@@ -282,7 +286,8 @@ i18n.use(initReactI18next).init({
       participant:participantScreenEN,
       follow:FollowerSrceenEN, 
       ownProfile:OwnProfileEN,
-      membership:MembershipEN
+      membership:MembershipEN,
+      contact:ContactEN
     },
     fr: {
       common: commonFR,
@@ -310,7 +315,8 @@ i18n.use(initReactI18next).init({
       participant:participantScreenFR,
       follow:FollowerSrceenFR, 
       ownProfile:OwnProfileFR,
-      membership:MembershipFR
+      membership:MembershipFR,
+      contact:ContactFR
     },
     nl: {
       common: commonNL,
@@ -338,7 +344,8 @@ i18n.use(initReactI18next).init({
       participant:participantScreenNL,
       follow:FollowerSrceenNL,
       ownProfile:OwnProfileNL,
-      membership:MembershipNL 
+      membership:MembershipNL,
+      contact:ContactNL 
     },
   },
   lng: initialLanguage,
@@ -369,7 +376,8 @@ i18n.use(initReactI18next).init({
     'errorScreen',
     'follow',
     'ownProfile',
-    'membership'
+    'membership',
+    'contact'
   ],
   interpolation: {
     escapeValue: false,

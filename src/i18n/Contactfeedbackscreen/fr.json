@@ -1,0 +1,55 @@
+{
+  "header": {
+    "title": "Contact et avis"
+  },
+  "banner": {
+    "title": "Nous aimerions avoir votre avis !",
+    "subtitle": "Vos retours nous aident à nous améliorer et à rendre l'expérience meilleure pour vous."
+  },
+  "fields": {
+    "name": {
+      "label": "Nom",
+      "placeholder": "Entrez votre nom"
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "abc@example.com"
+    },
+    "topic": {
+      "label": "Sujet",
+      "placeholder": "Sélectionnez un sujet"
+    },
+    "message": {
+      "label": "Message",
+      "placeholder": "Dites-nous ce qui s'est passé..."
+    }
+  },
+  "topics": {
+    "bug": "Bug ou problème",
+    "feature": "Demande de fonctionnalité",
+    "event": "Problème lié à un événement",
+    "billing": "Question de facturation",
+    "other": "Autre chose"
+  },
+  "button": {
+    "send": "Envoyer le retour",
+    "sending": "Envoi en cours..."
+  },
+  "footer": "La version de l'application et les informations de l'appareil sont envoyées automatiquement pour nous aider à résoudre les problèmes.",
+  "errors": {
+    "message_required": "Veuillez saisir un message (3 caractères minimum).",
+    "message_too_long": "Le message ne peut pas dépasser 500 caractères.",
+    "topic_required": "Veuillez sélectionner un sujet.",
+    "invalid_email": "Cette adresse e-mail ne semble pas correcte.",
+    "network_error": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+    "unauthorized": "Votre session a expiré. Veuillez vous reconnecter.",
+    "generic_title": "Une erreur s'est produite",
+    "generic_body": "Nous n'avons pas pu envoyer votre retour. Veuillez réessayer."
+  },
+  "success": {
+    "title": "Merci, c'est bien reçu",
+    "body": "Vous recevrez un e-mail de confirmation, et nous vous répondrons si nécessaire.",
+    "backToProfile": "Retour au profil",
+    "toastMessage": "Retour envoyé avec succès !"
+  }
+}

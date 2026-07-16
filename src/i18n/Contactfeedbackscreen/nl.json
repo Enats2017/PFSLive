@@ -1,0 +1,55 @@
+{
+  "header": {
+    "title": "Contact en feedback"
+  },
+  "banner": {
+    "title": "We horen graag van je!",
+    "subtitle": "Jouw feedback helpt ons te verbeteren en de app beter te maken voor jou."
+  },
+  "fields": {
+    "name": {
+      "label": "Naam",
+      "placeholder": "Voer je naam in"
+    },
+    "email": {
+      "label": "E-mail",
+      "placeholder": "abc@example.com"
+    },
+    "topic": {
+      "label": "Onderwerp",
+      "placeholder": "Selecteer een onderwerp"
+    },
+    "message": {
+      "label": "Bericht",
+      "placeholder": "Vertel ons wat er is gebeurd..."
+    }
+  },
+  "topics": {
+    "bug": "Bug of probleem",
+    "feature": "Functieverzoek",
+    "event": "Probleem met evenement",
+    "billing": "Vraag over facturering",
+    "other": "Iets anders"
+  },
+  "button": {
+    "send": "Feedback versturen",
+    "sending": "Bezig met verzenden..."
+  },
+  "footer": "Je app-versie en apparaatgegevens worden automatisch verzonden om ons te helpen bij het debuggen.",
+  "errors": {
+    "message_required": "Voer een bericht in (minimaal 3 tekens).",
+    "message_too_long": "Bericht mag niet langer zijn dan 500 tekens.",
+    "topic_required": "Selecteer een onderwerp.",
+    "invalid_email": "Dit e-mailadres lijkt niet correct.",
+    "network_error": "Kan de server niet bereiken. Controleer je verbinding en probeer het opnieuw.",
+    "unauthorized": "Je sessie is verlopen. Log opnieuw in.",
+    "generic_title": "Er is iets misgegaan",
+    "generic_body": "We konden je feedback niet verzenden. Probeer het opnieuw."
+  },
+  "success": {
+    "title": "Bedankt, we hebben het ontvangen",
+    "body": "Je ontvangt een bevestigingsmail, en we reageren als het nodig is.",
+    "backToProfile": "Terug naar profiel",
+    "toastMessage": "Feedback succesvol verzonden!"
+  }
+}

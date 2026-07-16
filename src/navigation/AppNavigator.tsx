@@ -40,6 +40,7 @@ import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
 import EditProfileScreen from '../screens/AuthScreens/EditProfileScreen';
 import EditPersonalEvent from '../screens/PersonalEventScreen/EditPersonalEvent';
 import LiveTrackingSettings from '../screens/SettingScreen/LiveTrackingSettingsScreen';
+import ContactFeedbackScreen from '../screens/ProfileScreen/ContactFeedbackScreen';
 
 // ✅ SERVICES & CONTEXT
 import { tokenService } from '../services/tokenService';
@@ -138,6 +139,7 @@ export const AppNavigator: React.FC = () => {
               <Stack.Screen name="EditPersonalEvent"    component={EditPersonalEvent}    options={noGesture} />
               
               <Stack.Screen name="OwnProfile" component={OwnProfile} options={noGesture} />
+              <Stack.Screen name="ContactFeedbackScreen" component={ContactFeedbackScreen} options={noGesture} />
             </>
           )}
         </Stack.Navigator>

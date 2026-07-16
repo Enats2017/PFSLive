@@ -16,6 +16,7 @@ export interface MembershipInfo {
 export interface AthleteProfile {
   firstname: string;
   lastname: string;
+  email: string;
   profile_picture: string;
   is_own_profile: number;
   password_protected: 0 | 1;
@@ -201,6 +202,7 @@ export const eventService = {
               firstname: "",
               lastname: "",
               profile_picture: "",
+              email:"",
               is_own_profile: 0,
               password_protected: 0,
               followers_count: 0, // ← add

@@ -19,10 +19,15 @@ import { toastError, toastSuccess } from '../../../utils/toast';
 import { appleVerifyService } from '../../services/appleverifyservice';
 import PurchaseStatusModal from '../../components/PurchaseStatusModal';
 
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../types/navigation';
+
+
+
 type SectionKey = 'menu' | 'events' | 'training' | 'account'
 interface MenuContentProps {
     onSelect: (id: SectionKey) => void;
-    onNavigate: (screen: string) => void;
+    onNavigate: (screen: string, params?: Record<string, any>) => void;
     profile: AthleteProfile | null;
     onRefresh: () => void;
     refreshLoading: boolean;
@@ -182,12 +187,22 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                 </View>
                 <Ionicons name="chevron-forward" size={24} color="black" />
             </TouchableOpacity>
+            <TouchableOpacity style={[commonStyles.card, ownProfile.menuRow]} activeOpacity={0.7} onPress={() => onNavigate('ContactFeedbackScreen', { profile })}>
+                <Feather name="message-square" size={26} color="black" />
+                <View style={ownProfile.menuTextWrapper}>
+                    <Text style={ownProfile.title}>{t('menu.contact.title')}</Text>
+                    <Text style={ownProfile.subtitle}>{t('menu.contact.subtitle')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color="black" />
+            </TouchableOpacity>
+            
         </View>
     );
 };
 
 const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const { t } = useTranslation('ownProfile');
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { width } = useDimensions();
     const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
@@ -211,7 +226,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const isFetching = useRef(false);
     const fromEditFetched = useRef(false);
     const activeTabRef = useRef<Tab>('Live');
-    const navigation = useNavigation();
+    
     const targetId = route.params?.customer_app_id ?? 0;
     const fromEdit = route.params?.fromEdit;
     const [deleteTarget, setDeleteTarget] = useState<AthleteEvent | null>(null);
@@ -414,7 +429,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     }, [deleteTarget, handleApiError, t]);
 
     const renderContent = (): React.ReactNode => {
-        if (activeSection === 'menu') return <MenuContent onSelect={setActiveSection} onNavigate={(screen) => navigation.navigate(screen as never)} profile={profile} onRefresh={handleRefresh} refreshLoading={refreshLoading} />;
+        if (activeSection === 'menu') return <MenuContent onSelect={setActiveSection}  onNavigate={(screen, params) => navigation.navigate(screen as any, params as any)} profile={profile} onRefresh={handleRefresh} refreshLoading={refreshLoading} />;
         if (activeSection === 'events') return (
             <EventsContent
                 onBack={goBack}

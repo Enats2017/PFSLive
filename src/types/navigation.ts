@@ -1,5 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Distance } from "../services/eventDetailService";
+import { AthleteProfile } from "../services/athleteProfileService";
 
 export type RootStackParamList = {
   HomeScreen: undefined;
@@ -53,6 +54,9 @@ export type RootStackParamList = {
     fromEdit?: boolean;
     pendingTransactionId?: string;
    };
+   ContactFeedbackScreen?: {
+      profile?: AthleteProfile;
+  };
   EditProfileScreen: undefined;
   EditPersonalEvent: {
     eventId: number;
@@ -236,6 +240,12 @@ export type MembershipPlansScreenpops = NativeStackScreenProps<
   RootStackParamList,
   "MembershipPlansScreen"
 >;
+export type ContactFeedbackScreenprops = NativeStackScreenProps<
+  RootStackParamList,
+  "ContactFeedbackScreen"
+>;
+
+
 
 export type AuthStackParamList = {
   LoginScreen: undefined;

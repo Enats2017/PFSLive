@@ -1,0 +1,55 @@
+{
+  "header": {
+    "title": "Contact and feedback"
+  },
+  "banner": {
+    "title": "We'd love to hear from you!",
+    "subtitle": "Your feedback helps us improve and make things better for you."
+  },
+  "fields": {
+    "name": {
+      "label": "Name",
+      "placeholder": "Enter Your Name"
+    },
+    "email": {
+      "label": "Email",
+      "placeholder": "abc@example.com"
+    },
+    "topic": {
+      "label": "Topic",
+      "placeholder": "Select a topic"
+    },
+    "message": {
+      "label": "Message",
+      "placeholder": "Tell us what happened..."
+    }
+  },
+  "topics": {
+    "bug": "Bug or problem",
+    "feature": "Feature request",
+    "event": "Event issue",
+    "billing": "Billing question",
+    "other": "Something else"
+  },
+  "button": {
+    "send": "Send Feedback",
+    "sending": "Sending..."
+  },
+  "footer": "Your app version and device details are sent automatically to help us debug.",
+  "errors": {
+    "message_required": "Please enter a message (at least 3 characters).",
+    "message_too_long": "Message can't be longer than 500 characters.",
+    "topic_required": "Please select a topic.",
+    "invalid_email": "That email address doesn't look right.",
+    "network_error": "Couldn't reach the server. Check your connection and try again.",
+    "unauthorized": "Your session has expired. Please log in again.",
+    "generic_title": "Something went wrong",
+    "generic_body": "We couldn't send your feedback. Please try again."
+  },
+  "success": {
+    "title": "Thanks, we got it",
+    "body": "You'll get a confirmation email, and we'll reply if it needs one.",
+    "backToProfile": "Back to profile",
+    "toastMessage": "Feedback sent successfully!"
+  }
+}

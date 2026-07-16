@@ -17,6 +17,10 @@
         "account": {
             "title": "Account",
             "subtitle": "Beheer uw accountinstellingen"
+        },
+        "contact": {
+            "title": "Contact en feedback",
+            "subtitle": "Vragen, bugs of ideeën"
         }
     },
     "profile": {

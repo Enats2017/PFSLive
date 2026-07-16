@@ -121,7 +121,8 @@ export const API_CONFIG = {
     APPLE_VERIFY_PURCHASE: '/apple_verify_purchase_api.php',
     UPDATE_FOLLOWER_EMAIL: '/update_follower_email_api.php',
     follower_language: '/update_follower_language_api.php',
-    DELETE_CUSTOM_EVENT: '/delete_custom_event_api.php'
+    DELETE_CUSTOM_EVENT: '/delete_custom_event_api.php',
+     SUBMIT_FEEDBACK: '/feedback_api.php', 
   },
 
   TIMEOUT: 15000,
@@ -174,7 +175,7 @@ export const API_CONFIG = {
 // App Configuration
 export const APP_CONFIG = {
   APP_NAME: "PFSLive",
-  VERSION: "1.0.0",
+  VERSION: "1.0.2",
 };
 
 // Map Configuration

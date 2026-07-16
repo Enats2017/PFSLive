@@ -32,6 +32,8 @@ interface FloatingLabelInputProps extends Omit<TextInputProps, 'onChangeText'> {
   isDatePicker?: boolean;
   isTimePicker?: boolean;
   isDropdown?: boolean;
+  multiline?: boolean;
+  inputHeight?: number;
   error?: boolean;
   errorMessage?: string;
   required?: boolean;
@@ -118,6 +120,8 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   minimumDate,
   pickerDoneLabel = 'Done',
   pickerCancelLabel = 'Cancel',
+   multiline = false,
+  inputHeight = 120,
   ...props
 }) => {
   // ✅ STATE
@@ -581,12 +585,13 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
         style={[
           styles.container,
           { borderColor },
+          multiline && { height: inputHeight, alignItems: 'flex-start' },
           isFocused && styles.containerFocused,
           error && styles.containerError,
         ]}
       >
         {iconName && (
-          <View style={styles.iconLeft}>
+          <View style={[styles.iconLeft, multiline && { top: 16 }]}>
             <Ionicons name={iconName} size={18} color={iconColor} />
           </View>
         )}
@@ -601,6 +606,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
             styles.input,
             { paddingLeft: iconName ? 44 : 15 },
             (isPassword || showClear) && { paddingRight: 46 },
+            multiline && { paddingTop: 20, textAlignVertical: 'top' },
           ]}
           value={value}
           onChangeText={onChangeText}
@@ -609,9 +615,11 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
           secureTextEntry={isPassword && !showPassword}
           placeholderTextColor={COLORS.GRAY_LIGHT}
           editable={editable}
+          multiline={multiline}
           {...props}
+          placeholder={isFocused ? props.placeholder : undefined}
         />
-
+     
         {showClear && editable && (
           <TouchableOpacity
             style={styles.iconRight}
