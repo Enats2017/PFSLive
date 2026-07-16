@@ -7,6 +7,7 @@ import {
     StatusBar,
     ActivityIndicator,
     Linking,
+    Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,8 +61,39 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         purchaseResult,
         purchaseError,
         resetPurchase,
+        restorePurchases,
+        restoreLoading,
+        restoreResult,
+        restoreError,
+        resetRestore,
     } = useMembershipPlans();
 
+    useEffect(() => {
+        if (restoreResult === "success") {
+            Alert.alert(
+                t('membership:restoreSuccess.title'),
+                t('membership:restoreSuccess.message')
+            );
+            resetRestore();
+            // Optionally navigate back / refresh profile
+        } else if (restoreResult === "none") {
+            Alert.alert(
+                t('membership:restoreNone.title'),
+                t('membership:restoreNone.message')
+            );
+            resetRestore();
+        }
+    }, [restoreResult]);
+
+    useEffect(() => {
+        if (restoreError) {
+            Alert.alert(
+                t('membership:restoreError.title'),
+                t('membership:restoreError.message')
+            );
+            resetRestore();
+        }
+    }, [restoreError]);
 
     useEffect(() => {
         if (defaultSelectedTier) setSelected(defaultSelectedTier);
@@ -337,6 +369,20 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 <Text style={styles.subscriptionInfoText}>
                     {t('membership:subscriptionInfo')}
                 </Text>
+
+                <TouchableOpacity
+                    onPress={restorePurchases}
+                    disabled={restoreLoading}
+                    style={styles.restoreButton}
+                >
+                    {restoreLoading ? (
+                        <ActivityIndicator size="small" color={COLORS.darkText} />
+                    ) : (
+                        <Text style={styles.restoreButtonText}>
+                            {t('membership:restorePurchases')}
+                        </Text>
+                    )}
+                </TouchableOpacity>
 
                 <View style={styles.legalLinksRow}>
                     <TouchableOpacity onPress={() => Linking.openURL(getLegalUrls().privacy)}>

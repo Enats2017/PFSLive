@@ -57,6 +57,10 @@
     "privacy": "Privacybeleid",
     "terms": "Gebruiksvoorwaarden (EULA)"
   },
+  "restorePurchases": "Aankopen herstellen",
+  "restoreSuccess": { "title": "Aankopen hersteld", "message": "Je lidmaatschap is succesvol hersteld." },
+  "restoreNone": { "title": "Niets te herstellen", "message": "Er zijn geen eerdere aankopen gevonden voor deze Apple ID." },
+  "restoreError": { "title": "Herstellen mislukt", "message": "We konden je aankopen niet herstellen. Probeer het opnieuw." },
   "subscriptionInfo": "Abonnementen worden jaarlijks gefactureerd en verlengen automatisch, tenzij minstens 24 uur voor het einde van de huidige periode geannuleerd. U kunt uw abonnement beheren of annuleren in de instellingen van uw App Store-account.",
   "cta": {
     "continueWith": "Doorgaan met {{planName}}"

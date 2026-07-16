@@ -249,4 +249,17 @@ export const membershipPlansStyle = StyleSheet.create({
         fontWeight: '700',
         marginRight: 6,
     },
+    restoreButton: {
+        alignSelf: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        marginTop: 8,
+        marginBottom: 8,
+    },
+    restoreButtonText: {
+        color: COLORS.darkText,
+        fontSize: 14,
+        fontWeight: '600',
+        textDecorationLine: 'underline',
+    },
 });

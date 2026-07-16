@@ -14,6 +14,9 @@ export type PlanId = "lite" | "basic" | "pro";
 
 export const PLAN_IDS: PlanId[] = ["lite", "basic", "pro"];
 
+// ✅ Restore result type
+export type RestoreResult = "success" | "none" | null;
+
 interface UseMembershipPlansResult {
   plansData: MembershipPlansData | null;
   loadingPlans: boolean;
@@ -30,6 +33,12 @@ interface UseMembershipPlansResult {
   purchaseResult: VerifyPurchaseResponse | null;
   purchaseError: string | null;
   resetPurchase: () => void;
+  // ✅ Restore purchases
+  restorePurchases: () => Promise<void>;
+  restoreLoading: boolean;
+  restoreResult: RestoreResult;
+  restoreError: string | null;
+  resetRestore: () => void;
 }
 
 export function useMembershipPlans(): UseMembershipPlansResult {
@@ -40,12 +49,19 @@ export function useMembershipPlans(): UseMembershipPlansResult {
   const [purchaseResult, setPurchaseResult] =
     useState<VerifyPurchaseResponse | null>(null);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+
+  // ✅ Restore state
+  const [restoreLoading, setRestoreLoading] = useState<boolean>(false);
+  const [restoreResult, setRestoreResult] = useState<RestoreResult>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+
   const {
     connected,
     products,
     fetchProducts,
     subscriptions,
     requestPurchase: rawRequestPurchase,
+    getAvailablePurchases, // ✅ ADDED — triggers StoreKit restore
   } = useIAP();
   const [storeProducts, setStoreProducts] = useState<Record<string, string>>(
     {},
@@ -54,7 +70,6 @@ export function useMembershipPlans(): UseMembershipPlansResult {
   const processedTransactions = useRef<Set<string>>(new Set());
   const processingRef = useRef<Set<string>>(new Set());
   const awaitingPurchaseRef = useRef(false);
-  console.log("11111", awaitingPurchaseRef);
 
   console.log("🚀 useMembershipPlans mounted");
 
@@ -64,6 +79,13 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     setPurchaseLoading(false);
   }, []);
 
+  // ✅ Reset restore state
+  const resetRestore = useCallback(() => {
+    setRestoreError(null);
+    setRestoreResult(null);
+    setRestoreLoading(false);
+  }, []);
+
   // ── Load plans from backend ──
   const loadPlans = useCallback(async () => {
     try {
@@ -71,9 +93,11 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       setPlansError(null);
       const data = await membershipPlanService.getApplePlans();
       setPlansData(data);
+      return data; // ✅ return so restore can check entitlement immediately
     } catch (error: any) {
       setPlansError(error?.message || "Failed to load membership plans");
       console.error("❌ Error loading membership plans:", error);
+      return null;
     } finally {
       setLoadingPlans(false);
     }
@@ -114,12 +138,54 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       try {
         return await rawRequestPurchase(params);
       } catch (err) {
-        awaitingPurchaseRef.current = false; // disarm if the call itself throws (e.g. sync validation error)
+        awaitingPurchaseRef.current = false; // disarm if the call itself throws
         throw err;
       }
     },
     [rawRequestPurchase],
   );
+
+  // ✅ ── Restore Purchases (Apple Guideline 3.1.1) ──
+  // Triggers StoreKit's restore. Restored transactions flow through the
+  // existing purchaseUpdatedListener below, which verifies each on the
+  // backend and reactivates the membership. We then reload plans and check
+  // the backend entitlement (our source of truth) to report success.
+  const restorePurchases = useCallback(async () => {
+    try {
+      setRestoreLoading(true);
+      setRestoreError(null);
+      setRestoreResult(null);
+
+      // Allow previously-seen transactions to re-verify on restore,
+      // otherwise the listener's dedupe guard would skip them.
+      processedTransactions.current.clear();
+
+      // Arm the ref so restored transactions are treated as user-initiated
+      // and get verified through the listener.
+      awaitingPurchaseRef.current = true;
+
+      // iOS: triggers AppStore.sync() and prompts the user to authenticate.
+      // Returns void — restored items emit through purchaseUpdatedListener.
+      await getAvailablePurchases();
+
+      // Give the listener time to verify restored transactions on the backend.
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // Reload entitlement from backend (source of truth).
+      const data = await loadPlans();
+
+      const hasActive =
+        data?.entitlement?.has_membership === true &&
+        data?.entitlement?.status === "active";
+
+      setRestoreResult(hasActive ? "success" : "none");
+    } catch (error: any) {
+      setRestoreError(error?.message || "Restore failed");
+    } finally {
+      setRestoreLoading(false);
+      awaitingPurchaseRef.current = false;
+    }
+  }, [getAvailablePurchases, loadPlans]);
 
   // ── Map subscriptions → price lookup ──
   useEffect(() => {
@@ -140,7 +206,7 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     }
   }, [subscriptions, products]);
 
-  // ── Purchase listener — fires after Apple confirms payment ──
+  // ── Purchase listener — fires after Apple confirms payment OR restore ──
   useEffect(() => {
     const subscription = purchaseUpdatedListener(async (purchase: any) => {
       const transactionId =
@@ -226,11 +292,19 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     storeProducts,
     loadingPrices,
     defaultSelectedTier,
-    refetchPlans: loadPlans,
+    refetchPlans: async () => {   // ✅ void wrapper
+      await loadPlans();
+    },
     requestPurchase,
     purchaseLoading,
     purchaseResult,
     purchaseError,
     resetPurchase,
+    // ✅ Restore purchases
+    restorePurchases,
+    restoreLoading,
+    restoreResult,
+    restoreError,
+    resetRestore,
   };
 }

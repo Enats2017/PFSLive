@@ -57,6 +57,19 @@
     "privacy": "Privacy Policy",
     "terms": "Terms of Use (EULA)"
   },
+  "restorePurchases": "Restore Purchases",
+  "restoreSuccess": {
+    "title": "Purchases Restored",
+    "message": "Your membership has been restored successfully."
+  },
+  "restoreNone": {
+    "title": "Nothing to Restore",
+    "message": "No previous purchases were found for this Apple ID."
+  },
+  "restoreError": {
+    "title": "Restore Failed",
+    "message": "We couldn't restore your purchases. Please try again."
+  },
   "subscriptionInfo": "Subscriptions are billed yearly and renew automatically unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription in your App Store account settings.",
   "cta": {
     "continueWith": "Continue with {{planName}}"

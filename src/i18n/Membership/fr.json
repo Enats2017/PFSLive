@@ -57,6 +57,10 @@
     "privacy": "Politique de confidentialité",
     "terms": "Conditions d'utilisation (CLUF)"
   },
+  "restorePurchases": "Restaurer les achats",
+  "restoreSuccess": { "title": "Achats restaurés", "message": "Votre abonnement a été restauré avec succès." },
+  "restoreNone": { "title": "Rien à restaurer", "message": "Aucun achat précédent n'a été trouvé pour cet identifiant Apple." },
+  "restoreError": { "title": "Échec de la restauration", "message": "Nous n'avons pas pu restaurer vos achats. Veuillez réessayer." },
   "subscriptionInfo": "Les abonnements sont facturés annuellement et se renouvellent automatiquement, sauf annulation au moins 24 heures avant la fin de la période en cours. Vous pouvez gérer ou annuler votre abonnement dans les réglages de votre compte App Store.",
   "cta": {
     "continueWith": "Doorgaan met {{planName}}"
