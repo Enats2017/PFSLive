@@ -234,7 +234,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
                 removeClippedSubviews={false}
                 contentContainerStyle={{
                     paddingHorizontal: spacing.md,
-                    paddingBottom: spacing.xxxl,
+                    paddingBottom: spacing.xxxxl,
                 }}
                 ListHeaderComponent={
                     <SearchInput
