@@ -46,6 +46,7 @@
     "eventNotFound": "Événement introuvable. Il a peut-être été supprimé.",
     "noChanges": "Aucune modification n'a été apportée à l'événement.",
     "invalidEventId": "Événement invalide. Veuillez revenir en arrière et réessayer.",
+    "categoryRequired": "Veuillez sélectionner un type de catégorie",
     "categoryInvalid": "Veuillez sélectionner une catégorie valide"
   },
   "file": {

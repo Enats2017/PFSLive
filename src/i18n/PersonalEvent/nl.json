@@ -46,6 +46,7 @@
     "eventNotFound": "Evenement niet gevonden. Het is mogelijk verwijderd.",
     "noChanges": "Er zijn geen wijzigingen aangebracht.",
     "invalidEventId": "Ongeldig evenement. Ga terug en probeer opnieuw.",
+    "categoryRequired": "Selecteer een categorietype",
     "categoryInvalid": "Selecteer een geldige categorie"   
   },
   "file": {

@@ -128,6 +128,9 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
         case 'event_type_required':
           setFieldError('eventType', t('personal:errors.eventTypeRequired'));
           break;
+        case 'category_id_required':
+          setFieldError('category', t('personal:errors.categoryRequired'));
+          break;
         case 'category_id_invalid':                                           
           setFieldError('category', t('personal:errors.categoryInvalid'));    
           break;
@@ -295,6 +298,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
                 isDropdown
                 options={CATEGORY_OPTIONS}
                 onSelect={handlers.handleCategoryChange}
+                required
                 editable={!isSubmitting}
                 error={!!errors.category}
               />

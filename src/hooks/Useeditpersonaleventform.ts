@@ -140,6 +140,9 @@ export const useEditPersonalEventForm = () => {
     if (!formData.selectedEventType) {
       e.eventType = t('personal:errors.eventTypeRequired');
     }
+    if (!formData.selectedCategory) {
+      e.category = t('personal:errors.categoryRequired');
+    }
     if (!formData.date) {
       e.date = t('personal:errors.dateRequired');
     }

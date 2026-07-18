@@ -108,6 +108,9 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
         case 'race_date_required':
           setFieldError('date', t('personal:errors.dateRequired'));
           break;
+        case 'category_id_required':
+          setFieldError('category', t('personal:errors.categoryRequired'));
+          break;
         case 'category_id_invalid':
           setFieldError('category', t('personal:errors.categoryInvalid'));
           break;
@@ -266,6 +269,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                 isDropdown
                 options={categoryOptions}
                 onSelect={handlers.handleCategoryChange}
+                required
                 editable={!isSubmitting}
                 error={!!errors.category}
               />

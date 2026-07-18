@@ -123,7 +123,7 @@ export const usePersonalEventForm = () => {
   // ✅ All error messages from personal:errors.* language keys — no hardcoded strings
   const validateForm = useCallback((): boolean => {
     const newErrors: FieldErrors = {};
-    const { name, selectedEventType, date, startTime } = formData;
+    const { name, selectedEventType, selectedCategory, date, startTime } = formData;
 
     if (!name.trim()) {
       newErrors.name = t('personal:errors.nameRequired');
@@ -131,6 +131,10 @@ export const usePersonalEventForm = () => {
 
     if (!isValidEventType(selectedEventType?.value ?? null)) {
       newErrors.eventType = t('personal:errors.eventTypeRequired');
+    }
+
+    if (!selectedCategory) {
+      newErrors.category = t('personal:errors.categoryRequired');
     }
 
     if (!date.trim()) {

@@ -207,8 +207,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // Refs
   const gpsWatchRef = useRef<{ remove: () => void | Promise<void> } | null>(null);
-  const queueProcessorRef = useRef<NodeJS.Timeout | null>(null);
-  const raceStartCheckRef = useRef<NodeJS.Timeout | null>(null);
+  const queueProcessorRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const raceStartCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appState = useRef(AppState.currentState);
   const raceStartTimeRef = useRef<Date | null>(null);
   const isGPSActiveRef = useRef<boolean>(false);
@@ -1412,7 +1412,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         return interval;
       };
 
-      let intervalId: NodeJS.Timeout | null = null;
+      let intervalId: ReturnType<typeof setInterval> | null = null;
 
       checkTokenAndPoll().then(interval => {
         intervalId = interval;

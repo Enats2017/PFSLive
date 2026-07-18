@@ -46,7 +46,8 @@
     "eventNotFound": "Event not found. It may have been deleted.",
     "noChanges": "No changes were made to the event.",
     "invalidEventId": "Invalid event. Please go back and try again.",
-    "categoryInvalid": "Please select a valid category"
+    "categoryInvalid": "Please select a valid category",
+    "categoryRequired": "Please select a category type"
   },
   "file": {
     "uploadTitle": "Tap to Upload GPX File",
