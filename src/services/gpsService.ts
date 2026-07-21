@@ -77,6 +77,8 @@ const FINISH_APPROACH_INTERVAL = 5;                            // seconds
 const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 const FINISH_LINE_THRESHOLD_KM = 0.05;                         // 50m for auto-stop
 const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m even in finish zone
+const FINISH_COORDS_KEY = '@PFSLive:finishCoords';             // cached {lat,lon} of the finish line
+const LOCAL_FINISH_APPROACH_M = FINISH_APPROACH_THRESHOLD * 1000; // offline: straight-line <=1km -> 5s
 // Base distanceFilter (metres). On iOS this is the ONLY rate control — the
 // locationUpdateInterval keys are Android-only — so 0 meant CLLocationManager
 // delivered ~1 fix/second while moving (battery + per-second AsyncStorage churn),
@@ -645,7 +647,38 @@ const _processLocationForSendInternal = async (
     const categoryIdNum = Number(categoryId);
     const minMovementMetres = MOVEMENT_THRESHOLD[categoryIdNum] ?? DEFAULT_MOVEMENT_METRES;
 
-    const finishApproach = await AsyncStorage.getItem(FINISH_APPROACH_KEY);
+    let finishApproach = await AsyncStorage.getItem(FINISH_APPROACH_KEY);
+
+    // 🏁 OFFLINE finish-approach fallback. The server's distance_to_finish only
+    // arrives in a send reply, so with no network the 5s cadence never activates
+    // as the runner crosses into the last km. Here we measure straight-line
+    // distance to the cached finish point on-device. Straight-line only -> treat
+    // as 'poll faster', NEVER 'finished' (server stays the finish authority).
+    if (finishApproach !== '1') {
+      try {
+        const fcStr = await AsyncStorage.getItem(FINISH_COORDS_KEY);
+        if (fcStr) {
+          const fc = JSON.parse(fcStr);
+          const mToFinish = distanceMetres(raw.latitude, raw.longitude, fc.lat, fc.lon);
+          if (mToFinish <= LOCAL_FINISH_APPROACH_M) {
+            await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
+            await AsyncStorage.setItem(NEAR_FINISH_KEY, '1');
+            finishApproach = '1'; // so effectiveInterval + movementFloor use it THIS fix
+            try {
+              await BackgroundGeolocation.setConfig({
+                geolocation: {
+                  locationUpdateInterval:        FINISH_APPROACH_INTERVAL * 1000,
+                  fastestLocationUpdateInterval: FINISH_APPROACH_INTERVAL * 1000,
+                  distanceFilter:                0,
+                },
+              });
+              await safeChangePace(true);
+            } catch { /* silent */ }
+            await addLog('🏁', `Finish approach (local/offline) — ${(mToFinish / 1000).toFixed(2)}km straight-line${tag}`);
+          }
+        }
+      } catch { /* silent */ }
+    }
     const effectiveInterval = finishApproach === '1'
       ? FINISH_APPROACH_INTERVAL
       : (intervalSeconds ?? 30);
@@ -815,6 +848,15 @@ const _processLocationForSendInternal = async (
     const count = countStr ? parseInt(countStr) : 0;
     const sentCount = count + 1;
     await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(sentCount));
+
+    // Cache finish coords once (server-provided) for the OFFLINE approach fallback.
+    if (result.finish_lat != null && result.finish_lon != null) {
+      try {
+        if (!(await AsyncStorage.getItem(FINISH_COORDS_KEY))) {
+          await AsyncStorage.setItem(FINISH_COORDS_KEY, JSON.stringify({ lat: Number(result.finish_lat), lon: Number(result.finish_lon) }));
+        }
+      } catch { /* silent */ }
+    }
 
     // ✅ Finish-line approach: activate 5s interval when ≤ 1km to finish.
     // Loop-course guard: skip finish approach for first 3 sends (~90s).
@@ -1200,6 +1242,7 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(NEAR_FINISH_KEY);
   await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
   await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
+  await AsyncStorage.removeItem(FINISH_COORDS_KEY);
   await AsyncStorage.removeItem(LAST_QUEUED_KEY);
   if (API_CONFIG.DEBUG) console.log('✅ Tracking stopped');
   await addLog('🛑', 'Tracking stopped');
@@ -1568,6 +1611,7 @@ export const gpsService = {
       await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
       await AsyncStorage.removeItem(LOG_UPLOADED_KEY);
       await AsyncStorage.removeItem(LAST_QUEUED_KEY);
+      await AsyncStorage.removeItem(FINISH_COORDS_KEY);
       // Clear stale queue ONLY on a fresh start. On a fresh start any queued
       // fixes are post-finish stragglers from a prior offline finish — safe to
       // wipe. On a relaunch onto an existing session the queue may hold a real

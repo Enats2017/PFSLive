@@ -60,6 +60,10 @@ export interface SendLocationResponse {
    *                finished=1 alone, GPS distance can lag).
    *   'distance' → derived from distance_to_finish_km ≤ 50m (apply GPS guards). */
   finish_source?: 'rr' | 'distance';
+  /** ✅ Finish-line coordinates (once known) — cached client-side so the
+   *  background task can activate the 5s finish-approach OFFLINE. */
+  finish_lat?: number | null;
+  finish_lon?: number | null;
 }
 
 // Standard backend response format
@@ -182,6 +186,8 @@ export const locationService = {
         // distance_to_next_cp is kept as legacy / fallback.
         distance_to_next_cp: data.distance_to_next_cp ?? null,
         distance_to_finish_km: data.distance_to_finish_km ?? null,
+        finish_lat: data.finish_lat ?? null,
+        finish_lon: data.finish_lon ?? null,
         // ✅ Pass through finished flag (1/0) so the background task can auto-stop.
         // Coerce to number; default 0 when absent so the gpsService AND-condition
         // (serverFinished === 1) simply stays false on older API responses.

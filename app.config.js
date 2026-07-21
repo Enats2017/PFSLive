@@ -10,7 +10,7 @@ export default ({ config }) => {
     name: "Livio",
     slug: "livio",
     scheme: "livio",
-    version: "1.0.2",
+    version: "1.0.3",
     orientation: "default",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
