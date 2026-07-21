@@ -1227,26 +1227,21 @@ export const finishBackgroundStop = async (
   participantId?: string,
   eventId?: string,
 ): Promise<void> => {
-  try {
-    await addLog('🏆', 'Finish detected during background queue drain — stopping');
-  } catch { /* silent */ }
+  try { await addLog('🏆', 'Finish detected during background queue drain — stopping'); } catch {}
 
-  // Read the real sent-count for the log payload before we clear it.
+  // 1) Kill engine + notification NOW — must not wait on the network.
+  try { await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK); } catch {}
+  try { await BackgroundGeolocation.stop(); BackgroundGeolocation.removeListeners(); } catch {}
+
+  // 2) Upload (can be slow; notification is already gone).
   let sentCount = 0;
-  try {
-    const cStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
-    sentCount = cStr ? (parseInt(cStr) || 0) : 0;
-  } catch { /* silent */ }
+  try { const c = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY); sentCount = c ? (parseInt(c) || 0) : 0; } catch {}
+  try { await _uploadTrackingLogOnFinish(participantId ?? '', eventId ?? '', sentCount); } catch {}
 
-  // Upload first (no-op if foregrounded — HomeScreen's stop will handle it then).
-  try {
-    await _uploadTrackingLogOnFinish(participantId ?? '', eventId ?? '', sentCount);
-  } catch { /* silent */ }
-
-  // Then full teardown: stops Transistor, removes listeners, clears session keys,
-  // appends "🛑 Tracking stopped", flushes the log buffer.
+  // 3) Clear session keys + flush (safe now). stop() called again is idempotent.
   await _doFullStop();
-
+  // …existing queue-clear block…
+  
   // Clear the queue ONLY when it's already empty (the normal case: the drain
   // completed, then we stopped). NEVER wipe a non-empty backlog here — those fixes
   // are the runner's real, PRE-finish race data still waiting to upload after an
