@@ -127,6 +127,7 @@ export const authService = {
         email: email.trim().toLowerCase(),
         password,
         device_id: deviceId,
+        platform: Platform.OS,
       };
 
       if (API_CONFIG.DEBUG) {
