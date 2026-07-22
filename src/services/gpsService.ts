@@ -602,7 +602,9 @@ const _processLocationForSendInternal = async (
     // as the runner crosses into the last km. Here we measure straight-line
     // distance to the cached finish point on-device. Straight-line only -> treat
     // as 'poll faster', NEVER 'finished' (server stays the finish authority).
-    if (finishApproach !== '1') {
+    const _scStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+    const _sc = _scStr ? (parseInt(_scStr) || 0) : 0;
+    if (finishApproach !== '1' && _sc >= 3) {
       try {
         const fcStr = await AsyncStorage.getItem(FINISH_COORDS_KEY);
         if (fcStr) {
