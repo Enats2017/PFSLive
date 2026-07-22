@@ -595,6 +595,39 @@ const _processLocationForSendInternal = async (
       }
     } catch { /* silent — drain failure must never block the live send */ }
 
+    let finishApproach = await AsyncStorage.getItem(FINISH_APPROACH_KEY);
+
+    // 🏁 OFFLINE finish-approach fallback. The server's distance_to_finish only
+    // arrives in a send reply, so with no network the 5s cadence never activates
+    // as the runner crosses into the last km. Here we measure straight-line
+    // distance to the cached finish point on-device. Straight-line only -> treat
+    // as 'poll faster', NEVER 'finished' (server stays the finish authority).
+    if (finishApproach !== '1') {
+      try {
+        const fcStr = await AsyncStorage.getItem(FINISH_COORDS_KEY);
+        if (fcStr) {
+          const fc = JSON.parse(fcStr);
+          const mToFinish = distanceMetres(raw.latitude, raw.longitude, fc.lat, fc.lon);
+          if (mToFinish <= LOCAL_FINISH_APPROACH_M) {
+            await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
+            await AsyncStorage.setItem(NEAR_FINISH_KEY, '1');
+            finishApproach = '1'; // so effectiveInterval + movementFloor use it THIS fix
+            try {
+              await BackgroundGeolocation.setConfig({
+                geolocation: {
+                  locationUpdateInterval:        FINISH_APPROACH_INTERVAL * 1000,
+                  fastestLocationUpdateInterval: FINISH_APPROACH_INTERVAL * 1000,
+                  distanceFilter:                0,
+                },
+              });
+              await safeChangePace(true);
+            } catch { /* silent */ }
+            await addLog('🏁', `Finish approach (local/offline) — ${(mToFinish / 1000).toFixed(2)}km straight-line${tag}`);
+          }
+        }
+      } catch { /* silent */ }
+    }
+
     // ✅ ORDER GUARD. The server snaps distance forward against the LATEST stored
     // device_timestamp and rejects anything older. So a newer live fix must NEVER
     // be stored while older fixes are still queued — that would advance the stored
@@ -647,38 +680,7 @@ const _processLocationForSendInternal = async (
     const categoryIdNum = Number(categoryId);
     const minMovementMetres = MOVEMENT_THRESHOLD[categoryIdNum] ?? DEFAULT_MOVEMENT_METRES;
 
-    let finishApproach = await AsyncStorage.getItem(FINISH_APPROACH_KEY);
-
-    // 🏁 OFFLINE finish-approach fallback. The server's distance_to_finish only
-    // arrives in a send reply, so with no network the 5s cadence never activates
-    // as the runner crosses into the last km. Here we measure straight-line
-    // distance to the cached finish point on-device. Straight-line only -> treat
-    // as 'poll faster', NEVER 'finished' (server stays the finish authority).
-    if (finishApproach !== '1') {
-      try {
-        const fcStr = await AsyncStorage.getItem(FINISH_COORDS_KEY);
-        if (fcStr) {
-          const fc = JSON.parse(fcStr);
-          const mToFinish = distanceMetres(raw.latitude, raw.longitude, fc.lat, fc.lon);
-          if (mToFinish <= LOCAL_FINISH_APPROACH_M) {
-            await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
-            await AsyncStorage.setItem(NEAR_FINISH_KEY, '1');
-            finishApproach = '1'; // so effectiveInterval + movementFloor use it THIS fix
-            try {
-              await BackgroundGeolocation.setConfig({
-                geolocation: {
-                  locationUpdateInterval:        FINISH_APPROACH_INTERVAL * 1000,
-                  fastestLocationUpdateInterval: FINISH_APPROACH_INTERVAL * 1000,
-                  distanceFilter:                0,
-                },
-              });
-              await safeChangePace(true);
-            } catch { /* silent */ }
-            await addLog('🏁', `Finish approach (local/offline) — ${(mToFinish / 1000).toFixed(2)}km straight-line${tag}`);
-          }
-        }
-      } catch { /* silent */ }
-    }
+    
     const effectiveInterval = finishApproach === '1'
       ? FINISH_APPROACH_INTERVAL
       : (intervalSeconds ?? 30);
@@ -1238,7 +1240,6 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
   await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
   await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
-  await AsyncStorage.removeItem(RACE_FINISHED_KEY);
   await AsyncStorage.removeItem(NEAR_FINISH_KEY);
   await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
   await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
@@ -1392,6 +1393,12 @@ export const ensureBackgroundTaskAlive = async (
   notificationBody: string,
 ): Promise<boolean> => {
   try {
+    // 🚫 Never resurrect a finished/stopped session. _doFullStop clears
+    // TRACKING_PARAMS_KEY, so its absence means tracking is over — restarting
+    // here would re-create the foreground-service notification.
+    const _params = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!_params) return false;
+    
     // ✅ Always (re)attach the JS listeners FIRST. The native engine and these
     // listeners have separate lifecycles: on a cold relaunch the engine can be
     // alive (enabled===true) while THIS JS context has none attached, so it
