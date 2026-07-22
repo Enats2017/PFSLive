@@ -602,29 +602,35 @@ const _processLocationForSendInternal = async (
     // as the runner crosses into the last km. Here we measure straight-line
     // distance to the cached finish point on-device. Straight-line only -> treat
     // as 'poll faster', NEVER 'finished' (server stays the finish authority).
-    const _scStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
-    const _sc = _scStr ? (parseInt(_scStr) || 0) : 0;
-    if (finishApproach !== '1' && _sc >= 3) {
+    if (finishApproach !== '1') {
       try {
         const fcStr = await AsyncStorage.getItem(FINISH_COORDS_KEY);
-        if (fcStr) {
-          const fc = JSON.parse(fcStr);
-          const mToFinish = distanceMetres(raw.latitude, raw.longitude, fc.lat, fc.lon);
-          if (mToFinish <= LOCAL_FINISH_APPROACH_M) {
-            await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
-            await AsyncStorage.setItem(NEAR_FINISH_KEY, '1');
-            finishApproach = '1'; // so effectiveInterval + movementFloor use it THIS fix
-            try {
-              await BackgroundGeolocation.setConfig({
-                geolocation: {
-                  locationUpdateInterval:        FINISH_APPROACH_INTERVAL * 1000,
-                  fastestLocationUpdateInterval: FINISH_APPROACH_INTERVAL * 1000,
-                  distanceFilter:                0,
-                },
-              });
-              await safeChangePace(true);
-            } catch { /* silent */ }
-            await addLog('🏁', `Finish approach (local/offline) — ${(mToFinish / 1000).toFixed(2)}km straight-line${tag}`);
+        if (fcStr) {                                   // ← no coords → skip the counters entirely
+          const _scStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+          const _sc = _scStr ? (parseInt(_scStr) || 0) : 0;
+          const { QUEUE_COUNT_KEY } = require('./locationQueueService');
+          const _qcStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
+          const _qc = _qcStr ? (parseInt(_qcStr) || 0) : 0;
+
+          if ((_sc + _qc) >= 3) {
+            const fc = JSON.parse(fcStr);
+            const mToFinish = distanceMetres(raw.latitude, raw.longitude, fc.lat, fc.lon);
+            if (mToFinish <= LOCAL_FINISH_APPROACH_M) {
+              await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
+              await AsyncStorage.setItem(NEAR_FINISH_KEY, '1');
+              finishApproach = '1'; // so effectiveInterval + movementFloor use it THIS fix
+              try {
+                await BackgroundGeolocation.setConfig({
+                  geolocation: {
+                    locationUpdateInterval:        FINISH_APPROACH_INTERVAL * 1000,
+                    fastestLocationUpdateInterval: FINISH_APPROACH_INTERVAL * 1000,
+                    distanceFilter:                0,
+                  },
+                });
+                await safeChangePace(true);
+              } catch { /* silent */ }
+              await addLog('🏁', `Finish approach (local/offline) — ${(mToFinish / 1000).toFixed(2)}km straight-line${tag}`);
+            }
           }
         }
       } catch { /* silent */ }
