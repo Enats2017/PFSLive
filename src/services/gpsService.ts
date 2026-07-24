@@ -79,6 +79,8 @@ const FINISH_LINE_THRESHOLD_KM = 0.05;                         // 50m for auto-s
 const FINISH_APPROACH_MIN_MOVE_METRES = 1;                     // require >=1m even in finish zone
 const FINISH_COORDS_KEY = '@PFSLive:finishCoords';             // cached {lat,lon} of the finish line
 const LOCAL_FINISH_APPROACH_M = FINISH_APPROACH_THRESHOLD * 1000; // offline: straight-line <=1km -> 5s
+const REMAINING_KEY = '@PFSLive:remainingToFinish';            // {m,lat,lon} — server-seeded, dead-reckoned offline
+
 // Base distanceFilter (metres). On iOS this is the ONLY rate control — the
 // locationUpdateInterval keys are Android-only — so 0 meant CLLocationManager
 // delivered ~1 fix/second while moving (battery + per-second AsyncStorage churn),
@@ -597,25 +599,60 @@ const _processLocationForSendInternal = async (
 
     let finishApproach = await AsyncStorage.getItem(FINISH_APPROACH_KEY);
 
-    // 🏁 OFFLINE finish-approach fallback. The server's distance_to_finish only
-    // arrives in a send reply, so with no network the 5s cadence never activates
-    // as the runner crosses into the last km. Here we measure straight-line
-    // distance to the cached finish point on-device. Straight-line only -> treat
-    // as 'poll faster', NEVER 'finished' (server stays the finish authority).
-    if (finishApproach !== '1') {
+    // 🏁 OFFLINE finish-approach fallback — runs ONLY while offline.
+    // Online, the server's ALONG-ROUTE distance_to_finish is authoritative and
+    // activates 5s at the right point, so this local path is gated on
+    // _backlogRemains (queue not empty => sends are failing). Without that gate
+    // it fired early online: on bends 1.2km of route reads as <1km crow-flies.
+    //
+    // Distance = last server value (reseeded on every successful send) minus
+    // ground covered since — i.e. dead reckoning along the real path, which
+    // tracks route distance far better than straight-line. Cross-checked
+    // against straight-line so GPS drift can't trigger it from far away.
+    // 'Poll faster' only — NEVER 'finished' (server stays the finish authority).
+    if (finishApproach !== '1' && _backlogRemains) {
       try {
-        const fcStr = await AsyncStorage.getItem(FINISH_COORDS_KEY);
-        if (fcStr) {                                   // ← no coords → skip the counters entirely
-          const _scStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
-          const _sc = _scStr ? (parseInt(_scStr) || 0) : 0;
-          const { QUEUE_COUNT_KEY } = require('./locationQueueService');
-          const _qcStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
-          const _qc = _qcStr ? (parseInt(_qcStr) || 0) : 0;
+        const remStr = await AsyncStorage.getItem(REMAINING_KEY);
+        if (remStr) {
+          const st = JSON.parse(remStr);
+          const moved = distanceMetres(st.lat, st.lon, raw.latitude, raw.longitude);
+          // Noise floor: this block runs BEFORE the accuracy/movement filters,
+          // so raw GPS jitter while stationary would be counted as progress and
+          // erode `remaining` over a long offline stop. Ignore sub-5m deltas and
+          // cap implausible jumps (bad fix / signal re-acquire).
+          const DR_MIN_MOVE_M = 5;
+          const DR_MAX_MOVE_M = 500;
+          const counts = (moved >= DR_MIN_MOVE_M && moved <= DR_MAX_MOVE_M);
+          const remaining = counts ? Number(st.m) - moved : Number(st.m);
 
-          if ((_sc + _qc) >= 3) {
-            const fc = JSON.parse(fcStr);
-            const mToFinish = distanceMetres(raw.latitude, raw.longitude, fc.lat, fc.lon);
-            if (mToFinish <= LOCAL_FINISH_APPROACH_M) {
+          // Re-anchor ONLY when a decrement actually happened — otherwise small
+          // real movements would be repeatedly discarded against a moving anchor
+          // instead of accumulating across fixes.
+          if (counts) {
+            await AsyncStorage.setItem(REMAINING_KEY, JSON.stringify({
+              m: remaining, lat: raw.latitude, lon: raw.longitude,
+            }));
+          }
+
+          if (remaining <= LOCAL_FINISH_APPROACH_M) {
+            // Loop-course guard: require >= 3 CAPTURED fixes (sent + queued).
+            // Sent-count alone freezes offline — queued fixes keep it advancing.
+            const _scStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+            const _sc = _scStr ? (parseInt(_scStr) || 0) : 0;
+            const { QUEUE_COUNT_KEY } = require('./locationQueueService');
+            const _qcStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
+            const _qc = _qcStr ? (parseInt(_qcStr) || 0) : 0;
+
+            // Sanity cap: route-remaining <=1km implies straight-line <=1km, so
+            // this never blocks a true positive — it only rejects DR drift.
+            let straightOk = true;
+            const fcStr = await AsyncStorage.getItem(FINISH_COORDS_KEY);
+            if (fcStr) {
+              const fc = JSON.parse(fcStr);
+              straightOk = distanceMetres(raw.latitude, raw.longitude, fc.lat, fc.lon) <= LOCAL_FINISH_APPROACH_M;
+            }
+
+            if ((_sc + _qc) >= 3 && straightOk) {
               await AsyncStorage.setItem(FINISH_APPROACH_KEY, '1');
               await AsyncStorage.setItem(NEAR_FINISH_KEY, '1');
               finishApproach = '1'; // so effectiveInterval + movementFloor use it THIS fix
@@ -629,7 +666,7 @@ const _processLocationForSendInternal = async (
                 });
                 await safeChangePace(true);
               } catch { /* silent */ }
-              await addLog('🏁', `Finish approach (local/offline) — ${(mToFinish / 1000).toFixed(2)}km straight-line${tag}`);
+              await addLog('🏁', `Finish approach (offline) — ${(remaining / 1000).toFixed(2)}km remaining (dead-reckoned)${tag}`);
             }
           }
         }
@@ -865,6 +902,19 @@ const _processLocationForSendInternal = async (
         if (!(await AsyncStorage.getItem(FINISH_COORDS_KEY))) {
           await AsyncStorage.setItem(FINISH_COORDS_KEY, JSON.stringify({ lat: Number(result.finish_lat), lon: Number(result.finish_lon) }));
         }
+      } catch { /* silent */ }
+    }
+
+    // ✅ Reseed remaining-to-finish from server truth on EVERY successful send.
+    // This is what the offline path dead-reckons from, and it wipes any drift
+    // accumulated during a previous outage.
+    if (result.distance_to_finish_km != null) {
+      try {
+        await AsyncStorage.setItem(REMAINING_KEY, JSON.stringify({
+          m: Number(result.distance_to_finish_km) * 1000,
+          lat: raw.latitude,
+          lon: raw.longitude,
+        }));
       } catch { /* silent */ }
     }
 
@@ -1252,6 +1302,7 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
   await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
   await AsyncStorage.removeItem(FINISH_COORDS_KEY);
+  await AsyncStorage.removeItem(REMAINING_KEY);
   await AsyncStorage.removeItem(LAST_QUEUED_KEY);
   if (API_CONFIG.DEBUG) console.log('✅ Tracking stopped');
   await addLog('🛑', 'Tracking stopped');
@@ -1627,6 +1678,7 @@ export const gpsService = {
       await AsyncStorage.removeItem(LOG_UPLOADED_KEY);
       await AsyncStorage.removeItem(LAST_QUEUED_KEY);
       await AsyncStorage.removeItem(FINISH_COORDS_KEY);
+      await AsyncStorage.removeItem(REMAINING_KEY);
       // Clear stale queue ONLY on a fresh start. On a fresh start any queued
       // fixes are post-finish stragglers from a prior offline finish — safe to
       // wipe. On a relaunch onto an existing session the queue may hold a real
