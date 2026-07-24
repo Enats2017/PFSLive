@@ -42,6 +42,7 @@ const LAST_SENT_KEY = '@PFSLive:lastSentAt';
 export const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
 const LAST_POSITION_KEY = '@PFSLive:lastPosition';
 const LAST_ALTITUDE_KEY = '@PFSLive:lastAltitude';
+const TEST_PHASE_KEY       = '@PFSLive:testPhase';
 
 // ✅ Finish-line approach: when ≤ 1km to finish, drop interval to 5s for
 // accurate plotting. Stored in AsyncStorage so the engine handlers can read
@@ -1304,6 +1305,8 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(FINISH_COORDS_KEY);
   await AsyncStorage.removeItem(REMAINING_KEY);
   await AsyncStorage.removeItem(LAST_QUEUED_KEY);
+  await AsyncStorage.removeItem(TEST_PHASE_KEY);
+
   if (API_CONFIG.DEBUG) console.log('✅ Tracking stopped');
   await addLog('🛑', 'Tracking stopped');
   await _flushLogsNow();
@@ -1679,6 +1682,7 @@ export const gpsService = {
       await AsyncStorage.removeItem(LAST_QUEUED_KEY);
       await AsyncStorage.removeItem(FINISH_COORDS_KEY);
       await AsyncStorage.removeItem(REMAINING_KEY);
+      await AsyncStorage.removeItem(TEST_PHASE_KEY);
       // Clear stale queue ONLY on a fresh start. On a fresh start any queued
       // fixes are post-finish stragglers from a prior offline finish — safe to
       // wipe. On a relaunch onto an existing session the queue may hold a real
