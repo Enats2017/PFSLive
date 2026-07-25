@@ -43,6 +43,7 @@ export const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
 const LAST_POSITION_KEY = '@PFSLive:lastPosition';
 const LAST_ALTITUDE_KEY = '@PFSLive:lastAltitude';
 const TEST_PHASE_KEY       = '@PFSLive:testPhase';
+export const FINAL_SENT_COUNT_KEY = '@PFSLive:finalSentCount';
 
 // ✅ Finish-line approach: when ≤ 1km to finish, drop interval to 5s for
 // accurate plotting. Stored in AsyncStorage so the engine handlers can read
@@ -583,9 +584,10 @@ const _processLocationForSendInternal = async (
         }
 
         if (totalFlushed > 0) {
-          const cStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
-          const c = cStr ? parseInt(cStr) : 0;
-          await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(c + totalFlushed));
+          // Do NOT bump BACKGROUND_SENT_COUNT_KEY here — processQueue() already
+          // increments it once per drained fix (locationService.ts:320). Adding
+          // totalFlushed again counted every queued fix twice (DB 67 vs 77 when
+          // 2 live + 10 queued + 55 live). Log only.
           let fin = '0';
           try { fin = (await AsyncStorage.getItem(RACE_FINISHED_KEY)) ?? '0'; } catch {}
           const pendingNote = fin === '1'
@@ -1297,6 +1299,18 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(LAST_SENT_KEY);
   await AsyncStorage.removeItem(LAST_POSITION_KEY);
   await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
+  // Preserve the final total before clearing — the stop toast (and any late
+  // reader) runs AFTER this teardown on the background-finish path, and would
+  // otherwise read null and fall back to stale React state (showed 10, not 12).
+  try {
+    const _final = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+    const _prevFinal = await AsyncStorage.getItem(FINAL_SENT_COUNT_KEY);
+    const cur  = _final !== null ? (parseInt(_final) || 0) : -1;
+    const prev = _prevFinal !== null ? (parseInt(_prevFinal) || 0) : -1;
+    // Never lower an existing keeper — a 2nd teardown sees a fresh/low counter
+    // and would clobber the real finish total (12 → 10).
+    if (cur > prev) await AsyncStorage.setItem(FINAL_SENT_COUNT_KEY, String(cur));
+  } catch { /* silent */ }
   await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
   await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
   await AsyncStorage.removeItem(NEAR_FINISH_KEY);
@@ -1674,6 +1688,7 @@ export const gpsService = {
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
       await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
       await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
+      await AsyncStorage.removeItem(FINAL_SENT_COUNT_KEY);
       await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
       await AsyncStorage.removeItem(RACE_FINISHED_KEY);
       await AsyncStorage.removeItem(NEAR_FINISH_KEY);

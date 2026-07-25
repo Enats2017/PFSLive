@@ -32,7 +32,7 @@ import {
   ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry,
   startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive,
   isTracking, getTrackingParams, stopWatching, attachUi, detachUi,
-  LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY,
+  LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY, FINAL_SENT_COUNT_KEY,
 } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -679,14 +679,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       try {
         const sentCount = await locationService.processQueue(participantId, eventId);
         if (sentCount > 0) {
-          // ✅ Write to BACKGROUND_SENT_COUNT_KEY so countdown timer sync
-          // includes queue-sent locations in the total count
-          try {
-            const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
-            const current = countStr ? parseInt(countStr) : 0;
-            await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(current + sentCount));
-          } catch { /* silent */ }
-
           if (API_CONFIG.DEBUG) {
             toastSuccess(
               t('home:tracking.queueProcessed'),
@@ -1041,7 +1033,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setIsSendingData(false);
     setCurrentLocation(null);
     trackingParamsRef.current = null;
-    AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => { });
+    // NOTE: do NOT clear BACKGROUND_SENT_COUNT_KEY here — the stop-path drain
+    // below (and finishBackgroundStop) still need it for an accurate total.
+    // It's cleared at the very end of this function instead (see below).
 
     await stopBackgroundFetchKeepalive();
 
@@ -1055,14 +1049,41 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (participantId && eventId && !raceAlreadyFinished) {
       try {
         const drained = await locationService.processQueue(participantId, eventId);
-        if (drained > 0) {
-          actualSentCount += drained;   // include stop-path drained fixes in the total
-          if (API_CONFIG.DEBUG) console.log(`✅ Drained ${drained} queued locations on stop`);
+        // processQueue bumps BACKGROUND_SENT_COUNT_KEY per drained fix now, so we
+        // re-read the live counter below instead of adding `drained` (that would
+        // double-count). Keep the log for visibility.
+        if (drained > 0 && API_CONFIG.DEBUG) {
+          console.log(`✅ Drained ${drained} queued locations on stop`);
         }
       } catch { /* silent */ }
     }
 
     const remaining = await locationQueueService.getQueueSize();
+
+    // Re-read the counter — processQueue may have bumped it (and, on finish,
+    // teardown may have cleared it). This is the authoritative post-drain total.
+    try {
+      const afterStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+      if (afterStr !== null) {
+        const parsedAfter = parseInt(afterStr);
+        // Only accept a HIGHER value. If the finish path already tore down and
+        // cleared the counter mid-drain, this read could be low/absent — never
+        // let that pull the total below what we captured pre-drain.
+        if (!isNaN(parsedAfter) && parsedAfter > actualSentCount) actualSentCount = parsedAfter;
+      }
+    } catch { /* silent */ }
+
+    // On the background-finish path the counter was already cleared by
+    // _doFullStop; fall back to the preserved final total so the toast matches
+    // the DB (12), not stale state.
+    try {
+      const finalStr = await AsyncStorage.getItem(FINAL_SENT_COUNT_KEY);
+      if (finalStr !== null) {
+        const pf = parseInt(finalStr);
+        if (!isNaN(pf) && pf > actualSentCount) actualSentCount = pf;
+      }
+    } catch { /* silent */ }
+
     setQueuedCount(remaining);
 
     if (participantId && eventId) {
@@ -1096,7 +1117,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         queued: remaining,
       })
     );
-
+    
+    AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => { });
+    AsyncStorage.removeItem(FINAL_SENT_COUNT_KEY).catch(() => { });
     setLocationUpdateCount(0);
   }, [locationUpdateCount, participantId, eventId, t]);
 
@@ -1352,14 +1375,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 });
               }
 
-              const sentCount = await locationService.processQueue(participantId, eventId);
-              if (sentCount > 0) {
-                try {
-                  const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
-                  const current = countStr ? parseInt(countStr) : 0;
-                  await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(current + sentCount));
-                } catch { /* silent */ }
-              }
+              // drain the backlog; counter is maintained inside processQueue now
+              await locationService.processQueue(participantId, eventId);
               await loadQueueSize();
             } catch { /* silent */ }
           })();
@@ -1910,9 +1927,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       const remaining = await locationQueueService.getQueueSize();
                       setQueuedCount(remaining);
                       if (sentCount > 0) {
+                        // processQueue() already bumped the counter as it drained —
+                        // READ the live total for the toast, don't add sentCount again.
+                        let totalSent = sentCount;
+                        try {
+                          const liveStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+                          if (liveStr !== null) totalSent = parseInt(liveStr) || sentCount;
+                        } catch { /* silent */ }
                         toastSuccess(
                           t('home:tracking.queueProcessed'),
-                          t('home:tracking.queuedSent', { count: sentCount })
+                          t('home:tracking.queuedSent', { count: totalSent })
                         );
                       } else {
                         toastError(t('common:errors.generic'), t('home:tracking.queueRetryFailed'));

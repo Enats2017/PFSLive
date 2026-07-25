@@ -5,6 +5,11 @@ import { Platform } from 'react-native';
 import { TrackingLogEntry, RACE_FINISHED_KEY } from './gpsService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Mirror of gpsService's BACKGROUND_SENT_COUNT_KEY — declared locally to avoid
+// a circular import. processQueue bumps it per drained fix so the counter is
+// LIVE before finishBackgroundStop reads it for the tracking-log upload.
+const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
+
 // Absolute wall-clock timeout. axios's own `timeout` does NOT reliably fire on
 // a half-open socket (cell drops mid-request, no FIN/RST) — the request can hang
 // for minutes. Promise.race against a real timer guarantees the await resolves
@@ -304,6 +309,16 @@ export const locationService = {
           );
 
           sentCount++;
+
+          // ✅ Keep the cumulative session counter live AS WE DRAIN. finishBackgroundStop
+          // (below, once the queue empties) reads BACKGROUND_SENT_COUNT_KEY for the log
+          // upload — bumping it only in the callers after return meant the finish log
+          // carried the pre-drain value (2 instead of 12).
+          try {
+            const _cStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
+            const _c = _cStr ? (parseInt(_cStr) || 0) : 0;
+            await AsyncStorage.setItem(BACKGROUND_SENT_COUNT_KEY, String(_c + 1));
+          } catch { /* silent */ }
 
           // ✅ FINISH-DURING-DRAIN — full background teardown.
           // A finish can cross while we're draining the offline backlog (runner
