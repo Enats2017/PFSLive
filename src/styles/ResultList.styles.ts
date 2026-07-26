@@ -320,7 +320,13 @@ divider: {
     paddingLeft: 8,
   },
 
-
+  // Flag is the only remaining column (UTMB was to its left) → no divider.
+  statFlagFullNoBorder: {
+    flex: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  
   statVal: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,

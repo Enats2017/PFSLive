@@ -111,6 +111,7 @@ export interface EventRankingResponse {
     race_name: string;
     distance_name: string;
     product_app_id: number;
+    category_id: number;
     product_option_value_app_id: number;
     from_live: 0 | 1;
     race_status: string;

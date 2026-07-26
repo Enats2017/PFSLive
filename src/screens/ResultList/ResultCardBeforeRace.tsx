@@ -96,35 +96,40 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                 )}
 
                 <View style={resultListStyle.statsRow}>
-                    <View style={resultListStyle.statCol}>
-                        {hasUtmbIndex ? (
-                            <View style={resultListStyle.beforeRaceLeftHalf}>
-                                <View style={resultListStyle.utmbSection}>
-                                    <View style={resultListStyle.utmbBadge}>
-                                        <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
-                                        <Text style={resultListStyle.utmbBadgeTextBottom}>
-                                            {t('allrace:race.utmbIndex')}
-                                        </Text>
+                    {showUtmbIndex && (
+                        <View style={resultListStyle.statCol}>
+                            {hasUtmbIndex ? (
+                                <View style={resultListStyle.beforeRaceLeftHalf}>
+                                    <View style={resultListStyle.utmbSection}>
+                                        <View style={resultListStyle.utmbBadge}>
+                                            <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
+                                            <Text style={resultListStyle.utmbBadgeTextBottom}>
+                                                {t('allrace:race.utmbIndex')}
+                                            </Text>
+                                        </View>
+                                        <Text style={resultListStyle.utmbValue}>{item.utmb_index}</Text>
                                     </View>
-                                    <Text style={resultListStyle.utmbValue}>{item.utmb_index}</Text>
                                 </View>
-                            </View>
-                        ) : (
-                            <View style={resultListStyle.beforeRaceLeftHalf}>
-                                <View style={resultListStyle.utmbSection}>
-                                    <View style={resultListStyle.utmbBadge}>
-                                        <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
-                                        <Text style={resultListStyle.utmbBadgeTextBottom}>
-                                            {t('allrace:race.utmbIndex')}
-                                        </Text>
+                            ) : (
+                                <View style={resultListStyle.beforeRaceLeftHalf}>
+                                    <View style={resultListStyle.utmbSection}>
+                                        <View style={resultListStyle.utmbBadge}>
+                                            <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
+                                            <Text style={resultListStyle.utmbBadgeTextBottom}>
+                                                {t('allrace:race.utmbIndex')}
+                                            </Text>
+                                        </View>
+                                        <Text style={resultListStyle.statLabel}>—</Text>
                                     </View>
-                                    <Text style={resultListStyle.statLabel}>—</Text>
                                 </View>
-                            </View>
-                        )}
-                    </View>
+                            )}
+                        </View>
+                    )}
 
-                    <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
+                    <View style={[
+                        resultListStyle.statCol,
+                        showUtmbIndex ? resultListStyle.statFlagMid : resultListStyle.statFlagFullNoBorder,
+                    ]}>
                         <View style={resultListStyle.flagRow}>
                             {item.nation_flag && (
                                 <SvgUri width={28} height={20} uri={item.nation_flag} />

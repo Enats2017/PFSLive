@@ -171,33 +171,35 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                                     </Text>
                                 </View>
                             </View>
-                            <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
-                                {hasUtmbIndex ? (
-                                    <View style={resultListStyle.beforeRaceLeftHalf}>
-                                        <View style={resultListStyle.utmbSection}>
-                                            <View style={resultListStyle.utmbBadge}>
-                                                <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
-                                                <Text style={resultListStyle.utmbBadgeTextBottom}>
-                                                    {t('allrace:race.utmbIndex')}
-                                                </Text>
+                            {showUtmbIndex && (
+                                <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
+                                    {hasUtmbIndex ? (
+                                        <View style={resultListStyle.beforeRaceLeftHalf}>
+                                            <View style={resultListStyle.utmbSection}>
+                                                <View style={resultListStyle.utmbBadge}>
+                                                    <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
+                                                    <Text style={resultListStyle.utmbBadgeTextBottom}>
+                                                        {t('allrace:race.utmbIndex')}
+                                                    </Text>
+                                                </View>
+                                                <Text style={resultListStyle.statVal}>{item.utmb_index}</Text>
                                             </View>
-                                            <Text style={resultListStyle.statVal}>{item.utmb_index}</Text>
                                         </View>
-                                    </View>
-                                ) : (
-                                    <View style={resultListStyle.beforeRaceLeftHalf}>
-                                        <View style={resultListStyle.utmbSection}>
-                                            <View style={resultListStyle.utmbBadge}>
-                                                <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
-                                                <Text style={resultListStyle.utmbBadgeTextBottom}>
-                                                    {t('allrace:race.utmbIndex')}
-                                                </Text>
+                                    ) : (
+                                        <View style={resultListStyle.beforeRaceLeftHalf}>
+                                            <View style={resultListStyle.utmbSection}>
+                                                <View style={resultListStyle.utmbBadge}>
+                                                    <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
+                                                    <Text style={resultListStyle.utmbBadgeTextBottom}>
+                                                        {t('allrace:race.utmbIndex')}
+                                                    </Text>
+                                                </View>
+                                                <Text style={resultListStyle.statLabel}>-</Text>
                                             </View>
-                                            <Text style={resultListStyle.statLabel}>-</Text>
                                         </View>
-                                    </View>
-                                )}
-                            </View>
+                                    )}
+                                </View>
+                            )}
                         </>
                     )}
                 </View>
