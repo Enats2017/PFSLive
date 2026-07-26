@@ -29,7 +29,12 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                     <View style={resultInfoStyles.headerMiddle} />
                     <View style={resultInfoStyles.diagRight} />
                     <View style={resultInfoStyles.headerRed}>
-                        <Text style={resultInfoStyles.text}>
+                        <Text
+                            style={resultInfoStyles.text}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.7}
+                        >
                             {event?.distance_name ?? '—'}
                         </Text>
                     </View>

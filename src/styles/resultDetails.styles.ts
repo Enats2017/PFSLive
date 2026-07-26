@@ -19,7 +19,7 @@ export const resultInfoStyles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: colors.white,
     fontWeight: typography.weights.regular,
-    
+    textAlign: "center",
   },
 
   header: {

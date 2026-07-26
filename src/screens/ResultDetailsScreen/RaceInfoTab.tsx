@@ -21,6 +21,12 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
     
     const fmtRank = (v?: string) => (/^\d+$/.test(v ?? '') ? (v as string) : '—');
 
+    // "1 (M40+)" — rank with its category name; blank category → just the rank
+    const fmtCategoryRank = (rank?: string, cat?: string) => {
+        const r = fmtRank(rank);
+        return (r !== '—' && cat && cat.trim() !== '') ? `${r} (${cat})` : r;
+    };
+
     return (
         <ScrollView
             contentContainerStyle={resultInfoStyles.scrollContent}
@@ -37,7 +43,12 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                     <View style={resultInfoStyles.headerMiddle} />
                     <View style={resultInfoStyles.diagRight} />
                     <View style={resultInfoStyles.headerRed}>
-                        <Text style={resultInfoStyles.text}>
+                        <Text
+                            style={resultInfoStyles.text}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.7}
+                        >
                             {event?.distance_name ?? '—'}
                         </Text>
                     </View>
@@ -70,7 +81,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                 <View style={resultInfoStyles.rankingsCard}>
                     {[
                         { labelKey: 'raceInfo.overallRanking', value: fmtRank(raceInfo?.position) },
-                        { labelKey: 'raceInfo.rankingInOpen',  value: fmtRank(raceInfo?.category_rank) },
+                        { labelKey: 'raceInfo.rankingInOpen',  value: fmtCategoryRank(raceInfo?.category_rank, raceInfo?.category_name) },
                         { labelKey: 'raceInfo.genderRanking',  value: fmtRank(raceInfo?.gender_ranking) },
                     ].map((item, i) => (
                         <View
