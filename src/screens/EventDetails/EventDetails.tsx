@@ -29,6 +29,8 @@ const EventDetails = ({ route }: EventDetailsProps) => {
 
   const { product_app_id, event_name, auto_register_id, event_image } = route.params;
 
+  const [showResults, setShowResults] = useState(true);
+
   if (API_CONFIG.DEBUG) {
     console.log('📋 EventDetails params:', {
       product_app_id,
@@ -61,6 +63,7 @@ const EventDetails = ({ route }: EventDetailsProps) => {
             event_image={event_image}
             auto_register_id={auto_register_id ?? null}
             onRefresh={handleRefresh}
+            onResultsAvailability={setShowResults}
           />
         ) : (
           <View style={commonStyles.centerContainer}>
@@ -76,6 +79,7 @@ const EventDetails = ({ route }: EventDetailsProps) => {
         product_app_id={product_app_id}
         event_name={event_name}
         event_image={event_image}
+        showResults={showResults}
       />
     </SafeAreaView>
   );

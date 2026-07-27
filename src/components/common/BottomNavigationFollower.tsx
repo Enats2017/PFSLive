@@ -13,7 +13,8 @@ interface BottomNavigationFollowerProps {
   event_image?: string | null;
   product_option_value_app_id?: string | number;
   sourceTab?: 'past' | 'live' | 'upcoming';
-  selectedDistanceLabel?: string | number; 
+  selectedDistanceLabel?: string | number;
+  showResults?: boolean; 
 }
 
 // ✅ Custom icon assets from assets folder
@@ -31,7 +32,8 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
   product_option_value_app_id,
   sourceTab,
   selectedDistanceLabel,
-  event_image
+  event_image,
+  showResults = true,
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute();
@@ -40,7 +42,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
   const tabs: { name: TabName; label: string }[] = [
     { name: 'Home',      label: t('nav.home') },
     { name: 'Favorites', label: t('nav.favorites') },
-    { name: 'Results',   label: t('nav.results') },
+    ...(showResults ? [{ name: 'Results' as TabName, label: t('nav.results') }] : []),
     { name: 'Map',       label: t('nav.map') },
   ];
 

@@ -63,15 +63,23 @@ export interface DeleteParticipantResponse {
   message?: string;
 }
 
-export interface EventDetail {
+export interface EventInfo {
   product_app_id: number;
   name: string;
+  image: string;
+  city: string;
+  country: string;
   race_date: string;
-  manufacturer_name: string;
-  location: string;
-  image_url: string;
-  distances: Distance[];
+  status: string;
+  race_result_status?: number;
+  rr_url?: string;
+}
+
+export interface EventDetail {
+  timezone: string;
   server_datetime: string;
+  distances: Distance[];
+  event: EventInfo;
 }
 
 export const eventDetailService = {

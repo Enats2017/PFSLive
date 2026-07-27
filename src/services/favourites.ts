@@ -83,6 +83,8 @@ export interface FavouritesPagination {
 
 export interface FavouritesResponse {
   favourites: FavouriteItem[];
+  race_result_status?: number;
+  rr_url?: string;
   pagination: FavouritesPagination;
 }
 
@@ -131,7 +133,7 @@ export const favouritesApi = {
         customer_app_id_string,
         language_id,
         page: params.page ?? 1,
-         device_id: deviceId,
+        device_id: deviceId,
       };
 
       if (API_CONFIG.DEBUG) {

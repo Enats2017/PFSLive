@@ -38,6 +38,7 @@ interface DistanceTabProps {
   event_image?: string | null;
   auto_register_id?: number | null;
   onRefresh?: () => void;
+  onResultsAvailability?: (show: boolean) => void;
 }
 
 const DistanceTab = ({
@@ -46,6 +47,7 @@ const DistanceTab = ({
   event_image,
   auto_register_id,
   onRefresh,
+  onResultsAvailability,
 }: DistanceTabProps) => {
   const { t } = useTranslation(['details']);
   const navigation = useNavigation<any>();
@@ -60,6 +62,7 @@ const DistanceTab = ({
   const [gpxRestrictedVisible, setGpxRestrictedVisible] = useState(false);
   const [gpxRestrictedItem, setGpxRestrictedItem] = useState<Distance | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
+  const [showResults, setShowResults] = useState(false);
 
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -77,6 +80,14 @@ const DistanceTab = ({
 
         setDistances(result.distances);
         setServerTime(result.server_datetime);
+
+        // Results button/tab only when RR results are published (status 1) AND a URL exists.
+        const canShowResults =
+          result.event?.race_result_status === 1 &&
+          (result.event?.rr_url ?? '') !== '';
+        
+        setShowResults(canShowResults);
+        onResultsAvailability?.(canShowResults);
 
         if (API_CONFIG.DEBUG) {
           console.log('✅ Distances loaded:', result.distances.length);
@@ -464,6 +475,7 @@ const DistanceTab = ({
     <>
       <FlatList
         data={distances}
+        extraData={showResults}
         keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}

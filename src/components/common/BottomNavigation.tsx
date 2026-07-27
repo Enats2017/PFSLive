@@ -14,6 +14,7 @@ interface BottomNavigationProps {
   product_option_value_app_id?: string | number;
   sourceScreen?: string;
   selectedDistanceLabel?: string | number;
+  showResults?: boolean; 
 }
 
 // ✅ Custom icon assets from assets folder
@@ -32,6 +33,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   product_option_value_app_id,
   sourceScreen,
   selectedDistanceLabel,
+  showResults = true,
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute();
@@ -40,7 +42,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   const tabs: { name: TabName; label: string }[] = [
     { name: 'Home',      label: t('nav.home') },
     { name: 'Favorites', label: t('nav.favorites') },
-    { name: 'Results',   label: t('nav.results') },
+    ...(showResults ? [{ name: 'Results' as TabName, label: t('nav.results') }] : []),
     { name: 'Map',       label: t('nav.map') },
   ];
 

@@ -65,8 +65,6 @@ export interface LiveTrackingParticipant {
     checkpoints: LiveTrackingCheckpoint[];
 }
 
-
-
 export interface DistanceOption {
     product_option_value_app_id: number;
     distance_name: string;
@@ -87,6 +85,8 @@ export interface LiveTrackingResponse {
         distances: DistanceOption[];
         participants: LiveTrackingParticipant[];
         checkpoints: LiveTrackingCheckpoint[];
+        race_result_status?: number;
+        rr_url?: string;
     };
     error: string | null;
 }

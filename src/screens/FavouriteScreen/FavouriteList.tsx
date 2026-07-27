@@ -48,6 +48,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
 
     const { error, hasError, handleApiError, clearError } = useScreenError();
     const onFollowSuccessRef = useRef<(() => void) | null>(null);
+    const [showResults, setShowResults] = useState(false);
 
     // ✅ Same follow plumbing as ResultListScreen — single source of truth
     const {
@@ -81,6 +82,12 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                 page: result.pagination.page,
                 total_pages: result.pagination.total_pages,
             });
+
+            const canShowResults =
+                result?.race_result_status === 1 &&
+                (result?.rr_url ?? '') !== '';
+            
+            setShowResults(canShowResults);
 
             if (API_CONFIG.DEBUG) {
                 console.log('✅ Favourites loaded:', {
@@ -252,6 +259,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     event_image={event_image}
                     sourceTab={sourceTab}
                     product_option_value_app_id={product_option_value_app_id}
+                    showResults={showResults}
                 />
             ) : (
                 <BottomNavigation
@@ -261,6 +269,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     event_image={event_image}
                     sourceScreen={sourceScreen}
                     product_option_value_app_id={product_option_value_app_id}
+                    showResults={showResults}
                 />
             )}
 

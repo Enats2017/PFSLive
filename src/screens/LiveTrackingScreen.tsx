@@ -56,6 +56,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [profileCollapsed, setProfileCollapsed] = useState(false);
     const [participantsLoading, setParticipantsLoading] = useState(false);
     const [loadedGpxUrl, setLoadedGpxUrl] = useState<string | null>(null);
+    const [showResults, setShowResults] = useState(false);
+
+    
 
     // ✅ Follower's own device location — plotted directly from GPS,
     // never stored to DB (follower is watching, not racing).
@@ -368,6 +371,12 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 console.log('🔄 Auto-refresh: Skipping distances and GPX (using cached data)');
             }
 
+            const canShowResults =
+                response?.data?.race_result_status === 1 &&
+                (response?.data?.rr_url ?? '') !== '';
+            
+            setShowResults(canShowResults);
+
             setLoading(false);
 
             setTimeout(() => {
@@ -626,6 +635,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         event_image={event_image}
                         product_option_value_app_id={product_option_value_app_id}
                         sourceTab={sourceTab}
+                        showResults={showResults}
                     />
                 ) : (
                     <BottomNavigation
@@ -635,6 +645,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         event_image={event_image}
                         product_option_value_app_id={product_option_value_app_id}
                         sourceScreen={sourceScreen}
+                        showResults={showResults}
                     />
                 )
             )}

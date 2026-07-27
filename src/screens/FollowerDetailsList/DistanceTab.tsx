@@ -27,18 +27,20 @@ interface DistanceTabProps {
   sourceTab?: 'past' | 'live' | 'upcoming';
   event_name: string;
   event_image?: string;
-
+  onResultsAvailability?: (show: boolean) => void;
 }
 
 const DistanceTab = ({
   product_app_id,
   sourceTab = 'past',
   event_name,
-  event_image
+  event_image,
+  onResultsAvailability,
 }: DistanceTabProps) => {
   const navigation = useNavigation<any>();
   const { t } = useTranslation(['result', 'details', 'common']);
   const [results, setResults] = useState<Distance[]>([]);
+  const [showResults, setShowResults] = useState(false);
   const [loading, setLoading] = useState(true);
   const [imageLoading, setImageLoading] = useState(true);
   //const [error, setError] = useState<string | null>(null);
@@ -50,6 +52,13 @@ const DistanceTab = ({
       clearError();
       const result = await eventDetailService.getEventDetails(product_app_id);
       setResults(result.distances);
+      // Results button/tab only when RR results are published (status 1) AND a URL exists.
+      const canShowResults =
+        result.event?.race_result_status === 1 &&
+        (result.event?.rr_url ?? '') !== '';
+      
+      setShowResults(canShowResults);
+      onResultsAvailability?.(canShowResults);
     } catch (err: any) {
       handleApiError(err);
     } finally {
@@ -106,7 +115,7 @@ const DistanceTab = ({
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isPast = sourceTab === 'past';
     const isLiveOrUpcoming = sourceTab === 'live' || sourceTab === 'upcoming';
-
+    
     return (
       <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.md }]}>
         <View style={[detailsStyles.distance]}>
@@ -162,23 +171,25 @@ const DistanceTab = ({
           <View style={detailsStyles.verticalDivider} />
 
           <View style={{ gap: spacing.md }}>
-            <TouchableOpacity
-              style={detailsStyles.resultsButton}
-              onPress={() => navigation.navigate('ResultList', {
-                product_app_id,
-                product_option_value_app_id: Number(item.product_option_value_app_id),
-                event_name: event_name,
-                event_image: event_image,
-                sourceScreen: 'FollowerDistanceScreen',
-                sectionType: 'follower',
-                sourceTab,
-              })}
-              activeOpacity={0.8}
-            >
-              <Text style={commonStyles.primaryButtonText}>
-                {t('button.result')}
-              </Text>
-            </TouchableOpacity>
+            {showResults && (
+              <TouchableOpacity
+                style={detailsStyles.resultsButton}
+                onPress={() => navigation.navigate('ResultList', {
+                  product_app_id,
+                  product_option_value_app_id: Number(item.product_option_value_app_id),
+                  event_name: event_name,
+                  event_image: event_image,
+                  sourceScreen: 'FollowerDistanceScreen',
+                  sectionType: 'follower',
+                  sourceTab,
+                })}
+                activeOpacity={0.8}
+              >
+                <Text style={commonStyles.primaryButtonText}>
+                  {t('button.result')}
+                </Text>
+              </TouchableOpacity>
+            )}
             {isLiveOrUpcoming && (
               <TouchableOpacity
                 style={detailsStyles.routeButton}
@@ -202,7 +213,7 @@ const DistanceTab = ({
         </View>
       </View>
     );
-  }, [navigation, product_app_id, sourceTab, t]);
+  }, [navigation, product_app_id, event_name, event_image, sourceTab, t, showResults]);
 
   if (loading) {
     return (
@@ -237,6 +248,7 @@ const DistanceTab = ({
       ) : (
         <FlatList
           data={results}
+          extraData={showResults}
           keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}

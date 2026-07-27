@@ -36,6 +36,9 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(new Set(['Distance']));
   const { product_app_id, event_name, sourceTab, event_image } = route.params;
 
+  const [showResults, setShowResults] = useState(true);
+  
+
   useEffect(() => {
     const index = TABS.indexOf(activeTabRef.current);
     const timer = setTimeout(() => {
@@ -67,6 +70,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
             sourceTab={sourceTab}
             event_name={event_name}
             event_image={event_image}
+            onResultsAvailability={setShowResults}
           />
         );
       case 'Participant':
@@ -158,6 +162,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
         event_image={event_image}
         product_option_value_app_id={0}
         sourceTab={sourceTab}
+        showResults={showResults}
       />
     </SafeAreaView>
   );
