@@ -372,26 +372,32 @@ const DistanceTab = ({
               </Text>
             </View>
 
-            <View style={detailsStyles.metaRow}>
-              <Feather name="users" size={16} color={colors.gray500} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
-                {item.participant_started_count} {t('details:athletes')}
-              </Text>
-            </View>
+            {showResults && (
+              <View style={detailsStyles.metaRow}>
+                <Feather name="users" size={16} color={colors.gray500} />
+                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                  {item.participant_started_count} {t('details:athletes')}
+                </Text>
+              </View>
+            )}
 
-            <View style={detailsStyles.metaRow}>
-              <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
-                {item.finished_count} {t('details:finished')}
-              </Text>
-            </View>
+            {showResults && (
+              <View style={detailsStyles.metaRow}>
+                <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
+                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                  {item.finished_count} {t('details:finished')}
+                </Text>
+              </View>
+            )}
 
-            <View style={detailsStyles.metaRow}>
-              <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
-              <Text style={detailsStyles.metaTextRed} numberOfLines={1}>
-                {item.dnf_count} {t('details:dnf')}
-              </Text>
-            </View>
+            {showResults && (
+              <View style={detailsStyles.metaRow}>
+                <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
+                <Text style={detailsStyles.metaTextRed} numberOfLines={1}>
+                  {item.dnf_count} {t('details:dnf')}
+                </Text>
+              </View>
+            )}
 
             <View style={detailsStyles.metaRow}>
               <MaterialCommunityIcons name="timer-sand" size={15} color={colors.gray600} />
