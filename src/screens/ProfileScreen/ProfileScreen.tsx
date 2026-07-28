@@ -338,7 +338,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} />
+                <AppHeader showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
                 </View>
@@ -350,7 +350,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader />
+                <AppHeader showLogo={true} showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -364,7 +364,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} />
+            <AppHeader showLogo={true} showBack />
 
             <ScrollView                
                 nestedScrollEnabled={true}

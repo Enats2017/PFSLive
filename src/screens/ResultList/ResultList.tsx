@@ -196,6 +196,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 product_app_id={product_app_id}
                 product_option_value_app_id={currentPovId}
                 raceStatus={raceStatus as 'finished' | 'in_progress' | 'not_started'}
+                showBack
             />
 
             <View style={resultListStyle.filterRow1}>

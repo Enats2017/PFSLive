@@ -19,7 +19,7 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
     if (isLoggedIn === null) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-                <AppHeader title={t('setting:liveTrackingSettings.header')} showLogo={true} />
+                <AppHeader title={t('setting:liveTrackingSettings.header')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
                     <Text style={commonStyles.loadingText}>{t('setting:liveTrackingSettings.loadingText')}</Text>
@@ -31,7 +31,7 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
     return (
         <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
             <StatusBar barStyle="dark-content" backgroundColor="#F4F6FB" />
-            <AppHeader title={t('setting:liveTrackingSettings.header')} showLogo={true} />
+            <AppHeader title={t('setting:liveTrackingSettings.header')} showLogo={true} showBack />
             {isLoggedIn ? <UserTrackingSettings /> : <GuestTrackingSettings />}
         </SafeAreaView>
     );

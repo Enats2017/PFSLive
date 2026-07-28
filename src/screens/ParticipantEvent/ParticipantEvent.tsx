@@ -315,7 +315,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} />
+                <AppHeader showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
                 </View>
@@ -327,7 +327,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader />
+                <AppHeader showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -341,7 +341,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} />
+            <AppHeader showLogo={true} showBack />
             <View style={{ flex: 1 }} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
                 <View style={eventStyles.section}>
                     <Text style={eventStyles.textCenter}>{t('event:official.title')}</Text>

@@ -92,7 +92,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
-            <AppHeader />
+            <AppHeader showBack />
             <ScrollView
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}

@@ -274,7 +274,7 @@ const FollowerScreen = () => {
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
-            <AppHeader />
+            <AppHeader showBack />
 
             <Animated.View
                 style={{

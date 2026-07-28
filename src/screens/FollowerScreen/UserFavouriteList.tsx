@@ -228,7 +228,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
-            <AppHeader />
+            <AppHeader showBack />
 
             <View style={follow.yellowHeader}>
                 <Text style={commonStyles.title}>{t('follow:favourite')}</Text>

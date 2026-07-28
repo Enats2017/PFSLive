@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+  import { StyleSheet } from 'react-native';
 import { colors, spacing, typography } from './common.styles';
 
 export const headerStyles = StyleSheet.create({
@@ -16,7 +16,16 @@ export const headerStyles = StyleSheet.create({
   
   leftSection: {
     flex: 1,
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  
+  backBtn: {
+    width: 34,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   
   centerSection: {
@@ -34,15 +43,16 @@ export const headerStyles = StyleSheet.create({
   },
   
   logo: {
-    width: 100,
-    height: 50,
-    alignItems: 'flex-start',
+    width: 44,
+    height: 44,
+    alignItems: 'center',
     justifyContent: 'center',
   },
+  
   centerLogo: {
-  width: "100%",
-  height: 45,
-},
+    width: "100%",
+    height: 45,
+  },
   
   // ✅ ADD THIS: Logo Image Style
   logoImage: {

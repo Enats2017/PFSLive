@@ -75,7 +75,7 @@ const ForgotPassword: React.FC<ForgotPasswordScreenProps> = ({ navigation }) => 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} />
+      <AppHeader showLogo={true} showBack />
       
       {/* Progress Bar */}
       <View style={forgotStyles.progressContainer}>

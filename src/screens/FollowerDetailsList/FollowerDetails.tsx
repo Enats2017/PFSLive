@@ -110,7 +110,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
       edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}
     >
       <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} />
+      <AppHeader showLogo={true} showBack />
 
       <View
         style={{ flex: 1 }}

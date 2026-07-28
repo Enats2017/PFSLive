@@ -199,7 +199,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
     return (
       <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
         <StatusBar barStyle="dark-content" />
-        <AppHeader showLogo={false} />
+        <AppHeader showLogo={false} showBack />
         <View style={commonStyles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -237,7 +237,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   return (
     <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}>
       <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={false} />
+      <AppHeader showLogo={false} showBack />
 
       <View style={[detailsStyles.section]}>
         <Text style={commonStyles.title}>{event_name}</Text>

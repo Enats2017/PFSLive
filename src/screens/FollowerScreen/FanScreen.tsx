@@ -133,7 +133,7 @@ const FanScreen = () => {
             edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}
         >
             <StatusBar barStyle="dark-content" />
-            <AppHeader logoimg={true} />
+            <AppHeader logoimg={true} showBack />
 
             <ScrollView
                 contentContainerStyle={fanstyle.scrollContent}

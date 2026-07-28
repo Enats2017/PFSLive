@@ -196,7 +196,7 @@ const FollowersList: React.FC = () => {
     return (
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
-            <AppHeader />
+            <AppHeader showBack />
             <View style={follow.yellowHeader}>
                 <Text style={commonStyles.title}>{t('follow:followers')}</Text>
             </View>

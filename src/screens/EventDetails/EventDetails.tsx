@@ -49,7 +49,7 @@ const EventDetails = ({ route }: EventDetailsProps) => {
   return (
     <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top', 'bottom']}>
       <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} />
+      <AppHeader showLogo={true} showBack />
       <View style={detailsStyles.section}>
         <Text style={detailsStyles.title}>{event_name}</Text>
       </View>

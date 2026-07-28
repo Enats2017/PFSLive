@@ -511,7 +511,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader title={event_name} showLogo={true} />
+                <AppHeader title={event_name} showLogo={true} showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -527,7 +527,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader title={event_name} showLogo={true} />
+                <AppHeader title={event_name} showLogo={true} showBack />
                 <ErrorScreen
                     type="empty"
                     onRetry={() => loadLiveTrackingData(false)}
@@ -539,7 +539,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}>
             <StatusBar barStyle="dark-content" />
-            <AppHeader title={event_name} showLogo={true} />
+            <AppHeader title={event_name} showLogo={true} showBack />
             {showDistanceDropdown && selectedDistance && (
                 <DistanceDropdown
                     distances={distances}

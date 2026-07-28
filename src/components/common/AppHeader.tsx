@@ -15,6 +15,8 @@ interface AppHeaderProps {
   product_app_id?: number;
   product_option_value_app_id?: number | null;
   raceStatus?: 'finished' | 'in_progress' | 'not_started';
+  showBack?: boolean;            // show a back arrow on the left
+  onBack?: () => void;           // optional custom handler (defaults to navigation.goBack)
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -25,8 +27,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   product_app_id,
   product_option_value_app_id,
   raceStatus,
+  showBack = false,
+  onBack,
 }) => {
   const navigation = useNavigation<any>();
+
+  const handleBackPress = () => {
+    if (onBack) return onBack();
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' }] });
+  };
 
   // ✅ Clears entire stack — no back history
   const handleLogoPress = () => {
@@ -59,12 +69,27 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <View style={headerStyles.container}>
-      {/* Left — Home Icon */}
+      {/* Left — Back arrow (opt-in) + Home icon */}
       <View style={headerStyles.leftSection}>
+        {showBack && (
+          <TouchableOpacity
+            style={headerStyles.backBtn}
+            onPress={handleBackPress}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialCommunityIcons
+              name="chevron-left"
+              size={32}
+              color={colors.primary}
+            />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={headerStyles.logo}
           onPress={handleLogoPress}
           activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <MaterialCommunityIcons
             name="home-variant"

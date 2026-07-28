@@ -335,7 +335,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} />
+                <AppHeader showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
                 </View>
@@ -347,7 +347,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader />
+                <AppHeader showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -361,7 +361,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
             <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} />
+            <AppHeader showLogo={true} showBack />
             <Animated.View
                 style={{
                     flex: 1,

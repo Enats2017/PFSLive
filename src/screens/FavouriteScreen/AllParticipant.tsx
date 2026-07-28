@@ -230,7 +230,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader />
+                <AppHeader showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}

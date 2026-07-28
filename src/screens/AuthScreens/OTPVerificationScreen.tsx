@@ -206,7 +206,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} />
+      <AppHeader showLogo={true} showBack />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}

@@ -363,7 +363,7 @@ const ParticipantResult = () => {
   if (loading && searchText.length === 0) {
     return (
       <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <AppHeader showLogo={true} />
+        <AppHeader showLogo={true} showBack />
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       </SafeAreaView>
     );
@@ -382,7 +382,7 @@ const ParticipantResult = () => {
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <AppHeader showLogo={true} />
+      <AppHeader showLogo={true} showBack />
 
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
         <Text style={[commonStyles.title, { marginBottom: spacing.sm }]}>{event_name}</Text>

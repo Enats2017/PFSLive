@@ -121,7 +121,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   return (
     <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
       <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} />
+      <AppHeader showLogo={true} showBack />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}

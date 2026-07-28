@@ -192,7 +192,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-                <AppHeader title={t('favourite:title')} />
+                <AppHeader title={t('favourite:title')} showBack />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
                 </View>
@@ -209,7 +209,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader />
+                <AppHeader showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -222,7 +222,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
 
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
-            <AppHeader title={t('favourite:title')} />
+            <AppHeader title={t('favourite:title')} showBack />
 
             <FlatList
                 data={favourites}

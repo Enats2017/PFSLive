@@ -163,7 +163,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader />
+                <AppHeader showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}

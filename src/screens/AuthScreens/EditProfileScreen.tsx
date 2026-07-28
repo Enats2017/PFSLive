@@ -209,7 +209,7 @@ const EditProfileScreen = () => {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} />
+                <AppHeader showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color="#e8341a" />
                 </View>
@@ -221,7 +221,7 @@ const EditProfileScreen = () => {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} />
+                <AppHeader showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
                     <Ionicons name="warning-outline" size={40} color="#e8341a" />
                     <Text style={commonStyles.errorText}>{profileError}</Text>
@@ -233,7 +233,7 @@ const EditProfileScreen = () => {
     return (
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} />
+            <AppHeader showLogo={true} showBack />
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

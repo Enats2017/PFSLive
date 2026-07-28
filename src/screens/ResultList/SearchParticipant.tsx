@@ -195,7 +195,7 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} />
+                <AppHeader showLogo={true} showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}

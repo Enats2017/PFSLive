@@ -219,7 +219,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     return (
       <SafeAreaView style={commonStyles.container} edges={['top']}>
         <StatusBar barStyle="dark-content" />
-        <AppHeader showLogo />
+        <AppHeader showLogo showBack />
         <View style={commonStyles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -230,7 +230,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
   return (
     <SafeAreaView style={commonStyles.container} edges={['top']}>
       <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo />
+      <AppHeader showLogo showBack />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
