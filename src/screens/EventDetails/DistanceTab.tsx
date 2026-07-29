@@ -63,6 +63,7 @@ const DistanceTab = ({
   const [gpxRestrictedItem, setGpxRestrictedItem] = useState<Distance | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
   const [showResults, setShowResults] = useState(false);
+  const [showResultsStats, setShowResultsStats] = useState(false);
 
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -88,6 +89,10 @@ const DistanceTab = ({
         
         setShowResults(canShowResults);
         onResultsAvailability?.(canShowResults);
+
+        const canShowResultsStats =
+          result.event?.race_result_status === 1;
+        setShowResultsStats(canShowResultsStats);
 
         if (API_CONFIG.DEBUG) {
           console.log('✅ Distances loaded:', result.distances.length);
@@ -372,7 +377,7 @@ const DistanceTab = ({
               </Text>
             </View>
 
-            {showResults && (
+            {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Feather name="users" size={16} color={colors.gray500} />
                 <Text style={detailsStyles.metaText} numberOfLines={1}>
@@ -381,7 +386,7 @@ const DistanceTab = ({
               </View>
             )}
 
-            {showResults && (
+            {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
                 <Text style={detailsStyles.metaText} numberOfLines={1}>
@@ -390,7 +395,7 @@ const DistanceTab = ({
               </View>
             )}
 
-            {showResults && (
+            {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
                 <Text style={detailsStyles.metaTextRed} numberOfLines={1}>
@@ -447,7 +452,7 @@ const DistanceTab = ({
         </View>
       </View>
     );
-  }, [CountdownBadge, handleRegister, handleUndoClick, registerLoading, confirmItem, selectedItem, t]);
+  }, [CountdownBadge, handleRegister, handleUndoClick, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats]);
 
   if (loading) {
     return (

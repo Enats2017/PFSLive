@@ -41,6 +41,7 @@ const DistanceTab = ({
   const { t } = useTranslation(['result', 'details', 'common']);
   const [results, setResults] = useState<Distance[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [showResultsStats, setShowResultsStats] = useState(false);
   const [loading, setLoading] = useState(true);
   const [imageLoading, setImageLoading] = useState(true);
   //const [error, setError] = useState<string | null>(null);
@@ -59,6 +60,11 @@ const DistanceTab = ({
       
       setShowResults(canShowResults);
       onResultsAvailability?.(canShowResults);
+
+      const canShowResultsStats =
+        result.event?.race_result_status === 1;
+      setShowResultsStats(canShowResultsStats);
+
     } catch (err: any) {
       handleApiError(err);
     } finally {
@@ -135,7 +141,7 @@ const DistanceTab = ({
                 {formatClockTime(item.race_time)}
               </Text>
             </View>
-            {showResults && (
+            {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Feather name="users" size={16} color={colors.gray500} />
                 <Text style={commonStyles.subtitle} numberOfLines={1}>
@@ -143,7 +149,7 @@ const DistanceTab = ({
                 </Text>
               </View>
             )}
-            {showResults && (
+            {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
                 <Text style={commonStyles.subtitle} numberOfLines={1}>
@@ -151,7 +157,7 @@ const DistanceTab = ({
                 </Text>
               </View>
             )}
-            {showResults && (
+            {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
                 <Text style={commonStyles.subtitlered} numberOfLines={1}>
@@ -216,7 +222,7 @@ const DistanceTab = ({
         </View>
       </View>
     );
-  }, [navigation, product_app_id, event_name, event_image, sourceTab, t, showResults]);
+  }, [navigation, product_app_id, event_name, event_image, sourceTab, t, showResults, showResultsStats]);
 
   if (loading) {
     return (
