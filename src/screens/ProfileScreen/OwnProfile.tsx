@@ -134,7 +134,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
     return (
         <View style={ownProfile.menuSection}>
             {profile?.is_own_profile === 1 && (
-                Platform.OS === 'android' ? renderIosCard() : (
+                Platform.OS === 'ios' ? renderIosCard() : (
                     <TouchableOpacity style={ownProfile.trackingBanner} activeOpacity={0.85}>
                         <Ionicons name="navigate-circle-outline" size={30} color="black" />
                         <View style={ownProfile.trackingTextWrapper}>
