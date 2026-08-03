@@ -255,14 +255,14 @@ const DistanceTab = ({
   // ✅ GPX CLICK HANDLER — check registration first
   const handleGpxClick = useCallback(
     (item: Distance) => {
-      if (item.registration_status === 'registered') {
+      //if (item.registration_status === 'registered') {
         // Registered → download directly
         downloadGpx(item);
-      } else {
+      //} else {
         // Not registered → show popup
-        setGpxRestrictedItem(item);
-        setGpxRestrictedVisible(true);
-      }
+      //  setGpxRestrictedItem(item);
+      //  setGpxRestrictedVisible(true);
+      //}
     },
     [downloadGpx]
   );
