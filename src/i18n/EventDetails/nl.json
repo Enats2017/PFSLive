@@ -3,7 +3,7 @@
     "Distance": "Afstand",
     "Participant": "Deelnemer"
   },
-  "button": "INSCHRIJVEN",
+  "button": "VERBINDEN",
   "undo": "AFMELDEN",
   "gpx": "DOWNLOAD GPX",
   "live": "LIVE",
@@ -110,9 +110,8 @@
       "description": "Probeer het later opnieuw."
     }
   },
-  "infoMessage": "Importeer het GPX-bestand in uw smartwatch of GPS-apparaat. Alleen geregistreerde deelnemers kunnen downloaden.",
-    "gpxInfo": "Als u het GPX-bestand wilt importeren in uw smartwatch of GPS-apparaat.",
-    "gpxDownload": {
+  "connectInfo": "De officiële tijdsregistratie is automatisch actief voor alle deelnemers.\nWil je gebruikmaken van Live Tracking? Koppel dan je Livio-account aan je startnummer voor dit evenement.\nTik op 'Connecteer' om verder te gaan.",
+  "gpxDownload": {
     "permissionDeniedTitle": "Toestemming geweigerd",
     "permissionDeniedMessage": "Toegang tot de map is vereist om het GPX-bestand op te slaan.",
     "successTitle": "Gedownload",
@@ -124,5 +123,7 @@
   "gpxRestricted": {
     "title": "Registratie Vereist",
     "message": "Alleen geregistreerde deelnemers kunnen het GPX-bestand downloaden. Schrijf je eerst in voor deze afstand."
-  }
+  },
+  "iosnotnow":"Not Now",
+  "map": "Kaart"
 }

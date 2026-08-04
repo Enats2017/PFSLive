@@ -267,6 +267,21 @@ const DistanceTab = ({
     [downloadGpx]
   );
 
+  // ✅ MAP CLICK HANDLER — open the live map for this distance
+  const handleMapClick = useCallback(
+    (item: Distance) => {
+      navigation.navigate('LiveTracking', {
+        product_app_id: Number(product_app_id),
+        product_option_value_app_id: Number(item.product_option_value_app_id),
+        event_name,
+        sourceScreen: 'EventDetails',
+        sectionType: 'participant',
+        sourceTab: 'live',
+      });
+    },
+    [navigation, product_app_id, event_name]
+  );
+
   // ✅ UNDO HANDLER
   const handleUndoClick = useCallback((item: Distance) => {
     if (API_CONFIG.DEBUG) {
@@ -332,16 +347,7 @@ const DistanceTab = ({
             <AntDesign name="link" size={20} color={colors.primaryDark} />
           </View>
           <Text style={detailsStyles.infoBoxText}>
-            {t('details:infoMessage')}
-          </Text>
-        </View>
-
-        <View style={detailsStyles.infoBox}>
-          <View style={detailsStyles.infoIconWrapper}>
-            <AntDesign name="link" size={20} color={colors.primaryDark} />
-          </View>
-          <Text style={detailsStyles.infoBoxText}>
-            {t('details:gpxInfo')}
+            {t('details:connectInfo')}
           </Text>
         </View>
 
@@ -448,11 +454,22 @@ const DistanceTab = ({
                 {t('details:gpx')}
               </Text>
             </TouchableOpacity>
+
+            {/* ✅ MAP button — live tracking map for this distance */}
+            <TouchableOpacity
+              style={detailsStyles.routeButton}
+              onPress={() => handleMapClick(item)}
+              activeOpacity={0.8}
+            >
+              <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
+                {t('details:map')}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
     );
-  }, [CountdownBadge, handleRegister, handleUndoClick, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats]);
+  }, [CountdownBadge, handleRegister, handleUndoClick, handleMapClick, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats]);
 
   if (loading) {
     return (
