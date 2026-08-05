@@ -14,7 +14,7 @@ interface BottomNavigationFollowerProps {
   product_option_value_app_id?: string | number;
   sourceTab?: 'past' | 'live' | 'upcoming';
   selectedDistanceLabel?: string | number;
-  showResults?: boolean; 
+  showResults?: boolean;
   race_date?: string | null;
 }
 
@@ -27,7 +27,7 @@ const isRaceInPast = (race_date?: string | null): boolean => {
   today.setHours(0, 0, 0, 0);
   parsed.setHours(0, 0, 0, 0);
 
-  return parsed < today;
+  return parsed <= today;
 };
 
 // ✅ Custom icon assets from assets folder
@@ -37,6 +37,11 @@ const TAB_ICONS: Record<TabName, any> = {
   Results:   require('../../../assets/results.png'),
   Map:       require('../../../assets/map.png'),
 };
+
+// The Results tab shows a start list before race day and results after, so the
+// icon follows the label. Kept out of TAB_ICONS because it's an alternate face
+// of the same tab, not a fifth destination.
+const PARTICIPANTS_ICON = require('../../../assets/participants.png');
 
 export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> = ({
   activeTab = 'Home',
@@ -53,15 +58,18 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
   const route = useRoute();
   const { t } = useTranslation('common');
 
-  const resultsLabel = isRaceInPast(race_date) // 👈 new
-    ? t('nav.participants')
-    : t('nav.results');
+  // One flag drives both the label and the icon so they can't drift apart.
+  const raceIsPast = isRaceInPast(race_date);
+  const resultsLabel = raceIsPast ? t('nav.results') : t('nav.participants');
+  const resultsIcon = raceIsPast ? TAB_ICONS.Results : PARTICIPANTS_ICON;
 
-  const tabs: { name: TabName; label: string }[] = [
-    { name: 'Home',      label: t('nav.home') },
-    { name: 'Favorites', label: t('nav.favorites') },
-     ...(showResults ? [{ name: 'Results' as TabName, label: resultsLabel }] : []),
-    { name: 'Map',       label: t('nav.map') },
+  const tabs: { name: TabName; label: string; icon: any }[] = [
+    { name: 'Home',      label: t('nav.home'),      icon: TAB_ICONS.Home },
+    { name: 'Favorites', label: t('nav.favorites'), icon: TAB_ICONS.Favorites },
+    ...(showResults
+      ? [{ name: 'Results' as TabName, label: resultsLabel, icon: resultsIcon }]
+      : []),
+    { name: 'Map',       label: t('nav.map'),       icon: TAB_ICONS.Map },
   ];
 
   const handleTabPress = (tabName: TabName) => {
@@ -146,7 +154,7 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
             activeOpacity={0.7}
           >
             <Image
-              source={TAB_ICONS[tab.name]}
+              source={tab.icon}
               style={[
                 bottomNavStyles.iconImage,
                 isActive && bottomNavStyles.iconImageActive,

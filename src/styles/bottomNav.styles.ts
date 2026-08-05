@@ -39,12 +39,22 @@ export const bottomNavStyles = StyleSheet.create({
     fontWeight: typography.weights.semibold,
   },
   iconImage: {
-    width: 45,
-    height: 45,
-    marginBottom: 0,
-    opacity: 0.5,  // inactive — dimmed
+    // Square, to match the normalized icon canvases: each glyph is centred
+    // inside its own transparent square, so it self-aligns and needs no
+    // per-icon nudging. 26 is the platform norm for a tab icon — the previous
+    // 45 was compensating for the padding baked into the old exports, where the
+    // glyph only filled part of the image.
+    width: 26,
+    height: 26,
+    resizeMode: 'contain',
+    marginBottom: 4,
+    // tintColor rather than opacity: dimming pure black to 50% produces a washed
+    // grey that doesn't match the label colour beside it, and it can't take the
+    // brand colour when active. Requires transparent PNGs — an opaque plate
+    // blocks the tint entirely.
+    tintColor: colors.gray500,
   },
   iconImageActive: {
-    opacity: 1,    // active — full opacity
+    tintColor: colors.accent,
   },
 });

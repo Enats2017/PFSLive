@@ -14,7 +14,7 @@ interface BottomNavigationProps {
   product_option_value_app_id?: string | number;
   sourceScreen?: string;
   selectedDistanceLabel?: string | number;
-  showResults?: boolean; 
+  showResults?: boolean;
   race_date?: string | null;
 }
 
@@ -28,7 +28,7 @@ const isRaceInPast = (race_date?: string | null): boolean => {
   today.setHours(0, 0, 0, 0);
   parsed.setHours(0, 0, 0, 0);
 
-  return parsed < today;
+  return parsed <= today;
 };
 
 // ✅ Custom icon assets from assets folder
@@ -38,6 +38,11 @@ const TAB_ICONS: Record<TabName, any> = {
   Results:   require('../../../assets/results.png'),
   Map:       require('../../../assets/map.png'),
 };
+
+// The Results tab shows a start list before race day and results after, so the
+// icon follows the label. Kept out of TAB_ICONS because it's an alternate face
+// of the same tab, not a fifth destination.
+const PARTICIPANTS_ICON = require('../../../assets/participants.png');
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   activeTab = 'Home',
@@ -54,15 +59,18 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   const route = useRoute();
   const { t } = useTranslation('common');
 
-    const resultsLabel = isRaceInPast(race_date)
-    ? t('nav.participants')
-    : t('nav.results');
+  // One flag drives both the label and the icon so they can't drift apart.
+  const raceIsPast = isRaceInPast(race_date);
+  const resultsLabel = raceIsPast ? t('nav.results') : t('nav.participants');
+  const resultsIcon = raceIsPast ? TAB_ICONS.Results : PARTICIPANTS_ICON;
 
-  const tabs: { name: TabName; label: string }[] = [
-    { name: 'Home',      label: t('nav.home') },
-    { name: 'Favorites', label: t('nav.favorites') },
-    ...(showResults ? [{ name: 'Results' as TabName, label: resultsLabel }] : []),
-    { name: 'Map',       label: t('nav.map') },
+  const tabs: { name: TabName; label: string; icon: any }[] = [
+    { name: 'Home',      label: t('nav.home'),      icon: TAB_ICONS.Home },
+    { name: 'Favorites', label: t('nav.favorites'), icon: TAB_ICONS.Favorites },
+    ...(showResults
+      ? [{ name: 'Results' as TabName, label: resultsLabel, icon: resultsIcon }]
+      : []),
+    { name: 'Map',       label: t('nav.map'),       icon: TAB_ICONS.Map },
   ];
 
   const handleTabPress = (tabName: TabName) => {
@@ -77,11 +85,10 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             product_app_id,
             product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
-            event_image:event_image || '',
+            event_image: event_image || '',
             sourceScreen: sourceScreen || route.name,
             sectionType: 'participant',
             sourceTab: 'live',
-            
           });
         }
         break;
@@ -92,12 +99,11 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             product_app_id,
             product_option_value_app_id: product_option_value_app_id || 0,
             event_name: event_name || '',
-            event_image:event_image || '',
+            event_image: event_image || '',
             sourceScreen: sourceScreen || route.name,
             sectionType: 'participant',
             sourceTab: 'live',
             selectedDistanceLabel,
-          
           });
         }
         break;
@@ -107,12 +113,11 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           navigation.navigate('FavouriteList', {
             product_app_id,
             event_name: event_name || '',
-            event_image:event_image || '',
+            event_image: event_image || '',
             sectionType: 'participant',
             sourceScreen: sourceScreen || route.name,
             sourceTab: 'live',
             product_option_value_app_id: product_option_value_app_id || 0,
-            
           });
         }
         break;
@@ -121,31 +126,28 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
   const handleHomeNavigation = () => {
     const currentRoute = route.name;
-    
+
     if (currentRoute === 'ResultList') {
       if (sourceScreen === 'EventDetails') {
         navigation.navigate('EventDetails', {
           product_app_id,
           event_name: event_name || '',
-          event_image:event_image || '',
+          event_image: event_image || '',
           auto_register_id: null,
-          
         });
       } else if (sourceScreen === 'RaceResultScreen') {
         navigation.navigate('RaceResultScreen', {
           product_app_id,
           event_name: event_name || '',
-          event_image:event_image || '',
-          
+          event_image: event_image || '',
         });
       } else {
         if (product_app_id) {
           navigation.navigate('EventDetails', {
             product_app_id,
             event_name: event_name || '',
-            event_image:event_image || '',
+            event_image: event_image || '',
             auto_register_id: null,
-             
           });
         } else {
           navigation.navigate('HomeScreen');
@@ -156,16 +158,14 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         navigation.navigate('RaceResultScreen', {
           product_app_id,
           event_name: event_name || '',
-          event_image:event_image || '',
-         
+          event_image: event_image || '',
         });
       } else {
         navigation.navigate('EventDetails', {
           product_app_id,
           event_name: event_name || '',
-          event_image:event_image || '',
+          event_image: event_image || '',
           auto_register_id: null,
-          
         });
       }
     } else if (currentRoute === 'RaceResultScreen' || currentRoute === 'EventDetails') {
@@ -175,9 +175,8 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         navigation.navigate('EventDetails', {
           product_app_id,
           event_name: event_name || '',
-          event_image:event_image || '',
+          event_image: event_image || '',
           auto_register_id: null,
-          
         });
       } else {
         navigation.navigate('HomeScreen');
@@ -197,7 +196,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             activeOpacity={0.7}
           >
             <Image
-              source={TAB_ICONS[tab.name]}
+              source={tab.icon}
               style={[
                 bottomNavStyles.iconImage,
                 isActive && bottomNavStyles.iconImageActive,
