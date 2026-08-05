@@ -15,7 +15,21 @@ interface BottomNavigationProps {
   sourceScreen?: string;
   selectedDistanceLabel?: string | number;
   showResults?: boolean; 
+  race_date?: string | null;
 }
+
+const isRaceInPast = (race_date?: string | null): boolean => {
+  if (!race_date) return false; // unknown → default to "Results"
+
+  const parsed = new Date(race_date);
+  if (isNaN(parsed.getTime())) return false; // unparseable → default to "Results"
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  parsed.setHours(0, 0, 0, 0);
+
+  return parsed < today;
+};
 
 // ✅ Custom icon assets from assets folder
 const TAB_ICONS: Record<TabName, any> = {
@@ -34,15 +48,20 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   sourceScreen,
   selectedDistanceLabel,
   showResults = true,
+  race_date
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute();
   const { t } = useTranslation('common');
 
+    const resultsLabel = isRaceInPast(race_date)
+    ? t('nav.participants')
+    : t('nav.results');
+
   const tabs: { name: TabName; label: string }[] = [
     { name: 'Home',      label: t('nav.home') },
     { name: 'Favorites', label: t('nav.favorites') },
-    ...(showResults ? [{ name: 'Results' as TabName, label: t('nav.results') }] : []),
+    ...(showResults ? [{ name: 'Results' as TabName, label: resultsLabel }] : []),
     { name: 'Map',       label: t('nav.map') },
   ];
 
@@ -62,6 +81,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             sourceScreen: sourceScreen || route.name,
             sectionType: 'participant',
             sourceTab: 'live',
+            
           });
         }
         break;
@@ -77,6 +97,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             sectionType: 'participant',
             sourceTab: 'live',
             selectedDistanceLabel,
+          
           });
         }
         break;
@@ -91,6 +112,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             sourceScreen: sourceScreen || route.name,
             sourceTab: 'live',
             product_option_value_app_id: product_option_value_app_id || 0,
+            
           });
         }
         break;
@@ -107,12 +129,14 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           event_name: event_name || '',
           event_image:event_image || '',
           auto_register_id: null,
+          
         });
       } else if (sourceScreen === 'RaceResultScreen') {
         navigation.navigate('RaceResultScreen', {
           product_app_id,
           event_name: event_name || '',
           event_image:event_image || '',
+          
         });
       } else {
         if (product_app_id) {
@@ -121,6 +145,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             event_name: event_name || '',
             event_image:event_image || '',
             auto_register_id: null,
+             
           });
         } else {
           navigation.navigate('HomeScreen');
@@ -132,6 +157,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           product_app_id,
           event_name: event_name || '',
           event_image:event_image || '',
+         
         });
       } else {
         navigation.navigate('EventDetails', {
@@ -139,6 +165,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           event_name: event_name || '',
           event_image:event_image || '',
           auto_register_id: null,
+          
         });
       }
     } else if (currentRoute === 'RaceResultScreen' || currentRoute === 'EventDetails') {
@@ -150,6 +177,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           event_name: event_name || '',
           event_image:event_image || '',
           auto_register_id: null,
+          
         });
       } else {
         navigation.navigate('HomeScreen');

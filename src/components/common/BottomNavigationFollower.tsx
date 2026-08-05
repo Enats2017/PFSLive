@@ -15,7 +15,20 @@ interface BottomNavigationFollowerProps {
   sourceTab?: 'past' | 'live' | 'upcoming';
   selectedDistanceLabel?: string | number;
   showResults?: boolean; 
+  race_date?: string | null;
 }
+
+const isRaceInPast = (race_date?: string | null): boolean => {
+  if (!race_date) return false;
+  const parsed = new Date(race_date);
+  if (isNaN(parsed.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  parsed.setHours(0, 0, 0, 0);
+
+  return parsed < today;
+};
 
 // ✅ Custom icon assets from assets folder
 const TAB_ICONS: Record<TabName, any> = {
@@ -34,15 +47,20 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
   selectedDistanceLabel,
   event_image,
   showResults = true,
+  race_date,
 }) => {
   const navigation = useNavigation<any>();
   const route = useRoute();
   const { t } = useTranslation('common');
 
+  const resultsLabel = isRaceInPast(race_date) // 👈 new
+    ? t('nav.participants')
+    : t('nav.results');
+
   const tabs: { name: TabName; label: string }[] = [
     { name: 'Home',      label: t('nav.home') },
     { name: 'Favorites', label: t('nav.favorites') },
-    ...(showResults ? [{ name: 'Results' as TabName, label: t('nav.results') }] : []),
+     ...(showResults ? [{ name: 'Results' as TabName, label: resultsLabel }] : []),
     { name: 'Map',       label: t('nav.map') },
   ];
 

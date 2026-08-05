@@ -108,7 +108,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         checkpointOptions,       // ← new: dropdown options derived from results[0].checkpoints
         onCheckpointSelect,
         statistics,
-
+        raceDate,
     } = useResultList(
         product_app_id,
         product_option_value_app_id,
@@ -326,6 +326,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     product_option_value_app_id={product_option_value_app_id}
                     sourceTab={sourceTab}
                     selectedDistanceLabel={selectedDistanceLabel}
+                    race_date={raceDate}
                 />
             ) : (
                 <BottomNavigation
@@ -336,6 +337,8 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     product_option_value_app_id={product_option_value_app_id}
                     sourceScreen={sourceScreen}
                     selectedDistanceLabel={selectedDistanceLabel}
+                    race_date={raceDate}
+
                 />
             )}
 

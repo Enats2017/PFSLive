@@ -40,6 +40,8 @@ export interface AthleteEvent {
   race_status?: "not_started" | "in_progress" | "finished";
    can_delete?: number;
   product_custom_app_id?: number;
+   race_result_status?: number;      // 👈 new
+  race_result_api_url?: string; 
 }
 
 interface DeleteCustomEventResponse {

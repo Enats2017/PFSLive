@@ -37,6 +37,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   const { product_app_id, event_name, sourceTab, event_image } = route.params;
 
   const [showResults, setShowResults] = useState(true);
+  const [raceDate, setRaceDate] = useState<string | null>(null);
   
 
   useEffect(() => {
@@ -71,6 +72,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
             event_name={event_name}
             event_image={event_image}
             onResultsAvailability={setShowResults}
+            onRaceDateAvailable={setRaceDate}
           />
         );
       case 'Participant':
@@ -163,6 +165,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
         product_option_value_app_id={0}
         sourceTab={sourceTab}
         showResults={showResults}
+        race_date={raceDate} 
       />
     </SafeAreaView>
   );

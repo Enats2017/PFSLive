@@ -57,6 +57,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [participantsLoading, setParticipantsLoading] = useState(false);
     const [loadedGpxUrl, setLoadedGpxUrl] = useState<string | null>(null);
     const [showResults, setShowResults] = useState(false);
+    const [raceDate, setRaceDate] = useState<string | null>(null);
 
     
 
@@ -374,8 +375,12 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             const canShowResults =
                 response?.data?.race_result_status === 1 &&
                 (response?.data?.rr_url ?? '') !== '';
+
+                setRaceDate(response?.data?.product_race_date ?? null);
+
+                console.log("livetrackingscreen",raceDate );
             
-            setShowResults(canShowResults);
+             setShowResults(canShowResults);
 
             setLoading(false);
 
@@ -398,6 +403,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             }
         }
     };
+
+    
+    
 
     const loadGPX = async (gpxUrl: string) => {
         try {
@@ -636,6 +644,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         product_option_value_app_id={product_option_value_app_id}
                         sourceTab={sourceTab}
                         showResults={showResults}
+                        race_date={raceDate}
                     />
                 ) : (
                     <BottomNavigation
@@ -646,6 +655,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         product_option_value_app_id={product_option_value_app_id}
                         sourceScreen={sourceScreen}
                         showResults={showResults}
+                        race_date={raceDate}
                     />
                 )
             )}

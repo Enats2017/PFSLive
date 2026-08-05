@@ -86,6 +86,8 @@ export interface LiveTrackingResponse {
         participants: LiveTrackingParticipant[];
         checkpoints: LiveTrackingCheckpoint[];
         race_result_status?: number;
+        race_date?: string | null;
+        product_race_date?: string | null;
         rr_url?: string;
     };
     error: string | null;

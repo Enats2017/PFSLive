@@ -117,6 +117,8 @@ export interface EventRankingResponse {
     race_status: string;
     race_progress_status?: string;  // ✅ 'not_started' | 'in_progress' | 'finished'
     show_utmb_index?: number;
+    race_date?: string | null;
+    product_race_date?: string | null;
   };
 }
 

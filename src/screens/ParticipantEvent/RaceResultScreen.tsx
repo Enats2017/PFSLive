@@ -33,7 +33,9 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   const isGestureNav = insets.bottom > 0;
   const isLandscape = windowWidth > height;
   const width = containerWidth || windowWidth;
-
+  const [raceDate, setRaceDate] = useState<string | null>(null);
+  const [showResultsStats, setShowResultsStats] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
   const [results, setResults] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +60,17 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           product_app_id,
           bustCache
         );
+        const canShowResults =
+          result.event?.race_result_status === 1 &&
+          (result.event?.rr_url ?? '') !== '';
+
+        setShowResults(canShowResults);
+
+        const canShowResultsStats =
+          result.event?.race_result_status === 1;
+        setShowResultsStats(canShowResultsStats);
+
+        setRaceDate(result?.event?.product_race_date)
 
         // ✅ FILTER ONLY FINISHED DISTANCES
         const finished = result.distances.filter(
@@ -150,45 +163,53 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
                 {formatClockTime(item.race_time)}
               </Text>
             </View>
-            <View style={detailsStyles.metaRow}>
-              <Feather name="users" size={16} color={colors.gray500} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
-                {item.participant_started_count} {t('details:athletes')}
-              </Text>
-            </View>
-            <View style={detailsStyles.metaRow}>
-              <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
-                {item.finished_count} {t('details:finished')}
-              </Text>
-            </View>
-            <View style={detailsStyles.metaRow}>
-              <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
-              <Text style={detailsStyles.metaTextRed} numberOfLines={1}>
-                {item.dnf_count} {t('details:dnf')}
-              </Text>
-            </View>
+            {showResultsStats && (
+              <View style={detailsStyles.metaRow}>
+                <Feather name="users" size={16} color={colors.gray500} />
+                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                  {item.participant_started_count} {t('details:athletes')}
+                </Text>
+              </View>
+            )}
+            {showResultsStats && (
+              <View style={detailsStyles.metaRow}>
+                <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
+                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                  {item.finished_count} {t('details:finished')}
+                </Text>
+              </View>
+            )}
+            {showResultsStats && (
+              <View style={detailsStyles.metaRow}>
+                <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
+                <Text style={detailsStyles.metaTextRed} numberOfLines={1}>
+                  {item.dnf_count} {t('details:dnf')}
+                </Text>
+              </View>
+            )}
           </View>
           <View style={detailsStyles.verticalDivider} />
-          <TouchableOpacity
-            style={detailsStyles.resultsButton}
-            onPress={() =>
-              navigation.navigate('ResultList', {
-                product_app_id,
-                product_option_value_app_id: Number(item.product_option_value_app_id),
-                event_name: event_name,
-                event_image: event_image,
-                sourceScreen: 'RaceResultScreen',
-                sectionType: 'participant',
-                sourceTab: 'past',
-              })
-            }
-            activeOpacity={0.8}
-          >
-            <Text style={commonStyles.primaryButtonText}>
-              {t('button.result')}
-            </Text>
-          </TouchableOpacity>
+          {showResults && (
+            <TouchableOpacity
+              style={detailsStyles.resultsButton}
+              onPress={() =>
+                navigation.navigate('ResultList', {
+                  product_app_id,
+                  product_option_value_app_id: Number(item.product_option_value_app_id),
+                  event_name: event_name,
+                  event_image: event_image,
+                  sourceScreen: 'RaceResultScreen',
+                  sectionType: 'participant',
+                  sourceTab: 'past',
+                })
+              }
+              activeOpacity={0.8}
+            >
+              <Text style={commonStyles.primaryButtonText}>
+                {t('button.result')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
@@ -270,6 +291,8 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         product_app_id={product_app_id}
         event_name={event_name}
         event_image={event_image}
+        race_date={raceDate}
+
       />
     </SafeAreaView>
   );

@@ -27,17 +27,13 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         sectionType,
         sourceScreen,
         sourceTab,
-        product_option_value_app_id
+        product_option_value_app_id,
     } = route.params;
-
-    console.log("eventImage",event_image);
-    
 
     const { width } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
     const isLandscape = width 
-
     const { t } = useTranslation(['favourite', 'common']);
     const [favourites, setFavourites] = useState<FavouriteItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -45,11 +41,10 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const [paginationInfo, setPaginationInfo] = useState({ page: 1, total_pages: 1 });
     const isFetching = useRef(false);
     const isInitialMount = useRef(true);
-
     const { error, hasError, handleApiError, clearError } = useScreenError();
     const onFollowSuccessRef = useRef<(() => void) | null>(null);
     const [showResults, setShowResults] = useState(false);
-
+    const [raceDate, setRaceDate] = useState<string | null>(null);
     // ✅ Same follow plumbing as ResultListScreen — single source of truth
     const {
         isFollowed,
@@ -86,6 +81,8 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             const canShowResults =
                 result?.race_result_status === 1 &&
                 (result?.rr_url ?? '') !== '';
+
+            setRaceDate(result?.product_race_date ?? null); 
             
             setShowResults(canShowResults);
 
@@ -116,6 +113,9 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             fetchFavourites();
         }, [fetchFavourites, refreshFollowedUsers])
     );
+
+    console.log("favourite racedate:",raceDate);
+    
 
     const loadMore = useCallback(async () => {
         if (loadingMore || paginationInfo.page >= paginationInfo.total_pages) return;
@@ -260,6 +260,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     sourceTab={sourceTab}
                     product_option_value_app_id={product_option_value_app_id}
                     showResults={showResults}
+                    race_date={raceDate}
                 />
             ) : (
                 <BottomNavigation
@@ -270,6 +271,9 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     sourceScreen={sourceScreen}
                     product_option_value_app_id={product_option_value_app_id}
                     showResults={showResults}
+                    race_date={raceDate}
+
+                    
                 />
             )}
 

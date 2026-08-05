@@ -7,7 +7,7 @@ import { RootStackParamList } from '../../types/navigation';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
 import { profileStyles } from '../../styles/Profile.styles';
 import { AthleteEvent } from '../../services/athleteProfileService';
-import { Feather, MaterialCommunityIcons,Ionicons } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -20,6 +20,10 @@ interface EventCardPastProps {
 const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastProps) => {
     const { t } = useTranslation(['profile']);
     const navigation = useNavigation<NavigationProp>();
+
+    const canShowResultButton = useCallback(() => {
+        return item.race_result_status === 1 && !!item.race_result_api_url;
+    }, [item.race_result_status, item.race_result_api_url]);
 
     const handlePress = useCallback(() => {
         if (isOwnProfile) {
@@ -51,7 +55,7 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
     }, [item, isOwnProfile, navigation]);
 
     return (
-        <View style={[commonStyles.card, { flexDirection: 'row', alignItems: 'center', marginBottom:spacing.md }]}>
+        <View style={[commonStyles.card, { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }]}>
             <View style={styles.info}>
                 <Text style={[commonStyles.title, { marginBottom: spacing.sm }]} numberOfLines={1}>{item.name}</Text>
                 <View style={styles.dateRow}>
@@ -62,13 +66,15 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
                 </View>
             </View>
 
-            <TouchableOpacity
-                style={styles.iconButtonBlue}
-                onPress={handlePress}
-                activeOpacity={0.8}
-            >
-                <Ionicons name="bar-chart-outline" size={23} color={colors.primaryDark} />
-            </TouchableOpacity>
+            {canShowResultButton() && (
+                <TouchableOpacity
+                    style={styles.iconButtonBlue}
+                    onPress={handlePress}
+                    activeOpacity={0.8}
+                >
+                    <Ionicons name="bar-chart-outline" size={23} color={colors.primaryDark} />
+                </TouchableOpacity>
+            )}
         </View>
     );
 });
@@ -80,12 +86,12 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
     },
- 
+
     dateRow: {
         flexDirection: 'row',
         alignItems: 'center',
     },
-   
+
     iconButtonBlue: {
         backgroundColor: colors.themeiColor,
         borderRadius: 8,

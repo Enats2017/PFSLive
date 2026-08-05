@@ -82,6 +82,7 @@ export const useResultList = (
     started: 0,
     dnf: 0,
   });
+   const [raceDate, setRaceDate] = useState<string | null>(null);
 
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -141,6 +142,7 @@ export const useResultList = (
 
         if (data.event?.race_status) {
           setRaceStatus(data.event.race_status);
+          setRaceDate(data.event?.product_race_date ?? null);
           setRaceProgressStatus(data.event.race_progress_status ?? "");
 
           if (API_CONFIG.DEBUG) {
@@ -622,5 +624,6 @@ export const useResultList = (
     checkpointOptions, // ← dropdown options derived from results[0].checkpoints
     onCheckpointSelect,
     statistics,
+     raceDate,
   };
 };

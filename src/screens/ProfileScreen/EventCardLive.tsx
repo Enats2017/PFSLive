@@ -21,6 +21,8 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
     const { t } = useTranslation(['profile']);
     const navigation = useNavigation<NavigationProp>();
 
+    
+
     const handleEditPress = useCallback(() => {
         if (item.event_source === 'custom') {
             navigation.navigate('EditPersonalEvent', { eventId: item.id });

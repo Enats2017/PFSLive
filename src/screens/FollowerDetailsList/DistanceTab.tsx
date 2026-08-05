@@ -28,6 +28,7 @@ interface DistanceTabProps {
   event_name: string;
   event_image?: string;
   onResultsAvailability?: (show: boolean) => void;
+  onRaceDateAvailable?: (date: string | null) => void; 
 }
 
 const DistanceTab = ({
@@ -36,6 +37,7 @@ const DistanceTab = ({
   event_name,
   event_image,
   onResultsAvailability,
+  onRaceDateAvailable,
 }: DistanceTabProps) => {
   const navigation = useNavigation<any>();
   const { t } = useTranslation(['result', 'details', 'common']);
@@ -64,6 +66,8 @@ const DistanceTab = ({
       const canShowResultsStats =
         result.event?.race_result_status === 1;
       setShowResultsStats(canShowResultsStats);
+
+      onRaceDateAvailable?.(result.event?.product_race_date ?? null);
 
     } catch (err: any) {
       handleApiError(err);

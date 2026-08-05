@@ -39,6 +39,7 @@ interface DistanceTabProps {
   auto_register_id?: number | null;
   onRefresh?: () => void;
   onResultsAvailability?: (show: boolean) => void;
+  onRaceDateAvailable?: (date: string | null) => void; 
 }
 
 const DistanceTab = ({
@@ -48,6 +49,7 @@ const DistanceTab = ({
   auto_register_id,
   onRefresh,
   onResultsAvailability,
+  onRaceDateAvailable,
 }: DistanceTabProps) => {
   const { t } = useTranslation(['details']);
   const navigation = useNavigation<any>();
@@ -89,6 +91,7 @@ const DistanceTab = ({
         
         setShowResults(canShowResults);
         onResultsAvailability?.(canShowResults);
+        onRaceDateAvailable?.(result.event?.product_race_date ?? null);
 
         const canShowResultsStats =
           result.event?.race_result_status === 1;
