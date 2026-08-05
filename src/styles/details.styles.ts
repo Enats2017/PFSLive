@@ -221,6 +221,7 @@ export const detailsStyles = StyleSheet.create({
   padding: spacing.sm,
   marginHorizontal: spacing.md,
   marginBottom: spacing.md, 
+  marginTop: spacing.md, 
   gap: spacing.sm,
 },
 

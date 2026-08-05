@@ -3,7 +3,7 @@
     "Distance": "Distance",
     "Participant": "Participant"
   },
-  "button": "S'INSCRIRE",
+  "button": "ASSOCIER",
   "undo": "ANNULER L'INSCRIPTION",
   "gpx": "TÉLÉCHARGER GPX",
   "live": "EN DIRECT",
@@ -110,8 +110,7 @@
       "description": "Veuillez réessayer plus tard."
     }
   },
-  "infoMessage": "Importez le fichier GPX dans votre montre connectée ou appareil GPS. Seuls les participants inscrits peuvent télécharger.",
-  "gpxInfo": "Si vous souhaitez importer le fichier GPX dans votre montre connectée ou appareil GPS, seuls les participants inscrits sont autorisés à télécharger le fichier GPX.",
+  "connectInfo": "Le chronométrage officiel est automatiquement activé pour tous les participants.\nVous souhaitez utiliser le Live Tracking ? Associez votre compte Livio à votre dossard pour cet événement.\nAppuyez sur « Associer » pour continuer.",
   "gpxDownload": {
     "permissionDeniedTitle": "Permission refusée",
     "permissionDeniedMessage": "L'accès au dossier est requis pour enregistrer le fichier GPX.",
@@ -124,5 +123,7 @@
   "gpxRestricted": {
     "title": "Inscription Requise",
     "message": "Seuls les participants inscrits peuvent télécharger le fichier GPX. Veuillez d'abord vous inscrire à cette distance."
-  }
+  },
+  "iosnotnow":"Not Now",
+  "map": "CARTE"
 }

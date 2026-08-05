@@ -3,7 +3,7 @@
     "Distance": "Distance",
     "Participant": "Participant"
   },
-  "button": "SIGN UP",
+  "button": "CONNECT",
   "undo": "UNDO FOR SIGNUP",
   "gpx": "DOWNLOAD GPX",
   "live": "LIVE",
@@ -81,7 +81,7 @@
       "title": "Live Tracking Unavailable",
       "description": "Your current tracking sessions are not active. Live tracking isn't available right now.",
       "iosDescription": "You've used all your live tracking sessions. Get more to sign up for this event.",
-     "button": "Get more sessions"
+      "button": "Get more sessions"
 
     },
     "limit_reached": {
@@ -112,8 +112,7 @@
       "description": "Please try again later."
     }
   },
-  "infoMessage": "Choose the distance you will be participating in to link your live results (bib number) with your live tracking.",
-  "gpxInfo": "Import GPX into your smartwatch or GPS device. Only registered participants can download.",
+  "connectInfo": "Official timekeeping (results) is automatically enabled for all participants.\nWant to use Live Tracking? Connect your Livio account to your race bib for this event.\nTap \"Connect\" to continue.",
   "gpxDownload": {
     "permissionDeniedTitle": "Permission Denied",
     "permissionDeniedMessage": "Folder access is required to save the GPX file.",
@@ -127,5 +126,6 @@
     "title": "Registration Required",
     "message": "Only registered participants can download the GPX file. Please sign up for this distance first."
   },
-   "iosnotnow":"Not Now"
+  "iosnotnow":"Not Now",
+  "map": "MAP"
 }
