@@ -229,35 +229,41 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ==================== NOTIFICATION HELPERS ====================
 
   const navigateToResultDetails = useCallback((data: NotificationData) => {
-    // navigation.navigate('LiveTracking', {
-    //   product_app_id: Number(data.race_id),
-    //   product_option_value_app_id: Number(data.product_option_value_app_id),
-    //   event_name: data.event_name,
-    //   sourceScreen: 'FollowerDistanceScreen',
-    //   sectionType: 'follower',
-    //   sourceTab: 'live'
-    // });
-    if (data.product_option_value_app_id == 0) {
+    // Route on where the notification's DATA came from, not on the event type.
+    //   tracking_source 'rr'  → RaceResult timing exists → ResultDetails
+    //   tracking_source 'gps' → GPS-tracked (custom event, OR partner event with
+    //                           race_result_status = 0) → live map
+    // Partner events with RR unconfigured send a real product_option_value_app_id
+    // but have no results, so the old `pov == 0` test sent them to ResultDetails
+    // and it came up empty.
+    const eventSource = (data.event_source as string) ?? 'custom';
+    const povId = Number(data.product_option_value_app_id ?? 0);
+
+    // Fallback for notifications queued before tracking_source shipped, and for
+    // older app installs: pov 0 could only ever mean a custom event.
+    const trackingSource =
+      (data.tracking_source as string) ?? (povId === 0 ? 'gps' : 'rr');
+
+    if (trackingSource === 'gps') {
       navigation.navigate('LiveTracking', {
         product_app_id: Number(data.race_id),
-        product_option_value_app_id: Number(data.product_option_value_app_id),
+        product_option_value_app_id: povId,
         event_name: data.event_name,
         event_image: data.event_image,
         sourceScreen: 'FollowerDistanceScreen',
         sectionType: 'follower',
         sourceTab: 'live',
-        event_source: 'custom',
+        event_source: eventSource,
       });
     } else {
       navigation.navigate('ResultDetails', {
         product_app_id: Number(data.race_id),
-        product_option_value_app_id: Number(data.product_option_value_app_id),
+        product_option_value_app_id: povId,
         bib: String(data.bib),
         from_live: 0,
         raceStatus: (data.race_status as any) ?? undefined,
       });
     }
-
   }, [navigation]);
 
   const closeNotificationPopup = useCallback(() => {

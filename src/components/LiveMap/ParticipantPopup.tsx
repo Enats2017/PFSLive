@@ -10,12 +10,20 @@ interface ParticipantPopupProps {
     participant: ParticipantMapMarker;
     onClose: () => void;
     event_source?: string;
+    /**
+     * True only when RaceResult timing is live for this event. A partner event
+     * with race_result_status = 0 is tracked from GPS exactly like a custom one:
+     * no bib, no positions. event_source alone can't express that, since both
+     * kinds of partner event report 'partner'.
+     */
+    isRrActive?: boolean;
 }
 
 export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
     participant,
     onClose,
     event_source,
+    isRrActive,
 }) => {
     const { t } = useTranslation(['livetracking', 'common']);
 
@@ -44,13 +52,22 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
         }
     };
 
-    const showPosition = participant.source === 'race_result' && participant.last_checkpoint_name;
+    // source === 'race_result' already implies RR data, but gate on isRrActive too
+    // so a stale marker from a previous poll can't render a positions block on an
+    // event where RR has since been switched off.
+    const showPosition = (isRrActive ?? true)
+        && participant.source === 'race_result'
+        && participant.last_checkpoint_name;
     const showFemalePosition = participant.gender === 'f' && participant.position_gender;
 
     const LOW_BATTERY_THRESHOLD = 15; // % — warn at/below this
 
+    // Once someone has crossed the line their tracker stops sending, so "offline"
+    // and "battery low" describe a phone in a drop bag, not a runner in trouble.
+    const hasFinished = participant.connection_status === 'finished';
+
     const battery = participant.battery_level;
-    const showLowBattery = battery != null && battery <= LOW_BATTERY_THRESHOLD;
+    const showLowBattery = !hasFinished && battery != null && battery <= LOW_BATTERY_THRESHOLD;
 
     return (
         <View style={liveTrackingStyles.popupOverlay}>
@@ -76,15 +93,17 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                         <Text style={liveTrackingStyles.participantName}>
                             {participant.name || 'Unknown'}
                         </Text>
-                        {event_source !== 'custom' && (
+                        {/* Fall back to the old event_source test for any caller
+                            that hasn't been updated to pass isRrActive yet. */}
+                        {(isRrActive ?? event_source !== 'custom') && !!participant.bib && (
                             <Text style={liveTrackingStyles.participantBib}>
-                                {t('livetracking:bibNumber')} {participant.bib || '—'}
+                                {t('livetracking:bibNumber')} {participant.bib}
                             </Text>
                         )}
                     </View>
                 </View>
 
-                {participant.connection_status === 'offline' ? (
+                {hasFinished ? null : participant.connection_status === 'offline' ? (
                     <View style={{
                         flexDirection: 'row', alignItems: 'center', gap: 6,
                         backgroundColor: '#F1F5F9', borderColor: '#CBD5E1', borderWidth: 1,

@@ -194,6 +194,8 @@ export interface NotificationData {
   checkpoint_key: string;
   bib: string | number;
   race_status: string;
+  event_source?: string;      // 'custom' | 'partner'
+  tracking_source?: string;   // 'rr' | 'gps'
 }
 
 // ✅ Hook interface

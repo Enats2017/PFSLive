@@ -58,7 +58,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [loadedGpxUrl, setLoadedGpxUrl] = useState<string | null>(null);
     const [showResults, setShowResults] = useState(false);
     const [raceDate, setRaceDate] = useState<string | null>(null);
-
+    const isRrActive = !isCustomEvent && showResults;
     
 
     // ✅ Follower's own device location — plotted directly from GPS,
@@ -82,9 +82,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             .map(p => {
                 const firstInitial = p.firstname?.charAt(0).toUpperCase() || '';
                 const lastInitial = p.lastname?.charAt(0).toUpperCase() || '';
-                const initials = event_source === 'custom'
-                    ? `${firstInitial}${lastInitial}`         // ✅ partner → bib number
-                    : String(p.bib_number);
+                // Bib is only meaningful when RaceResult is active. Custom events and
+                // partner events with RR off have no bib to show, so fall back to
+                // initials. Per-participant check too, in case a bib is missing on an
+                // otherwise RR-active event.
+                const bib = String(p.bib_number ?? '').trim();
+                const initials = (isRrActive && bib !== '')
+                    ? bib
+                    : `${firstInitial}${lastInitial}`;
 
                 return {
                     id: p.participant_app_id,
@@ -116,7 +121,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     connection_status: p.connection_status ?? null,
                 };
             });
-    }, [participants]);
+    }, [participants, isRrActive]);
 
     // Refresh cadence: speed up to 10s when any tracked runner is within 1km of
     // the finish, so the finish moment is caught promptly; otherwise 60s.
@@ -490,7 +495,12 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const showCheckpoints = hasGpx && hasCheckpoints;
     const showElevationProfile = hasGpx;
     const hasValidCoords = participantMarkers.some(p => p.lat !== 0 && p.lon !== 0);
-    const showParticipants = isCustomEvent ? (hasGpx || hasValidCoords) : hasValidCoords;
+    // GPS-tracked events (custom, or partner with RR off) show the map as soon as a
+    // route exists, even before anyone has a fix — there's no results view to fall
+    // back to. RR events wait for coordinates.
+    const showParticipants = !isRrActive ? (hasGpx || hasValidCoords) : hasValidCoords;
+    // Distances come from oc_product_option_value_app, which partner events have
+    // regardless of RR status — so this stays keyed on isCustomEvent.
     const showDistanceDropdown = !isCustomEvent;
     const showBottomNav = !isCustomEvent;
 
@@ -531,7 +541,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     }
 
     // Handle no data separately — no error object needed
-    if (!isCustomEvent && !selectedDistance && !hasValidCoords) {
+    if (isRrActive && !selectedDistance && !hasValidCoords) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
@@ -621,6 +631,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     <ParticipantPopup
                         participant={popupState.data as ParticipantMapMarker}
                         event_source={event_source}
+                        isRrActive={isRrActive}
                         onClose={handleClosePopup}
                     />
                 )}
