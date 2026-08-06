@@ -2,7 +2,7 @@
 import 'react-native-gesture-handler';
 
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, LogBox, NativeModules, AppState, Linking, Platform } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, LogBox, NativeModules, AppState, Linking, Platform, BackHandler } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Mapbox from '@rnmapbox/maps';
@@ -14,6 +14,9 @@ import { toastConfig } from "./utils/toastConfig";
 import './src/services/gpsService';
 import { navigationRef } from './src/navigation/navigationRef';
 import { API_CONFIG } from './src/constants/config';
+import { useVersionCheck } from './src/hooks/useVersionCheck';
+import { versionService } from './src/services/versionService';
+import { UpdateRequiredModal } from './src/components/UpdateRequiredModal';
 
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 
@@ -56,6 +59,44 @@ const navigateToPersonalEvent = (uri: string, fileName: string) => {
     setTimeout(() => clearInterval(interval), 5000);
   }
 };
+
+/**
+ * ✅ Root-level update gate.
+ *
+ * Rendered as a sibling of AppNavigator so the modal sits above EVERY screen.
+ * Previously the version check lived in a useFocusEffect on HomeScreen, which
+ * meant a user who opened the app onto LiveTracking (or any other screen) and
+ * never returned Home was never checked — the sessions a forced update most
+ * needs to reach were exactly the ones it couldn't.
+ */
+function RootUpdateGate() {
+  const { updateInfo, visible, dismiss } = useVersionCheck();
+
+  // A forced update can't be dismissed, so also swallow the Android hardware
+  // back button while it's showing — otherwise back dismisses the modal and
+  // leaves the user in an app we've declared unusable.
+  useEffect(() => {
+    if (!visible || !updateInfo?.isForced) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, [visible, updateInfo?.isForced]);
+
+  if (!updateInfo || !visible) return null;
+
+  // Prop order and names match HomeScreen's existing usage (line 1551).
+  return (
+    <UpdateRequiredModal
+      visible={visible}
+      isForced={updateInfo.isForced}
+      currentVersion={updateInfo.currentVersion}
+      latestVersion={updateInfo.latestVersion}
+      title={updateInfo.title}
+      message={updateInfo.message}
+      onUpdate={() => versionService.openStore(updateInfo.updateUrl)}
+      onLater={updateInfo.isForced ? undefined : dismiss}
+    />
+  );
+}
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
@@ -168,6 +209,8 @@ export default function App() {
     <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AppNavigator />
+        {/* Above the navigator so the update modal covers every screen. */}
+        <RootUpdateGate />
         <Toast
           config={toastConfig}
           position="top"

@@ -24,7 +24,6 @@ import * as Battery from 'expo-battery';
 // Local imports
 import { HomeScreenProps } from '../types/navigation';
 import { AppHeader } from '../components/common/AppHeader';
-import { UpdateRequiredModal } from '../components/UpdateRequiredModal';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
 import {
@@ -38,7 +37,6 @@ import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
 import { tokenService } from '../services/tokenService';
-import { versionService } from '../services/versionService';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { useNotifications, NotificationData } from '../hooks/useNotifications';
 import { followerApi } from '../services/registerFollowerServices';
@@ -58,15 +56,6 @@ interface StandardApiResponse<T = any> {
   success: boolean;
   data: T;
   error: string | null;
-}
-
-interface UpdateInfo {
-  isForced: boolean;
-  currentVersion: string;
-  latestVersion: string;
-  title: string;
-  message: string;
-  updateUrl: string;
 }
 
 export interface FollowingLiveEvent {
@@ -192,10 +181,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [showEarlyTrackingModal, setShowEarlyTrackingModal] = useState(false);
 
   const [showStartConfirmModal, setShowStartConfirmModal] = useState(false);
-
-  // Version check states
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
 
   // ✅ Notification popup state
   const [notificationPopup, setNotificationPopup] = useState<{
@@ -435,52 +420,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       } catch { /* silent */ }
     }
   }, []);
-
-  // ==================== VERSION CHECK ====================
-
-  const checkAppVersion = useCallback(async () => {
-    try {
-      if (API_CONFIG.DEBUG) console.log('🔍 Checking app version...');
-
-      const result = await versionService.checkVersion();
-
-      if (result.needsUpdate) {
-        setUpdateInfo({
-          isForced: result.isForced,
-          currentVersion: result.currentVersion,
-          latestVersion: result.latestVersion,
-          title: result.title,
-          message: result.message,
-          updateUrl: result.updateUrl,
-        });
-        setShowUpdateModal(true);
-
-        if (API_CONFIG.DEBUG) {
-          console.log('⚠️ Update available:', {
-            forced: result.isForced,
-            current: result.currentVersion,
-            latest: result.latestVersion,
-          });
-        }
-      } else {
-        if (API_CONFIG.DEBUG) console.log('✅ App is up to date');
-      }
-    } catch (error) {
-      if (API_CONFIG.DEBUG) console.error('❌ Version check failed:', error);
-    }
-  }, []);
-
-  const handleUpdate = useCallback(() => {
-    if (updateInfo?.updateUrl) {
-      versionService.openStore(updateInfo.updateUrl);
-    }
-  }, [updateInfo]);
-
-  const handleLater = useCallback(() => {
-    if (!updateInfo?.isForced) {
-      setShowUpdateModal(false);
-    }
-  }, [updateInfo]);
 
   // ==================== DATA FETCHING ====================
 
@@ -1151,9 +1090,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // Initialize on mount
   useEffect(() => {
-    checkAppVersion();
     initializeScreen();
-  }, [checkAppVersion, initializeScreen]);
+  }, [initializeScreen]);
 
   // ✅ Battery optimization — prompt once on first install when HomeScreen is visible
   // HomeScreen provides the background behind the system dialog — better UX than App.tsx
@@ -1205,14 +1143,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }, 1000);
     return () => clearInterval(interval);
   }, [isGPSActive, calculateTimeUntilRace, stopGPSTracking]);
-
-  // Block back button on forced update
-  useEffect(() => {
-    if (showUpdateModal && updateInfo?.isForced) {
-      const backHandler = BackHandler.addEventListener('hardwareBackPress', () => true);
-      return () => backHandler.remove();
-    }
-  }, [showUpdateModal, updateInfo?.isForced]);
 
   // ✅ Cleanup on unmount.
   //
@@ -1410,8 +1340,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
-      checkAppVersion();
-
       const checkTokenAndPoll = async () => {
         const token = await tokenService.getToken();
 
@@ -1447,7 +1375,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           if (API_CONFIG.DEBUG) console.log('📴 Unfocused - Stopped polling');
         }
       };
-    }, [checkAppVersion, fetchHomeData])
+    }, [fetchHomeData])
   );
 
   // ✅ Drain a PENDING FINISH — runs regardless of isGPSActive, on mount and on
@@ -1545,20 +1473,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <AppHeader />
-
-      {/* Update Modal */}
-      {updateInfo && (
-        <UpdateRequiredModal
-          visible={showUpdateModal}
-          isForced={updateInfo.isForced}
-          currentVersion={updateInfo.currentVersion}
-          latestVersion={updateInfo.latestVersion}
-          title={updateInfo.title}
-          message={updateInfo.message}
-          onUpdate={handleUpdate}
-          onLater={updateInfo.isForced ? undefined : handleLater}
-        />
-      )}
 
       {Platform.OS === 'android' && (
         <Modal
