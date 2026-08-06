@@ -69,7 +69,7 @@ const DistanceTab = ({
   const [showResultsStats, setShowResultsStats] = useState(false);
   const [rrUrl, setRrUrl] = useState<string>('');
   const [eventRegisterUrl, setEventRegisterUrl] = useState<string>('');
-  const [gpxRestrictedReason, setGpxRestrictedReason] = useState<'no_results' | 'not_registered' | null>(null);
+
 
 
 
@@ -266,37 +266,42 @@ const DistanceTab = ({
   }, [auto_register_id, distances, loading, handleRegister, navigation]);
 
   // ✅ GPX CLICK HANDLER — check registration first
-  const handleGpxClick = useCallback(
-    (item: Distance) => {
-      if (!rrUrl) {
-        setGpxRestrictedItem(item);
-        setGpxRestrictedReason('no_results');
-        setGpxRestrictedVisible(true);
-        return;
-      }
-      if (item.registration_status === 'registered') {
+    const handleGpxClick = useCallback(
+      (item: Distance) => {
+        //if (item.registration_status === 'registered') {
+          downloadGpx(item);
+        //} else {
+        //  setGpxRestrictedItem(item);
+        //  setGpxRestrictedVisible(true);
+        //}
+      },
+      [downloadGpx]
+    );
+
+    const handleDownloadGpx = useCallback(
+      (item: Distance) => {
+        if (!rrUrl) {
+          setGpxRestrictedItem(item);
+          setGpxRestrictedVisible(true);
+          return;
+        }
         downloadGpx(item);
-      } else {
-        setGpxRestrictedItem(item);
-        setGpxRestrictedReason('not_registered');
-        setGpxRestrictedVisible(true);
-      }
-    },
-    [downloadGpx, rrUrl]
-  );
+      },
+      [downloadGpx, rrUrl]
+    );
 
   const isRegisterMode = useMemo(
     () => !rrUrl && !!eventRegisterUrl,
     [rrUrl, eventRegisterUrl]
   );
 
-  const handleExternalRegister = useCallback((url: string) => {
-    Linking.openURL(url).catch((err) => {
-      if (API_CONFIG.DEBUG) {
-        console.error('❌ Failed to open register URL:', err);
-      }
-    });
-  }, []);
+const handleExternalRegister = useCallback((url: string) => {
+  Linking.openURL(url).catch((err) => {
+    if (API_CONFIG.DEBUG) {
+      console.error('❌ Failed to open register URL:', err);
+    }
+  });
+}, []);
 
   // ✅ MAP CLICK HANDLER — open the live map for this distance
   const handleMapClick = useCallback(
@@ -484,7 +489,8 @@ const DistanceTab = ({
             {/* ✅ GPX button ALWAYS visible */}
             <TouchableOpacity
               style={detailsStyles.routeButton}
-              onPress={() => handleGpxClick(item)}
+              //onPress={() => handleGpxClick(item)}
+              onPress={() => handleDownloadGpx(item)}
               activeOpacity={0.8}
             >
               <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
@@ -506,7 +512,7 @@ const DistanceTab = ({
         </View>
       </View>
     );
-  }, [CountdownBadge, handleRegister, handleUndoClick, handleMapClick, handleGpxClick, handleExternalRegister, eventRegisterUrl, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode]);
+  }, [CountdownBadge, handleRegister, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode]);
 
   if (loading) {
     return (
@@ -594,22 +600,13 @@ const DistanceTab = ({
 
      <ErrorModal
         visible={gpxRestrictedVisible}
-        titleKey={
-          gpxRestrictedReason === 'no_results'
-            ? 'details:gpxRestricted.noResultsTitle'
-            : 'details:gpxRestricted.title'
-        }
-        messageKey={
-          gpxRestrictedReason === 'no_results'
-            ? 'details:gpxRestricted.noResultsMessage'
-            : 'details:gpxRestricted.message'
-        }
+        titleKey="details:gpxRestricted.noResultsTitle"
+        messageKey="details:gpxRestricted.noResultsMessage"
         onClose={() => {
           setGpxRestrictedVisible(false);
           setGpxRestrictedItem(null);
-          setGpxRestrictedReason(null); 
         }}
-    />
+      />
     </>
   );
 };
