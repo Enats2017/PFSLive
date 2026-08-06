@@ -4,6 +4,7 @@
     "Participant": "Deelnemer"
   },
   "button": "VERBINDEN",
+  "register": "Registreren",
   "undo": "AFMELDEN",
   "gpx": "DOWNLOAD GPX",
   "live": "LIVE",
@@ -121,8 +122,10 @@
     "noFileMessage": "Geen GPX-bestand beschikbaar."
   },
   "gpxRestricted": {
-    "title": "Registratie Vereist",
-    "message": "Alleen geregistreerde deelnemers kunnen het GPX-bestand downloaden. Schrijf je eerst in voor deze afstand."
+    "title": "GPX niet beschikbaar",
+    "message": "U moet zich inschrijven voor dit evenement om het GPX-bestand te downloaden.",
+    "noResultsTitle": "GPX niet beschikbaar",
+    "noResultsMessage": "Het GPX-routebestand is nog niet beschikbaar voor dit evenement."
   },
   "iosnotnow":"Not Now",
   "map": "Kaart"

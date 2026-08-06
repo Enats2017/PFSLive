@@ -4,6 +4,7 @@
     "Participant": "Participant"
   },
   "button": "CONNECT",
+  "register": "Register",
   "undo": "UNDO FOR SIGNUP",
   "gpx": "DOWNLOAD GPX",
   "live": "LIVE",
@@ -123,9 +124,12 @@
     "noFileMessage": "No GPX file available."
   },
   "gpxRestricted": {
-    "title": "Registration Required",
-    "message": "Only registered participants can download the GPX file. Please sign up for this distance first."
+    "title": "GPX Not Available",
+    "message": "You need to register for this event to download the GPX file.",
+    "noResultsTitle": "GPX Not Available",
+    "noResultsMessage": "The GPX route file is not available for this event yet."
   },
+  
   "iosnotnow":"Not Now",
   "map": "MAP"
 }

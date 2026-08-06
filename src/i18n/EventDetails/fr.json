@@ -5,6 +5,7 @@
   },
   "button": "ASSOCIER",
   "undo": "ANNULER L'INSCRIPTION",
+   "register": "S'inscrire",
   "gpx": "TÉLÉCHARGER GPX",
   "live": "EN DIRECT",
   "countdown": {
@@ -121,8 +122,10 @@
     "noFileMessage": "Aucun fichier GPX disponible."
   },
   "gpxRestricted": {
-    "title": "Inscription Requise",
-    "message": "Seuls les participants inscrits peuvent télécharger le fichier GPX. Veuillez d'abord vous inscrire à cette distance."
+    "title": "GPX non disponible",
+    "message": "Vous devez vous inscrire à cet événement pour télécharger le fichier GPX.",
+    "noResultsTitle": "GPX non disponible",
+    "noResultsMessage": "Le fichier de tracé GPX n'est pas encore disponible pour cet événement."
   },
   "iosnotnow":"Not Now",
   "map": "CARTE"

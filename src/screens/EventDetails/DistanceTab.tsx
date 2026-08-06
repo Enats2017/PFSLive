@@ -6,7 +6,8 @@ import {
   FlatList,
   ActivityIndicator,
   StatusBar,
-  Image
+  Image,
+  Linking
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -66,6 +67,12 @@ const DistanceTab = ({
   const [imageLoading, setImageLoading] = useState(true);
   const [showResults, setShowResults] = useState(false);
   const [showResultsStats, setShowResultsStats] = useState(false);
+  const [rrUrl, setRrUrl] = useState<string>('');
+  const [eventRegisterUrl, setEventRegisterUrl] = useState<string>('');
+  const [gpxRestrictedReason, setGpxRestrictedReason] = useState<'no_results' | 'not_registered' | null>(null);
+
+
+
 
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
@@ -83,6 +90,9 @@ const DistanceTab = ({
 
         setDistances(result.distances);
         setServerTime(result.server_datetime);
+
+        setRrUrl(result.event?.rr_url ?? '');
+      setEventRegisterUrl(result.event?.event_register_url ?? '');
 
         // Results button/tab only when RR results are published (status 1) AND a URL exists.
         const canShowResults =
@@ -258,17 +268,35 @@ const DistanceTab = ({
   // ✅ GPX CLICK HANDLER — check registration first
   const handleGpxClick = useCallback(
     (item: Distance) => {
-      //if (item.registration_status === 'registered') {
-        // Registered → download directly
+      if (!rrUrl) {
+        setGpxRestrictedItem(item);
+        setGpxRestrictedReason('no_results');
+        setGpxRestrictedVisible(true);
+        return;
+      }
+      if (item.registration_status === 'registered') {
         downloadGpx(item);
-      //} else {
-        // Not registered → show popup
-      //  setGpxRestrictedItem(item);
-      //  setGpxRestrictedVisible(true);
-      //}
+      } else {
+        setGpxRestrictedItem(item);
+        setGpxRestrictedReason('not_registered');
+        setGpxRestrictedVisible(true);
+      }
     },
-    [downloadGpx]
+    [downloadGpx, rrUrl]
   );
+
+  const isRegisterMode = useMemo(
+    () => !rrUrl && !!eventRegisterUrl,
+    [rrUrl, eventRegisterUrl]
+  );
+
+  const handleExternalRegister = useCallback((url: string) => {
+    Linking.openURL(url).catch((err) => {
+      if (API_CONFIG.DEBUG) {
+        console.error('❌ Failed to open register URL:', err);
+      }
+    });
+  }, []);
 
   // ✅ MAP CLICK HANDLER — open the live map for this distance
   const handleMapClick = useCallback(
@@ -427,23 +455,29 @@ const DistanceTab = ({
 
           <View style={{ gap: spacing.sm }} >
             <TouchableOpacity
-              style={[detailsStyles.resultsButton]}
-              onPress={() =>
-                item.registration_status === 'registered'
-                  ? handleUndoClick(item)
-                  : handleRegister(item)
-              }
-              disabled={isRegistering}
-              activeOpacity={0.8}
-            >
+                style={[detailsStyles.resultsButton]}
+                onPress={() => {
+                  if (isRegisterMode) {
+                    handleExternalRegister(eventRegisterUrl);
+                    return;
+                  }
+                  item.registration_status === 'registered'
+                    ? handleUndoClick(item)
+                    : handleRegister(item);
+                }}
+                disabled={isRegistering}
+                activeOpacity={0.8}
+              >
               {isRegistering ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
-                  {item.registration_status === 'registered'
-                    ? t('details:undo')
+                {item.registration_status === 'registered'
+                  ? t('details:undo')
+                  : isRegisterMode
+                    ? t('details:register')
                     : t('details:button')}
-                </Text>
+              </Text>
               )}
             </TouchableOpacity>
 
@@ -472,7 +506,7 @@ const DistanceTab = ({
         </View>
       </View>
     );
-  }, [CountdownBadge, handleRegister, handleUndoClick, handleMapClick, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats]);
+  }, [CountdownBadge, handleRegister, handleUndoClick, handleMapClick, handleGpxClick, handleExternalRegister, eventRegisterUrl, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode]);
 
   if (loading) {
     return (
@@ -558,15 +592,24 @@ const DistanceTab = ({
         onRetry={handleErrorRetry}
       />
 
-      <ErrorModal
+     <ErrorModal
         visible={gpxRestrictedVisible}
-        titleKey="details:gpxRestricted.title"
-        messageKey="details:gpxRestricted.message"
+        titleKey={
+          gpxRestrictedReason === 'no_results'
+            ? 'details:gpxRestricted.noResultsTitle'
+            : 'details:gpxRestricted.title'
+        }
+        messageKey={
+          gpxRestrictedReason === 'no_results'
+            ? 'details:gpxRestricted.noResultsMessage'
+            : 'details:gpxRestricted.message'
+        }
         onClose={() => {
           setGpxRestrictedVisible(false);
           setGpxRestrictedItem(null);
+          setGpxRestrictedReason(null); 
         }}
-      />
+    />
     </>
   );
 };

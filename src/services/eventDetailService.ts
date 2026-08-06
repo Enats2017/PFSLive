@@ -74,6 +74,7 @@ export interface EventInfo {
   status: string;
   race_result_status?: number;
   rr_url?: string;
+  event_register_url?: string;
 }
 
 export interface EventDetail {
