@@ -84,6 +84,7 @@ export interface FavouritesPagination {
 export interface FavouritesResponse {
   favourites: FavouriteItem[];
   race_result_status?: number;
+  show_results?: number;
   rr_url?: string;
   race_date?: string;
   product_race_date?: string;

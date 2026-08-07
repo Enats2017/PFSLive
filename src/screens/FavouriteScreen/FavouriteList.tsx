@@ -79,8 +79,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             });
 
             const canShowResults =
-                result?.race_result_status === 1 &&
-                (result?.rr_url ?? '') !== '';
+                result?.show_results === 1;
 
             setRaceDate(result?.product_race_date ?? null); 
             

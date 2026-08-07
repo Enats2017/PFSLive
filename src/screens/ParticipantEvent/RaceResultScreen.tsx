@@ -61,13 +61,12 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           bustCache
         );
         const canShowResults =
-          result.event?.race_result_status === 1 &&
-          (result.event?.rr_url ?? '') !== '';
+          result.event?.show_results === 1;
 
         setShowResults(canShowResults);
 
         const canShowResultsStats =
-          result.event?.race_result_status === 1;
+          result.event?.show_results === 1;
         setShowResultsStats(canShowResultsStats);
 
         setRaceDate(result?.event?.product_race_date)

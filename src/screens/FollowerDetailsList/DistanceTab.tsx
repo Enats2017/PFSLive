@@ -57,14 +57,13 @@ const DistanceTab = ({
       setResults(result.distances);
       // Results button/tab only when RR results are published (status 1) AND a URL exists.
       const canShowResults =
-        result.event?.race_result_status === 1 &&
-        (result.event?.rr_url ?? '') !== '';
+          result.event?.show_results === 1;
       
       setShowResults(canShowResults);
       onResultsAvailability?.(canShowResults);
 
       const canShowResultsStats =
-        result.event?.race_result_status === 1;
+        result.event?.show_results === 1;
       setShowResultsStats(canShowResultsStats);
 
       onRaceDateAvailable?.(result.event?.product_race_date ?? null);

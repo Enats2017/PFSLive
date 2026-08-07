@@ -378,14 +378,13 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             }
 
             const canShowResults =
-                response?.data?.race_result_status === 1 &&
-                (response?.data?.rr_url ?? '') !== '';
+                response?.data?.show_results === 1;
 
-                setRaceDate(response?.data?.product_race_date ?? null);
+            setRaceDate(response?.data?.product_race_date ?? null);
 
-                console.log("livetrackingscreen",raceDate );
+            console.log("livetrackingscreen",raceDate );
             
-             setShowResults(canShowResults);
+            setShowResults(canShowResults);
 
             setLoading(false);
 
@@ -408,9 +407,6 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             }
         }
     };
-
-    
-    
 
     const loadGPX = async (gpxUrl: string) => {
         try {
@@ -487,7 +483,6 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const handleClosePopup = () => {
         setPopupState({ type: null, data: null });
     };
-
 
     const hasGpx = !!routeData;
     const hasCheckpoints = apiCheckpoints != null && apiCheckpoints.length > 0;

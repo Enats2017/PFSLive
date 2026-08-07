@@ -70,9 +70,10 @@ export interface EventInfo {
   city: string;
   country: string;
   race_date: string;
-   product_race_date: string;
+  product_race_date: string;
   status: string;
   race_result_status?: number;
+  show_results?: number;
   rr_url?: string;
   event_register_url?: string;
 }
