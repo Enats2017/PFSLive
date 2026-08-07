@@ -249,6 +249,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           product_app_id={product_app_id}
           event_name={event_name}
           event_image={event_image}
+           showResults={showResults}
         />
       </SafeAreaView>
     );
@@ -291,6 +292,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         event_name={event_name}
         event_image={event_image}
         race_date={raceDate}
+        showResults={showResults}
 
       />
     </SafeAreaView>

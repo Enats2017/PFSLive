@@ -81,12 +81,13 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
           <ParticipantTab
             product_app_id={product_app_id}
             event_image={event_image}
+            showResults={showResults}
           />
         );
       default:
         return null;
     }
-  }, [product_app_id, sourceTab, event_name, event_image, visitedTabs, t]);
+  }, [product_app_id, sourceTab, event_name, event_image, visitedTabs, showResults, t]);
 
   const handleTabPress = useCallback((tab: Tab) => {
     const index = TABS.indexOf(tab);

@@ -16,6 +16,7 @@ interface ParticipantCardProps {
   isLoading: boolean;
   onToggleFollow: () => void;
   password_protected?: 0 | 1;
+  showResults?: boolean;
 }
 
 const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
@@ -23,11 +24,11 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
   product_app_id,
   isFollowed,
   isLoading,
-  onToggleFollow
+  onToggleFollow,
+   showResults = true, 
 }) => {
   const { t } = useTranslation(['details', 'follower']);
   const navigation = useNavigation<any>();
-
   // ✅ MEMOIZED VALUES
   const fullName = useMemo(() =>
     `${item.firstname ?? ''} ${item.lastname ?? ''}`.trim().toUpperCase() ||
@@ -58,6 +59,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
   const isPast         = item.race_status === 'finished';
   // Follow only makes sense before/while racing (not for finished/past)
   const showFollow     = !isPast;
+    const shouldShowResults = showResults;
 
   const bib = item.bib || item.bib_number || '';
 
@@ -152,21 +154,23 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
           - Past/finished: primary button only (full width)
           - Else: primary button + follow/unfollow side by side */}
       <View style={{ flexDirection: 'row' }}>
-        <TouchableOpacity
-          style={[
-            commonStyles.primaryButton,
-            {
-              flex: 1,
-              borderRadius: 0,
-              borderBottomLeftRadius: 12,
-              borderBottomRightRadius: showFollow ? 0 : 12,
-            },
-          ]}
-          activeOpacity={0.8}
-          onPress={onPrimaryPress}
-        >
-          <Text style={commonStyles.primaryButtonText}>{primaryLabel}</Text>
-        </TouchableOpacity>
+        {shouldShowResults && (
+          <TouchableOpacity
+            style={[
+              commonStyles.primaryButton,
+              {
+                flex: 1,
+                borderRadius: 0,
+                borderBottomLeftRadius: 12,
+                borderBottomRightRadius: showFollow ? 0 : 12,
+              },
+            ]}
+            activeOpacity={0.8}
+            onPress={onPrimaryPress}
+          >
+            <Text style={commonStyles.primaryButtonText}>{primaryLabel}</Text>
+          </TouchableOpacity>
+        )}
 
         {showFollow && (
           <TouchableOpacity
@@ -204,7 +208,8 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     prevProps.item.source === nextProps.item.source &&
     prevProps.isFollowed === nextProps.isFollowed &&
     prevProps.isLoading === nextProps.isLoading &&
-    prevProps.password_protected === nextProps.password_protected
+    prevProps.password_protected === nextProps.password_protected &&
+    prevProps.showResults === nextProps.showResults 
   );
 });
 

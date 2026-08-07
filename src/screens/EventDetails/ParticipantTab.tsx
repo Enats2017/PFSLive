@@ -22,9 +22,10 @@ import { useScreenError } from '../../hooks/useApiError';
 interface ParticipantTabProps {
   product_app_id: string | number;
    event_image?: string;
+   showResults?: boolean;
 }
 
-const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_image  }) => {
+const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_image, showResults = true,   }) => {
   const { t } = useTranslation(['details', 'follower']);
 
   const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
@@ -182,6 +183,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
         <ParticipantCard
           item={item}
           product_app_id={productId}
+          showResults={showResults} 
           isFollowed={isFollowed(productId, bib, item.customer_app_id)}
           isLoading={isLoading(productId, bib, item.customer_app_id)}
           onToggleFollow={() => {
@@ -195,7 +197,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
         />
       );
     },
-    [productId, isFollowed, isLoading, handleFollowPress]
+    [productId, isFollowed, isLoading, handleFollowPress, showResults]
   );
 
 
