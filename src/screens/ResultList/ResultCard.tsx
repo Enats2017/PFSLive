@@ -54,14 +54,11 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     ? item.checkpoints?.[Number(selectedCheckpoint.value)]
     : null;
 
-    const displayPosition =
-    selectedCp?.ranking || item.position || "-";
+    const displayPosition = item.position || "-";
 
-    const displayAgeGroupRank =
-    selectedCp?.rank_agegroup || item.finish_rank_agegroup || "-";
+    const displayAgeGroupRank = item.finish_rank_agegroup || "-";
 
-    const displayFinishGenderRank =
-    selectedCp?.rank_agegroup || item.finish_rank_gender;
+    const displayFinishGenderRank = item.finish_rank_gender;
 
    const genderRank =
     isFemale && /^\d+$/.test(displayFinishGenderRank ?? "")

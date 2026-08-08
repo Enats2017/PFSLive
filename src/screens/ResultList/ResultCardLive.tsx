@@ -94,8 +94,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     const cp2 = idx2 !== null ? checkpoints[idx2] : null;
     const cp3 = idx3 !== null ? checkpoints[idx3] : null;
 
-    const displayGenderRank =
-    cp1?.rank_agegroup || item.finish_rank_gender;
+    const displayGenderRank = item.finish_rank_gender;
 
   const genderRank =
     isFemale && /^\d+$/.test(displayGenderRank ?? "")

@@ -1763,13 +1763,25 @@ export const gpsService = {
             disableMotionActivityUpdates: false,
           },
           app: {
-            // stopOnTerminate:false is what keeps the SDK armed after iOS kills the
-            // app — it is the reason iOS relaunches us at all. Do NOT flip this.
+            // stopOnTerminate:false is what keeps the SDK armed after the OS kills
+            // the app — on iOS it is the reason we get relaunched at all. Do NOT flip.
             stopOnTerminate:   false,
             // Pairs with it as the SDK's standard survive-termination-and-reboot
             // combination. Only takes effect if the SDK was ENABLED at shutdown, and
             // _doFullStop() calls stop(), so a finished race cannot resurrect itself.
             startOnBoot:       true,
+            // [Android] RUNTIME flag for the headless JS context. The
+            // enableHeadless:true in app.config.js is the Expo config-plugin option
+            // and only wires the native manifest — this is the separate runtime one.
+            //
+            // Transistor's docs say it is "only needed for custom headless JS logic"
+            // because they assume http.url is configured and the native service
+            // uploads by itself. We send from JS (processLocationForSend), so for
+            // this architecture it IS required: without it the foreground service
+            // kept running after a swipe-away but no JS context was ever started —
+            // 206s of total silence on the Samsung test with the notification still
+            // showing, and registerHeadlessTask never fired.
+            enableHeadless:    true,
             heartbeatInterval: 60,
             preventSuspend:    true,
             notification: {
