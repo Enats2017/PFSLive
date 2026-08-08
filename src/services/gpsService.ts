@@ -288,9 +288,10 @@ const _hydrateBufferOnce = async (): Promise<void> => {
   } catch { /* silent */ }
 };
 
-// Keeps its async signature so existing `await addLog(...)` call-sites are
-// unchanged.
-const addLog = async (icon: string, msg: string): Promise<void> => {
+// Exported so locationQueueService can log queue drops to the same on-device
+// panel. Imported there via require(), not import, to avoid a circular module
+// reference at load time.
+export const addLog = async (icon: string, msg: string): Promise<void> => {
   await _hydrateBufferOnce();
   _logBuffer.push({ ts: Date.now(), icon, msg });
   _logDirty = true;
@@ -555,10 +556,24 @@ const _processLocationForSendInternal = async (
     const DRAIN_TIME_BUDGET_MS = 12000;  // stay well under the iOS wake kill timer
     let _backlogRemains = false;
     try {
-      const { QUEUE_COUNT_KEY } = require('./locationQueueService');
+      const { QUEUE_COUNT_KEY, locationQueueService: _lq } = require('./locationQueueService');
       const qCountStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
       let qCount = qCountStr ? parseInt(qCountStr) : 0;
-      if (qCount > 0) {
+
+      // ── OFFLINE SHORT-CIRCUIT ────────────────────────────────────────────
+      // A backlog can only drain with network. Without this check the loop below
+      // runs on EVERY onLocation fire while offline — ~100 times across an
+      // 8-minute dead zone, each one burning up to DRAIN_TIME_BUDGET_MS on HTTP
+      // that must time out before it fails. That is background execution time
+      // iOS accounts against the app, and it is the most likely reason the
+      // 08-Aug session was terminated mid-race after two outages.
+      // hasNetwork() races its probe against a 3s timer and falls back
+      // optimistically, so a slow probe can never wedge a legitimate drain.
+      const _canDrain = (qCount > 0) ? await _lq.hasNetwork() : true;
+      if (qCount > 0 && !_canDrain) {
+        await addLog('📴', `Offline — ${qCount} fix(es) held, drain skipped${tag}`);
+        _backlogRemains = true;
+      } else if (qCount > 0) {
         const { locationService } = require('./locationService');
         const drainStart = Date.now();
         let totalFlushed = 0;
@@ -1748,8 +1763,13 @@ export const gpsService = {
             disableMotionActivityUpdates: false,
           },
           app: {
+            // stopOnTerminate:false is what keeps the SDK armed after iOS kills the
+            // app — it is the reason iOS relaunches us at all. Do NOT flip this.
             stopOnTerminate:   false,
-            startOnBoot:       false,
+            // Pairs with it as the SDK's standard survive-termination-and-reboot
+            // combination. Only takes effect if the SDK was ENABLED at shutdown, and
+            // _doFullStop() calls stop(), so a finished race cannot resurrect itself.
+            startOnBoot:       true,
             heartbeatInterval: 60,
             preventSuspend:    true,
             notification: {
@@ -1766,9 +1786,14 @@ export const gpsService = {
             },
           },
           logger: {
+            // Warning (not Off) in production: this is a NATIVE SQLite log that
+            // survives app termination and relaunch. When the 08-Aug session died
+            // at 08:55 and stayed dead for 3h13m, the JS panel log stopped with it
+            // and there was no record of what the native side did. Retrieve with
+            // BackgroundGeolocation.getLog() / .emailLog() after an incident.
             logLevel: API_CONFIG.DEBUG
               ? BackgroundGeolocation.LogLevel.Verbose
-              : BackgroundGeolocation.LogLevel.Off,
+              : BackgroundGeolocation.LogLevel.Warning,
             debug: false,
           },
           reset: true,
@@ -1887,3 +1912,71 @@ try {
   // Older SDK / platform without headless support — silent, the watchdog still
   // covers the foreground-return path.
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+ *  COLD-BOOT REHYDRATE  —  iOS relaunch-after-termination
+ *
+ *  BackgroundGeolocation.ready() is called in exactly ONE place: inside
+ *  startWatchingPosition (~line 1751). Nothing calls it at app boot.
+ *
+ *  iOS silently relaunches the app in the background roughly every 200m of
+ *  movement once it has terminated us (that is what stopOnTerminate:false buys).
+ *  But the SDK requires ready() on EVERY app launch before it routes events into
+ *  JS — so each of those relaunches brought up a fresh JS context in which
+ *  startWatchingPosition never ran, no listeners were attached, and
+ *  getState().enabled still read true. The engine sampled GPS and called nobody:
+ *  the "functionally deaf, looks healthy" state described at the
+ *  _registerTransistorListeners banner, reached through the one door neither the
+ *  watchdog (foreground-gated) nor registerHeadlessTask (Android-only) covers.
+ *
+ *  Module-level on purpose: it must run on a background launch where React never
+ *  mounts. App.tsx already imports this file for its side effects.
+ *
+ *  Deliberately additive — no existing logic is touched, and nothing happens at
+ *  all unless a live session is present in storage.
+ * ════════════════════════════════════════════════════════════════════════ */
+const _rehydrateTrackingOnBoot = async (): Promise<void> => {
+  try {
+    // _doFullStop() removes TRACKING_PARAMS_KEY, so its presence is a reliable
+    // "session still live" signal.
+    const paramsJson = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!paramsJson) return;
+
+    const finished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
+    if (finished === '1') {
+      // Race over. With startOnBoot:true the engine can come up running after a
+      // reboot that interrupted a stop — shut it down rather than just bailing.
+      try {
+        const st = await BackgroundGeolocation.getState();
+        if (st.enabled) {
+          await BackgroundGeolocation.stop();
+          await addLog('🛑', 'Cold boot — race already finished, engine stopped');
+        }
+      } catch { /* silent */ }
+      return;
+    }
+
+    // reset:false — do NOT re-apply the config. The native side still holds this
+    // session's settings, including any in-race adjustment (the finish-approach
+    // distanceFilter:0). A reset here would silently undo them.
+    await BackgroundGeolocation.ready({ reset: false });
+
+    // Idempotent (removeListeners first) — safe even if listeners already exist.
+    _registerTransistorListeners();
+
+    const state = await BackgroundGeolocation.getState();
+    if (!state.enabled) {
+      await BackgroundGeolocation.start();
+      await addLog('🔁', 'Cold boot — live session found, engine restarted + listeners attached');
+    } else {
+      await addLog('🔁', 'Cold boot — engine alive, listeners re-attached');
+    }
+  } catch (e) {
+    try {
+      await addLog('⚠️', `Cold-boot rehydrate failed: ${String((e as any)?.message ?? e).slice(0, 80)}`);
+    } catch { /* silent */ }
+  }
+};
+
+// Fire and forget — must not block bundle evaluation.
+_rehydrateTrackingOnBoot();

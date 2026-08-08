@@ -103,9 +103,12 @@ export const locationQueueService = {
         const lastQueuedAt = lastQueuedStr ? parseInt(lastQueuedStr) : 0;
         const throttleValid = !(isNaN(lastQueuedAt) || lastQueuedAt > now);
         if (throttleValid && (now - lastQueuedAt < gapMs)) {
-          if (API_CONFIG.DEBUG) {
-            console.log(`⏭️ Queue-throttled — ${((now - lastQueuedAt) / 1000).toFixed(0)}s < ${intervalSec}s, fix dropped`);
-          }
+          // On-device panel, not console: this is where offline fixes are lost,
+          // and console.log doesn't exist in a production build.
+          try {
+            const { addLog } = require('./gpsService');
+            await addLog('⏭️', `Queue-throttled — ${((now - lastQueuedAt) / 1000).toFixed(0)}s < ${intervalSec}s, fix dropped`);
+          } catch { /* silent */ }
           return; // within the interval — drop this fix, keep queue at interval rate
         }
       }
@@ -131,6 +134,14 @@ export const locationQueueService = {
         console.log(`📦 Location queued (${queue.length} in queue)`);
       }
     } catch (error) {
+      // A failed insert means a fix is LOST — silently, until now. console.error
+      // doesn't exist in a production build, so this went to the on-device panel
+      // instead: an AsyncStorage write failure during an outage is exactly the
+      // kind of thing that leaves a backlog smaller than it should be.
+      try {
+        const { addLog } = require('./gpsService');
+        await addLog('⚠️', `Queue insert FAILED — fix lost: ${String((error as any)?.message ?? error).slice(0, 80)}`);
+      } catch { /* silent */ }
       if (API_CONFIG.DEBUG) {
         console.error('❌ Error adding to queue:', error);
       }
