@@ -18,8 +18,8 @@
     "minutes": "M",
     "seconds": "S" 
   },
-  "athletes": "Athlètes démarrés",
-  "finished": "Athlètes Terminés",
+  "athletes": "Athlètes au départ",
+  "finished": "Athlètes à l'arrivée",
   "dnf": "DNF",
   "distance": {
     "empty": "Aucune distance disponible"
