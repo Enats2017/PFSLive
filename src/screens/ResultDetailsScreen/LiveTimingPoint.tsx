@@ -76,8 +76,8 @@ const pace = (v: string | undefined, t: any) =>
 const genderLetter = (gender: string | undefined) =>
     gender === 'female' ? 'F' : gender === 'male' ? 'M' : '';
 
-// "25 F 5" → 25th overall at this point, 5th in gender. Falls back to the bare
-// ranking when there's no gender rank or the gender is unknown.
+// "25 F 5" → 25th overall at this point, 5th among women.
+// Men and unknown gender show the bare overall ranking.
 const rankingWithGender = (
     ranking: string | undefined,
     gender: string | undefined,
@@ -85,8 +85,10 @@ const rankingWithGender = (
     t: any,
 ) => {
     if (!ranking) return t('defaults.empty');
-    const g = genderLetter(gender);
-    return (g && rank_gender) ? `${ranking} ${g} ${rank_gender}` : ranking;
+    const isFemale = gender === 'female';
+    return isFemale && /^\d+$/.test(rank_gender ?? '')
+        ? `${ranking} F ${rank_gender}`
+        : ranking;
 };
 
 const StatRow = memo(({
