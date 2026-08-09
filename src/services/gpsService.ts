@@ -75,6 +75,20 @@ const LAST_LOC_FIRE_KEY = '@PFSLive:lastLocFireAt';
 
 const LAST_QUEUED_KEY = '@PFSLive:lastQueuedAt';
 
+// 08-Aug log analysis: drain sessions could wedge. A drain pass that sends 0
+// leaves _backlogRemains true; if the head fix keeps failing (persistent per-fix
+// error, or hasNetwork() optimism masking a real dead zone), EVERY later pass
+// also sends 0 and the queue never drains again — one participant sat stuck for
+// 3h with the app alive the whole time. These two keys let the drain block reason
+// about CONSECUTIVE failure instead of a single pass:
+//   _DRAIN_FAILS_KEY   how many drain attempts in a row have flushed nothing
+//   _OFFLINE_UNTIL_KEY a short cooldown timestamp; while set, skip the drain HTTP
+//                      entirely (the thing that burns iOS background wake-time)
+const DRAIN_FAILS_KEY   = '@PFSLive:drainFailStreak';
+const OFFLINE_UNTIL_KEY = '@PFSLive:offlineCooldownUntil';
+const DRAIN_FAILS_TO_OFFLINE = 2;      // consecutive zero-flush passes → treat as offline
+const OFFLINE_COOLDOWN_MS    = 60000;  // then skip drain HTTP for 60s before retrying
+
 const FINISH_APPROACH_INTERVAL = 5;                            // seconds
 const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 const FINISH_LINE_THRESHOLD_KM = 0.05;                         // 50m for auto-stop
@@ -560,18 +574,43 @@ const _processLocationForSendInternal = async (
       const qCountStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
       let qCount = qCountStr ? parseInt(qCountStr) : 0;
 
-      // ── OFFLINE SHORT-CIRCUIT ────────────────────────────────────────────
-      // A backlog can only drain with network. Without this check the loop below
-      // runs on EVERY onLocation fire while offline — ~100 times across an
-      // 8-minute dead zone, each one burning up to DRAIN_TIME_BUDGET_MS on HTTP
-      // that must time out before it fails. That is background execution time
-      // iOS accounts against the app, and it is the most likely reason the
-      // 08-Aug session was terminated mid-race after two outages.
-      // hasNetwork() races its probe against a 3s timer and falls back
-      // optimistically, so a slow probe can never wedge a legitimate drain.
-      const _canDrain = (qCount > 0) ? await _lq.hasNetwork() : true;
-      if (qCount > 0 && !_canDrain) {
-        await addLog('📴', `Offline — ${qCount} fix(es) held, drain skipped${tag}`);
+      // ── OFFLINE SHORT-CIRCUIT + WEDGE GUARD ──────────────────────────────
+      // A backlog can only drain with network. Without a skip the loop below runs
+      // on EVERY onLocation fire while offline — ~100 times across an 8-minute
+      // dead zone, each burning up to DRAIN_TIME_BUDGET_MS on HTTP that must time
+      // out before it fails. That background time is charged to the app on iOS and
+      // is the most likely reason the 08-Aug session was terminated after two
+      // outages.
+      //
+      // The original guard used hasNetwork() alone, but on 08-Aug that log line
+      // ("📴 drain skipped") NEVER fired across 67 sessions despite 440 rejects:
+      // NetInfo.fetch() reports connected/optimistic in a dead zone, so a real
+      // outage was always treated as an online drain-that-fails. And one session
+      // wedged for 3h — the queue stopped draining entirely while the app stayed
+      // alive, because a persistently-failing head fix makes every pass flush 0
+      // and nothing ever cleared _backlogRemains.
+      //
+      // So decide "offline" from OBSERVED outcomes, not the probe alone:
+      //   • honour an active cooldown (set after repeated zero-flush passes) and
+      //     skip the drain HTTP outright while it lasts;
+      //   • otherwise attempt the drain, but track a consecutive-zero-flush streak
+      //     across fires. Two dry passes → assume offline / poisoned head fix,
+      //     open a 60s cooldown, and stop hammering the network. A single good
+      //     drain resets everything.
+      let _cooldownUntil = 0;
+      try {
+        const cuStr = await AsyncStorage.getItem(OFFLINE_UNTIL_KEY);
+        _cooldownUntil = cuStr ? (parseInt(cuStr) || 0) : 0;
+      } catch { /* silent */ }
+      const _inCooldown = _cooldownUntil > Date.now();
+
+      const _probeOk = (qCount > 0 && !_inCooldown) ? await _lq.hasNetwork() : true;
+
+      if (qCount > 0 && (_inCooldown || !_probeOk)) {
+        // Offline (probe says so, or we're inside the post-failure cooldown).
+        // Hold the fixes, skip the drain HTTP. Cheap — no network attempt at all.
+        const reason = _inCooldown ? 'cooldown' : 'no network';
+        await addLog('📴', `Offline (${reason}) — ${qCount} fix(es) held, drain skipped${tag}`);
         _backlogRemains = true;
       } else if (qCount > 0) {
         const { locationService } = require('./locationService');
@@ -610,6 +649,29 @@ const _processLocationForSendInternal = async (
             : `(${qCount} still pending)`;
           await addLog('📤', `Drained ${totalFlushed} queued fix(es) ${pendingNote} before live send${tag}`);
         }
+
+        // ── WEDGE GUARD ────────────────────────────────────────────────────
+        // A pass that flushed something = network is really back → clear the
+        // streak and any cooldown. A pass that flushed NOTHING while fixes remain
+        // = the head fix is failing (dead zone the probe missed, or a poisoned
+        // fix the server keeps rejecting). Count it; after DRAIN_FAILS_TO_OFFLINE
+        // in a row, open a cooldown so we stop burning wake-time on HTTP that
+        // isn't going through. The cooldown auto-expires, so recovery is
+        // automatic once the network genuinely returns.
+        try {
+          if (totalFlushed > 0) {
+            await AsyncStorage.removeItem(DRAIN_FAILS_KEY);
+            await AsyncStorage.removeItem(OFFLINE_UNTIL_KEY);
+          } else if (qCount > 0) {
+            const fStr = await AsyncStorage.getItem(DRAIN_FAILS_KEY);
+            const fails = (fStr ? (parseInt(fStr) || 0) : 0) + 1;
+            await AsyncStorage.setItem(DRAIN_FAILS_KEY, String(fails));
+            if (fails >= DRAIN_FAILS_TO_OFFLINE) {
+              await AsyncStorage.setItem(OFFLINE_UNTIL_KEY, String(Date.now() + OFFLINE_COOLDOWN_MS));
+              await addLog('📴', `Drain stalled ${fails}× — backing off network for ${Math.round(OFFLINE_COOLDOWN_MS / 1000)}s${tag}`);
+            }
+          }
+        } catch { /* silent */ }
 
         _backlogRemains = qCount > 0;
       }
@@ -1334,6 +1396,8 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(FINISH_COORDS_KEY);
   await AsyncStorage.removeItem(REMAINING_KEY);
   await AsyncStorage.removeItem(LAST_QUEUED_KEY);
+  await AsyncStorage.removeItem(DRAIN_FAILS_KEY);
+  await AsyncStorage.removeItem(OFFLINE_UNTIL_KEY);
   await AsyncStorage.removeItem(TEST_PHASE_KEY);
 
   if (API_CONFIG.DEBUG) console.log('✅ Tracking stopped');
