@@ -112,6 +112,12 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
         });
     }, [navigation, product_app_id, currentPovId, item.bib, raceStatus]);
 
+    const hasUtmbIndex = showUtmbIndex &&
+        item.utmb_index &&
+        item.utmb_index.trim() !== '' &&
+        item.utmb_index !== '0' &&
+        Number(item.utmb_index) !== 0;
+
     const handleStarPress = useCallback(() => {
         if (!isLoading) onToggleFollow();
     }, [isLoading, onToggleFollow]);
@@ -183,6 +189,16 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         {[item.club, item.nation, item.age].filter(Boolean).join(' · ')}
                     </Text>
                 </View>
+
+                {hasUtmbIndex && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                        <View style={resultListStyle.utmbBadge}>
+                        <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
+                        <Text style={resultListStyle.utmbBadgeTextBottom}>Index</Text>
+                        </View>
+                        <Text style={[resultListStyle.utmbValue, { fontSize: 16 }]}>{item.utmb_index}</Text>
+                    </View>
+                )}
 
                 {isLive && !isCheckpointMode && (
                     <View style={{ marginTop: 6 }}>

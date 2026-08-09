@@ -151,6 +151,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     fromLive={fromLive}
                     raceStatus={raceStatus}
                     currentPovId={currentPovId}
+                    showUtmbIndex={showUtmbIndex}
                     isWomen={selectedCategory === 'women' || item.gender === 'female'}
                     
                 />
@@ -165,7 +166,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 currentPovId={currentPovId}
                 isWomen={selectedCategory === 'women' || item.gender === 'female'}
                 showUtmbIndex={showUtmbIndex}
-                 selectedCheckpoint={selectedCheckpoint} 
+                selectedCheckpoint={selectedCheckpoint} 
             />
         );
     }, [
