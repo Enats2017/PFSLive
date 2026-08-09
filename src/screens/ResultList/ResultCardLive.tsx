@@ -101,9 +101,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
         ? `F ${displayGenderRank}`
         : null;
 
-    const badgeNumber = isCheckpointMode
-        ? (cp1?.is_crossed ? (cp1?.ranking || '-') : '-')
-        : item.position.replace('.', '');
+    const badgeNumber = item.position.replace('.', '');
 
     const handleCardPress = useCallback(() => {
         navigation.navigate('ResultDetails', {
