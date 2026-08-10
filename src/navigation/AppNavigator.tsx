@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { getAnalytics, logScreenView } from '@react-native-firebase/analytics';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator } from 'react-native';
@@ -54,6 +55,7 @@ const noGesture = { gestureEnabled: false } as const;
 
 export const AppNavigator: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const routeNameRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     tokenService.getToken().then(token => setIsLoggedIn(!!token));
@@ -72,7 +74,23 @@ export const AppNavigator: React.FC = () => {
 
   return (
     <AuthContext.Provider value={{ isLoggedIn, login, logout }}>
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer
+        ref={navigationRef}
+        onReady={() => {
+          routeNameRef.current = navigationRef.current?.getCurrentRoute()?.name;
+        }}
+        onStateChange={async () => {
+          const previous = routeNameRef.current;
+          const current = navigationRef.current?.getCurrentRoute()?.name;
+          if (current && previous !== current) {
+            await logScreenView(getAnalytics(), {
+              screen_name: current,
+              screen_class: current,
+            });
+          }
+          routeNameRef.current = current;
+        }}
+      >
         <Stack.Navigator
           initialRouteName="HomeScreen"
           screenOptions={{

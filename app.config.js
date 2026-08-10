@@ -28,6 +28,7 @@ export default ({ config }) => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "eu.passionforsports.livio",
+      googleServicesFile: process.env.GOOGLE_SERVICES_PLIST ?? "./GoogleService-Info.plist",
       buildNumber: "1",
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "Livio uses your location to track your race progress in real-time.",
@@ -39,6 +40,8 @@ export default ({ config }) => {
         UIBackgroundModes: ["remote-notification", "location", "fetch"],
         TSLocationManagerLicense: process.env.TSLOCATIONMANAGER_LICENSE ?? "",
         LSSupportsOpeningDocumentsInPlace: true,
+        GOOGLE_ANALYTICS_DEFAULT_ALLOW_AD_PERSONALIZATION_SIGNALS: false,
+        GOOGLE_ANALYTICS_IDFV_COLLECTION_ENABLED: false,
         ITSAppUsesNonExemptEncryption: false,
         ...(process.env.EXPO_PUBLIC_ENV !== "production" && {
           NSAppTransportSecurity: {
@@ -96,6 +99,9 @@ export default ({ config }) => {
         "FOREGROUND_SERVICE_LOCATION",
         "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
       ],
+      blockedPermissions: [
+          "com.google.android.gms.permission.AD_ID"   // ✅ ADD — blocks Firebase ad ID
+      ],
       // ✅ GPX intent filters — withGpxShareIntent plugin handles native wiring
       intentFilters: [
         {
@@ -131,11 +137,16 @@ export default ({ config }) => {
 
     // ✅ Plugins
     plugins: [
+      "@react-native-firebase/app",                    // ← ADD (first, before others that need it)
+      ["@react-native-firebase/analytics", { "ios": { "withoutAdIdSupport": true } }],  // ← ADD (GDPR-friendly, no Ad ID)
       // ✅ Custom plugin — handles GPX share/view intent wiring for Android
       "./plugins/withGpxShareIntent",
       [
         "expo-build-properties",
         {
+          ios: {
+            useFrameworks: "static"      // ← ADD: required by Firebase (and compatible with Mapbox)
+          },
           android: {
             usesCleartextTraffic: process.env.EXPO_PUBLIC_ENV !== "production",  // ⚠️ Remove before production
             enableProguardInReleaseBuilds: true,
