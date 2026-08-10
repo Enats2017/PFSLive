@@ -187,6 +187,32 @@ const safeChangePace = async (isMoving: boolean): Promise<void> => {
   } catch { /* silent — never let a pace change crash tracking */ }
 };
 
+// ── PRE-RACE LOW-POWER MODE ────────────────────────────────────────────────
+// Logs showed participants arm tracking long before the gun (avg ~278 min, one
+// 13 h) and, because live_tracking_activated now lights up on START press, this
+// window is growing. During it the engine runs at full rate: the 60s heartbeat
+// re-asserts MOVING every beat (forcing the dense onLocation stream) and pulls a
+// keepalive fix. None of that is needed before the race starts — no fix is even
+// sent (the send path returns early on "Race not started"). So while the race
+// has not started we let the engine idle: skip the re-wake and skip the
+// keepalive pull. The instant the race starts, normal behaviour resumes with no
+// other change. Reads the SAME raceStartTime/manualStart the send path uses, so
+// the two agree on when the race is live.
+const isRaceNotStarted = async (): Promise<boolean> => {
+  try {
+    const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!raw) return false;                     // no session → don't throttle
+    const { raceStartTime, manualStart } = JSON.parse(raw);
+    if (manualStart === 1) return false;        // manual start → race is live now
+    if (!raceStartTime) return false;           // unknown → be safe, run normally
+    const startMs = new Date(raceStartTime).getTime();
+    if (isNaN(startMs)) return false;
+    return Date.now() < startMs;                // true only while still pre-race
+  } catch {
+    return false;                               // any error → run normally
+  }
+};
+
 // Sample ~3× per send window so the throttle always has a candidate near the
 // target — keeps cadence at the interval (30s/60s/4min/5min) instead of doubling.
 const fixIntervalMs = (sendIntervalSec?: number): number => {
@@ -1295,6 +1321,17 @@ const _registerTransistorListeners = (): void => {
           }
         }
       } catch { /* silent */ }
+
+      // ── PRE-RACE LOW-POWER: before the gun, don't re-wake the dense stream and
+      // don't pull a keepalive fix. No fix is sent pre-race anyway, so this just
+      // lets the engine idle (coarse distanceFilter + motion sensor still re-wake
+      // it if the person actually starts moving). Saves the battery that early
+      // arming would otherwise burn. Resumes full behaviour the moment the race
+      // starts. The liveness ping above already self-gates on raceStartedOk.
+      if (await isRaceNotStarted()) {
+        await addLog('🔋', 'Heartbeat — pre-race low-power (engine idle until start)');
+        return;
+      }
 
       const hbState = await BackgroundGeolocation.getState();
 

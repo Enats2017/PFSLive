@@ -43,14 +43,21 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                 </Text>
             </View>
 
-            {events.map((event) => {
+            {events.map((event, eventIdx) => {
                 const remainingSec = Math.max(0, (event.starts_in_seconds || 0) - elapsed);
                 const isLive = event.race_status === 'in_progress' || (event.race_status === 'upcoming' && remainingSec === 0);
                 const isUpcoming = event.race_status === 'upcoming' && remainingSec > 0;
 
+                // A single event can appear once per distance, so product_app_id alone
+                // is no longer unique across rows (it started colliding when the feed
+                // began returning per-distance rows). Compose it with the distance id
+                // (product_option_value_app_id) — and fall back to the row index — so
+                // every card has a stable, unique key.
+                const rowKey = `${event.product_app_id}-${event.product_option_value_app_id ?? 'na'}-${eventIdx}`;
+
                 return (
                     <View
-                        key={event.product_app_id}
+                        key={rowKey}
                         style={[
                             commonStyles.card,
                             {

@@ -1797,11 +1797,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     persistentScrollbar={true}
                     nestedScrollEnabled={true}
                   >
-                    {[...trackingLogs].reverse().map((entry, idx) => {
+                    {trackingLogs.map((entry, origIdx) => ({ entry, origIdx }))
+                      .reverse()
+                      .map(({ entry, origIdx }) => {
                       const time = new Date(entry.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                       return (
                         <Text
-                          key={idx}
+                          key={`${entry.ts}-${origIdx}`}
                           style={{ fontFamily: 'monospace', fontSize: 10, color: '#e2e8f0', marginBottom: 2 }}
                         >
                           {time} {entry.icon} {entry.msg}
