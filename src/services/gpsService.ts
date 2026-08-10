@@ -1961,7 +1961,7 @@ export const gpsService = {
 // Everything it calls (the listeners, processLocationForSend, AsyncStorage,
 // the lazy require of locationService) is already React-free.
 // ════════════════════════════════════════════════════════════════════════
-const _headlessTask = async (event: { name: string; params: any }): Promise<void> => {
+export const headlessTask = async (event: { name: string; params: any }): Promise<void> => {
   try {
     // Only bother for an actually-active session — if params are gone the race
     // is over / never started and there's nothing to re-attach for.
@@ -1982,12 +1982,12 @@ const _headlessTask = async (event: { name: string; params: any }): Promise<void
   }
 };
 
-try {
-  BackgroundGeolocation.registerHeadlessTask(_headlessTask);
-} catch {
-  // Older SDK / platform without headless support — silent, the watchdog still
-  // covers the foreground-return path.
-}
+// try {
+//   BackgroundGeolocation.registerHeadlessTask(_headlessTask);
+// } catch {
+//   // Older SDK / platform without headless support — silent, the watchdog still
+//   // covers the foreground-return path.
+// }
 
 /* ════════════════════════════════════════════════════════════════════════
  *  COLD-BOOT REHYDRATE  —  iOS relaunch-after-termination
