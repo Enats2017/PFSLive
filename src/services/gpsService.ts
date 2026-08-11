@@ -550,6 +550,18 @@ const _processLocationForSendInternal = async (
   const tag = source === 'transistor' ? ' [t]' : '';
   const now = Date.now();
 
+  // ✅ DEFENSE-IN-DEPTH: this is the single chokepoint every send path funnels
+  // through (onLocation, headless, drain). Validate coords here too, not just at
+  // the call sites, so no present or future caller can hand an undefined/NaN
+  // lat/lon into the send/AsyncStorage/native path — the exact shape that has
+  // crashed iOS under the New Architecture. Cheap, and it can't mask a real fix.
+  if (!raw
+      || typeof raw.latitude !== 'number'  || !isFinite(raw.latitude)
+      || typeof raw.longitude !== 'number' || !isFinite(raw.longitude)) {
+    try { await addLog('⚠️', `Send skipped — invalid coords (lat/lon not finite)${tag}`); } catch { /* silent */ }
+    return;
+  }
+
   // ✅ Read previous fire-at BEFORE we overwrite it. The previous value is
   // what the freeze diagnostic uses to decide whether the engine was firing
   // during the gap (false freeze) or truly silent (real freeze).
@@ -1235,8 +1247,12 @@ const _registerTransistorListeners = (): void => {
       // bgLoc.coords.latitude on undefined threw a TypeError — and under the New
       // Architecture (RN 0.81+) an uncaught JS error inside a native callback is
       // FATAL (it was silently swallowed on the old architecture). Bail out
-      // safely instead of crashing.
-      if (!bgLoc?.coords || typeof bgLoc.coords.latitude !== 'number') {
+      // safely instead of crashing. Check BOTH lat and lon as finite numbers: a
+      // payload with a valid latitude but undefined/NaN longitude previously
+      // passed a latitude-only check and crashed iOS downstream.
+      if (!bgLoc?.coords
+          || typeof bgLoc.coords.latitude !== 'number'  || !isFinite(bgLoc.coords.latitude)
+          || typeof bgLoc.coords.longitude !== 'number' || !isFinite(bgLoc.coords.longitude)) {
         addLog('⚠️', 'onLocation fired without valid coords — skipped');
         return;
       }
@@ -2005,14 +2021,94 @@ export const headlessTask = async (event: { name: string; params: any }): Promis
     const params = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
     if (!params) return;
 
-    // Re-attach listeners into THIS fresh context so the engine's events start
-    // routing through onLocation → processLocationForSend again.
+    // Re-attach listeners into THIS fresh context so any FUTURE engine events
+    // route through onLocation → processLocationForSend again.
     _registerTransistorListeners();
     await addLog('🧟', `Headless wake (${event.name}) — listeners re-attached in background context`);
 
-    // The 'terminate' event fires just before the OS tears the app down; the
-    // 'location'/'heartbeat' events will now flow through the re-attached
-    // listeners on their own, so nothing more is needed here.
+    // ✅ CRITICAL: the location that WOKE this headless task is carried in
+    // event.params RIGHT NOW. Re-attaching listeners only catches FUTURE events —
+    // it does NOT replay the fix that triggered this wake. So on a swipe-away /
+    // terminated app, every headless 'location' wake delivered a real coordinate
+    // in event.params that we were DROPPING (the listener was always being set up
+    // one fix too late). Result: the OS woke us ~every 10s with a fix and we sent
+    // none of them — silent tracking loss for the whole backgrounded ride.
+    //
+    // 'location' / 'motionchange' events: event.params carries the coords (either
+    // params.coords directly, or params.location.coords) — send THAT fix.
+    // 'heartbeat' events: event.params does NOT carry a usable coords object (the
+    // plugin's own headless examples call getCurrentPosition() for heartbeat), so
+    // we fetch a fresh fix here — this covers a STATIONARY participant whose app
+    // is terminated in the background (the "standing at the gun, app killed" gap).
+    // processLocationForSend's throttle/movement/pre-race gating + mutex de-dupe
+    // all of this against the listener path.
+    if (event.name === 'location' || event.name === 'motionchange') {
+      const loc = event.params?.location ?? event.params;
+      const coords = loc?.coords;
+      // Guard BOTH lat and lon as finite numbers. A malformed payload with a
+      // valid latitude but undefined/NaN longitude would otherwise pass a
+      // latitude-only check and hand an undefined lon downstream — the exact
+      // undefined-coords shape that has crashed iOS before. Under the New
+      // Architecture an undefined reaching a native bridge call is fatal.
+      if (coords
+          && typeof coords.latitude === 'number' && isFinite(coords.latitude)
+          && typeof coords.longitude === 'number' && isFinite(coords.longitude)) {
+        const ts = typeof loc.timestamp === 'string'
+          ? new Date(loc.timestamp).getTime()
+          : (loc.timestamp as unknown as number);
+        await addLog('📨', `Headless fix — lat:${coords.latitude.toFixed(5)} spd:${coords.speed?.toFixed(1) ?? '?'}m/s (sending from background)`);
+        await processLocationForSend({
+          latitude:         coords.latitude,
+          longitude:        coords.longitude,
+          altitude:         coords.altitude ?? null,
+          accuracy:         coords.accuracy ?? null,
+          altitudeAccuracy: (coords as any).altitude_accuracy ?? null,
+          speed:            coords.speed ?? null,
+          heading:          coords.heading ?? null,
+          timestamp:        (typeof ts === 'number' && !isNaN(ts)) ? ts : Date.now(),
+          mocked:           false,
+        }, 'task');
+      } else {
+        await addLog('⚠️', 'Headless wake — location payload missing valid lat/lon, skipped');
+      }
+    } else if (event.name === 'heartbeat') {
+      // Heartbeat carries no coords in event.params — fetch one. Same options as
+      // the foreground heartbeat. Wrapped so a fetch failure (no fix in a dead
+      // zone) can't throw out of the headless task. getCurrentPosition does NOT
+      // persist to the SDK DB (we send via our own pipeline).
+      try {
+        const hbLoc = await BackgroundGeolocation.getCurrentPosition({
+          samples:         2,
+          timeout:         30,
+          desiredAccuracy: 10,
+          persist:         false,
+        });
+        const c = hbLoc?.coords;
+        if (c
+            && typeof c.latitude === 'number' && isFinite(c.latitude)
+            && typeof c.longitude === 'number' && isFinite(c.longitude)) {
+          const hts = typeof hbLoc.timestamp === 'string'
+            ? new Date(hbLoc.timestamp).getTime()
+            : (hbLoc.timestamp as unknown as number);
+          await addLog('📨', `Headless heartbeat fix — lat:${c.latitude.toFixed(5)} (sending from background)`);
+          await processLocationForSend({
+            latitude:         c.latitude,
+            longitude:        c.longitude,
+            altitude:         c.altitude ?? null,
+            accuracy:         c.accuracy ?? null,
+            altitudeAccuracy: (c as any).altitude_accuracy ?? null,
+            speed:            c.speed ?? null,
+            heading:          c.heading ?? null,
+            timestamp:        (typeof hts === 'number' && !isNaN(hts)) ? hts : Date.now(),
+            mocked:           false,
+          }, 'task');
+        }
+      } catch {
+        // No fix available (dead zone / timeout) — nothing to send this beat.
+      }
+    }
+    // The 'terminate' event carries no fix — it just signals imminent teardown;
+    // re-attaching above is all that's needed for it.
   } catch {
     // Headless task must never throw — an unhandled throw here can crash the
     // background relaunch.
