@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../constants/config';
-
 const TOKEN_STORAGE_KEY = '@PFSLive:authToken';
 const CUSTOMER_KEY = '@PFSLive:customer_app_id';
+const HAS_PARTICIPATED_KEY = 'analytics_has_participated';
+const HAS_USED_FOLLOWER_FEATURE_KEY = 'analytics_has_used_follower_feature';
 
 export const tokenService = {
   /**
@@ -87,4 +88,48 @@ export const tokenService = {
       return false;
     }
   },
+
+   /**
+   * Check if this user has ever completed a participant action
+   * (register / create event / start tracking).
+   */
+  async getHasParticipated(): Promise<boolean> {
+    try {
+      const value = await AsyncStorage.getItem(HAS_PARTICIPATED_KEY);
+      return value === 'true';
+    } catch (error) {
+      console.error('❌ Error reading hasParticipated:', error);
+      return false;
+    }
+  },
+
+  async setHasParticipated(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(HAS_PARTICIPATED_KEY, 'true');
+      console.log('✅ hasParticipated flag set');
+    } catch (error) {
+      console.error('❌ Error saving hasParticipated:', error);
+    }
+  },
+
+  async getHasUsedFollowerFeature(): Promise<boolean> {
+    try {
+      const value = await AsyncStorage.getItem(HAS_USED_FOLLOWER_FEATURE_KEY);
+      return value === 'true';
+    } catch (error) {
+      console.error('❌ Error reading hasUsedFollowerFeature:', error);
+      return false;
+    }
+  },
+
+  async setHasUsedFollowerFeature(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(HAS_USED_FOLLOWER_FEATURE_KEY, 'true');
+      console.log('✅ hasUsedFollowerFeature flag set');
+    } catch (error) {
+      console.error('❌ Error saving hasUsedFollowerFeature:', error);
+    }
+  },
+
+  
 };

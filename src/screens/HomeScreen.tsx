@@ -20,8 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Battery from 'expo-battery';
-
-// Local imports
+import { analyticsService } from '../services/analyticsService';
 import { HomeScreenProps } from '../types/navigation';
 import { AppHeader } from '../components/common/AppHeader';
 import { toastSuccess, toastError } from '../../utils/toast';
@@ -49,8 +48,6 @@ import FollowingLiveEventsSection from './FollowingLiveEventsSection';
 import { useDimensions } from '../hooks/useDimensions';
 import { FanEmailModal } from '../components/Fanemailmodal';
 import { fanEmailStorage } from '../utils/fanEmailStorage';
-
-// ==================== TYPES ====================
 
 interface StandardApiResponse<T = any> {
   success: boolean;
@@ -858,6 +855,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       }
 
       toastSuccess(t('home:tracking.gpsActivated'), message);
+      await analyticsService.markAsParticipant('start_tracking');
     } catch (error) {
       Alert.alert(
         t('common:errors.generic'),
