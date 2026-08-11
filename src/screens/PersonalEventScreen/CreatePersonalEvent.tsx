@@ -31,6 +31,7 @@ import { usePersonalEventForm } from '../../hooks/usePersonalEventForm';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useDimensions } from '../../hooks/useDimensions';
 import { tokenService } from '../../services/tokenService';
+import { analyticsService } from '../../services/analyticsService';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -233,6 +234,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
         toastSuccess(t('personal:success.title'), response.message || t('personal:success.message'));
         resetForm();
         clearFile();
+        await analyticsService.markAsParticipant('create_event'); 
         const customerId = await tokenService.getCustomerId();   // same method used in athleteProfileService.ts
         navigation.navigate('OwnProfile', {
             customer_app_id: customerId,

@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { analyticsService } from '../../services/analyticsService';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 
@@ -57,13 +58,13 @@ const DistanceTab = ({
       setResults(result.distances);
       // Results button/tab only when RR results are published (status 1) AND a URL exists.
       const canShowResults =
-          result.event?.show_results === 1;
+          result.event?.show_results === 0;
       
       setShowResults(canShowResults);
       onResultsAvailability?.(canShowResults);
 
       const canShowResultsStats =
-        result.event?.show_results === 1;
+        result.event?.show_results === 0;
       setShowResultsStats(canShowResultsStats);
 
       onRaceDateAvailable?.(result.event?.product_race_date ?? null);
@@ -186,15 +187,18 @@ const DistanceTab = ({
             {showResults && (
               <TouchableOpacity
                 style={detailsStyles.resultsButton}
-                onPress={() => navigation.navigate('ResultList', {
-                  product_app_id,
-                  product_option_value_app_id: Number(item.product_option_value_app_id),
-                  event_name: event_name,
-                  event_image: event_image,
-                  sourceScreen: 'FollowerDistanceScreen',
-                  sectionType: 'follower',
-                  sourceTab,
-                })}
+                  onPress={async () => {
+                    await analyticsService.markAsFollowerActive('view_result'); // ✅ added
+                    navigation.navigate('ResultList', {
+                      product_app_id,
+                      product_option_value_app_id: Number(item.product_option_value_app_id),
+                      event_name: event_name,
+                      event_image: event_image,
+                      sourceScreen: 'FollowerDistanceScreen',
+                      sectionType: 'follower',
+                      sourceTab,
+                    });
+                  }}
                 activeOpacity={0.8}
               >
                 <Text style={commonStyles.primaryButtonText}>
@@ -205,15 +209,18 @@ const DistanceTab = ({
             {isLiveOrUpcoming && (
               <TouchableOpacity
                 style={detailsStyles.routeButton}
-                onPress={() => navigation.navigate('LiveTracking', {
-                  product_app_id,
-                  product_option_value_app_id: item.product_option_value_app_id || '',
-                  event_name: event_name,
-                  event_image: event_image,
-                  sourceScreen: 'FollowerDistanceScreen',
-                  sectionType: 'follower',
-                  sourceTab,
-                })}
+                onPress={async () => {
+                  await analyticsService.markAsFollowerActive('view_live_route'); // ✅ added
+                  navigation.navigate('LiveTracking', {
+                    product_app_id,
+                    product_option_value_app_id: item.product_option_value_app_id || '',
+                    event_name: event_name,
+                    event_image: event_image,
+                    sourceScreen: 'FollowerDistanceScreen',
+                    sectionType: 'follower',
+                    sourceTab,
+                  });
+                }}
                 activeOpacity={0.8}
               >
                 <Text style={commonStyles.primaryButtonText}>

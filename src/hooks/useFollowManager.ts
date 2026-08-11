@@ -12,6 +12,7 @@ import {
 } from "../utils/followStorage";
 import { toastSuccess, toastError } from "../../utils/toast";
 import { followService } from "../services/followService";
+import { analyticsService } from "../services/analyticsService";
 
 interface UseFollowManagerResult {
   followedUsers: Set<number>;
@@ -227,6 +228,7 @@ export function useFollowManager(
         try {
           if (willFollow) {
             await followUser(numericId);
+            await analyticsService.markAsFollowerActive('follow_participant');
             toastSuccess(
               t("follower:success.followTitle"),
               t("follower:success.followMessage"),
@@ -330,6 +332,7 @@ export function useFollowManager(
         if (willFollow) {
           await smartFollow(productId, bib, customerAppId);
           onFollowSuccess?.();
+          await analyticsService.markAsFollowerActive('follow_participant');
           toastSuccess(
             t("follower:success.followTitle"),
             t("follower:success.followMessage"),

@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, ActivityIndicator } from 'react-native';
 import { RootStackParamList } from '../types/navigation';
+import { analyticsService } from '../services/analyticsService';
 
 // ✅ APP SCREENS
 import HomeScreen from '../screens/HomeScreen';
@@ -58,7 +59,10 @@ export const AppNavigator: React.FC = () => {
   const routeNameRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    tokenService.getToken().then(token => setIsLoggedIn(!!token));
+    tokenService.getToken().then(async (token) => {
+      setIsLoggedIn(!!token);
+      await analyticsService.initRole();
+    });
   }, []);
 
   const login  = useCallback(() => setIsLoggedIn(true),  []);
@@ -154,8 +158,7 @@ export const AppNavigator: React.FC = () => {
               <Stack.Screen name="RegisterScreen"        component={RegisterScreen}        options={noGesture} />
               <Stack.Screen name="OTPVerificationScreen" component={OTPVerificationScreen} options={noGesture} />
               <Stack.Screen name="EditProfileScreen"    component={EditProfileScreen}    options={noGesture} />
-              <Stack.Screen name="EditPersonalEvent"    component={EditPersonalEvent}    options={noGesture} />
-              
+              <Stack.Screen name="EditPersonalEvent"    component={EditPersonalEvent}    options={noGesture} /> 
               <Stack.Screen name="OwnProfile" component={OwnProfile} options={noGesture} />
               <Stack.Screen name="ContactFeedbackScreen" component={ContactFeedbackScreen} options={noGesture} />
             </>

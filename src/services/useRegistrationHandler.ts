@@ -13,6 +13,7 @@ import {
   clearPendingRegistration,
 } from '../hooks/usePendingRegistration';
 import { useAuth } from '../context/AuthContext'; // ✅ NEW
+import { analyticsService } from './analyticsService';
 
 interface UseRegistrationHandlerReturn {
   modalVisible: boolean;
@@ -494,6 +495,7 @@ const useRegistrationHandler = (
         setIsFirstTracking(0);
         await clearPendingRegistration();
         await invalidateEventCache();
+        await analyticsService.markAsParticipant('register');
         onSuccess?.(
           confirmItem.product_option_value_app_id,
           result.participant?.participant_app_id
