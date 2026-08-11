@@ -1212,8 +1212,6 @@ const _registerFgAppStateListener = (): void => {
       addLog('📱', 'App foregrounded — UI driven by Transistor onLocation');
     } else if (nextState === 'background') {
       addLog('🌙', 'App backgrounded — Transistor continues in background');
-    } else if (nextState === 'inactive') {
-      addLog('💤', 'App inactive (iOS transition)');
     }
   });
 };
@@ -2186,6 +2184,18 @@ const _rehydrateTrackingOnBoot = async (): Promise<void> => {
     } catch { /* silent */ }
   }
 };
+
+// ✅ Exported so the REOPEN path can run it too. The module-level call below
+// only fires on module evaluation, which does NOT happen on a warm reopen after
+// a swipe-away — the process (and this module) survive, so nothing re-runs it.
+// That left BackgroundGeolocation.ready() uncalled in the resumed context, and
+// ready() is required on EVERY launch before the SDK routes events into JS:
+// the engine kept recording to its own DB (getCount 154 → 163 across a silent
+// window, enabled:true moving:true) while no onLocation ever fired. Attaching
+// listeners cannot substitute for it. HomeScreen's restore awaits this before
+// attachUi. Safe to call repeatedly — ready({reset:false}) preserves the native
+// config, including any in-race finish-approach distanceFilter.
+export const rehydrateTracking = _rehydrateTrackingOnBoot;
 
 // Fire and forget — must not block bundle evaluation.
 _rehydrateTrackingOnBoot();

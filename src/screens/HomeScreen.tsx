@@ -30,7 +30,7 @@ import {
   gpsService, BACKGROUND_SENT_COUNT_KEY, RACE_FINISHED_KEY,
   ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry,
   startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive,
-  isTracking, getTrackingParams, stopWatching, attachUi, detachUi,
+  isTracking, getTrackingParams, stopWatching, attachUi, detachUi, rehydrateTracking,
   LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY, FINAL_SENT_COUNT_KEY,
 } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
@@ -1233,6 +1233,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           notificationTitle: t('home:tracking.backgroundNotificationTitle'),
           notificationBody: t('home:tracking.backgroundNotificationBody'),
         };
+
+        // ✅ Re-arm the SDK for THIS JS context before anything else. On a warm
+        // reopen after a swipe-away the gpsService module is not re-evaluated,
+        // so the module-level rehydrate never runs and ready() is never called
+        // here — the engine records to its own database and JS hears nothing.
+        // This is what actually restores delivery; re-registering listeners
+        // alone does not. It also re-attaches the listeners itself.
+        await rehydrateTracking();
 
         // Re-attach the foreground UI callback so live lat/lon updates resume
         // on this screen instance. Transistor's background sends continue
