@@ -8,13 +8,14 @@ module.exports = function withFirebaseDisableSPM(config) {
     (cfg) => {
       const podfilePath = path.join(cfg.modRequest.platformProjectRoot, 'Podfile');
       let podfile = fs.readFileSync(podfilePath, 'utf-8');
-      if (!podfile.includes('$RNFirebaseDisableSPM = true')) {
-        podfile =
-          '$RNFirebaseDisableSPM = true\n' +
-          '$RNFirebaseAsStaticFramework = true\n' +
-          podfile;
-        fs.writeFileSync(podfilePath, podfile);
+      let prefix = '';
+      if (!podfile.includes('$RNFirebaseDisableSPM')) {
+        prefix += '$RNFirebaseDisableSPM = true\n';
       }
+      if (!podfile.includes('$RNFirebaseAsStaticFramework')) {
+        prefix += '$RNFirebaseAsStaticFramework = true\n';
+      }
+      if (prefix) fs.writeFileSync(podfilePath, prefix + podfile);
       return cfg;
     },
   ]);
