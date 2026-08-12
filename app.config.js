@@ -137,7 +137,7 @@ export default ({ config }) => {
 
     // ✅ Plugins
     plugins: [
-      "@react-native-firebase/app",                    // ← ADD (first, before others that need it)
+      ["@react-native-firebase/app", { "ios": { "disableSPM": true } }],                    // ← ADD (first, before others that need it)
       ["@react-native-firebase/analytics", { "ios": { "withoutAdIdSupport": true } }],  // ← ADD (GDPR-friendly, no Ad ID)
       // ✅ Custom plugin — handles GPX share/view intent wiring for Android
       "./plugins/withGpxShareIntent",
@@ -202,7 +202,8 @@ export default ({ config }) => {
           sounds: [],
           mode: "production"
         }
-      ]
+      ],
+      "./plugins/withFirebaseDisableSPM",
     ],
 
     // ✅ Extra Configuration
