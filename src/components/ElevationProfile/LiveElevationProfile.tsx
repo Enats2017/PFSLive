@@ -13,6 +13,7 @@ interface LiveElevationProfileProps {
     aidStations: GPXAidStation[];
     apiCheckpoints: CheckpointData[];
     participants: ParticipantMapMarker[];
+    trainingFree?: boolean;
     totalDistance: number;
     minElevation: number;
     maxElevation: number;
@@ -25,6 +26,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     aidStations,
     apiCheckpoints,
     participants,
+    trainingFree,
     totalDistance,
     minElevation,
     maxElevation,
@@ -127,10 +129,22 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     const currDiff = Math.abs(curr.pt.x - p.distance_km);
                     return currDiff < prevDiff ? curr : prev;
                 });
-                return { x: best.pt.x, y: best.pt.y, participant: p };  // ✅ keep p
+
+                // Training: a fix the backend chose NOT to snap is genuinely off
+                // the line, so the nearest chart point is an arbitrary spot with no
+                // relation to where they are. On-route fixes are snapped to a real
+                // trackpoint and land within a metre or two, so they plot normally.
+                if (trainingFree) {
+                    const cosLat = Math.cos((p.lat * Math.PI) / 180) || 1e-6;
+                    const dE = (best.pt.lon - p.lon) * 111320 * cosLat;
+                    const dN = (best.pt.lat - p.lat) * 111320;
+                    if (Math.hypot(dE, dN) > 100) return null;   // metres
+                }
+
+                return { x: best.pt.x, y: best.pt.y, participant: p };
             })
             .filter((p): p is { x: number; y: number; participant: ParticipantMapMarker } => p !== null);
-    }, [participants, chartData]);
+    }, [participants, chartData, trainingFree]);
 
     // ✅ NEW: Auto-scroll to keep participant dot visible whenever their position changes
     React.useEffect(() => {

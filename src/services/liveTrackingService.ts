@@ -88,6 +88,12 @@ export interface LiveTrackingResponse {
         race_result_status?: number;
         show_results?: number;
         race_date?: string | null;
+        /**
+         * Training event (custom, event_type 3): free-form session. Distance is an
+         * odometer over the participant's own fixes, the GPX is a reference line
+         * only, and distance_to_finish_km / distance_to_next_cp are always null.
+         */
+        training_free?: boolean;
         product_race_date?: string | null;
         rr_url?: string;
     };

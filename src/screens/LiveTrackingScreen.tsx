@@ -59,6 +59,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [showResults, setShowResults] = useState(false);
     const [raceDate, setRaceDate] = useState<string | null>(null);
     const isRrActive = !isCustomEvent && showResults;
+    const [trainingFree, setTrainingFree] = useState(false);
     
 
     // ✅ Follower's own device location — plotted directly from GPS,
@@ -140,6 +141,11 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 p.distance_to_finish_km != null ? safeParseFloat(p.distance_to_finish_km) : null;
 
             if (remaining == null) {
+                // Training: there is no "remaining". total is the reference GPX
+                // length and covered is an odometer, so total − covered is
+                // meaningless — and lands in the 0-1km fast-refresh band exactly
+                // when the session passes the GPX length.
+                if (trainingFree) return false;
                 if (total <= 0) return false;
                 const covered = safeParseFloat(p.distance_covered_km);
                 if (covered <= 0) return false;
@@ -152,7 +158,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         },);
 
         return nearFinish ? FAST_REFRESH_MS : NORMAL_REFRESH_MS;
-    }, [participants, routeData?.totalDistance]);
+    }, [participants, routeData?.totalDistance, trainingFree]);
 
     // ✅ Follower's own position — watched on mount, never written to DB.
     // Uses Balanced accuracy (battery friendly) since precision isn't critical.
@@ -386,6 +392,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             
             setShowResults(canShowResults);
 
+            setTrainingFree(response?.data?.training_free === true);
+
             setLoading(false);
 
             setTimeout(() => {
@@ -593,6 +601,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                             aidStations={showCheckpoints ? (routeData?.aidStations ?? []) : []}
                             apiCheckpoints={showCheckpoints ? apiCheckpoints : []}
                             participants={showParticipants ? participantMarkers : []}
+                            trainingFree={trainingFree}
                             totalDistance={routeData?.totalDistance ?? 0}
                             minElevation={routeData?.minElevation ?? 0}
                             maxElevation={routeData?.maxElevation ?? 0}
