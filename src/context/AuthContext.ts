@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react';
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  login:  () => void;  // call after token saved
+  login: (userId: string) => void;  // call after token saved
   logout: () => void;  // call after token removed
 }
 

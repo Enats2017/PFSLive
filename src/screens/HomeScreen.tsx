@@ -48,6 +48,7 @@ import FollowingLiveEventsSection from './FollowingLiveEventsSection';
 import { useDimensions } from '../hooks/useDimensions';
 import { FanEmailModal } from '../components/Fanemailmodal';
 import { fanEmailStorage } from '../utils/fanEmailStorage';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../constants/analyticsScreens';
 
 interface StandardApiResponse<T = any> {
   success: boolean;
@@ -1328,6 +1329,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const localCustomerId = await tokenService.getCustomerId();
 
     if (alreadyPrompted || localCustomerId) {
+      analyticsService.logInteraction(ANALYTICS_SCREENS.HOME, ANALYTICS_BUTTONS.FAN_MODE);
       // Already asked once on this device — skip modal, go straight in
       navigation.navigate('FanScreen'); // swap for your real fan destination
       return;
@@ -1948,7 +1950,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={homeStyles.buttonContainer}>
           <TouchableOpacity
             style={homeStyles.button}
-            onPress={() => navigation.navigate('ParticipantScreen')}
+            onPress={ async ()  => {
+               await analyticsService.logInteraction(ANALYTICS_SCREENS.HOME, ANALYTICS_BUTTONS.PARTICIPANT_MODE); 
+              navigation.navigate('ParticipantScreen')}}
           >
             <Text style={homeStyles.buttonText}>{t('home:button.Participant')}</Text>
           </TouchableOpacity>

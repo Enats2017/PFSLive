@@ -62,10 +62,19 @@ export const AppNavigator: React.FC = () => {
     tokenService.getToken().then(async (token) => {
       setIsLoggedIn(!!token);
       await analyticsService.initRole();
+      if (token) {
+        const customerId = await tokenService.getCustomerId();
+        if (customerId) {
+          await analyticsService.setUserIdentity(String(customerId));
+        }
+      }
     });
   }, []);
 
-  const login  = useCallback(() => setIsLoggedIn(true),  []);
+  const login = useCallback(async (userId: string) => {
+    setIsLoggedIn(true);
+    await analyticsService.setUserIdentity(userId);
+  }, []);
   const logout = useCallback(() => setIsLoggedIn(false), []);
 
   if (isLoggedIn === null) {

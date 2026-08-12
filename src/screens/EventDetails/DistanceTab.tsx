@@ -31,6 +31,8 @@ import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import useGpxDownload from '../../hooks/useGpxDownload';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
 
 
 interface DistanceTabProps {
@@ -285,7 +287,9 @@ const DistanceTab = ({
           return;
         }
         downloadGpx(item);
+        analyticsService.logInteraction(ANALYTICS_SCREENS.EVENT_DETAILS, ANALYTICS_BUTTONS.DOWNLOAD_GPX);
       },
+      
       [downloadGpx, rrUrl]
     );
 
@@ -305,6 +309,7 @@ const handleExternalRegister = useCallback((url: string) => {
   // ✅ MAP CLICK HANDLER — open the live map for this distance
   const handleMapClick = useCallback(
     (item: Distance) => {
+      analyticsService.logInteraction(ANALYTICS_SCREENS.EVENT_DETAILS, ANALYTICS_BUTTONS.MAP);
       navigation.navigate('LiveTracking', {
         product_app_id: Number(product_app_id),
         product_option_value_app_id: Number(item.product_option_value_app_id),

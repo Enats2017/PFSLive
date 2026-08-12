@@ -69,7 +69,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
       if (response.success) {
         toastSuccess(t('login:success'), t('login:welcomeBack'));
-        login(); // ✅ flip isLoggedIn → auth screens unmount, protected screens mount
+        const customerId = response.data?.customer?.customer_app_id;
+        login(customerId ? String(customerId) : ''); // ✅ flip isLoggedIn → auth screens unmount, protected screens mount
         await handleAfterAuth();
       }
     } catch (error: any) {
