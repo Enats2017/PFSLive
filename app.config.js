@@ -202,7 +202,8 @@ export default ({ config }) => {
           sounds: [],
           mode: "production"
         }
-      ]
+      ],
+      "./plugins/withFirebaseDisableSPM",
     ],
 
     // ✅ Extra Configuration
