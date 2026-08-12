@@ -10,6 +10,8 @@ import { formatEventDate } from '../../utils/dateFormatter';
 import SearchInput from '../../components/SearchInput';
 import { API_CONFIG } from '../../constants/config';
 import ErrorScreen from '../../components/ErrorScreen';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 interface PastTabProps {
     events: EventItem[];
@@ -165,14 +167,23 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         marginBottom: spacing.md,
                     },
                 ]}
-                onPress={() =>
+                onPress={ async () => {
+                    analyticsService.logInteraction(
+                        ANALYTICS_SCREENS.EVENT_LIST,
+                        ANALYTICS_BUTTONS.PAST_EVENT,
+                        'tap',
+                        {
+                            [ANALYTICS_PARAMS.EVENT_NAME]: item.name, 
+                            [ANALYTICS_PARAMS.TAB_NAME]: 'past',
+                        }
+                    );
                     navigation.navigate('RaceResultScreen', {
                         product_app_id: Number(item.product_app_id),
                         event_name: item.name,
                         event_image: item.event_image ?? '',
                         sourceTab: 'past',
                     })
-                }
+                }}
                 activeOpacity={0.8}
             >
                 <View style={eventStyles.eventCardInfo}>
@@ -187,14 +198,15 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
                 <TouchableOpacity
                     style={eventStyles.iconButtonBlue}
-                    onPress={() =>
+                    onPress={ async () => {
+                        await analyticsService.logInteraction(ANALYTICS_SCREENS.EVENT_LIST, ANALYTICS_BUTTONS.PAST_EVENT);
                         navigation.navigate('RaceResultScreen', {
                             product_app_id: item.product_app_id,
                             event_name: item.name,
                             event_image: item.event_image ?? '',
                             sourceTab: 'past',
                         })
-                    }
+                    }}
                     activeOpacity={0.8}
                 >
                     <Ionicons name="bar-chart-outline" size={23} color={colors.primaryDark} />

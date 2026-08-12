@@ -7,6 +7,8 @@ import { RaceResult } from '../../services/resultList';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../styles/common.styles';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
 
 interface ResultCardBeforeRaceProps {
     item: RaceResult;
@@ -18,6 +20,7 @@ interface ResultCardBeforeRaceProps {
     raceStatus: string;
     currentPovId: number;
     isWomen?: boolean;
+    analyticsScreenName: string;
 }
 
 const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
@@ -29,7 +32,8 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
     showUtmbIndex,
     raceStatus,
     currentPovId,
-    isWomen
+    isWomen,
+    analyticsScreenName,
 }) => {
     const { t } = useTranslation(['allrace', 'common']);
     const navigation = useNavigation<any>();
@@ -43,6 +47,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
         Number(item.utmb_index) !== 0;
 
     const handlePress = () => {
+         analyticsService.logInteraction(analyticsScreenName, ANALYTICS_BUTTONS.PARTICIPANT_PROFILE);
         navigation.navigate('ResultDetails', {
             product_app_id,
             product_option_value_app_id: Number(currentPovId),

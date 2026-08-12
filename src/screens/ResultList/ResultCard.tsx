@@ -8,6 +8,8 @@ import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { colors } from '../../styles/common.styles';
 import { FilterOption } from '../../components/FilterDropdown';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
 
 interface ResultCardProps {
     item: RaceResult;
@@ -21,6 +23,7 @@ interface ResultCardProps {
     isWomen?: boolean;
     showUtmbIndex: boolean;
     selectedCheckpoint?: FilterOption | null;
+    analyticsScreenName: string;
 }
 
 const ResultCard: React.FC<ResultCardProps> = memo(({
@@ -35,6 +38,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     isWomen,
     showUtmbIndex,
     selectedCheckpoint,
+    analyticsScreenName,
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
@@ -69,13 +73,14 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     selectedCp?.name || item.category_name;
 
     const handleCardPress = useCallback(() => {
+        analyticsService.logInteraction(analyticsScreenName, ANALYTICS_BUTTONS.PARTICIPANT_PROFILE);
         navigation.navigate('ResultDetails', {
             product_app_id,
             product_option_value_app_id: Number(currentPovId),
             bib: item.bib,
             raceStatus
         });
-    }, [navigation, item.customer_app_id]);
+    }, [navigation, item.customer_app_id, analyticsScreenName]);
 
     const handleStarPress = useCallback(() => {
         if (!isLoading) onToggleFollow();

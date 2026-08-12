@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 interface FanEventCardProps {
     item: ParticipantItem;
@@ -131,11 +133,19 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                 <TouchableOpacity
                     style={[commonStyles.favoriteButton, { borderRadius: 0 }]}
                     activeOpacity={0.8}
-                    onPress={() =>
+                    onPress={ async () => {
+                        await analyticsService.logInteraction(
+                            ANALYTICS_SCREENS.PARTICIPANT_LIST,
+                            ANALYTICS_BUTTONS.VIEW_PROFILE,
+                            'tap',
+                            {
+                                [ANALYTICS_PARAMS.PARTICIPANT_ID]: item.customer_app_id,
+                            }
+                        );
                         navigation.navigate('ProfileScreen', {
                             customer_app_id: item.customer_app_id,
                         })
-                    }
+                    }}
                 >
                     <Text style={commonStyles.primaryButtonText}>
                         {t('follower:button.viewprofile')}

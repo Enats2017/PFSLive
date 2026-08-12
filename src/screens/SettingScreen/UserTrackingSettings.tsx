@@ -13,6 +13,8 @@ import { styles } from '../../styles/liveTrackingSettings.styles';
 import { LanguageSelector, LanguageOption, LANGUAGE_OPTIONS } from './LanguageSelector';
 import { saveLanguage, getLanguageCodeFromId } from '../../i18n';
 import { useLanguageStore } from '../../store/useLanguageStore';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
 
 type Visibility = 'public' | 'private';
 
@@ -121,6 +123,12 @@ export const UserTrackingSettings: React.FC = () => {
             );
             syncState(settings);
             syncLanguage(languageId);
+            analyticsService.logInteraction(
+                ANALYTICS_SCREENS.TRACKING_SETTINGS,
+                ANALYTICS_BUTTONS.VISIBILITY_SAVE,
+                'submit',
+                { visibility: vis } // 'public' or 'private'
+            );
             toastSuccess(t('setting:liveTrackingSettings.toastSuccess'));
             return true;
         } catch (e: any) {

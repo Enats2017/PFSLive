@@ -25,7 +25,7 @@ export const analyticsService = {
     const hasParticipated = await tokenService.getHasParticipated();
     const hasUsedFollowerFeature =
       await tokenService.getHasUsedFollowerFeature(); // ✅ added
-    const role = computeCategory(hasParticipated, hasUsedFollowerFeature); // ✅ changed
+    const role = computeCategory(hasParticipated, hasUsedFollowerFeature); //changed
     await setUserProperty(analytics, "user_role", role);
     console.log("📊 [Analytics] initRole → user_role set to:", role);
     return role;
@@ -57,13 +57,24 @@ export const analyticsService = {
     console.log(
       "📊 [Analytics] User upgraded to",
       role,
-      "via:", // ✅ changed to show real role (could be "both")
+      "via:", // changed to show real role (could be "both")
       sourceAction,
     );
 
     await logEvent(analytics, "became_participant", {
       source_action: sourceAction,
     });
+  },
+
+  async logInteraction(
+    screenName: string,
+    buttonName: string,
+    action: string = 'tap',
+    extraParams?: Record<string, string | number | boolean>
+  ) {
+    const eventName = `${screenName}_${buttonName}_${action}`;
+    await logEvent(analytics, eventName, extraParams);
+    console.log('📊 [Analytics] Interaction logged:', eventName, extraParams ?? '');
   },
 
   // ✅ NEW — call when a user genuinely uses a follower feature

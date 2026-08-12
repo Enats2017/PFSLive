@@ -7,6 +7,8 @@ import { detailsStyles } from '../../styles/details.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 
 interface ParticipantCardProps {
@@ -65,6 +67,14 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
 
   // Navigate to ResultDetails (race_result participants)
   const goToResults = () => {
+     analyticsService.logInteraction(
+      ANALYTICS_SCREENS.PARTICIPANT_LIST,
+      ANALYTICS_BUTTONS.PARTICIPANT_PROFILE,
+      'tap',
+      {
+        [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib_number,
+      }
+    );
     navigation.navigate('ResultDetails', {
       raceStatus: item.race_status,
       product_app_id,
@@ -76,6 +86,14 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
 
   // Navigate to ProfileScreen (local participants)
   const goToProfile = () => {
+     analyticsService.logInteraction(
+        ANALYTICS_SCREENS.PARTICIPANT_LIST,
+        ANALYTICS_BUTTONS.VIEW_PROFILE,
+        'tap',
+        {
+           [ANALYTICS_PARAMS.PARTICIPANT_ID]: item.customer_app_id ?? 0,
+        }
+    );
     navigation.navigate('ProfileScreen', {
       customer_app_id: item.customer_app_id,
     });

@@ -11,6 +11,8 @@ import { EventItem } from '../../services/eventService';
 import { formatEventDate } from '../../utils/dateFormatter';
 import { API_CONFIG } from '../../constants/config';
 import ErrorScreen from '../../components/ErrorScreen';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 interface UpcomingTabProps {
     events: EventItem[];
@@ -58,7 +60,16 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                         marginBottom: spacing.md,
                     },
                 ]}
-                onPress={() =>
+                onPress={ async () => {
+                    await analyticsService.logInteraction(
+                        ANALYTICS_SCREENS.EVENT_LIST,
+                        ANALYTICS_BUTTONS.UPCOMING_EVENT,
+                        'tap',
+                        {
+                            [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
+                            [ANALYTICS_PARAMS.TAB_NAME]: 'upcoming', 
+                        }
+                    );
                     navigation.navigate('EventDetails', {
                         product_app_id: Number(item.product_app_id),
                         event_name: item.name,
@@ -66,7 +77,7 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                         auto_register_id: null,
                         
                     })
-                }
+                }}
                 activeOpacity={0.8}
             >
                 <View style={eventStyles.eventCardInfo}>
@@ -82,14 +93,23 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                 {/* Eye icon button - dark blue */}
                 <TouchableOpacity
                     style={eventStyles.iconButtonBlue}
-                    onPress={() =>
+                    onPress={ async () => {
+                        await analyticsService.logInteraction(
+                            ANALYTICS_SCREENS.EVENT_LIST,
+                            ANALYTICS_BUTTONS.UPCOMING_EVENT,
+                            'tap',
+                            {
+                                [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
+                                [ANALYTICS_PARAMS.TAB_NAME]: 'upcoming', 
+                            }
+                        );
                         navigation.navigate('EventDetails', {
                             product_app_id: item.product_app_id,
                             event_name: item.name,
                             event_image: item.event_image ?? '',
                             auto_register_id: null,
                         })
-                    }
+                    }}
                     activeOpacity={0.8}
                 >
                     <Ionicons name="eye-outline" size={23} color={colors.primaryDark} />

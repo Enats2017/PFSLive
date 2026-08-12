@@ -8,6 +8,8 @@ import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { colors } from '../../styles/common.styles';
 import { formatClockTime } from '../../utils/timeFormat';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
 
 interface ResultCardLiveProps {
     item: RaceResult;
@@ -22,6 +24,7 @@ interface ResultCardLiveProps {
     showUtmbIndex?: boolean;
     isCheckpointMode?: boolean;              // true when a checkpoint is selected in the dropdown
     selectedCheckpointIndex?: number | null; // index into the no-START checkpoints array
+    analyticsScreenName: string;
 }
 
 const getActiveCheckpoints = (checkpoints: RaceResult['checkpoints']) => {
@@ -64,6 +67,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     showUtmbIndex,
     isCheckpointMode = false,
     selectedCheckpointIndex = null,
+    analyticsScreenName,
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
@@ -104,6 +108,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     const badgeNumber = item.position.replace('.', '');
 
     const handleCardPress = useCallback(() => {
+        analyticsService.logInteraction(analyticsScreenName, ANALYTICS_BUTTONS.PARTICIPANT_PROFILE);
         navigation.navigate('ResultDetails', {
             product_app_id,
             product_option_value_app_id: Number(currentPovId),

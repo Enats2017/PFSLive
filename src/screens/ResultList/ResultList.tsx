@@ -26,6 +26,7 @@ import ResultCardBeforeRace from './ResultCardBeforeRace';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useDimensions } from '../../hooks/useDimensions';
+import {  ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 const StatItem = ({ label, value, highlight }: { label: string; value: number | string; highlight?: boolean }) => (
     <View style={resultListStyle.statItem}>
@@ -117,6 +118,10 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         followedBibs
     );
 
+    const resultListScreenName = sectionType === 'follower'
+    ? ANALYTICS_SCREENS.FOLLOWER_RESULT_LIST
+    : ANALYTICS_SCREENS.RESULT_LIST;
+
     const renderItem = useCallback(({ item }: { item: RaceResult }) => {
         const commonProps = {
             item,
@@ -130,6 +135,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 password_protected: item.password_protected ?? 0,
                 bib_number: item.bib,
             }),
+            analyticsScreenName: resultListScreenName,
         };
 
         if (raceStatus === 'not_started' || (raceStatus === 'in_progress' && raceProgressStatus === 'not_started')) {
@@ -173,7 +179,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         isFollowed, isLoading, handleFollowPress,
         raceStatus, raceProgressStatus, sourceTab, fromLive,
         product_app_id, currentPovId, showUtmbIndex, selectedCategory,
-        selectedCheckpoint, selectedCheckpoint
+        selectedCheckpoint, selectedCheckpoint, resultListScreenName
     ]);
 
     const ListFooter = useCallback(() =>

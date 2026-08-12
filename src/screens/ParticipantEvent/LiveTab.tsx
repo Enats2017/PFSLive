@@ -11,6 +11,8 @@ import { EventItem } from '../../services/eventService';
 import { formatEventDate } from '../../utils/dateFormatter';
 import { API_CONFIG } from '../../constants/config';
 import ErrorScreen from '../../components/ErrorScreen';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 interface LiveTabProps {
     events: EventItem[];
@@ -58,14 +60,23 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         marginBottom: spacing.md,
                     },
                 ]}
-                onPress={() =>
+                onPress={async () => {
+                    analyticsService.logInteraction(
+                        ANALYTICS_SCREENS.EVENT_LIST,
+                        ANALYTICS_BUTTONS.LIVE_EVENT,
+                        'tap',
+                        {
+                            [ANALYTICS_PARAMS.EVENT_NAME]: item.name, 
+                            [ANALYTICS_PARAMS.TAB_NAME]: 'live',
+                        }
+                    );
                     navigation.navigate('EventDetails', {
                         product_app_id: Number(item.product_app_id),
                         event_name: item.name,
                         event_image: item.event_image ?? '',
                         auto_register_id: null,
-                    })
-                }
+                    });
+                }}
                 activeOpacity={0.8}
             >
                 <View style={eventStyles.eventCardInfo}>
@@ -80,14 +91,23 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
                 <TouchableOpacity
                     style={eventStyles.iconButtonBlue}
-                    onPress={() =>
+                    onPress={ async () => {
+                        analyticsService.logInteraction(
+                        ANALYTICS_SCREENS.EVENT_LIST,
+                        ANALYTICS_BUTTONS.LIVE_EVENT,
+                        'tap',
+                        {
+                            [ANALYTICS_PARAMS.EVENT_NAME]: item.name, 
+                            [ANALYTICS_PARAMS.TAB_NAME]: 'live',
+                        }
+                    );
                         navigation.navigate('EventDetails', {
                             product_app_id: item.product_app_id,
                             event_name: item.name,
                             event_image: item.event_image ?? '',
                             auto_register_id: null,
                         })
-                    }
+                    }}
                     activeOpacity={0.8}
                 >
                     <Ionicons name="eye-outline" size={23} color={colors.primaryDark} />
