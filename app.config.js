@@ -145,7 +145,7 @@ export default ({ config }) => {
         "expo-build-properties",
         {
           ios: {
-            useFrameworks: "static"      // ← ADD: required by Firebase (and compatible with Mapbox)
+            useFrameworks: "dynamic"      // ← ADD: required by Firebase (and compatible with Mapbox)
           },
           android: {
             usesCleartextTraffic: process.env.EXPO_PUBLIC_ENV !== "production",  // ⚠️ Remove before production
