@@ -112,15 +112,19 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
             analyticsScreenName,
             ANALYTICS_BUTTONS.PARTICIPANT_PROFILE,
             'tap',
-            { [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib }
+            { [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib },
         );
+
+        // ADD
+        void analyticsService.markAsFollowerActive('view_result');
+
         navigation.navigate('ResultDetails', {
             product_app_id,
             product_option_value_app_id: Number(currentPovId),
             bib: item.bib,
             raceStatus
         });
-    }, [navigation, product_app_id, currentPovId, item.bib, raceStatus]);
+    }, [navigation, product_app_id, currentPovId, item.bib, raceStatus, analyticsScreenName]);
 
     const hasUtmbIndex = showUtmbIndex &&
         item.utmb_index &&

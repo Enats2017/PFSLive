@@ -308,8 +308,15 @@ const handleExternalRegister = useCallback((url: string) => {
 
   // ✅ MAP CLICK HANDLER — open the live map for this distance
   const handleMapClick = useCallback(
-    (item: Distance) => {
-      analyticsService.logInteraction(ANALYTICS_SCREENS.EVENT_DETAILS, ANALYTICS_BUTTONS.MAP);
+    async (item: Distance) => {
+      analyticsService.logInteraction(
+        ANALYTICS_SCREENS.EVENT_DETAILS,
+        ANALYTICS_BUTTONS.MAP,
+      );
+
+      // ADD — watching a live map is a follower action
+      await analyticsService.markAsFollowerActive('view_live_route');
+
       navigation.navigate('LiveTracking', {
         product_app_id: Number(product_app_id),
         product_option_value_app_id: Number(item.product_option_value_app_id),
@@ -319,7 +326,7 @@ const handleExternalRegister = useCallback((url: string) => {
         sourceTab: 'live',
       });
     },
-    [navigation, product_app_id, event_name]
+    [navigation, product_app_id, event_name],
   );
 
   // ✅ UNDO HANDLER

@@ -199,7 +199,15 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 <TouchableOpacity
                     style={eventStyles.iconButtonBlue}
                     onPress={ async () => {
-                        await analyticsService.logInteraction(ANALYTICS_SCREENS.EVENT_LIST, ANALYTICS_BUTTONS.PAST_EVENT);
+                        await analyticsService.logInteraction(
+                            ANALYTICS_SCREENS.EVENT_LIST,
+                            ANALYTICS_BUTTONS.PAST_EVENT,
+                            'tap',
+                            {
+                                [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
+                                [ANALYTICS_PARAMS.TAB_NAME]: 'past',
+                            },
+                        );
                         navigation.navigate('RaceResultScreen', {
                             product_app_id: item.product_app_id,
                             event_name: item.name,

@@ -47,14 +47,16 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
         Number(item.utmb_index) !== 0;
 
     const handlePress = () => {
-         analyticsService.logInteraction(
+        analyticsService.logInteraction(
             analyticsScreenName,
             ANALYTICS_BUTTONS.PARTICIPANT_PROFILE,
             'tap',
-            {
-                [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib,
-            }
+            { [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib },
         );
+
+        // ADD
+        void analyticsService.markAsFollowerActive('view_result');
+        
         navigation.navigate('ResultDetails', {
             product_app_id,
             product_option_value_app_id: Number(currentPovId),

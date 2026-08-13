@@ -19,6 +19,7 @@ import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 
@@ -188,6 +189,10 @@ const DistanceTab = ({
               <TouchableOpacity
                 style={detailsStyles.resultsButton}
                   onPress={async () => {
+                    analyticsService.logInteraction(
+                      ANALYTICS_SCREENS.EVENT_DETAILS,
+                      ANALYTICS_BUTTONS.RESULT,
+                    );
                     await analyticsService.markAsFollowerActive('view_result'); // ✅ added
                     navigation.navigate('ResultList', {
                       product_app_id,
@@ -210,6 +215,10 @@ const DistanceTab = ({
               <TouchableOpacity
                 style={detailsStyles.routeButton}
                 onPress={async () => {
+                  analyticsService.logInteraction(
+                    ANALYTICS_SCREENS.EVENT_DETAILS,
+                    ANALYTICS_BUTTONS.MAP,
+                  );
                   await analyticsService.markAsFollowerActive('view_live_route'); // ✅ added
                   navigation.navigate('LiveTracking', {
                     product_app_id,
