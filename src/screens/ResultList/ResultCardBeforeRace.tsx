@@ -8,7 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../styles/common.styles';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
+import { ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 interface ResultCardBeforeRaceProps {
     item: RaceResult;
@@ -47,7 +47,14 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
         Number(item.utmb_index) !== 0;
 
     const handlePress = () => {
-         analyticsService.logInteraction(analyticsScreenName, ANALYTICS_BUTTONS.PARTICIPANT_PROFILE);
+         analyticsService.logInteraction(
+            analyticsScreenName,
+            ANALYTICS_BUTTONS.PARTICIPANT_PROFILE,
+            'tap',
+            {
+                [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib,
+            }
+        );
         navigation.navigate('ResultDetails', {
             product_app_id,
             product_option_value_app_id: Number(currentPovId),

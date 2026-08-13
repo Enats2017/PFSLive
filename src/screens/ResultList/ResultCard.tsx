@@ -9,7 +9,7 @@ import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { colors } from '../../styles/common.styles';
 import { FilterOption } from '../../components/FilterDropdown';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
+import { ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 interface ResultCardProps {
     item: RaceResult;
@@ -73,7 +73,14 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     selectedCp?.name || item.category_name;
 
     const handleCardPress = useCallback(() => {
-        analyticsService.logInteraction(analyticsScreenName, ANALYTICS_BUTTONS.PARTICIPANT_PROFILE);
+       analyticsService.logInteraction(
+            analyticsScreenName,
+            ANALYTICS_BUTTONS.PARTICIPANT_PROFILE,
+            'tap',
+            {
+                [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib,
+            }
+        );
         navigation.navigate('ResultDetails', {
             product_app_id,
             product_option_value_app_id: Number(currentPovId),
