@@ -82,7 +82,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 
         // ADD
         void analyticsService.markAsFollowerActive('view_result');
-
+        
         navigation.navigate('ResultDetails', {
             product_app_id,
             product_option_value_app_id: Number(currentPovId),

@@ -190,10 +190,10 @@ const DistanceTab = ({
                 style={detailsStyles.resultsButton}
                   onPress={async () => {
                     analyticsService.logInteraction(
-                      ANALYTICS_SCREENS.EVENT_DETAILS,
+                      ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,      // was: not logged
                       ANALYTICS_BUTTONS.RESULT,
                     );
-                    await analyticsService.markAsFollowerActive('view_result'); // ✅ added
+                    void analyticsService.markAsFollowerActive('view_result');   // was: await
                     navigation.navigate('ResultList', {
                       product_app_id,
                       product_option_value_app_id: Number(item.product_option_value_app_id),
@@ -216,10 +216,10 @@ const DistanceTab = ({
                 style={detailsStyles.routeButton}
                 onPress={async () => {
                   analyticsService.logInteraction(
-                    ANALYTICS_SCREENS.EVENT_DETAILS,
-                    ANALYTICS_BUTTONS.MAP,
+                    ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,      // was: EVENT_DETAILS
+                    ANALYTICS_BUTTONS.ROUTE,                       // was: MAP
                   );
-                  await analyticsService.markAsFollowerActive('view_live_route'); // ✅ added
+                  void analyticsService.markAsFollowerActive('view_live_route');  // was: await
                   navigation.navigate('LiveTracking', {
                     product_app_id,
                     product_option_value_app_id: item.product_option_value_app_id || '',

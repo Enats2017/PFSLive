@@ -310,12 +310,11 @@ const handleExternalRegister = useCallback((url: string) => {
   const handleMapClick = useCallback(
     async (item: Distance) => {
       analyticsService.logInteraction(
-        ANALYTICS_SCREENS.EVENT_DETAILS,
+        ANALYTICS_SCREENS.EVENT_DETAILS,     // correct as is — participant side
         ANALYTICS_BUTTONS.MAP,
       );
 
-      // ADD — watching a live map is a follower action
-      await analyticsService.markAsFollowerActive('view_live_route');
+      void analyticsService.markAsFollowerActive('view_live_route');  // was: await
 
       navigation.navigate('LiveTracking', {
         product_app_id: Number(product_app_id),

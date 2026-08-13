@@ -2,6 +2,11 @@ export const ANALYTICS_SCREENS = {
   HOME: 'home',
   EVENT_LIST: 'event_list',
   EVENT_DETAILS: 'event_details',
+  // Follower-side event details. Without this, a live-map view from the
+  // follower section and one from the participant section both report as
+  // `event_details` and can't be told apart — same reason RESULT_LIST and
+  // FOLLOWER_RESULT_LIST are separate.
+  FOLLOWER_EVENT_DETAILS: 'follower_event_details',
   FOLLOWER_EVENT_LIST: 'follower_event_list',
   RESULT_LIST: 'result_list',
   FOLLOWER_RESULT_LIST: 'follower_result_list',
