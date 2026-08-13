@@ -19,6 +19,7 @@ import { UserFavouriteListpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useDimensions } from '../../hooks/useDimensions';
+import { analyticsService } from '../../services/analyticsService';
 
 interface PaginationState {
     page: number;
@@ -101,6 +102,11 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
                 });
                 setSearchResults(result.favourites);
                 setSearchPagination({ page: 1, total_pages: result.pagination.total_pages });
+
+                // One event per completed search — inside the debounce, after
+                // results resolve. Not per keystroke, not on pagination.
+                // Count only, never the query text (unbounded cardinality).
+                void analyticsService.logSearchPerformed('favourite', result.favourites.length);
             } catch (err) {
                 console.error('❌ Favourites search failed:', err);
             } finally {

@@ -5,6 +5,7 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { followerApi } from "../services/registerFollowerServices";
 import { API_CONFIG } from "../constants/config";
+import { analyticsService } from "../services/analyticsService";
 
 const EXPO_TOKEN_STORAGE_KEY = "expo_push_token";
 const FOLLOWER_ID_KEY = "FOLLOWER_ID";
@@ -118,6 +119,12 @@ async function registerForPushNotifications(): Promise<string | null> {
         console.log(`📱 ${Platform.OS} notification permission: ${status}`);
       }
     }
+
+    // The prompt has just resolved, so refresh the stored permission properties
+    // now rather than waiting for the next app foreground. Deliberately placed
+    // BEFORE the early return so it runs on the denied path too — a denial is
+    // the more interesting datapoint of the two.
+    void analyticsService.syncPermissionProperties();
 
     if (finalStatus !== "granted") {
       if (API_CONFIG.DEBUG) {
@@ -249,6 +256,17 @@ export function useNotifications(): UseNotificationsReturn {
     if (API_CONFIG.DEBUG) {
       console.log(`👆 ${Platform.OS} notification tapped:`, { title, data });
     }
+
+    // Logged BEFORE the handler guard below: the user tapped regardless of
+    // whether a tap handler happens to be registered, and taps that arrive with
+    // no handler (or an incomplete payload) are exactly the ones worth seeing in
+    // the data — they're the ones that silently go nowhere.
+    //
+    // Only fires from the RESPONSE listener, so this genuinely means "opened the
+    // app from a notification", not "received one". `type` is 'checkpoint' or
+    // 'finish' per NotificationData, both low-cardinality and safe as a
+    // registered dimension.
+    void analyticsService.logNotificationOpened(data?.type ?? "unknown");
 
     if (data?.race_id && data?.event_name && onNotificationTapRef.current) {
       onNotificationTapRef.current(data as NotificationData);

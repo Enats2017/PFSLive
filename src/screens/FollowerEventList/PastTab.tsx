@@ -56,6 +56,15 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     page: 1,
                     total_pages: result.pagination?.past?.total_pages ?? 1,
                 });
+
+                // ✅ Fires ONCE per completed search — inside the debounce, after
+                // results resolve. Not per keystroke. Page 2+ (loadMoreSearchResults)
+                // deliberately does NOT fire this: that's pagination of the same
+                // search, and logging there would multiply one search into several
+                // events. Only the result COUNT is sent, never the query text —
+                // free text is unbounded and would blow GA4's cardinality limit.
+                void analyticsService.logSearchPerformed('event', result.tabs.past.length);
+
                 console.log('Past search page 1 loaded, total_pages:', result.pagination?.past?.total_pages);
             } catch (error) {
                 console.log('❌ Search failed:', error);
@@ -149,8 +158,8 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         marginBottom: spacing.md,
                     },
                 ]}
-                onPress={ async () => {
-                     await analyticsService.logInteraction(
+                onPress={async () => {
+                    await analyticsService.logInteraction(
                         ANALYTICS_SCREENS.FOLLOWER_EVENT_LIST,
                         ANALYTICS_BUTTONS.PAST_EVENT,
                         'tap',
@@ -181,8 +190,8 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 {/* Eye icon button - dark blue */}
                 <TouchableOpacity
                     style={eventStyles.iconButtonBlue}
-                    onPress={ async () => {
-                         await analyticsService.logInteraction(
+                    onPress={async () => {
+                        await analyticsService.logInteraction(
                             ANALYTICS_SCREENS.FOLLOWER_EVENT_LIST,
                             ANALYTICS_BUTTONS.PAST_EVENT,
                             'tap',
@@ -228,7 +237,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         ? t('event:empty.searchNoResults')
                         : t('event:empty.past')
                 }
-                message="" // ← empty string hides message, or add a subtitle if you want
+                message=""
                 onRetry={() => { }}
             />
         ),

@@ -857,6 +857,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       toastSuccess(t('home:tracking.gpsActivated'), message);
       await analyticsService.markAsParticipant('start_tracking');
+      // Records its own start timestamp, so duration is computed by the service
+      // and doesn't depend on gpsService session state.
+      void analyticsService.logTrackingStarted({
+        eventId,
+        manualStart: raceData?.manual_start === 1,
+        intervalSeconds: trackingParamsRef.current?.intervalSeconds,
+      });
     } catch (error) {
       Alert.alert(
         t('common:errors.generic'),
@@ -1062,6 +1069,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       })
     );
     
+    // Both actualSentCount and remaining are final at this point (post-drain,
+    // post-fallback reads). On a background finish this is usually a no-op:
+    // gpsService.finishBackgroundStop already consumed the session token.
+    void analyticsService.logTrackingCompleted({
+      endReason: raceAlreadyFinished ? 'finish_crossed' : 'manual_stop',
+      pointsSent: actualSentCount,
+      queuedRemaining: remaining,
+    });
+
     AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => { });
     AsyncStorage.removeItem(FINAL_SENT_COUNT_KEY).catch(() => { });
     setLocationUpdateCount(0);

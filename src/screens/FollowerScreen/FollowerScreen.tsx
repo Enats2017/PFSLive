@@ -26,6 +26,7 @@ import useSearchSuggestions from '../../hooks/useSearchSuggestions';
 import { eventService, ParticipantItem } from '../../services/followerEvent';
 import AthleteSuggestionDropdown from '../../components/AthleteSuggestionDropdown';
 import { useDimensions } from '../../hooks/useDimensions';
+import { analyticsService } from '../../services/analyticsService';
 
 const Divider = () => (
     <View style={follow.dividerRow}>
@@ -120,8 +121,14 @@ const FollowerScreen = () => {
                     page_participant: 1,
                     filter_name_participant: text.trim(),
                 });
-                setAthleteSuggestions(result.participants || []);
+                const found = result.participants || [];
+                setAthleteSuggestions(found);
                 setAthletePage(1);
+
+                // One event per completed search — inside the debounce, after
+                // results resolve. Not per keystroke, not on pagination.
+                // Count only, never the query text (unbounded cardinality).
+                void analyticsService.logSearchPerformed('athlete', found.length);
                 setAthleteTotalPages(result.pagination?.participants?.total_pages ?? 0);
             } catch {
                 setAthleteSuggestions([]);

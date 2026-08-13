@@ -21,6 +21,7 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { AppHeader } from '../../components/common/AppHeader';
 import { useDimensions } from '../../hooks/useDimensions';
+import { analyticsService } from '../../services/analyticsService';
 
 const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation }) => {
     const { product_app_id, product_option_value_app_id, raceStatus } = route.params;
@@ -92,6 +93,21 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
 
                 setPage(pageNum);
                 setTotalPages(result.pagination.total_pages);
+
+                // Fires ONCE per completed search. fetchParticipants is shared by
+                // three callers, so both guards matter:
+                //   pageNum === 1   → excludes pagination (same search, more pages)
+                //   search non-empty → excludes the initial useFocusEffect load,
+                //                      which calls fetchParticipants(1, '')
+                // Sends pagination.total (all matches), not participants.length,
+                // which is capped at one page. Never the query text — free text is
+                // unbounded and would blow GA4's cardinality limit.
+                if (pageNum === 1 && search.trim().length > 0) {
+                    void analyticsService.logSearchPerformed(
+                        'participant',
+                        result.pagination.total ?? result.participants.length,
+                    );
+                }
 
                 if (API_CONFIG.DEBUG) {
                     console.log(`📄 Page ${pageNum}/${result.pagination.total_pages} | Total: ${result.pagination.total}`);

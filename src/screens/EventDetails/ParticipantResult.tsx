@@ -17,6 +17,7 @@ import { commonStyles, spacing, colors } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
+import { analyticsService } from '../../services/analyticsService';
 import ConfirmRaceResultModal from './ConfirmRaceResultModal';
 import ErrorModal from '../../components/ErrorModal';
 import { participantService, Participant } from '../../services/participantService';
@@ -126,6 +127,19 @@ const ParticipantResult = () => {
 
         setPage(pageNum);
         setTotalPages(result.pagination.total_pages);
+
+        // Guarded because fetchParticipants is shared by the initial load, the
+        // search, and pagination:
+        //   pageNum === 1    -> excludes pagination (same search, more pages)
+        //   search non-empty -> excludes the mount-time fetchParticipants(1, '')
+        // Sends pagination.total (all matches), not participants.length, which is
+        // capped at one page. Never the query text.
+        if (pageNum === 1 && search.trim().length > 0) {
+          void analyticsService.logSearchPerformed(
+            'participant',
+            result.pagination.total ?? result.participants.length,
+          );
+        }
       } catch (err: any) {
         if (pageNum === 1) handleApiError(err);
       } finally {

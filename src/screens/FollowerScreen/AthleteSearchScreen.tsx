@@ -19,6 +19,7 @@ import { eventService, ParticipantItem } from '../../services/followerEvent';
 import { AthleteSearchScreenpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { useDimensions } from '../../hooks/useDimensions';
+import { analyticsService } from '../../services/analyticsService';
 
 interface PaginationState {
     page: number;
@@ -69,11 +70,20 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
                     page_participant: 1,
                     filter_name_participant: searchText.trim(),
                 });
-                setSearchResults(result.participants || []);
+                const found = result.participants || [];
+                setSearchResults(found);
                 setSearchPagination({
                     page: 1,
                     total_pages: result.pagination?.participants?.total_pages ?? 1,
                 });
+
+                // Fires ONCE per completed search — inside the debounce, after results
+                // resolve. Not per keystroke. loadMoreSearchResults deliberately does
+                // NOT fire this: pages 2+ are pagination of the SAME search, and
+                // logging there would multiply one search into several events.
+                // Only the result COUNT is sent, never the query text — free text is
+                // unbounded and would blow GA4's cardinality limit.
+                void analyticsService.logSearchPerformed('athlete', found.length);
             } catch (err) {
                 console.error('❌ Search failed:', err);
             } finally {

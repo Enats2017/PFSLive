@@ -3,6 +3,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { SelectedFile, formatFileSize } from "../services/editPersonalEventService";
 import { useTranslation } from "react-i18next";
 import { Alert } from "react-native";
+import { analyticsService } from "../services/analyticsService";
 
 export interface ExistingFile {
   path: string;
@@ -77,6 +78,12 @@ export const useEditFileUpload = ({
         size: size ?? 0,
         mimeType: mimeType ?? "application/gpx+xml",
       });
+
+      // Logged only AFTER both validations pass and the file is accepted — a
+      // cancelled picker, an oversized file, or a non-.gpx name is not an import.
+      // The filename is deliberately NOT sent: user filenames are unbounded and
+      // can contain personal data.
+      void analyticsService.logGpxImported("file_picker_edit");
 
     } catch {
       onFileError("Could not open file picker");

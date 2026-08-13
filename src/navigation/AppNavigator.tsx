@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getAnalytics, logScreenView } from '@react-native-firebase/analytics';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, AppState } from 'react-native';
 import { RootStackParamList } from '../types/navigation';
 import { analyticsService } from '../services/analyticsService';
 
@@ -62,6 +62,8 @@ export const AppNavigator: React.FC = () => {
     tokenService.getToken().then(async (token) => {
       setIsLoggedIn(!!token);
       await analyticsService.initRole();
+      // Read-only — never prompts, so it's safe on every start.
+      await analyticsService.syncPermissionProperties();
       if (token) {
         const customerId = await tokenService.getCustomerId();
         if (customerId) {
@@ -71,11 +73,27 @@ export const AppNavigator: React.FC = () => {
     });
   }, []);
 
+  // Re-read permissions on every foreground: a change made in iOS/Android
+  // Settings never notifies the app, so without this the stored value goes
+  // stale until the next cold start.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void analyticsService.syncPermissionProperties();
+    });
+    return () => sub.remove();
+  }, []);
+
   const login = useCallback(async (userId: string) => {
     setIsLoggedIn(true);
     await analyticsService.setUserIdentity(userId);
   }, []);
-  const logout = useCallback(() => setIsLoggedIn(false), []);
+  const logout = useCallback(async () => {
+    setIsLoggedIn(false);
+    // Detach the Firebase user ID. Without this, everything the next
+    // person does on this device is still attributed to the account that
+    // just logged out.
+    await analyticsService.clearUserIdentity();
+  }, []);
 
   if (isLoggedIn === null) {
     return (

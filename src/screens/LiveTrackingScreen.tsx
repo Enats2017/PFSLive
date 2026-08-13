@@ -25,6 +25,8 @@ import { useScreenError } from '../hooks/useApiError';
 import { tokenService } from '../services/tokenService';
 import * as Location from 'expo-location';
 import { useDimensions } from '../hooks/useDimensions';
+import { analyticsService } from '../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../constants/analyticsScreens';
 
 const safeParseFloat = (value: any): number => {
     if (value === null || value === undefined) return 0;
@@ -35,6 +37,14 @@ const safeParseFloat = (value: any): number => {
 const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigation }) => {
     const { t } = useTranslation(['livetracking', 'common']);
     const { product_app_id, product_option_value_app_id, event_name, event_image, sourceScreen, sectionType, sourceTab, event_source, selectedDistanceLabel } = route.params;
+
+    // Same runtime split ResultList uses: the follower and participant sections
+    // reach this screen by different routes, and collapsing them into one
+    // ui_screen value would make it impossible to tell which section drives
+    // live-map usage.
+    const liveScreenName = sectionType === 'follower'
+        ? ANALYTICS_SCREENS.FOLLOWER_LIVE_TRACKING
+        : ANALYTICS_SCREENS.LIVE_TRACKING;
     const { width, height } = useDimensions(); // make sure height is destructured
     const isLandscape = width > height;
     const insets = useSafeAreaInsets();
@@ -467,6 +477,15 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const handleDistanceChange = async (distance: DistanceOption) => {
         console.log('📊 Distance changed to:', distance.distance_name);
 
+        // Distance name is the RACE distance label ('10K', 'Marathon') — a small
+        // fixed set per event, not free text, so it is safe as a parameter.
+        void analyticsService.logInteraction(
+            liveScreenName,
+            ANALYTICS_BUTTONS.DISTANCE_SELECT,
+            'select',
+            { distance_name: distance.distance_name },
+        );
+
         const isSameDistance = selectedDistance?.product_option_value_app_id === distance.product_option_value_app_id;
 
         if (!isSameDistance) {
@@ -480,11 +499,21 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         await loadLiveTrackingData(false, distance);
     };
     const handleParticipantPress = (participant: ParticipantMapMarker) => {
+        void analyticsService.logInteraction(
+            liveScreenName,
+            ANALYTICS_BUTTONS.MAP_PARTICIPANT,
+            'tap',
+        );
         setPopupState({ type: 'participant', data: participant });
     };
 
     const handleAidStationPress = (station: AidStationMapMarker) => {
         console.log('🔍 aid station pressed:', station);
+        void analyticsService.logInteraction(
+            liveScreenName,
+            ANALYTICS_BUTTONS.MAP_AID_STATION,
+            'tap',
+        );
         setPopupState({ type: 'aidstation', data: station });
     };
 
@@ -621,7 +650,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                                 zIndex: 10, elevation: 10
                             },   // follow the bottom:0 profile + sit above the overlay
                         ]}
-                        onPress={() => setProfileCollapsed(!profileCollapsed)}
+                        onPress={() => {
+                            void analyticsService.logInteraction(
+                                liveScreenName,
+                                ANALYTICS_BUTTONS.ELEVATION_TOGGLE,
+                                profileCollapsed ? 'expand' : 'collapse',
+                            );
+                            setProfileCollapsed(!profileCollapsed);
+                        }}
                     >
                         <Ionicons
                             name={profileCollapsed ? 'chevron-up' : 'chevron-down'}

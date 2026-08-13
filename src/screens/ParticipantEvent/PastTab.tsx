@@ -56,6 +56,14 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     page: 1,
                     total_pages: result.pagination?.past?.total_pages ?? 1,
                 });
+
+                // ✅ Fires ONCE per completed search, inside the debounce and after
+                // results resolve — not per keystroke. Page 2+ (loadMoreSearchResults)
+                // deliberately does NOT fire this: that's pagination, not a new search.
+                // Only the result COUNT is sent, never the query text — free text is
+                // unbounded and would blow GA4's cardinality limit.
+                void analyticsService.logSearchPerformed('event', result.tabs.past.length);
+
                 console.log('Past search page 1 loaded, total_pages:', result.pagination?.past?.total_pages);
             } catch (error) {
                 console.log('❌ Search failed:', error);

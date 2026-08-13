@@ -24,6 +24,7 @@ import { toastSuccess } from '../../../utils/toast';
 import { usePendingRegistration } from '../../hooks/usePendingRegistration';
 import { API_CONFIG } from '../../constants/config';
 import { useAuth } from '../../context/AuthContext';
+import { analyticsService } from '../../services/analyticsService';
 
 const OTP_LENGTH = 6;
 const INITIAL_COUNTDOWN = 60;
@@ -110,18 +111,38 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
         const data = await otpService.verify({ verification_token, otp: code, purpose });
 
         if (data.success && data.data?.token) {
+          const customerId = data.data?.customer?.customer_app_id ?? 0;
           await tokenService.saveToken(data.data.token);
-          await tokenService.saveCustomerId(data.data?.customer?.customer_app_id ?? 0);
+          await tokenService.saveCustomerId(customerId);
 
           if (API_CONFIG.DEBUG) console.log('✅ OTP verified, token saved');
 
+          void analyticsService.logAuthStep('otp_verified');
+          // sign_up fires HERE, not on the register call — this is the first
+          // moment the account is actually usable. A token is also issued, so
+          // a registration is a login too.
+          if (purpose === 'registration') {
+            void analyticsService.logSignUp('email');
+          }
+          void analyticsService.logLogin('otp');
+
           toastSuccess(t('otp:success.title'), t('otp:success.message'));
-          login(); // ✅ flip isLoggedIn → auth screens unmount, protected screens mount
+          // Was: login() with no argument. AuthContext types login as
+          // (userId: string) => void and AppNavigator passes it straight to
+          // analyticsService.setUserIdentity — so every OTP-verified user (i.e.
+          // every NEW registration) was calling setUserId(analytics, undefined)
+          // and never got a Firebase user ID attached.
+          login(customerId ? String(customerId) : '');
           await handleAfterAuth();
         }
       } catch (error: any) {
         const errorData = error.response?.data;
         const errorCode = errorData?.error || 'unknown_error';
+
+        // Failures are the point of this funnel: otp_sent -> otp_verified is
+        // where entrants are lost, and the error CODE says why. Never the
+        // message, never the code the user typed.
+        void analyticsService.logAuthStep('otp_failed', errorCode);
 
         switch (errorCode) {
           case 'verification_token_invalid':
@@ -176,6 +197,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
         setCanResend(false);
         setOtp(Array(OTP_LENGTH).fill(''));
         inputRefs.current[0]?.focus();
+        void analyticsService.logAuthStep('otp_resent');
         toastSuccess(t('otp:resendSuccess'), t('otp:resendSuccessMessage'));
       }
     } catch (error: any) {

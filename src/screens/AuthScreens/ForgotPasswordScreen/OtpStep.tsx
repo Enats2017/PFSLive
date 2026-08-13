@@ -13,6 +13,7 @@ import { otpService } from '../../../services/otpService';
 import { toastError } from '../../../../utils/toast';
 import { forgotStyles } from '../../../styles/forgetPassword.styles';
 import { commonStyles, colors } from '../../../styles/common.styles';
+import { analyticsService } from '../../../services/analyticsService';
 
 // ─── Constants ───────────────────────────────────────────────────
 const OTP_LENGTH = 6;
@@ -137,11 +138,15 @@ const OtpStep: React.FC<OtpStepProps> = ({
             });
 
             if (data.success && data.data?.password_reset_token) {
+                void analyticsService.logAuthStep('reset_otp_verified');
                 onNext(data.data.password_reset_token);
             }
 
         } catch (err: any) {
-            handleError(err.response?.data?.error ?? 'unknown_error', err);
+            const code = err.response?.data?.error ?? 'unknown_error';
+            // Server error CODE only — never the message, never the entered OTP.
+            void analyticsService.logAuthStep('otp_failed', code);
+            handleError(code, err);
         } finally {
             setLoading(false);
         }

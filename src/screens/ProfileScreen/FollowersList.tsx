@@ -16,6 +16,7 @@ import { userFollowersService, FollowerItem } from '../../services/followerListS
 
 import FollowerListCard from './FollowerListCard';
 import ErrorScreen from '../../components/ErrorScreen';
+import { analyticsService } from '../../services/analyticsService';
 
 interface PaginationState {
     page: number;
@@ -79,6 +80,11 @@ const FollowersList: React.FC = () => {
                 });
                 setSearchResults(result.followers);
                 setSearchPagination({ page: 1, total_pages: result.pagination.total_pages });
+
+                // One event per completed search — inside the debounce, after
+                // results resolve. Not per keystroke, not on pagination.
+                // Count only, never the query text (unbounded cardinality).
+                void analyticsService.logSearchPerformed('follower', result.followers.length);
             } catch (err) {
                 console.error('❌ Followers search failed:', err);
             } finally {

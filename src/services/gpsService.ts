@@ -1488,6 +1488,26 @@ export const finishBackgroundStop = async (
   try { const c = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY); sentCount = c ? (parseInt(c) || 0) : 0; } catch {}
   try { await _uploadTrackingLogOnFinish(participantId ?? '', eventId ?? '', sentCount); } catch {}
 
+  // 2b) Analytics: this path ends sessions INDEPENDENTLY of
+  // HomeScreen.stopGPSTracking — a finish crossed while backgrounded never
+  // reaches that function. Without this call, every background finish would
+  // record a tracking_started with no tracking_completed, i.e. exactly the
+  // population we most want to measure would look like a failure.
+  // Must run BEFORE _doFullStop() while session keys still exist.
+  // logTrackingCompleted is self-guarding: it consumes the start timestamp,
+  // so a later stopGPSTracking on the same session is a silent no-op.
+  // require() (not a top-level import) matches the existing pattern below
+  // and avoids a circular import.
+  try {
+    const { analyticsService } = require('./analyticsService');
+    const { locationQueueService } = require('./locationQueueService');
+    await analyticsService.logTrackingCompleted({
+      endReason: 'finish_crossed',
+      pointsSent: sentCount,
+      queuedRemaining: await locationQueueService.getQueueSize(),
+    });
+  } catch { /* silent */ }
+
   // 3) Clear session keys + flush (safe now). stop() called again is idempotent.
   await _doFullStop();
   // …existing queue-clear block…

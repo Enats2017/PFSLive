@@ -12,6 +12,17 @@ export const ANALYTICS_SCREENS = {
   FOLLOWER_RESULT_LIST: 'follower_result_list',
   PARTICIPANT_LIST: 'participant_list',
   TRACKING_SETTINGS: 'tracking_settings',
+  // Live map, split the same way as RESULT_LIST / FOLLOWER_RESULT_LIST —
+  // both sections reach this screen and drive it for different reasons.
+  LIVE_TRACKING: 'live_tracking',
+  RESULT_DETAILS: 'result_details',
+  // Shared bottom bars. Given their own screen values rather than the host
+  // route's name: they appear on many screens, and route names are PascalCase
+  // ('ResultList') which would mix two naming vocabularies in ui_screen.
+  BOTTOM_NAV: 'bottom_nav',
+  BOTTOM_NAV_FOLLOWER: 'bottom_nav_follower',
+  FOLLOWER_DETAILS: 'follower_details',
+  FOLLOWER_LIVE_TRACKING: 'follower_live_tracking',
 } as const;
 
 export const ANALYTICS_BUTTONS = {
@@ -33,6 +44,21 @@ export const ANALYTICS_BUTTONS = {
   PARTICIPANT_MODE: 'participant_mode',
   FAN_MODE: 'fan_mode',
   VISIBILITY_SAVE: 'visibility_save',
+
+  // Live map screen
+  DISTANCE_SELECT: 'distance_select',
+  MAP_PARTICIPANT: 'map_participant',
+  MAP_AID_STATION: 'map_aid_station',
+  ELEVATION_TOGGLE: 'elevation_toggle',
+
+  // Tabbed detail screens
+  TAB: 'tab',
+
+  // Bottom-bar destinations
+  NAV_HOME: 'nav_home',
+  NAV_FAVORITES: 'nav_favorites',
+  NAV_RESULTS: 'nav_results',
+  NAV_MAP: 'nav_map',
 } as const;
 
 export const ANALYTICS_PARAMS = {

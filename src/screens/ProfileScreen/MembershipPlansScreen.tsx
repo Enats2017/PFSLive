@@ -21,6 +21,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MembershipPlansScreenpops, RootStackParamList } from '../../types/navigation';
 import { tokenService } from '../../services/tokenService';
 import PurchaseStatusModal from '../../components/PurchaseStatusModal';
+import { analyticsService } from '../../services/analyticsService';
 
 interface PlanData {
     name: string;
@@ -44,6 +45,9 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     const [modalAction, setModalAction] = useState<ModalActionType | null>(null);
     const [modalPlanId, setModalPlanId] = useState<PlanId | null>(null);
     const customerAppIdRef = useRef<number | null>(null);
+    // Carries the product_id from the purchase REQUEST to the confirmed
+    // RESULT effect below, which doesn't otherwise receive it.
+    const pendingProductIdRef = useRef<string | null>(null);
     const insets = useSafeAreaInsets();
 
 
@@ -185,6 +189,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         console.log("calling the request");
         console.log("requestdata", apiPlan.product_id);
         try {
+            pendingProductIdRef.current = apiPlan.product_id ?? null;
             await requestPurchase({
                 request: {
                     apple: { sku: apiPlan.product_id },
@@ -204,6 +209,14 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     useEffect(() => {
         if (!purchaseResult) return;
+
+        // Fires only on a CONFIRMED result — a cancelled or failed purchase
+        // never reaches this effect, so the count is real conversions.
+        void analyticsService.logSubscriptionPurchased(
+            pendingProductIdRef.current ?? 'unknown',
+        );
+        pendingProductIdRef.current = null;
+
         navigation.replace('OwnProfile', {
             customer_app_id: customerAppIdRef.current ?? null,
             fromEdit: true,

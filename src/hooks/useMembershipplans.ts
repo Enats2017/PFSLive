@@ -9,6 +9,7 @@ import {
   appleVerifyService,
   VerifyPurchaseResponse,
 } from "../services/appleverifyservice";
+import { analyticsService, SubscriptionState } from "../services/analyticsService";
 
 export type PlanId = "lite" | "basic" | "pro";
 
@@ -93,6 +94,26 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       setPlansError(null);
       const data = await membershipPlanService.getApplePlans();
       setPlansData(data);
+
+      // Synced HERE rather than in MembershipPlansScreen so it also covers the
+      // restore path and refetchPlans — restorePurchases() calls loadPlans() to
+      // re-read entitlement, and that is exactly when the property is most
+      // likely to change. Runs on EVERY entitlement resolve, not just after a
+      // purchase; otherwise a lapsed user stays marked active forever.
+      //
+      // NOTE: `expired` is not derivable from this payload — has_membership
+      // false reads identically for someone who never subscribed and someone
+      // whose subscription ended, so both report `free`. If the API ever
+      // exposes a lapsed flag, map it here.
+      if (data?.entitlement) {
+        const { has_membership, status, source } = data.entitlement;
+        const state: SubscriptionState = !has_membership
+          ? "free"
+          : status === "grace"
+            ? "grace"
+            : "active";
+        void analyticsService.setSubscriptionState(state, source);
+      }
       return data; // ✅ return so restore can check entitlement immediately
     } catch (error: any) {
       setPlansError(error?.message || "Failed to load membership plans");
@@ -178,8 +199,14 @@ export function useMembershipPlans(): UseMembershipPlansResult {
         data?.entitlement?.has_membership === true &&
         data?.entitlement?.status === "active";
 
-      setRestoreResult(hasActive ? "success" : "none");
+      const outcome = hasActive ? "success" : "none";
+      // The none/success ratio is the useful number here: "restore found
+      // nothing" is a common paid-app complaint and is otherwise invisible
+      // unless someone files a support ticket.
+      void analyticsService.logRestorePurchases(outcome);
+      setRestoreResult(outcome);
     } catch (error: any) {
+      void analyticsService.logRestorePurchases("error");
       setRestoreError(error?.message || "Restore failed");
     } finally {
       setRestoreLoading(false);

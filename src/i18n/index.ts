@@ -2,6 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
+import { analyticsService } from '../services/analyticsService';
 
 // ✅ COMMON TRANSLATIONS
 import commonEN from './common/en.json';
@@ -178,6 +179,9 @@ const getDeviceLanguage = (): LanguageCode => {
 export const saveLanguage = async (language: LanguageCode) => {
   try {
     await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    // Every persist runs through here — the device-detected default on first
+    // launch and any later switch — so this is the one place that catches both.
+    void analyticsService.setLanguage(language);
     console.log('✅ Language saved to storage:', language);
   } catch (error) {
     console.error('❌ Error saving language:', error);

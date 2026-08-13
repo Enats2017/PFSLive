@@ -169,6 +169,10 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
     if (!validateForm()) return;
     if (isSubmitting) return;
 
+    // After validation passes, so this counts real submit attempts rather
+    // than every tap on a half-filled form.
+    void analyticsService.logCreateEventStep('started');
+
     try {
       setIsSubmitting(true);
 
@@ -187,6 +191,9 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
       const action = response.action || 'unknown_error';
 
       if (action !== 'registered' && action !== 'success') {
+        // membership_required and limit_reached are commercial signals, not
+        // errors — the action code says which.
+        void analyticsService.logCreateEventStep('blocked', action);
         switch (action) {
           case 'membership_required':
             setRegistrationStatus('membership_required');
@@ -235,6 +242,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
         resetForm();
         clearFile();
         await analyticsService.markAsParticipant('create_event'); 
+        void analyticsService.logCreateEventStep('completed');
         const customerId = await tokenService.getCustomerId();   // same method used in athleteProfileService.ts
         navigation.navigate('OwnProfile', {
             customer_app_id: customerId,

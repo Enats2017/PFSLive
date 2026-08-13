@@ -17,6 +17,7 @@ import { API_CONFIG } from './src/constants/config';
 import { useVersionCheck } from './src/hooks/useVersionCheck';
 import { versionService } from './src/services/versionService';
 import { UpdateRequiredModal } from './src/components/UpdateRequiredModal';
+import { analyticsService } from './src/services/analyticsService';
 
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 
@@ -42,7 +43,16 @@ if (__DEV__) {
 }
 
 // ✅ Navigate to PersonalEvent with GPX file pre-selected
+//
+// Single chokepoint for BOTH share-intent paths — the iOS file:// deep link
+// and the Android GpxShare native module both land here — so the analytics
+// call lives here rather than being duplicated at each call site.
+// Logged once at entry, NOT inside the navigationRef retry interval below,
+// which can tick up to 50 times before the navigator is ready.
+// The file-picker path is separate and lives in useFileUpload.
 const navigateToPersonalEvent = (uri: string, fileName: string) => {
+  void analyticsService.logGpxImported('share_intent');
+
   const navigate = () => {
     navigationRef.current?.navigate('PersonalEvent', { sharedFileUri: uri, sharedFileName: fileName });
   };

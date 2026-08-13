@@ -9,6 +9,7 @@ import {
   formatFileSize,
 } from '../services/personalEventService';
 import { API_CONFIG } from '../constants/config';
+import { analyticsService } from '../services/analyticsService';
 
 export const useFileUpload = (
   maxFileSize: number,
@@ -50,6 +51,13 @@ export const useFileUpload = (
           mimeType: file.mimeType,
           size: file.size,
         });
+
+        // Logged only AFTER both validations pass and the file is accepted.
+        // A cancelled picker, a wrong file type, or an oversized file is not an
+        // import and would inflate the count if logged earlier.
+        // The filename is deliberately NOT sent — user filenames are unbounded
+        // and can contain personal data.
+        void analyticsService.logGpxImported('file_picker_create');
 
         if (API_CONFIG.DEBUG) {
           console.log('✅ File selected:', {

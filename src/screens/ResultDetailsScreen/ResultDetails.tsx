@@ -19,6 +19,8 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { AppHeader } from '../../components/common/AppHeader';
 import { useDimensions } from '../../hooks/useDimensions';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
 
 type TabKey = 'raceInfo' | 'timingPoint' | 'runnerInfo';
 const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo'];
@@ -80,6 +82,11 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
 
     const handleFollow = () => {
         if (!canFollow) return;
+        void analyticsService.logInteraction(
+            ANALYTICS_SCREENS.RESULT_DETAILS,
+            ANALYTICS_BUTTONS.FOLLOW,
+            Followed ? 'unfollow' : 'follow',
+        );
         handleFollowPress({
             customer_app_id: data?.race_info?.customer_app_id,
             password_protected: data?.race_info?.password_protected ?? 0,
@@ -88,6 +95,15 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     };
 
     const handleTabPress = useCallback((tab: TabKey) => {
+        // action distinguishes a deliberate tab tap from a swipe below — same
+        // destination, different intent, and the ratio says whether the tab bar
+        // is discoverable.
+        void analyticsService.logInteraction(
+            ANALYTICS_SCREENS.RESULT_DETAILS,
+            ANALYTICS_BUTTONS.TAB,
+            'tap',
+            { tab_name: tab },
+        );
         const index = TAB_KEYS.indexOf(tab);
         activeTabRef.current = tab;
         setActiveTab(tab);
@@ -103,6 +119,12 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         if (index >= 0 && index < TAB_KEYS.length) {
             const tab = TAB_KEYS[index];
             if (tab !== activeTabRef.current) {
+                void analyticsService.logInteraction(
+                    ANALYTICS_SCREENS.RESULT_DETAILS,
+                    ANALYTICS_BUTTONS.TAB,
+                    'swipe',
+                    { tab_name: tab },
+                );
                 activeTabRef.current = tab;
                 setActiveTab(tab);
                 tabScrollRef.current?.scrollTo({

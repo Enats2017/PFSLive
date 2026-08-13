@@ -18,6 +18,7 @@ import { useFollowManager } from '../../hooks/useFollowManager';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
+import { analyticsService } from '../../services/analyticsService';
 
 interface ParticipantTabProps {
   product_app_id: string | number;
@@ -103,6 +104,19 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
 
         setPage(pageNum);
         setTotalPages(result.pagination.total_pages);
+
+        // Guarded because fetchParticipants is shared by the initial load, the
+        // search, and pagination:
+        //   pageNum === 1    -> excludes pagination (same search, more pages)
+        //   search non-empty -> excludes the mount-time fetchParticipants(1, '')
+        // Sends pagination.total (all matches), not participants.length, which is
+        // capped at one page. Never the query text.
+        if (pageNum === 1 && search.trim().length > 0) {
+          void analyticsService.logSearchPerformed(
+            'participant',
+            result.pagination.total ?? result.participants.length,
+          );
+        }
 
         if (API_CONFIG.DEBUG) {
           console.log(

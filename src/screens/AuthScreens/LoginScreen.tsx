@@ -24,6 +24,7 @@ import { useAuthForm } from '../../hooks/useAuthForm';
 import { usePendingRegistration } from '../../hooks/usePendingRegistration';
 import { useAuth } from '../../context/AuthContext';
 import { useDimensions } from '../../hooks/useDimensions';
+import { analyticsService } from '../../services/analyticsService';
 
 const INITIAL_FORM_DATA = {
   email: '',
@@ -69,6 +70,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
       if (response.success) {
         toastSuccess(t('login:success'), t('login:welcomeBack'));
+        // GA4 recommended event — fires only on a confirmed successful login.
+        void analyticsService.logLogin('password');
         const customerId = response.data?.customer?.customer_app_id;
         login(customerId ? String(customerId) : ''); // ✅ flip isLoggedIn → auth screens unmount, protected screens mount
         await handleAfterAuth();

@@ -3,6 +3,8 @@ import { View, TouchableOpacity, Text, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { bottomNavStyles } from '../../styles/bottomNav.styles';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
 
 type TabName = 'Home' | 'Favorites' | 'Results' | 'Map';
 
@@ -44,6 +46,13 @@ const TAB_ICONS: Record<TabName, any> = {
 // of the same tab, not a fifth destination.
 const PARTICIPANTS_ICON = require('../../../assets/participants.png');
 
+const NAV_BUTTONS: Record<TabName, string> = {
+  Home:      ANALYTICS_BUTTONS.NAV_HOME,
+  Favorites: ANALYTICS_BUTTONS.NAV_FAVORITES,
+  Results:   ANALYTICS_BUTTONS.NAV_RESULTS,
+  Map:       ANALYTICS_BUTTONS.NAV_MAP,
+};
+
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   activeTab = 'Home',
   product_app_id,
@@ -74,6 +83,14 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   ];
 
   const handleTabPress = (tabName: TabName) => {
+  // Fixed map, so ui_button stays a small stable set. Logged BEFORE the
+  // switch: a tap on Results/Map/Favorites with no product_app_id silently
+  // does nothing today, and those dead taps are worth seeing.
+    void analyticsService.logInteraction(
+      ANALYTICS_SCREENS.BOTTOM_NAV,
+      NAV_BUTTONS[tabName],
+    );
+
     switch (tabName) {
       case 'Home':
         handleHomeNavigation();

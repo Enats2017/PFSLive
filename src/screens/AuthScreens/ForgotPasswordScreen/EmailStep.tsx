@@ -11,6 +11,7 @@ import FloatingLabelInput from '../../../components/FloatingLabelInput';
 import { authService } from '../../../services/authService';
 import { commonStyles, colors } from '../../../styles/common.styles';
 import { forgotStyles } from '../../../styles/forgetPassword.styles';
+import { analyticsService } from '../../../services/analyticsService';
 
 interface EmailStepProps {
   onNext: (email: string, verificationToken: string) => void;
@@ -48,6 +49,8 @@ const EmailStep: React.FC<EmailStepProps> = ({ onNext, onBack }) => {
       const response = await authService.forgotPassword(email.trim().toLowerCase());
 
       if (response.success && response.data?.verification_token) {
+        // Reset requested — the email address itself is never sent.
+        void analyticsService.logAuthStep('reset_requested');
         onNext(email.trim().toLowerCase(), response.data.verification_token);
       } else {
         setError(t('forget:emailStep.errors.emailNotFound'));

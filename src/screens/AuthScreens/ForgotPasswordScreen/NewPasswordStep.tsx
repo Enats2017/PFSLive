@@ -12,6 +12,7 @@ import FloatingLabelInput from '../../../components/FloatingLabelInput';
 import { authService } from '../../../services/authService';
 import { forgotStyles } from '../../../styles/forgetPassword.styles';
 import { commonStyles, colors } from '../../../styles/common.styles';
+import { analyticsService } from '../../../services/analyticsService';
 
 interface NewPasswordStepProps {
   passwordResetToken: string;
@@ -68,6 +69,7 @@ const NewPasswordStep: React.FC<NewPasswordStepProps> = ({
       );
 
       if (response.success) {
+        void analyticsService.logAuthStep('reset_completed');
         onSuccess();
       }
     } catch (error: any) {

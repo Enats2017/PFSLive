@@ -26,6 +26,7 @@ import { validateRegisterForm } from '../../services/validation/authValidation';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { useAuthForm } from '../../hooks/useAuthForm';
 import { API_CONFIG } from '../../constants/config';
+import { analyticsService } from '../../services/analyticsService';
 import { useDimensions } from '../../hooks/useDimensions';
 
 // ✅ CONSTANTS
@@ -280,6 +281,11 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
       });
 
       if (response.success && response.data?.verification_token) {
+        // Account created but NOT yet usable — the OTP still has to be
+        // verified. sign_up is deliberately NOT fired here; it belongs on
+        // OTP success, otherwise every abandoned verification counts as a
+        // signup and the number is meaningless.
+        void analyticsService.logAuthStep('register_submitted');
         toastSuccess(
           t('register:success'),
           t('register:welcome', { name: formData.firstname })

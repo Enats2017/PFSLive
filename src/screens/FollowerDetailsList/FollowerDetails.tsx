@@ -17,6 +17,8 @@ import ParticipantTab from '../EventDetails/ParticipantTab';
 import type { followerDetailspops } from '../../types/navigation';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 import { useDimensions } from '../../hooks/useDimensions';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
 
 type Tab = 'Participant' | 'Distance';
 const TABS: Tab[] = ['Participant', 'Distance'];
@@ -90,6 +92,12 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   }, [product_app_id, sourceTab, event_name, event_image, visitedTabs, showResults, t]);
 
   const handleTabPress = useCallback((tab: Tab) => {
+    void analyticsService.logInteraction(
+      ANALYTICS_SCREENS.FOLLOWER_DETAILS,
+      ANALYTICS_BUTTONS.TAB,
+      'tap',
+      { tab_name: tab },
+    );
     const index = TABS.indexOf(tab);
     activeTabRef.current = tab;
     setActiveTab(tab);
@@ -101,6 +109,12 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / width);
     const swipedTab = TABS[index];
     if (swipedTab && swipedTab !== activeTabRef.current) {
+      void analyticsService.logInteraction(
+        ANALYTICS_SCREENS.FOLLOWER_DETAILS,
+        ANALYTICS_BUTTONS.TAB,
+        'swipe',
+        { tab_name: swipedTab },
+      );
       activeTabRef.current = swipedTab;
       setActiveTab(swipedTab);
       setVisitedTabs(prev => new Set(prev).add(swipedTab));

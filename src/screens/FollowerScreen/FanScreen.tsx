@@ -21,6 +21,7 @@ import SuggestionDropdown from '../../components/SuggestionDropdown';
 import { eventService, EventItem } from '../../services/followerEvent';
 import { formatEventDate } from '../../utils/dateFormatter';
 import EventCard from '../../components/EventCard';
+import { analyticsService } from '../../services/analyticsService';
 
 
 
@@ -77,7 +78,13 @@ const FanScreen = () => {
                     suggestionService.getSuggestions({ filter_name: text.trim() }),
                     suggestionService.getSuggestions({ filter_name_past_suggestion: text.trim() }),
                 ]);
-                setSuggestions([...liveUpcoming, ...past]);
+                const merged = [...liveUpcoming, ...past];
+                setSuggestions(merged);
+
+                // One event per completed search — inside the debounce, after
+                // results resolve. Not per keystroke, not on pagination.
+                // Count only, never the query text (unbounded cardinality).
+                void analyticsService.logSearchPerformed('event', merged.length);
             } catch {
                 setSuggestions([]);
             } finally {
