@@ -340,6 +340,31 @@ export const analyticsService = {
     await setUserProperty(analytics, "subscription_state", "active");
   },
 
+  /**
+   * Ongoing follow/unfollow counter.
+   *
+   * markAsFollowerActive fires only on the FIRST follow ever — it is a role
+   * classifier, not a counter — so "how many follows happen per week" is
+   * unanswerable and unfollows are completely invisible without this.
+   *
+   * MUST exist on BOTH app and web. They share one GA4 property, so if only
+   * the web sends follow_toggle the report shows web-only volume and reads as
+   * though the web drives nearly all follows, which is worse than having no
+   * number at all. Signature matches lib/analytics.ts on the web.
+   */
+  async logFollowToggle(
+    action: "follow" | "unfollow",
+    context: string,
+    extraParams?: Record<string, string | number | boolean>,
+  ) {
+    await logEvent(analytics, "follow_toggle", {
+      follow_action: action,
+      ui_screen: context,
+      ...(extraParams ?? {}),
+    });
+    console.log("📊 [Analytics] follow_toggle:", action, context);
+  },
+
   // ─────────────────────────────────────────────────────────────
   // TIER 3 — feature usage
   // ─────────────────────────────────────────────────────────────
