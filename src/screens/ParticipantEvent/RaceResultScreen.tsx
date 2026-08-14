@@ -36,7 +36,6 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   const [raceDate, setRaceDate] = useState<string | null>(null);
   const [showResultsStats, setShowResultsStats] = useState(false);
   const [showResults, setShowResults] = useState(false);
-
   const [results, setResults] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
   //const [error, setError] = useState<string | null>(null);
@@ -63,7 +62,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         const canShowResults =
           result.event?.show_results === 1;
 
-        setShowResults(canShowResults);
+        setShowResults(canShowResults);   
 
         const canShowResultsStats =
           result.event?.show_results === 1;
@@ -212,7 +211,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         </View>
       </View>
     );
-  }, [navigation, product_app_id, t]);
+  }, [navigation, product_app_id, t,  showResults,showResultsStats,event_name,event_image]);
 
   // ✅ LOADING STATE
   if (loading) {
