@@ -229,12 +229,19 @@ export function useFollowManager(
           if (willFollow) {
             await followUser(numericId);
             await analyticsService.markAsFollowerActive('follow_participant');
+            // markAsFollowerActive fires only on the FIRST follow ever — it's a
+            // role classifier, not a counter. Without this there is no ongoing
+            // follow volume at all. Context values ('customer' / 'bib') match the
+            // web so the dimension means one thing across both surfaces.
+            void analyticsService.logFollowToggle('follow', 'customer');
             toastSuccess(
               t("follower:success.followTitle"),
               t("follower:success.followMessage"),
             );
           } else {
             await unfollowUser(numericId);
+            // Unfollows were completely invisible before this.
+            void analyticsService.logFollowToggle('unfollow', 'customer');
             onFollowSuccess?.();
             toastSuccess(
               t("follower:success.unfollowTitle"),
@@ -333,6 +340,7 @@ export function useFollowManager(
           await smartFollow(productId, bib, customerAppId);
           onFollowSuccess?.();
           await analyticsService.markAsFollowerActive('follow_participant');
+          void analyticsService.logFollowToggle('follow', 'bib');
           toastSuccess(
             t("follower:success.followTitle"),
             t("follower:success.followMessage"),
@@ -340,6 +348,7 @@ export function useFollowManager(
         } else {
           await smartUnfollow(productId, bib, customerAppId);
           onFollowSuccess?.();
+          void analyticsService.logFollowToggle('unfollow', 'bib');
           toastSuccess(
             t("follower:success.unfollowTitle"),
             t("follower:success.unfollowMessage"),
