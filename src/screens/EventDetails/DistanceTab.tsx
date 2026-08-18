@@ -225,6 +225,11 @@ const DistanceTab = ({
     handleErrorRetry,
     handleRegister,
     handleDelete,
+    liveTrackingModalVisible,
+    liveTrackingItem,
+    handleConnectClick,
+    handleLiveTrackingConfirm,
+    handleLiveTrackingClose,
   } = useRegistrationHandler(
     product_app_id,
     event_name,
@@ -478,7 +483,7 @@ const handleExternalRegister = useCallback((url: string) => {
                   }
                   item.registration_status === 'registered'
                     ? handleUndoClick(item)
-                    : handleRegister(item);
+                    : handleConnectClick(item);
                 }}
                 disabled={isRegistering}
                 activeOpacity={0.8}
@@ -616,6 +621,13 @@ const handleExternalRegister = useCallback((url: string) => {
           setGpxRestrictedVisible(false);
           setGpxRestrictedItem(null);
         }}
+      />
+      <RegistrationModal
+        visible={liveTrackingModalVisible}
+        status="connect_confirm"
+        distanceName={liveTrackingItem?.distance_name ?? ''}
+        onClose={handleLiveTrackingClose}
+        onConfirm={handleLiveTrackingConfirm}
       />
     </>
   );

@@ -109,6 +109,12 @@
       "icon": "?",
       "title": "Quelque Chose S'est Mal Passé",
       "description": "Veuillez réessayer plus tard."
+    },
+    "connect_confirm": {
+      "icon": "🔗",
+      "title": "Suivi en direct",
+      "description": "Le suivi en direct est optionnel et nécessite un abonnement — mais votre première session est GRATUITE !",
+      "button": "Oui"
     }
   },
   "connectInfo": "Le chronométrage officiel est automatiquement activé pour tous les participants.\nVous souhaitez utiliser le Live Tracking ? Associez votre compte Livio à votre dossard pour cet événement.\nAppuyez sur « Associer » pour continuer.",

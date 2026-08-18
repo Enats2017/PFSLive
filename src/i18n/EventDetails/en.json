@@ -111,6 +111,12 @@
       "icon": "?",
       "title": "Something Went Wrong",
       "description": "Please try again later."
+    },
+    "connect_confirm": {
+      "icon": "🔗",
+      "title": "Live Tracking",
+      "description": "Live Tracking is optional and requires a membership — but your first session is FREE!",
+      "button": "Yes"
     }
   },
   "connectInfo": "Official timekeeping (results) is automatically enabled for all participants.\nWant to use Live Tracking? Connect your Livio account to your race bib for this event.\nTap \"Connect\" to continue.",

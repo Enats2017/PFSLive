@@ -109,6 +109,12 @@
       "icon": "?",
       "title": "Er Ging Iets Mis",
       "description": "Probeer het later opnieuw."
+    },
+    "connect_confirm": {
+      "icon": "🔗",
+      "title": "Live Tracking",
+      "description": "Live Tracking is optioneel en vereist een lidmaatschap — maar je eerste sessie is GRATIS!",
+      "button": "Ja"
     }
   },
   "connectInfo": "De officiële tijdsregistratie is automatisch actief voor alle deelnemers.\nWil je gebruikmaken van Live Tracking? Koppel dan je Livio-account aan je startnummer voor dit evenement.\nTik op 'Connecteer' om verder te gaan.",

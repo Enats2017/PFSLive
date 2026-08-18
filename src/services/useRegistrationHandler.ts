@@ -34,6 +34,11 @@ interface UseRegistrationHandlerReturn {
   handleErrorRetry: (() => void) | undefined;
   handleRegister: (item: Distance, showConfirmPopup?: boolean) => Promise<void>;
   handleDelete: (item: Distance) => Promise<void>;
+  liveTrackingModalVisible: boolean;
+  liveTrackingItem: Distance | null;
+  handleConnectClick: (item: Distance) => void;
+  handleLiveTrackingConfirm: () => void;
+  handleLiveTrackingClose: () => void;
 }
 
 const SUCCESS_ACTIONS = ['registered', 'confirm_race_result'];
@@ -67,6 +72,8 @@ const useRegistrationHandler = (
   const [errorRetryAction, setErrorRetryAction] = useState<(() => void) | undefined>(
     undefined
   );
+  const [liveTrackingModalVisible, setLiveTrackingModalVisible] = useState(false);
+const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
 
   const isTokenValid = async (): Promise<boolean> => {
     try {
@@ -571,6 +578,37 @@ const useRegistrationHandler = (
     [callRegisterAPI, product_app_id, event_name, handleUnauthorized] // ✅ removed navigation
   );
 
+  const handleConnectClick = useCallback(
+  (item: Distance) => {
+    // 🔴 Adjust this condition if "finished" isn't registration_status === 'unavailable'
+    const isEventFinished = item.countdown.status === 'finished';
+
+    if (isEventFinished) {
+      // Existing Connect flow — unchanged, "Event Has Ended" modal still fires from here
+      handleRegister(item);
+      return;
+    }
+
+    // Live / Upcoming — show Live Tracking confirm modal first
+    setLiveTrackingItem(item);
+    setLiveTrackingModalVisible(true);
+  },
+  [handleRegister]
+);
+
+const handleLiveTrackingConfirm = useCallback(() => {
+    setLiveTrackingModalVisible(false);
+    if (liveTrackingItem) {
+      handleRegister(liveTrackingItem); // reuses existing flow, no duplication
+    }
+    setLiveTrackingItem(null);
+  }, [liveTrackingItem, handleRegister]);
+
+  const handleLiveTrackingClose = useCallback(() => {
+    setLiveTrackingModalVisible(false);
+    setLiveTrackingItem(null);
+  }, []);
+
   const handleModalClose = useCallback(() => {
     setModalVisible(false);
     setSelectedItem(null);
@@ -602,6 +640,12 @@ const useRegistrationHandler = (
     handleErrorRetry: errorRetryAction,
     handleRegister,
     handleDelete: callDeleteAPI,
+    liveTrackingModalVisible,
+    liveTrackingItem,
+    handleConnectClick,
+    handleLiveTrackingConfirm,
+    handleLiveTrackingClose,
+    
   };
 };
 

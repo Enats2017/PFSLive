@@ -18,7 +18,8 @@ type RegistrationStatus =
   | 'limit_reached'
   | 'membership_upcoming'  // ✅ NEW
   | 'unavailable'
-  | 'available';
+  | 'available'
+  | 'connect_confirm';
 
 interface RegistrationModalProps {
   visible: boolean;
@@ -27,6 +28,7 @@ interface RegistrationModalProps {
   membershipLimit?: number;
   membershipStartDate?: string;  // ✅ NEW
   onClose: () => void;
+   onConfirm?: () => void;
 }
 
 interface ModalConfig {
@@ -46,6 +48,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   membershipLimit,
   membershipStartDate,  // ✅ NEW
   onClose,
+  onConfirm,
 }) => {
   const { t } = useTranslation(['details']);
   const navigation = useNavigation<any>();
@@ -57,9 +60,18 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   // ✅ GET MODAL CONFIG FROM i18n
   const getModalConfig = (status: RegistrationStatus): ModalConfig => {
     const baseKey = `details:registrationModal.${status}`;
+    if (status === 'connect_confirm') {
+      return {
+        icon: t('details:registrationModal.connect_confirm.icon'),
+        title: t('details:registrationModal.connect_confirm.title'),
+        description: t('details:registrationModal.connect_confirm.description'),
+        accentColor: colors.primary,
+        buttonLabel: t('details:registrationModal.connect_confirm.button'),
+      };
+    }
      const showUpgradeButton = Platform.OS === 'ios' && UPGRADE_STATUSES.includes(status);
 
-    const accentColors: Record<RegistrationStatus, string> = {
+    const accentColors: Record<Exclude<RegistrationStatus, 'connect_confirm'>, string> = {
       registered:           colors.primaryLight,
       membership_required:  colors.primary,
       limit_reached:        colors.primary,
@@ -142,9 +154,13 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
   const config = getModalConfig(status);
    const handleUpgradePress = () => {
-    onClose();
-    navigation.navigate('MembershipPlansScreen');
-  };
+  if (status === 'connect_confirm') {
+    onConfirm?.();
+    return;
+  }
+  onClose();
+  navigation.navigate('MembershipPlansScreen');
+};
 
 
   return (
@@ -224,7 +240,11 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
             >
               <Text style={commonStyles.primaryButtonText}>{config.buttonLabel}</Text>
             </TouchableOpacity>
-            <Text style={[styles.description,{marginTop:spacing.sm}]}>{t('details:iosnotnow')}</Text>
+            {status !== 'connect_confirm' && ( // ✅ moved guard here — only the one instance
+            <Text style={[styles.description, { marginTop: spacing.sm }]}>
+              {t('details:iosnotnow')}
+            </Text>
+          )}
           </View>
           )}
         </Animated.View>
