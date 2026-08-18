@@ -78,6 +78,9 @@ export interface RaceInfo {
     participant_app_id: number | null;
     customer_app_id: number | null;
     password_protected: 0 | 1;
+    position_total?: string;
+    category_rank_total?: string;
+    gender_ranking_total?: string;
 }
 
 export interface RunnerInfo {

@@ -85,5 +85,9 @@
   },
   "timePicker": {
     "placeholder": "HH:MM"
-  }
+  },
+  "gender": {
+  "men": "Hommes",
+  "women": "Femmes"
+}
 }

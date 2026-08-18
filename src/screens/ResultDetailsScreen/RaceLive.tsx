@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView,Dimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
-import { commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, typography } from '../../styles/common.styles';
 import { Entypo } from '@expo/vector-icons';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/resultDetailsService';
@@ -59,11 +59,27 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
         .find(cp => cp.is_crossed);
 
     const fmtRank = (v?: string) => (/^\d+$/.test(v ?? '') ? (v as string) : '—');
+    const fmtRankTotal = (rank?: string, total?: string) => {
+        const r = fmtRank(rank);
+        if (r === '—') return '—';
+        return (/^\d+$/.test(total ?? '')) ? `${r} / ${total}` : r;
+    };
 
     // "1 (M40+)" — rank with its category name; blank category → just the rank
-    const fmtCategoryRank = (rank?: string, cat?: string) => {
-        const r = fmtRank(rank);
-        return (r !== '—' && cat && cat.trim() !== '') ? `${r} (${cat})` : r;
+   const fmtCategoryRank = (rank?: string, total?: string, cat?: string) => {
+        const rt = fmtRankTotal(rank, total);
+        return (rt !== '—' && cat && cat.trim() !== '') ? `${rt} (${cat})` : rt;
+    };
+
+    const fmtGenderRank = (rank?: string, total?: string, gender?: string) => {
+        const rt = fmtRankTotal(rank, total);
+        if (rt === '—') return '—';
+        const genderLabel = gender === 'female'
+            ? t('common:gender.women')
+            : gender === 'male'
+                ? t('common:gender.men')
+                : '';
+        return genderLabel ? `${rt} ${genderLabel}` : rt;
     };
 
     return (
@@ -161,9 +177,18 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
 
                 <View style={resultInfoStyles.rankingsCard}>
                     {[
-                        { labelKey: 'raceInfo.overallRanking', value: fmtRank(raceInfo?.position) },
-                        { labelKey: 'raceInfo.rankingInOpen',  value: fmtCategoryRank(raceInfo?.category_rank, raceInfo?.category_name) },
-                        { labelKey: 'raceInfo.genderRanking',  value: fmtRank(raceInfo?.gender_ranking) },
+                        {
+                            labelKey: 'raceInfo.overallRanking',
+                            value: fmtRankTotal(raceInfo?.position, raceInfo?.position_total),
+                        },
+                        {
+                            labelKey: 'raceInfo.rankingInOpen',
+                            value: fmtCategoryRank(raceInfo?.category_rank, raceInfo?.category_rank_total, raceInfo?.category_name),
+                        },
+                        {
+                            labelKey: 'raceInfo.genderRanking',
+                            value: fmtGenderRank(raceInfo?.gender_ranking, raceInfo?.gender_ranking_total, raceInfo?.gender),
+                        },
                     ].map((item, i) => (
                         <View
                             key={item.labelKey}
@@ -172,13 +197,10 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                                 i === 1 && resultInfoStyles.rankingColBorder,
                             ]}
                         >
-                            <Text style={[commonStyles.subtitle, {
-                                textAlign: 'center',
-                                marginBottom: 8,
-                            }]}>
+                            <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
                                 {t(item.labelKey)}
                             </Text>
-                            <Text style={commonStyles.title}>{item.value}</Text>
+                            <Text style={[commonStyles.title,{textAlign:'center', fontSize:typography.sizes.lg}]}>{item.value}</Text>
                         </View>
                     ))}
                 </View>
