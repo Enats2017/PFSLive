@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, commonStyles } from '../../styles/common.styles';
@@ -11,6 +11,9 @@ import { getImageUrl } from '../../constants/config';
 
 interface RunnerInfoProps {
     runnerInfo?: RunnerInfo;
+    liveTrackingActivated?: number;
+    isFollowing?: boolean;
+    onMapPress?: () => void;
 }
 
 const getInitials = (name?: string): string => {
@@ -20,7 +23,7 @@ const getInitials = (name?: string): string => {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo }) => {
+const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo,  liveTrackingActivated,isFollowing,onMapPress}) => {
     const { t } = useTranslation('resultdetails');
     const initials = getInitials(runnerInfo?.name);
 
@@ -29,6 +32,8 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo }) => {
         runnerInfo.utmb_index.trim() !== '' &&
         runnerInfo.utmb_index !== '0' &&
         Number(runnerInfo.utmb_index) !== 0;
+
+        const showMapButton = liveTrackingActivated === 1 && !!isFollowing;
 
     return (
         <View style={commonStyles.container}>
@@ -119,6 +124,18 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo }) => {
                     </View>
                 )}
 
+                {showMapButton && (
+                    <TouchableOpacity
+                        style={resultInfoStyles.mapButton}
+                        onPress={onMapPress}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons name="map-outline" size={18} color={colors.white} />
+                        <Text style={resultInfoStyles.mapButtonText}>
+                            {t('runnerInfo.viewOnMap')}
+                        </Text>
+                    </TouchableOpacity>
+                )}
             </View>
         </View>
     );

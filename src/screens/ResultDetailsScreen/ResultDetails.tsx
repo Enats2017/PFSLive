@@ -152,7 +152,25 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     <LiveTimingPoint checkpoints={data?.checkpoints} raceStatus={data?.event?.race_status} gender={data?.race_info?.gender} />
                 )}
                 {item === 'runnerInfo' && (
-                    <RunnerInfoTab runnerInfo={data?.runner_info} />
+                    <RunnerInfoTab
+                        runnerInfo={data?.runner_info}
+                        liveTrackingActivated={data?.race_info?.live_tracking_activated}
+                        isFollowing={Followed}
+                        onMapPress={() => {
+                            void analyticsService.logInteraction(
+                                ANALYTICS_SCREENS.RESULT_DETAILS,
+                                ANALYTICS_BUTTONS.MAP,
+                                'tap',
+                            );
+                             navigation.navigate('LiveTracking', {
+                                product_app_id: data?.event?.product_app_id ?? product_app_id,
+                                product_option_value_app_id: data?.event?.product_option_value_app_id,
+                                event_name: data?.event?.race_name ?? '',
+                                event_source: 'partner',
+                                selectedDistanceLabel: data?.event?.distance_name,
+                            });
+                        }}
+                    />
                 )}
             </View>
         );
