@@ -116,7 +116,8 @@
       "icon": "🔗",
       "title": "Live Tracking",
       "description": "Live Tracking is optional and requires a membership — but your first session is FREE! Don’t want to use it? No problem. You don’t need to connect Livio to your bib. Your followers will still receive official RFID updates when you pass checkpoints and the finish line.",
-      "button": "Yes"
+      "button": "Yes",
+      "notNowButton": "Not Now"
     }
   },
   "connectInfo": "Official timekeeping (results) is automatically enabled for all participants.\nWant to use Live Tracking? Connect your Livio account to your race bib for this event.\nTap \"Connect\" to continue.",

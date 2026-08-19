@@ -114,7 +114,8 @@
       "icon": "🔗",
       "title": "Live Tracking",
       "description": "Live Tracking is optioneel en vereist een abonnement — maar je eerste sessie is GRATIS! Wil je het niet gebruiken? Geen probleem. Je hoeft Livio niet aan je startnummer te koppelen. Je volgers blijven de officiële RFID-updates ontvangen wanneer je een checkpoint of de finish passeert.",
-      "button": "Ja"
+      "button": "Ja",
+      "notNowButton": "Niet nu"
     }
   },
   "connectInfo": "De officiële tijdsregistratie is automatisch actief voor alle deelnemers.\nWil je gebruikmaken van Live Tracking? Koppel dan je Livio-account aan je startnummer voor dit evenement.\nTik op 'Connecteer' om verder te gaan.",

@@ -114,7 +114,8 @@
       "icon": "🔗",
       "title": "Suivi en direct",
       "description": "Le Live Tracking est facultatif et nécessite un abonnement — mais votre première session est GRATUITE ! Vous ne souhaitez pas l’utiliser ? Aucun problème. Vous n’avez pas besoin de connecter Livio à votre dossard. Vos proches continueront à recevoir les mises à jour officielles RFID lors de votre passage aux points de contrôle et à la ligne d’arrivée.",
-      "button": "Oui"
+      "button": "Oui",
+      "notNowButton": "Pas maintenant"
     }
   },
   "connectInfo": "Le chronométrage officiel est automatiquement activé pour tous les participants.\nVous souhaitez utiliser le Live Tracking ? Associez votre compte Livio à votre dossard pour cet événement.\nAppuyez sur « Associer » pour continuer.",

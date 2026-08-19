@@ -233,18 +233,40 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
           <Text style={styles.description}>{config.description}</Text>
           {config.buttonLabel && (
           <View style = {{width:"100%", paddingTop:spacing.md}} >
-            <TouchableOpacity
-              style={[commonStyles.primaryButton, { backgroundColor: config.accentColor }]}
-              activeOpacity={0.85}
-              onPress={handleUpgradePress}
-            >
-              <Text style={commonStyles.primaryButtonText}>{config.buttonLabel}</Text>
-            </TouchableOpacity>
-            {status !== 'connect_confirm' && ( // ✅ moved guard here — only the one instance
-            <Text style={[styles.description, { marginTop: spacing.sm }]}>
-              {t('details:iosnotnow')}
-            </Text>
-          )}
+            {status === 'connect_confirm' ? (
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={[commonStyles.secondaryButton]}
+                  activeOpacity={0.7}
+                  onPress={onClose}
+                >
+                  <Text style={commonStyles.secondaryButtonText}>
+                    {t('details:registrationModal.connect_confirm.notNowButton')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, styles.confirmBtnRow, { backgroundColor: config.accentColor }]}
+                  activeOpacity={0.85}
+                  onPress={handleUpgradePress}
+                >
+                  <Text style={commonStyles.primaryButtonText}>{config.buttonLabel}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, { backgroundColor: config.accentColor }]}
+                  activeOpacity={0.85}
+                  onPress={handleUpgradePress}
+                >
+                  <Text style={commonStyles.primaryButtonText}>{config.buttonLabel}</Text>
+                </TouchableOpacity>
+                <Text style={[styles.description, { marginTop: spacing.sm }]}>
+                  {t('details:iosnotnow')}
+                </Text>
+              </>
+            )}
           </View>
           )}
         </Animated.View>
@@ -344,6 +366,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 4,
   },
+ buttonRow: {
+  flexDirection: 'row',
+  gap: spacing.sm,
+},
+
+confirmBtnRow: {
+  flex: 1,
+},
+
 });
 
 export default RegistrationModal;
