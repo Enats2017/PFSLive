@@ -527,7 +527,7 @@ const handleExternalRegister = useCallback((url: string) => {
         </View>
       </View>
     );
-  }, [CountdownBadge, handleRegister, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode]);
+  }, [CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode]);
 
   if (loading) {
     return (

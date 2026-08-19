@@ -579,24 +579,25 @@ const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
   );
 
   const handleConnectClick = useCallback(
-  (item: Distance) => {
-    // 🔴 Adjust this condition if "finished" isn't registration_status === 'unavailable'
-    const isEventFinished = item.countdown.status === 'finished';
+    (item: Distance) => {     
+      const isEventFinished = item.countdown.status === 'finished';
+      if (isEventFinished) {
+        handleRegister(item);
+        return;
+      }
+      const status = item.registration_status?.toString().trim(); // ✅ defensive normalize
+      if (status === 'available') {
+        setLiveTrackingItem(item);
+        setLiveTrackingModalVisible(true);
+        return;
+      }
 
-    if (isEventFinished) {
-      // Existing Connect flow — unchanged, "Event Has Ended" modal still fires from here
       handleRegister(item);
-      return;
-    }
+    },
+    [handleRegister]
+  );
 
-    // Live / Upcoming — show Live Tracking confirm modal first
-    setLiveTrackingItem(item);
-    setLiveTrackingModalVisible(true);
-  },
-  [handleRegister]
-);
-
-const handleLiveTrackingConfirm = useCallback(() => {
+  const handleLiveTrackingConfirm = useCallback(() => {
     setLiveTrackingModalVisible(false);
     if (liveTrackingItem) {
       handleRegister(liveTrackingItem); // reuses existing flow, no duplication

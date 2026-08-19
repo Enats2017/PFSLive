@@ -3,7 +3,7 @@
     "Distance": "Distance",
     "Participant": "Participant"
   },
-  "button": "ASSOCIER",
+  "button": "Suivi en direct",
   "undo": "ANNULER L'INSCRIPTION",
    "register": "S'inscrire",
   "gpx": "TÉLÉCHARGER GPX",
@@ -113,7 +113,7 @@
     "connect_confirm": {
       "icon": "🔗",
       "title": "Suivi en direct",
-      "description": "Le suivi en direct est optionnel et nécessite un abonnement — mais votre première session est GRATUITE !",
+      "description": "Le Live Tracking est facultatif et nécessite un abonnement — mais votre première session est GRATUITE ! Vous ne souhaitez pas l’utiliser ? Aucun problème. Vous n’avez pas besoin de connecter Livio à votre dossard. Vos proches continueront à recevoir les mises à jour officielles RFID lors de votre passage aux points de contrôle et à la ligne d’arrivée.",
       "button": "Oui"
     }
   },
