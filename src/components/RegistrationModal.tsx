@@ -37,6 +37,7 @@ interface ModalConfig {
   description: string;
   accentColor: string;
   buttonLabel: string | null;
+  notNowLabel?: string;
 }
 
 const UPGRADE_STATUSES: RegistrationStatus[] = ['membership_required', 'limit_reached'];
@@ -67,6 +68,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
         description: t('details:registrationModal.connect_confirm.description'),
         accentColor: colors.primary,
         buttonLabel: t('details:registrationModal.connect_confirm.button'),
+        notNowLabel: t('details:registrationModal.connect_confirm.notNowButton'),
       };
     }
      const showUpgradeButton = Platform.OS === 'ios' && UPGRADE_STATUSES.includes(status);
@@ -241,7 +243,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   onPress={onClose}
                 >
                   <Text style={commonStyles.secondaryButtonText}>
-                    {t('details:registrationModal.connect_confirm.notNowButton')}
+                    {config.notNowLabel}
                   </Text>
                 </TouchableOpacity>
 
