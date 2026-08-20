@@ -44,7 +44,8 @@
     "category": "CATEGORIE",
     "utmbIndex": "INDEX",
     "utmbSeries": "WORLD SERIES",
-    "noClub": "—"
+    "noClub": "—",
+    "viewOnMap": "Bekijk op de kaart"
   },
   "awards": {
     "time": "TIJD",

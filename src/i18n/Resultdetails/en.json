@@ -45,7 +45,8 @@
     "category": "CATEGORY",
     "utmbIndex": "INDEX",
     "utmbSeries": "WORLD SERIES",
-    "noClub": "—"
+    "noClub": "—",
+    "viewOnMap": "View on map"
   },
   "awards": {
     "time": "TIME",

@@ -83,6 +83,7 @@ export const resultInfoStyles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
+    
    
   },
 
@@ -431,4 +432,22 @@ export const resultInfoStyles = StyleSheet.create({
   flagEmoji: {
     fontSize: 22,
   },
+  mapButton: {
+
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    margin:10,
+    
+},
+mapButtonText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+},
+
 });
