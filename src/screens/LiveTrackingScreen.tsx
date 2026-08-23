@@ -134,6 +134,24 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             });
     }, [participants, isRrActive]);
 
+    // ✅ The poll replaces `participants` wholesale, so participantMarkers above is
+    // rebuilt with brand-new object identities every cycle. popupState.data is the
+    // object captured at tap time and is orphaned the moment the next poll lands —
+    // which is why an open popup used to freeze on its tap-time race time, distance
+    // and last-update. Resolve the tapped participant against the CURRENT markers on
+    // every render instead, so popupState.data now only carries the identity.
+    // Resolves to null when the runner drops out of the feed (the memo above filters
+    // anyone whose coordinates go to 0,0), which closes the popup rather than leaving
+    // a card of indefinitely stale numbers on screen.
+    const livePopupParticipant = useMemo(() => {
+        if (popupState.type !== 'participant' || !popupState.data) return null;
+        // Mapbox round-trips feature properties through the native bridge, which can
+        // hand back a numeric string, so compare numerically rather than with ===.
+        const tappedId = Number((popupState.data as ParticipantMapMarker).id);
+        if (Number.isNaN(tappedId)) return null;
+        return participantMarkers.find(m => Number(m.id) === tappedId) ?? null;
+    }, [popupState, participantMarkers]);
+
     // Refresh cadence: speed up to 10s when any tracked runner is within 1km of
     // the finish, so the finish moment is caught promptly; otherwise 60s.
     const FINISH_APPROACH_KM = 1.0;
@@ -667,9 +685,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     </TouchableOpacity>
                 )}
 
-                {popupState.type === 'participant' && popupState.data && (
+                {popupState.type === 'participant' && livePopupParticipant && (
                     <ParticipantPopup
-                        participant={popupState.data as ParticipantMapMarker}
+                        participant={livePopupParticipant}
                         event_source={event_source}
                         isRrActive={isRrActive}
                         onClose={handleClosePopup}
