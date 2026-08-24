@@ -60,9 +60,9 @@
     "not_started": "Niet Gestart",
     "in_progress": "Bezig",
     "finished": "Gefinished",
-    "DNF": "Niet Gefinisht",
-    "DNS": "Niet van Start Gegaan",
-    "DSQ": "Gediskwalificeerd"
+    "DNF": "DNF",
+    "DNS": "DNS",
+    "DSQ": "DSQ"
   },
   "countdown": {
     "days": "Dagen",

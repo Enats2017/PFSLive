@@ -61,9 +61,9 @@
     "not_started": "Not Started",
     "in_progress": "In Progress",
     "finished": "Finished",
-    "DNF": "Did Not Finish",
-    "DNS": "Did Not Start",
-    "DSQ": "Disqualified"
+    "DNF": "DNF",
+    "DNS": "DNS",
+    "DSQ": "DSQ"
   },
   "countdown": {
     "days": "Days",

@@ -12,10 +12,11 @@ import { formatClockTime } from '../../utils/timeFormat';
 
 const getStatusColors = (status: string) => {
     switch (status) {
+        // Green = finished, red = still out on course. These were inverted.
         case 'in_progress':
-            return { backgroundColor: colors.success, textColor: colors.white };
+            return { backgroundColor: colors.error, textColor: colors.white };
         case 'finished':
-            return { backgroundColor: colors.participantColor, textColor: colors.white };
+            return { backgroundColor: colors.success, textColor: colors.white };
         case 'not_started':
         default:
             return { backgroundColor: colors.gray500, textColor: colors.white };

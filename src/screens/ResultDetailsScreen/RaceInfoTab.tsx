@@ -6,6 +6,11 @@ import { commonStyles, typography } from '../../styles/common.styles';
 import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/resultDetailsService';
 import { formatClockTime } from '../../utils/timeFormat';
 
+// participant_status is open-ended: the API passes through whatever non-numeric
+// text the timing feed puts in `pos`, uppercased, alongside its own
+// 'not_started' | 'in_progress' | 'finished'.
+const KNOWN_STATUSES = ['not_started', 'in_progress', 'finished', 'DNF', 'DNS', 'DSQ'];
+
 interface Props {
     raceInfo?: RaceInfo;
     event?: ResultDetailEvent;
@@ -43,6 +48,14 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                 : '';
         return genderLabel ? `${rt} ${genderLabel}` : rt;
     };
+
+    // Never default to "finished": a missing status is not a finish, and an
+    // unrecognised feed code (OTL, NC, ...) is already displayable as sent.
+    const statusText = (s?: string | null) => {
+        if (!s) return '—';
+        return KNOWN_STATUSES.includes(s) ? t(`status.${s}`) : s;
+    };
+
     return (
         <ScrollView
             contentContainerStyle={resultInfoStyles.scrollContent}
@@ -52,7 +65,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                 <View style={resultInfoStyles.headerBar}>
                     <View style={resultInfoStyles.headerGreen}>
                         <Text style={resultInfoStyles.text}>
-                            {t(`status.${raceInfo?.participant_status ?? 'finished'}`)}
+                            {statusText(raceInfo?.participant_status)}
                         </Text>
                     </View>
                     <View style={resultInfoStyles.diagLeft} />
