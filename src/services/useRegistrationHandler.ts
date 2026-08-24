@@ -168,6 +168,9 @@ const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
           if (API_CONFIG.DEBUG) {
             console.log('⚠️ Non-success action received:', action);
           }
+          // `action` is a server enum code, never a message and never user
+          // input — safe to send as register_reason.
+          void analyticsService.logRegisterStep('failed', action, event_name);
 
           switch (action) {
             case 'already_registered':
@@ -272,6 +275,7 @@ const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
             setConfirmData(result.race_result_data ?? null);
             setConfirmItem(item);
             setIsFirstTracking(result.is_first_tracking || 0);
+            void analyticsService.logRegisterStep('confirm_shown', undefined, event_name);
             setConfirmModalVisible(true);
             await clearPendingRegistration();
             break;
@@ -464,6 +468,9 @@ const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
         if (API_CONFIG.DEBUG) {
           console.error('❌ Confirmation failed with action:', action);
         }
+        // Failure on the confirm step, after the user already committed —
+        // worth distinguishing from a failure on the initial register call.
+        void analyticsService.logRegisterStep('failed', action, event_name);
 
         switch (action) {
           case 'bib_number_invalid':
@@ -503,6 +510,7 @@ const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
         await clearPendingRegistration();
         await invalidateEventCache();
         await analyticsService.markAsParticipant('register');
+        void analyticsService.logRegisterStep('completed', undefined, event_name);
         onSuccess?.(
           confirmItem.product_option_value_app_id,
           result.participant?.participant_app_id
@@ -537,9 +545,18 @@ const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
 
   const handleRegister = useCallback(
     async (item: Distance, showConfirmPopup?: boolean) => {
+      // Registration funnel. The register_step event has existed since day one
+      // but was never called from anywhere, so only the terminal
+      // markAsParticipant('register') fired — meaning drop-off was invisible
+      // and there was no way to see WHERE people abandon signing up.
+      void analyticsService.logRegisterStep('started', undefined, event_name);
+
       const hasToken = await isTokenValid();
 
       if (!hasToken) {
+        // Bounced to login mid-registration. Historically the single largest
+        // silent drop-off point.
+        void analyticsService.logRegisterStep('login_required', undefined, event_name);
         if (API_CONFIG.DEBUG) {
           console.log('🔐 No token, redirecting to login');
         }

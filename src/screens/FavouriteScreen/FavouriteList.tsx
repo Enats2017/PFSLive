@@ -18,6 +18,7 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { useDimensions } from '../../hooks/useDimensions';
+import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const {
@@ -57,7 +58,12 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         handlePasswordSubmit,
         handlePasswordModalClose,
     } = useFollowManager(t, product_app_id,                                   // ✅ productAppId — not needed in this screen
-        () => onFollowSuccessRef.current?.(), );
+        () => onFollowSuccessRef.current?.(),
+        {
+            screenName: ANALYTICS_SCREENS.FAVOURITE_LIST,
+            raceName: event_name,
+        },
+    );
 
     const fetchFavourites = useCallback(async () => {
         if (isFetching.current) {

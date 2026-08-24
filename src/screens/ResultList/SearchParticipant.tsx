@@ -103,9 +103,11 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
                 // which is capped at one page. Never the query text — free text is
                 // unbounded and would blow GA4's cardinality limit.
                 if (pageNum === 1 && search.trim().length > 0) {
+                    // In-race search; only the product id is in scope here.
                     void analyticsService.logSearchPerformed(
                         'participant',
                         result.pagination.total ?? result.participants.length,
+                        { product_app_id },
                     );
                 }
 

@@ -27,7 +27,6 @@ import { API_CONFIG } from '../../constants/config';
 import { tokenService } from '../../services/tokenService';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
-import FanEventCard from '../FollowerEventList/FollowerCard';
 import { useDimensions } from '../../hooks/useDimensions';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';

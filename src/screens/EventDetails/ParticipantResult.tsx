@@ -27,6 +27,7 @@ import { clearPendingRegistration } from '../../hooks/usePendingRegistration';
 import { getCurrentLanguageId } from '../../i18n';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
+import { ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 interface ParticipantResultRouteParams {
   product_app_id: number;
@@ -135,9 +136,12 @@ const ParticipantResult = () => {
         // Sends pagination.total (all matches), not participants.length, which is
         // capped at one page. Never the query text.
         if (pageNum === 1 && search.trim().length > 0) {
+          // A participant search always happens inside ONE race, so it can be
+          // attributed. (The eight cross-event searches must NOT be.)
           void analyticsService.logSearchPerformed(
             'participant',
             result.pagination.total ?? result.participants.length,
+            { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
           );
         }
       } catch (err: any) {

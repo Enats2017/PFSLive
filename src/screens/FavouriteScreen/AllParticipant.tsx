@@ -23,6 +23,7 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { AppHeader } from '../../components/common/AppHeader';
 import { useDimensions } from '../../hooks/useDimensions';
+import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => {
     const { product_app_id } = route.params;
@@ -42,7 +43,9 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
         passwordError,
         handlePasswordSubmit,
         handlePasswordModalClose,
-    } = useFollowManager(t, productId);
+    } = useFollowManager(t, productId, undefined, {
+        screenName: ANALYTICS_SCREENS.ALL_PARTICIPANTS,
+    });
 
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [loading, setLoading] = useState(true);

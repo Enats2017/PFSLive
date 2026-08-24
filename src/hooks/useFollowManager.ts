@@ -13,6 +13,7 @@ import {
 import { toastSuccess, toastError } from "../../utils/toast";
 import { followService } from "../services/followService";
 import { analyticsService } from "../services/analyticsService";
+import { ANALYTICS_PARAMS } from "../constants/analyticsScreens";
 
 interface UseFollowManagerResult {
   followedUsers: Set<number>;
@@ -47,11 +48,45 @@ interface UseFollowManagerResult {
   handlePasswordModalClose: () => void;
 }
 
+/**
+ * Analytics context for follow events. Optional and additive — every existing
+ * useFollowManager(t) / useFollowManager(t, id) / useFollowManager(t, id, cb)
+ * call site keeps working untouched.
+ *
+ * The hook has no idea which screen it is on or which race is showing, so
+ * without this a follow_toggle could only say "someone followed somebody,
+ * somewhere". Callers that DO know pass it in.
+ */
+export interface FollowAnalyticsContext {
+  /** An ANALYTICS_SCREENS value — where the follow control was pressed. */
+  screenName?: string;
+  /** Race title. Only meaningful for bib (event-scoped) follows. */
+  raceName?: string;
+}
+
 export function useFollowManager(
   t: any,
   productAppId?: number,
-  onFollowSuccess?: () => void, 
+  onFollowSuccess?: () => void,
+  analyticsContext?: FollowAnalyticsContext,
 ): UseFollowManagerResult {
+  // Destructured to primitives: callers pass an inline object literal, whose
+  // identity changes every render and would invalidate the useCallbacks below.
+  const analyticsScreen = analyticsContext?.screenName;
+  const analyticsRaceName = analyticsContext?.raceName;
+
+  // Only include keys that actually have a value — GA4 treats an empty string
+  // as a real value in reports, which is worse than the row being absent.
+  const followParams = useCallback(
+    (extra?: Record<string, string | number | boolean>) => {
+      const params: Record<string, string | number | boolean> = { ...(extra ?? {}) };
+      if (analyticsScreen) params.ui_screen = analyticsScreen;
+      if (analyticsRaceName) params[ANALYTICS_PARAMS.EVENT_NAME] = analyticsRaceName;
+      return params;
+    },
+    [analyticsScreen, analyticsRaceName],
+  );
+
   const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set());
   const [followedBibs, setFollowedBibs] = useState<Map<number, Set<string>>>(
     new Map(),
@@ -231,9 +266,14 @@ export function useFollowManager(
             await analyticsService.markAsFollowerActive('follow_participant');
             // markAsFollowerActive fires only on the FIRST follow ever — it's a
             // role classifier, not a counter. Without this there is no ongoing
-            // follow volume at all. Context values ('customer' / 'bib') match the
-            // web so the dimension means one thing across both surfaces.
-            void analyticsService.logFollowToggle('follow', 'customer');
+            // follow volume at all.
+            //
+            // ATHLETE scope: followed by customer_app_id, so it carries across
+            // EVERY event this athlete enters. Deliberately no race_name even
+            // when the caller supplied one — the follow is not race-scoped, and
+            // tagging it would overstate how much a given race drove permanent
+            // follows. Matches lib/analytics.ts on the web.
+            void analyticsService.logFollowToggle('follow', 'athlete', followParams());
             toastSuccess(
               t("follower:success.followTitle"),
               t("follower:success.followMessage"),
@@ -241,7 +281,7 @@ export function useFollowManager(
           } else {
             await unfollowUser(numericId);
             // Unfollows were completely invisible before this.
-            void analyticsService.logFollowToggle('unfollow', 'customer');
+            void analyticsService.logFollowToggle('unfollow', 'athlete', followParams());
             onFollowSuccess?.();
             toastSuccess(
               t("follower:success.unfollowTitle"),
@@ -340,7 +380,13 @@ export function useFollowManager(
           await smartFollow(productId, bib, customerAppId);
           onFollowSuccess?.();
           await analyticsService.markAsFollowerActive('follow_participant');
-          void analyticsService.logFollowToggle('follow', 'bib');
+          // EVENT scope: followed by bib, so it applies to this race only —
+          // race_name and product_app_id are meaningful here.
+          void analyticsService.logFollowToggle(
+            'follow',
+            'event',
+            followParams({ product_app_id: productId }),
+          );
           toastSuccess(
             t("follower:success.followTitle"),
             t("follower:success.followMessage"),
@@ -348,7 +394,11 @@ export function useFollowManager(
         } else {
           await smartUnfollow(productId, bib, customerAppId);
           onFollowSuccess?.();
-          void analyticsService.logFollowToggle('unfollow', 'bib');
+          void analyticsService.logFollowToggle(
+            'unfollow',
+            'event',
+            followParams({ product_app_id: productId }),
+          );
           toastSuccess(
             t("follower:success.unfollowTitle"),
             t("follower:success.unfollowMessage"),
@@ -424,7 +474,7 @@ export function useFollowManager(
         });
       }
     },
-    [followedUsers, followedBibs, followingInProgress, t, onFollowSuccess],
+    [followedUsers, followedBibs, followingInProgress, t, onFollowSuccess, followParams],
   );
 
   const handleFollowPress = useCallback(

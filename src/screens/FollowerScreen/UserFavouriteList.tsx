@@ -20,6 +20,7 @@ import { useFollowManager } from '../../hooks/useFollowManager';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useDimensions } from '../../hooks/useDimensions';
 import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 interface PaginationState {
     page: number;
@@ -63,6 +64,8 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
         t,
         undefined,                                   // ✅ productAppId — not needed in this screen
         () => onFollowSuccessRef.current?.(),        // ✅ onFollowSuccess callback via ref
+        // Cross-event screen: follows here are athlete-scoped, so no raceName.
+        { screenName: ANALYTICS_SCREENS.USER_FAVOURITES },
     );
 
     // ✅ useCallback so the ref always holds a stable, up-to-date reference
@@ -183,6 +186,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
     const renderCard = useCallback(
         ({ item }: { item: FavouriteItem }) => (
             <FanEventCard
+                analyticsScreenName={ANALYTICS_SCREENS.USER_FAVOURITES}
                 item={item}
                 isFollowed={isFollowed(item.customer_app_id)}
                 isLoading={isLoading(item.customer_app_id)}

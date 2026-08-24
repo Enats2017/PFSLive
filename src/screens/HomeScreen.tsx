@@ -1076,6 +1076,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       endReason: raceAlreadyFinished ? 'finish_crossed' : 'manual_stop',
       pointsSent: actualSentCount,
       queuedRemaining: remaining,
+      // Race context: tracking_started already sends event_id, so without these
+      // a completed session could not be tied back to the race it belonged to.
+      eventId,
+      raceName: homeData?.next_race_name,
     });
 
     AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => { });

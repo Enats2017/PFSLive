@@ -20,6 +20,7 @@ import { AthleteSearchScreenpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { useDimensions } from '../../hooks/useDimensions';
 import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 interface PaginationState {
     page: number;
@@ -52,7 +53,9 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
         passwordError,
         handlePasswordSubmit,
         handlePasswordModalClose,
-    } = useFollowManager(t);
+    } = useFollowManager(t, undefined, undefined, {
+        screenName: ANALYTICS_SCREENS.ATHLETE_SEARCH,
+    });
 
     const displayEvents = searchText.trim().length > 0 ? searchResults : participants;
 
@@ -180,6 +183,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
     const renderCard = useCallback(
         ({ item }: { item: ParticipantItem }) => (
             <FanEventCard
+                analyticsScreenName={ANALYTICS_SCREENS.ATHLETE_SEARCH}
                 item={item}
                 isFollowed={isFollowed(item.customer_app_id)}
                 isLoading={isLoading(item.customer_app_id)}

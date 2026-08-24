@@ -11,6 +11,14 @@ import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 interface FanEventCardProps {
+    /**
+     * Which screen this card is rendered on. Required: the card is shared by
+     * the athlete-search screen and the user's own favourites list, and it used
+     * to hardcode PARTICIPANT_LIST — so ui_screen conflated three unrelated
+     * screens, one of which (the in-event participant list) genuinely uses that
+     * value. Same prop pattern as the ResultList cards.
+     */
+    analyticsScreenName: string;
     item: ParticipantItem;
     isFollowed: boolean;
     isLoading: boolean;
@@ -19,6 +27,7 @@ interface FanEventCardProps {
 }
 
 const FanEventCard: React.FC<FanEventCardProps> = ({
+    analyticsScreenName,
     item,
     isFollowed,
     isLoading,
@@ -135,7 +144,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                     activeOpacity={0.8}
                     onPress={ async () => {
                         await analyticsService.logInteraction(
-                            ANALYTICS_SCREENS.PARTICIPANT_LIST,
+                            analyticsScreenName,
                             ANALYTICS_BUTTONS.VIEW_PROFILE,
                             'tap',
                             {

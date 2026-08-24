@@ -23,6 +23,14 @@ export const ANALYTICS_SCREENS = {
   BOTTOM_NAV_FOLLOWER: 'bottom_nav_follower',
   FOLLOWER_DETAILS: 'follower_details',
   FOLLOWER_LIVE_TRACKING: 'follower_live_tracking',
+  // Added so follow_toggle can report a real screen. Previously the follow
+  // type ('customer'/'bib') was written into ui_screen instead, and these
+  // screens had no value at all.
+  ATHLETE_SEARCH: 'athlete_search',
+  USER_FAVOURITES: 'user_favourites',
+  FAVOURITE_LIST: 'favourite_list',
+  ALL_PARTICIPANTS: 'all_participants',
+  PROFILE: 'profile',
 } as const;
 
 export const ANALYTICS_BUTTONS = {
@@ -79,7 +87,9 @@ export const ANALYTICS_PARAMS = {
 
 // NOTE ON REGISTERING CUSTOM DIMENSIONS IN GA4:
 //   Register:      tab_name, race_name, ui_screen, ui_button, ui_action,
-//                  role_at_time  (all Event scope)
+//                  role_at_time, follow_scope  (all Event scope)
+//   follow_scope is shared with the web app — same dimension, one property.
+//   Registration is NOT retroactive: register before shipping, never after.
 //                  has_followed, user_role  (User scope)
 //   Do NOT register: bib_number, customer_id
 //     Both are unbounded. GA4 collapses anything past roughly 500 unique

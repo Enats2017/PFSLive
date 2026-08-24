@@ -255,6 +255,14 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
       const message = error.message === 'API_ERROR'
         ? t('personal:errors.createFailed')
         : error.message;
+      // 'failed' was declared in the union but unreachable — the catch logged
+      // nothing, so a thrown/network failure looked identical to the user
+      // simply never finishing. Only the error CODE is sent, never the
+      // message: error.message can contain server text or user input.
+      void analyticsService.logCreateEventStep(
+        'failed',
+        error?.message === 'API_ERROR' ? 'api_error' : 'exception',
+      );
       toastError(t('common:errors.generic'), message);
     } finally {
       setIsSubmitting(false);

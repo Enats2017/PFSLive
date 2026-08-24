@@ -19,6 +19,7 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 interface ParticipantTabProps {
   product_app_id: string | number;
@@ -40,7 +41,9 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     passwordError,
     handlePasswordSubmit,
     handlePasswordModalClose,
-  } = useFollowManager(t, productId);
+  } = useFollowManager(t, productId, undefined, {
+    screenName: ANALYTICS_SCREENS.PARTICIPANT_LIST,
+  });
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,9 +115,13 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
         // Sends pagination.total (all matches), not participants.length, which is
         // capped at one page. Never the query text.
         if (pageNum === 1 && search.trim().length > 0) {
+          // In-race search. Only the product id is in scope here — no event
+          // name reaches this component — so attribute by id rather than
+          // sending an empty race_name.
           void analyticsService.logSearchPerformed(
             'participant',
             result.pagination.total ?? result.participants.length,
+            { product_app_id: productId },
           );
         }
 

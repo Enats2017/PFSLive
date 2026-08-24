@@ -26,6 +26,7 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useDimensions } from '../../hooks/useDimensions';
+import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 type Tab = 'Past' | 'Live';
 const TABS: Tab[] = ['Past', 'Live'];
@@ -63,7 +64,9 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
         passwordError,
         handlePasswordSubmit,
         handlePasswordModalClose,
-    } = useFollowManager(t);
+    } = useFollowManager(t, undefined, undefined, {
+        screenName: ANALYTICS_SCREENS.PROFILE,
+    });
 
     const isInitialMount = useRef(true);
     const isFetching = useRef(false);

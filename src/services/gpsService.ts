@@ -1505,6 +1505,9 @@ export const finishBackgroundStop = async (
       endReason: 'finish_crossed',
       pointsSent: sentCount,
       queuedRemaining: await locationQueueService.getQueueSize(),
+      // No race NAME reaches gpsService — it only ever holds ids — so send the
+      // id alone rather than an empty race_name.
+      eventId: eventId ?? undefined,
     });
   } catch { /* silent */ }
 

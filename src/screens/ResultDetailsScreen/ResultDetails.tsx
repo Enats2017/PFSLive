@@ -53,7 +53,10 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         handleFollowPress, passwordModalVisible,
         isVerifying, passwordError,
         handlePasswordSubmit, handlePasswordModalClose,
-    } = useFollowManager(t, product_app_id);
+    } = useFollowManager(t, product_app_id, undefined, {
+        screenName: ANALYTICS_SCREENS.RESULT_DETAILS,
+        raceName: data?.event?.race_name,
+    });
 
     const [activeTab, setActiveTab] = useState<TabKey>('raceInfo');
     const activeTabRef = useRef<TabKey>('raceInfo');

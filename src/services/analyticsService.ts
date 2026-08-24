@@ -2,6 +2,7 @@ import {
   getAnalytics,
   setUserId,
   setUserProperty,
+  setAnalyticsCollectionEnabled,
   logEvent,
 } from "@react-native-firebase/analytics";
 import * as Location from "expo-location";
@@ -10,6 +11,36 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { tokenService } from "./tokenService";
 
 const analytics = getAnalytics();
+
+// ── Collection kill-switch ────────────────────────────────────────────────
+// App and web share ONE GA4 property (549139365). Until now every dev-client
+// session and every internal `preview` build reported into it, so client-facing
+// numbers silently included developer and tester activity — there is only one
+// Firebase project (livio-c0757) and no per-environment google-services file,
+// so there was nothing to filter on afterwards either.
+//
+// EXPO_PUBLIC_ENV is already set per profile in eas.json; this just connects it.
+//
+// The FORCE override exists because disabling collection also blanks Firebase
+// DebugView — without it you cannot verify tracking on a preview build at all.
+// Set EXPO_PUBLIC_ANALYTICS_FORCE=1 for a one-off verification build.
+const ANALYTICS_FORCED_ON = process.env.EXPO_PUBLIC_ANALYTICS_FORCE === "1";
+const ANALYTICS_ENABLED =
+  process.env.EXPO_PUBLIC_ENV === "production" || ANALYTICS_FORCED_ON;
+
+// Fire-and-forget: the native SDK applies this before it uploads its first
+// batch, and every logEvent below is already non-blocking.
+void setAnalyticsCollectionEnabled(analytics, ANALYTICS_ENABLED).catch(() => {
+  // Never let an analytics setting break app start.
+});
+
+if (!ANALYTICS_ENABLED) {
+  console.log(
+    "📊 [Analytics] collection DISABLED (EXPO_PUBLIC_ENV=" +
+      String(process.env.EXPO_PUBLIC_ENV) +
+      "). Set EXPO_PUBLIC_ANALYTICS_FORCE=1 to re-enable for a build.",
+  );
+}
 
 // Own key — analyticsService records its own tracking start time so duration
 // doesn't depend on internals of gpsService/HomeScreen.
@@ -270,6 +301,9 @@ export const analyticsService = {
     distanceKm?: number;
     pointsSent?: number;
     queuedRemaining?: number;
+    /** Race context — omit rather than pass an empty value. */
+    eventId?: string | number | null;
+    raceName?: string | null;
   }) {
     // Self-guarding against double-fire. Two independent paths end a session:
     // HomeScreen's stopGPSTracking, and gpsService's finishBackgroundStop —
@@ -297,9 +331,20 @@ export const analyticsService = {
     await logEvent(analytics, "tracking_completed", {
       end_reason: params.endReason,
       duration_seconds: durationSeconds,
-      distance_km: Math.round(params.distanceKm ?? 0),
       points_sent: params.pointsSent ?? 0,
       queued_remaining: params.queuedRemaining ?? 0,
+      // distance_km is only sent when a caller actually has a distance.
+      // It used to be `params.distanceKm ?? 0`, and since NEITHER call site
+      // passes one, every tracking_completed carried a hard-coded 0 — a number
+      // that looks real in a report and is always wrong. An absent parameter is
+      // honest; a false zero is not.
+      ...(typeof params.distanceKm === "number" && Number.isFinite(params.distanceKm)
+        ? { distance_km: Math.round(params.distanceKm) }
+        : {}),
+      // Race context, when the caller has it. tracking_started already sends
+      // event_id; this closes the asymmetry.
+      ...(params.eventId ? { event_id: String(params.eventId) } : {}),
+      ...(params.raceName ? { race_name: params.raceName } : {}),
     });
 
     console.log(
@@ -351,18 +396,27 @@ export const analyticsService = {
    * the web sends follow_toggle the report shows web-only volume and reads as
    * though the web drives nearly all follows, which is worse than having no
    * number at all. Signature matches lib/analytics.ts on the web.
+   *
+   * followScope is a real product distinction, not a UI detail:
+   *   'athlete' — followed by customer_app_id, carries across EVERY event
+   *   'event'   — followed by bib, applies to that one race only
+   * It used to be passed as 'customer'/'bib' and written into `ui_screen`,
+   * which put two follow-types into the same dimension as every real screen
+   * name — and since app and web share one GA4 property, that made
+   * "interactions by screen" unreadable for both. The real screen now travels
+   * in ui_screen via extraParams.
    */
   async logFollowToggle(
     action: "follow" | "unfollow",
-    context: string,
+    followScope: "athlete" | "event",
     extraParams?: Record<string, string | number | boolean>,
   ) {
     await logEvent(analytics, "follow_toggle", {
       follow_action: action,
-      ui_screen: context,
+      follow_scope: followScope,
       ...(extraParams ?? {}),
     });
-    console.log("📊 [Analytics] follow_toggle:", action, context);
+    console.log("📊 [Analytics] follow_toggle:", action, followScope, extraParams ?? "");
   },
 
   // ─────────────────────────────────────────────────────────────
@@ -387,7 +441,14 @@ export const analyticsService = {
     await logEvent(analytics, "gpx_imported", { gpx_source: source });
   },
 
-  /** Someone actually ran a search. Pass result count, not the query text. */
+  /**
+   * Someone actually ran a search. Pass result count, not the query text.
+   *
+   * extraParams carries `race_name` for the three searches that happen INSIDE
+   * one race. The other eight are cross-event by nature (global athlete search,
+   * event-name search, your own favourites/followers) and must NOT be given a
+   * race — it would be meaningless there.
+   */
   async logSearchPerformed(
     searchType:
       | "participant"   // participant lists inside an event
@@ -396,10 +457,12 @@ export const analyticsService = {
       | "favourite"     // searching your own favourites
       | "follower",     // searching your own followers
     resultCount: number,
+    extraParams?: Record<string, string | number | boolean>,
   ) {
     await logEvent(analytics, "search_performed", {
       search_type: searchType,
       result_count: resultCount,
+      ...(extraParams ?? {}),
     });
   },
 
@@ -471,12 +534,16 @@ export const analyticsService = {
       | "completed"         // registered
       | "failed",
     reason?: string,
+    raceName?: string,
   ) {
     await logEvent(analytics, "register_step", {
       register_step: step,
       // Server error CODE only — never a message, never user input.
       register_reason: reason ?? "",
+      // Registration always happens against one race, so it can be attributed.
+      ...(raceName ? { race_name: raceName } : {}),
     });
+    console.log("📊 [Analytics] register_step:", step, reason ?? "");
   },
 
   /**

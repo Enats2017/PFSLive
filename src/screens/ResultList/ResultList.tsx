@@ -55,6 +55,12 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         event_image,
     } = route.params;
 
+    // Declared before useFollowManager so the follow events can report which
+    // side of the app the user is on (participant vs follower result list).
+    const resultListScreenName = sectionType === 'follower'
+        ? ANALYTICS_SCREENS.FOLLOWER_RESULT_LIST
+        : ANALYTICS_SCREENS.RESULT_LIST;
+
     const {
         isFollowed,
         isLoading,
@@ -67,7 +73,10 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         passwordError,
         handlePasswordSubmit,
         handlePasswordModalClose,
-    } = useFollowManager(t, product_app_id);
+    } = useFollowManager(t, product_app_id, undefined, {
+        screenName: resultListScreenName,
+        raceName: event_name,
+    });
 
     const initialType = sourceTab === 'live' ? TYPE_OPTIONS[1] : TYPE_OPTIONS[0];
 
@@ -117,10 +126,6 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         initialType,
         followedBibs
     );
-
-    const resultListScreenName = sectionType === 'follower'
-    ? ANALYTICS_SCREENS.FOLLOWER_RESULT_LIST
-    : ANALYTICS_SCREENS.RESULT_LIST;
 
     const renderItem = useCallback(({ item }: { item: RaceResult }) => {
         const commonProps = {
