@@ -309,7 +309,9 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     prev.item.status === next.item.status &&
     prev.item.checkpoints === next.item.checkpoints &&
     prev.isCheckpointMode === next.isCheckpointMode &&
-    prev.selectedCheckpointIndex === next.selectedCheckpointIndex
+    prev.selectedCheckpointIndex === next.selectedCheckpointIndex && 
+    prev.showUtmbIndex === next.showUtmbIndex &&
+    prev.item.utmb_index === next.item.utmb_index
 );
 
 ResultCardLive.displayName = 'ResultCardLive';

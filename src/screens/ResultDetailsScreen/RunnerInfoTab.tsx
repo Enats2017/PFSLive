@@ -11,6 +11,7 @@ import { getImageUrl } from '../../constants/config';
 
 interface RunnerInfoProps {
     runnerInfo?: RunnerInfo;
+    showUtmbIndex?: boolean;
     liveTrackingActivated?: number;
     isFollowing?: boolean;
     onMapPress?: () => void;
@@ -23,7 +24,7 @@ const getInitials = (name?: string): string => {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo,  liveTrackingActivated,isFollowing,onMapPress}) => {
+const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, liveTrackingActivated,isFollowing,onMapPress}) => {
     const { t } = useTranslation('resultdetails');
     const initials = getInitials(runnerInfo?.name);
 
@@ -96,7 +97,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo,  liveTrackingAct
                 </View> */}
 
                 {/* ✅ Only show UTMB section if utmb_index exists and is not 0 */}
-                {hasUtmbIndex && (
+                {showUtmbIndex && hasUtmbIndex && (
                     <View style={resultInfoStyles.row}>
                         <View style={resultInfoStyles.col}>
                             <View style={resultInfoStyles.utmbIndexBadge}>

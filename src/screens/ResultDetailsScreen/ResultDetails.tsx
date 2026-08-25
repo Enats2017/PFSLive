@@ -157,6 +157,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                 {item === 'runnerInfo' && (
                     <RunnerInfoTab
                         runnerInfo={data?.runner_info}
+                        showUtmbIndex={data?.event?.show_utmb_index === 1}
                         liveTrackingActivated={data?.race_info?.live_tracking_activated}
                         isFollowing={Followed}
                         onMapPress={() => {

@@ -153,17 +153,18 @@ export const useResultList = (
             );
           }
         }
+        setShowUtmbIndex(data.event?.show_utmb_index === 1);
 
-        if (data.event?.show_utmb_index !== undefined) {
-          setShowUtmbIndex(data.event.show_utmb_index === 1);
+        // if (data.event?.show_utmb_index !== undefined) {
+        //   setShowUtmbIndex(data.event.show_utmb_index === 1);
 
-          if (API_CONFIG.DEBUG) {
-            console.log(
-              "✅ Show UTMB Index:",
-              data.event.show_utmb_index === 1,
-            );
-          }
-        }
+        //   if (API_CONFIG.DEBUG) {
+        //     console.log(
+        //       "✅ Show UTMB Index:",
+        //       data.event.show_utmb_index === 1,
+        //     );
+        //   }
+        // }
 
         if ((povId === undefined || povId === 0) && data.distances.length > 0) {
           const firstDistance = data.distances[0];
