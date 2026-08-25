@@ -51,8 +51,10 @@ export interface ResultDetailEvent {
     timezone: string;
     server_datetime: string;
     from_live: 0 | 1;
-     race_status: string;   // ✅ added
+    race_status: string;   // ✅ added
     gpx_url: string; 
+    show_utmb_index: 0|1
+
 }
 
 export interface RaceInfo {
