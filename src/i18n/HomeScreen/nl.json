@@ -113,5 +113,21 @@
     "maybeLater": "Misschien later",
     "savedTitle": "E-mailadres opgeslagen",
     "savedMessage": "We houden je op de hoogte van race-updates."
+  },
+  "gpsHealth": {
+    "title": "Locatietoegang is beperkt",
+    "blockedBody": "Livio heeft locatietoegang \"Altijd\" nodig om je wedstrijd op te nemen terwijl je telefoon in je zak zit. Met \"Tijdens gebruik van de app\" stopt de registratie zodra het scherm uitgaat.",
+    "blockedBodyDenied": "Livio heeft toegang tot je locatie nodig om je wedstrijd op te nemen. Locatietoegang staat nu uit voor deze app.",
+    "openSettings": "Instellingen openen",
+    "bannerNoBackground": "Beperkte locatietoegang — je positie wordt niet meer opgenomen zodra het scherm uitgaat. Tik om op te lossen.",
+    "bannerNoFix": "GPS geeft geen positie door. Je wedstrijd wordt niet opgenomen.",
+    "bannerProviderOff": "Locatievoorzieningen staan uit. Je wedstrijd wordt niet opgenomen.",
+    "notificationTitle": "Livio neemt je wedstrijd niet op",
+    "notificationBody": "GPS reageert niet meer. Open Livio om dit op te lossen.",
+    "blockedBodyLocationOff": "Locatie staat uit op deze telefoon, waardoor Livio je wedstrijd niet kan opnemen. Zet Locatie aan en druk daarna opnieuw op Start.",
+    "stepsLocationOffIos": "Ga naar Instellingen → Privacy en beveiliging → Locatievoorzieningen en zet dit aan.",
+    "stepsIos": "Tik op Locatie en kies daarna “Altijd”.",
+    "stepsAndroid": "Kies “Altijd toestaan” op het volgende scherm.",
+    "stepsAndroidSettings": "Open Machtigingen → Locatie en kies daarna “Altijd toestaan”."
   }
 }

@@ -367,7 +367,7 @@ const handleExternalRegister = useCallback((url: string) => {
     return (
       <View>
         {event_image ? (
-          <View style={{ width: '100%', aspectRatio: 612 / 300, justifyContent: 'center', alignItems: 'center',}}>
+          <View style={{ width: '100%', aspectRatio: 612 / 428, justifyContent: 'center', alignItems: 'center',}}>
             {imageLoading && (
               <ActivityIndicator
                 size="large"
@@ -381,7 +381,7 @@ const handleExternalRegister = useCallback((url: string) => {
               resizeMode="cover"
               style={{
                 width: '100%',
-                aspectRatio: 612 / 300,
+                aspectRatio: 612 / 428,
                 opacity: imageLoading ? 0 : 1,
               }}
               onLoad={() => setImageLoading(false)}

@@ -10,11 +10,45 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // LIVE before finishBackgroundStop reads it for the tracking-log upload.
 const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
 
+// How many times one queued fix may be rejected by the server before it is
+// discarded to unblock everything behind it. Only counts CLIENT-side rejections
+// (see the drain's catch) — transient failures never increment it.
+const MAX_FIX_ATTEMPTS = 5;
+
 // Absolute wall-clock timeout. axios's own `timeout` does NOT reliably fire on
 // a half-open socket (cell drops mid-request, no FIN/RST) — the request can hang
 // for minutes. Promise.race against a real timer guarantees the await resolves
 // within `ms` no matter what the socket does, so the send/drain/mutex budgets
 // downstream actually hold.
+/**
+ * Compact, bounded description of a send failure for the on-device log.
+ * Bounded on purpose: this string ends up in every rejected-fix log line, and
+ * the log is capped, so it must stay short and must never carry a server body.
+ */
+function _describeSendError(error: any): string {
+  if (!error) return 'network error';
+  const status = error?.status ?? error?.response?.status;
+  const type = error?.type;               // AppError: 'network' | 'server' | 'empty'
+  const code = error?.code;               // AppError code, or axios ECONNABORTED etc
+  // Rate limiting is the one we most need to spot at a glance: api.ts's
+  // handleError throws away the HTTP status, but the server's 429 body text
+  // survives in `code`, so match on that. 617 rejections on 2026-08-23 clustered
+  // across runners in the same minute and we could not tell whether they were
+  // 429s — this makes that answerable from the log alone.
+  const codeStr = code ? String(code) : '';
+  if (/rate limit/i.test(codeStr)) return 'HTTP 429 rate limited';
+
+  const parts: string[] = [];
+  if (status) parts.push(`http ${status}`);
+  if (type) parts.push(String(type));
+  if (codeStr && codeStr !== String(type)) parts.push(codeStr.slice(0, 40));
+  if (!parts.length) {
+    const m = String(error?.message ?? '').slice(0, 60);
+    parts.push(m || 'network error');
+  }
+  return parts.join(' ');
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -233,9 +267,15 @@ export const locationService = {
         };
         await locationQueueService.addToQueue(queuedLocation);
         if (API_CONFIG.DEBUG) console.log('📦 Location queued (error)');
+        // Carry WHY it failed into the message. Every failure class — HTTP 429
+        // rate-limit, 5xx, 404, DNS, socket timeout — used to collapse into the
+        // single string "Location queued (network error)", which made the
+        // 2026-08-23 race undiagnosable: 617 rejections and no way to tell a
+        // server rate-limit from a runner losing signal. apiClient throws
+        // AppError{type, code}; withTimeout throws a plain Error.
         return {
           success: false,
-          message: 'Location queued (network error)',
+          message: `Location queued (${_describeSendError(error)})`,
         };
       }
 
@@ -308,6 +348,35 @@ export const locationService = {
             true,          // ← this fix came from the offline queue
           );
 
+          // ⚠️ DATA LOSS GUARD — do not remove. PREVENTATIVE, not a past fix.
+          //
+          // sendLocation RESOLVES with { success:false } (it does not throw) when
+          // the network drops mid-drain or the API rejects the fix. Falling
+          // through to sentCount++ lets removeFromQueue(sentCount) splice those
+          // fixes out of the queue, so a cell dropout during a 50-fix drain could
+          // delete up to 50 real positions while reporting them as sent.
+          //
+          // NOT observed on 2026-08-23 — that race lost nothing. An earlier
+          // version of this comment cited a session with total_sent=604 against 7
+          // "Sent OK" lines as proof. That was a misreading: drained fixes log once
+          // per BATCH ("Drained N queued fix(es)"), not per fix, and the on-device
+          // log is capped, so "Sent OK" can never be expected to match the counter.
+          // The real evidence says the opposite — every one of the 149 sessions
+          // ended with total_queued = 0, and the server accepted MORE fixes (27,822)
+          // than the clients counted as sent (24,728 once duplicate uploads are
+          // collapsed). The hazard below is real in code; it simply never fired.
+          //
+          // break, not continue: removeFromQueue() splices from the HEAD by count,
+          // so the drained prefix must stay contiguous. Stopping here leaves this
+          // fix and everything behind it in the queue for the next pass.
+          if (!qResult || qResult.success !== true) {
+            try {
+              const { addLog } = require('./gpsService');
+              await addLog('🔴', `Drain halted — fix not accepted (${qResult?.message ?? 'unknown'}); ${sentCount} sent, rest kept queued`);
+            } catch { /* silent */ }
+            break;
+          }
+
           sentCount++;
 
           // ✅ Keep the cumulative session counter live AS WE DRAIN. finishBackgroundStop
@@ -358,9 +427,38 @@ export const locationService = {
             // the gpsService drain loop break out and the watchdog treat the session
             // as over while fixes are still pending. It's set at teardown below.
           }
-        } catch (error) {
+        } catch (error: any) {
           if (API_CONFIG.DEBUG) {
             console.error('❌ Failed to send queued location');
+          }
+
+          // QUEUE WEDGE GUARD.
+          //
+          // A fix the server rejects OUTRIGHT throws on every pass, so it stayed
+          // at the head of the queue and blocked every fix behind it for the rest
+          // of the race — 101 of 149 sessions logged "Drain stalled" on
+          // 2026-08-23. retryCount already existed on QueuedLocation but was
+          // never incremented or read.
+          //
+          // Only a genuine CLIENT-side rejection is ever discarded. A network
+          // drop ('network'), a 5xx ('server') and a 429 rate-limit are all
+          // transient — discarding a fix for those would be the exact data loss
+          // the queue exists to prevent, so they only ever break and retry.
+          const codeStr = String(error?.code ?? '');
+          const isRateLimited = /rate limit/i.test(codeStr);
+          const permanentReject = error?.type === 'empty' && !isRateLimited;
+
+          if (permanentReject) {
+            const attempts = await locationQueueService.bumpHeadRetry();
+            if (attempts >= MAX_FIX_ATTEMPTS) {
+              try {
+                const { addLog } = require('./gpsService');
+                await addLog('🗑️', `Fix rejected ${attempts}× (${codeStr.slice(0, 40)}) — discarded to unblock the queue`);
+              } catch { /* silent */ }
+              // Drop the sent prefix AND the one poison fix behind it.
+              await locationQueueService.removeFromQueue(sentCount + 1);
+              alreadyRemoved = true;
+            }
           }
           break;
         }
@@ -406,7 +504,11 @@ export const locationService = {
     logs: TrackingLogEntry[],
     totalSent: number,
     totalQueued: number,
-  ): Promise<void> {
+    // Returns TRUE only on a confirmed save. It used to return void and swallow
+    // every failure, so callers set their "already uploaded" flag even when the
+    // upload had failed — the documented retry could never happen and the log was
+    // lost. Still never throws: a log-upload failure must not block stop-tracking.
+  ): Promise<boolean> {
     try {
       const url     = getApiEndpoint(API_CONFIG.ENDPOINTS.SAVE_TRACKING_LOG);
       const headers = await API_CONFIG.getHeaders();
@@ -423,9 +525,12 @@ export const locationService = {
         'saveTrackingLog'
       );
       if (API_CONFIG.DEBUG) console.log('✅ Tracking log saved to server');
+      return true;
     } catch (err: any) {
       if (API_CONFIG.DEBUG) console.log('⚠️ Tracking log save failed (non-fatal):', err?.message);
-      // Silent — log upload failure must never block stop tracking
+      // Silent — log upload failure must not block stop tracking, but the caller
+      // needs to know so it can release its claim and let the other path retry.
+      return false;
     }
   },
 

@@ -89,6 +89,60 @@ const OFFLINE_UNTIL_KEY = '@PFSLive:offlineCooldownUntil';
 const DRAIN_FAILS_TO_OFFLINE = 2;      // consecutive zero-flush passes → treat as offline
 const OFFLINE_COOLDOWN_MS    = 60000;  // then skip drain HTTP for 60s before retrying
 
+// ── GPS HEALTH ────────────────────────────────────────────────────────────
+// Why this exists: on 2026-08-23 seven sessions showed a green "GPS Active"
+// banner for hours while recording nothing — one for nine hours. Once the fault
+// starts these sessions never recover (at most ONE further successful send), so
+// the runner needs telling while they can still act on it.
+//
+// GPS_HEALTH_KEY is read by HomeScreen's existing 1s tick. AsyncStorage rather
+// than React state because every one of these faults is raised from a native or
+// headless context that cannot see React.
+//
+// The streak is EVENT-driven, not time-driven, and that is deliberate: a
+// "no fix for N minutes" rule false-fires after any iOS suspension. Measured
+// across all 156 race sessions, a healthy session never exceeded TWO
+// consecutive faults, while broken ones reached 590 / 188 / 54 / 30. A
+// threshold of 3 separated them with zero false alarms out of 87 healthy runs.
+export const GPS_HEALTH_KEY = '@PFSLive:gpsHealth';        // '' | 'no_fix' | 'provider_off' | 'no_background_perm'
+const GPS_FAULT_STREAK_KEY  = '@PFSLive:gpsFaultStreak';
+const GPS_FAULTS_TO_WARN    = 3;
+
+/** Count one GPS fault. At the threshold, flag the session unhealthy. */
+const _bumpGpsFault = async (reason: string): Promise<void> => {
+  try {
+    const cur = parseInt((await AsyncStorage.getItem(GPS_FAULT_STREAK_KEY)) || '0') || 0;
+    const next = cur + 1;
+    await AsyncStorage.setItem(GPS_FAULT_STREAK_KEY, String(next));
+    if (next === GPS_FAULTS_TO_WARN) {
+      await AsyncStorage.setItem(GPS_HEALTH_KEY, reason);
+      await addLog('🛑', `GPS unhealthy — ${next} consecutive faults (${reason}); runner warned`);
+    }
+  } catch { /* silent — health tracking must never break tracking */ }
+};
+
+/**
+ * Any genuinely valid fix clears the streak and a fix-derived warning.
+ *
+ * Clears ONLY 'no_fix'. 'no_background_perm' and 'provider_off' are STANDING
+ * conditions, not events: a foreground fix arriving proves nothing about whether
+ * background permission exists or location services are on. Clearing them here
+ * made the banner flicker on and off every few seconds — safeChangePace sets it
+ * each heartbeat, the next fix wiped it. Those two are cleared by the thing that
+ * owns them (a permission re-check, or onProviderChange reporting usable).
+ */
+const _clearGpsFault = async (): Promise<void> => {
+  try {
+    const cur = await AsyncStorage.getItem(GPS_FAULT_STREAK_KEY);
+    if (cur && cur !== '0') await AsyncStorage.setItem(GPS_FAULT_STREAK_KEY, '0');
+    const health = await AsyncStorage.getItem(GPS_HEALTH_KEY);
+    if (health === 'no_fix') {
+      await AsyncStorage.removeItem(GPS_HEALTH_KEY);
+      await addLog('💚', 'GPS recovered — valid fix received, warning cleared');
+    }
+  } catch { /* silent */ }
+};
+
 const FINISH_APPROACH_INTERVAL = 5;                            // seconds
 const FINISH_APPROACH_THRESHOLD = 1.0;                         // km
 const FINISH_LINE_THRESHOLD_KM = 0.05;                         // 50m for auto-stop
@@ -183,6 +237,21 @@ const safeChangePace = async (isMoving: boolean): Promise<void> => {
     const bg = await Location.getBackgroundPermissionsAsync();
     if (bg.status === 'granted') {
       await BackgroundGeolocation.changePace(isMoving);
+      // This function owns 'no_background_perm', so it also retires it — the
+      // runner may have granted "Always" from the settings screen mid-race.
+      // Runs on every heartbeat, so recovery is visible within ~60s.
+      if ((await AsyncStorage.getItem(GPS_HEALTH_KEY)) === 'no_background_perm') {
+        await AsyncStorage.removeItem(GPS_HEALTH_KEY);
+        await addLog('💚', 'Background location permission granted — warning cleared');
+      }
+    } else {
+      // Free signal: this runs ~every 60s from the heartbeat and already knows
+      // background permission is missing — it just threw the answer away. That
+      // is the exact state that silently kills a pocketed phone's tracking, so
+      // record it for the runner-facing warning instead of discarding it.
+      // Does NOT touch the fault streak: this is a standing condition, not an
+      // event, and it must not be cleared by a foreground fix arriving.
+      await AsyncStorage.setItem(GPS_HEALTH_KEY, 'no_background_perm');
     }
   } catch { /* silent — never let a pace change crash tracking */ }
 };
@@ -193,7 +262,7 @@ const safeChangePace = async (isMoving: boolean): Promise<void> => {
 // window is growing. During it the engine runs at full rate: the 60s heartbeat
 // re-asserts MOVING every beat (forcing the dense onLocation stream) and pulls a
 // keepalive fix. None of that is needed before the race starts — no fix is even
-// sent (the send path returns early on "Race not started"). So while the race
+// sent (the send path returns early on a PRESTART_SKIP log). So while the race
 // has not started we let the engine idle: skip the re-wake and skip the
 // keepalive pull. The instant the race starts, normal behaviour resumes with no
 // other change. Reads the SAME raceStartTime/manualStart the send path uses, so
@@ -434,9 +503,26 @@ const _uploadTrackingLogOnFinish = async (
     } catch { /* silent */ }
 
     const { locationService } = require('./locationService');
-    await locationService.saveTrackingLog(participantId, eventId, logs, sentCount, remaining);
 
+    // CLAIM BEFORE UPLOADING — this is what stops duplicate rows.
+    //
+    // The flag used to be set AFTER saveTrackingLog returned, so the gap between
+    // the read at the top of this function and the write here spanned an entire
+    // multi-second network call. HomeScreen.stopGPSTracking reads the same flag
+    // and, landing inside that window, uploaded the very same log again. That is
+    // the 43 duplicate rows in oc_tracking_logs_app on 2026-08-23 — 28% of all
+    // rows, pairs 0-5s apart with identical counters.
+    //
+    // Claiming first narrows the window from seconds to the read-write gap. The
+    // claim is released again if the save fails, so the other path still retries
+    // — which is the behaviour the comment above always described but, because
+    // saveTrackingLog swallowed its errors and returned void, never actually had.
     await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');
+    const uploaded = await locationService.saveTrackingLog(participantId, eventId, logs, sentCount, remaining);
+    if (uploaded === false) {
+      try { await AsyncStorage.removeItem(LOG_UPLOADED_KEY); } catch { /* silent */ }
+      return;
+    }
     if (API_CONFIG.DEBUG) console.log('📤 Tracking log uploaded from background after finish');
   } catch {
     // Silent — leave LOG_UPLOADED_KEY unset so the foreground stop retries.
@@ -580,15 +666,22 @@ const _processLocationForSendInternal = async (
     const { participantId, eventId, intervalSeconds, categoryId, raceStartTime, manualStart } = JSON.parse(paramsJson);
 
     // ✅ Race start check — block sends before race begins.
+    //
+    // The PRESTART_SKIP marker earns its ugliness: runners routinely press Start
+    // 15-55min early, so this fires on every GPS event until the gun — 29,848
+    // rows on 2026-08-23 alone. Without a distinct marker they are shaped just
+    // like genuine send failures, which is exactly how that race's "617 API
+    // rejections" false alarm happened (the real figure was ~1,120 network
+    // errors, a normal 2-6%). Keep suppression greppable apart from failure.
     if (manualStart !== 1) {
       if (!raceStartTime) {
-        await addLog('⏳', `Race time not set — skipping send${tag}`);
+        await addLog('⏳', `PRESTART_SKIP — race time not set, not sending${tag}`);
         return;
       }
       const raceTimeMs = new Date(raceStartTime).getTime();
       if (isNaN(raceTimeMs) || now < raceTimeMs) {
         const minsLeft = isNaN(raceTimeMs) ? '?' : ((raceTimeMs - now) / 60000).toFixed(1);
-        await addLog('⏳', `Race not started — ${minsLeft}min remaining${tag}`);
+        await addLog('⏳', `PRESTART_SKIP — race not started, ${minsLeft}min remaining${tag}`);
         return;
       }
     }
@@ -1238,6 +1331,30 @@ const _registerFgAppStateListener = (): void => {
 const _registerTransistorListeners = (): void => {
   try { BackgroundGeolocation.removeListeners(); } catch { /* silent */ }
 
+  // Location services switched off, or permission revoked, MID-RACE. This was
+  // previously undetectable — the app kept showing "GPS Active" indefinitely.
+  // Unambiguous and instant, unlike inferring it from missing fixes.
+  BackgroundGeolocation.onProviderChange((provider) => {
+    try {
+      const usable = !!provider?.enabled && (!!provider?.gps || !!provider?.network);
+      if (!usable) {
+        void AsyncStorage.setItem(GPS_HEALTH_KEY, 'provider_off');
+        addLog('🛑', `Location services unavailable (enabled:${provider?.enabled} gps:${provider?.gps} status:${provider?.status})`);
+      } else {
+        // This listener owns 'provider_off', so it is the one that retires it.
+        void (async () => {
+          try {
+            if ((await AsyncStorage.getItem(GPS_HEALTH_KEY)) === 'provider_off') {
+              await AsyncStorage.removeItem(GPS_HEALTH_KEY);
+              await addLog('💚', 'Location services available again');
+            }
+          } catch { /* silent */ }
+        })();
+        void _clearGpsFault();
+      }
+    } catch { /* silent — a listener must never throw into native */ }
+  });
+
   BackgroundGeolocation.onLocation((bgLoc) => {
     try {
       // ✅ GUARD: a location event can arrive without a valid coords object
@@ -1252,12 +1369,16 @@ const _registerTransistorListeners = (): void => {
           || typeof bgLoc.coords.latitude !== 'number'  || !isFinite(bgLoc.coords.latitude)
           || typeof bgLoc.coords.longitude !== 'number' || !isFinite(bgLoc.coords.longitude)) {
         addLog('⚠️', 'onLocation fired without valid coords — skipped');
+        void _bumpGpsFault('no_fix');
         return;
       }
 
       const ts = typeof bgLoc.timestamp === 'string'
         ? new Date(bgLoc.timestamp).getTime()
         : (bgLoc.timestamp as unknown as number);
+
+      // A valid fix proves GPS is alive — clear any standing fault streak/warning.
+      void _clearGpsFault();
 
       // ✅ Drive the HomeScreen live display straight from Transistor.
       if (_uiCallback) {
@@ -1400,6 +1521,7 @@ const _registerTransistorListeners = (): void => {
     } catch (hbErr: any) {
       // Heartbeat must never throw — a beat with no fix is fine; retry next beat.
       addLog('💓', `Heartbeat fix failed: ${hbErr?.message ?? 'unknown'}`);
+      void _bumpGpsFault('no_fix');
     }
   });
 };
@@ -1450,6 +1572,10 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(DRAIN_FAILS_KEY);
   await AsyncStorage.removeItem(OFFLINE_UNTIL_KEY);
   await AsyncStorage.removeItem(TEST_PHASE_KEY);
+  // Session-scoped on purpose: a runner who dismissed the GPS warning in one
+  // race must still be warned in the next.
+  await AsyncStorage.removeItem(GPS_HEALTH_KEY);
+  await AsyncStorage.removeItem(GPS_FAULT_STREAK_KEY);
 
   if (API_CONFIG.DEBUG) console.log('✅ Tracking stopped');
   await addLog('🛑', 'Tracking stopped');
@@ -1679,6 +1805,16 @@ export const ensureBackgroundTaskAlive = async (
 };
 
 export const gpsService = {
+  /**
+   * DEAD CODE — do not call. Kept only because removing an exported method is a
+   * wider change than this warrants.
+   *
+   * It returns TRUE on foreground alone, which is the exact behaviour the start
+   * gate now exists to forbid: "While using the app" records nothing once the
+   * phone is in a pocket. Wiring this back into any start path would silently
+   * re-open the 2026-08-23 failure. Use requestPermissionsDetailed(), which
+   * reports foreground, background and canAskAgain separately.
+   */
   async requestPermissions(): Promise<boolean> {
     try {
       const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
@@ -1702,6 +1838,106 @@ export const gpsService = {
     } catch (error) {
       if (API_CONFIG.DEBUG) console.error('❌ Error requesting location permissions:', error);
       return false;
+    }
+  },
+
+  /**
+   * Full location-permission state. THIS is what the Start button must consult.
+   *
+   * requestPermissions()/hasPermissions() below deliberately look at FOREGROUND
+   * only, and requestPermissions() discards the background result entirely
+   * ("foreground is enough to start; background is a bonus"). That assumption is
+   * what broke the 2026-08-23 race: a runner who granted "While Using the App"
+   * — the default outcome of tapping through the install prompt — passed every
+   * check, saw a green "GPS Active" banner, and recorded nothing the moment the
+   * phone went into a pocket, because the OS suspends location delivery and
+   * safeChangePace() silently no-ops without background permission.
+   *
+   * Seven sessions failed this way, one of them for nine hours. Background
+   * permission is NOT a bonus for a race tracker — it is the requirement.
+   *
+   * Mirrors analyticsService.syncPermissionProperties()'s tri-state so the two
+   * agree: background granted = 'always', foreground only = 'when_in_use'.
+   */
+  async getPermissionState(): Promise<{
+    foreground: boolean;
+    background: boolean;
+    level: 'always' | 'when_in_use' | 'denied';
+    canAskAgain: boolean;
+  }> {
+    try {
+      const fg = await Location.getForegroundPermissionsAsync();
+      if (fg.status !== 'granted') {
+        return {
+          foreground: false, background: false, level: 'denied',
+          canAskAgain: fg.canAskAgain !== false,
+        };
+      }
+      const bg = await Location.getBackgroundPermissionsAsync();
+      const background = bg.status === 'granted';
+      // Reported WITHOUT requesting, so the popup can be honest about where its
+      // button is about to land. Once a runner picks "While using the app" on
+      // the OS page, Android flips this to false permanently: the request stops
+      // showing anything and App info becomes the only reachable screen.
+      return {
+        foreground: true, background, level: background ? 'always' : 'when_in_use',
+        canAskAgain: bg.canAskAgain !== false,
+      };
+    } catch {
+      // Fail CLOSED. An unreadable permission state must not be treated as
+      // granted — that is exactly how the silent failure got through before.
+      return { foreground: false, background: false, level: 'denied', canAskAgain: false };
+    }
+  },
+
+  /**
+   * Request both permissions and report what was actually granted, instead of
+   * requesting background and throwing the answer away.
+   */
+  async requestPermissionsDetailed(): Promise<{
+    foreground: boolean;
+    background: boolean;
+    level: 'always' | 'when_in_use' | 'denied';
+    canAskAgain: boolean;
+  }> {
+    try {
+      const fg = await Location.requestForegroundPermissionsAsync();
+      if (fg.status !== 'granted') {
+        return {
+          foreground: false, background: false, level: 'denied',
+          canAskAgain: fg.canAskAgain !== false,
+        };
+      }
+      // On Android 11+ background location CANNOT be granted from a dialog, so
+      // this call makes the OS itself route the runner to the app's Location
+      // permission page ("Allow all the time"). That routing is what the old
+      // start-tracking flow relied on — it was never a settings intent.
+      const bg = await Location.requestBackgroundPermissionsAsync();
+      // Re-read rather than trust the request result: on Android the background
+      // grant can land asynchronously via the settings screen.
+      const state = await this.getPermissionState();
+      // canAskAgain false = permanently denied, so the OS will silently no-op on
+      // any further request and a settings trip is the ONLY remaining route.
+      return { ...state, canAskAgain: bg.canAskAgain !== false };
+    } catch {
+      return { foreground: false, background: false, level: 'denied', canAskAgain: false };
+    }
+  },
+
+  /**
+   * Device-level location services state, which is NOT the same thing as a
+   * permission. A runner can have granted "Always" and still have the phone's
+   * master Location switch off — every permission check passes, the engine
+   * starts, and the session records nothing. That is the 2026-08-23 race-day
+   * failure. Uses the same `usable` test as the onProviderChange listener so
+   * the start gate and the mid-race banner cannot disagree.
+   */
+  async isLocationServiceEnabled(): Promise<boolean> {
+    try {
+      const p: any = await BackgroundGeolocation.getProviderState();
+      return !!p?.enabled && (!!p?.gps || !!p?.network);
+    } catch {
+      return true;   // unknown -> never block the runner on a failed probe
     }
   },
 
@@ -2204,6 +2440,7 @@ const _rehydrateTrackingOnBoot = async (): Promise<void> => {
   } catch (e) {
     try {
       await addLog('⚠️', `Cold-boot rehydrate failed: ${String((e as any)?.message ?? e).slice(0, 80)}`);
+      await _bumpGpsFault('no_fix');
     } catch { /* silent */ }
   }
 };

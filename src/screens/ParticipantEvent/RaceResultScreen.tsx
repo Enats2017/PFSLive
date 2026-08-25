@@ -109,7 +109,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         <View
           style={{
             width: '100%',
-            aspectRatio: 612 / 300,
+            aspectRatio: 612 / 428,
             justifyContent: 'center',
             alignItems: 'center',
           }}
