@@ -15,6 +15,29 @@ const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
 // (see the drain's catch) — transient failures never increment it.
 const MAX_FIX_ATTEMPTS = 5;
 
+// Codes from insert_participant_location_api.php that mean THIS FIX will never be
+// accepted, no matter how many times it is retried. Anything NOT on this list —
+// insert_failed (the DB write failed), unauthorized (token expired mid-race),
+// unknown_error, a 429 rate-limit, or any code the backend adds later — is
+// transient or recoverable and MUST stay queued.
+//
+// Allowlist, not denylist, ON PURPOSE. ApiSecurity::respondError() defaults to
+// HTTP 400 and api.ts's handleError maps EVERY 4xx to type:'empty', so the app
+// cannot tell "your fix is malformed" from "our database is down" — both arrive
+// identically. Defaulting to discard deletes real GPS positions during a backend
+// outage; defaulting to keep only risks a queue wedge that clears itself once the
+// backend recovers. Keep the failure mode on the safe side.
+const PERMANENT_REJECT_CODES = new Set([
+  'participant_id_invalid',
+  'event_id_invalid',
+  'latitude_invalid',
+  'latitude_out_of_range',
+  'longitude_invalid',
+  'longitude_out_of_range',
+  'participant_not_found',
+  'fix_not_object',
+]);
+
 // Absolute wall-clock timeout. axios's own `timeout` does NOT reliably fire on
 // a half-open socket (cell drops mid-request, no FIN/RST) — the request can hang
 // for minutes. Promise.race against a real timer guarantees the await resolves
@@ -440,13 +463,22 @@ export const locationService = {
           // 2026-08-23. retryCount already existed on QueuedLocation but was
           // never incremented or read.
           //
-          // Only a genuine CLIENT-side rejection is ever discarded. A network
-          // drop ('network'), a 5xx ('server') and a 429 rate-limit are all
-          // transient — discarding a fix for those would be the exact data loss
-          // the queue exists to prevent, so they only ever break and retry.
-          const codeStr = String(error?.code ?? '');
-          const isRateLimited = /rate limit/i.test(codeStr);
-          const permanentReject = error?.type === 'empty' && !isRateLimited;
+          // Only a fix the backend will NEVER accept is discarded, and only when
+          // its code is on the PERMANENT_REJECT_CODES allowlist above.
+          //
+          // This used to be a denylist — "discard anything type:'empty' that does
+          // not look rate-limited" — which was backwards. respondError() defaults
+          // to HTTP 400 and handleError maps every 4xx to 'empty', so insert_failed
+          // (the DB INSERT failed) and unauthorized (token expired mid-race) both
+          // landed as 'empty' and were deleted after MAX_FIX_ATTEMPTS. At the 10s
+          // drain interval that is one real position destroyed every ~50s for the
+          // rest of the race, from conditions that resolve on their own.
+          //
+          // A network drop ('network'), a 5xx ('server'), a 429 rate-limit and every
+          // unrecognised code now break and retry instead.
+          const codeStr = String(error?.code ?? '').toLowerCase();   // handleError already lowercases
+          const permanentReject =
+            error?.type === 'empty' && PERMANENT_REJECT_CODES.has(codeStr);
 
           if (permanentReject) {
             const attempts = await locationQueueService.bumpHeadRetry();
