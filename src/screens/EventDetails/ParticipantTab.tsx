@@ -228,7 +228,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
         <View
           style={{
             width: '100%',
-            aspectRatio: 612 / 300,
+            aspectRatio: 612 / 428,
             justifyContent: 'center',
             alignItems: 'center',
           }}
@@ -246,7 +246,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
             resizeMode="cover"
             style={{
               width: '100%',
-              aspectRatio: 612 / 300,
+              aspectRatio: 612 / 428,
               opacity: imageLoading ? 0 : 1,
             }}
             onLoad={() => setImageLoading(false)}

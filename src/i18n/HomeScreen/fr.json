@@ -113,5 +113,21 @@
     "maybeLater": "Peut-être plus tard",
     "savedTitle": "Adresse e-mail enregistrée",
     "savedMessage": "Nous vous tiendrons informé des mises à jour des courses."
+  },
+  "gpsHealth": {
+    "title": "Accès à la localisation limité",
+    "blockedBody": "Livio a besoin de l'accès à la localisation « Toujours » pour enregistrer votre course lorsque votre téléphone est dans votre poche. Avec « Lorsque l'app est active », votre position n'est plus enregistrée dès que l'écran s'éteint.",
+    "blockedBodyDenied": "Livio a besoin d'accéder à votre position pour enregistrer votre course. L'autorisation de localisation est actuellement désactivée pour cette application.",
+    "openSettings": "Ouvrir les réglages",
+    "bannerNoBackground": "Accès à la localisation limité — votre position ne sera plus enregistrée quand l'écran s'éteindra. Appuyez pour corriger.",
+    "bannerNoFix": "Le GPS ne renvoie aucune position. Votre course n'est pas enregistrée.",
+    "bannerProviderOff": "La localisation est désactivée. Votre course n'est pas enregistrée.",
+    "notificationTitle": "Livio n'enregistre pas votre course",
+    "notificationBody": "Le GPS ne répond plus. Ouvrez Livio pour corriger.",
+    "blockedBodyLocationOff": "La localisation est désactivée sur ce téléphone, Livio ne peut donc pas enregistrer votre course. Activez la localisation, puis appuyez de nouveau sur Démarrer.",
+    "stepsLocationOffIos": "Allez dans Réglages → Confidentialité et sécurité → Service de localisation et activez-le.",
+    "stepsIos": "Touchez Position, puis choisissez « Toujours ».",
+    "stepsAndroid": "Choisissez « Toujours autoriser » sur l'écran suivant.",
+    "stepsAndroidSettings": "Ouvrez Autorisations → Localisation, puis choisissez « Toujours autoriser »."
   }
 }

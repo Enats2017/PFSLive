@@ -119,6 +119,15 @@ export const locationQueueService = {
         if (API_CONFIG.DEBUG) {
           console.warn('⚠️ Queue is full, removing oldest location');
         }
+        // Overflow DELETES the runner's oldest unsent fix. The console.warn above
+        // is DEBUG-gated and Metro strips console.* from release builds, so in a
+        // real race this happened with no trace whatsoever. At the 30s interval
+        // the 500-slot buffer is ~4h; at the 5s finish-approach interval it is
+        // only ~42 minutes, so this is reachable on a long outage near the line.
+        try {
+          const { addLog } = require('./gpsService');
+          await addLog('🗑️', `Queue FULL (${MAX_QUEUE_SIZE}) — oldest fix discarded to make room`);
+        } catch { /* silent */ }
         queue.shift();
       }
 
@@ -157,6 +166,30 @@ export const locationQueueService = {
         console.error('❌ Error getting queue:', error);
       }
       return [];
+    }
+  },
+
+  /**
+   * Increment retryCount on the fix at the HEAD of the queue and return the new
+   * value. Returns 0 if the queue is empty.
+   *
+   * QueuedLocation.retryCount has existed since the beginning but was written as
+   * 0 and never read or incremented, so a fix the server permanently rejects sat
+   * at the head and blocked everything behind it for the rest of the race —
+   * 101 of 149 sessions logged "Drain stalled" on 2026-08-23. The drain uses
+   * this to give a rejected fix a bounded number of attempts before discarding
+   * just that one fix.
+   */
+  async bumpHeadRetry(): Promise<number> {
+    try {
+      const queue = await this.getQueue();
+      if (queue.length === 0) return 0;
+      const next = (Number(queue[0].retryCount) || 0) + 1;
+      queue[0] = { ...queue[0], retryCount: next };
+      await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
+      return next;
+    } catch {
+      return 0;
     }
   },
 

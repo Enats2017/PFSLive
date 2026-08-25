@@ -9,7 +9,7 @@
     "Participant": "I AM A PARTICIPANT",
     "Fan": "I AM A FAN"
   },
-   "Logotagline": "Livio - official tracking & results app for the most beautiful races",
+  "Logotagline": "Livio - official tracking & results app for the most beautiful races",
   "Event": {
     "title": "Event Name",
     "Date": "Date",
@@ -113,5 +113,21 @@
     "maybeLater": "Maybe later",
     "savedTitle": "Email saved",
     "savedMessage": "We'll keep you posted on race updates."
+  },
+  "gpsHealth": {
+    "title": "Location access is limited",
+    "blockedBody": "Livio needs \"Always\" location access to record your race while your phone is in your pocket. With \"While Using the App\" your position stops being recorded as soon as the screen turns off.",
+    "blockedBodyDenied": "Livio needs access to your location to record your race. Location permission is currently turned off for this app.",
+    "openSettings": "Open settings",
+    "bannerNoBackground": "Limited location access — your position will stop recording when the screen turns off. Tap to fix.",
+    "bannerNoFix": "GPS is not returning a position. Your race is not being recorded.",
+    "bannerProviderOff": "Location services are turned off. Your race is not being recorded.",
+    "notificationTitle": "Livio is not recording your race",
+    "notificationBody": "GPS has stopped responding. Open Livio to fix it.",
+    "blockedBodyLocationOff": "Location is switched off on this phone, so Livio cannot record your race. Turn Location on, then press Start again.",
+    "stepsLocationOffIos": "Go to Settings → Privacy & Security → Location Services and turn it on.",
+    "stepsIos": "Tap Location, then choose “Always”.",
+    "stepsAndroid": "Choose “Allow all the time” on the next screen.",
+    "stepsAndroidSettings": "Open Permissions → Location, then choose “Allow all the time”."
   }
 }

@@ -13,10 +13,12 @@ import {
   BackHandler,
   Modal,
   Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Battery from 'expo-battery';
@@ -31,6 +33,7 @@ import {
   startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive,
   isTracking, getTrackingParams, stopWatching, attachUi, detachUi, rehydrateTracking,
   LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY, FINAL_SENT_COUNT_KEY,
+  GPS_HEALTH_KEY,
 } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -110,6 +113,8 @@ const EARLY_TRACKING_WARNING_HOURS = 24;
 
 // ==================== BATTERY OPTIMIZATION ====================
 
+const ANDROID_PACKAGE = 'eu.passionforsports.livio';
+
 /**
  * Open system dialog to exempt app from battery optimization.
  * HomeScreen provides the visual background behind the system dialog.
@@ -120,13 +125,78 @@ const requestBatteryOptimizationExemption = async (): Promise<void> => {
   try {
     await IntentLauncher.startActivityAsync(
       IntentLauncher.ActivityAction.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-      { data: 'package:eu.passionforsports.livio' }
+      { data: `package:${ANDROID_PACKAGE}` }
     );
   } catch {
     // Fallback — open battery optimization list directly
     await IntentLauncher.startActivityAsync(
       'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS'
     );
+  }
+};
+
+type PermissionBlockReason = 'denied' | 'no_background_perm' | 'location_off';
+
+/**
+ * Take the runner to the page that fixes THEIR problem, and actually land on
+ * it — not on App info with a list of instructions to follow.
+ *
+ * Android publishes an intent for the device Location toggle, so 'location_off'
+ * is exact. The per-app permission page has no public intent, so:
+ *   1. MANAGE_APP_PERMISSIONS -> Livio's permission list, one tap from Location.
+ *   2. APPLICATION_DETAILS_SETTINGS -> App info. The old behaviour; always resolves.
+ *
+ * DELIBERATELY NOT USED: MANAGE_APP_PERMISSION (singular), which targets the
+ * Location page itself. It requires Intent.EXTRA_USER, a Parcelable UserHandle,
+ * and expo-intent-launcher can only carry plain JS values in `extra`. Without it
+ * the activity still RESOLVES — so no exception is thrown and the ladder never
+ * falls through — then finishes immediately. The runner sees a flash and lands
+ * nowhere, which is worse than App info. It cannot be fixed from JS; reaching
+ * that page needs a native module.
+ *
+ * Falling through is otherwise safe: IntentLauncherModule.kt wraps
+ * startActivityForResult in try/catch(Throwable) -> promise.reject, so an OEM
+ * that does not export a tier rejects rather than crashing. That promise only
+ * settles when the user RETURNS, so a tier that does launch cannot fall through
+ * and open a second screen behind it.
+ *
+ * iOS has no per-page deep link at all (the App-Prefs: schemes are private API
+ * and get apps rejected), so openSettings() lands on Livio's own page, where
+ * Location is a single row.
+ */
+const openLocationSettingsFor = async (reason: PermissionBlockReason): Promise<void> => {
+  if (Platform.OS !== 'android') {
+    Linking.openSettings().catch(() => { /* silent */ });
+    return;
+  }
+
+  if (reason === 'location_off') {
+    try {
+      await IntentLauncher.startActivityAsync(
+        IntentLauncher.ActivityAction.LOCATION_SOURCE_SETTINGS
+      );
+      return;
+    } catch {
+      // OEM without the activity — fall through to App info.
+    }
+  } else {
+    try {
+      await IntentLauncher.startActivityAsync('android.intent.action.MANAGE_APP_PERMISSIONS', {
+        extra: { 'android.intent.extra.PACKAGE_NAME': ANDROID_PACKAGE },
+      });
+      return;
+    } catch {
+      // Fall through to App info.
+    }
+  }
+
+  try {
+    await IntentLauncher.startActivityAsync(
+      IntentLauncher.ActivityAction.APPLICATION_DETAILS_SETTINGS,
+      { data: `package:${ANDROID_PACKAGE}` }
+    );
+  } catch {
+    Linking.openSettings().catch(() => { /* silent */ });
   }
 };
 
@@ -168,6 +238,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [timeUntilRace, setTimeUntilRace] = useState<string>('');
   const [serverTimeOffset, setServerTimeOffset] = useState<number>(0);
   const [showPowerSavingModal, setShowPowerSavingModal] = useState(false);
+  // Location-permission gate (blocks Start) and the mid-race GPS health banner.
+  const [showLocationPermissionModal, setShowLocationPermissionModal] = useState(false);
+  const [permissionBlockReason, setPermissionBlockReason] = useState<PermissionBlockReason>('denied');
+  // Whether the OS will still show its own Location permission page. Decides
+  // BOTH what the popup's button can achieve and what its text may promise;
+  // false means the button can only reach App info, so the text must say so.
+  const [permissionCanAskAgain, setPermissionCanAskAgain] = useState(true);
+  const [gpsHealth, setGpsHealth] = useState<string>('');
+  const gpsHealthNotifiedRef = useRef(false);
 
   // ✅ Tracking log — DEBUG only, shows background task events live
   const [trackingLogs, setTrackingLogs] = useState<TrackingLogEntry[]>([]);
@@ -667,13 +746,41 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
    */
   const doStartGPSTracking = useCallback(async () => {
     try {
-      if (!hasPermission) {
-        const granted = await gpsService.requestPermissions();
-        if (!granted) {
-          toastError(t('home:errors.permissionRequired'), t('home:errors.permissionDescription'));
-          return;
-        }
-        setHasPermission(true);
+      // ── PERMISSION GATE ─────────────────────────────────────────────────
+      // This used to accept FOREGROUND permission alone and start tracking.
+      // That is what broke the 2026-08-23 race: a runner with "While Using the
+      // App" passed the check, saw a green GPS-Active banner, and recorded
+      // nothing once the phone went in a pocket — seven sessions, one of them
+      // for nine hours, none of which ever recovered.
+      //
+      // Background ("Always") is not optional for a race tracker, so we block
+      // and tell the runner instead of starting a session that cannot work.
+      //
+      // CHECK ONLY — do not request here. On Android 11+ the background request
+      // is what makes the OS open Livio's Location permission page, and the OS
+      // grants that routing roughly once: request again straight after and it
+      // returns silently having shown nothing. Requesting here therefore burned
+      // the one useful ask BEFORE the popup appeared, leaving the popup's
+      // button with nothing left to trigger — it looked completely dead. The
+      // ask now belongs to that button, which is the whole point of it.
+      const perms = await gpsService.getPermissionState();
+      setHasPermission(perms.foreground);
+      setPermissionCanAskAgain(perms.canAskAgain);
+
+      if (!perms.foreground || !perms.background) {
+        setPermissionBlockReason(perms.foreground ? 'no_background_perm' : 'denied');
+        setShowLocationPermissionModal(true);
+        return;
+      }
+
+      // Permissions can ALL be granted while the phone's master Location switch
+      // is off. Nothing above catches that, so the session used to start, show
+      // "GPS Active", and record nothing — the 23 Aug failure. Blocking here is
+      // what makes the 'location_off' deep-link reachable at start time.
+      if (!(await gpsService.isLocationServiceEnabled())) {
+        setPermissionBlockReason('location_off');
+        setShowLocationPermissionModal(true);
+        return;
       }
 
       // ✅ Re-fetch home data FRESH (cache-bypassed) at the moment Start is
@@ -942,7 +1049,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setShowEarlyTrackingModal(false);
   }, []);
 
-  const stopGPSTracking = useCallback(async () => {
+  // `opts` is optional and defensively typed: this function is also passed
+  // straight to a Pressable's onPress (see the tracking button below), which
+  // invokes it with a GestureResponderEvent. That object has no
+  // raceAlreadyFinished property, so the flag reads as undefined and we fall
+  // back to the AsyncStorage check — which is the correct behaviour for a
+  // manual stop.
+  const stopGPSTracking = useCallback(async (opts?: { raceAlreadyFinished?: boolean }) => {
     // ✅ FIRST — read the actual sent count from AsyncStorage BEFORE we tear
     //    anything down. When auto-stop fires after a background→active
     //    transition, the 1s sync interval hasn't run (JS suspended in bg), so
@@ -994,10 +1107,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // finish path (or the live finish path) already drained and tore down, so
     // re-draining here would only re-detect finished=1 and trigger a redundant
     // finishBackgroundStop/_doFullStop (idempotent, but produces a stray 🏆/🛑).
-    let raceAlreadyFinished = false;
-    try { raceAlreadyFinished = (await AsyncStorage.getItem(RACE_FINISHED_KEY)) === '1'; } catch { /* silent */ }
+    // The auto-stop callers CLEAR RACE_FINISHED_KEY before calling us (to stop
+    // their own 1s/AppState tick re-firing), so reading the key here always saw
+    // false — the guard below never engaged, the stop-path drain re-ran, and
+    // _uploadTrackingLogOnFinish fired a SECOND time. That produced 43 duplicate
+    // rows in oc_tracking_logs_app on 2026-08-23 (28% of all rows), uploaded
+    // 0-5s apart with identical counters. It also made every GPS-detected finish
+    // report end_reason:'manual_stop' to analytics.
+    // Callers that already consumed the key now tell us so explicitly.
+    let raceAlreadyFinished = opts?.raceAlreadyFinished === true;
+    if (!raceAlreadyFinished) {
+      try { raceAlreadyFinished = (await AsyncStorage.getItem(RACE_FINISHED_KEY)) === '1'; } catch { /* silent */ }
+    }
 
-    if (participantId && eventId && !raceAlreadyFinished) {
+    // Drain if the race is still running OR anything is still queued. The
+    // raceAlreadyFinished guard exists to avoid a redundant teardown, not to
+    // abandon fixes: now that a failed drain correctly LEAVES fixes in the queue
+    // (see locationService's data-loss guard), skipping this unconditionally on
+    // the finish path would strand them. processQueue's own deferred-finish logic
+    // only tears down once the queue is actually empty, so this is safe to run.
+    const queuedBeforeStop = await locationQueueService.getQueueSize();
+    if (participantId && eventId && (!raceAlreadyFinished || queuedBeforeStop > 0)) {
       try {
         const drained = await locationService.processQueue(participantId, eventId);
         // processQueue bumps BACKGROUND_SENT_COUNT_KEY per drained fix now, so we
@@ -1047,13 +1177,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         if (alreadyUploaded !== '1') {
           const logs = await getFullTrackingLog();
           if (logs.length > 0) {
-            await locationService.saveTrackingLog(
+            // Claim BEFORE the network call, mirroring _uploadTrackingLogOnFinish.
+            // Setting the flag only afterwards left a multi-second window in which
+            // the background finish path read "not uploaded" and uploaded the same
+            // log again — the duplicate rows seen on 2026-08-23. Released again if
+            // the save fails so the other path can still retry.
+            await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');
+            const uploaded = await locationService.saveTrackingLog(
               participantId,
               eventId,
               logs,
               actualSentCount,   // ✅ was: locationUpdateCount
               remaining,
             );
+            if (uploaded === false) {
+              try { await AsyncStorage.removeItem(LOG_UPLOADED_KEY); } catch { /* silent */ }
+            }
           }
         }
       } catch { /* silent */ }
@@ -1138,6 +1277,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         if (queueCountStr !== null) setQueuedCount(parseInt(queueCountStr) || 0);
       } catch { /* silent */ }
 
+      // ✅ GPS health — written from native/headless contexts that cannot see
+      // React state, so AsyncStorage is the only channel. Drives the warning
+      // banner below. Empty string = healthy.
+      try {
+        const health = await AsyncStorage.getItem(GPS_HEALTH_KEY);
+        setGpsHealth(health ?? '');
+
+        // Notify ONCE per session. A banner alone is useless to a runner with
+        // the phone in a pocket for hours — which is precisely the population
+        // this failure hits. Ref-guarded so the 1s tick cannot spam.
+        if (health && !gpsHealthNotifiedRef.current) {
+          gpsHealthNotifiedRef.current = true;
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: t('home:gpsHealth.notificationTitle'),
+              body: t('home:gpsHealth.notificationBody'),
+            },
+            trigger: null,   // deliver immediately
+          }).catch(() => { /* silent — a failed notification must not break tracking */ });
+        }
+        if (!health) gpsHealthNotifiedRef.current = false;   // re-arm after recovery
+      } catch { /* silent */ }
+
       // ✅ Sync tracking logs — DEBUG only
       if (API_CONFIG.DEBUG) {
         try {
@@ -1155,7 +1317,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const raceFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
         if (raceFinished === '1') {
           await AsyncStorage.removeItem(RACE_FINISHED_KEY);
-          await stopGPSTracking();
+          await stopGPSTracking({ raceAlreadyFinished: true });
         }
       } catch { /* silent */ }
 
@@ -1318,7 +1480,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               const raceFinished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
               if (raceFinished === '1') {
                 await AsyncStorage.removeItem(RACE_FINISHED_KEY);
-                await stopGPSTracking();
+                await stopGPSTracking({ raceAlreadyFinished: true });
                 return;
               }
 
@@ -1609,6 +1771,101 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </View>
       </Modal>
 
+      {/* ✅ Location-permission modal — blocks Start, and is also reachable by
+          tapping the mid-race health banner. Same notif* skeleton as every
+          other modal on this screen. */}
+      <Modal
+        transparent
+        visible={showLocationPermissionModal}
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={homeStyles.notifBackdrop}>
+          <View style={homeStyles.notifWrapper}>
+            <View style={homeStyles.notifCard}>
+              <View style={homeStyles.notifIconWrapper}>
+                <Ionicons name="location-outline" size={36} color={colors.error} />
+              </View>
+              <Text style={homeStyles.notifTitle}>{t('home:gpsHealth.title')}</Text>
+              <Text style={homeStyles.notifBody}>
+                {/* Three distinct problems, three distinct instructions: turn the
+                    phone's Location on, grant the permission at all, or upgrade
+                    While-Using to Always. Collapsing them tells most runners to
+                    do the wrong thing. */}
+                {permissionBlockReason === 'location_off'
+                  ? t('home:gpsHealth.blockedBodyLocationOff')
+                  : permissionBlockReason === 'denied'
+                    ? t('home:gpsHealth.blockedBodyDenied')
+                    : t('home:gpsHealth.blockedBody')}
+              </Text>
+              {/* Shown wherever the button cannot land on the exact page — which
+                  on Android's permission route is still the case, since the one
+                  intent that targets the Location page needs a Parcelable extra
+                  JS cannot send. Android's location_off deep-link IS exact, so
+                  that combination alone gets no extra line. */}
+              {!(Platform.OS === 'android' && permissionBlockReason === 'location_off') && (
+                <Text style={homeStyles.notifBody}>
+                  {Platform.OS === 'ios'
+                    ? (permissionBlockReason === 'location_off'
+                        ? t('home:gpsHealth.stepsLocationOffIos')
+                        : t('home:gpsHealth.stepsIos'))
+                    : permissionCanAskAgain
+                      ? t('home:gpsHealth.stepsAndroid')
+                      : t('home:gpsHealth.stepsAndroidSettings')}
+                </Text>
+              )}
+              <View style={homeStyles.notifButtonContainer}>
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  onPress={() => {
+                    setShowLocationPermissionModal(false);
+                    void (async () => {
+                      // Ask the OS FIRST. On Android 11+ a background-location
+                      // request cannot be answered by a dialog, so the system
+                      // itself opens Livio's Location permission page with
+                      // "Allow all the time" — the page the old start-tracking
+                      // flow landed on. A settings intent can never reach it
+                      // (that needs a Parcelable extra JS cannot send), so this
+                      // is the only route to it, and it can also return granted
+                      // outright. Only once the OS refuses to ask again does a
+                      // settings trip become the last resort.
+                      if (permissionBlockReason !== 'location_off') {
+                        try {
+                          const t0 = Date.now();
+                          const perms = await gpsService.requestPermissionsDetailed();
+                          setHasPermission(perms.foreground);
+                          if (perms.background) return;   // granted outright — nothing more to do
+                          // Whether the OS actually SHOWED anything is not in
+                          // its answer: a silent auto-deny and a real refusal
+                          // look identical, and canAskAgain stays true for both.
+                          // Elapsed time separates them — a screen the runner
+                          // read and dismissed cannot come back in a few ms.
+                          // Without this the button silently did nothing.
+                          if (Date.now() - t0 > 700) return;
+                        } catch {
+                          // fall through to settings
+                        }
+                      }
+                      await openLocationSettingsFor(permissionBlockReason);
+                    })();
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={commonStyles.primaryButtonText}>{t('home:gpsHealth.openSettings')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={commonStyles.secondaryButton}
+                  onPress={() => setShowLocationPermissionModal(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={commonStyles.secondaryButtonText}>{t('common:buttons.close')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* ✅ Power Saving Mode modal — blocks tracking when battery saver is ON */}
       <Modal
         transparent
@@ -1625,7 +1882,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 <Ionicons name="battery-dead-outline" size={36} color={colors.error} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:powerSaving.title')}</Text>
-              <Text style={homeStyles.notifBody}>{t('home:powerSaving.message')}</Text>
+              {/* Platform-specific on purpose. This previously read
+                  t('home:powerSaving.message'), a key that exists in NO locale
+                  file — all three define messageAndroid/messageIos — so the
+                  modal rendered the literal string "home:powerSaving.message"
+                  to users. iOS has no deep link to Low Power Mode, hence the
+                  two different texts. */}
+              <Text style={homeStyles.notifBody}>
+                {Platform.OS === 'android'
+                  ? t('home:powerSaving.messageAndroid')
+                  : t('home:powerSaving.messageIos')}
+              </Text>
               <View style={homeStyles.notifButtonContainer}>
                 {Platform.OS === 'android' ? (
                   <>
@@ -1842,7 +2109,48 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 )}
 
                 <Text style={homeStyles.heading}>{t('home:Event.description')}</Text>
-                {/* Tracking Button */}
+                {/* GPS-HEALTH WARNING BANNER.
+                    Seven sessions on 2026-08-23 showed "GPS Active" for hours
+                    while recording nothing, and none of them recovered. This is
+                    the runner-facing signal for that. Clears itself as soon as a
+                    valid fix arrives (see _clearGpsFault in gpsService).
+                    Uses permissionWarning/permissionWarningText from
+                    home.styles.ts — written long ago for exactly this and never
+                    wired up until now. */}
+                {isGPSActive && gpsHealth !== '' && (
+                  <TouchableOpacity
+                    style={homeStyles.permissionWarning}
+                    onPress={() => {
+                      // The banner fires for every gpsHealth value, so without
+                      // this the modal kept whatever reason Start last set — a
+                      // provider_off banner showed "permission denied" copy and
+                      // opened the wrong page. no_fix maps to location_off: the
+                      // useful action for "no position" is the same settings page.
+                      setPermissionBlockReason(
+                        gpsHealth === 'no_background_perm' ? 'no_background_perm' : 'location_off'
+                      );
+                      void gpsService.getPermissionState()
+                        .then((ps) => setPermissionCanAskAgain(ps.canAskAgain))
+                        .catch(() => setPermissionCanAskAgain(false));
+                      setShowLocationPermissionModal(true);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={homeStyles.permissionWarningText}>
+                      {gpsHealth === 'no_background_perm'
+                        ? t('home:gpsHealth.bannerNoBackground')
+                        : gpsHealth === 'provider_off'
+                          ? t('home:gpsHealth.bannerProviderOff')
+                          : t('home:gpsHealth.bannerNoFix')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Tracking Button.
+                    onPress is wrapped rather than given stopGPSTracking directly:
+                    onPress supplies a GestureResponderEvent, and that function's
+                    first argument is now an options object. Calling it with no
+                    args keeps the manual-stop path explicit. */}
                 <TouchableOpacity
                   style={[
                     homeStyles.button,
@@ -1852,7 +2160,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       opacity: 0.6,
                     },
                   ]}
-                  onPress={isGPSActive ? stopGPSTracking : confirmStartTracking}
+                  onPress={isGPSActive ? () => { void stopGPSTracking(); } : confirmStartTracking}
                   disabled={!isGPSActive && (!participantId || !eventId)}
                 >
                   <Text style={homeStyles.buttonText}>
