@@ -450,4 +450,9 @@ mapButtonText: {
     fontWeight: '600',
 },
 
+singleColumn: {
+    width: '100%',
+    alignItems: 'center',
+},
+
 });

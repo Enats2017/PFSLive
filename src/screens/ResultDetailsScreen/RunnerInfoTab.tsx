@@ -96,34 +96,52 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                     </View>
                 </View> */}
 
-                {/* ✅ Only show UTMB section if utmb_index exists and is not 0 */}
-                {showUtmbIndex && hasUtmbIndex && (
-                    <View style={resultInfoStyles.row}>
-                        <View style={resultInfoStyles.col}>
-                            <View style={resultInfoStyles.utmbIndexBadge}>
-                                <Text style={resultInfoStyles.utmbText}>UTMB</Text>
-                                <View style={resultInfoStyles.utmbIndexTag}>
-                                    <Text style={resultInfoStyles.utmbIndexText}>
-                                        {t('runnerInfo.utmbIndex')}
+                <View style={resultInfoStyles.row}>
+                    {showUtmbIndex && hasUtmbIndex && (
+                        <>
+                            <View style={resultInfoStyles.col}>
+                                <View style={resultInfoStyles.utmbIndexBadge}>
+                                    <Text style={resultInfoStyles.utmbText}>
+                                        UTMB
                                     </Text>
+
+                                    <View style={resultInfoStyles.utmbIndexTag}>
+                                        <Text style={resultInfoStyles.utmbIndexText}>
+                                            {t('runnerInfo.utmbIndex')}
+                                        </Text>
+                                    </View>
                                 </View>
+
+                                <Text style={commonStyles.title}>
+                                    {runnerInfo.utmb_index}
+                                </Text>
                             </View>
-                            <Text style={commonStyles.title}>
-                                {runnerInfo.utmb_index}
-                            </Text>
-                        </View>
 
-                        <View style={resultInfoStyles.colDivider} />
+                            <View style={resultInfoStyles.colDivider} />
+                        </>
+                    )}
+                    <View
+                        style={[
+                            resultInfoStyles.col,
+                            { gap: 5 },
+                            !showUtmbIndex && resultInfoStyles.singleColumn,
+                        ]}
+                    >
+                        <Text style={commonStyles.subtitle}>
+                            {t('runnerInfo.category')}
+                        </Text>
 
-                        <View style={[resultInfoStyles.col,{gap:5}]}>
-                            <Text style={commonStyles.subtitle}>{t('runnerInfo.category')}</Text>
-                            <Text style={commonStyles.title}>
-                                {runnerInfo?.category_name || '—'}
-                            </Text>
-                            <Ionicons name="card-outline" size={28} color="#333" />
-                        </View>
+                        <Text style={commonStyles.title}>
+                            {runnerInfo?.category_name || '—'}
+                        </Text>
+
+                        <Ionicons
+                            name="card-outline"
+                            size={28}
+                            color="#333"
+                        />
                     </View>
-                )}
+                </View>
 
                 {showMapButton && (
                     <TouchableOpacity
