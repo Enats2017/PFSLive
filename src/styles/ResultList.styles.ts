@@ -286,13 +286,20 @@ divider: {
   teamText: {
     fontSize: 12,
     color: colors.gray500,
-   
   },
-    waveText: {
-      fontSize: 12,
-      color: colors.gray500,
-      marginBottom: 10,
-    },
+  waveText: {
+    fontSize: 12,
+    color: colors.gray500,
+  },
+
+  // ✅ The 10px gap belongs to the club/nation + wave BLOCK, not to whichever
+  // line happens to render last. `wave` comes from getField() in the RaceResult
+  // parser, which returns '' (not null) when the export has no wave column —
+  // true for most events — so the wave line is usually absent. Hanging the
+  // margin off waveText silently dropped the gap on every non-wave event.
+  metaBlock: {
+    marginBottom: 10,
+  },
 
   // ── Stats Row ─────────────────────────────────────────────
   statsRow: {
