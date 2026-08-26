@@ -23,7 +23,8 @@
     "genderRank": "Gender",
     "categoryRank": "Category",
     "in": "in",
-    "minutes": "minutes"
+    "minutes": "minutes",
+    "wavelabel":"Wave"
   },
   "timingPoint": {
     "checkpoint": "CHECKPOINT",

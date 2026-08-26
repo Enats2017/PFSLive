@@ -136,5 +136,6 @@
     "noResultsMessage": "Le fichier de tracé GPX n'est pas encore disponible pour cet événement."
   },
   "iosnotnow":"Not Now",
-  "map": "CARTE"
+  "map": "CARTE",
+  "wave": "Vague"
 }

@@ -136,5 +136,6 @@
     "noResultsMessage": "Het GPX-routebestand is nog niet beschikbaar voor dit evenement."
   },
   "iosnotnow":"Not Now",
-  "map": "Kaart"
+  "map": "Kaart",
+  "wave": "Golf"
 }

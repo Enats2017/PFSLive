@@ -113,6 +113,11 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                     <Text style={commonStyles.title}>{raceInfo?.bib ?? '—'}</Text>
                     <Text style={commonStyles.title}>{raceInfo?.name ?? '—'}</Text>
                 </View>
+                 {raceInfo?.wave && (
+                    <View style={resultInfoStyles.bibCard}>
+                        <Text style={commonStyles.title}>{t('raceInfo.wavelabel')}: {raceInfo?.wave}</Text>
+                    </View>
+                )}
 
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.subtitle}>{t('raceInfo.raceTime')}</Text>

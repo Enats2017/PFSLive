@@ -203,6 +203,11 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         {[item.club, item.nation, item.age].filter(Boolean).join(' · ')}
                     </Text>
                 </View>
+                {item.wave && (
+                    <Text style={resultListStyle.waveText} numberOfLines={1}>
+                        {t('allrace:race.wavelabel')}:{item.wave}  
+                    </Text>
+                )}
 
                 {hasUtmbIndex && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>

@@ -64,6 +64,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     const shouldShowResults = showResults;
 
   const bib = item.bib || item.bib_number || '';
+  const wave = item.wave;
 
   // Navigate to ResultDetails (race_result participants)
   const goToResults = () => {
@@ -156,6 +157,10 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
               {t('details:tracking.bib')}: {item.bib_number}
             </Text>
           )}
+          {wave && (
+              <Text style={commonStyles.subtitle}>{t('details:wave')}: {item.wave}</Text>
+            )
+          }
         </View>
       </View>
 

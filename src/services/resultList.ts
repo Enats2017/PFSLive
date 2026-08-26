@@ -28,6 +28,7 @@ export interface RaceResult {
   checkpointActualTime?: string;
   checkpointRanking?: string;
   checkpointDiff?: string;
+  wave:string
 }
 
 export interface Checkpoint {

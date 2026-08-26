@@ -140,6 +140,11 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 <Text style={resultListStyle.teamText} numberOfLines={1}>
                     {[item.club, item.nation].filter(Boolean).join(' · ')}
                 </Text>
+               {item.wave &&(
+                    <Text style={resultListStyle.waveText} numberOfLines={1}>
+                        {t('allrace:race.wavelabel')}: {item.wave}  
+                    </Text>
+                )}
 
                 {isLive && (
                     <View style={{ marginTop: 6 }}>

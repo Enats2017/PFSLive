@@ -83,6 +83,7 @@ export interface RaceInfo {
     position_total?: string;
     category_rank_total?: string;
     gender_ranking_total?: string;
+    wave: string
 }
 
 export interface RunnerInfo {

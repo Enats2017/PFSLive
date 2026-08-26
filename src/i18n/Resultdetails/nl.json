@@ -23,7 +23,8 @@
     "genderRank": "Geslacht",
     "categoryRank": "Categorie",
     "in": "over",
-    "minutes": "minuten"
+    "minutes": "minuten",
+    "wavelabel": "Golf"
   },
   "timingPoint": {
     "checkpoint": "CHECKPOINT",

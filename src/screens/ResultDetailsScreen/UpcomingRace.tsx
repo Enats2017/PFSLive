@@ -44,11 +44,16 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                     <Text style={commonStyles.title}>{raceInfo?.bib ?? '—'}</Text>
                     <Text style={commonStyles.title}>{raceInfo?.name ?? '—'}</Text>
                 </View>
-
+                {raceInfo?.wave && (
+                    <View style={resultInfoStyles.bibCard}>
+                        <Text style={commonStyles.title}>{t('raceInfo.wavelabel')}: {raceInfo?.wave}</Text>
+                    </View>
+                )}
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.subtitle}>{t('raceInfo.raceTime')}</Text>
                     <Text style={resultInfoStyles.raceTimeText}>00:00:00</Text>
                 </View>
+                
 
                 <View style={resultInfoStyles.statsCard}>
                     <View style={resultInfoStyles.statsCol}>

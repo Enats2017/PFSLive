@@ -103,6 +103,12 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                     {[item.club, item.nation].filter(Boolean).join(' · ')}
                 </Text>
 
+                {item.wave &&(
+                    <Text style={resultListStyle.waveText} numberOfLines={1}>
+                        {t('allrace:race.wavelabel')}:{item.wave}  
+                    </Text>
+                )}
+
                 {isLive && (
                     <View style={{ marginTop: 6 }}>
                         <LiveTrackingBar />

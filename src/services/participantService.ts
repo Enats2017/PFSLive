@@ -19,6 +19,7 @@ export interface Participant {
   product_app_id?: number;
   product_option_value_app_id?: number | null;
   race_status?: 'not_started' | 'in_progress' | 'finished' | string;
+  wave:string
 }
 
 export interface ParticipantPagination {

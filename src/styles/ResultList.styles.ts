@@ -286,8 +286,13 @@ divider: {
   teamText: {
     fontSize: 12,
     color: colors.gray500,
-    marginBottom: 10,
+   
   },
+    waveText: {
+      fontSize: 12,
+      color: colors.gray500,
+      marginBottom: 10,
+    },
 
   // ── Stats Row ─────────────────────────────────────────────
   statsRow: {

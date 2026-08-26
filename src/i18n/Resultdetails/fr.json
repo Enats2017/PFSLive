@@ -23,7 +23,8 @@
     "genderRank": "Sexe",
     "categoryRank": "Catégorie",
     "in": "dans",
-    "minutes": "minutes"
+    "minutes": "minutes",
+    "wavelabel": "Vague"
   },
   "timingPoint": {
     "checkpoint": "CHECKPOINT",
