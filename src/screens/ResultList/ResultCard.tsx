@@ -156,7 +156,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 
                 <View style={resultListStyle.statsRow}>
                     <View style={resultListStyle.statCol}>
-                        <Text style={resultListStyle.statLabel}>{t('allrace:race.time')}</Text>
+                        <Text style={resultListStyle.statLabel}>{t('allrace:race.raceTime')}</Text>
                         <Text style={resultListStyle.statVal}>{item.time || "-"}</Text>
                     </View>
 

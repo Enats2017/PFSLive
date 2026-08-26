@@ -507,6 +507,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               onChangeText={handleGenderSelect}
               iconName="people-outline"
               isDropdown
+              required
               options={GENDER_LABELS}
               editable={!loading}
               error={!!errors.gender}

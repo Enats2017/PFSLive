@@ -111,6 +111,7 @@
     "save": "Save",
     "saving": "Saving",
     "maybeLater": "Maybe later",
+    "saveFailed": "We couldn't save your email. Please try again.",
     "savedTitle": "Email saved",
     "savedMessage": "We'll keep you posted on race updates."
   },

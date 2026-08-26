@@ -36,12 +36,6 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
     };
 
     const formatLastUpdate = (time: number | null | undefined, type: string | null | undefined): string => {
-        console.log('time');
-        console.log(time);
-
-        console.log('type');
-        console.log(type);
-        
         if (!time || !type) return t('livetracking:justNow');
 
         switch (type) {

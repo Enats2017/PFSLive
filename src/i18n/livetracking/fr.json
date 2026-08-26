@@ -15,6 +15,8 @@
     "toNextCheckpoint": "Vers le prochain checkpoint",
     "lastUpdate": "Dernière mise à jour",
     "justNow": "À l'instant",
+    "secondsAgo": "Il y a {{count}} sec",
+    "secondsAgo_plural": "Il y a {{count}} sec",
     "minutesAgo": "Il y a {{count}} min",
     "minutesAgo_plural": "Il y a {{count}} mins",
     "hoursAgo": "Il y a {{count}} heure",

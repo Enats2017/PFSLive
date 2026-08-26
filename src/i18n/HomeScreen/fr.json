@@ -111,6 +111,7 @@
     "save": "Enregistrer",
     "saving": "Enregistrement",
     "maybeLater": "Peut-être plus tard",
+    "saveFailed": "Nous n'avons pas pu enregistrer votre adresse e-mail. Veuillez réessayer.",
     "savedTitle": "Adresse e-mail enregistrée",
     "savedMessage": "Nous vous tiendrons informé des mises à jour des courses."
   },

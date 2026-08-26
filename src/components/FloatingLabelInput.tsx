@@ -439,7 +439,11 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
               },
             ]}
           >
-            {value || timePickerPlaceholder}
+            {/* ✅ Only show the placeholder once the label has floated out of the way.
+                The label animates up on `isFocused || value || showTimePicker` (see the
+                animation effect); while it is still sitting inside the field, drawing the
+                placeholder here too renders both strings on top of each other. */}
+            {value || (showTimePicker ? timePickerPlaceholder : '')}
           </Text>
 
           <View style={styles.iconRight}>
@@ -532,7 +536,9 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
               },
             ]}
           >
-            {displayValue || datePickerPlaceholder}
+            {/* ✅ Same as the time picker above — the placeholder must not be drawn while
+                the label is still un-floated, or "Date of Birth" and "DD-MM-YYYY" overlap. */}
+            {displayValue || (showDatePicker ? datePickerPlaceholder : '')}
           </Text>
 
           <View style={styles.iconRight}>

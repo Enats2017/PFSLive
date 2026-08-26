@@ -111,6 +111,7 @@
     "save": "Opslaan",
     "saving": "Opslaan",
     "maybeLater": "Misschien later",
+    "saveFailed": "We konden je e-mailadres niet opslaan. Probeer het opnieuw.",
     "savedTitle": "E-mailadres opgeslagen",
     "savedMessage": "We houden je op de hoogte van race-updates."
   },

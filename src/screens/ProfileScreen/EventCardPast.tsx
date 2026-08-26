@@ -60,7 +60,8 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
                 <Text style={[commonStyles.title, { marginBottom: spacing.sm }]} numberOfLines={1}>{item.name}</Text>
                 <View style={styles.dateRow}>
                     <MaterialCommunityIcons name="calendar-month-outline" size={16} color="#888" style={{ marginRight: 4 }} />
-                    <Text style={commonStyles.date}>
+                    {/* ✅ Same overflow guard as EventCardLive — see the note there. */}
+                    <Text style={[commonStyles.date, { flexShrink: 1 }]} numberOfLines={1}>
                         {item.race_date_formatted} {formatClockTime(item.race_time)}
                     </Text>
                 </View>

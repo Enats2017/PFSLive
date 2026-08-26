@@ -57,6 +57,7 @@
     "privacy": "Privacybeleid",
     "terms": "Gebruiksvoorwaarden (EULA)"
   },
+  "retry": "Opnieuw proberen",
   "restorePurchases": "Aankopen herstellen",
   "restoreSuccess": { "title": "Aankopen hersteld", "message": "Je lidmaatschap is succesvol hersteld." },
   "restoreNone": { "title": "Niets te herstellen", "message": "Er zijn geen eerdere aankopen gevonden voor deze Apple ID." },
