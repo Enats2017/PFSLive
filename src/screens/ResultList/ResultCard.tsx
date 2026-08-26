@@ -137,14 +137,16 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                     {t('allrace:race.bibNumber')} {item.bib}
                 </Text>
 
-                <Text style={resultListStyle.teamText} numberOfLines={1}>
-                    {[item.club, item.nation].filter(Boolean).join(' · ')}
-                </Text>
-               {item.wave &&(
-                    <Text style={resultListStyle.waveText} numberOfLines={1}>
-                        {t('allrace:race.wavelabel')}: {item.wave}  
+                <View style={resultListStyle.metaBlock}>
+                    <Text style={resultListStyle.teamText} numberOfLines={1}>
+                        {[item.club, item.nation].filter(Boolean).join(' · ')}
                     </Text>
-                )}
+                    {item.wave ? (
+                        <Text style={resultListStyle.waveText} numberOfLines={1}>
+                            {t('allrace:race.wavelabel')}: {item.wave}
+                        </Text>
+                    ) : null}
+                </View>
 
                 {isLive && (
                     <View style={{ marginTop: 6 }}>

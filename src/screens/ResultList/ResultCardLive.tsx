@@ -191,23 +191,25 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     {t('allrace:race.bibNumber')} {item.bib}
                 </Text>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                    {item.nation_flag ? (
-                        <SvgUri
-                            uri={item.nation_flag}
-                            width={20}
-                            height={14}
-                        />
+                <View style={resultListStyle.metaBlock}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {item.nation_flag ? (
+                            <SvgUri
+                                uri={item.nation_flag}
+                                width={20}
+                                height={14}
+                            />
+                        ) : null}
+                        <Text style={resultListStyle.teamText} numberOfLines={1}>
+                            {[item.club, item.nation, item.age].filter(Boolean).join(' · ')}
+                        </Text>
+                    </View>
+                    {item.wave ? (
+                        <Text style={resultListStyle.waveText} numberOfLines={1}>
+                            {t('allrace:race.wavelabel')}: {item.wave}
+                        </Text>
                     ) : null}
-                    <Text style={resultListStyle.teamText} numberOfLines={1}>
-                        {[item.club, item.nation, item.age].filter(Boolean).join(' · ')}
-                    </Text>
                 </View>
-                {item.wave && (
-                    <Text style={resultListStyle.waveText} numberOfLines={1}>
-                        {t('allrace:race.wavelabel')}:{item.wave}  
-                    </Text>
-                )}
 
                 {hasUtmbIndex && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>

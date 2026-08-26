@@ -10,7 +10,9 @@
     "upcoming": "TOON ALLE AANKOMENDE EVENEMENTEN",
     "past": "TOON ALLE RESULTATEN",
     "athlete": "Atleet zoeken",
-    "favourite": "LIJST VAN FAVORIETEN"
+    "favourite": "LIJST VAN FAVORIETEN",
+    "remove": "VERWIJDEREN",
+    "followback": "TERUG VOLGEN"
   },
   "search": {
     "upcomgsearch": "Zoek race op evenementnaam",

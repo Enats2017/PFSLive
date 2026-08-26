@@ -10,7 +10,9 @@
     "upcoming": "AFFICHER TOUS LES ÉVÉNEMENTS À VENIR",
     "past": "AFFICHER TOUS LES RÉSULTATS",
     "athlete": "Rechercher un athlète",
-    "favourite": "LISTE DES FAVORIS"
+    "favourite": "LISTE DES FAVORIS",
+    "remove": "RETIRER",
+    "followback": "SUIVRE EN RETOUR"
   },
   "search": {
     "upcomgsearch": "Rechercher une course par nom d'événement",
