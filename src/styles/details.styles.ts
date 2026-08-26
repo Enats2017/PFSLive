@@ -149,6 +149,20 @@ export const detailsStyles = StyleSheet.create({
     height: 55,
     marginHorizontal: spacing.md,
   },
+
+  // ✅ Same accent bar, but height follows the text block instead of being fixed.
+  // ParticipantCard's block grew from 4 lines to 5 when the wave line was added,
+  // so the fixed 55 (which used to end flush with the last line) now stops around
+  // the bib and leaves the wave line hanging below it. alignSelf:'stretch'
+  // overrides topRow's alignItems:'center' for this one child, so the bar spans
+  // the block whether or not the wave line renders.
+  // Kept separate from `divider` on purpose — ParticipantResult, FollowerCard and
+  // FollowerListCard still use the 4-line layout, where 55 is correct.
+  dividerStretch: {
+    width: 3,
+    alignSelf: "stretch",
+    marginHorizontal: spacing.md,
+  },
   info: {
     flex: 1,
   },

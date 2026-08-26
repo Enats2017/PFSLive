@@ -138,7 +138,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
           colors={['#e8341a', '#f4a100', '#1a73e8']}
           start={{ x: 0, y: 1 }}
           end={{ x: 1, y: 0 }}
-          style={detailsStyles.divider}
+          style={detailsStyles.dividerStretch}
         />
 
         <View style={detailsStyles.info}>
