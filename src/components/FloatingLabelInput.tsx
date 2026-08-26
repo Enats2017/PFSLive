@@ -167,10 +167,12 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   }, [error, isFocused, showDatePicker, showTimePicker]);
 
   const labelLeft = iconName ? 44 : 15;
+  const labelRight = isPassword || showClearButton ? 52 : 15;
 
   const labelStyle = useMemo(() => ({
     position: 'absolute' as const,
     left: labelLeft,
+    right: labelRight,
     top: animatedValue.interpolate({
       inputRange: [0, 1],
       outputRange: [17, -9],
@@ -188,7 +190,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     zIndex: 1,
     fontWeight: '500' as const,
     letterSpacing: 0.3,
-  }), [animatedValue, labelLeft, error]);
+  }), [animatedValue, labelLeft, labelRight, error]);
 
   // ══════════════════════════════════════════════════════════
   //  DATE / TIME PICKER CALLBACKS
@@ -607,7 +609,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
         </View>
       )}
 
-      <Animated.Text style={labelStyle} pointerEvents="none">
+      <Animated.Text style={labelStyle} pointerEvents="none" numberOfLines={1} ellipsizeMode="tail" >
         {label}
         {required && <Animated.Text style={{ color: COLORS.ERROR }}> *</Animated.Text>}
       </Animated.Text>
