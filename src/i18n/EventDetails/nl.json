@@ -38,6 +38,7 @@
     "bib": "Startnummer"
   },
   "success": {
+    "label": "Registratie Geslaagd!",
     "message": "Bedankt voor je aanmelding voor de live tracking van dit evenement. Vertel je familie en vrienden dat ze je hier kunnen volgen en vergeet niet om je live tracking 1 uur voor de start van je race te activeren in deze app!"
   },
   "unregister": {

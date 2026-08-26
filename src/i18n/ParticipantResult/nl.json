@@ -8,6 +8,11 @@
   },
   "loadingMore": "Meer laden... ({{page}}/{{totalPages}})",
   "scrollForMore": "Scroll voor meer ({{count}} geladen)",
+  "mailSent": {
+    "title": "Verificatie-e-mail verzonden!",
+    "message": "We hebben een bevestigingsmail naar uw geregistreerde adres gestuurd. Klik op de link in de e-mail om uw registratie te voltooien.",
+    "button": "Begrepen"
+  },
   "error": {
     "missingParamsTitle": "Ontbrekende informatie",
     "missingParamsMessage": "Kan deelnemers niet laden. Vereiste informatie ontbreekt.",

@@ -38,6 +38,7 @@
     "bib": "Dossard"
   },
   "success": {
+    "label": "Inscription Réussie !",
     "message": "Merci de vous être inscrit au suivi en direct de cet événement. Dites à votre famille et à vos amis de vous suivre ici et n'oubliez pas d'activer votre suivi en direct 1 heure avant le début de votre course dans cette application !"
   },
   "unregister": {
