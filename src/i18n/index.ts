@@ -257,9 +257,7 @@ const getInitialLanguage = (): LanguageCode => {
   }
 };
 
-//const initialLanguage = getInitialLanguage();
-
-const initialLanguage : LanguageCode="en";
+const initialLanguage = getInitialLanguage();
 
 i18n.use(initReactI18next).init({
   compatibilityJSON: 'v3',
