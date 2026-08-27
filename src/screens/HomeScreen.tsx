@@ -275,6 +275,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const raceStartTimeRef = useRef<Date | null>(null);
   const isGPSActiveRef = useRef<boolean>(false);
   const serverTimeOffsetRef = useRef<number>(0);
+  // ✅ Set when doStartGPSTracking() bails at the permission gate. It means "the
+  // runner already tapped START and confirmed — finish the job as soon as the
+  // permission requirement is met", so granting Always does not make them tap
+  // START and sit through the confirm popup a second time on the start line.
+  // Cleared on resume, on explicit dismissal, and once a start clears the gate.
+  const pendingStartRef = useRef(false);
   // ✅ Ref so GPS callback always reads current value without stale closure
   const isSendingDataRef = useRef<boolean>(false);
   // ✅ Ref to tracking params — needed by watchdog to restart task if killed
@@ -769,6 +775,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       if (!perms.foreground || !perms.background) {
         setPermissionBlockReason(perms.foreground ? 'no_background_perm' : 'denied');
+        // Arm the resume — see pendingStartRef. Without this the runner grants
+        // Always and comes back to a stopped tracker.
+        pendingStartRef.current = true;
         setShowLocationPermissionModal(true);
         return;
       }
@@ -779,9 +788,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // what makes the 'location_off' deep-link reachable at start time.
       if (!(await gpsService.isLocationServiceEnabled())) {
         setPermissionBlockReason('location_off');
+        pendingStartRef.current = true;
         setShowLocationPermissionModal(true);
         return;
       }
+
+      // Past the gate — disarm, so a later unrelated foreground cannot fire a
+      // phantom start.
+      pendingStartRef.current = false;
 
       // ✅ Re-fetch home data FRESH (cache-bypassed) at the moment Start is
       // pressed. The organiser can edit the race start_hour right before the
@@ -1456,6 +1470,56 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     };
   }, [hasRaceStarted, startQueueProcessor, startRaceStartChecker, t]);
 
+  // ✅ RESUME A PENDING START WHEN THE RUNNER COMES BACK FROM SETTINGS.
+  //
+  // The permission modal's button closes the modal and sends the runner to the
+  // OS Location page. Granting "Allow all the time" there and returning used to
+  // land on a stopped tracker — the main AppState listener below handles the
+  // power-saving modal and the isGPSActive watchdog, but had no branch for a
+  // start waiting on permission, so the runner had to tap START and confirm
+  // again. At the start line that is the worst moment to repeat yourself.
+  //
+  // Deliberately its own listener rather than a branch in the effect below:
+  // that one already depends on eight values and re-subscribes whenever any of
+  // them changes. doStartGPSTracking is read through a ref so this effect can
+  // subscribe once and never churn.
+  const doStartGPSTrackingRef = useRef(doStartGPSTracking);
+  doStartGPSTrackingRef.current = doStartGPSTracking;
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active' || !pendingStartRef.current) return;
+
+      void (async () => {
+        try {
+          const perms = await gpsService.getPermissionState();
+          setHasPermission(perms.foreground);
+
+          const satisfied =
+            perms.foreground &&
+            perms.background &&
+            (await gpsService.isLocationServiceEnabled());
+
+          if (satisfied) {
+            // Clear FIRST — the inline-grant path can resolve for the same
+            // grant, and whichever runs second must find nothing pending.
+            pendingStartRef.current = false;
+            setShowLocationPermissionModal(false);
+            await doStartGPSTrackingRef.current();
+            return;
+          }
+
+          // Came back without granting. The button already dismissed the modal,
+          // so without this the runner faces a bare screen and no explanation
+          // of why tracking still is not running. Put it back and stay armed.
+          setShowLocationPermissionModal(true);
+        } catch { /* silent — a later foreground retries */ }
+      })();
+    });
+
+    return () => sub.remove();
+  }, []);
+
   // App state changes
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
@@ -1834,7 +1898,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           const t0 = Date.now();
                           const perms = await gpsService.requestPermissionsDetailed();
                           setHasPermission(perms.foreground);
-                          if (perms.background) return;   // granted outright — nothing more to do
+                          if (perms.background) {
+                            // Granted outright, without ever leaving the app —
+                            // on Android 11+ the OS opens Livio's Location page
+                            // itself. This used to `return` here, which left
+                            // permission correct and the start abandoned: the
+                            // runner had to tap START and confirm all over
+                            // again. Finish what they already asked for.
+                            // Clear the ref FIRST so the AppState resume below
+                            // sees nothing pending and cannot start a second time.
+                            if (pendingStartRef.current) {
+                              pendingStartRef.current = false;
+                              await doStartGPSTracking();
+                            }
+                            return;
+                          }
                           // Whether the OS actually SHOWED anything is not in
                           // its answer: a silent auto-deny and a real refusal
                           // look identical, and canAskAgain stays true for both.
@@ -1855,7 +1933,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={commonStyles.secondaryButton}
-                  onPress={() => setShowLocationPermissionModal(false)}
+                  onPress={() => {
+                    // Backing out cancels the start — disarm, or a later
+                    // foreground would fire a start the runner declined.
+                    pendingStartRef.current = false;
+                    setShowLocationPermissionModal(false);
+                  }}
                   activeOpacity={0.7}
                 >
                   <Text style={commonStyles.secondaryButtonText}>{t('common:buttons.close')}</Text>
