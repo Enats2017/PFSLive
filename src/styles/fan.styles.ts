@@ -91,7 +91,8 @@ export const fanstyle = StyleSheet.create({
   eventImg: {
     width: 160,
     height: 112, // was: 100
-    resizeMode: "cover",
+    // NOTE: no resizeMode here — this wraps an expo-image, which reads fit from
+    // the contentFit PROP (set in EventCard.tsx), not from the style.
     
     position: 'relative',   // 👈 add this
     overflow: 'hidden',

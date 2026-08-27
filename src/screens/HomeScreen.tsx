@@ -7,7 +7,6 @@ import {
   StatusBar,
   ScrollView,
   Alert,
-  Image,
   AppState,
   ActivityIndicator,
   BackHandler,
@@ -15,6 +14,7 @@ import {
   Platform,
   Linking,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -2088,7 +2088,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <Image
             source={require('../../assets/livio_logo_transparent.png')}
             style={homeStyles.logo}
-            resizeMode="contain"
+            contentFit="contain"
           />
         </View>
 
@@ -2397,8 +2397,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 <View key={index} style={homeStyles.logoBox}>
                   <Image
                     source={{ uri }}
+                    cachePolicy="memory-disk"
                     style={homeStyles.partnerLogo}
-                    resizeMode="contain"
+                    contentFit="contain"
                   />
                 </View>
               ))}

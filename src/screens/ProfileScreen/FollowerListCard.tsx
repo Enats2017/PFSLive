@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { FollowerItem } from '../../services/followerListService';
 import { commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
@@ -58,8 +59,9 @@ const FollowerListCard: React.FC<FollowerCardProps> = ({
                     {profileImageUri ? (
                         <Image
                             source={{ uri: profileImageUri }}
+                            cachePolicy="memory-disk"
                             style={detailsStyles.avatarImage}
-                            resizeMode="cover"
+                            contentFit="cover"
                         />
                     ) : (
                         <View style={detailsStyles.avatarFallback}>
@@ -84,12 +86,13 @@ const FollowerListCard: React.FC<FollowerCardProps> = ({
                                 <Text style={commonStyles.text}>|</Text>
                                 <Image
                                     source={{ uri: flagImageUri }}
+                                    cachePolicy="memory-disk"
                                     style={{
                                         width: 20,
                                         height: 14,
                                         borderRadius: 2,
                                     }}
-                                    resizeMode="cover"
+                                    contentFit="cover"
                                 />
                             </>
                         )}

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { ParticipantItem } from '../../services/followerEvent';
 import { commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
@@ -81,8 +82,9 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                         <>
                             <Image
                                 source={{ uri: profileImageUri }}
+                                cachePolicy="memory-disk"
                                 style={detailsStyles.avatarImage}
-                                resizeMode="cover"
+                                contentFit="cover"
                                 onLoad={() => setAvatarLoading(false)}
                                 onError={() => setAvatarLoading(false)}
                             />
@@ -125,12 +127,13 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                                 <Text style={commonStyles.text}>|</Text>
                                 <Image
                                     source={{ uri: flagImageUri }}
+                                    cachePolicy="memory-disk"
                                     style={{
                                         width: 20,
                                         height: 14,
                                         borderRadius: 2,
                                     }}
-                                    resizeMode="cover"
+                                    contentFit="cover"
                                 />
                             </>
                         )}

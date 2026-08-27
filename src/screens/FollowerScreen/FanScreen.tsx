@@ -5,8 +5,7 @@ import {
     TouchableOpacity,
     View,
     ScrollView,
-    Image,
-} from 'react-native';
+    } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';

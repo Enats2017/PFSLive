@@ -6,8 +6,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   StatusBar,
-  Image,
-} from 'react-native';
+  } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -123,7 +123,8 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           )}
           <Image
             source={{ uri: event_image }}
-            resizeMode="cover"
+            contentFit="cover"
+              cachePolicy="memory-disk"
             style={{
               width: '100%',
               height: '100%',
@@ -131,7 +132,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             }}
             onLoad={() => setImageLoading(false)}
             onError={(e) => {
-              console.log('❌ Image failed:', event_image, e.nativeEvent?.error);
+              console.log('❌ Image failed:', event_image, e?.error);
               setImageLoading(false);
             }}
           />

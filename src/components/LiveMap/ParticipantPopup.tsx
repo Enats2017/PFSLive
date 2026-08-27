@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ParticipantMapMarker } from '../../types/liveTracking';
@@ -74,6 +75,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                     {participant.profile_picture ? (
                         <Image
                             source={{ uri: participant.profile_picture }}
+                            cachePolicy="memory-disk"
                             style={liveTrackingStyles.avatar}
                         />
                     ) : (

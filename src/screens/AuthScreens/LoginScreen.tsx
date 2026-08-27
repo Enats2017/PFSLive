@@ -7,9 +7,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-  Image,
+  ActivityIndicator
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
@@ -144,7 +144,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 <Image
                   source={require('../../../assets/livio_logo_transparent.png')}
                   style={loginStyles.logo}
-                  resizeMode="contain"
+                  contentFit="contain"
                 />
               </View>
               <Text style={loginStyles.title}>{t('login:title')}</Text>

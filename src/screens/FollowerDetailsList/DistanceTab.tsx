@@ -3,9 +3,9 @@ import {
   View, Text, FlatList, ActivityIndicator,
   TouchableOpacity,
   StatusBar,
-  Dimensions,
-  Image
+  Dimensions
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
@@ -105,7 +105,8 @@ const DistanceTab = ({
 
             <Image
               source={{ uri: event_image }}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="memory-disk"
               style={{
                 width: '100%',
                 height: '100%',
@@ -113,7 +114,7 @@ const DistanceTab = ({
               }}
               onLoad={() => setImageLoading(false)}
               onError={(e) => {
-                console.log('❌ Image failed:', event_image, e.nativeEvent?.error);
+                console.log('❌ Image failed:', event_image, e?.error);
                 setImageLoading(false);
               }}
             />

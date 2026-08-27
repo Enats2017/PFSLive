@@ -1,13 +1,13 @@
 import React from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { Image } from 'expo-image';
 import { colors, spacing } from '../styles/common.styles';
 import { ParticipantItem } from '../services/followerEvent';
 
@@ -89,8 +89,9 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
                                 {hasImage ? (
                                     <Image
                                         source={{ uri: item.profile_picture }}
+                                        cachePolicy="memory-disk"
                                         style={styles.avatarImage}
-                                        resizeMode="cover"
+                                        contentFit="cover"
                                     />
                                 ) : (
                                     <View style={styles.avatarFallback}>
@@ -108,8 +109,9 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
                                     {item.flag_url ? (
                                         <Image
                                             source={{ uri: item.flag_url }}
+                                            cachePolicy="memory-disk"
                                             style={styles.flag}
-                                            resizeMode="cover"
+                                            contentFit="cover"
                                         />
                                     ) : null}
                                     <Text style={styles.city} numberOfLines={1}>

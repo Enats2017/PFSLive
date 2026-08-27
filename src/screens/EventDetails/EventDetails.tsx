@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StatusBar,
-  Image,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';

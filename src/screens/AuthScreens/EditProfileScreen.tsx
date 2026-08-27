@@ -1,8 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import {
-    View, Text, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, Alert, Image,
-    KeyboardAvoidingView, Platform
-} from 'react-native'
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StatusBar,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform
+} from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -253,8 +261,9 @@ const EditProfileScreen = () => {
                             {avatarUri ? (
                                 <Image
                                     source={{ uri: avatarUri }}
+                                    cachePolicy="memory-disk"
                                     style={profileStyles.avatar}
-                                    resizeMode="cover"
+                                    contentFit="cover"
                                 />
                             ) : (
                                 <View style={[profileStyles.avatar, profileStyles.avatarFallback]}>

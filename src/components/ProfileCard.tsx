@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useNavigation } from '@react-navigation/native';
@@ -55,6 +56,7 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                     {profile?.profile_picture ? (
                         <Image
                             source={{ uri:(profile.profile_picture) || undefined }}
+                            cachePolicy="memory-disk"
                             style={profileStyles.avatar}
                         />
                     ) : (

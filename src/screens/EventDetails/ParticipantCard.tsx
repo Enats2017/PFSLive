@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { Participant } from '../../services/participantService';
 import { colors, commonStyles, spacing } from '../../styles/common.styles';
@@ -124,8 +125,9 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
           {profileImageUri ? (
             <Image
               source={{ uri: profileImageUri }}
+              cachePolicy="memory-disk"
               style={detailsStyles.avatarImage}
-              resizeMode="cover"
+              contentFit="cover"
             />
           ) : (
             <View style={detailsStyles.avatarFallback}>

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, Image, StatusBar, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, StatusBar, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors, commonStyles, spacing } from '../../styles/common.styles'
 import { Ionicons, FontAwesome5, FontAwesome6, FontAwesome, Feather } from '@expo/vector-icons'
@@ -480,6 +481,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                                 <>
                                     <Image
                                         source={{ uri: profile.profile_picture || undefined }}
+                                        cachePolicy="memory-disk"
                                         style={ownProfile.avatar}
                                         onLoad={() => setAvatarLoading(false)}
                                         onError={() => setAvatarLoading(false)}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, commonStyles } from '../../styles/common.styles';
@@ -44,6 +45,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                     {runnerInfo?.profile_picture ? (
                         <Image
                             source={{ uri: getImageUrl(runnerInfo?.profile_picture) || undefined }}
+                            cachePolicy="memory-disk"
                             style={resultInfoStyles.avatarCircle}
                         />
                     ) : (

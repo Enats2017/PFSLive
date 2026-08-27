@@ -8,9 +8,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Image,
-  Alert,
+  Alert
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -379,6 +379,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
                     <>
                       <Image
                         source={{ uri: formData.profileImage }}
+                        cachePolicy="memory-disk"
                         style={registerStyles.profileImage}
                       />
                       <TouchableOpacity

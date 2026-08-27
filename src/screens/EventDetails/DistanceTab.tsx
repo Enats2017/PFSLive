@@ -6,9 +6,9 @@ import {
   FlatList,
   ActivityIndicator,
   StatusBar,
-  Image,
   Linking
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, colors, spacing } from '../../styles/common.styles';
@@ -378,7 +378,8 @@ const handleExternalRegister = useCallback((url: string) => {
 
             <Image
               source={{ uri: event_image }}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="memory-disk"
               style={{
                 width: '100%',
                 aspectRatio: 612 / 428,
@@ -386,7 +387,7 @@ const handleExternalRegister = useCallback((url: string) => {
               }}
               onLoad={() => setImageLoading(false)}
               onError={(e) => {
-                console.log('❌ Image failed:', event_image, e.nativeEvent?.error);
+                console.log('❌ Image failed:', event_image, e?.error);
                 setImageLoading(false);
               }}
             />

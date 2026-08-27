@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, Image } from 'react-native';
+import { View, TouchableOpacity, Text } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { colors } from '../../styles/common.styles';
 import { bottomNavStyles } from '../../styles/bottomNav.styles';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
@@ -212,13 +214,17 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             onPress={() => handleTabPress(tab.name)}
             activeOpacity={0.7}
           >
+            {/* ✅ tintColor must be a PROP here, not a style. RN's <Image>
+                honours tintColor in a StyleSheet; expo-image ignores it and only
+                reads the prop — so leaving it in bottomNavStyles.iconImage would
+                render every tab icon untinted and silently kill the grey/active
+                state. See the note in bottomNav.styles.ts for why the tint is
+                load-bearing rather than cosmetic. */}
             <Image
               source={tab.icon}
-              style={[
-                bottomNavStyles.iconImage,
-                isActive && bottomNavStyles.iconImageActive,
-              ]}
-              resizeMode="contain"
+              style={bottomNavStyles.iconImage}
+              tintColor={isActive ? colors.accent : colors.gray500}
+              contentFit="contain"
             />
             <Text style={[bottomNavStyles.label, isActive && bottomNavStyles.labelActive]}>
               {tab.label}

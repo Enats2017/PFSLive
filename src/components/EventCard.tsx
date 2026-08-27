@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../styles/common.styles';
 import { fanstyle } from '../styles/fan.styles';
 import { EventItem } from '../services/followerEvent';
 import { formatEventDate } from '../utils/dateFormatter';
-
-
-const loadedCache = new Set<string>();
 
 interface EventCardProps {
     item: EventItem;
@@ -16,8 +14,17 @@ interface EventCardProps {
 
 const EventCard: React.FC<EventCardProps> = ({ item, t }) => {
     const uri = item.event_image?.trim();
+    // ✅ expo-image, not RN Image. This card renders ~10 at a time in the fan
+    // "Next Events" slider, and RN Image decodes each banner with no disk cache
+    // and no reliable downsampling — the bitmap-memory profile Play's new
+    // threshold targets. expo-image caches to memory AND disk and decodes to the
+    // view size (160x112 dp here) instead of the source size.
+    //
+    // The hand-rolled `loadedCache` Set that used to live here is gone: it only
+    // ever tracked "has this URI loaded once this session" to skip the spinner,
+    // which expo-image's own cache does properly, including across launches.
     const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>(
-        uri && loadedCache.has(uri) ? 'loaded' : uri ? 'loading' : 'error'
+        uri ? 'loading' : 'error'
     );
 
     return (
@@ -27,11 +34,14 @@ const EventCard: React.FC<EventCardProps> = ({ item, t }) => {
                     <Image
                         source={{ uri }}
                         style={StyleSheet.absoluteFill}
-                        resizeMode="cover"
-                        onLoad={() => {
-                            loadedCache.add(uri);
-                            setStatus('loaded');
-                        }}
+                        // expo-image: contentFit replaces RN's resizeMode
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        // Lets the list recycle the underlying view between cards
+                        // instead of holding a bitmap per row.
+                        recyclingKey={uri}
+                        transition={150}
+                        onLoad={() => setStatus('loaded')}
                         onError={() => setStatus('error')}
                     />
                 )}

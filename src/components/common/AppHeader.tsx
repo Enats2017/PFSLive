@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { headerStyles } from '../../styles/header.styles';
 import { useNavigation } from '@react-navigation/native';
@@ -103,7 +104,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <Image
                 source={require('../../../assets/livio_logo_transparent.png')}
                 style={headerStyles.centerLogo}
-                resizeMode="contain"
+                contentFit="contain"
               />
               </View>
         )
