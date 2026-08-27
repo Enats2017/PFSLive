@@ -34,5 +34,26 @@
     "genericErrorTitle": "Fout",
     "genericError": "Er is iets misgegaan. Probeer het later opnieuw.",
     "forgotPasswordComingSoon": "Wachtwoord vergeten functie komt binnenkort. Neem contact op met support."
+  },
+  "deviceTransfer": {
+    "title": "Dit account staat op een ander apparaat",
+    "body": "U kunt het naar deze telefoon verplaatsen. We sturen een 6-cijferige code naar {{email}} om te bevestigen dat u het bent.",
+    "note": "Uw andere telefoon wordt afgemeld. U kunt dit één keer per 30 dagen doen.",
+    "confirm": "Naar deze telefoon verplaatsen",
+    "cancel": "Niet nu",
+    "errors": {
+      "cooldownTitle": "Overdracht al gebruikt",
+      "cooldown": "U heeft dit account onlangs naar een nieuw apparaat verplaatst. Over {{days}} dagen kan het opnieuw, of neem contact op met support.",
+      "tooManyRequestsTitle": "Te veel pogingen",
+      "tooManyRequests": "Te veel overdrachtsverzoeken. Wacht even en probeer het opnieuw.",
+      "deviceTakenTitle": "Telefoon al in gebruik",
+      "deviceTaken": "Deze telefoon is al gekoppeld aan een ander Livio-account. Neem contact op met support.",
+      "recentPasswordResetTitle": "Wachtwoord recent gewijzigd",
+      "recentPasswordReset": "Voor uw veiligheid kunt u binnen 24 uur na een wachtwoordwijziging niet van apparaat wisselen. Probeer het morgen opnieuw.",
+      "notNeededTitle": "Niets te verplaatsen",
+      "notNeeded": "Dit account is niet aan een ander apparaat gekoppeld. Probeer opnieuw in te loggen.",
+      "deviceIdTitle": "Apparaat niet herkend",
+      "deviceId": "We konden deze telefoon niet identificeren. Herstart de app en probeer het opnieuw."
+    }
   }
 }

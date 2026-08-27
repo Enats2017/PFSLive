@@ -2,15 +2,21 @@ import axios from 'axios';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 
 // ✅ TYPES
+export type OtpPurpose = 'registration' | 'forgot_password' | 'device_change';
+
 export interface VerifyOtpPayload {
   verification_token: string;
   otp: string;
-    purpose: 'registration' | 'forgot_password'; 
+    purpose: OtpPurpose;
+  // ✅ device_change only. The server binds the target device at request time
+  // and refuses to complete on any other handset, so a code read out of the
+  // owner's mailbox is useless on a stranger's phone.
+  device_id?: string;
 }
 
 export interface ResendOtpPayload {
   verification_token: string;
-  purpose: 'registration' | 'forgot_password';
+  purpose: OtpPurpose;
 }
 
 export interface OtpResponse {

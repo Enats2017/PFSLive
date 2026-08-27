@@ -11,28 +11,95 @@ import { tokenService } from "../services/tokenService";
 
 const DEVICE_ID_KEY = 'secure_device_id';
 
-export const getDeviceId = async (): Promise<string> => {
+// ✅ Resolved once per app session. This is read on ~15 code paths (auth,
+// favourites, push registration, tracking); without the cache each one redoes
+// the OS call and the Keychain read.
+let cachedDeviceId: string | null = null;
+
+const readStoredDeviceId = async (): Promise<string | null> => {
   try {
-    if (Platform.OS === 'android') {
-      // Android - hardware ID, always stable
-      const androidId = Application.getAndroidId();
-      if (androidId) return androidId;
-    }
-
-    // iOS - use Keychain (survives uninstall/reinstall/clear data)
-    const stored = await SecureStore.getItemAsync(DEVICE_ID_KEY);
-    if (stored) return stored;
-
-    // First time - get vendor ID and save to Keychain
-    const vendorId = await Application.getIosIdForVendorAsync()?? '';
-    await SecureStore.setItemAsync(DEVICE_ID_KEY, vendorId);
-    return vendorId;
-
+    return await SecureStore.getItemAsync(DEVICE_ID_KEY);
   } catch (error) {
-    console.log('❌ Device ID error:', error);
-     return 'unknown_device';
-    
+    // SecureStore defaults to WHEN_UNLOCKED. Push registration and background
+    // tasks can run before first unlock, where the read throws rather than
+    // returning null.
+    if (API_CONFIG.DEBUG) console.log('⚠️ Device ID read failed:', error);
+    return null;
   }
+};
+
+const writeStoredDeviceId = async (value: string): Promise<void> => {
+  try {
+    await SecureStore.setItemAsync(DEVICE_ID_KEY, value);
+  } catch (error) {
+    if (API_CONFIG.DEBUG) console.log('⚠️ Device ID write failed:', error);
+  }
+};
+
+/**
+ * Stable per-device identifier. The account is locked to this value server-side
+ * (oc_customer_app.device_id), so a value that changes is a lockout — the user
+ * has to run the device transfer flow to get back in.
+ *
+ * Each platform keeps the source it already used, so upgrading the app does not
+ * change the id of any working device:
+ *   - Android: SSAID first. It survives uninstall/reinstall for a given signing
+ *     key, which SecureStore does not (Android wipes app data on uninstall), so
+ *     SecureStore would be a downgrade as the primary here.
+ *   - iOS: the Keychain copy first. Raw IDFV resets once every app from this
+ *     vendor is removed, so the first value seen is the one we keep.
+ *
+ * Neither survives a factory reset — the OS regenerates its identifier and
+ * wipes the Keychain — and nothing client-side can change that. That case is
+ * covered by the device transfer flow instead.
+ */
+export const getDeviceId = async (): Promise<string> => {
+  if (cachedDeviceId) return cachedDeviceId;
+
+  if (Platform.OS === 'android') {
+    // Was: this fell through to getIosIdForVendorAsync() when getAndroidId()
+    // returned falsy — an iOS-only call that throws on Android, landing every
+    // such device on the shared 'unknown_device' string below.
+    try {
+      const androidId = Application.getAndroidId();
+      if (androidId) {
+        cachedDeviceId = androidId;
+        return androidId;
+      }
+    } catch (error) {
+      if (API_CONFIG.DEBUG) console.log('⚠️ getAndroidId failed:', error);
+    }
+  }
+
+  const stored = await readStoredDeviceId();
+  if (stored) {
+    cachedDeviceId = stored;
+    return stored;
+  }
+
+  let id = '';
+  try {
+    if (Platform.OS === 'ios') {
+      id = (await Application.getIosIdForVendorAsync()) ?? '';
+    }
+  } catch (error) {
+    if (API_CONFIG.DEBUG) console.log('⚠️ getIosIdForVendorAsync failed:', error);
+  }
+
+  if (!id) {
+    // Was: 'unknown_device' — one literal shared by every device that failed,
+    // so the first account to claim it locked out all the others, and the
+    // server had no way to tell them apart. A random id is at least unique.
+    // Not from expo-crypto: it is not installed and adding it forces a native
+    // rebuild. This is an identifier, not a secret, and it is persisted on
+    // first use.
+    id = `gen_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}${Math.random().toString(36).slice(2, 10)}`;
+    if (API_CONFIG.DEBUG) console.log('⚠️ No OS device id available, generated:', id);
+  }
+
+  await writeStoredDeviceId(id);
+  cachedDeviceId = id;
+  return id;
 };
 
 const getApiUrl = (): string => {
@@ -76,6 +143,9 @@ export const API_CONFIG = {
     REGISTER: "/register_api.php",
     VERIFY_OTP: "/verify_otp_api.php", // ← add
     RESEND_OTP: "/resent_otp_api.php",
+    // Step 1 of a device transfer: verifies the password, emails a 6-digit
+    // code. Step 2 is VERIFY_OTP with purpose 'device_change'.
+    DEVICE_CHANGE_REQUEST: "/device_change_request_api.php",
 
 
     // Home

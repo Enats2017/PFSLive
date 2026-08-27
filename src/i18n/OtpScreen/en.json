@@ -28,6 +28,22 @@
     "noConnectionTitle": "No Internet Connection",
     "noConnection": "Please check your internet connection and try again.",
     "genericErrorTitle": "Error",
-    "genericError": "Something went wrong. Please try again later."
+    "genericError": "Something went wrong. Please try again later.",
+    "deviceMismatchTitle": "Wrong phone",
+    "deviceMismatch": "This code was requested on a different phone. Please start again from the login screen.",
+    "conflictTitle": "Could not complete",
+    "conflict": "We could not move your account just now. Please try logging in again.",
+    "deviceTakenTitle": "Phone already in use",
+    "deviceTaken": "This phone is already linked to a different Livio account. Please contact support.",
+    "maxResendsTitle": "No more codes",
+    "maxResends": "You've requested too many codes. Please start again from the login screen.",
+    "accountDisabledTitle": "Account unavailable",
+    "accountDisabled": "This account is not active. Please contact support."
+  },
+  "deviceChange": {
+    "title": "Confirm your new phone",
+    "subtitle": "We sent a 6-digit code to",
+    "successTitle": "Device changed",
+    "successMessage": "Your account has moved to this phone. Your other device has been signed out."
   }
 }

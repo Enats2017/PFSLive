@@ -57,6 +57,18 @@ export interface ForgotPasswordResponse {
   };
 }
 
+export interface DeviceChangeRequestResponse {
+  success: boolean;
+  error?: string | null;
+  data?: {
+    action: string; // 'otp_sent'
+    verification_token?: string;
+    // ✅ Present on the `device_change_cooldown` error so the screen can say
+    // when they can try again instead of just "contact support".
+    retry_after_days?: number;
+  };
+}
+
 export interface ResetPasswordResponse {
   success: boolean;
   error?: string | null;
@@ -161,6 +173,62 @@ export const authService = {
     } catch (error) {
       if (API_CONFIG.DEBUG) {
         console.error("❌ Login error:", error);
+      }
+      throw error;
+    }
+  },
+
+  /**
+   * Step 1 of a device transfer.
+   *
+   * Called straight after login fails with `device_not_allowed`, using the
+   * credentials the user has already typed — the server only reaches that error
+   * after the password has passed, so re-asking for it would be pointless
+   * friction. The password is passed through in memory and never stored or put
+   * into navigation params.
+   *
+   * On success the server has emailed a 6-digit code; step 2 is
+   * otpService.verify with purpose 'device_change'.
+   */
+  async requestDeviceChange(
+    email: string,
+    password: string,
+  ): Promise<DeviceChangeRequestResponse> {
+    try {
+      const deviceId = await getDeviceId();
+      const headers = await API_CONFIG.getHeaders();
+
+      const requestBody = {
+        email: email.trim().toLowerCase(),
+        password,
+        device_id: deviceId,
+        platform: Platform.OS,
+      };
+
+      if (API_CONFIG.DEBUG) {
+        console.log("📤 Device change request:", {
+          email: requestBody.email,
+          device_id: deviceId,
+        });
+      }
+
+      const response = await axios.post<DeviceChangeRequestResponse>(
+        getApiEndpoint(API_CONFIG.ENDPOINTS.DEVICE_CHANGE_REQUEST),
+        requestBody,
+        {
+          headers,
+          timeout: API_CONFIG.TIMEOUT,
+        },
+      );
+
+      if (API_CONFIG.DEBUG) {
+        console.log("✅ Device change OTP sent");
+      }
+
+      return response.data;
+    } catch (error) {
+      if (API_CONFIG.DEBUG) {
+        console.error("❌ Device change request error:", error);
       }
       throw error;
     }

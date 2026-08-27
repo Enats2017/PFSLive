@@ -34,5 +34,26 @@
     "genericErrorTitle": "Erreur",
     "genericError": "Quelque chose s'est mal passé. Veuillez réessayer plus tard.",
     "forgotPasswordComingSoon": "La fonction mot de passe oublié arrive bientôt. Veuillez contacter le support."
+  },
+  "deviceTransfer": {
+    "title": "Ce compte est sur un autre appareil",
+    "body": "Vous pouvez le transférer vers ce téléphone. Nous enverrons un code à 6 chiffres à {{email}} pour confirmer votre identité.",
+    "note": "Votre autre téléphone sera déconnecté. Vous pouvez le faire une fois tous les 30 jours.",
+    "confirm": "Transférer vers ce téléphone",
+    "cancel": "Pas maintenant",
+    "errors": {
+      "cooldownTitle": "Transfert déjà utilisé",
+      "cooldown": "Vous avez transféré ce compte récemment. Vous pourrez recommencer dans {{days}} jours, ou contactez le support.",
+      "tooManyRequestsTitle": "Trop de tentatives",
+      "tooManyRequests": "Trop de demandes de transfert. Veuillez patienter et réessayer.",
+      "deviceTakenTitle": "Téléphone déjà utilisé",
+      "deviceTaken": "Ce téléphone est déjà lié à un autre compte Livio. Veuillez contacter le support.",
+      "recentPasswordResetTitle": "Mot de passe récemment modifié",
+      "recentPasswordReset": "Pour votre sécurité, vous ne pouvez pas changer d'appareil dans les 24 heures suivant un changement de mot de passe. Réessayez demain.",
+      "notNeededTitle": "Rien à transférer",
+      "notNeeded": "Ce compte n'est pas lié à un autre appareil. Veuillez réessayer de vous connecter.",
+      "deviceIdTitle": "Appareil non reconnu",
+      "deviceId": "Nous n'avons pas pu identifier ce téléphone. Redémarrez l'application et réessayez."
+    }
   }
 }

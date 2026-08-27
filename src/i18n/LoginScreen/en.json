@@ -34,5 +34,26 @@
     "genericErrorTitle": "Error",
     "genericError": "Something went wrong. Please try again later.",
     "forgotPasswordComingSoon": "Forgot password feature coming soon. Please contact support."
+  },
+  "deviceTransfer": {
+    "title": "This account is on another device",
+    "body": "You can move it to this phone. We'll email a 6-digit code to {{email}} to confirm it's you.",
+    "note": "Your other phone will be signed out. You can do this once every 30 days.",
+    "confirm": "Move to this phone",
+    "cancel": "Not now",
+    "errors": {
+      "cooldownTitle": "Transfer already used",
+      "cooldown": "You moved this account to a new device recently. You can do it again in {{days}} days, or contact support.",
+      "tooManyRequestsTitle": "Too many attempts",
+      "tooManyRequests": "Too many device transfer requests. Please wait a moment and try again.",
+      "deviceTakenTitle": "Phone already in use",
+      "deviceTaken": "This phone is already linked to a different Livio account. Please contact support.",
+      "recentPasswordResetTitle": "Recent password change",
+      "recentPasswordReset": "For your security you can't move devices within 24 hours of a password change. Please try again tomorrow.",
+      "notNeededTitle": "Nothing to move",
+      "notNeeded": "This account isn't locked to another device. Please try logging in again.",
+      "deviceIdTitle": "Device not recognised",
+      "deviceId": "We couldn't identify this phone. Please restart the app and try again."
+    }
   }
 }

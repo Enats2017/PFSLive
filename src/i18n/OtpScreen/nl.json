@@ -28,6 +28,22 @@
     "noConnectionTitle": "Geen Internetverbinding",
     "noConnection": "Controleer uw internetverbinding en probeer het opnieuw.",
     "genericErrorTitle": "Fout",
-    "genericError": "Er is iets misgegaan. Probeer het later opnieuw."
+    "genericError": "Er is iets misgegaan. Probeer het later opnieuw.",
+    "deviceMismatchTitle": "Verkeerde telefoon",
+    "deviceMismatch": "Deze code is op een andere telefoon aangevraagd. Begin opnieuw vanaf het inlogscherm.",
+    "conflictTitle": "Kon niet voltooien",
+    "conflict": "We konden uw account nu niet verplaatsen. Probeer opnieuw in te loggen.",
+    "deviceTakenTitle": "Telefoon al in gebruik",
+    "deviceTaken": "Deze telefoon is al gekoppeld aan een ander Livio-account. Neem contact op met support.",
+    "maxResendsTitle": "Geen codes meer",
+    "maxResends": "U heeft te veel codes aangevraagd. Begin opnieuw vanaf het inlogscherm.",
+    "accountDisabledTitle": "Account niet beschikbaar",
+    "accountDisabled": "Dit account is niet actief. Neem contact op met support."
+  },
+  "deviceChange": {
+    "title": "Bevestig uw nieuwe telefoon",
+    "subtitle": "We hebben een 6-cijferige code gestuurd naar",
+    "successTitle": "Apparaat gewijzigd",
+    "successMessage": "Uw account is naar deze telefoon verplaatst. Uw andere apparaat is afgemeld."
   }
 }

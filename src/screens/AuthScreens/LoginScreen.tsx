@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
+import DeviceTransferModal from '../../components/DeviceTransferModal';
 import { authService } from '../../services/authService';
 import { validateLoginForm } from '../../services/validation/authValidation';
 import { commonStyles } from '../../styles/common.styles';
@@ -44,6 +45,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const { handleAfterAuth } = usePendingRegistration(navigation);
 
   const [loading, setLoading] = useState(false);
+
+  // ✅ Device transfer. Offered when login comes back `device_not_allowed`,
+  // i.e. the account is bound to a different phone. The password stays in
+  // formData and is handed straight to requestDeviceChange — it is never
+  // persisted and never put into navigation params, which are serializable.
+  const [deviceModalVisible, setDeviceModalVisible] = useState(false);
+  const [deviceRequestLoading, setDeviceRequestLoading] = useState(false);
 
   const handleLogin = useCallback(async () => {
     clearAllErrors();
@@ -100,7 +108,19 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           toastError(t('login:errors.accountDisabledTitle'), t('login:errors.accountDisabled'));
           break;
         case 'device_not_allowed':
-          toastError(t('login:errors.deviceNotAllowedTitle'), t('login:errors.deviceNotAllowed'));
+          // Was a dead-end toast telling the user to email support. The
+          // password has already been verified server-side to reach this
+          // error, so offer the transfer instead of ending the journey here.
+          setDeviceModalVisible(true);
+          break;
+        case 'device_already_registered':
+          // This phone belongs to a different account, so the transfer flow
+          // cannot help — it would be refused for the same reason. Say so
+          // directly rather than opening a modal that leads nowhere.
+          toastError(
+            t('login:deviceTransfer.errors.deviceTakenTitle'),
+            t('login:deviceTransfer.errors.deviceTaken'),
+          );
           break;
         case 'token_failed':
           toastError(t('login:errors.tokenFailedTitle'), t('login:errors.tokenFailed'));
@@ -121,6 +141,91 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       setLoading(false);
     }
   }, [formData, clearAllErrors, setErrors, handleAfterAuth, login, t]);
+
+  const handleDeviceTransfer = useCallback(async () => {
+    setDeviceRequestLoading(true);
+
+    try {
+      const email = formData.email.trim().toLowerCase();
+      const response = await authService.requestDeviceChange(email, formData.password);
+
+      if (response.success && response.data?.verification_token) {
+        setDeviceModalVisible(false);
+        void analyticsService.logAuthStep('device_change_requested');
+
+        navigation.navigate('OTPVerificationScreen', {
+          email,
+          verification_token: response.data.verification_token,
+          purpose: 'device_change',
+        });
+      }
+    } catch (error: any) {
+      const data = error.response?.data;
+      const errorCode = data?.error || 'unknown_error';
+
+      void analyticsService.logAuthStep('device_change_failed', errorCode);
+      setDeviceModalVisible(false);
+
+      switch (errorCode) {
+        case 'device_change_cooldown':
+          toastError(
+            t('login:deviceTransfer.errors.cooldownTitle'),
+            t('login:deviceTransfer.errors.cooldown', {
+              days: data?.data?.retry_after_days ?? 30,
+            }),
+          );
+          break;
+        case 'device_change_too_many_requests':
+        case 'device_change_too_soon':
+          toastError(
+            t('login:deviceTransfer.errors.tooManyRequestsTitle'),
+            t('login:deviceTransfer.errors.tooManyRequests'),
+          );
+          break;
+        case 'device_already_registered':
+          toastError(
+            t('login:deviceTransfer.errors.deviceTakenTitle'),
+            t('login:deviceTransfer.errors.deviceTaken'),
+          );
+          break;
+        case 'device_change_recent_password_reset':
+          toastError(
+            t('login:deviceTransfer.errors.recentPasswordResetTitle'),
+            t('login:deviceTransfer.errors.recentPasswordReset'),
+          );
+          break;
+        case 'device_change_not_needed':
+          toastError(
+            t('login:deviceTransfer.errors.notNeededTitle'),
+            t('login:deviceTransfer.errors.notNeeded'),
+          );
+          break;
+        case 'device_id_invalid':
+        case 'device_id_required':
+          toastError(
+            t('login:deviceTransfer.errors.deviceIdTitle'),
+            t('login:deviceTransfer.errors.deviceId'),
+          );
+          break;
+        case 'invalid_credentials':
+          setErrors({ password: t('login:errors.invalidCredentials') });
+          toastError(
+            t('login:errors.invalidCredentialsTitle'),
+            t('login:errors.invalidCredentials'),
+          );
+          break;
+        default:
+          if (error.request && !error.response) {
+            toastError(t('login:errors.noConnectionTitle'), t('login:errors.noConnection'));
+          } else {
+            toastError(t('login:errors.genericErrorTitle'), t('login:errors.genericError'));
+          }
+          break;
+      }
+    } finally {
+      setDeviceRequestLoading(false);
+    }
+  }, [formData, navigation, setErrors, t]);
 
   return (
     <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
@@ -220,6 +325,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <DeviceTransferModal
+        visible={deviceModalVisible}
+        email={formData.email.trim().toLowerCase()}
+        loading={deviceRequestLoading}
+        onConfirm={handleDeviceTransfer}
+        onClose={() => setDeviceModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };

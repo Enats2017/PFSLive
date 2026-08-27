@@ -28,6 +28,22 @@
     "noConnectionTitle": "Pas de Connexion Internet",
     "noConnection": "Veuillez vérifier votre connexion Internet et réessayer.",
     "genericErrorTitle": "Erreur",
-    "genericError": "Quelque chose s'est mal passé. Veuillez réessayer plus tard."
+    "genericError": "Quelque chose s'est mal passé. Veuillez réessayer plus tard.",
+    "deviceMismatchTitle": "Mauvais téléphone",
+    "deviceMismatch": "Ce code a été demandé sur un autre téléphone. Veuillez recommencer depuis l'écran de connexion.",
+    "conflictTitle": "Impossible de terminer",
+    "conflict": "Nous n'avons pas pu transférer votre compte. Veuillez réessayer de vous connecter.",
+    "deviceTakenTitle": "Téléphone déjà utilisé",
+    "deviceTaken": "Ce téléphone est déjà lié à un autre compte Livio. Veuillez contacter le support.",
+    "maxResendsTitle": "Plus de codes",
+    "maxResends": "Vous avez demandé trop de codes. Veuillez recommencer depuis l'écran de connexion.",
+    "accountDisabledTitle": "Compte indisponible",
+    "accountDisabled": "Ce compte n'est pas actif. Veuillez contacter le support."
+  },
+  "deviceChange": {
+    "title": "Confirmez votre nouveau téléphone",
+    "subtitle": "Nous avons envoyé un code à 6 chiffres à",
+    "successTitle": "Appareil modifié",
+    "successMessage": "Votre compte a été transféré vers ce téléphone. Votre autre appareil a été déconnecté."
   }
 }

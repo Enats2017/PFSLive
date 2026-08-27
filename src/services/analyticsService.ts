@@ -477,7 +477,7 @@ export const analyticsService = {
    *
    * Never pass the email address, or any other identifier, as a parameter.
    */
-  async logLogin(method: "password" | "otp") {
+  async logLogin(method: "password" | "otp" | "device_change") {
     await logEvent(analytics, "login", { method });
   },
 
@@ -503,7 +503,10 @@ export const analyticsService = {
       | "otp_resent"
       | "reset_requested"      // forgot-password email submitted
       | "reset_otp_verified"
-      | "reset_completed",
+      | "reset_completed"
+      | "device_change_requested" // transfer OTP sent to the account email
+      | "device_change_failed"    // refused: cooldown, device taken, throttle
+      | "device_change_verified", // account moved, old device signed out
     reason?: string,
   ) {
     await logEvent(analytics, "auth_step", {
