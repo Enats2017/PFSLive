@@ -120,15 +120,13 @@ export const favouritesApi = {
 
       const deviceId = await getDeviceId();
 
-      if (customer_app_id_string === "" && bib_number_string === "") {
-        if (API_CONFIG.DEBUG) {
-          console.log(
-            "ℹ️ No favourites in local storage for product:",
-            params.product_app_id,
-          );
-        }
-        return emptyResponse(params.page ?? 1);
-      }
+      // Deliberately NOT short-circuiting on "nothing followed yet". The
+      // response also carries show_results, which is a property of the event
+      // and cannot be known locally - FavouriteList feeds it into showResults,
+      // and returning early left that undefined, so `show_results === 1` was
+      // false and the Results tab vanished for anyone with no favourites.
+      // The endpoint answers 200 with favourites: [] plus the event fields in
+      // this case, so one request is all it costs.
 
       const requestBody = {
         product_app_id: params.product_app_id,
@@ -157,7 +155,9 @@ export const favouritesApi = {
         },
       );
 
-      const data = response.data;
+      // The endpoint always sends the full shape, but never hand FavouriteList
+      // an undefined - it reads result.favourites and result.pagination directly.
+      const data = response.data ?? emptyResponse(params.page ?? 1);
 
       if (API_CONFIG.DEBUG) {
         console.log("✅ Favourites loaded:", {
