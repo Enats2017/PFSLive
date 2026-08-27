@@ -167,12 +167,22 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   }, [error, isFocused, showDatePicker, showTimePicker]);
 
   const labelLeft = iconName ? 44 : 15;
-  const labelRight = isPassword || showClearButton ? 52 : 15;
 
   const labelStyle = useMemo(() => ({
     position: 'absolute' as const,
     left: labelLeft,
-    right: labelRight,
+    // ⚠️ Do NOT add `right` back here.
+    //
+    // This label floats up onto the border (top animates 17 → -9) and paints
+    // backgroundColor WHITE behind itself to notch a gap in it. With BOTH left
+    // and right set, an absolutely-positioned element stretches across that whole
+    // span — so the white fill stopped hugging the text and became a full-width
+    // strip painted over the top border, leaving it visible only as stubs at the
+    // two corners. Content-sized is what makes the notch hug the label.
+    //
+    // `right` was also keeping a long label clear of the clear/eye button in the
+    // resting position; maxWidth does that job now without stretching the box.
+    maxWidth: '75%' as const,
     top: animatedValue.interpolate({
       inputRange: [0, 1],
       outputRange: [17, -9],
@@ -190,7 +200,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     zIndex: 1,
     fontWeight: '500' as const,
     letterSpacing: 0.3,
-  }), [animatedValue, labelLeft, labelRight, error]);
+  }), [animatedValue, labelLeft, error]);
 
   // ══════════════════════════════════════════════════════════
   //  DATE / TIME PICKER CALLBACKS
@@ -331,7 +341,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
             </View>
           )}
 
-          <Animated.Text style={labelStyle}>
+          <Animated.Text style={labelStyle} numberOfLines={1} ellipsizeMode="tail">
             {label}
             {required && <Animated.Text style={{ color: COLORS.ERROR }}> *</Animated.Text>}
           </Animated.Text>
@@ -426,7 +436,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
             </View>
           )}
 
-          <Animated.Text style={labelStyle}>
+          <Animated.Text style={labelStyle} numberOfLines={1} ellipsizeMode="tail">
             {label}
             {required && <Animated.Text style={{ color: COLORS.ERROR }}> *</Animated.Text>}
           </Animated.Text>
@@ -523,7 +533,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
               </View>
           )}
 
-         <Animated.Text style={labelStyle} pointerEvents="none">  {/* ✅ add this */}
+         <Animated.Text style={labelStyle} pointerEvents="none" numberOfLines={1} ellipsizeMode="tail">  {/* ✅ add this */}
             {label}
             {required && <Animated.Text style={{ color: COLORS.ERROR }}> *</Animated.Text>}
           </Animated.Text>
