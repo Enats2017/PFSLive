@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppError, ErrorType } from '../services/api';
 
@@ -35,10 +35,12 @@ interface UseScreenErrorReturn {
 export function useScreenError(): UseScreenErrorReturn {
   const { t } = useTranslation('errorScreen');
   const [error, setError] = useState<ScreenError | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
 
   const handleApiError = useCallback((err: unknown) => {
     if (err instanceof AppError) {
       const hasCustom = CODE_MESSAGES.has(err.code);
+      setErrorCode(hasCustom ? err.code : null);
       setError({
         type:    err.type,
         title:   hasCustom ? t(`codes.${err.code}.title`)   : undefined,
@@ -46,11 +48,28 @@ export function useScreenError(): UseScreenErrorReturn {
         // undefined → ErrorScreen uses default network/server/empty text from en.json
       });
     } else {
+          setErrorCode(null);
       setError({ type: 'server' });
     }
   }, [t]);
 
-  const clearError = useCallback(() => setError(null), []);
+   useEffect(() => {
+    if (!error || !errorCode) {
+      return;
+    }
+    setError((currentError) => {
+      if (!currentError) {
+        return null;
+      }
+      return {
+        ...currentError,
+        title: t(`codes.${errorCode}.title`),
+        message: t(`codes.${errorCode}.message`),
+      };
+    });
+  }, [t, errorCode]);
+
+  const clearError = useCallback(() => { setError(null); setErrorCode(null)}, []);
 
   return {
     error,
