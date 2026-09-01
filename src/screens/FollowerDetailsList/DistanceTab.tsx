@@ -20,6 +20,8 @@ import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
+import useGpxDownload from '../../hooks/useGpxDownload';
+import ErrorModal from '../../components/ErrorModal';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 
@@ -51,6 +53,14 @@ const DistanceTab = ({
   //const [error, setError] = useState<string | null>(null);
   const { error, hasError, handleApiError, clearError } = useScreenError();
 
+  // ✅ GPX download — same flow as the participant distance tab
+  // (screens/EventDetails/DistanceTab.tsx). The hook owns the download,
+  // permissions and its own alerts; this screen only decides when to allow it.
+  const { downloadGpx } = useGpxDownload();
+  const [gpxRestrictedVisible, setGpxRestrictedVisible] = useState(false);
+  // Event-level gate: an event with no RaceResult URL has no route file wired up.
+  const [rrUrl, setRrUrl] = useState<string>('');
+
   const fetchResults = useCallback(async () => {
     try {
       setLoading(true);
@@ -63,6 +73,8 @@ const DistanceTab = ({
       
       setShowResults(canShowResults);
       onResultsAvailability?.(canShowResults);
+
+      setRrUrl(result.event?.rr_url ?? '');
 
       const canShowResultsStats =
         result.event?.show_results === 1;
@@ -82,6 +94,24 @@ const DistanceTab = ({
   useEffect(() => {
     setImageLoading(true);
   }, [event_image]);
+
+  // ✅ Same gate as the participant tab: the button is always shown, and the
+  // check happens on tap. An event with no RaceResult URL has no route file
+  // published, so explain that rather than failing silently.
+  const handleDownloadGpx = useCallback(
+    (item: Distance) => {
+      if (!rrUrl) {
+        setGpxRestrictedVisible(true);
+        return;
+      }
+      downloadGpx(item);
+      analyticsService.logInteraction(
+        ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,
+        ANALYTICS_BUTTONS.DOWNLOAD_GPX,
+      );
+    },
+    [downloadGpx, rrUrl],
+  );
 
   const renderListHeader = useCallback(() => (
     <>
@@ -238,11 +268,23 @@ const DistanceTab = ({
                 </Text>
               </TouchableOpacity>
             )}
+
+            {!isPast && (
+              <TouchableOpacity
+                style={detailsStyles.routeButton}
+                onPress={() => handleDownloadGpx(item)}
+                activeOpacity={0.8}
+              >
+                <Text style={commonStyles.primaryButtonText}>
+                  {t('details:gpx')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
     );
-  }, [navigation, product_app_id, event_name, event_image, sourceTab, t, showResults, showResultsStats]);
+  }, [navigation, product_app_id, event_name, event_image, sourceTab, t, showResults, showResultsStats, handleDownloadGpx]);
 
   if (loading) {
     return (
@@ -286,6 +328,13 @@ const DistanceTab = ({
           ListHeaderComponent={renderListHeader}
         />
       )}
+
+      <ErrorModal
+        visible={gpxRestrictedVisible}
+        titleKey="details:gpxRestricted.noResultsTitle"
+        messageKey="details:gpxRestricted.noResultsMessage"
+        onClose={() => setGpxRestrictedVisible(false)}
+      />
     </View>
   );
 };

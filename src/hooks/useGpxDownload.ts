@@ -55,7 +55,7 @@ const useGpxDownload = () => {
       }
     } catch (err) {
       console.log(err);
-      Alert.alert(t('details:error.title'), t('detailsgpxDownload.errorMessage'));
+      Alert.alert(t('details:error.title'), t('details:gpxDownload.errorMessage'));
     } finally {
       setDownloadingId(null);
     }
