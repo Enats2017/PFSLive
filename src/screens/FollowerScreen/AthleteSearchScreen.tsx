@@ -2,14 +2,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
-    StatusBar,
     Text,
     View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Feather } from '@expo/vector-icons';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
@@ -203,7 +202,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
             return (
                 <ActivityIndicator
                     size="small"
-                    color={colors.primary}
+                    color={palette.navy}
                     style={{ marginTop: spacing.lg }}
                 />
             );
@@ -217,7 +216,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
         }
         return (
             <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: spacing.xl, gap: 12 }}>
-                <Feather name="users" size={48} color={colors.gray500} />
+                <Feather name="users" size={48} color={palette.textMuted} />
                 <Text style={commonStyles.title}>
                     {t('follow:empty.emptyTitle')}
                 </Text>
@@ -229,13 +228,8 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
     }, [searching, searchText, t]);
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showBack />
-
-            <View style={follow.yellowHeader}>
-                <Text style={commonStyles.title}>{t('follow:athlete')}</Text>
-            </View>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={t('common:band.findAthlete')} showBack />
 
             <FlatList
                 data={displayEvents}
@@ -247,7 +241,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
                 keyboardShouldPersistTaps="handled"
                 removeClippedSubviews={false}
                 contentContainerStyle={{
-                    paddingHorizontal: spacing.md,
+                    paddingHorizontal: spacing.xl,
                     paddingBottom: spacing.xxxxl,
                 }}
                 ListHeaderComponent={
@@ -263,7 +257,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
                     loadingMore || loadingMoreParticipant ? (
                         <ActivityIndicator
                             size="small"
-                            color={colors.primary}
+                            color={palette.navy}
                             style={{ marginVertical: spacing.md }}
                         />
                     ) : null

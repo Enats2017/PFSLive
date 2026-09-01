@@ -5,12 +5,12 @@
     "Upcoming": "À venir"
   },
   "official": {
-    "title": "ÉVÉNEMENTS DES PARTENAIRES OFFICIELS"
+    "title": "Événements des partenaires officiels"
   },
   "personal": {
-    "title": "TROUVER UN ATHLÈTE",
+    "title": "Trouver un athlète",
     "description": "Suivez vos propres activités",
-    "button": "ALLER À L'ÉVÉNEMENT PERSONNEL"
+    "button": "Aller à l'événement personnel"
   },
   "searching": "Recherche en cours...",
   "empty": {
@@ -25,7 +25,7 @@
     "unfollowTitle": "Ne Plus Suivre Réussi",
     "unfollowMessage": "Vous ne suivez plus cet athlète."
   },
-    "error": {
+  "error": {
     "failed": "Échec du chargement des événements",
     "retry": "Réessayer",
     "title": "Erreur",
@@ -38,10 +38,10 @@
   "button": {
     "viewprofile": "VOIR",
     "follower": "SUIVRE",
-    "show_event": "AFFICHER L'ÉVÉNEMENT",
-    "unfollow": "NE PLUS SUIVRE",
-    "favourite": "AJOUTER AUX FAVORIS",
+    "show_event": "Afficher l'événement",
+    "unfollow": "Ne plus suivre",
+    "favourite": "Ajouter aux favoris",
     "remove": "SUPPRIMER",
-    "followback": "SUIVRE EN RETOUR"
+    "followback": "Suivre en retour"
   }
 }

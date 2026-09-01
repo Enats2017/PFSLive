@@ -3,142 +3,146 @@
     "Distance": "Distance",
     "Participant": "Participant"
   },
-  "button": "Live Tracking",
+  "button": "Live tracking",
   "register": "Register",
-  "undo": "UNDO FOR SIGNUP",
-  "gpx": "DOWNLOAD GPX",
-  "live": "LIVE",
+  "undo": "Undo for signup",
+  "gpx": "Download GPX",
+  "live": "Live",
   "countdown": {
-    "live": "LIVE",
+    "live": "Live",
     "finished": "FINISHED",
     "startsIn": "Starts in",
-    "startingSoon": "Starting Soon",
+    "startingSoon": "Starting soon",
     "days": "D",
     "hours": "H",
     "minutes": "M",
-    "seconds": "S" 
+    "seconds": "S"
   },
   "distance": {
     "empty": "No distances available"
   },
-  "athletes": "Athletes Started",
-  "finished": "Athletes Finished",
+  "athletes": "Athletes started",
+  "finished": "Athletes finished",
   "dnf": "DNF",
   "participant": {
     "empty": "Search participants by name or bib number",
     "search": "Search participants by name, bib number",
     "searching": "Searching...",
     "noResults": "No participants found for",
-    "favorite": "ADD TO FAVORITE",
-    "unknownName": "UNKNOWN PARTICIPANT",
+    "favorite": "Add to favourite",
+    "unknownName": "Unknown participant",
     "results": "RESULTS"
   },
   "tracking": {
-    "live": "Live Tracking Active",
+    "live": "Live tracking active",
     "bib": "Bib"
   },
   "success": {
-    "label": "Registration Successful!",
+    "label": "Registration successful!",
     "message": "Thank you for signing up for the live tracking of this event. Tell your family and friends to follow you here and don't forget to activate your live tracking from 1 hour before the start of your race in this app!"
   },
   "unregister": {
-    "successTitle": "Unregistered Successfully",
+    "successTitle": "Unregistered successfully",
     "successMessage": "You have been successfully unregistered from this distance."
   },
   "error": {
     "title": "Failed to load data",
     "retry": "Retry",
     "missingId": "Event ID missing",
-    "unexpectedTitle": "Unexpected Response",
+    "unexpectedTitle": "Unexpected response",
     "unexpectedMessage": "The server returned an unexpected response. Please try again.",
-    "invalidBibTitle": "Invalid Bib Number",
+    "invalidBibTitle": "Invalid bib number",
     "invalidBibMessage": "The bib number provided is invalid. Please check and try again.",
-    "registrationFailedTitle": "Registration Failed",
+    "registrationFailedTitle": "Registration failed",
     "registrationFailedMessage": "Unable to complete registration. Please check your connection and try again.",
-    "cannotUnregisterTitle": "Cannot Unregister",
+    "cannotUnregisterTitle": "Cannot unregister",
     "cannotUnregisterMessage": "Missing participant information. Please refresh and try again.",
-    "unregisterFailedTitle": "Unregister Failed",
+    "unregisterFailedTitle": "Unregister failed",
     "unregisterFailedMessage": "Unable to unregister. Please try again.",
-    "networkErrorTitle": "Network Error",
+    "networkErrorTitle": "Network error",
     "networkErrorMessage": "Unable to connect to the server. Please check your internet connection and try again.",
-    "trackingAlreadyStartedTitle": "Tracking Already Active",
+    "trackingAlreadyStartedTitle": "Tracking already active",
     "trackingAlreadyStartedMessage": "Live tracking has already been activated for this event. You cannot unregister once tracking has started.",
-    "eventInProgressTitle": "Event Already Started",
+    "eventInProgressTitle": "Event already started",
     "eventInProgressMessage": "The event is currently in progress. You cannot unregister while the event is ongoing.",
-    "eventFinishedTitle": "Event Has Ended",
+    "eventFinishedTitle": "Event has ended",
     "eventFinishedMessage": "This event has already finished. Registration is no longer available.",
-    "validationErrorTitle": "Validation Error",
+    "validationErrorTitle": "Validation error",
     "validationErrorMessage": "The information provided is invalid. Please check and try again.",
     "participant_not_found": "Participant not found."
   },
   "registrationModal": {
     "registered": {
       "icon": "✓",
-      "title": "You're Already Registered!",
+      "title": "You're already registered!",
       "description": "You're already registered for this distance. Get ready to race!"
     },
     "membership_required": {
       "icon": "◆",
-      "title": "Live Tracking Unavailable",
+      "title": "Live tracking unavailable",
       "description": "Your current tracking sessions are not active. Live tracking isn't available right now.",
       "iosDescription": "You've used all your live tracking sessions. Get more to sign up for this event.",
       "button": "Get more sessions"
-
     },
     "limit_reached": {
       "icon": "↑",
-      "title": "No Tracking Sessions Left",
+      "title": "No tracking sessions left",
       "description": "You've used all the live tracking sessions currently available to you.",
       "iosDescription": "Your membership isn't active right now. Renew it to track live again.",
-       "button": "Renew membership"
+      "button": "Renew membership"
     },
     "membership_upcoming": {
       "icon": "⏳",
-      "title": "Membership Not Yet Active",
-      "description": "Your membership starts on {{date}}. You will be able to register for live tracking once your membership becomes active."
+      "title": "Membership not yet active",
+      "description": "Your membership starts on {{date}}. You will be able to register for live tracking once your membership becomes active.",
+      "button": "View plans"
     },
     "unavailable": {
       "icon": "⊘",
-      "title": "Not Available",
+      "title": "Not available",
       "description": "Registration for this distance is not yet configured. Please check back soon."
     },
     "available": {
       "icon": "→",
-      "title": "Ready to Race?",
+      "title": "Ready to race?",
       "description": "Secure your spot now before it fills up. Let's do this!"
     },
     "default": {
       "icon": "?",
-      "title": "Something Went Wrong",
+      "title": "Something went wrong",
       "description": "Please try again later."
     },
     "connect_confirm": {
       "icon": "🔗",
-      "title": "Live Tracking",
+      "title": "Live tracking",
       "description": "Live Tracking is optional and requires a membership — but your first session is FREE! Don’t want to use it? No problem. You don’t need to connect Livio to your bib. Your followers will still receive official RFID updates when you pass checkpoints and the finish line.",
       "button": "Yes",
-      
-      "notNowButton": "Not Now"
-    }
+      "notNowButton": "Not now"
+    },
+    "viewPlansButton": "View plans"
   },
   "connectInfo": "Official timekeeping (results) is automatically enabled for all participants.\nWant to use Live Tracking? Connect your Livio account to your race bib for this event.\nTap \"Connect\" to continue.",
   "gpxDownload": {
-    "permissionDeniedTitle": "Permission Denied",
+    "permissionDeniedTitle": "Permission denied",
     "permissionDeniedMessage": "Folder access is required to save the GPX file.",
     "successTitle": "Downloaded",
     "successMessage": "saved successfully.",
     "errorMessage": "Could not download GPX file.",
-    "noFileTitle": "No GPX File",
+    "noFileTitle": "No GPX file",
     "noFileMessage": "No GPX file available."
   },
   "gpxRestricted": {
-    "title": "GPX Not Available",
+    "title": "GPX not available",
     "message": "You need to register for this event to download the GPX file.",
-    "noResultsTitle": "GPX Not Available",
+    "noResultsTitle": "GPX not available",
     "noResultsMessage": "The GPX route file is not available for this event yet."
   },
-  
-  "iosnotnow":"Not Now",
+  "iosnotnow": "Not now",
   "map": "MAP",
-  "wave":"Wave"
+  "wave": "Wave",
+  "chart": {
+    "elevationProfile": "Elevation profile",
+    "distance": "Distance",
+    "elevation": "Elevation"
+  }
 }

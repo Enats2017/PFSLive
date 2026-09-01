@@ -1,21 +1,21 @@
 {
-  "subtitle": "SUIVI EN DIRECT & RÉSULTATS",
-  "tagline": "PARTAGEZ VOTRE COURSE OU ENTRAÎNEMENT AVEC VOS AMIS & FAMILLE",
+  "subtitle": "Suivi en direct & résultats",
+  "tagline": "Partagez votre course ou entraînement avec vos amis & famille",
   "Logotagline": "Livio - application officielle de suivi et de résultats des plus belles courses",
   "subtext": "Résultats en direct",
   "participant": {
     "title": "Suivi en direct"
   },
   "button": {
-    "Participant": "JE SUIS UN PARTICIPANT",
-    "Fan": "JE SUIS UN FAN"
+    "Participant": "Je suis un participant",
+    "Fan": "Je suis un fan"
   },
   "Event": {
     "title": "Nom de l'événement",
     "Date": "Date",
     "description": "Vous pouvez démarrer votre suivi en direct 1 heure avant votre départ. Assurez-vous de garder cette application ouverte en permanence et de ne pas la fermer !",
-    "buttonText": "DÉMARRER LE SUIVI",
-    "button": "ARRÊTER LE SUIVI"
+    "buttonText": "Démarrer le suivi",
+    "button": "Arrêter le suivi"
   },
   "status": {
     "gpsActive": "GPS Actif - En attente du départ de la course",
@@ -27,7 +27,8 @@
     "loading": "Chargement...",
     "manualStartEnabled": "Démarrage manuel activé",
     "manualStartDescription": "La transmission des données est contrôlée manuellement",
-    "manualStartReady": "Prêt à envoyer (mode manuel)"
+    "manualStartReady": "Prêt à envoyer (mode manuel)",
+    "raceStartsIn": "La course commence dans : {{time}}"
   },
   "tracking": {
     "gpsActivated": "GPS Activé",
@@ -92,10 +93,12 @@
     "disable": "Ouvrir les réglages de batterie"
   },
   "followingEvents": {
-    "sectionTitle": "ÉVÉNEMENTS QUE VOUS SUIVEZ",
-    "startsIn": "COMMENCE DANS",
-    "live": "EN DIRECT",
-    "routeButton": "Suivre L'Événement"
+    "sectionTitle": "Événements que vous suivez",
+    "startsIn": "Commence dans",
+    "live": "En direct",
+    "routeButton": "Suivre L'Événement",
+    "youFollow": "Vous suivez",
+    "opensEventPage": "Ouvre la page de l’événement"
   },
   "startConfirm": {
     "title": "Démarrer le suivi en direct ?",
@@ -130,5 +133,22 @@
     "stepsIos": "Touchez Position, puis choisissez « Toujours ».",
     "stepsAndroid": "Choisissez « Toujours autoriser » sur l'écran suivant.",
     "stepsAndroidSettings": "Ouvrez Autorisations → Localisation, puis choisissez « Toujours autoriser »."
+  },
+  "hero": {
+    "title": "Votre course est\nprête à suivre",
+    "subtitle": "Suivez votre course et les athlètes que vous suivez"
+  },
+  "sections": {
+    "nextSession": "Prochaine session"
+  },
+  "active": {
+    "trackingActive": "Suivi actif",
+    "distance": "Distance",
+    "allSent": "Toutes les positions envoyées · {{ago}}",
+    "queued": "{{count}} en attente d’envoi · {{ago}}",
+    "secAgo": "il y a {{n}} s",
+    "minAgo": "il y a {{n}} min",
+    "justNow": "à l’instant",
+    "keepOpen": "Verrouillez votre téléphone et rangez-le — Livio continue en arrière-plan. Ne fermez simplement pas l’application."
   }
 }

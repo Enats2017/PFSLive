@@ -19,45 +19,43 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
             showsVerticalScrollIndicator={false}
         >
             <View style={resultInfoStyles.card}>
-                <View style={resultInfoStyles.headerBar}>
-                    <View style={resultInfoStyles.headerGreen}>
-                        <Text style={resultInfoStyles.text}>
-                            {t(`status.${event?.race_status ?? 'not_started'}`)}
-                        </Text>
-                    </View>
-                    <View style={resultInfoStyles.diagLeft} />
-                    <View style={resultInfoStyles.headerMiddle} />
-                    <View style={resultInfoStyles.diagRight} />
-                    <View style={resultInfoStyles.headerRed}>
-                        <Text
-                            style={resultInfoStyles.text}
-                            numberOfLines={1}
-                            adjustsFontSizeToFit
-                            minimumFontScale={0.7}
-                        >
-                            {event?.distance_name ?? '—'}
-                        </Text>
-                    </View>
+                {/* 29_RaceInfo.png: a small-caps section label, then label/value
+                    rows. Status and distance were chips left over from the old
+                    two-tone banner. */}
+                <Text style={resultInfoStyles.sectionLabel}>{t('raceInfo.raceResult')}</Text>
+
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.status')}</Text>
+                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                        {t(`status.${event?.race_status ?? 'not_started'}`)}
+                    </Text>
                 </View>
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.title}>{raceInfo?.bib ?? '—'}</Text>
-                    <Text style={commonStyles.title}>{raceInfo?.name ?? '—'}</Text>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.distance')}</Text>
+                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                        {event?.distance_name ?? '—'}
+                    </Text>
+                </View>
+
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={resultInfoStyles.rowValue}>{raceInfo?.bib ?? '—'}</Text>
+                    <Text style={resultInfoStyles.rowValue}>{raceInfo?.name ?? '—'}</Text>
                 </View>
                 {raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
-                        <Text style={commonStyles.title}>{t('raceInfo.wavelabel')}: {raceInfo?.wave}</Text>
+                        <Text style={resultInfoStyles.rowValue}>{t('raceInfo.wavelabel')}: {raceInfo?.wave}</Text>
                     </View>
                 )}
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.subtitle}>{t('raceInfo.raceTime')}</Text>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.raceTime')}</Text>
                     <Text style={resultInfoStyles.raceTimeText}>00:00:00</Text>
                 </View>
                 
 
                 <View style={resultInfoStyles.statsCard}>
                     <View style={resultInfoStyles.statsCol}>
-                        <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
+                        <Text style={resultInfoStyles.rowLabel}>
                             {t('raceInfo.distanceCompleted')}
                         </Text>
                         <Text style={resultInfoStyles.raceTimeText}>
@@ -66,7 +64,7 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                     </View>
                     <View style={resultInfoStyles.statsColBorder} />
                     <View style={resultInfoStyles.statsCol}>
-                        <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
+                        <Text style={resultInfoStyles.rowLabel}>
                             {t('raceInfo.elevationGain')}
                         </Text>
                         <Text style={resultInfoStyles.raceTimeText}>

@@ -5,8 +5,8 @@
     "Upcoming": "Upcoming"
   },
   "official": {
-    "title": "OFFICIAL PARTNER EVENTS",
-    "button": "SIGN UP LIVE TRACKING"
+    "title": "Official partner events",
+    "button": "Sign up live tracking"
   },
   "past": {
     "button": "RESULT"
@@ -19,14 +19,13 @@
     "searchNoResults": "No events match your search"
   },
   "personal": {
-    "title": "PERSONAL EVENTS",
+    "title": "Personal events",
     "description": "Racing an event or planning a training session that is not an official partner event? Create it here!",
-    "button": "CREATE PERSONAL EVENT"
+    "button": "Create personal event"
   },
   "error": {
     "failed": "Failed to load events",
     "retry": "Retry"
   },
-
-  "search":"Search Event By Name"
+  "search": "Search event by name"
 }

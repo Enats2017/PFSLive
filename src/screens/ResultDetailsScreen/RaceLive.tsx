@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView,Dimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
-import { commonStyles, spacing, typography } from '../../styles/common.styles';
+import { commonStyles, spacing, typography, palette, fonts } from '../../styles/common.styles';
 import { Entypo } from '@expo/vector-icons';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/resultDetailsService';
@@ -88,39 +88,41 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
             showsVerticalScrollIndicator={false}
         >
             <View style={[resultInfoStyles.card, { marginBottom: 20 }]}>
-                <View style={resultInfoStyles.headerBar}>
-                    <View style={[resultInfoStyles.headerGreen]}>
-                        <Text style={resultInfoStyles.text}>
-                            {t(`status.${event?.race_status ?? 'in_progress'}`)}
-                        </Text>
-                    </View>
-                    <View style={resultInfoStyles.diagLeft} />
-                    <View style={resultInfoStyles.headerMiddle} />
-                    <View style={resultInfoStyles.diagRight} />
-                    <View style={resultInfoStyles.headerRed}>
-                        <Text
-                            style={resultInfoStyles.text}
-                            numberOfLines={1}
-                            adjustsFontSizeToFit
-                            minimumFontScale={0.7}
-                        >
-                            {event?.distance_name ?? '—'}
-                        </Text>
-                    </View>
+                {/* 29_RaceInfo.png: a small-caps section label, then label/value
+                    rows. Status and distance were chips left over from the old
+                    two-tone banner. */}
+                <Text style={resultInfoStyles.sectionLabel}>{t('raceInfo.raceResult')}</Text>
+
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.status')}</Text>
+                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                        {t(`status.${event?.race_status ?? 'in_progress'}`)}
+                    </Text>
                 </View>
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.title}>{raceInfo?.bib ?? '—'}</Text>
-                    <Text style={commonStyles.title}>{raceInfo?.name ?? '—'}</Text>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.distance')}</Text>
+                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                        {event?.distance_name ?? '—'}
+                    </Text>
+                </View>
+
+                <Text style={resultInfoStyles.checkpointName} numberOfLines={1}>
+                    {raceInfo?.name ?? '—'}
+                </Text>
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.bib', 'Bib')}</Text>
+                    <Text style={resultInfoStyles.rowValue}>{raceInfo?.bib ?? '—'}</Text>
                 </View>
                  {raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
-                        <Text style={commonStyles.title}>{t('raceInfo.wavelabel')}: {raceInfo?.wave}</Text>
+                        <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.wavelabel')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>{raceInfo?.wave}</Text>
                     </View>
                 )}
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.subtitle}>{t('raceInfo.raceTime')}</Text>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.raceTime')}</Text>
                     <Text style={resultInfoStyles.raceTimeText}>
                         {formatSeconds(elapsedSeconds)}
                     </Text>
@@ -130,10 +132,10 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                     <View style={[resultListStyle.card, {
                         borderWidth: 0.28,
                         borderLeftWidth: 0.28,
-                        borderColor: '#FF3B30',
+                        borderColor: palette.danger,
                     }]}>
                         <View style={resultInfoStyles.bibCard}>
-                            <Text style={commonStyles.subtitle}>
+                            <Text style={resultInfoStyles.rowLabel}>
                                 {t('raceInfo.nextTimingPoint')}
                             </Text>
                             <Text style={resultInfoStyles.timingPointDate}>
@@ -156,7 +158,7 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
 
                 {raceInfo?.previous_cp && (
                     <View style={resultInfoStyles.bibCard}>
-                        <Text style={commonStyles.subtitle}>
+                        <Text style={resultInfoStyles.rowLabel}>
                             {t('raceInfo.previousTimingPoint')}
                         </Text>
                         <Text style={resultInfoStyles.timingPointDate}>
@@ -168,12 +170,9 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                                 : formatClockTime(raceInfo.previous_cp.actual_time) || '—'
                             }
                         </Text>
-                        <View style={[resultInfoStyles.headerBar, {
-                            paddingTop: spacing.sm,
-                            gap: spacing.sm,
-                        }]}>
-                            <Entypo name="stopwatch" size={24} color="black" />
-                            <Text style={commonStyles.title}>
+                        <View style={resultInfoStyles.iconRow}>
+                            <Entypo name="stopwatch" size={24} color={palette.ink} />
+                            <Text style={resultInfoStyles.rowValue}>
                                 {raceInfo.previous_cp.race_time || '—'}
                             </Text>
                         </View>
@@ -202,17 +201,18 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                                 i === 1 && resultInfoStyles.rankingColBorder,
                             ]}
                         >
-                            <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
+                            <Text style={resultInfoStyles.rowLabel}>
                                 {t(item.labelKey)}
                             </Text>
-                            <Text style={[commonStyles.title,{textAlign:'center', fontSize:typography.sizes.lg}]}>{item.value}</Text>
+                            <Text style={[resultInfoStyles.rowValue,{textAlign:'center', fontFamily: fonts.body,
+    fontSize: 20}]}>{item.value}</Text>
                         </View>
                     ))}
                 </View>
 
                 <View style={resultInfoStyles.statsCard}>
                     <View style={resultInfoStyles.statsCol}>
-                        <Text style={[commonStyles.subtitle, {
+                        <Text style={[resultInfoStyles.rowLabel, {
                             textAlign: 'center',
                             marginBottom: 8,
                         }]}>
@@ -226,7 +226,7 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                     </View>
                     <View style={resultInfoStyles.statsColBorder} />
                     <View style={resultInfoStyles.statsCol}>
-                        <Text style={[commonStyles.subtitle, {
+                        <Text style={[resultInfoStyles.rowLabel, {
                             textAlign: 'center',
                             marginBottom: 8,
                         }]}>

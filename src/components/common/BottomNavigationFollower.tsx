@@ -3,7 +3,7 @@ import { View, TouchableOpacity, Text } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { colors } from '../../styles/common.styles';
+import { palette } from '../../styles/common.styles';
 import { bottomNavStyles } from '../../styles/bottomNav.styles';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
@@ -174,12 +174,14 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
           >
             {/* ✅ tintColor as a PROP — expo-image ignores it in a StyleSheet.
                 See the note in BottomNavigation.tsx. */}
-            <Image
-              source={tab.icon}
-              style={bottomNavStyles.iconImage}
-              tintColor={isActive ? colors.accent : colors.gray500}
-              contentFit="contain"
-            />
+            <View style={isActive ? bottomNavStyles.pill : bottomNavStyles.pillGhost}>
+              <Image
+                source={tab.icon}
+                style={bottomNavStyles.iconImage}
+                tintColor={isActive ? palette.ink : palette.textMuted}
+                contentFit="contain"
+              />
+            </View>
             <Text style={[bottomNavStyles.label, isActive && bottomNavStyles.labelActive]}>
               {tab.label}
             </Text>

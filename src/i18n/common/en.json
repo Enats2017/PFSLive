@@ -18,7 +18,7 @@
   },
   "nav": {
     "home": "Home",
-    "favorites": "Favorites",
+    "favorites": "Favourites",
     "results": "Results",
     "participants": "Participants",
     "map": "Map",
@@ -35,7 +35,8 @@
   "loading": {
     "please_wait": "Please wait...",
     "loading": "Loading...",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "participants": "Loading participants…"
   },
   "months": {
     "january": "January",
@@ -51,8 +52,7 @@
     "november": "November",
     "december": "December"
   },
-
- "week": {
+  "week": {
     "mon": "Mon",
     "tue": "Tue",
     "wed": "Wed",
@@ -60,11 +60,11 @@
     "fri": "Fri",
     "sat": "Sat",
     "sun": "Sun"
-},
+  },
   "update": {
-    "currentVersion": "Current Version",
-    "latestVersion": "Latest Version",
-    "updateNow": "UPDATE NOW",
+    "currentVersion": "Current version",
+    "latestVersion": "Latest version",
+    "updateNow": "Update now",
     "later": "Later",
     "forcedMessage": "You must update to continue using the app"
   },
@@ -72,7 +72,7 @@
   "ok": "OK",
   "cancel": "Cancel",
   "countrySelector": {
-    "title": "Select Country",
+    "title": "Select country",
     "searchPlaceholder": "Search country...",
     "resultOne": "{{count}} country found",
     "resultMany": "{{count}} countries found",
@@ -87,8 +87,40 @@
   "timePicker": {
     "placeholder": "HH:MM"
   },
-    "gender": {
-      "men": "Men",
-      "women": "Women"
-    }
+  "gender": {
+    "men": "Men",
+    "women": "Women"
+  },
+  "band": {
+    "home": "Live tracking & results",
+    "login": "Log in",
+    "register": "Register",
+    "verifyEmail": "Verify email",
+    "resetPassword": "Reset password",
+    "profile": "Profile",
+    "account": "Account",
+    "athlete": "Athlete",
+    "myFollowers": "My followers",
+    "yourEvents": "Your events",
+    "membership": "Membership",
+    "settings": "Settings",
+    "trackingSettings": "Tracking settings",
+    "contactFeedback": "Contact & feedback",
+    "events": "Events",
+    "findRace": "Find a race",
+    "followRace": "Follow the race",
+    "participantHub": "Participant hub",
+    "findAthlete": "Find an athlete",
+    "favouriteAthletes": "Favourite athletes",
+    "searchParticipants": "Search participants",
+    "selectProfile": "Select your profile",
+    "newPersonalEvent": "New personal event",
+    "editPersonalEvent": "Edit personal event",
+    "trainingSessions": "Training sessions"
+  },
+  "empty": {
+    "noResults": "No results found",
+    "noAthletes": "No athletes found"
+  },
+  "or": "OR"
 }

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Participant } from '../../services/participantService';
-import { colors, commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette } from '../../styles/common.styles';
 import { favstyle } from '../../styles/favourite.style';
 import Entypo from '@expo/vector-icons/Entypo';
 import { useNavigation } from '@react-navigation/native';
@@ -42,17 +42,25 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     return (
         <TouchableOpacity style={favstyle.participantcard} onPress={handlePress}>
             <View style={favstyle.bibBox}>
-                <Text style={commonStyles.primaryButtonText}>{item.bib_number}</Text>
+                <Text style={favstyle.bibBoxText}>
+                    {(fullName || '?').split(/\s+/).filter(Boolean).slice(0, 2)
+                        .map((n) => n[0]).join('').toUpperCase() || '?'}
+                </Text>
             </View>
             <View style={favstyle.content}>
                 <Text numberOfLines={1} style={commonStyles.title}>
                     {fullName}
                 </Text>
-                <Text style={commonStyles.subtitle}>{item.race_distance}</Text>
+                <Text style={favstyle.participantMeta} numberOfLines={1}>
+                    {[
+                        item.bib_number ? `${t('details:tracking.bib')} ${item.bib_number}` : null,
+                        item.race_distance,
+                    ].filter(Boolean).join(' · ')}
+                </Text>
             </View>
             {/* ✅ View not TouchableOpacity — chevron is non-interactive */}
             <View style={favstyle.righticon}>
-                <Entypo name="chevron-right" size={30} color={colors.gray500} />
+                <Entypo name="chevron-right" size={30} color={palette.textMuted} />
             </View>
         </TouchableOpacity>
     );

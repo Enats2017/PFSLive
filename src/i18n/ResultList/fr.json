@@ -2,17 +2,17 @@
   "race": {
     "loading": "Chargement des résultats…",
     "noResults": "Aucun résultat pour ces filtres.",
-    "live": "EN DIRECT",
+    "live": "En direct",
     "bibNumber": "Numéro de dossard",
-     "wavelabel": "Vague",
-    "raceTime": "TEMPS DE COURSE",
-    "diffFirst": "DIFF 1ER",
+    "wavelabel": "Vague",
+    "raceTime": "Temps de course",
+    "diffFirst": "Diff 1er",
     "ranking": "CLASSEMENT",
     "retry": "Réessayer",
     "errorLoad": "Échec du chargement des résultats. Appuyez pour réessayer.",
     "utmbIndex": "INDEX",
     "eta": "ETA",
-    "etaFinish": "ETA ARRIVÉE",
+    "etaFinish": "Eta arrivée",
     "finish": "ARRIVÉE"
   },
   "time": {
@@ -27,13 +27,16 @@
     "favourite": "Favoris",
     "noFavourites": "Pas encore de favoris. Appuyez sur ☆ sur un résultat pour l'enregistrer.",
     "checkpoint": "Point de contrôle",
-     "statistics": "Statistiques",
+    "statistics": "Statistiques",
     "stat_all": "Tous",
     "stat_started": "Partis",
     "stat_crossed": "Passés",
     "stat_expected": "Attendus",
     "stat_dnf": "DNF",
-    "is_finshed": "TERMINÉ",
+    "isFinished": "TERMINÉ",
     "all": "Tous"
+  },
+  "search": {
+    "resultsFor": "{{count}} résultats pour « {{query}} »"
   }
 }

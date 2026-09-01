@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { FollowerItem } from '../../services/followerListService';
 import { commonStyles, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
+import { follow } from '../../styles/followerScreen.styles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -51,6 +52,7 @@ const FollowerListCard: React.FC<FollowerCardProps> = ({
         <View
             style={[
                 commonStyles.card,
+                commonStyles.cardAccent,
                 { padding: 0, marginBottom: spacing.xs, marginTop: spacing.xl },
             ]}
         >
@@ -70,20 +72,15 @@ const FollowerListCard: React.FC<FollowerCardProps> = ({
                     )}
                 </View>
 
-                <LinearGradient
-                    colors={['#e8341a', '#f4a100', '#1a73e8']}
-                    start={{ x: 0, y: 1 }}
-                    end={{ x: 1, y: 0 }}
-                    style={detailsStyles.divider}
-                />
 
                 <View style={detailsStyles.info}>
                     <Text style={commonStyles.title}>{fullName}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={commonStyles.text}>{item.city}</Text>
+                        <Text style={commonStyles.text} numberOfLines={1}>
+                            {[item.city, item.country].filter(Boolean).join(' · ')}
+                        </Text>
                         {flagImageUri && (
                             <>
-                                <Text style={commonStyles.text}>|</Text>
                                 <Image
                                     source={{ uri: flagImageUri }}
                                     cachePolicy="memory-disk"
@@ -98,19 +95,18 @@ const FollowerListCard: React.FC<FollowerCardProps> = ({
                         )}
                     </View>
                 </View>
-            </View>
 
-             <View style={{ flexDirection: 'row' }}>
                 <TouchableOpacity
-                    style={[commonStyles.favoriteButton, { borderRadius: 0, flex: 1 }]}
+                    style={follow.viewChip}
                     activeOpacity={0.8}
+                    accessibilityRole="button"
                     onPress={() =>
                         navigation.navigate('ProfileScreen', {
                             customer_app_id: item.customer_app_id,
                         })
                     }
                 >
-                    <Text style={commonStyles.primaryButtonText}>
+                    <Text style={follow.viewChipText}>
                         {t('follower:button.viewprofile')}
                     </Text>
                 </TouchableOpacity>

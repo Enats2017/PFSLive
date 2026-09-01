@@ -3,8 +3,9 @@ import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette, space } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
+import { EventListCard } from '../../components/EventListCard';
 import { EventItem, eventService } from '../../services/eventService';
 import { formatEventDate } from '../../utils/dateFormatter';
 import SearchInput from '../../components/SearchInput';
@@ -164,70 +165,30 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
     const renderItem = useCallback(
         ({ item }: { item: EventItem }) => (
-            <TouchableOpacity
-                style={[
-                    commonStyles.card,
-                    {
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingHorizontal: spacing.lg,
-                        paddingVertical: spacing.md,
-                        marginBottom: spacing.md,
-                    },
-                ]}
-                onPress={ async () => {
+            <EventListCard
+                name={item.name}
+                date={formatEventDate(item.race_date, t)}
+                city={item.city}
+                country={item.country}
+                imageUrl={item.event_image}
+                onPress={async () => {
                     analyticsService.logInteraction(
                         ANALYTICS_SCREENS.EVENT_LIST,
                         ANALYTICS_BUTTONS.PAST_EVENT,
                         'tap',
                         {
-                            [ANALYTICS_PARAMS.EVENT_NAME]: item.name, 
+                            [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
                             [ANALYTICS_PARAMS.TAB_NAME]: 'past',
                         }
                     );
-                    navigation.navigate('RaceResultScreen', {
+                    navigation.navigate('EventDetails', {
                         product_app_id: Number(item.product_app_id),
                         event_name: item.name,
                         event_image: item.event_image ?? '',
-                        sourceTab: 'past',
-                    })
+                        auto_register_id: null,
+                    });
                 }}
-                activeOpacity={0.8}
-            >
-                <View style={eventStyles.eventCardInfo}>
-                    <Text style={[commonStyles.title, { marginBottom: 4 }]}>{item.name}</Text>
-                    <View style={eventStyles.eventCardDateRow}>
-                        <Ionicons name="calendar-outline" size={14} color={colors.gray500} />
-                        <Text style={commonStyles.date}>
-                            {formatEventDate(item.race_date, t)}
-                        </Text>
-                    </View>
-                </View>
-
-                <TouchableOpacity
-                    style={eventStyles.iconButtonBlue}
-                    onPress={ async () => {
-                        await analyticsService.logInteraction(
-                            ANALYTICS_SCREENS.EVENT_LIST,
-                            ANALYTICS_BUTTONS.PAST_EVENT,
-                            'tap',
-                            {
-                                [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
-                                [ANALYTICS_PARAMS.TAB_NAME]: 'past',
-                            },
-                        );
-                        navigation.navigate('RaceResultScreen', {
-                            product_app_id: item.product_app_id,
-                            event_name: item.name,
-                            event_image: item.event_image ?? '',
-                            sourceTab: 'past',
-                        })
-                    }}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="bar-chart-outline" size={23} color={colors.primaryDark} />
-                </TouchableOpacity>
-            </TouchableOpacity>
+            />
         ),
         [navigation, t]
     );
@@ -240,7 +201,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
    const ListFooterComponent = useCallback(() => {
            if (!loadingMore && !loadingMoreSearch) return null;
            return (
-               <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.md }} />
+               <ActivityIndicator size="small" color={palette.navy} style={{ marginVertical: spacing.md }} />
            );
        }, [loadingMore, loadingMoreSearch]);
 
@@ -263,7 +224,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
     return (
         <>
             {/* SEARCH BAR */}
-            <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm }}>
+            <View style={{ paddingHorizontal: space.xl, paddingTop: spacing.md, paddingBottom: spacing.sm }}>
                 <SearchInput
                     placeholder={t('event:search')}
                     value={searchText}
@@ -275,7 +236,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
             {/* SEARCHING INDICATOR */}
             {searching && (
                 <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color={colors.primary} />
+                    <ActivityIndicator size="small" color={palette.navy} />
                 </View>
             )}
 
@@ -289,7 +250,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{
                     paddingTop:spacing.sm,
-                    paddingHorizontal: spacing.md,
+                    paddingHorizontal: spacing.xl,
                     paddingBottom: spacing.xxxxl,
                     flexGrow: 1,
                 }}

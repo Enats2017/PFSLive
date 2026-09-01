@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { RaceResultData } from '../../services/eventDetailService';
-import { colors, commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette, fonts, shadows, radii, space } from '../../styles/common.styles';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ConfirmRaceResultModalProps {
   visible: boolean;
@@ -67,7 +68,6 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
       <View style={styles.wrapper}>
         <View style={styles.card}>
           {/* Top accent bar */}
-          <View style={styles.accentBar} />
 
           {/* Close button */}
           <TouchableOpacity
@@ -82,7 +82,7 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
 
           {/* Icon */}
           <View style={styles.iconWrapper}>
-            <Text style={styles.iconText}>🏁</Text>
+            <Ionicons name="flag" size={28} color={palette.navy} />
           </View>
 
           {/* Title */}
@@ -126,7 +126,7 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
           <TouchableOpacity
             style={[
               commonStyles.primaryButton,
-              { marginBottom: 10 },
+              { marginBottom: space.md },
               registerLoading && { opacity: 0.7 },
             ]}
             onPress={onConfirm}
@@ -134,7 +134,7 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
             activeOpacity={0.82}
           >
             {registerLoading ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={palette.surface} size="small" />
             ) : (
               <Text style={commonStyles.primaryButtonText}>
                 {emailVerificationMode
@@ -192,31 +192,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: palette.surface,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     paddingHorizontal: 24,
     paddingTop: 36,
-    paddingBottom: 70,
+    paddingBottom: 72,
     maxHeight: '75%',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -8 },
-        shadowOpacity: 0.12,
-        shadowRadius: 20,
-      },
-      android: { elevation: 20 },
-    }),
-  },
-  accentBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    ...shadows.raised,
   },
   closeBtn: {
     position: 'absolute',
@@ -228,55 +211,57 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.primary,
+    backgroundColor: palette.navy,
     justifyContent: 'center',
     alignItems: 'center',
   },
   closeBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.white,
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.surface,
   },
   iconWrapper: {
     alignSelf: 'center',
     width: 68,
     height: 68,
-    borderRadius: 50,
-    backgroundColor: '#fff0e6',
+    borderRadius: 34,
+    backgroundColor: palette.warningBg,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: space.md,
   },
   iconText: {
-    fontSize: 30,
+    fontFamily: fonts.body,
+        fontSize: 26,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
     marginBottom: 8,
   },
   chip: {
     alignSelf: 'center',
-    backgroundColor: '#f5ebe8cc',
+    backgroundColor: palette.warningBg,
     borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 20,
-    paddingHorizontal: 14,
+    borderColor: palette.navy,
+    borderRadius: radii.pill,
+    paddingHorizontal: space.xl,
     paddingVertical: 4,
-    marginBottom: 10,
+    marginBottom: space.md,
   },
   chipText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.primary,
+    fontFamily: fonts.bodySemi,
+        fontSize: 11,
+    color: palette.navy,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   subtitle: {
-    fontSize: 13,
-    color: '#64748b',
+    fontFamily: fonts.body,
+        fontSize: 13,
+    color: palette.textMuted,
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 8,
@@ -284,7 +269,7 @@ const styles = StyleSheet.create({
   divider: {
     width: '100%',
     height: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: palette.border,
     marginVertical: 16,
   },
   dataContainer: {
@@ -297,28 +282,28 @@ const rowStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 9,
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: palette.fill,
   },
   label: {
-    fontSize: 13,
-    color: '#94a3b8',
-    fontWeight: '500',
+    fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+    color: palette.textMuted,
     flex: 1,
   },
   value: {
-    fontSize: 14,
-    color: '#0f172a',
-    fontWeight: '600',
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.ink,
     flex: 1,
     textAlign: 'right',
   },
   highlightValue: {
-    color: '#0f172a',
-    fontSize: 16,
-    fontWeight: '800',
-  },
+    color: palette.ink,
+    fontFamily: fonts.display,
+        fontSize: 15,
+    },
 });
 
 export default ConfirmRaceResultModal;

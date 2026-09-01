@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StatusBar,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -18,7 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { AppHeader } from '../../components/common/AppHeader';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
 import CountrySelector from '../../components/CountrySelector';
-import { commonStyles, colors } from '../../styles/common.styles';
+import { commonStyles, palette, space } from '../../styles/common.styles';
 import { registerStyles } from '../../styles/Register.styles';
 import { RegisterProps } from '../../types/navigation';
 import { authService } from '../../services/authService';
@@ -28,6 +27,7 @@ import { useAuthForm } from '../../hooks/useAuthForm';
 import { API_CONFIG } from '../../constants/config';
 import { analyticsService } from '../../services/analyticsService';
 import { useDimensions } from '../../hooks/useDimensions';
+import { Button } from '../../components/ui';
 
 // ✅ CONSTANTS
 const INITIAL_FORM_DATA = {
@@ -352,9 +352,8 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
   }, [formData, clearAllErrors, setErrors, applyApiFieldErrors, navigation, t]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} showBack />
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+      <AppHeader title={t('common:band.register')} showLogo={true} showBack />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -370,7 +369,14 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={{ paddingHorizontal: 15 }}>
+          {/* ✅ HEADER SECTION — same white sub-header as Login: the deck opens
+              every auth screen with a heading + one line of reassurance. */}
+          <View style={registerStyles.headerSection}>
+            <Text style={registerStyles.title}>{t('register:title')}</Text>
+            <Text style={registerStyles.subtitle}>{t('register:subtitle')}</Text>
+          </View>
+
+          <View style={{ paddingHorizontal: space.xl }}>
             {/* ✅ PROFILE IMAGE SECTION */}
             <View style={registerStyles.imagesection}>
               <TouchableOpacity onPress={showImageSourcePicker} activeOpacity={0.8}>
@@ -387,16 +393,16 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
                         onPress={removeImage}
                         activeOpacity={0.8}
                       >
-                        <Ionicons name="close" size={14} color="{colors.primary}" />
+                        <Ionicons name="close" size={14} color={palette.navy} />
                       </TouchableOpacity>
                     </>
                   ) : (
                     <>
                       <View style={registerStyles.placeholder}>
-                        <Ionicons name="person-outline" size={40} color="#9ca3af" />
+                        <Ionicons name="person-outline" size={40} color={palette.placeholder} />
                       </View>
                       <View style={registerStyles.cameraIcon}>
-                        <Ionicons name="camera-outline" size={18} color="#fff" />
+                        <Ionicons name="camera-outline" size={18} color={palette.surface} />
                       </View>
                     </>
                   )}
@@ -411,28 +417,33 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               )}
             </View>
 
-            {/* Form Fields */}
-            <FloatingLabelInput
-              label={t('firstName')}
-              value={formData.firstname}
-              onChangeText={(value) => setField('firstname', value)}
-              iconName="person-outline"
-              required
-              editable={!loading}
-              error={!!errors.firstname}
-              errorMessage={errors.firstname}
-            />
-
-            <FloatingLabelInput
-              label={t('lastName')}
-              value={formData.lastname}
-              onChangeText={(value) => setField('lastname', value)}
-              iconName="people-outline"
-              required
-              editable={!loading}
-              error={!!errors.lastname}
-              errorMessage={errors.lastname}
-            />
+            {/* Form Fields — 04_Register.png pairs the two name fields. */}
+            <View style={registerStyles.fieldRow}>
+              <View style={registerStyles.fieldHalf}>
+                <FloatingLabelInput
+                  label={t('firstName')}
+                  value={formData.firstname}
+                  onChangeText={(value) => setField('firstname', value)}
+                  iconName="person-outline"
+                  required
+                  editable={!loading}
+                  error={!!errors.firstname}
+                  errorMessage={errors.firstname}
+                />
+              </View>
+              <View style={registerStyles.fieldHalf}>
+                <FloatingLabelInput
+                  label={t('lastName')}
+                  value={formData.lastname}
+                  onChangeText={(value) => setField('lastname', value)}
+                  iconName="people-outline"
+                  required
+                  editable={!loading}
+                  error={!!errors.lastname}
+                  errorMessage={errors.lastname}
+                />
+              </View>
+            </View>
 
             <FloatingLabelInput
               label={t('email')}
@@ -487,33 +498,39 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               errorMessage={errors.city}
             />
 
-            <FloatingLabelInput
-              label={t('dateOfBirth')}
-              value={formData.dob}
-              onChangeText={(value) => setField('dob', value)}
-              iconName="calendar-outline"
-              isDatePicker
-              datePickerPlaceholder={t('common:datePicker.placeholder')}    
-              pickerDoneLabel={t('common:buttons.done')}
-              pickerCancelLabel={t('common:buttons.cancel')}
-              editable={!loading}
-              error={!!errors.dob}
-              errorMessage={errors.dob}
-            />
-
-            {/* ✅ Gender — displays translated label, stores English key for API */}
-            <FloatingLabelInput
-              label={t('register:Gender.gender')}
-              value={formData.genderLabel}
-              onChangeText={handleGenderSelect}
-              iconName="people-outline"
-              isDropdown
-              required
-              options={GENDER_LABELS}
-              editable={!loading}
-              error={!!errors.gender}
-              errorMessage={errors.gender}
-            />
+            {/* Birth date and gender share a row, per the mockup. */}
+            <View style={registerStyles.fieldRow}>
+              <View style={registerStyles.fieldHalf}>
+                <FloatingLabelInput
+                  label={t('dateOfBirth')}
+                  value={formData.dob}
+                  onChangeText={(value) => setField('dob', value)}
+                  iconName="calendar-outline"
+                  isDatePicker
+                  datePickerPlaceholder={t('common:datePicker.placeholder')}    
+                  pickerDoneLabel={t('common:buttons.done')}
+                  pickerCancelLabel={t('common:buttons.cancel')}
+                  editable={!loading}
+                  error={!!errors.dob}
+                  errorMessage={errors.dob}
+                />
+              </View>
+              <View style={registerStyles.fieldHalf}>
+                {/* ✅ Gender — displays translated label, stores English key for API */}
+                <FloatingLabelInput
+                  label={t('register:Gender.gender')}
+                  value={formData.genderLabel}
+                  onChangeText={handleGenderSelect}
+                  iconName="people-outline"
+                  isDropdown
+                  required
+                  options={GENDER_LABELS}
+                  editable={!loading}
+                  error={!!errors.gender}
+                  errorMessage={errors.gender}
+                />
+              </View>
+            </View>
 
             {/* Terms & Conditions */}
             <View style={registerStyles.termsContainer}>
@@ -527,7 +544,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
                 disabled={loading}
               >
                 {formData.acceptedTerms && (
-                  <Ionicons name="checkmark" size={16} color="#fff" />
+                  <Ionicons name="checkmark" size={16} color={palette.surface} />
                 )}
               </TouchableOpacity>
 
@@ -548,20 +565,11 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
 
             {/* Submit Button */}
             <View style={registerStyles.buttonSection}>
-              <TouchableOpacity
-                style={[commonStyles.primaryButton, loading && { opacity: 0.7 }]}
+              <Button
+                label={t('common:buttons.save')}
                 onPress={handleSubmit}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={commonStyles.primaryButtonText}>
-                    {t('common:buttons.save')}
-                  </Text>
-                )}
-              </TouchableOpacity>
+                loading={loading}
+              />
             </View>
 
             {/* Divider */}

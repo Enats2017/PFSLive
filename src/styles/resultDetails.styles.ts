@@ -1,6 +1,6 @@
 // ResultDetails.styles.ts
 import { StyleSheet, Dimensions } from "react-native";
-import { colors, spacing, typography } from "./common.styles";
+import { spacing, typography, type, palette, space, radii, fonts, shadows } from "./common.styles";
 
 const { width, } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.88;
@@ -9,25 +9,27 @@ const DIAG_SIZE = isTablet ? 70 : 35;
 
 export const resultInfoStyles = StyleSheet.create({
   scrollContent: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.white,
-    paddingTop: spacing.sm,
-    marginBottom: spacing.xxxl,
+    padding: space.xl,
+    paddingBottom: space.xxxl,
+    backgroundColor: palette.page,
+    flexGrow: 1,
   },
-   text: {
-    fontSize: typography.sizes.md,
-    color: colors.white,
-    fontWeight: typography.weights.regular,
+  text: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 10,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    color: palette.navy,
     textAlign: "center",
   },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    gap: 10,
+    gap: space.md,
+    paddingHorizontal: space.xl,
+    paddingVertical: space.lg,
+    backgroundColor: palette.surface,
   },
   headerBackBtn: {
     width: 32,
@@ -35,28 +37,47 @@ export const resultInfoStyles = StyleSheet.create({
   headerCenter: {
     flex: 1,
   },
+
+  // Runner identity under the band — the event name is in the band itself.
+  runnerMeta: {
+    ...type.body,
+    color: palette.textMuted,
+  },
   headerRightBtn: {
     width: 32,
     alignItems: "flex-end",
   },
+  tabStrip: {
+    backgroundColor: palette.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
+  },
 
   tabBarContent: {
     flexDirection: "row",
-    paddingHorizontal: 4,
-    paddingBottom: 6,
+    gap: space.xxl,
+    paddingHorizontal: space.xl,
+    backgroundColor: palette.surface,
   },
   tabItem: {
-     flex: 1,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 2.5,
+    borderBottomColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: width / 3,
-    
+  },
+  // ✅ Redesign: the active tab is a navy pill, matching the shared tab bar.
+  tabItemActive: {
+    borderBottomColor: palette.lime,
+  },
+  tabText: {
+    fontFamily: fonts.displayMedium,
+    fontSize: 15,
+    color: palette.textMuted,
   },
   tabTextActive: {
-    color: colors.black,
-    fontWeight: typography.weights.bold,
+    fontFamily: fonts.display,
+    color: palette.ink,
   },
   tabUnderline: {
     position: "absolute",
@@ -73,91 +94,91 @@ export const resultInfoStyles = StyleSheet.create({
     width,
     flex: 1,
   },
-
   card: {
-    width: "97%",
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-    
-   
+    backgroundColor: palette.surface,
+    borderRadius: radii.md,
+    padding: space.lg,
+    marginBottom: space.md,
+    ...shadows.card,
   },
-
   headerBar: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.sm,
+    marginBottom: space.md,
   },
   headerGreen: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    width: CARD_WIDTH * 0.42,
-    height: CARD_WIDTH * 0.1,
-    borderTopLeftRadius:10,
-  },
-  diagLeft: {
-    width: 0,
-    height: 0,
-    borderStyle: "solid",
-    borderTopWidth: DIAG_SIZE,
-    borderRightWidth: 20,
-    borderBottomWidth: 0,
-    borderLeftWidth: 0,
-    borderTopColor: colors.primary,
-    borderRightColor: "transparent",
-    borderBottomColor: "transparent",
-    borderLeftColor: "transparent",
-    
-  },
-  diagRight:{
-    width: 0,
-    height: 0,
-    borderStyle: "solid",
-    borderTopWidth: DIAG_SIZE,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-    borderLeftWidth: 20,
-    borderTopColor: colors.primaryLight,
-    borderRightColor: "transparent",
-    borderBottomColor: "transparent",
-    borderLeftColor: "transparent",
-  },
-  headerMiddle: {
-    flex: 1,
+    backgroundColor: palette.fill,
+    borderRadius: radii.sm,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xs,
   },
   headerRed: {
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    width: CARD_WIDTH * 0.42,
-    height: CARD_WIDTH * 0.1,
-    borderTopRightRadius:10,
+    backgroundColor: palette.fill,
+    borderRadius: radii.sm,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xs,
   },
-
+  // Label left, value right — the deck's detail row. It was a centred stack.
   bibCard: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 15,
+    justifyContent: "space-between",
+    gap: space.md,
+    paddingVertical: space.sm,
+  },
+  // Small-caps section label at the head of a card (29_RaceInfo.png).
+  sectionLabel: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 10,
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
+    color: palette.textMuted,
+    marginBottom: space.md,
   },
 
+  iconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    paddingTop: space.sm,
+  },
+
+
+  rowLabel: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textBody,
+    flexShrink: 1,
+  },
+  rowValue: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
+  },
+
+  statLabel: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 10,
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
+    color: palette.textMuted,
+  },
+  statValue: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
+  },
   raceTimeText: {
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
-    letterSpacing: 1,
-    textAlign: "center",
-    marginTop: spacing.sm,
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: palette.ink,
   },
-
   timingPointDate: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
-    marginTop: spacing.md,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: palette.textMuted,
   },
 
   rankingsCard: {
@@ -174,129 +195,116 @@ export const resultInfoStyles = StyleSheet.create({
   rankingColBorder: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: colors.gray400,
+    borderColor: palette.placeholder,
   },
 
   statsCard: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    padding: 5,
+    padding: 4,
   },
   statsCol: {
     flex: 1,
     alignItems: "center",
   },
   statsColBorder: {
-    paddingVertical: 18,
+    paddingVertical: 16,
     borderLeftWidth: 1,
-    borderColor: colors.gray300,
+    borderColor: palette.inputBorder,
   },
 
   // ── Timeline Styles ──────────────────────────────────────
-  leftCol: {
-    width: 64,
-    alignSelf: "stretch",
-    alignItems: "center",
+  // The timeline rail: narrow gutter, card takes the rest.
+  timelineRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: space.md,
   },
 
-  iconSpacer: {
-    height: 158,
-  },
-
-  lineTop: {
-    width: 2,
-    height: 158,
-    backgroundColor: colors.primaryLight,
-  },
-
-  iconCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-  },
-  iconCircleDone: {
-    backgroundColor: colors.primaryLight,
-  },
   iconCirclePending: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: palette.navyLift,
   },
 
-  lineBottomWrap: {
+
+
+
+
+
+  // ── 30_CheckpointHistory.png: card head ────────────────
+  // The mockup drops the timeline rail entirely. Each checkpoint is a plain
+  // card: a rounded-square status badge, the name over its distance, and the
+  // race time over the ranking on the right.
+  cpHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.lg,
+  },
+  cpBadge: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: palette.lime,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cpBadgeFinish: {
+    backgroundColor: palette.navy,
+  },
+  cpBadgePending: {
+    backgroundColor: palette.fill,
+  },
+  cpHeadText: {
     flex: 1,
-    width: "100%",
-    alignItems: "center",
-    position: "relative",
-    minHeight: 200,
+    minWidth: 0,
   },
-
-  lineBottom: {
-    position: "absolute",
-    top: 4,
-    bottom: 0,
-    width: 2,
-    backgroundColor: colors.primaryLight,
-  },
-
-  // ✅ VERIFIED: Distance Label - Upper position (ORANGE)
-  segmentDistanceLabel: {
-    position: "absolute",
-    top: 150,              // ✅ Upper position
-    left: -25,
-    width: 80,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  segmentDistanceText: {
+  cpName: {
+    fontFamily: fonts.display,
     fontSize: 15,
-    fontWeight: typography.weights.bold,
-    color: colors.primaryLight,     // ✅ ORANGE
-    letterSpacing: 0.3,
-    transform: [{ rotate: "-90deg" }],
-    textAlign: "center",
-    width: 80,
+    color: palette.ink,
   },
-
-  // ✅ VERIFIED: Elevation Label - Lower position (ORANGE)
-  segmentElevationLabel: {
-    position: "absolute",
-    top: 250,             // ✅ Below distance (NOT bottom)
-    left: -25,
-    width: 80,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  segmentElevationText: {
+  cpSub: {
+    fontFamily: fonts.body,
     fontSize: 13,
-    fontWeight: typography.weights.bold,
-    color: colors.primaryLight,     // ✅ ORANGE (same as distance)
-    letterSpacing: 0.3,
-    transform: [{ rotate: "-90deg" }],
-    textAlign: "center",
-    width: 80,
+    color: palette.textMuted,
+    marginTop: 2,
+  },
+  cpRight: {
+    alignItems: "flex-end",
+  },
+  cpTime: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
+  },
+  cpRank: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+    marginTop: 2,
+  },
+  cpDivider: {
+    height: 1,
+    backgroundColor: palette.border,
+    marginVertical: space.md,
   },
 
   // ── Checkpoint Card Styles ──────────────────────────────
   timingcard: {
+    ...shadows.card,
     flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: 14,
-    marginBottom: 5,
-   
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 2,
-    paddingBottom: 4,
+    backgroundColor: palette.surface,
+    borderRadius: radii.md,
+    padding: space.lg,
+    marginBottom: space.md,
+  },
+  // The checkpoint's own name — `bibCard` is a label/value ROW and cannot
+  // carry a title.
+  checkpointName: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
+    marginBottom: space.sm,
   },
 
   singleRow: {
@@ -305,49 +313,54 @@ export const resultInfoStyles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 4,
   },
-
   twoColRow: {
     flexDirection: "row",
     alignItems: "stretch",
-    paddingVertical: 30,
+    marginTop: space.md,
+    paddingTop: space.md,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
   },
   twoColLeft: {
     flex: 1,
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 8,
+    gap: space.xs,
   },
   verticalDivider: {
     width: 1,
-    backgroundColor: colors.gray400,
+    backgroundColor: palette.border,
   },
   twoColRight: {
     flex: 1,
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 8,
+    gap: space.xs,
+    paddingLeft: space.md,
   },
 
   // ── Avatar / Profile ─────────────────────────────────────
   avatarCircle: {
-    marginTop: 10,
-    width: 120,
-    height: 140,
-    borderRadius: 15,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
   },
 
   initials: {
-    marginTop: 10,
-    width: 120,
-    height: 140,
-    borderRadius: 15,
-    backgroundColor: colors.gray200,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: palette.fill,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Deck: 26px display type in navy. This was `palette.danger` — crimson
+  // initials on grey, a colour the deck uses only for DNF/error states.
+  initialsText: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    color: palette.navy,
+    letterSpacing: 1,
   },
 
   // ── Row / Col Layout ─────────────────────────────────────
@@ -362,67 +375,67 @@ export const resultInfoStyles = StyleSheet.create({
   },
   colDivider: {
     width: 1,
-    backgroundColor: colors.gray400,
+    backgroundColor: palette.placeholder,
   },
 
   // ── UTMB Badges ──────────────────────────────────────────
   utmbIndexBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1a1a2e",
+    backgroundColor: palette.ink,
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
     gap: 4,
   },
   utmbText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: "800",
+    color: palette.surface,
+    fontFamily: fonts.bodySemi,
+        fontSize: 12,
     letterSpacing: 0.5,
   },
   utmbIndexTag: {
-    backgroundColor: colors.info,
+    backgroundColor: palette.navy,
     borderRadius: 3,
-    paddingHorizontal: 5,
+    paddingHorizontal: 4,
     paddingVertical: 1,
   },
   utmbIndexText: {
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: "900",
+    color: palette.surface,
+    fontFamily: fonts.bodySemi,
+        fontSize: 11,
     letterSpacing: 0.5,
   },
   utmbValue: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: "#111",
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
   },
 
   utmbSeriesBadge: {
     alignItems: "center",
   },
   utmbSeriesTitle: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: "#1a1a2e",
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.ink,
     letterSpacing: 1,
   },
   utmbSeriesSub: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: "#1a1a2e",
+    fontFamily: fonts.bodySemi,
+        fontSize: 10,
+    color: palette.ink,
     letterSpacing: 1,
   },
 
   // ── Misc ─────────────────────────────────────────────────
   cornerBadge: {
-    backgroundColor: colors.info,
+    backgroundColor: palette.navy,
     alignSelf: "flex-start",
     paddingHorizontal: 20,
     paddingVertical: 8,
-    borderBottomRightRadius: 22,
-    marginBottom: 14,
+    borderBottomRightRadius: 16,
+    marginBottom: space.md,
   },
   countryRow: {
     flexDirection: "row",
@@ -430,25 +443,25 @@ export const resultInfoStyles = StyleSheet.create({
     gap: 8,
   },
   flagEmoji: {
-    fontSize: 22,
+    fontFamily: fonts.body,
+        fontSize: 20,
   },
   mapButton: {
-
-    height: 44,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
+    height: 56,
+    borderRadius: radii.md,
+    backgroundColor: palette.lime,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    margin:10,
-    
-},
-mapButtonText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
-},
+    gap: 10,
+    marginHorizontal: space.md,
+    marginBottom: space.md,
+  },
+  mapButtonText: {
+    color: palette.ink,
+    fontFamily: fonts.display,
+    fontSize: 15,
+  },
 
 singleColumn: {
     width: '100%',

@@ -4,15 +4,15 @@
     "noResults": "Geen resultaten voor deze filters.",
     "live": "LIVE",
     "bibNumber": "Startnummer",
-     "wavelabel": "Golf",
-    "raceTime": "RACE TIJD",
-    "diffFirst": "VERSCHIL 1E",
+    "wavelabel": "Golf",
+    "raceTime": "Race tijd",
+    "diffFirst": "Verschil 1e",
     "ranking": "RANGSCHIKKING",
     "retry": "Opnieuw proberen",
     "errorLoad": "Kan resultaten niet laden. Tik om opnieuw te proberen.",
     "utmbIndex": "INDEX",
     "eta": "ETA",
-    "etaFinish": "ETA FINISH",
+    "etaFinish": "Eta finish",
     "finish": "FINISH"
   },
   "time": {
@@ -34,6 +34,9 @@
     "stat_expected": "Verwacht",
     "stat_dnf": "DNF",
     "all": "Alle",
-    "is_finshed": "VOLTOOID"
+    "isFinished": "VOLTOOID"
+  },
+  "search": {
+    "resultsFor": "{{count}} resultaten voor “{{query}}”"
   }
 }

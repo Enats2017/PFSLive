@@ -1,11 +1,11 @@
 {
-  "title": "Confirm Registration",
+  "title": "Confirm registration",
   "subtitle": "If this is you, please hit the Confirm button. Then you will receive an email, and after clicking the link in that email, you are all good to go!",
   "fields": {
-    "bibNumber": "Bib Number",
-    "firstName": "First Name",
-    "lastName": "Last Name",
-    "dob": "Date of Birth",
+    "bibNumber": "Bib number",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "dob": "Date of birth",
     "gender": "Gender",
     "city": "City",
     "country": "Country",
@@ -14,16 +14,16 @@
     "email": "Email"
   },
   "buttons": {
-    "confirm": "Confirm & Register",
+    "confirm": "Confirm & register",
     "confirmOnly": "Confirm",
     "cancel": "Cancel"
   },
   "error": {
-    "invalidDataTitle": "Invalid Data",
+    "invalidDataTitle": "Invalid data",
     "invalidDataMessage": "Missing confirmation data. Please close and try registering again.",
-    "registrationFailedTitle": "Registration Failed",
+    "registrationFailedTitle": "Registration failed",
     "registrationFailedMessage": "Unable to complete registration. Please try again.",
-    "confirmationFailedTitle": "Confirmation Failed",
+    "confirmationFailedTitle": "Confirmation failed",
     "confirmationFailedMessage": "Unable to confirm registration. Please try again."
   }
 }

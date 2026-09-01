@@ -35,7 +35,8 @@
   "loading": {
     "please_wait": "Even geduld...",
     "loading": "Laden...",
-    "processing": "Verwerken..."
+    "processing": "Verwerken...",
+    "participants": "Deelnemers laden…"
   },
   "months": {
     "january": "Januari",
@@ -63,7 +64,7 @@
   "update": {
     "currentVersion": "Huidige versie",
     "latestVersion": "Nieuwste versie",
-    "updateNow": "NU BIJWERKEN",
+    "updateNow": "Nu bijwerken",
     "later": "Later",
     "forcedMessage": "U moet bijwerken om de app te blijven gebruiken"
   },
@@ -89,5 +90,37 @@
   "gender": {
     "men": "Mannen",
     "women": "Vrouwen"
-  }
+  },
+  "band": {
+    "home": "Live volgen & uitslagen",
+    "login": "Inloggen",
+    "register": "Registreren",
+    "verifyEmail": "E-mail verifiëren",
+    "resetPassword": "Wachtwoord opnieuw instellen",
+    "profile": "Profiel",
+    "account": "Account",
+    "athlete": "Atleet",
+    "myFollowers": "Mijn volgers",
+    "yourEvents": "Jouw evenementen",
+    "membership": "Lidmaatschap",
+    "settings": "Instellingen",
+    "trackingSettings": "Volginstellingen",
+    "contactFeedback": "Contact & feedback",
+    "events": "Evenementen",
+    "findRace": "Zoek een wedstrijd",
+    "followRace": "Volg de wedstrijd",
+    "participantHub": "Deelnemershub",
+    "findAthlete": "Zoek een atleet",
+    "favouriteAthletes": "Favoriete atleten",
+    "searchParticipants": "Deelnemers zoeken",
+    "selectProfile": "Kies je profiel",
+    "newPersonalEvent": "Nieuw persoonlijk evenement",
+    "editPersonalEvent": "Persoonlijk evenement bewerken",
+    "trainingSessions": "Trainingsessies"
+  },
+  "empty": {
+    "noResults": "Geen resultaten",
+    "noAthletes": "Geen atleten gevonden"
+  },
+  "or": "OF"
 }

@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { colors, spacing } from "./common.styles";
+import { spacing, palette, fonts, shadows, space, withAlpha } from "./common.styles";
 
 export const profileStyles = StyleSheet.create({
   textsection: {
@@ -19,20 +19,20 @@ export const profileStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    marginBottom: 6,
+    paddingVertical: 4,
+    marginBottom: space.md,
     gap: 5,
   },
   badgeDot: { 
     width: 7, 
     height: 7, 
-    borderRadius: 4 
+    borderRadius: 3.5 
   },
   badgeText: { 
-    fontSize: 11, 
-    fontWeight: "700", 
+    fontFamily: fonts.bodySemi,
+        fontSize: 11, 
     letterSpacing: 0.5 
   },
   empty: {
@@ -48,46 +48,71 @@ export const profileStyles = StyleSheet.create({
     alignItems: "center",
     overflow: "hidden",
     paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.md, // ✅ ADDED: Horizontal padding for button
+    paddingHorizontal: space.xl, // ✅ ADDED: Horizontal padding for button
   },
   avatarWrapper: { 
     position: "relative", 
     marginVertical: spacing.md 
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderColor: colors.gray400,
-    borderWidth: 1,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderColor: palette.lime,
+    borderWidth: 2.5,
+    backgroundColor: palette.fill,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+  },
+  identityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.lg,
+  },
+  identityText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  identityName: {
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: palette.ink,
+  },
+  // 20_OtherProfile.png: "<place> - <country>" under the athlete's name.
+  identityPlace: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+    marginTop: 2,
+  },
+  identityMeta: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: palette.textMuted,
+    marginTop: space.xs,
   },
   avatarImage: { 
     width: "100%", 
     height: "100%" 
   },
   editIcon: {
+    ...shadows.hairline,
+
     position: "absolute",
     bottom: 0,
     right: 0,
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.primary,
+    backgroundColor: palette.navy,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
   },
   profileName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.black,
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     letterSpacing: 1,
     marginBottom: spacing.sm,
     textAlign: "center",
@@ -103,71 +128,80 @@ export const profileStyles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   content: {  
-    paddingHorizontal: spacing.md, 
+    paddingHorizontal: space.xl, 
     paddingBottom: 100 
   },
   avatarFallback: {
-    backgroundColor: colors.gray200,
+    backgroundColor: palette.border,
     alignItems: "center",
     justifyContent: "center",
   },
   initials: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: colors.gray600,
+    fontFamily: fonts.display,
+        fontSize: 26,
+    color: palette.textBody,
     letterSpacing: 1,
   },
   cameraBtn: {
+    ...shadows.card,
+
     position: "absolute",
     bottom: 2,
     right: 2,
     width: 30,
     height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.primary,
+    borderRadius: 14,
+    backgroundColor: palette.navy,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 4,
   },
   removeBtn: {
     marginTop: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingHorizontal: space.xl,
+    paddingVertical: 8,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: palette.navy,
   },
   removeBtnText: { 
-    fontSize: 13, 
-    color: colors.primary, 
-    fontWeight: "600" 
-  },
+    fontFamily: fonts.bodySemi,
+        fontSize: 13, 
+    color: palette.navy, 
+    },
   sectionHeader: {  
     marginBottom: spacing.sm 
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: colors.gray500,
+    fontFamily: fonts.bodySemi,
+        fontSize: 12,
+    color: palette.textMuted,
     letterSpacing: 1.5,
   },
   sectionSubtitle: { 
-    fontSize: 12, 
-    color: colors.gray400, 
+    fontFamily: fonts.body,
+        fontSize: 12, 
+    color: palette.placeholder, 
     marginTop: 2 
   },
   sectionLine: { 
     height: 1, 
-    backgroundColor: colors.gray200, 
-    marginTop: 6 
+    backgroundColor: palette.border, 
+    marginTop: 8 
   },
+  // 08_EditProfile.png pairs first/last name and country/city on one line each.
+  fieldRow: {
+    flexDirection: 'row',
+    gap: space.md,
+  },
+  fieldHalf: {
+    flex: 1,
+    minWidth: 0,
+  },
+
   readOnlyHint: {
-    fontSize: 12,
-    color: colors.gray400,
+    fontFamily: fonts.body,
+        fontSize: 12,
+    color: palette.placeholder,
     marginTop: -4,
     marginBottom: spacing.sm,
     marginLeft: 4,
@@ -181,12 +215,12 @@ export const profileStyles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.md,
     padding: spacing.md,
-    backgroundColor: colors.success + '15',
-    borderRadius: 8,
+    backgroundColor: withAlpha(palette.lime, 0.08),
+    borderRadius: 10,
   },
   successText: { 
-    fontSize: 14, 
-    color: colors.success, 
-    fontWeight: "600" 
-  },
+    fontFamily: fonts.bodySemi,
+        fontSize: 13, 
+    color: palette.lime, 
+    },
 });

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../styles/common.styles';
+import { commonStyles, spacing, palette, fonts, space } from '../styles/common.styles';
 import { AthleteEvent } from '../services/athleteProfileService';
 
 interface Props {
@@ -73,7 +73,7 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
                     ]}
                 >
                     <View style={styles.iconWrap}>
-                        <Ionicons name="trash-outline" size={30} color={colors.participantColor ?? '#E53935'} />
+                        <Ionicons name="trash-outline" size={30} color={palette.danger} />
                     </View>
 
                     <Text style={commonStyles.title}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
@@ -98,7 +98,7 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
                             disabled={isDeleting}
                         >
                             {isDeleting
-                                ? <ActivityIndicator size="small" color="#fff" />
+                                ? <ActivityIndicator size="small" color={palette.surface} />
                                 : <Text style={styles.deleteText}>{t('ownProfile:deleteEvent.confirm')}</Text>}
                         </TouchableOpacity>
                     </View>
@@ -119,8 +119,8 @@ const styles = StyleSheet.create({
     backdrop: { ...StyleSheet.absoluteFillObject },
     sheet: {
         width: '100%',
-        backgroundColor: '#fff',
-        borderRadius: 24,    
+        backgroundColor: palette.surface,
+        borderRadius: 16,    
                 // NEW — all corners rounded now that it's centered
         paddingHorizontal: spacing.lg,
         paddingTop: spacing.lg,
@@ -129,15 +129,19 @@ const styles = StyleSheet.create({
     },
     iconWrap: {
         width: 60, height: 60, borderRadius: 30,
-        backgroundColor: '#FDECEA', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: palette.dangerBg, alignItems: 'center', justifyContent: 'center',
         marginBottom: spacing.md,
     },
-    title: { fontSize: 18, fontWeight: '700', color: colors.gray900, marginBottom: 10, textAlign: 'center' },
-    message: { fontSize: 15, color: '#666', textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
+    title: { fontFamily: fonts.display,
+        fontSize: 20, color: palette.ink, marginBottom: space.md, textAlign: 'center' },
+    message: { fontFamily: fonts.body,
+        fontSize: 15, color: palette.textBody, textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
     actions: { flexDirection: 'row', width: '100%', gap: 12 },
-    btn: { flex: 1, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    cancelBtn: { backgroundColor: '#F2F2F2' },
-    cancelText: { color: colors.gray900, fontWeight: '600', fontSize: 15 },
-    deleteBtn: { backgroundColor: colors.primary },
-    deleteText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+    btn: { flex: 1, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+    cancelBtn: { backgroundColor: palette.fill },
+    cancelText: { color: palette.ink, fontFamily: fonts.display,
+        fontSize: 15 },
+    deleteBtn: { backgroundColor: palette.navy },
+    deleteText: { color: palette.surface, fontFamily: fonts.display,
+        fontSize: 15 },
 });

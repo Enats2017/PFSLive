@@ -6,17 +6,17 @@
   "button": "Live Tracking",
   "register": "Registreren",
   "undo": "AFMELDEN",
-  "gpx": "DOWNLOAD GPX",
-  "live": "LIVE",
+  "gpx": "Download GPX",
+  "live": "Live",
   "countdown": {
-    "live": "LIVE",
+    "live": "Live",
     "finished": "AFGELOPEN",
     "startsIn": "Start over",
     "startingSoon": "Begint Binnenkort",
     "days": "D",
     "hours": "U",
     "minutes": "M",
-    "seconds": "S" 
+    "seconds": "S"
   },
   "athletes": "Gestarte atleten",
   "finished": "Gefinishte atleten",
@@ -29,8 +29,8 @@
     "search": "Zoek deelnemers op naam, rugnummer",
     "searching": "Zoeken...",
     "noResults": "Geen deelnemers gevonden voor",
-    "favorite": "TOEVOEGEN AAN FAVORIETEN",
-    "unknownName": "ONBEKENDE DEELNEMER",
+    "favorite": "Toevoegen aan favorieten",
+    "unknownName": "Onbekende deelnemer",
     "results": "RESULTATEN"
   },
   "tracking": {
@@ -82,7 +82,7 @@
       "title": "Live tracking niet beschikbaar",
       "description": "Uw huidige trackingsessies zijn niet actief. Live tracking is momenteel niet beschikbaar.",
       "iosDescription": "Je hebt al je live trackingsessies gebruikt. Koop er meer om je voor dit evenement in te schrijven.",
-       "button": "Meer sessies kopen"
+      "button": "Meer sessies kopen"
     },
     "limit_reached": {
       "icon": "↑",
@@ -94,7 +94,8 @@
     "membership_upcoming": {
       "icon": "⏳",
       "title": "Lidmaatschap Nog Niet Actief",
-      "description": "Uw lidmaatschap start op {{date}}. U kunt zich registreren voor live tracking zodra uw lidmaatschap actief wordt."
+      "description": "Uw lidmaatschap start op {{date}}. U kunt zich registreren voor live tracking zodra uw lidmaatschap actief wordt.",
+      "button": "Bekijk abonnementen"
     },
     "unavailable": {
       "icon": "⊘",
@@ -116,9 +117,9 @@
       "title": "Live Tracking",
       "description": "Live Tracking is optioneel en vereist een abonnement — maar je eerste sessie is GRATIS! Wil je het niet gebruiken? Geen probleem. Je hoeft Livio niet aan je startnummer te koppelen. Je volgers blijven de officiële RFID-updates ontvangen wanneer je een checkpoint of de finish passeert.",
       "button": "Ja",
-      
       "notNowButton": "Niet nu"
-    }
+    },
+    "viewPlansButton": "Bekijk abonnementen"
   },
   "connectInfo": "De officiële tijdsregistratie is automatisch actief voor alle deelnemers.\nWil je gebruikmaken van Live Tracking? Koppel dan je Livio-account aan je startnummer voor dit evenement.\nTik op 'Connecteer' om verder te gaan.",
   "gpxDownload": {
@@ -136,7 +137,12 @@
     "noResultsTitle": "GPX niet beschikbaar",
     "noResultsMessage": "Het GPX-routebestand is nog niet beschikbaar voor dit evenement."
   },
-  "iosnotnow":"Not Now",
+  "iosnotnow": "Not Now",
   "map": "Kaart",
-  "wave": "Golf"
+  "wave": "Golf",
+  "chart": {
+    "elevationProfile": "Hoogteprofiel",
+    "distance": "Afstand",
+    "elevation": "Hoogtemeters"
+  }
 }

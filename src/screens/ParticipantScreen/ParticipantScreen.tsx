@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ScrollView,
-    StatusBar,
     Text,
     TouchableOpacity,
     View,
@@ -10,7 +9,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette, space } from '../../styles/common.styles';
 import { particpant } from '../../styles/participantscreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
@@ -90,18 +89,17 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
 
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
+            <AppHeader title={t('common:band.participantHub')} showBack />
             <ScrollView
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: spacing.xxxxl }}
             >
                 <View style={{ zIndex: 50, elevation: 30 }}>
-                    <View style={particpant.yellowHeader}>
-                        <Feather name="radio" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                        <Text style={commonStyles.title}>
+                    <View style={particpant.sectionLabel}>
+                        <Feather name="radio" size={14} color={palette.lime} />
+                        <Text style={particpant.sectionLabelText}>
                             {t('participant:liveTracking.title')}
                         </Text>
                     </View>
@@ -125,7 +123,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                             onPress={() => navigation.navigate('ParticipantEvent')}
                             activeOpacity={0.8}
                         >
-                            <Feather name="calendar" size={15} color="#fff" style={{ marginRight: 8 }} />
+                            <Feather name="calendar" size={15} color={palette.surface} style={{ marginRight: 8 }} />
                             <Text style={commonStyles.primaryButtonText}>
                                 {t('participant:liveTracking.showAll')}
                             </Text>
@@ -134,17 +132,18 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                 </View>
                 <View style={particpant.dividerRow}>
                     <View style={particpant.dividerLine} />
-
+                    <Text style={particpant.dividerOr}>{t('common:or')}</Text>
+                    <View style={particpant.dividerLine} />
                 </View>
-                <View style={particpant.yellowHeader}>
-                    <Feather name="plus-circle" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                    <Text style={commonStyles.title}>
+                <View style={particpant.sectionLabel}>
+                    <Feather name="plus-circle" size={18} color={palette.ink} style={{ marginRight: 8 }} />
+                    <Text style={particpant.sectionLabelText}>
                         {t('participant:personalRace.title')}
                     </Text>
                 </View>
                 <View style={particpant.section}>
                     <View style={particpant.infoCard}>
-                        <MaterialCommunityIcons name="map-marker-path" size={22} color={colors.themeiColor} />
+                        <MaterialCommunityIcons name="map-marker-path" size={22} color={palette.lime} />
                         <Text style={[commonStyles.text, { lineHeight: 20 }]}>
                             {t('participant:personalRace.description')}
                         </Text>
@@ -154,7 +153,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                         onPress={handlePersonalEventPress}
                         activeOpacity={0.8}
                     >
-                        <Feather name="plus" size={15} color="#fff" style={{ marginRight: 8 }} />
+                        <Feather name="plus" size={15} color={palette.surface} style={{ marginRight: 8 }} />
                         <Text style={commonStyles.primaryButtonText}>
                             {t('participant:personalRace.createButton')}
                         </Text>
@@ -164,16 +163,16 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                     <View style={particpant.dividerLine} />
 
                 </View>
-                <View style={{paddingHorizontal:spacing.md}}>
+                <View style={{paddingHorizontal: space.xl}}>
                 <View style={fanstyle.nextEventsHeader}>
-                    <Text style={fanstyle.nextEventsTitle}>{t('participant:nextevetn')}</Text>
+                    <Text style={fanstyle.nextEventsTitle}>{t('participant:nextEvents')}</Text>
                     <TouchableOpacity
                         style={fanstyle.viewAllBtn}
                         onPress={() => navigation.navigate('ParticipantEvent')}
                         activeOpacity={0.7}
                     >
                         <Text style={fanstyle.viewAllText}>{t('participant:viewAll')}</Text>
-                        <Feather name="chevron-right" size={14} color={colors.primary} />
+                        <Feather name="chevron-right" size={14} color={palette.navy} />
                     </TouchableOpacity>
                 </View>
                 <ScrollView

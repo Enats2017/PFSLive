@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/common.styles';
+import { palette, withAlpha } from '../styles/common.styles';
 import { fanstyle } from '../styles/fan.styles';
 import { EventItem } from '../services/followerEvent';
 import { formatEventDate } from '../utils/dateFormatter';
@@ -49,9 +49,9 @@ const EventCard: React.FC<EventCardProps> = ({ item, t }) => {
                 {status !== 'loaded' && (
                     <View style={styles.overlay}>
                         {status === 'loading' ? (
-                            <ActivityIndicator size="small" color={colors.primary} />
+                            <ActivityIndicator size="small" color={palette.navy} />
                         ) : (
-                            <Ionicons name="image-outline" size={22} color={colors.primaryDark} />
+                            <Ionicons name="image-outline" size={22} color={palette.ink} />
                         )}
                     </View>
                 )}
@@ -61,7 +61,7 @@ const EventCard: React.FC<EventCardProps> = ({ item, t }) => {
                 <Text style={fanstyle.eventName} numberOfLines={1}>{item.name}</Text>
                 <View style={fanstyle.eventDateRow}>
                     <Text style={fanstyle.eventDate}>{formatEventDate(item.race_date, t)}</Text>
-                    <Ionicons name="calendar-outline" size={15} color={colors.primaryDark} />
+                    <Ionicons name="calendar-outline" size={15} color={palette.ink} />
                 </View>
             </View>
         </View>
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: colors.white + '33',
+        backgroundColor: withAlpha(palette.surface, 0.20),
     },
 });
 

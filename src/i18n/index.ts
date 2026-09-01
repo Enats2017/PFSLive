@@ -140,14 +140,11 @@ export type LanguageCode = keyof typeof LANGUAGES;
  */
 const getDeviceLanguage = (): LanguageCode => {
   try {
-    let deviceLocale = Localization.locale;
-
-    if (!deviceLocale) {
-      const locales = Localization.getLocales();
-      if (locales && locales.length > 0) {
-        deviceLocale = locales[0].languageCode || 'en';
-      }
-    }
+    // ✅ Localization.locale was removed from expo-localization — getLocales() is
+    // the only supported reader now, and it returns [] on a device with no locale.
+    const locales = Localization.getLocales();
+    const deviceLocale =
+      locales && locales.length > 0 ? locales[0].languageTag || locales[0].languageCode : null;
 
     if (!deviceLocale) {
       console.warn('⚠️ Could not detect device locale, using English');
@@ -260,7 +257,9 @@ const getInitialLanguage = (): LanguageCode => {
 const initialLanguage = getInitialLanguage();
 
 i18n.use(initReactI18next).init({
-  compatibilityJSON: 'v3',
+  // ✅ No compatibilityJSON: the v3 JSON format was dropped in i18next v23, so the
+  // flag did nothing here and the `_plural` keys never resolved. Plurals now use the
+  // v4 suffixes `_one` / `_other` — see src/i18n/livetracking/*.json.
   resources: {
     en: {
       common: commonEN,

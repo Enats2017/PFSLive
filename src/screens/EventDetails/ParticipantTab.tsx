@@ -9,7 +9,7 @@ import {
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette, space } from '../../styles/common.styles';
 import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
 import { API_CONFIG } from '../../constants/config';
@@ -236,7 +236,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
           {imageLoading && (
             <ActivityIndicator
               size="large"
-              color={colors.primary}
+              color={palette.navy}
               style={{ position: 'absolute', zIndex: 1 }}
             />
           )}
@@ -265,8 +265,8 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     if (loadingMore) {
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
+          <ActivityIndicator size="small" color={palette.navy} />
+          <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
             Loading more... ({page}/{totalPages})
           </Text>
         </View>
@@ -276,7 +276,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     if (hasMorePages() && participants.length > 0) {
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-          <Text style={{ color: colors.gray500 }}>
+          <Text style={{ color: palette.textMuted }}>
             Scroll for more ({participants.length})
           </Text>
         </View>
@@ -290,7 +290,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     return (
       <ActivityIndicator
         size="large"
-        color={colors.primary}
+        color={palette.navy}
         style={{ marginTop: 40 }}
       />
     );
@@ -311,12 +311,13 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     <>
       <View
         style={{
-          paddingHorizontal: spacing.md,
+          paddingHorizontal: space.xl,
           paddingTop: spacing.md,
          
         }}
       >
         <SearchInput
+                        framed={false}
           ref={searchInputRef}
           placeholder={t('details:participant.search')}
           value={searchText}
@@ -327,8 +328,8 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
 
       {loading && searchText.length > 0 && (
         <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
+          <ActivityIndicator size="small" color={palette.navy} />
+          <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
             {t('details:participant.searching')}
           </Text>
         </View>

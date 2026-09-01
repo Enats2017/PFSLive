@@ -1,31 +1,31 @@
 {
-  "title": "Verify Your Email",
+  "title": "Verify your email",
   "subtitle": "We sent a 6-digit verification code to",
   "verifyButton": "Verify",
   "didntReceive": "Didn't receive the code?",
   "resend": "Resend",
   "resendIn": "Resend in",
-  "resendSuccess": "Code Sent",
+  "resendSuccess": "Code sent",
   "resendSuccessMessage": "A new verification code has been sent to your email.",
   "success": {
-    "title": "Verification Successful",
+    "title": "Verification successful",
     "message": "Your email has been verified successfully!"
   },
   "errors": {
     "incomplete": "Please enter the complete 6-digit code",
-    "invalidTitle": "Invalid Code",
+    "invalidTitle": "Invalid code",
     "invalid": "The code you entered is incorrect. Please try again.",
-    "expiredTitle": "Code Expired",
+    "expiredTitle": "Code expired",
     "expired": "This verification code has expired. Please request a new one.",
-    "tooManyAttemptsTitle": "Too Many Attempts",
+    "tooManyAttemptsTitle": "Too many attempts",
     "tooManyAttempts": "You've exceeded the maximum number of attempts. Please try again later or request a new code.",
-    "tokenInvalidTitle": "Invalid Verification Link",
+    "tokenInvalidTitle": "Invalid verification link",
     "tokenInvalid": "This verification link is invalid or has expired. Please register again.",
-    "alreadyVerifiedTitle": "Already Verified",
+    "alreadyVerifiedTitle": "Already verified",
     "alreadyVerified": "This email has already been verified. Redirecting to login...",
-    "tokenFailedTitle": "Verification Failed",
+    "tokenFailedTitle": "Verification failed",
     "tokenFailed": "Unable to complete verification. Please try again or contact support.",
-    "noConnectionTitle": "No Internet Connection",
+    "noConnectionTitle": "No internet connection",
     "noConnection": "Please check your internet connection and try again.",
     "genericErrorTitle": "Error",
     "genericError": "Something went wrong. Please try again later.",
@@ -45,5 +45,11 @@
     "subtitle": "We sent a 6-digit code to",
     "successTitle": "Device changed",
     "successMessage": "Your account has moved to this phone. Your other device has been signed out."
+  },
+  "notArrived": {
+    "title": "Not arrived?",
+    "spam": "Check your spam folder — the code is sent from no-reply@liviolive.com.",
+    "wrongAddress": "Wrong address?",
+    "changeEmail": "Change email"
   }
 }

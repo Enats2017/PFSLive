@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StatusBar,
   ActivityIndicator,
   TextInput,
   KeyboardAvoidingView,
@@ -15,7 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import { AppHeader } from '../../components/common/AppHeader';
-import { commonStyles, colors } from '../../styles/common.styles';
+import { Button } from '../../components/ui';
+import { commonStyles, palette } from '../../styles/common.styles';
 import { optStyles } from '../../styles/OtpScreen.styles';
 import { OTPVerificationScreenProps } from '../../types/navigation';
 import { tokenService } from '../../services/tokenService';
@@ -286,9 +286,8 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
   }, [canResend, resending, verification_token, purpose, showErrorToast, t]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} showBack />
+    <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+      <AppHeader title={t('common:band.verifyEmail')} showLogo={true} showBack />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -303,7 +302,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
               <Ionicons
                 name={isDeviceChange ? 'phone-portrait-outline' : 'mail-outline'}
                 size={40}
-                color="{colors.primary}"
+                color="{palette.navy}"
               />
             </View>
             <Text style={optStyles.title}>
@@ -339,29 +338,23 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
 
           {!!error && (
             <Text style={optStyles.errorText}>
-              <Ionicons name="alert-circle-outline" size={13} color="#ef4444" /> {error}
+              <Ionicons name="alert-circle-outline" size={13} color={palette.danger} /> {error}
             </Text>
           )}
 
-          <TouchableOpacity
-            style={[commonStyles.primaryButton, loading && { opacity: 0.7 }, optStyles.verifyButton]}
+          <Button
+            label={t('otp:verifyButton')}
             onPress={() => handleVerify()}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={commonStyles.primaryButtonText}>{t('otp:verifyButton')}</Text>
-            )}
-          </TouchableOpacity>
+            loading={loading}
+            style={optStyles.verifyButton}
+          />
 
           <View style={optStyles.resendContainer}>
             <Text style={optStyles.resendLabel}>{t('otp:didntReceive')} </Text>
             {canResend ? (
               <TouchableOpacity onPress={handleResend} disabled={resending}>
                 {resending ? (
-                  <ActivityIndicator size="small" color="#FF5722" />
+                  <ActivityIndicator size="small" color={palette.warning} />
                 ) : (
                   <Text style={optStyles.resendLink}>{t('otp:resend')}</Text>
                 )}
@@ -369,6 +362,19 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
             ) : (
               <Text style={optStyles.countdown}>{t('otp:resendIn')} {countdown}s</Text>
             )}
+          </View>
+
+          {/* 05_OTP.png: where the code actually went, and a way back if the
+              address was mistyped. */}
+          <View style={optStyles.notArrivedCard}>
+            <Text style={optStyles.notArrivedTitle}>{t('otp:notArrived.title')}</Text>
+            <Text style={optStyles.notArrivedBody}>{t('otp:notArrived.spam')}</Text>
+            <View style={optStyles.notArrivedRow}>
+              <Text style={optStyles.notArrivedBody}>{t('otp:notArrived.wrongAddress')}</Text>
+              <TouchableOpacity onPress={() => navigation.goBack()} accessibilityRole="button">
+                <Text style={optStyles.notArrivedLink}>{t('otp:notArrived.changeEmail')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

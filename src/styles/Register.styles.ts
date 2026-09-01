@@ -1,7 +1,35 @@
 import { StyleSheet, Platform } from 'react-native';
-import { colors, spacing, typography } from './common.styles';
+import { spacing, typography, type, palette, fonts, shadows, radii, space } from './common.styles';
 
 export const registerStyles = StyleSheet.create({
+  // ✅ HEADER SECTION — mirrors loginStyles.headerSection so both auth screens
+  // open with the same white band; the deck draws them identically.
+  headerSection: {
+    paddingHorizontal: space.xl,
+    paddingTop: space.xxl,
+    paddingBottom: space.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
+  },
+  title: {
+    ...type.h1,
+  },
+  subtitle: {
+    ...type.small,
+    marginTop: space.sm,
+  },
+
+  // ✅ Paired fields — 04_Register.png puts first/last name on one line and
+  // birth date/gender on another, so the form reads as four rows not six.
+  fieldRow: {
+    flexDirection: 'row',
+    gap: space.md,
+  },
+  fieldHalf: {
+    flex: 1,
+    minWidth: 0,
+  },
+
   // ✅ IMAGE SECTION
   imagesection: {
     alignItems: 'center',
@@ -15,9 +43,9 @@ export const registerStyles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.gray100,
+    backgroundColor: palette.fill,
     borderWidth: 2,
-    borderColor: colors.gray200,
+    borderColor: palette.border,
   },
 
   profileImage: {
@@ -34,23 +62,13 @@ export const registerStyles = StyleSheet.create({
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: colors.primary,
-    borderRadius: 20,
+    backgroundColor: palette.navy,
+    borderRadius: radii.pill,
     width: 36,
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    ...shadows.card,
   },
 
   removeIcon: {
@@ -60,26 +78,17 @@ export const registerStyles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: colors.white,
+    backgroundColor: palette.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    ...shadows.card,
   },
 
   uploadPhotoText: {
     marginTop: spacing.sm,
-    color: colors.gray600,
-    fontSize: typography.sizes.sm,
+    color: palette.textBody,
+    fontFamily: fonts.body,
+    fontSize: 13,
     textAlign: 'center',
   },
 
@@ -95,22 +104,23 @@ export const registerStyles = StyleSheet.create({
   checkbox: {
     width: 22,
     height: 22,
-    borderRadius: 6,
+    borderRadius: 11,
     borderWidth: 1.5,
-    borderColor: colors.gray300,
+    borderColor: palette.inputBorder,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: palette.surface,
   },
 
   checkboxActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: palette.navy,
+    borderColor: palette.navy,
   },
 
   termsText: {
-    fontSize: typography.sizes.md,
-    color: colors.gray700,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: palette.textBody,
     flex: 1,
   },
 
@@ -129,15 +139,16 @@ export const registerStyles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.gray200,
+    backgroundColor: palette.border,
   },
 
   dividerText: {
-    marginHorizontal: spacing.md,
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
-    fontWeight: typography.weights.medium,
-  },
+    marginHorizontal: space.xl,
+    fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+    color: palette.textMuted,
+
+        },
 
   // ✅ REGISTER LINK
   registerButton: {
@@ -147,21 +158,24 @@ export const registerStyles = StyleSheet.create({
   },
 
   registerText: {
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: palette.textBody,
   },
 
   registerLink: {
-    color: colors.primary,
-    fontWeight: typography.weights.bold,
-  },
+    color: palette.navy,
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+        },
 
   // ✅ ERROR TEXT
   errorText: {
-    fontSize: typography.sizes.sm,
-    color: colors.error,
+    fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+    color: palette.danger,
     marginTop: spacing.xs,
     marginLeft: spacing.xs,
-    fontWeight: typography.weights.medium,
-  },
+
+        },
 });

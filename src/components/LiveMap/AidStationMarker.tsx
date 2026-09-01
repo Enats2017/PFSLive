@@ -4,7 +4,7 @@ import Mapbox from '@rnmapbox/maps';
 import { Ionicons } from '@expo/vector-icons';
 import { AidStationMapMarker } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
-import { colors } from '../../styles/common.styles';
+import { palette } from '../../styles/common.styles';
 
 interface AidStationMarkerProps {
     station: AidStationMapMarker;
@@ -24,7 +24,7 @@ export const AidStationMarker: React.FC<AidStationMarkerProps> = ({
         >
             <View style={liveTrackingStyles.aidStationMarker}>
                 <View style={liveTrackingStyles.aidStationIcon}>
-                    <Ionicons name="restaurant" size={16} color={colors.white} />
+                    <Ionicons name="restaurant" size={16} color={palette.surface} />
                 </View>
             </View>
         </Mapbox.PointAnnotation>

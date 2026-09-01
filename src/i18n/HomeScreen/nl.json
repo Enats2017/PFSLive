@@ -1,21 +1,21 @@
 {
-  "subtitle": "LIVE TRACKING & RESULTATEN",
-  "tagline": "DEEL JE RACE OF TRAINING MET JE VRIENDEN & FAMILIE",
+  "subtitle": "Live tracking & resultaten",
+  "tagline": "Deel je race of training met je vrienden & familie",
   "Logotagline": "Livio - officiële tracking- en resultatenapp van de mooiste wedstrijden",
   "subtext": "Live Resultaten",
   "participant": {
     "title": "Live Tracking"
   },
   "button": {
-    "Participant": "IK BEN EEN DEELNEMER",
-    "Fan": "IK BEN EEN FAN"
+    "Participant": "Ik ben een deelnemer",
+    "Fan": "Ik ben een fan"
   },
   "Event": {
     "title": "Naam evenement",
     "Date": "Datum",
     "description": "Je kunt je live tracking starten vanaf 1 uur voor je start. Zorg ervoor dat je deze app altijd open houdt en niet sluit!",
-    "buttonText": "START TRACKING",
-    "button": "STOP TRACKING"
+    "buttonText": "Start tracking",
+    "button": "Stop tracking"
   },
   "status": {
     "gpsActive": "GPS Actief - Wachten op start race",
@@ -27,7 +27,8 @@
     "loading": "Laden...",
     "manualStartEnabled": "Handmatige start ingeschakeld",
     "manualStartDescription": "Gegevensverzending wordt handmatig beheerd",
-    "manualStartReady": "Klaar om te verzenden (handmatige modus)"
+    "manualStartReady": "Klaar om te verzenden (handmatige modus)",
+    "raceStartsIn": "Wedstrijd start over: {{time}}"
   },
   "tracking": {
     "gpsActivated": "GPS Geactiveerd",
@@ -92,10 +93,12 @@
     "disable": "Batterij-instellingen openen"
   },
   "followingEvents": {
-    "sectionTitle": "EVENEMENTEN DIE U VOLGT",
-    "startsIn": "BEGINT OVER",
+    "sectionTitle": "Evenementen die u volgt",
+    "startsIn": "Begint over",
     "live": "LIVE",
-    "routeButton": "Volg Het Evenement"
+    "routeButton": "Volg Het Evenement",
+    "youFollow": "Jij volgt",
+    "opensEventPage": "Opent de evenementpagina"
   },
   "startConfirm": {
     "title": "Live tracking starten?",
@@ -130,5 +133,22 @@
     "stepsIos": "Tik op Locatie en kies daarna “Altijd”.",
     "stepsAndroid": "Kies “Altijd toestaan” op het volgende scherm.",
     "stepsAndroidSettings": "Open Machtigingen → Locatie en kies daarna “Altijd toestaan”."
+  },
+  "hero": {
+    "title": "Je wedstrijd is\nklaar om te volgen",
+    "subtitle": "Volg je wedstrijd en de atleten die je volgt"
+  },
+  "sections": {
+    "nextSession": "Volgende sessie"
+  },
+  "active": {
+    "trackingActive": "Tracking actief",
+    "distance": "Afstand",
+    "allSent": "Alle posities verzonden · {{ago}}",
+    "queued": "{{count}} wachten op verzending · {{ago}}",
+    "secAgo": "{{n}} sec geleden",
+    "minAgo": "{{n}} min geleden",
+    "justNow": "zojuist",
+    "keepOpen": "Vergrendel je telefoon en steek hem weg — Livio blijft op de achtergrond tracken. Sluit de app alleen niet af."
   }
 }

@@ -1,19 +1,20 @@
 import { StyleSheet } from "react-native";
-import { colors, spacing } from "./common.styles";
+import { spacing, palette, fonts, radii, space } from "./common.styles";
 
 export const fanstyle = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: spacing.xxxxl,
   },
   section: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
     paddingTop: spacing.md,
   },
   navCard: {
-    backgroundColor: colors.primary,
-    borderRadius: spacing.sm,
+    backgroundColor: palette.navy,
+    borderRadius: radii.md,
     paddingVertical: spacing.sm, // was: padding: spacing.md (all sides)
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
@@ -33,20 +34,21 @@ export const fanstyle = StyleSheet.create({
     flex: 1,
   },
   navTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: colors.white,
+    fontFamily: fonts.display,
+        fontSize: 15,
+    color: palette.surface,
     letterSpacing: 0.4,
     marginBottom: spacing.xs,
     textTransform: "uppercase",
   },
   navSub: {
-    fontSize: 13,
+    fontFamily: fonts.body,
+        fontSize: 13,
     color: "rgba(255,255,255,0.65)",
     lineHeight: 18,
   },
   nextEventsSection: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
     paddingTop: spacing.xs,
   },
 
@@ -57,9 +59,9 @@ export const fanstyle = StyleSheet.create({
     marginBottom: spacing.md,
   },
   nextEventsTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: colors.primaryDark,
+    fontFamily: fonts.display,
+        fontSize: 15,
+    color: palette.ink,
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
@@ -69,9 +71,9 @@ export const fanstyle = StyleSheet.create({
     gap: 2,
   },
   viewAllText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.primary,
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.navy,
   },
 
   sliderContent: {
@@ -82,11 +84,11 @@ export const fanstyle = StyleSheet.create({
 
   eventCard: {
     width: 160,
-    backgroundColor: colors.white,
+    backgroundColor: palette.surface,
     borderRadius: 14,
     overflow: "hidden",
     borderWidth: 0.5,
-    borderColor: "#e5e8ef",
+    borderColor: palette.border,
   },
   eventImg: {
     width: 160,
@@ -112,10 +114,10 @@ export const fanstyle = StyleSheet.create({
     padding: 12,
   },
   eventName: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.primaryDark,
-    marginBottom: 5,
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.ink,
+    marginBottom: 4,
   },
   eventDateRow: {
     flexDirection: "row",
@@ -124,7 +126,8 @@ export const fanstyle = StyleSheet.create({
     gap: 5,
   },
   eventDate: {
-    fontSize: 12,
-    color: "#5a6880",
+    fontFamily: fonts.body,
+        fontSize: 12,
+    color: palette.textMuted,
   },
 });

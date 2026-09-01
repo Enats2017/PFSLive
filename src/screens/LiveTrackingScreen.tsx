@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, ActivityIndicator, StatusBar, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +17,7 @@ import { gpxService, GPXRouteData } from '../services/gpxService';
 import { buildChartData } from '../utils/geoUtils';
 import { ParticipantMapMarker, AidStationMapMarker, PopupState, CheckpointData } from '../types/liveTracking';
 import { useFollowManager } from '../hooks/useFollowManager';
-import { commonStyles, colors } from '../styles/common.styles';
+import { commonStyles, palette } from '../styles/common.styles';
 import { liveTrackingStyles } from '../styles/liveTracking.styles';
 import { ChartDataPoint } from '../types';
 import ErrorScreen from '../components/ErrorScreen';
@@ -569,7 +569,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     if (loading) {
         return (
             <View style={commonStyles.centerContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
+                <ActivityIndicator size="large" color={palette.navy} />
                 <Text style={commonStyles.loadingText}>{t('livetracking:loadingData')}</Text>
             </View>
         );
@@ -577,8 +577,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
                 <AppHeader title={event_name} showLogo={true} showBack />
                 <ErrorScreen
                     type={error!.type}
@@ -593,8 +592,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     // Handle no data separately — no error object needed
     if (isRrActive && !selectedDistance && !hasValidCoords) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
                 <AppHeader title={event_name} showLogo={true} showBack />
                 <ErrorScreen
                     type="empty"
@@ -605,14 +603,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}>
-            <StatusBar barStyle="dark-content" />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
             <AppHeader title={event_name} showLogo={true} showBack />
             {showDistanceDropdown && selectedDistance && (
                 <DistanceDropdown
                     distances={distances}
                     selectedDistance={selectedDistance}
                     onSelect={handleDistanceChange}
+                    isLive={isRrActive}
                 />
             )}
             <View style={{ flex: 1 }}>
@@ -652,6 +650,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                             totalDistance={routeData?.totalDistance ?? 0}
                             minElevation={routeData?.minElevation ?? 0}
                             maxElevation={routeData?.maxElevation ?? 0}
+                            elevationGain={routeData?.elevationGain ?? 0}
                             onAidStationPress={handleAidStationPress}
                             onParticipantPress={handleParticipantPress}
                         />
@@ -680,7 +679,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         <Ionicons
                             name={profileCollapsed ? 'chevron-up' : 'chevron-down'}
                             size={24}
-                            color={colors.gray900}
+                            color={palette.ink}
                         />
                     </TouchableOpacity>
                 )}

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { AidStationMapMarker } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
-import { colors } from '../../styles/common.styles';
+import { palette, fonts } from '../../styles/common.styles';
 import { getFeatureIcon } from '../../utils/featureIcons';
 
 // GPX <wpt> descriptions arrive as HTML (RouteYou exports use <br/>, <p>, <ul>/<li>,
@@ -88,12 +88,12 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
         <View style={liveTrackingStyles.popupOverlay}>
             <View style={liveTrackingStyles.popup}>
                 <TouchableOpacity style={liveTrackingStyles.popupCloseBtn} onPress={onClose}>
-                    <Ionicons name="close" size={24} color={colors.gray600} />
+                    <Ionicons name="close" size={24} color={palette.textBody} />
                 </TouchableOpacity>
 
                 <View style={liveTrackingStyles.aidStationHeader}>
                     <View style={liveTrackingStyles.aidStationIconCircle}>
-                        <Ionicons name="restaurant" size={24} color={colors.white} />
+                        <Ionicons name="restaurant" size={24} color={palette.surface} />
                     </View>
 
                     <View style={liveTrackingStyles.aidStationHeaderText}>
@@ -113,20 +113,22 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                     the popup never grows past the screen. Hidden when empty
                     (e.g. Start/Finish or checkpoints without a description). */}
                 {description.length > 0 && (
-                    <View style={{ paddingTop: 15, paddingBottom: 15 }}>
+                    <View style={{ paddingTop: 16, paddingBottom: 16 }}>
                         {descExpanded ? (
                             <ScrollView
                                 style={{ maxHeight: 180 }}
                                 nestedScrollEnabled
                                 showsVerticalScrollIndicator
                             >
-                                <Text style={{ fontSize: 13, lineHeight: 19, color: '#374151' }}>
+                                <Text style={{ fontFamily: fonts.body,
+        fontSize: 13, lineHeight: 19, color: palette.textBody }}>
                                     {description}
                                 </Text>
                             </ScrollView>
                         ) : (
                             <Text
-                                style={{ fontSize: 13, lineHeight: 19, color: '#374151' }}
+                                style={{ fontFamily: fonts.body,
+        fontSize: 13, lineHeight: 19, color: palette.textBody }}
                                 numberOfLines={4}
                             >
                                 {description}
@@ -136,10 +138,11 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                         {isLongDesc && (
                             <TouchableOpacity
                                 onPress={() => setDescExpanded(v => !v)}
-                                style={{ marginTop: 6 }}
+                                style={{ marginTop: 8 }}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
-                                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>
+                                <Text style={{ fontFamily: fonts.bodySemi,
+        fontSize: 12, color: palette.navy }}>
                                     {descExpanded ? t('livetracking:readLess') : t('livetracking:readMore')}
                                 </Text>
                             </TouchableOpacity>
@@ -149,7 +152,7 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
 
                 <View style={liveTrackingStyles.popupSection}>
                     <View style={liveTrackingStyles.aidStationInfoRow}>
-                        <Ionicons name="location-outline" size={18} color={colors.gray600} />
+                        <Ionicons name="location-outline" size={18} color={palette.textBody} />
                         <Text style={liveTrackingStyles.popupLabel}>
                             {t('livetracking:distance')}:
                         </Text>
@@ -158,7 +161,7 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                         </Text>
                     </View>
                     <View style={liveTrackingStyles.aidStationInfoRow}>
-                        <Ionicons name="trending-up-outline" size={18} color={colors.gray600} />
+                        <Ionicons name="trending-up-outline" size={18} color={palette.textBody} />
                         <Text style={liveTrackingStyles.popupLabel}>
                             {t('livetracking:elevation')}:
                         </Text>
@@ -167,14 +170,14 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                         </Text>
                     </View>
                     {features.length > 0 && (
-                        <View style={{ paddingTop: 10 }}>
+                        <View style={{ paddingTop: 8 }}>
                             <Text style={{
-                                fontSize: 11,
-                                fontWeight: '600',
-                                color: colors.gray500,
+                                fontFamily: fonts.bodySemi,
+        fontSize: 11,
+                                color: palette.textMuted,
                                 letterSpacing: 0.6,
                                 textTransform: 'uppercase',
-                                marginBottom: 7,
+                                marginBottom: 8,
                             }}>
                                 {t('livetracking:availableServices')}
                             </Text>
@@ -184,7 +187,7 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                                         <Ionicons
                                             name={getFeatureIcon(feature)}
                                             size={18}
-                                            color={colors.gray600}
+                                            color={palette.textBody}
                                         />
                                     </View>
                                 ))}
@@ -195,7 +198,7 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
 
                 {!station.accessible_by_car && (
                     <View style={liveTrackingStyles.warningBox}>
-                        <Ionicons name="car-outline" size={20} color={colors.warning} />
+                        <Ionicons name="car-outline" size={20} color={palette.warning} />
                         <Text style={liveTrackingStyles.warningText}>
                             {t('livetracking:noCarAccess')}
                         </Text>
@@ -206,7 +209,7 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                         style={liveTrackingStyles.directionsBtn}
                         onPress={openDirections}
                     >
-                        <Ionicons name="navigate" size={20} color={colors.white} />
+                        <Ionicons name="navigate" size={20} color={palette.surface} />
                         <Text style={liveTrackingStyles.directionsBtnText}>
                             {t('livetracking:getDirections')}
                         </Text>
@@ -216,9 +219,12 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                     paddingTop: 12,
                     alignItems: 'flex-end',
                 }}>
-                    <Text style={{ fontSize: 12, color: colors.gray600 }}>
+                    <Text style={{ fontFamily: fonts.body,
+        fontSize: 12, color: palette.textBody }}>
                         {t('livetracking:poweredBy')}{' '}
-                        <Text style={{ fontWeight: '700', color: colors.gray900 }}> {t('livetracking:livio')}</Text>
+                        <Text style={{ fontFamily: fonts.bodySemi,
+        fontSize: 13,
+        color: palette.ink }}> {t('livetracking:livio')}</Text>
                     </Text>
                 </View>
             </View>

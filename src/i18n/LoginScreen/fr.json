@@ -55,5 +55,7 @@
       "deviceIdTitle": "Appareil non reconnu",
       "deviceId": "Nous n'avons pas pu identifier ce téléphone. Redémarrez l'application et réessayez."
     }
-  }
+  },
+  "createAccount": "Créer un compte",
+  "noAccountNote": "La majorité de Livio fonctionne sans compte — il n’en faut un que pour courir ou suivre."
 }

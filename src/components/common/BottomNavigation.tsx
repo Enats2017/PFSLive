@@ -3,7 +3,7 @@ import { View, TouchableOpacity, Text } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { colors } from '../../styles/common.styles';
+import { palette } from '../../styles/common.styles';
 import { bottomNavStyles } from '../../styles/bottomNav.styles';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
@@ -220,12 +220,14 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
                 render every tab icon untinted and silently kill the grey/active
                 state. See the note in bottomNav.styles.ts for why the tint is
                 load-bearing rather than cosmetic. */}
-            <Image
-              source={tab.icon}
-              style={bottomNavStyles.iconImage}
-              tintColor={isActive ? colors.accent : colors.gray500}
-              contentFit="contain"
-            />
+            <View style={isActive ? bottomNavStyles.pill : bottomNavStyles.pillGhost}>
+              <Image
+                source={tab.icon}
+                style={bottomNavStyles.iconImage}
+                tintColor={isActive ? palette.ink : palette.textMuted}
+                contentFit="contain"
+              />
+            </View>
             <Text style={[bottomNavStyles.label, isActive && bottomNavStyles.labelActive]}>
               {tab.label}
             </Text>

@@ -9,7 +9,8 @@ import {
     StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/common.styles';
+import { palette, fonts, shadows } from '../styles/common.styles';
+import { useTranslation } from 'react-i18next';
 
 export type ModalActionType =  'disabled' | 'locked' | 'hidden';
 
@@ -25,9 +26,9 @@ interface MembershipActionModalProps {
 }
 
 const ICON_BY_ACTION: Record<ModalActionType, { name: any; color: string; bg: string }> = {
-    disabled: { name: 'lock-closed', color: '#9CA3AF', bg: '#F3F4F6' },
-    locked: { name: 'time-outline', color: '#F59E0B', bg: '#FEF3C7' },
-    hidden: { name: 'information-circle', color: '#3B82F6', bg: '#DBEAFE' },
+    disabled: { name: 'lock-closed', color: palette.textMuted, bg: palette.fill },
+    locked: { name: 'time-outline', color: palette.warning, bg: palette.warningBg },
+    hidden: { name: 'information-circle', color: palette.noticeText, bg: palette.noticeBg },
 };
 
 const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
@@ -40,6 +41,7 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
     onClose,
     onConfirm,
 }) => {
+  const { t } = useTranslation();
     const scale = useRef(new Animated.Value(0.85)).current;
     const opacity = useRef(new Animated.Value(0)).current;
 
@@ -79,7 +81,7 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
                             ]}
                         >
                             <TouchableOpacity style={styles.closeButton} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                                <Ionicons name="close" size={20} color="#6B7280" />
+                                <Ionicons name="close" size={20} color={palette.textMuted} />
                             </TouchableOpacity>
 
                             <View style={[styles.iconWrapper, { backgroundColor: icon.bg }]}>
@@ -92,7 +94,7 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
                             {showConfirm ? (
                                 <View style={styles.buttonRow}>
                                     <TouchableOpacity style={styles.secondaryButton} onPress={onClose}>
-                                        <Text style={styles.secondaryButtonText}>Cancel</Text>
+                                        <Text style={styles.secondaryButtonText}>{t('common:buttons.cancel')}</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity style={styles.primaryButton} onPress={onConfirm}>
                                         <Text style={styles.primaryButtonText}>{confirmLabel}</Text>
@@ -120,20 +122,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
     },
     card: {
+    ...shadows.overlay,
+
         width: '100%',
         maxWidth: 360,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
+        backgroundColor: palette.surface,
+        borderRadius: 16,
         paddingTop: 28,
-        paddingBottom: 22,
+        paddingBottom: 24,
         paddingHorizontal: 24,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-        elevation: 10,
-    },
+  },
     closeButton: {
         position: 'absolute',
         top: 16,
@@ -142,7 +141,7 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: palette.fill,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -155,18 +154,19 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     title: {
-        fontSize: 19,
-        fontWeight: '700',
-        color: '#111827',
+        fontFamily: fonts.display,
+        fontSize: 20,
+        color: palette.ink,
         textAlign: 'center',
         marginBottom: 8,
     },
     description: {
-        fontSize: 14,
-        color: '#6B7280',
+        fontFamily: fonts.body,
+        fontSize: 13,
+        color: palette.textMuted,
         textAlign: 'center',
         lineHeight: 20,
-        marginBottom: 22,
+        marginBottom: 24,
     },
     buttonRow: {
         flexDirection: 'row',
@@ -175,34 +175,34 @@ const styles = StyleSheet.create({
     },
     secondaryButton: {
         flex: 1,
-        paddingVertical: 13,
+        paddingVertical: 12,
         borderRadius: 14,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: palette.fill,
         alignItems: 'center',
     },
     secondaryButtonText: {
+        fontFamily: fonts.display,
         fontSize: 15,
-        fontWeight: '600',
-        color: '#374151',
+        color: palette.textBody,
     },
     primaryButton: {
         flex: 1,
-        paddingVertical: 13,
+        paddingVertical: 12,
         borderRadius: 14,
-        backgroundColor: colors.primary,
+        backgroundColor: palette.navy,
         alignItems: 'center',
     },
     primaryButtonFull: {
         width: '100%',
-        paddingVertical: 13,
+        paddingVertical: 12,
         borderRadius: 14,
-       backgroundColor: colors.primary,
+       backgroundColor: palette.navy,
         alignItems: 'center',
     },
     primaryButtonText: {
+        fontFamily: fonts.display,
         fontSize: 15,
-        fontWeight: '700',
-        color: colors.white,
+        color: palette.surface,
     },
 });
 

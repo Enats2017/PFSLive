@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { colors, spacing } from "./common.styles";
+import { spacing, palette, radii, space, type, fonts } from './common.styles';
 
  export const particpant = StyleSheet.create({
 
@@ -8,50 +8,48 @@ import { colors, spacing } from "./common.styles";
         gap: spacing.xl,
     },
 
-    yellowHeader: {
+    sectionLabel: {
         flexDirection: 'row',
-        backgroundColor: colors.themeiColor,
-       
-        paddingVertical: spacing.sm,
         alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: spacing.xl
+        gap: space.sm,
+        paddingHorizontal: space.xl,
+        paddingTop: space.lg,
+        paddingBottom: space.sm,
     },
-    yellowHeaderText: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: '#1a1a1a',
-        letterSpacing: 0.5,
-        textTransform: 'uppercase',
+    sectionLabelText: {
+        ...type.label,
+        color: palette.textMuted,
     },
 
     dividerRow: {
-     
         paddingVertical: spacing.xl,
         flexDirection: 'row',
         alignItems: 'center',
-       
+        gap: space.md,
+    },
+    dividerOr: {
+        ...type.small,
     },
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: colors.gray200,
+        backgroundColor: palette.border,
     },
     dividerLabel: {
+        fontFamily: fonts.bodySemi,
         fontSize: 12,
-        fontWeight: '600',
-        color: colors.gray400,
+        color: palette.placeholder,
         letterSpacing: 1,
     },
 
     infoCard: {
         flexDirection: 'row',
-        backgroundColor: '#f8f8f8',
-        borderRadius: 10,
+        backgroundColor: palette.noticeBg,
+        borderRadius: radii.md,
         padding: spacing.md,
         gap: spacing.xs,
         borderLeftWidth: 3,
-        borderLeftColor: colors.themeiColor,
+        borderLeftColor: palette.lime,
     },
 
 });

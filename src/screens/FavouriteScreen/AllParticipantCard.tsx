@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Participant } from '../../services/participantService';
-import { colors, commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette } from '../../styles/common.styles';
 import { favstyle } from '../../styles/favourite.style';
 
 interface AllParticipantCardProps {
@@ -50,11 +50,11 @@ const AllParticipantCard: React.FC<AllParticipantCardProps> = React.memo(({
                 disabled={isLoading}
             >
                 {isLoading ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
+                    <ActivityIndicator size="small" color={palette.navy} />
                 ) : isFollowed ? (
-                    <Ionicons name="checkmark" size={22} color={colors.primary} />
+                    <Ionicons name="checkmark" size={22} color={palette.navy} />
                 ) : (
-                    <Ionicons name="add" size={22} color="#999" />
+                    <Ionicons name="add" size={22} color={palette.placeholder} />
                 )}
             </TouchableOpacity>
         </View>

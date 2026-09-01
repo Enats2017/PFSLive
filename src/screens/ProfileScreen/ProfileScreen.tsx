@@ -5,7 +5,6 @@ import {
     TouchableOpacity,
     FlatList,
     ActivityIndicator,
-    StatusBar,
     ScrollView
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import LiveTab from './LiveTab';
 import PastTab from './PastTab';
@@ -339,11 +338,10 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
 
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={t('common:band.athlete')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
             </SafeAreaView>
         );
@@ -351,9 +349,8 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={t('common:band.athlete')} showLogo={true} showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -365,15 +362,15 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={t('common:band.athlete')} showLogo={true} showBack />
 
             <ScrollView                
                 nestedScrollEnabled={true}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{
                     flexGrow: 1,
+                    paddingBottom: spacing.xxxxl,
                 }}
             >
                 <ProfileCard
@@ -391,27 +388,23 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                     }}
                 />
 
+                {/* ✅ Section label — the deck titles the race block above
+                    its Past/Live filter. */}
+                <Text style={detailsStyles.sectionLabel}>{t('profile:sections.recentRaces')}</Text>
+
                 <View style={detailsStyles.tabBar}>
                     {TABS.map(tab => {
                         const isActive = activeTab === tab;
                         return (
                             <TouchableOpacity
                                 key={tab}
-                                style={detailsStyles.tabItem}
+                                style={[detailsStyles.tabItem, isActive && detailsStyles.tabItemActive]}
                                 onPress={() => handleTabPress(tab)}
                                 activeOpacity={0.7}
                             >
                                 <Text style={[commonStyles.subtitle, isActive && detailsStyles.activeTabText]}>
                                     {t(`profile:tab.${tab}`)}
                                 </Text>
-                                {isActive && (
-                                    <LinearGradient
-                                        colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                        style={detailsStyles.underline}
-                                    />
-                                )}
                             </TouchableOpacity>
                         );
                     })}

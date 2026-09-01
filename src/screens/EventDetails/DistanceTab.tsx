@@ -11,7 +11,7 @@ import {
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette, fonts } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
 import RegistrationModal from '../../components/RegistrationModal';
@@ -371,7 +371,7 @@ const handleExternalRegister = useCallback((url: string) => {
             {imageLoading && (
               <ActivityIndicator
                 size="large"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ position: 'absolute', zIndex: 1 }}
               />
             )}
@@ -396,7 +396,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
         <View style={detailsStyles.infoBox}>
           <View style={detailsStyles.infoIconWrapper}>
-            <AntDesign name="link" size={20} color={colors.primaryDark} />
+            <AntDesign name="link" size={20} color={palette.ink} />
           </View>
           <Text style={detailsStyles.infoBoxText}>
             {t('details:connectInfo')}
@@ -422,14 +422,14 @@ const handleExternalRegister = useCallback((url: string) => {
             </Text>
 
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
+              <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
               <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.race_date_formatted}
               </Text>
             </View>
 
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="time-outline" size={15} color={colors.gray600} />
+              <Ionicons name="time-outline" size={15} color={palette.textBody} />
               <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {formatClockTime(item.race_time)}
               </Text>
@@ -437,7 +437,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Feather name="users" size={16} color={colors.gray500} />
+                <Feather name="users" size={16} color={palette.textMuted} />
                 <Text style={detailsStyles.metaText} numberOfLines={1}>
                   {item.participant_started_count} {t('details:athletes')}
                 </Text>
@@ -446,7 +446,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
+                <Ionicons name="ribbon-outline" size={15} color={palette.textBody} />
                 <Text style={detailsStyles.metaText} numberOfLines={1}>
                   {item.finished_count} {t('details:finished')}
                 </Text>
@@ -455,7 +455,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
+                <Ionicons name="close-circle-outline" size={15} color={palette.textBody} />
                 <Text style={detailsStyles.metaTextRed} numberOfLines={1}>
                   {item.dnf_count} {t('details:dnf')}
                 </Text>
@@ -463,7 +463,7 @@ const handleExternalRegister = useCallback((url: string) => {
             )}
 
             <View style={detailsStyles.metaRow}>
-              <MaterialCommunityIcons name="timer-sand" size={15} color={colors.gray600} />
+              <MaterialCommunityIcons name="timer-sand" size={15} color={palette.textBody} />
               <CountdownBadge
                 days={item.countdown.days}
                 hours={item.countdown.hours}
@@ -490,9 +490,9 @@ const handleExternalRegister = useCallback((url: string) => {
                 activeOpacity={0.8}
               >
               {isRegistering ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={palette.surface} />
               ) : (
-                <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
+                <Text style={detailsStyles.resultsButtonText}>
                 {item.registration_status === 'registered'
                   ? t('details:undo')
                   : isRegisterMode
@@ -509,7 +509,7 @@ const handleExternalRegister = useCallback((url: string) => {
               onPress={() => handleDownloadGpx(item)}
               activeOpacity={0.8}
             >
-              <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
+              <Text style={detailsStyles.routeButtonText}>
                 {t('details:gpx')}
               </Text>
             </TouchableOpacity>
@@ -520,7 +520,7 @@ const handleExternalRegister = useCallback((url: string) => {
               onPress={() => handleMapClick(item)}
               activeOpacity={0.8}
             >
-              <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
+              <Text style={detailsStyles.routeButtonText}>
                 {t('details:map')}
               </Text>
             </TouchableOpacity>
@@ -532,7 +532,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
   if (loading) {
     return (
-      <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+      <ActivityIndicator size="large" color={palette.navy} style={{ marginTop: 40 }} />
     );
   }
 
@@ -566,7 +566,7 @@ const handleExternalRegister = useCallback((url: string) => {
         keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 50, }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 48, }}
         renderItem={renderItem}
         ListHeaderComponent={renderListHeader}
       />

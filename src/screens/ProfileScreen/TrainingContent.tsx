@@ -9,7 +9,7 @@ import {
     Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { EventCard } from './EventCardLive';
 import { ownProfile } from '../../styles/ownProfile.styles';
@@ -80,7 +80,7 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
         return (
             <ActivityIndicator
                 size="small"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ marginVertical: spacing.md }}
             />
         );
@@ -106,7 +106,7 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
             }}
         >
             <TouchableOpacity style={ownProfile.backRow} onPress={onBack} activeOpacity={0.7}>
-                <Ionicons name="arrow-back" size={22} color={colors.gray900} />
+                <Ionicons name="arrow-back" size={22} color={palette.ink} />
                 <Text style={ownProfile.backLabel}>{t('ownProfile:backbtn.training')}</Text>
             </TouchableOpacity>
 
@@ -116,7 +116,7 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
                     onPress={handleCreatePersonalEvent}
                     activeOpacity={0.85}
                 >
-                    <Ionicons name="add-circle-outline" size={20} color={colors.gray900} />
+                    <Ionicons name="add-circle-outline" size={20} color={palette.ink} />
                     <Text style={ownProfile.createBtnText}>{t('ownProfile:training.create')}</Text>
                 </TouchableOpacity>
             )}
@@ -132,7 +132,7 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
                     nestedScrollEnabled={true}
                 
                     contentContainerStyle={{
-                        paddingHorizontal: spacing.md,
+                        paddingHorizontal: spacing.xl,
                         paddingTop: spacing.xs,
                         paddingBottom: spacing.xxxxl,
                         flexGrow: 1,

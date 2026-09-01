@@ -3,7 +3,6 @@ import {
     Animated,
     Platform,
     ScrollView,
-    StatusBar,
     Text,
     TouchableOpacity,
     View,
@@ -16,7 +15,7 @@ import { SafeAreaView,useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
@@ -171,13 +170,14 @@ const FollowerScreen = () => {
     const renderContent = () => (
         <>
             <View style={{ zIndex: 30, elevation: 30 }}>
-                <View style={follow.yellowHeader}>
-                    <Feather name="radio" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                    <Text style={commonStyles.title}>{t('follow:upcomingrace')}</Text>
+                <View style={follow.sectionLabel}>
+                    <Feather name="radio" size={14} color={palette.lime} />
+                    <Text style={follow.sectionLabelText}>{t('follow:upcomingrace')}</Text>
                 </View>
                 <View style={follow.section}>
                     <SearchInput
-                        placeholder={t('follow:search.upcomgsearch')}
+                        framed={false}
+                        placeholder={t('follow:search.upcomingSearch')}
                         value={upcoming.query}
                         onChangeText={upcoming.handleSearch}
                         icon="search"
@@ -189,24 +189,25 @@ const FollowerScreen = () => {
                         onSelect={handleUpcomingSelect}
                     />
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.md }]}
+                        style={[commonStyles.outlineButton, { flexDirection: 'row', marginTop: spacing.md }]}
                         onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Live' })}
                         activeOpacity={0.8}
                     >
-                        <Feather name="calendar" size={15} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={commonStyles.primaryButtonText}>{t('follow:button.upcoming')}</Text>
+                        <Feather name="calendar" size={15} color={palette.navy} style={{ marginRight: 8 }} />
+                        <Text style={commonStyles.outlineButtonText}>{t('follow:button.upcoming')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
             <Divider />
             <View style={{ zIndex: 20, elevation: 20 }}>
-                <View style={follow.yellowHeader}>
-                    <Feather name="radio" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                    <Text style={commonStyles.title}>{t('follow:pastrace')}</Text>
+                <View style={follow.sectionLabel}>
+                    <Feather name="radio" size={14} color={palette.lime} />
+                    <Text style={follow.sectionLabelText}>{t('follow:pastrace')}</Text>
                 </View>
                 <View style={follow.section}>
                     <SearchInput
-                        placeholder={t('follow:search.upcomgsearch')}
+                        framed={false}
+                        placeholder={t('follow:search.upcomingSearch')}
                         value={past.query}
                         onChangeText={past.handleSearch}
                         icon="search"
@@ -218,23 +219,24 @@ const FollowerScreen = () => {
                         onSelect={handlePastSelect}
                     />
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.md }]}
+                        style={[commonStyles.outlineButton, { flexDirection: 'row', marginTop: spacing.md }]}
                         onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Past' })}
                         activeOpacity={0.8}
                     >
-                        <Feather name="calendar" size={15} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={commonStyles.primaryButtonText}>{t('follow:button.past')}</Text>
+                        <Feather name="calendar" size={15} color={palette.navy} style={{ marginRight: 8 }} />
+                        <Text style={commonStyles.outlineButtonText}>{t('follow:button.past')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
             <Divider />
             <View style={{ zIndex: 10, elevation: 10 }}>
-                <View style={follow.yellowHeader}>
-                    <Feather name="plus-circle" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                    <Text style={commonStyles.title}>{t('follow:athlete')}</Text>
+                <View style={follow.sectionLabel}>
+                    <Feather name="plus-circle" size={18} color={palette.ink} style={{ marginRight: 8 }} />
+                    <Text style={follow.sectionLabelText}>{t('follow:athlete')}</Text>
                 </View>
                 <View style={follow.section}>
                     <SearchInput
+                        framed={false}
                         placeholder={t('follow:search.athletesearch')}
                         value={athleteQuery}
                         onChangeText={handleAthleteSearch}
@@ -252,12 +254,12 @@ const FollowerScreen = () => {
                         hasMore={athletePage < athleteTotalPages}
                     />
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.xl }]}
+                        style={[commonStyles.outlineButton, { flexDirection: 'row', marginTop: spacing.xl }]}
                         onPress={() => navigation.navigate('AthleteSearchScreen', {})}
                         activeOpacity={0.8}
                     >
-                        <Feather name="search" size={15} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={commonStyles.primaryButtonText}>
+                        <Feather name="search" size={15} color={palette.navy} style={{ marginRight: 8 }} />
+                        <Text style={commonStyles.outlineButtonText}>
                             {t('follow:button.athlete')}
                         </Text>
                     </TouchableOpacity>
@@ -265,12 +267,12 @@ const FollowerScreen = () => {
             </View>
             <View style={[follow.section, { zIndex: 1, elevation: 1 }]}>
                 <TouchableOpacity
-                    style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.xl, gap: 8 }]}
+                    style={[commonStyles.limeButton, { flexDirection: 'row', marginTop: spacing.xl, gap: 8 }]}
                     onPress={() => navigation.navigate('UserFavouriteList')}
                     activeOpacity={0.8}
                 >
-                    <MaterialIcons name="favorite-outline" size={18} color={colors.white} />
-                    <Text style={commonStyles.primaryButtonText}>
+                    <MaterialIcons name="favorite-outline" size={18} color={palette.ink} />
+                    <Text style={commonStyles.limeButtonText}>
                         {t('follow:button.favourite')}
                     </Text>
                 </TouchableOpacity>
@@ -279,9 +281,8 @@ const FollowerScreen = () => {
     );
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={t('common:band.findRace')} showBack />
 
             <Animated.View
                 style={{

@@ -23,6 +23,8 @@ export interface GPXRouteData {
     totalDistance: number;
     minElevation: number;
     maxElevation: number;
+    /** Total ascent (D+) in metres — the sum of the positive elevation deltas. */
+    elevationGain: number;
 }
 
 class GPXService {
@@ -77,6 +79,12 @@ class GPXService {
             const minElevation = Math.min(...elevations);
             const maxElevation = Math.max(...elevations);
 
+            let elevationGain = 0;
+            for (let i = 1; i < elevations.length; i++) {
+                const d = elevations[i] - elevations[i - 1];
+                if (d > 1) elevationGain += d;
+            }
+
             const routeData: GPXRouteData = {
                 name: parsed.name,
                 trackPoints: parsed.trackPoints,
@@ -84,6 +92,7 @@ class GPXService {
                 totalDistance,
                 minElevation,
                 maxElevation,
+                elevationGain: Math.round(elevationGain),
             };
 
             // ✅ Store in memory cache with ETag/LastModified for next request

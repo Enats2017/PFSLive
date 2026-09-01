@@ -6,7 +6,7 @@ import { ChartDataPoint } from '../../types';
 import { GPXAidStation } from '../../services/gpxService';
 import { ParticipantMapMarker, AidStationMapMarker, CheckpointData } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
-import { colors } from '../../styles/common.styles';
+import { palette, mapColors, fonts, withAlpha } from '../../styles/common.styles';
 
 interface LiveElevationProfileProps {
     chartData: ChartDataPoint[];
@@ -17,6 +17,7 @@ interface LiveElevationProfileProps {
     totalDistance: number;
     minElevation: number;
     maxElevation: number;
+    elevationGain?: number;
     onAidStationPress?: (station: AidStationMapMarker) => void;
     onParticipantPress?: (participant: ParticipantMapMarker) => void;
 }
@@ -30,6 +31,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     totalDistance,
     minElevation,
     maxElevation,
+    elevationGain = 0,
     onAidStationPress,
     onParticipantPress,
 }) => {
@@ -269,7 +271,14 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
         // be visible behind it, the parent chartContainer must overlap the map —
         // see the absolute-overlay snippet in LiveTrackingScreen.)
         <View style={[liveTrackingStyles.profileContainer, { backgroundColor: 'transparent' }]}>
-            <Text style={liveTrackingStyles.profileTitle}>{t('elevationProfile')}</Text>
+            <View style={liveTrackingStyles.profileHeader}>
+                <Text style={liveTrackingStyles.profileTitle}>{t('elevationProfile')}</Text>
+                {elevationGain > 0 && (
+                    <Text style={liveTrackingStyles.profileGain}>
+                        {elevationGain.toLocaleString()} {t('meterDPlus', 'm D+')}
+                    </Text>
+                )}
+            </View>
 
             <ScrollView
                 ref={scrollViewRef}  // ✅ NEW: attach ref
@@ -306,8 +315,9 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                             style={{
                                 data: {
                                     // Lighter fill so the map reads through the elevation shape.
-                                    fill: 'rgba(59, 130, 246, 0.25)',
-                                    stroke: '#3B82F6',
+                                    // Tint of the route colour, not the retired blue.
+                                    fill: withAlpha(mapColors.route, 0.25),
+                                    stroke: mapColors.route,
                                     strokeWidth: 3,
                                 },
                             }}
@@ -324,7 +334,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                     data: {
                                         // Light grey, but semi-transparent dark so it stays visible
                                         // over the map (pure #D1D5DB washed out on the overlay).
-                                        stroke: 'rgba(75, 85, 99, 0.45)',
+                                        stroke: withAlpha(palette.textBody, 0.45),
                                         strokeWidth: 1,
                                     },
                                 }}
@@ -340,7 +350,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                 ]}
                                 style={{
                                     data: {
-                                        stroke: colors.black,
+                                        stroke: palette.ink,
                                         strokeWidth: 1.5,
                                         strokeDasharray: '4,3',
                                     },
@@ -354,8 +364,8 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                 size={9}
                                 style={{
                                     data: {
-                                        fill: colors.black,
-                                        stroke: colors.white,
+                                        fill: palette.ink,
+                                        stroke: palette.surface,
                                         strokeWidth: 2.5,
                                     },
                                 }}
@@ -373,11 +383,11 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                         // (is_estimated); live / stale-but-real / finished → solid.
                                         fill: ({ datum }: any) =>
                                             datum?.participant?.connection_status === 'offline'
-                                                ? '#94A3B8'
-                                                : '#F97316',
+                                                ? mapColors.offline
+                                                : mapColors.participant,
                                         opacity: ({ datum }: any) =>
                                             datum?.participant?.is_estimated ? 0.55 : 1,
-                                        stroke: colors.white,
+                                        stroke: palette.surface,
                                         strokeWidth: 2.5,
                                     },
                                 }}
@@ -393,10 +403,10 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                     y={14}
                                     text={`${distance} km`}
                                     style={{
-                                        fontSize: 10,
-                                        fill: colors.gray700,
-                                        fontWeight: '600',
-                                    }}
+                                        fontFamily: fonts.bodySemi,
+        fontSize: 10,
+                                        fill: palette.textBody,
+                                        }}
                                     textAnchor="start"
                                     backgroundStyle={{ fill: 'rgba(255, 255, 255, 0.85)' }}
                                     backgroundPadding={3}
@@ -417,9 +427,9 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                     top: t.sy - 7,
                                     width: 22,
                                     textAlign: 'center',
-                                    color: colors.white,
-                                    fontSize: 10,
-                                    fontWeight: '700',
+                                    color: palette.surface,
+                                    fontFamily: fonts.bodySemi,
+        fontSize: 10,
                                     zIndex: 20,
                                     elevation: 20,
                                 }}

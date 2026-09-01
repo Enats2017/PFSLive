@@ -5,14 +5,14 @@
   },
   "buttons": {
     "editProfile": "Profiel bewerken",
-    "edit_personal_event": "PERSOONLIJK EVENEMENT BEWERKEN",
-    "live_tracking_progress": "LIVE TRACKING BEZIG",
-    "live_tracking_soon": "LIVE TRACKING START BINNENKORT",
-    "enable_gps": "SCHAKEL GPS IN OM TRACKING TE STARTEN",
+    "edit_personal_event": "Persoonlijk evenement bewerken",
+    "live_tracking_progress": "Live tracking bezig",
+    "live_tracking_soon": "Live tracking start binnenkort",
+    "enable_gps": "Schakel GPS in om tracking te starten",
     "load_more": "Meer laden",
-    "save_changes": "WIJZIGINGEN OPSLAAN",
-    "edit_live_tracking_event": "LIVE TRACKING BEWERKEN",
-    "live_tracking_ended": "LIVE TRACKING BEËINDIGD"
+    "save_changes": "Wijzigingen opslaan",
+    "edit_live_tracking_event": "Live tracking bewerken",
+    "live_tracking_ended": "Live tracking beëindigd"
   },
   "errors": {
     "user_not_found": "Gebruiker niet gevonden. Log opnieuw in.",
@@ -54,7 +54,7 @@
     "no_live_events_msg": "Er zijn momenteel geen lopende evenementen.\nKom later nog eens terug."
   },
   "past": {
-    "view_results": "BEKIJK RESULTATEN",
+    "view_results": "Bekijk resultaten",
     "no_events": "Geen eerdere evenementen gevonden",
     "no_events_msg": "Je hebt nog niet deelgenomen aan evenementen.\nJe eerdere evenementen verschijnen hier."
   },
@@ -92,9 +92,10 @@
     "choose_gallery": "Kies uit galerij"
   },
   "sections": {
-    "personal_info": "PERSOONLIJKE INFORMATIE",
-    "change_password": "WACHTWOORD WIJZIGEN",
-    "password_hint": "Laat leeg om huidig te behouden"
+    "personal_info": "Persoonlijke informatie",
+    "change_password": "Wachtwoord wijzigen",
+    "password_hint": "Laat leeg om huidig te behouden",
+    "recentRaces": "Recente wedstrijden"
   },
   "languages": {
     "english": "Engels",

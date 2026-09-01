@@ -9,7 +9,7 @@
   "fields": {
     "name": {
       "label": "Name",
-      "placeholder": "Enter Your Name"
+      "placeholder": "Enter your name"
     },
     "email": {
       "label": "Email",
@@ -32,7 +32,7 @@
     "other": "Something else"
   },
   "button": {
-    "send": "Send Feedback",
+    "send": "Send feedback",
     "sending": "Sending..."
   },
   "footer": "Your app version and device details are sent automatically to help us debug.",
@@ -51,5 +51,10 @@
     "body": "You'll get a confirmation email, and we'll reply if it needs one.",
     "backToProfile": "Back to profile",
     "toastMessage": "Feedback sent successfully!"
+  },
+  "reachUs": {
+    "title": "Other ways to reach us",
+    "email": "support@liviolive.com",
+    "replyTime": "We usually reply within one working day."
   }
 }

@@ -1,12 +1,13 @@
 import React, { memo, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
-import { colors } from '../../styles/common.styles';
+import { palette, categoryColors, fonts, space } from '../../styles/common.styles';
 import { formatClockTime } from '../../utils/timeFormat';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
@@ -143,7 +144,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
             </Text>
             <Text style={[
                 resultListStyle.statVal,
-                { color: cp?.is_crossed ? '#000' : '#9CA3AF' }
+                { color: cp?.is_crossed ? palette.ink : palette.placeholder }
             ]}>
                 {cp?.race_time || '-'}
             </Text>
@@ -151,78 +152,61 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     );
 
     return (
-        <View style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: colors.pinkcolor }]}>
+        <View style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: categoryColors.women }]}>
 
-            <TouchableOpacity
-                style={[
-                    resultListStyle.cornerBadge,
-                    isWomen
-                        ? { backgroundColor: colors.pinkcolor }  
-                        : hasFinished
-                            ? { backgroundColor: "#028A77" } 
-                            : null, 
-                ]}
-                onPress={handleStarPress}
-                activeOpacity={0.8}
-                disabled={isLoading}
-            >
-                <Text style={isFollowed ? resultListStyle.cornerStar : resultListStyle.cornerStarUnfilled}>
-                    ★
-                </Text>
-                <View style={resultListStyle.cornerBadgeRight}>
-                    <Text style={resultListStyle.cornerNum}>
-                        {badgeNumber}
+            {/* Row head — rank circle, identity, follow star. */}
+            <View style={resultListStyle.rowHead}>
+                <View style={[resultListStyle.rankCircle, hasFinished && resultListStyle.rankCircleFinished]}>
+                    <Text style={[resultListStyle.rankText, hasFinished && resultListStyle.rankTextFinished]}>
+                        {badgeNumber || '-'}
                     </Text>
-                    {genderRank && (
-                        <Text style={resultListStyle.cornerGenderRank}> {genderRank}</Text>
-                    )}
                 </View>
-            </TouchableOpacity>
+                <View style={resultListStyle.cardTop}>
+                    <Text style={resultListStyle.cardName} numberOfLines={1}>{item.name}</Text>
+                    {/* The flag and age were part of this row before the redesign and
+                        are kept: the deck's example runner simply had neither. */}
+                    <View style={resultListStyle.metaLine}>
+                        {!!item.nation_flag && (
+                            <SvgUri uri={item.nation_flag} width={18} height={13} />
+                        )}
+                        <Text style={resultListStyle.bibText} numberOfLines={1}>
+                            {[`${t('allrace:race.bibNumber')} ${item.bib}`, item.club, item.nation, item.age,
+                              item.wave ? `${t('allrace:race.wavelabel')} ${item.wave}` : null]
+                                .filter(Boolean).join(' \u00b7 ')}
+                        </Text>
+                    </View>
+                </View>
+                <TouchableOpacity
+                    onPress={handleStarPress}
+                    disabled={isLoading}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={isFollowed ? 'Unfollow athlete' : 'Follow athlete'}
+                >
+                    <Ionicons
+                        name={isFollowed ? 'star' : 'star-outline'}
+                        size={26}
+                        color={isFollowed ? palette.lime : palette.placeholder}
+                    />
+                </TouchableOpacity>
+            </View>
 
             <TouchableOpacity onPress={handleCardPress} activeOpacity={0.7}>
-                <View style={resultListStyle.cardTop}>
-                    <View style={resultListStyle.cardTopLeft}>
-                        <Text style={resultListStyle.cardName}>{item.name}</Text>
-                    </View>
-                    <View style={{ width: 100 }} />
-                </View>
-
-                <Text style={resultListStyle.bibText}>
-                    {t('allrace:race.bibNumber')} {item.bib}
-                </Text>
-
-                <View style={resultListStyle.metaBlock}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        {item.nation_flag ? (
-                            <SvgUri
-                                uri={item.nation_flag}
-                                width={20}
-                                height={14}
-                            />
-                        ) : null}
-                        <Text style={resultListStyle.teamText} numberOfLines={1}>
-                            {[item.club, item.nation, item.age].filter(Boolean).join(' · ')}
-                        </Text>
-                    </View>
-                    {item.wave ? (
-                        <Text style={resultListStyle.waveText} numberOfLines={1}>
-                            {t('allrace:race.wavelabel')}: {item.wave}
-                        </Text>
-                    ) : null}
-                </View>
 
                 {hasUtmbIndex && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: space.md }}>
                         <View style={resultListStyle.utmbBadge}>
                         <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
                         <Text style={resultListStyle.utmbBadgeTextBottom}>Index</Text>
                         </View>
-                        <Text style={[resultListStyle.utmbValue, { fontSize: 16 }]}>{item.utmb_index}</Text>
+                        <Text style={[resultListStyle.utmbValue, { fontFamily: fonts.body,
+        fontSize: 15 }]}>{item.utmb_index}</Text>
                     </View>
                 )}
 
                 {isLive && !isCheckpointMode && (
-                    <View style={{ marginTop: 6 }}>
+                    <View style={{ marginTop: 8 }}>
                         <LiveTrackingBar />
                     </View>
                 )}
@@ -240,7 +224,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
                                     : t('allrace:race.raceTime')}
                             </Text>
-                            <Text style={[resultListStyle.statVal, { color: lastCrossed?.race_time ? '#22C55E' : '#9CA3AF' }]}>
+                            <Text style={[resultListStyle.statVal, { color: lastCrossed?.race_time ? palette.lime : palette.placeholder }]}>
                                 {lastCrossed?.race_time || item.time || '-'}
                             </Text>
                         </View>
@@ -249,8 +233,9 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     {fromLive === 0 ? (
                         isCheckpointMode ? (
                             <View style={[resultListStyle.statCol, resultListStyle.statColLeft]}>
-                                <Text style={resultListStyle.statLabel}>
-                                    {t('allrace:race.ranking')}{'\n'}{cp1 ? truncateCheckpointName(cp1.name) : ''}
+                                <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                                    {[t('allrace:race.ranking'), cp1 ? truncateCheckpointName(cp1.name) : '']
+                                        .filter(Boolean).join(' ')}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
                                     {cp1?.is_crossed ? (cp1?.ranking || '-') : '-'}
@@ -258,10 +243,13 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             </View>
                         ) : (
                             <View style={[resultListStyle.statCol, resultListStyle.statColLeft]}>
-                                <Text style={resultListStyle.statLabel}>
-                                    {t('allrace:race.ranking')}{'\n'}{item.category_name}
+                                <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                                    {[t('allrace:race.ranking'), item.category_name]
+                                        .filter(Boolean).join(' ')}
                                 </Text>
-                                <Text style={resultListStyle.statVal}>{item.finish_rank_agegroup}</Text>
+                                <Text style={resultListStyle.statVal}>
+                                    {[item.finish_rank_agegroup, genderRank].filter(Boolean).join(' · ')}
+                                </Text>
                             </View>
                         )
                     ) : isCheckpointMode ? (

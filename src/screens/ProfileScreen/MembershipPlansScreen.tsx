@@ -4,7 +4,6 @@ import {
     Text,
     TouchableOpacity,
     ScrollView,
-    StatusBar,
     ActivityIndicator,
     Linking,
     Alert,
@@ -13,7 +12,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { colors, commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette } from '../../styles/common.styles';
+import { AppHeader } from '../../components/common/AppHeader';
+import { Button } from '../../components/ui';
 import { membershipPlansStyle as styles, COLORS } from '../../styles/membershipPlans.styles';
 import { useMembershipPlans, PlanId, PLAN_IDS } from '../../hooks/useMembershipplans';
 import MembershipPlanModel, { ModalActionType } from '../../components/MembershipPlanModel';
@@ -261,20 +262,23 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 activeOpacity={0.85}
                 onPress={() => handlePlanPress(id)}
                 style={[styles.card, isSelected ? styles.cardSelected : styles.cardUnselected]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={`${plan.name}, ${getPriceLabel(id)} ${plan.period}`}
             >
-                {plan.popularLabel && (
+                {!!plan.popularLabel && (
                     <View style={styles.popularBadge}>
-                        <Text style={[styles.popularBadgeText, isSelected && styles.popularselectedtext]}>{plan.popularLabel}</Text>
+                        <Text style={styles.popularBadgeText}>{plan.popularLabel}</Text>
                     </View>
                 )}
 
                 {isSelected && (
                     <View style={styles.checkCircle}>
-                        <Ionicons name="checkmark" size={15} color={colors.themeiColor} />
+                        <Ionicons name="checkmark" size={11} color={palette.navy} />
                     </View>
                 )}
 
-                <View style={styles.cardHeaderRow}>
+                <View style={styles.planRow}>
                     <Text style={[styles.planName, isSelected && styles.textLight]}>
                         {plan.name}
                     </Text>
@@ -284,18 +288,16 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                                 styles.sessionsBadgeText,
                                 isSelected && styles.sessionsBadgeTextSelected,
                             ]}
+                            numberOfLines={1}
                         >
                             {getSessionsLabel(id)}
                         </Text>
                     </View>
-                </View>
-
-                <View style={styles.priceRow}>
-                    <Text style={[styles.price, isSelected && styles.textLight]}>
+                    <View style={styles.spacer} />
+                    <Text style={[styles.price, isSelected && styles.textLight]} numberOfLines={1}>
                         {getPriceLabel(id)}
                     </Text>
-                    <Text style={[styles.period, isSelected && styles.periodLight]}>
-                        {' '}
+                    <Text style={[styles.period, isSelected && styles.mutedLight]}>
                         {plan.period}
                     </Text>
                 </View>
@@ -303,13 +305,9 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 <View style={styles.featuresWrapper}>
                     {plan.features.map((feature, idx) => (
                         <View key={idx} style={styles.featureRow}>
-                            <Ionicons
-                                name="checkmark"
-                                size={18}
-                                color={isSelected ? COLORS.navy : COLORS.darkText}
-                            />
+                            <Ionicons name="checkmark" size={14} color={palette.lime} />
                             <Text
-                                style={[styles.featureText, isSelected && styles.featureTextLight]}
+                                style={[styles.featureText, isSelected && styles.mutedLight]}
                             >
                                 {feature}
                             </Text>
@@ -322,10 +320,10 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     if (loadingPlans || loadingPrices) {
         return (
-            <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.themeiColor }]} edges={['top']}>
-                <StatusBar barStyle="light-content" backgroundColor={colors.themeiColor} />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={t('common:band.membership')} showBack />
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <ActivityIndicator size="large" color={COLORS.white} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
             </SafeAreaView>
         );
@@ -333,40 +331,38 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     if (plansError) {
         return (
-            <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.themeiColor }]} edges={['top']}>
-                <StatusBar barStyle="light-content" backgroundColor={colors.themeiColor} />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={t('common:band.membership')} showBack />
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
-                    <Text style={{ color: COLORS.white, textAlign: 'center', marginBottom: 16 }}>
+                    <Text style={[styles.headerSubtitle, { textAlign: 'center', marginBottom: 16 }]}>
                         {plansError}
                     </Text>
-                    <TouchableOpacity onPress={refetchPlans} style={styles.ctaButton}>
-                        <Text style={styles.ctaButtonText}>{t('membership:retry') as string}</Text>
-                    </TouchableOpacity>
+                    <Button
+                        label={t('membership:retry') as string}
+                        onPress={refetchPlans}
+                        fullWidth={false}
+                    />
                 </View>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.themeiColor }]} edges={['top' ]}>
-            <StatusBar barStyle="light-content" backgroundColor={colors.themeiColor} />
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="chevron-back" size={22} color={COLORS.navy} />
-                    <Text style={styles.headerLabel}>{t('membership:header.label')}</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.headerTitle}>{t('membership:header.title')}</Text>
-                <Text style={styles.headerSubtitle}>{t('membership:header.subtitle')}</Text>
-            </View>
+        <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            {/* The screen name now lives in the header's lime band, so
+                membership:header.label is no longer rendered here. */}
+            <AppHeader title={t('common:band.membership')} showBack />
 
             <ScrollView
                 style={styles.scroll}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
+                <Text style={styles.headerTitle}>{t('membership:header.title')}</Text>
+                <Text style={styles.headerSubtitle}>{t('membership:header.subtitle')}</Text>
+
                 <View style={styles.infoBanner}>
-                    <Ionicons name="information-circle-outline" size={22} color={COLORS.infoText} />
+                    <Ionicons name="information-circle-outline" size={16} color={COLORS.infoText} />
                     <Text style={styles.infoBannerText}>
                         {getBannerText()}
                     </Text>
@@ -414,13 +410,15 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 </View>
             </ScrollView>
 
-            <View style={[styles.ctaWrapper, { paddingBottom: insets.bottom }]}>
-                <TouchableOpacity style={[styles.ctaButton, isContinueDisabled && { opacity: 0.4 }]} activeOpacity={0.85} onPress={handleContinue} disabled={isContinueDisabled}>
-                    <Text style={styles.ctaButtonText}>
-                        {t('membership:cta.continueWith', { planName: getPlan(selected).name })}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={18} color={COLORS.darkText} />
-                </TouchableOpacity>
+            <View style={[styles.ctaWrapper, { paddingBottom: insets.bottom + 20 }]}>
+                <Button
+                    label={t('membership:cta.continueWith', { planName: getPlan(selected).name })}
+                    onPress={handleContinue}
+                    disabled={isContinueDisabled}
+                    loading={purchaseLoading}
+                    icon="chevron-forward"
+                    iconPosition="trailing"
+                />
             </View>
 
             <MembershipPlanModel

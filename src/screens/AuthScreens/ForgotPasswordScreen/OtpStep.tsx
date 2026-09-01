@@ -12,8 +12,9 @@ import { useTranslation } from 'react-i18next';
 import { otpService } from '../../../services/otpService';
 import { toastError } from '../../../../utils/toast';
 import { forgotStyles } from '../../../styles/forgetPassword.styles';
-import { commonStyles, colors } from '../../../styles/common.styles';
+import { commonStyles, palette } from '../../../styles/common.styles';
 import { analyticsService } from '../../../services/analyticsService';
+import { Button } from '../../../components/ui';
 
 // ─── Constants ───────────────────────────────────────────────────
 const OTP_LENGTH = 6;
@@ -185,7 +186,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
 
             {/* Icon */}
             <View style={forgotStyles.iconCircle}>
-                <Ionicons name="mail-open-outline" size={38} color={colors.primary} />
+                <Ionicons name="mail-open-outline" size={38} color={palette.navy} />
             </View>
 
             {/* Title & Subtitle */}
@@ -222,29 +223,17 @@ const OtpStep: React.FC<OtpStepProps> = ({
             {/* ✅ FIX: Error Message - Proper Text Wrapping */}
             {!!error && (
                 <View style={forgotStyles.errorContainer}>
-                    <Ionicons name="alert-circle-outline" size={13} color="#ef4444" />
+                    <Ionicons name="alert-circle-outline" size={13} color={palette.danger} />
                     <Text style={forgotStyles.errorText}>{error}</Text>
                 </View>
             )}
 
             {/* Verify Button */}
-            <TouchableOpacity
-                style={[
-                    commonStyles.primaryButton,
-                    { width: "100%" },
-                    loading && { opacity: 0.7 },
-                ]}
+            <Button
+                label={t('otp:verifyButton')}
                 onPress={() => handleVerify()}
-                disabled={loading}
-                activeOpacity={0.8}
-            >
-                {loading
-                    ? <ActivityIndicator color="#fff" size="small" />
-                    : <Text style={commonStyles.primaryButtonText}>
-                        {t('otp:verifyButton')}
-                    </Text>
-                }
-            </TouchableOpacity>
+                loading={loading}
+            />
 
             {/* Resend */}
             <View style={forgotStyles.resendRow}>
@@ -252,7 +241,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
                 {canResend ? (
                     <TouchableOpacity onPress={handleResend} disabled={resending}>
                         {resending
-                            ? <ActivityIndicator size="small" color={colors.primary} />
+                            ? <ActivityIndicator size="small" color={palette.navy} />
                             : <Text style={forgotStyles.resendLink}>
                                 {t('forget:otpStep.resendOtp')}
                             </Text>
@@ -273,7 +262,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
                 onPress={onBack}
                 activeOpacity={0.7}
             >
-                <Ionicons name="arrow-back-outline" size={16} color="#6b7280" />
+                <Ionicons name="arrow-back-outline" size={16} color={palette.textMuted} />
                 <Text style={forgotStyles.backButtonText}>
                     {t('forget:otpStep.changeEmail')}
                 </Text>

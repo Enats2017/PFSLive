@@ -1,55 +1,67 @@
 {
-    "tracking": {
-        "unlimited": "U heeft onbeperkte live trackingsessies.",
-        "remaining": "U heeft nog {{count}} live trackingsessie(s) over.",
-        "exhausted": "U heeft geen live trackingsessies meer over.",
-         "subtitle": "Volg je favoriete atleten live."
-    },
-    "menu": {
-        "events": {
-            "title": "Uw evenementen",
-            "subtitle": "Bekijk uw vroegere resultaten"
-        },
-        "training": {
-            "title": "Uw trainingssessies",
-            "subtitle": "Bekijk uw vroegere trainingssessies of upload een nieuwe."
-        },
-        "account": {
-            "title": "Account",
-            "subtitle": "Beheer uw accountinstellingen"
-        },
-        "contact": {
-            "title": "Contact en feedback",
-            "subtitle": "Vragen, bugs of ideeën"
-        }
-    },
-    "profile": {
-        "followers": "Volgers",
-        "following": "Volgend"
-    },
-    "backbtn": {
-        "events": "Uw Evenementen",
-        "training": "Trainingssessies"
-    },
-    "membershipCard": {
-        "liteTitle": "LIDMAATSCHAP",
-        "sessionsLeft": "live trackingsessies over",
-        "viewPlans": "Bekijk abonnementen en upgrade",
-        "noMembershipTitle": "Geen actief lidmaatschap",
-        "noMembershipSubtitle": "Neem een abonnement om te starten met live tracking van uw sessies.",
-        "paymentProcessing": "Betaling wordt verwerkt. Wacht ongeveer 1 minuut en tik dan op Vernieuwen om uw bijgewerkt lidmaatschap te bekijken.",
-        "refresh": "Vernieuwen"
+  "tracking": {
+    "unlimited": "U heeft onbeperkte live trackingsessies.",
+    "remaining": "U heeft nog {{count}} live trackingsessie(s) over.",
+    "exhausted": "U heeft geen live trackingsessies meer over.",
+    "subtitle": "Volg je favoriete atleten live."
+  },
+  "menu": {
+    "events": {
+      "title": "Uw evenementen",
+      "subtitle": "Bekijk uw vroegere resultaten"
     },
     "training": {
-        "create": "PERSOONLIJK EVENEMENT MAKEN"
+      "title": "Uw trainingssessies",
+      "subtitle": "Bekijk uw vroegere trainingssessies of upload een nieuwe."
     },
-    "deleteEvent": {
-      "deleteSuccess": "Evenement succesvol verwijderd",
-     "deleteFailed": "Verwijderen van evenement mislukt",  
+    "account": {
+      "title": "Account",
+      "subtitle": "Beheer uw accountinstellingen"
+    },
+    "contact": {
+      "title": "Contact en feedback",
+      "subtitle": "Vragen, bugs of ideeën"
+    },
+    "membership": {
+      "title": "Lidmaatschap",
+      "subtitle": "Abonnement, facturatie en bonnen"
+    },
+    "settings": {
+      "title": "Instellingen",
+      "subtitle": "Taal, zichtbaarheid en account"
+    }
+  },
+  "profile": {
+    "followers": "Volgers",
+    "following": "Volgend",
+    "races": "Wedstrijden"
+  },
+  "backbtn": {
+    "events": "Uw Evenementen",
+    "training": "Trainingssessies"
+  },
+  "membershipCard": {
+    "liteTitle": "LIDMAATSCHAP",
+    "sessionsLeft": "live trackingsessies over",
+    "viewPlans": "Bekijk abonnementen en upgrade",
+    "noMembershipTitle": "Geen actief lidmaatschap",
+    "noMembershipSubtitle": "Neem een abonnement om te starten met live tracking van uw sessies.",
+    "paymentProcessing": "Betaling wordt verwerkt. Wacht ongeveer 1 minuut en tik dan op Vernieuwen om uw bijgewerkt lidmaatschap te bekijken.",
+    "refresh": "Vernieuwen"
+  },
+  "training": {
+    "create": "Persoonlijk evenement maken"
+  },
+  "deleteEvent": {
+    "deleteSuccess": "Evenement succesvol verwijderd",
+    "deleteFailed": "Verwijderen van evenement mislukt",
     "confirmTitle": "Dit evenement verwijderen?",
     "confirmMessage": "\"{{name}}\" wordt permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
     "cancel": "Annuleren",
     "confirm": "Verwijderen",
     "trackingStartedError": "Dit evenement kan niet meer worden verwijderd omdat de tracking al is gestart."
-}
+  },
+  "events": {
+    "viewResult": "Bekijk resultaat"
+  }
 }

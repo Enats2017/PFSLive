@@ -8,7 +8,7 @@ import {
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
 import { useNavigation } from '@react-navigation/native';
@@ -98,7 +98,7 @@ const DistanceTab = ({
             {imageLoading && (
               <ActivityIndicator
                 size="large"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ position: 'absolute', zIndex: 1 }}
               />
             )}
@@ -136,20 +136,20 @@ const DistanceTab = ({
               {item.distance_name}
             </Text>
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
+              <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
               <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {item.race_date_formatted}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="time-outline" size={15} color={colors.gray600} />
+              <Ionicons name="time-outline" size={15} color={palette.textBody} />
               <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {formatClockTime(item.race_time)}
               </Text>
             </View>
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Feather name="users" size={16} color={colors.gray500} />
+                <Feather name="users" size={16} color={palette.textMuted} />
                 <Text style={commonStyles.subtitle} numberOfLines={1}>
                   {item.participant_started_count} {t('details:athletes')}
                 </Text>
@@ -157,7 +157,7 @@ const DistanceTab = ({
             )}
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
+                <Ionicons name="ribbon-outline" size={15} color={palette.textBody} />
                 <Text style={commonStyles.subtitle} numberOfLines={1}>
                   {item.finished_count} {t('details:finished')}
                 </Text>
@@ -165,7 +165,7 @@ const DistanceTab = ({
             )}
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
+                <Ionicons name="close-circle-outline" size={15} color={palette.textBody} />
                 <Text style={commonStyles.subtitlered} numberOfLines={1}>
                   {item.dnf_count} {t('details:dnf')}
                 </Text>
@@ -173,7 +173,7 @@ const DistanceTab = ({
             )}
             {!isPast && (
               <View style={detailsStyles.metaRow}>
-                <MaterialCommunityIcons name="timer-sand" size={15} color={colors.gray600} />
+                <MaterialCommunityIcons name="timer-sand" size={15} color={palette.textBody} />
                 <CountdownBadge
                   days={item.countdown.days}
                   hours={item.countdown.hours}
@@ -207,7 +207,7 @@ const DistanceTab = ({
                   }}
                 activeOpacity={0.8}
               >
-                <Text style={commonStyles.primaryButtonText}>
+                <Text style={detailsStyles.resultsButtonText}>
                   {t('button.result')}
                 </Text>
               </TouchableOpacity>
@@ -233,7 +233,7 @@ const DistanceTab = ({
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={commonStyles.primaryButtonText}>
+                <Text style={detailsStyles.routeButtonText}>
                   {t('button.route')}
                 </Text>
               </TouchableOpacity>
@@ -247,7 +247,7 @@ const DistanceTab = ({
   if (loading) {
     return (
       <View style={[commonStyles.centerContainer, { marginTop: 40 }]}>
-        <ActivityIndicator size="large" color={colors.success} />
+        <ActivityIndicator size="large" color={palette.lime} />
       </View>
     );
   }

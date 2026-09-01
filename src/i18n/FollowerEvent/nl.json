@@ -5,12 +5,12 @@
     "Upcoming": "Binnenkort"
   },
   "official": {
-    "title": "OFFICIËLE PARTNER EVENEMENTEN"
+    "title": "Officiële partner evenementen"
   },
   "personal": {
-    "title": "VIND EEN ATLEET",
+    "title": "Vind een atleet",
     "description": "Volg je eigen activiteiten",
-    "button": "GA NAAR PERSOONLIJK EVENEMENT"
+    "button": "Ga naar persoonlijk evenement"
   },
   "searching": "Zoeken...",
   "empty": {
@@ -38,9 +38,9 @@
   "button": {
     "viewprofile": "BEKIJK",
     "follower": "VOLGEN",
-    "show_event": "TOON EVENEMENT",
+    "show_event": "Toon evenement",
     "unfollow": "ONTVOLGEN",
-    "favourite": "TOEVOEGEN AAN FAVORIETEN",
+    "favourite": "Toevoegen aan favorieten",
     "remove": "VERWIJDEREN",
     "followback": "TERUGVOLGEN"
   }

@@ -1,62 +1,190 @@
 // styles/liveTrackingSettings.styles.ts
 import { StyleSheet } from 'react-native';
-import { colors, typography } from './common.styles';
+import { palette, radii, shadows, space, fonts, type, withAlpha } from './common.styles';
 
+// ✅ Redesign: 31_TrackingSettings.png — stacked cards on the page tint, each
+// card a labelled group. The visibility choice uses the shared SegmentedFilter.
 export const styles = StyleSheet.create({
+    // ── 35_Settings.png: the language block ────────────────
+    // Three pills side by side, the active one navy. A dropdown hid two of the
+    // three languages behind a tap.
+    languageBlock: {
+        marginBottom: space.md,
+    },
+    languageLabel: {
+        ...type.label,
+        color: palette.textMuted,
+        marginBottom: space.md,
+    },
+    languageRow: {
+        flexDirection: 'row',
+        gap: space.md,
+    },
+    languagePill: {
+        flex: 1,
+        minHeight: 48,
+        borderRadius: radii.md,
+        borderWidth: 1,
+        borderColor: palette.border,
+        backgroundColor: palette.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: space.sm,
+    },
+    languagePillActive: {
+        backgroundColor: palette.navy,
+        borderColor: palette.navy,
+    },
+    languagePillText: {
+        fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+        color: palette.textBody,
+    },
+    languagePillTextActive: {
+        fontFamily: fonts.display,
+        color: palette.surface,
+    },
+
     // Layout
-    
-    pageTitleRow:   { marginBottom: 20, marginTop: 8 },
-   
+    screen: {
+        flexGrow: 1,
+        padding: space.xl,
+        gap: space.md,
+        backgroundColor: palette.page,
+    },
+    pageTitleRow: {
+        marginBottom: space.xs,
+    },
+    pageTitle: {
+        ...type.h2,
+    },
+    pageSubtitle: {
+        ...type.body,
+        marginTop: space.xs,
+    },
 
     // Card
-    cardHeader:     { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-    cardIconWrap:   { width: 46, height: 46, borderRadius: 14, backgroundColor: colors.gray200, alignItems: 'center', justifyContent: 'center' },
-    cardSubtitle:   { fontSize: 12, color: colors.black, marginTop: 2 },
-    divider:        { height: 1, backgroundColor: '#F0F2F8', marginVertical: 16 },
-
-    // Segmented control
-    segmentedControl: { flexDirection: 'row', backgroundColor: '#F0F2F8', borderRadius: 14, padding: 4, marginBottom: 16, marginTop: 8 },
-    segment:          { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 11, gap: 6 },
-    segmentActive:    { backgroundColor: colors.primary, shadowColor: colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-    segmentEmoji:     { fontSize: 16 },
-    segmentTextActive:{ color: '#FFFFFF' },
+    cardLabel: {
+        ...type.label,
+        color: palette.textMuted,
+        marginBottom: space.md,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.md,
+        marginBottom: space.lg,
+    },
+    cardIconWrap: {
+        width: 46,
+        height: 46,
+        borderRadius: radii.md,
+        backgroundColor: palette.fill,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    cardTitle: {
+        ...type.h3,
+    },
+    cardSubtitle: {
+        ...type.small,
+        marginTop: 2,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: palette.border,
+        marginVertical: space.lg,
+    },
+    sectionLabel: {
+        ...type.label,
+        color: palette.textMuted,
+        marginBottom: space.sm,
+    },
+    actionSpacing: {
+        marginTop: space.lg,
+    },
 
     // Status
-    statusRow:      { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
-    statusDot:      { width: 8, height: 8, borderRadius: 4 },
-    dotGreen:       { backgroundColor: colors.success },
-    dotOrange:      { backgroundColor: colors.primary },
+    statusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.sm,
+        marginBottom: space.lg,
+    },
+    statusDot: { width: 8, height: 8, borderRadius: 4 },
+    dotGreen: { backgroundColor: palette.lime },
+    dotOrange: { backgroundColor: palette.warning },
 
-    // Modal
-    modalOverlay:   { flex: 1, justifyContent: 'flex-end' },
-    modalBackdrop:  { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
-    bottomSheet:    { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 14 },
-    sheetHandle:    { width: 40, height: 4, backgroundColor: '#E0E4F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
-    closeBtn:       { position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: 15, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
-    closeBtnText:   { fontSize: 13, fontWeight: '700', color: colors.white },
+    // Modal — the one place radius 16 (overlay) applies.
+    modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+    modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: withAlpha(palette.ink, 0.45) },
+    bottomSheet: {
+        backgroundColor: palette.surface,
+        borderTopLeftRadius: radii.lg,
+        borderTopRightRadius: radii.lg,
+        paddingHorizontal: space.xxl,
+        paddingTop: 16,
+        ...shadows.overlay,
+    },
+    sheetHandle: {
+        width: 40,
+        height: 4,
+        backgroundColor: palette.border,
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: space.xl,
+    },
+    closeBtn: {
+        position: 'absolute',
+        top: 14,
+        right: 14,
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: palette.navy,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10,
+    },
+    closeBtnText: {
+        fontFamily: fonts.bodySemi,
+        fontSize: 13,
+        color: palette.surface,
+    },
+    modalTitle: { ...type.h2 },
+    modalSubtitle: { ...type.body, marginTop: space.xs },
+    fieldLabel: { ...type.label, color: palette.textMuted, marginTop: space.sm },
 
     // Password
-    errorText:      { fontSize: 13, color: '#FF3B30', marginBottom: 6 },
-    hintText:       { fontSize: 12, color: colors.black, marginBottom: 14 },
+    errorText: {
+        ...type.small,
+        color: palette.danger,
+        marginBottom: space.md,
+    },
+    hintText: {
+        ...type.small,
+        marginBottom: space.md,
+    },
 
+    // Deleting an account is destructive, so it reads as danger and sits apart
+    // from the settings it is not part of.
     deleteAccountBtn: {
-        marginTop: 20,
-        padding: 16,
-        borderRadius: 12,
+        marginTop: space.xl,
+        padding: space.lg,
+        borderRadius: radii.md,
         borderWidth: 1,
-        borderColor: colors.error,
-        backgroundColor: '#FEF2F2',
+        borderColor: palette.danger,
+        backgroundColor: palette.dangerBg,
         alignItems: 'center',
     },
     deleteAccountText: {
-        color: colors.error,
-        fontSize: typography.sizes.md,
-        fontWeight: typography.weights.semibold,
+        fontFamily: fonts.display,
+        fontSize: 15,
+        color: palette.danger,
     },
     deleteAccountHint: {
-        color: colors.gray500,
-        fontSize: typography.sizes.xs,
-        marginTop: 4,
+        ...type.small,
+        marginTop: space.xs,
         textAlign: 'center',
     },
 });

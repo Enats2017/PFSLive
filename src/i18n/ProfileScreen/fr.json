@@ -5,14 +5,14 @@
   },
   "buttons": {
     "editProfile": "Modifier le profil",
-    "edit_personal_event": "MODIFIER L'ÉVÉNEMENT PERSONNEL",
-    "live_tracking_progress": "SUIVI EN DIRECT EN COURS",
-    "live_tracking_soon": "LE SUIVI EN DIRECT COMMENCE BIENTÔT",
-    "enable_gps": "ACTIVER LE GPS POUR DÉMARRER LE SUIVI",
+    "edit_personal_event": "Modifier l'événement personnel",
+    "live_tracking_progress": "Suivi en direct en cours",
+    "live_tracking_soon": "Le suivi en direct commence bientôt",
+    "enable_gps": "Activer le GPS pour démarrer le suivi",
     "load_more": "Charger plus",
-    "save_changes": "ENREGISTRER LES MODIFICATIONS",
-    "edit_live_tracking_event": "MODIFIER LE SUIVI EN DIRECT",
-    "live_tracking_ended": "SUIVI EN DIRECT TERMINÉ"
+    "save_changes": "Enregistrer les modifications",
+    "edit_live_tracking_event": "Modifier le suivi en direct",
+    "live_tracking_ended": "Suivi en direct terminé"
   },
   "errors": {
     "user_not_found": "Utilisateur non trouvé. Veuillez vous reconnecter.",
@@ -45,16 +45,16 @@
     "email_already_taken": "Cet e-mail est déjà utilisé"
   },
   "status": {
-    "live": "EN DIRECT",
+    "live": "En direct",
     "soon": "BIENTÔT",
     "finished": "TERMINÉ"
   },
-   "empty": {
+  "empty": {
     "no_live_events": "Aucun événement en direct pour le moment",
     "no_live_events_msg": "Il n'y a actuellement aucun événement en cours.\nVeuillez revenir plus tard."
   },
   "past": {
-    "view_results": "VOIR LES RÉSULTATS",
+    "view_results": "Voir les résultats",
     "no_events": "Aucun événement passé trouvé",
     "no_events_msg": "Vous n'avez encore participé à aucun événement.\nVos événements passés apparaîtront ici."
   },
@@ -92,9 +92,10 @@
     "choose_gallery": "Choisir dans la galerie"
   },
   "sections": {
-    "personal_info": "INFORMATIONS PERSONNELLES",
-    "change_password": "CHANGER LE MOT DE PASSE",
-    "password_hint": "Laisser vide pour conserver l'actuel"
+    "personal_info": "Informations personnelles",
+    "change_password": "Changer le mot de passe",
+    "password_hint": "Laisser vide pour conserver l'actuel",
+    "recentRaces": "Courses récentes"
   },
   "languages": {
     "english": "Anglais",

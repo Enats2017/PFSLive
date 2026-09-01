@@ -19,7 +19,7 @@ export default ({ config }) => {
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#D5DA28"
+      backgroundColor: "#C7D92C"
     },
 
     assetBundlePatterns: ["**/*"],
@@ -84,7 +84,7 @@ export default ({ config }) => {
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#D5DA28"
+        backgroundColor: "#C7D92C"
       },
       package: "eu.passionforsports.livio",
       versionCode: 1,
@@ -198,7 +198,7 @@ export default ({ config }) => {
         "expo-notifications",
         {
           icon: "./assets/notification-icon.png",
-          color: "#D5DA28",
+          color: "#C7D92C",
           defaultChannel: "default",
           sounds: [],
           mode: "production"

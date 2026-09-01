@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform } from 'react-native';
-import { colors, spacing, typography } from '../styles/common.styles';
+import { spacing, typography, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 
 interface UpdateRequiredModalProps {
   visible: boolean;
@@ -44,7 +45,7 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
         <View style={styles.container}>
           {/* Icon */}
           <View style={styles.iconContainer}>
-            <Text style={styles.icon}>🔄</Text>
+            <Ionicons name="refresh" size={30} color={palette.navy} />
           </View>
 
           {/* Title from API */}
@@ -121,54 +122,47 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   container: {
-    backgroundColor: colors.white,
+    backgroundColor: palette.surface,
     borderRadius: 16,
     padding: spacing.xxl,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
+    ...shadows.card,
   },
   iconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: withAlpha(palette.navy, 0.13),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
   icon: {
-    fontSize: 40,
+    fontFamily: fonts.body,
+        fontSize: 40,
   },
   title: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
+    fontFamily: fonts.bodySemi,
+        fontSize: 26,
+
+        color: palette.ink,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
   message: {
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: palette.textBody,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: spacing.lg,
   },
   versionInfo: {
     width: '100%',
-    backgroundColor: colors.gray100,
-    borderRadius: 8,
+    backgroundColor: palette.fill,
+    borderRadius: 10,
     padding: spacing.md,
     marginBottom: spacing.lg,
   },
@@ -178,60 +172,55 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   versionLabel: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
-    fontWeight: typography.weights.medium,
-  },
+    fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+    color: palette.textBody,
+
+        },
   versionValue: {
-    fontSize: typography.sizes.sm,
-    color: colors.black,
-    fontWeight: typography.weights.semibold,
-  },
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.ink,
+
+        },
   buttonContainer: {
     width: '100%',
     gap: spacing.md,
   },
   button: {
     paddingVertical: spacing.lg,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   updateButton: {
-    backgroundColor: colors.primary,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    backgroundColor: palette.navy,
+    ...shadows.card,
   },
   updateButtonText: {
-    color: colors.white,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 0.5,
+    color: palette.surface,
+    fontFamily: fonts.bodySemi,
+        fontSize: 20,
+
+        letterSpacing: 0.5,
   },
   laterButton: {
-    backgroundColor: colors.white,
+    backgroundColor: palette.surface,
     borderWidth: 1,
-    borderColor: colors.gray300,
+    borderColor: palette.inputBorder,
   },
   laterButtonText: {
-    color: colors.gray600,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-  },
+    color: palette.textBody,
+    fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        },
   forcedText: {
-    fontSize: typography.sizes.xs,
-    color: colors.error,
+    fontFamily: fonts.bodyMedium,
+        fontSize: 12,
+    color: palette.danger,
     textAlign: 'center',
     marginTop: spacing.md,
-    fontWeight: typography.weights.medium,
-  },
+
+        },
 });

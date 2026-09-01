@@ -1,5 +1,5 @@
 import { StyleSheet, Platform } from "react-native";
-import { colors, spacing, typography } from "./common.styles";
+import { spacing, typography, type, palette, fonts, shadows, space, withAlpha } from "./common.styles";
 
 // ✅ CONSTANTS
 const BORDER_RADIUS = 12;
@@ -9,11 +9,19 @@ const FILE_ICON_SIZE = 28;
 
 export const personalStyles = StyleSheet.create({
   // ✅ SECTION HEADER
+  // ✅ Redesign: the deck's white sub-header. This was a second full-width lime
+  // strip sitting directly under the AppHeader's lime band — the deck uses that
+  // band once per screen, for the screen title, and never repeats it.
   section: {
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.themeiColor,
-   
+    backgroundColor: palette.surface,
+    paddingHorizontal: space.xl,
+    paddingVertical: space.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
+  },
+  sectionLabel: {
+    ...type.label,
+    color: palette.textMuted,
   },
 
   // ✅ TEXT STYLES
@@ -21,19 +29,21 @@ export const personalStyles = StyleSheet.create({
     textAlign: "center",
     marginTop: spacing.md,
     paddingHorizontal: spacing.lg,
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
-    fontWeight: typography.weights.medium,
-    lineHeight: 20,
+    fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+    color: palette.textBody,
+
+        lineHeight: 20,
   },
 
   errorText: {
-    fontSize: typography.sizes.sm,
-    color: colors.error,
+    fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+    color: palette.danger,
     marginTop: spacing.xs,
     marginLeft: spacing.xs,
-    fontWeight: typography.weights.medium,
-    lineHeight: 18,
+
+        lineHeight: 18,
   },
 
   // ✅ FORM CONTAINER
@@ -46,34 +56,36 @@ export const personalStyles = StyleSheet.create({
   // ✅ FILE UPLOAD BOX
   uploadBox: {
     borderWidth: BORDER_WIDTH_NORMAL,
-    borderColor: colors.primary,
+    borderColor: palette.navy,
     borderStyle: "dashed",
     borderRadius: BORDER_RADIUS,
     paddingVertical: spacing.xxl,
     paddingHorizontal: spacing.lg,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.primary + "10",
+    backgroundColor: withAlpha(palette.navy, 0.06),
     minHeight: 140,
   },
 
   uploadBoxError: {
-    borderColor: colors.error,
-    backgroundColor: colors.error + "10",
+    borderColor: palette.danger,
+    backgroundColor: palette.dangerBg,
   },
 
   uploadTitle: {
     marginTop: spacing.md,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.primary,
+    fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        color: palette.navy,
     textAlign: "center",
   },
 
   uploadSubtitle: {
     marginTop: spacing.xs,
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textBody,
     textAlign: "center",
     lineHeight: 18,
   },
@@ -85,22 +97,12 @@ export const personalStyles = StyleSheet.create({
     justifyContent: "space-between",
     padding: spacing.lg,
     borderRadius: BORDER_RADIUS,
-    backgroundColor: colors.white,
+    backgroundColor: palette.surface,
     borderWidth: 1,
-    borderColor: colors.gray200,
+    borderColor: palette.border,
     minHeight: 80,
     // Platform-specific shadows
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    ...shadows.card,
   },
 
   fileLeft: {
@@ -114,7 +116,7 @@ export const personalStyles = StyleSheet.create({
     width: FILE_ICON_SIZE + 8,
     height: FILE_ICON_SIZE + 8,
     borderRadius: (FILE_ICON_SIZE + 8) / 2,
-    backgroundColor: colors.primary + "15",
+    backgroundColor: withAlpha(palette.navy, 0.08),
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.sm,
@@ -125,17 +127,19 @@ export const personalStyles = StyleSheet.create({
   },
 
   fileName: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.black,
+    fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        color: palette.ink,
     marginBottom: spacing.xs / 2,
   },
 
   fileSize: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray500,
-    fontWeight: typography.weights.regular,
-  },
+    fontFamily: fonts.body,
+        fontSize: 12,
+    color: palette.textMuted,
+
+        },
 
   // ✅ FILE ACTIONS
   actions: {
@@ -150,7 +154,7 @@ export const personalStyles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.gray100,
+    backgroundColor: palette.fill,
   },
 
   // ✅ FIELD WRAPPER (for error display)
@@ -163,7 +167,8 @@ export const personalStyles = StyleSheet.create({
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
   fileSection: { marginTop: spacing.md },
   undoBtn: { alignSelf: "flex-end", marginBottom: spacing.xs },
-  undoText: { color: colors.primary, fontSize: 13 },
+  undoText: { color: palette.navy, fontFamily: fonts.body,
+        fontSize: 13 },
   submitBtn: { marginTop: spacing.xxxl, marginBottom: spacing.xl },
   disabled: { opacity: 0.6 },
 });

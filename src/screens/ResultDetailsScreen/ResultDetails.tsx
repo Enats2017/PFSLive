@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StatusBar, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,7 +9,7 @@ import { ResultDetailspops } from '../../types/navigation';
 import RaceInfoTab from './RaceInfoTab';
 import RunnerInfoTab from './RunnerInfoTab';
 import { resultInfoStyles as s } from '../../styles/resultDetails.styles';
-import { colors, commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette } from '../../styles/common.styles';
 import RaceLive from './RaceLive';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import LiveTimingPoint from './LiveTimingPoint';
@@ -157,6 +157,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                 {item === 'runnerInfo' && (
                     <RunnerInfoTab
                         runnerInfo={data?.runner_info}
+                        raceInfo={data?.race_info}
                         showUtmbIndex={data?.event?.show_utmb_index === 1}
                         liveTrackingActivated={data?.race_info?.live_tracking_activated}
                         isFollowing={Followed}
@@ -183,21 +184,20 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']} >
-                <StatusBar barStyle="dark-content" />
                 <View style={s.header}>
                     <TouchableOpacity
                         style={s.headerBackBtn}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         onPress={() => navigation.goBack()}
                     >
-                        <Ionicons name="chevron-back" size={32} color={colors.gray900} />
+                        <Ionicons name="chevron-back" size={32} color={palette.ink} />
                     </TouchableOpacity>
                     <View style={s.headerCenter}>
                         <Text style={commonStyles.title}>...</Text>
                     </View>
                 </View>
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
             </SafeAreaView>
         );
@@ -205,8 +205,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
                 <AppHeader showBack />
                 <ErrorScreen
                     type={error!.type}
@@ -219,31 +218,36 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
-            <StatusBar barStyle="dark-content" />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={data?.race_info?.name ?? ''} showBack />
             <View
                 style={{ flex: 1 }}
                 onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
             >
+                {/* Sub-header — one muted meta line under the band, per the
+                    mockups. The name moved up into the lime band. */}
                 <View style={s.header}>
-                    <TouchableOpacity
-                        style={s.headerBackBtn}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Ionicons name="chevron-back" size={32} color={colors.gray900} />
-                    </TouchableOpacity>
                     <View style={s.headerCenter}>
-                        <Text style={commonStyles.title}>{data?.race_info?.name ?? '...'}</Text>
-                        <Text style={commonStyles.text}>{data?.race_info?.bib ?? ''}</Text>
+                        <Text style={s.runnerMeta} numberOfLines={1}>
+                            {[
+                                data?.race_info?.bib ? `${t('raceInfo.bib', 'Bib')} ${data.race_info.bib}` : null,
+                                data?.event?.distance_name,
+                            ].filter(Boolean).join(' · ')}
+                        </Text>
                     </View>
                     {canFollow && (
-                        <TouchableOpacity onPress={handleFollow} disabled={Loading}>
-                            <Entypo name={Followed ? 'star' : 'star-outlined'} size={33} color="black" />
+                        <TouchableOpacity
+                            onPress={handleFollow}
+                            disabled={Loading}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            accessibilityRole="button"
+                            accessibilityLabel={Followed ? 'Unfollow athlete' : 'Follow athlete'}
+                        >
+                            <Entypo name={Followed ? 'star' : 'star-outlined'} size={26} color={palette.lime} />
                         </TouchableOpacity>
                     )}
                 </View>
-                <View>
+                <View style={s.tabStrip}>
                     <ScrollView
                         ref={tabScrollRef}
                         horizontal
@@ -254,21 +258,13 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                         {TAB_KEYS.map((tabKey) => (
                             <TouchableOpacity
                                 key={tabKey}
-                                style={s.tabItem}
+                                style={[s.tabItem, activeTab === tabKey && s.tabItemActive]}
                                 onPress={() => handleTabPress(tabKey)}
                                 activeOpacity={0.7}
                             >
-                                <Text style={[commonStyles.text, activeTab === tabKey && s.tabTextActive]}>
+                                <Text style={[s.tabText, activeTab === tabKey && s.tabTextActive]}>
                                     {t(`tabs.${tabKey}`)}
                                 </Text>
-                                {activeTab === tabKey && (
-                                    <LinearGradient
-                                        colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                        style={s.tabUnderline}
-                                    />
-                                )}
                             </TouchableOpacity>
                         ))}
                     </ScrollView>

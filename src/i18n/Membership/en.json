@@ -1,6 +1,6 @@
 {
   "header": {
-    "label": "MEMBERSHIP",
+    "label": "Membership",
     "title": "Choose your plan",
     "subtitle": "Keep tracking your athletes live."
   },
@@ -17,7 +17,7 @@
   },
   "plans": {
     "lite": {
-      "name": "LITE",
+      "name": "Lite",
       "badge": "{{count}} sessions / year",
       "price": "€14.99",
       "period": "/ year",
@@ -28,7 +28,7 @@
       ]
     },
     "basic": {
-      "name": "BASIC",
+      "name": "Basic",
       "badge": "5 sessions / year",
       "price": "€29.99",
       "period": "/ year",
@@ -38,10 +38,10 @@
         "Priority for popular events",
         "Following your activity is always free for your fans"
       ],
-      "popularLabel": "MOST POPULAR"
+      "popularLabel": "Most popular"
     },
     "pro": {
-      "name": "PRO",
+      "name": "Pro",
       "badge": "Unlimited",
       "price": "€59.99",
       "period": "/ year",
@@ -60,15 +60,15 @@
   "retry": "Retry",
   "restorePurchases": "Restore Purchases",
   "restoreSuccess": {
-    "title": "Purchases Restored",
+    "title": "Purchases restored",
     "message": "Your membership has been restored successfully."
   },
   "restoreNone": {
-    "title": "Nothing to Restore",
+    "title": "Nothing to restore",
     "message": "No previous purchases were found for this Apple ID."
   },
   "restoreError": {
-    "title": "Restore Failed",
+    "title": "Restore failed",
     "message": "We couldn't restore your purchases. Please try again."
   },
   "subscriptionInfo": "Subscriptions are billed yearly and renew automatically unless cancelled at least 24 hours before the end of the current period. You can manage or cancel your subscription in your App Store account settings.",
@@ -79,7 +79,7 @@
     "upgrade": {
       "title": "Upgrade your membership?",
       "description": "Your current plan will be upgraded to {{planName}} once you confirm.",
-      "confirm": "Confirm Upgrade"
+      "confirm": "Confirm upgrade"
     },
     "disabled": {
       "title": "Downgrade not allowed",
@@ -88,7 +88,7 @@
     },
     "locked": {
       "title": "Use your remaining sessions first",
-       "description": "You still have {{count}} sessions left on your current plan. Use them before upgrading.",
+      "description": "You still have {{count}} sessions left on your current plan. Use them before upgrading.",
       "confirm": "Got it"
     },
     "hidden": {
@@ -96,5 +96,13 @@
       "description": "You're currently subscribed through the web. Manage your membership from there.",
       "confirm": "Got it"
     }
+  },
+  "purchase": {
+    "processingTitle": "Processing payment",
+    "processingBody": "Please wait while we confirm your purchase with Apple…",
+    "successTitle": "You're all set!",
+    "successBody": "Your membership is active. Enjoy tracking your athletes!",
+    "errorTitle": "Something went wrong",
+    "errorBody": "We could not verify your purchase. Please try again or contact support."
   }
 }

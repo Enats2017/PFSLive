@@ -1,52 +1,102 @@
 import { StyleSheet } from "react-native";
-import { colors, spacing } from "./common.styles";
+import { palette, radii, space, fonts, type, shadows } from "./common.styles";
 
+// ✅ Redesign: 12_ForgotPassword.png. The peach-tinted OTP boxes and the
+// orange-ringed icon circle are gone — the flow now uses the neutral fill and
+// the navy/lime pair like every other screen.
 export const forgotStyles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: space.xl,
+    paddingTop: space.md,
+  },
+
+  // ── 06_ForgotPassword.png: "What happens next" ─────────
+  // Three numbered steps. A reset flow that says nothing about the next screen
+  // is where people give up and mail support instead.
+  nextCard: {
+    backgroundColor: palette.surface,
+    borderRadius: radii.md,
+    padding: space.lg,
+    marginTop: space.xl,
+    ...shadows.card,
+  },
+  nextTitle: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
+    marginBottom: space.md,
+  },
+  nextRow: {
+    flexDirection: 'row',
+    gap: space.md,
+    marginBottom: space.md,
+  },
+  nextNum: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: palette.fill,
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 10,
+    justifyContent: 'center',
+  },
+  nextNumText: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 12,
+    color: palette.navy,
+  },
+  nextStepTitle: {
+    fontFamily: fonts.display,
+    fontSize: 13,
+    color: palette.ink,
+  },
+  nextStepSub: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: palette.textMuted,
+    marginTop: 2,
   },
 
   progressContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: space.xl,
+    paddingTop: space.md,
+    paddingBottom: space.sm,
     gap: 6,
   },
   progressSegment: {
     flex: 1,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: palette.border,
   },
+  // Lime marks progress, matching the badge language: lime = positive state.
   progressActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: palette.lime,
   },
+
   scroll: {
     flexGrow: 1,
-    paddingVertical: 16,
+    paddingVertical: space.lg,
+  },
+
+  title: {
+    ...type.h1,
+  },
+  subtitle: {
+    ...type.body,
+    marginTop: space.sm,
+    marginBottom: space.lg,
   },
 
   iconCircle: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#fff5f0',
-    borderWidth: 2,
-    borderColor: '#ffe0d6',
+    backgroundColor: palette.fill,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-
-  subtitle: {
-    textAlign: 'center',
-    marginTop: 12,
-    marginBottom: 15,
-    lineHeight: 22,
+    marginBottom: space.xl,
   },
 
   form: {
@@ -57,91 +107,77 @@ export const forgotStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: space.xl,
     gap: 6,
   },
-
   backButtonText: {
-    fontSize: 14,
-    color: '#6b7280',
-    fontWeight: '500',
+    ...type.smallMedium,
   },
 
   email: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 28,
-    marginTop: 4,
+    ...type.h3,
+    color: palette.navy,
+    marginTop: space.xs,
+    marginBottom: space.xxl,
   },
 
   otpRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 12,
+    marginBottom: space.md,
   },
-
   otpInput: {
     width: 48,
     height: 56,
     borderWidth: 1.5,
-    borderRadius: 12,
-    borderColor: '#d1d5db',
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-    backgroundColor: '#fff',
+    borderRadius: radii.md,
+    borderColor: palette.inputBorder,
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: palette.inkSoft,
+    backgroundColor: palette.surface,
     textAlign: 'center',
   },
-
+  // A filled box reads as progress, so it takes the navy edge — not a tint,
+  // which fought the error state at a glance.
   otpFilled: {
-    borderColor: colors.primaryLight,
-    backgroundColor: '#fff5f0',
+    borderColor: palette.navy,
   },
-
   otpError: {
-    borderColor: colors.participantColor,
-    backgroundColor: '#fff5f5',
+    borderColor: palette.danger,
+    backgroundColor: palette.dangerBg,
   },
 
-  // ✅ ADD ERROR CONTAINER
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: space.md,
     gap: 6,
   },
-
   errorText: {
-    fontSize: 13,
-    color: colors.primaryDark,
-    fontWeight: '500',
+    ...type.smallMedium,
+    color: palette.danger,
   },
 
   resendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: 10,
+    marginTop: space.xl,
+    marginBottom: space.md,
   },
-
   resendLabel: {
-    fontSize: 14,
-    color: '#6b7280',
+    ...type.small,
   },
-
   resendLink: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemi,
+    fontSize: 12,
+    color: palette.navy,
   },
-
   countdown: {
-    fontSize: 14,
-    color: '#9ca3af',
-    fontWeight: '500',
+    ...type.smallMedium,
+    color: palette.placeholder,
   },
 
   buttonDisabled: {

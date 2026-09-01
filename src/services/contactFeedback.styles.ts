@@ -1,69 +1,76 @@
 import { StyleSheet } from 'react-native';
-import { colors, spacing } from '../styles/common.styles';
+import { palette, radii, space, fonts, type, shadows } from '../styles/common.styles';
 
-
+// ✅ Redesign: 36_ContactFeedback.png. The header row and title moved into the
+// shared AppHeader band, so `header`/`backButton`/`headerTitle` are gone.
 export const contactStyles = StyleSheet.create({
-    flex: {
-        flex: 1,
-        backgroundColor: colors.white,
+    // ── 36_ContactFeedback.png: the "other ways to reach us" card ──
+    reachCard: {
+        backgroundColor: palette.surface,
+        borderRadius: radii.md,
+        padding: space.lg,
+        marginTop: space.lg,
+        ...shadows.card,
     },
-    header: {
+    reachTitle: {
+        ...type.h3,
+        marginBottom: space.md,
+    },
+    reachRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: spacing.md,
-        paddingTop: 6,
-        paddingBottom: 14,
+        gap: space.md,
+        paddingBottom: space.md,
+        borderBottomWidth: 1,
+        borderBottomColor: palette.border,
     },
-    backButton: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 10,
+    reachEmail: {
+        ...type.bodyMedium,
+        color: palette.ink,
     },
-    headerTitle: {
-        fontSize: 19,
-        fontWeight: '700',
-        color: colors.gray900,
-        letterSpacing: 0.2,
+    reachNote: {
+        ...type.small,
+        marginTop: space.md,
+    },
+
+    flex: {
+        flex: 1,
+        backgroundColor: palette.surface,
     },
     scrollContent: {
         flexGrow: 1,
-        paddingHorizontal: spacing.md,
-        paddingBottom: spacing.xxxl,
+        paddingHorizontal: space.xl,
+        paddingTop: space.lg,
+        paddingBottom: space.xxxl,
     },
 
-    // Banner
+    // Banner — the lime-tinted notice, not the old periwinkle.
     banner: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#EEF1FE',
-        borderRadius: 10,
-        padding: 18,
-        marginTop: spacing.md,
-        marginBottom: spacing.md,
+        backgroundColor: palette.noticeBg,
+        borderRadius: radii.md,
+        padding: space.lg,
+        marginBottom: space.lg,
     },
     bannerText: {
         flex: 1,
-        paddingRight: 12,
+        paddingRight: space.md,
     },
     bannerTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: colors.primary,
-        marginBottom: 4,
+        ...type.h3,
+        color: palette.noticeText,
+        marginBottom: space.xs,
     },
     bannerSubtitle: {
-        fontSize: 12.5,
-        lineHeight: 17,
-        color: colors.gray400,
+        ...type.small,
+        color: palette.noticeText,
     },
     bannerIllustration: {
         width: 56,
         height: 56,
-        borderRadius: 16,
-        backgroundColor: colors.white,
+        borderRadius: radii.lg,
+        backgroundColor: palette.surface,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -74,39 +81,29 @@ export const contactStyles = StyleSheet.create({
         width: 22,
         height: 22,
         borderRadius: 11,
-        backgroundColor: colors.primary,
+        backgroundColor: palette.navy,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 2,
-        borderColor: colors.white,
-    },
-
-    card: {
-        backgroundColor: colors.white,
-        borderRadius: 20,
-        paddingHorizontal: 2,
+        borderColor: palette.surface,
     },
 
     charCount: {
         alignSelf: 'flex-end',
+        fontFamily: fonts.body,
         fontSize: 11,
-        color: colors.gray400,
+        color: palette.textMuted,
         marginTop: -4,
     },
 
-    sendIcon: {
-        marginRight: 8,
+    submitSpacing: {
+        marginTop: space.xl,
     },
 
     footerNote: {
+        ...type.small,
         textAlign: 'center',
-        fontSize: 11.5,
-        color: colors.gray400,
-        marginTop: 16,
-        lineHeight: 16,
-        paddingHorizontal: 12,
-    },
-    buttonDisabled: {
-        opacity: 0.6,
+        marginTop: space.lg,
+        paddingHorizontal: space.md,
     },
 });

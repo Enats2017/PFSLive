@@ -4,7 +4,6 @@ import {
     Text,
     TouchableOpacity,
     FlatList,
-    StatusBar,
     ActivityIndicator,
     Keyboard,
     KeyboardEvent,
@@ -14,7 +13,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import PastTab from './PastTab';
 import LiveTab from './LiveTab';
@@ -333,11 +332,10 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
 
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={t('common:band.events')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
             </SafeAreaView>
         );
@@ -345,9 +343,8 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showBack />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={t('common:band.events')} showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -359,9 +356,8 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={t('common:band.events')} showLogo={true} showBack />
             <Animated.View
                 style={{
                     flex: 1,
@@ -369,16 +365,16 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                 }}
                 onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
             >
-                <View style={eventStyles.section}>
-                    <Text style={eventStyles.textCenter}>{t('follower:official.title')}</Text>
-                </View>
-
-                {/* TAB BAR */}
-                <View style={eventStyles.tabBar}>
+                {/* ✅ Sub-header — deck: one white band under the AppHeader holding
+                    the page label and its filter tabs. Was a full-width lime
+                    strip with a centred title. */}
+                <View style={eventStyles.subHeader}>
+                    {/* TAB BAR */}
+                    <View style={eventStyles.tabBar}>
                     {TABS.map((tab) => (
                         <TouchableOpacity
                             key={tab}
-                            style={eventStyles.tabItem}
+                            style={[eventStyles.tabItem, activeTab === tab && eventStyles.tabItemActive]}
                             onPress={() => handleTabPress(tab)}
                             activeOpacity={0.7}
                         >
@@ -388,16 +384,9 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                             ]}>
                                 {t(`follower:live.${tab}`)}
                             </Text>
-                            {activeTab === tab && (
-                                <LinearGradient
-                                    colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={eventStyles.underline}
-                                />
-                            )}
                         </TouchableOpacity>
                     ))}
+                    </View>
                 </View>
 
                 <View>

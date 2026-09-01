@@ -1,10 +1,10 @@
 {
   "header": {
-    "label": "LIDMAATSCHAP",
+    "label": "Lidmaatschap",
     "title": "Kies je abonnement",
     "subtitle": "Blijf je atleten live volgen."
   },
- "infoBanner": {
+  "infoBanner": {
     "text": "Je gratis sessie is gebruikt. Kies een abonnement om je te registreren en je race op de wedstrijddag te volgen.",
     "hasSessionsLeft": "Je hebt nog {{count}} sessies over. Upgrade op elk moment om meer sessies te krijgen.",
     "noSessionsLeft": "Je hebt al je sessies gebruikt. Upgrade je abonnement om je races te blijven volgen.",
@@ -17,8 +17,8 @@
   },
   "plans": {
     "lite": {
-      "name": "LITE",
-      "badge": "2 sessies / jaar",
+      "name": "Lite",
+      "badge": "{{count}} sessies / jaar",
       "price": "€ 14,99",
       "period": "/ jaar",
       "features": [
@@ -28,7 +28,7 @@
       ]
     },
     "basic": {
-      "name": "BASIC",
+      "name": "Basic",
       "badge": "5 sessies / jaar",
       "price": "€ 29,99",
       "period": "/ jaar",
@@ -38,10 +38,10 @@
         "Voorrang bij populaire evenementen",
         "Het volgen van jouw activiteit is altijd gratis voor je fans"
       ],
-      "popularLabel": "MEEST GEKOZEN"
+      "popularLabel": "Meest gekozen"
     },
     "pro": {
-      "name": "PRO",
+      "name": "Pro",
       "badge": "Onbeperkt",
       "price": "€ 59,99",
       "period": "/ jaar",
@@ -59,9 +59,18 @@
   },
   "retry": "Opnieuw proberen",
   "restorePurchases": "Aankopen herstellen",
-  "restoreSuccess": { "title": "Aankopen hersteld", "message": "Je lidmaatschap is succesvol hersteld." },
-  "restoreNone": { "title": "Niets te herstellen", "message": "Er zijn geen eerdere aankopen gevonden voor deze Apple ID." },
-  "restoreError": { "title": "Herstellen mislukt", "message": "We konden je aankopen niet herstellen. Probeer het opnieuw." },
+  "restoreSuccess": {
+    "title": "Aankopen hersteld",
+    "message": "Je lidmaatschap is succesvol hersteld."
+  },
+  "restoreNone": {
+    "title": "Niets te herstellen",
+    "message": "Er zijn geen eerdere aankopen gevonden voor deze Apple ID."
+  },
+  "restoreError": {
+    "title": "Herstellen mislukt",
+    "message": "We konden je aankopen niet herstellen. Probeer het opnieuw."
+  },
   "subscriptionInfo": "Abonnementen worden jaarlijks gefactureerd en verlengen automatisch, tenzij minstens 24 uur voor het einde van de huidige periode geannuleerd. U kunt uw abonnement beheren of annuleren in de instellingen van uw App Store-account.",
   "cta": {
     "continueWith": "Doorgaan met {{planName}}"
@@ -86,6 +95,14 @@
       "title": "Je hebt al een actief lidmaatschap",
       "description": "Je bent momenteel geabonneerd via de website. Beheer je lidmaatschap daar.",
       "confirm": "Begrepen"
+    }
+  },
+  "purchase": {
+    "processingTitle": "Betaling wordt verwerkt",
+    "processingBody": "Even geduld terwijl we je aankoop bevestigen bij Apple…",
+    "successTitle": "Alles is klaar!",
+    "successBody": "Je lidmaatschap is actief. Veel plezier met het volgen van je atleten!",
+    "errorTitle": "Er is iets misgegaan",
+    "errorBody": "We konden je aankoop niet verifiëren. Probeer het opnieuw of neem contact op."
   }
-}
 }

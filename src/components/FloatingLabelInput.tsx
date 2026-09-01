@@ -13,7 +13,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/common.styles';
+import { palette, radii, fonts, shadows, space } from '../styles/common.styles';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 // ✅ TYPES
@@ -51,16 +51,19 @@ interface FloatingLabelInputProps extends Omit<TextInputProps, 'onChangeText'> {
 }
 
 // ✅ CONSTANTS
+// Repointed at the design tokens. These used to read the legacy palette, whose
+// navy was #0f2a3f rather than the approved #0F2447, and whose selected-row tint
+// was a pink (#fff5f5) that appears nowhere in the deck.
 const COLORS = {
-  ERROR:        colors.error,        // #DC143C
-  PRIMARY:      colors.primary,      // #0f2a3f
-  GRAY_LIGHT:   colors.inputBorder,  // #d1d5db
-  GRAY_MED:     colors.gray400,      // #9ca3af
-  GRAY_DARK:    colors.gray900,      // #111827
-  WHITE:        colors.white,        // #ffffff
-  BORDER_LIGHT: colors.inputBorderFocus, // #e5e7eb
-  BG_SELECTED:  colors.inputBgSelected,  // #fff5f5
-  BG_ITEM:      colors.inputBgItem,      // #f3f4f6
+  ERROR:        palette.danger,
+  PRIMARY:      palette.navy,
+  GRAY_LIGHT:   palette.inputBorder,
+  GRAY_MED:     palette.placeholder,
+  GRAY_DARK:    palette.inkSoft,
+  WHITE:        palette.surface,
+  BORDER_LIGHT: palette.border,
+  BG_SELECTED:  palette.noticeBg,
+  BG_ITEM:      palette.fill,
 } as const;
 
 const ANIMATION_DURATION = 200;
@@ -635,7 +638,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
         style={[
           styles.input,
           { paddingLeft: iconName ? 44 : 15 },
-          (isPassword || showClear) && { paddingRight: 46 },
+          (isPassword || showClear) && { paddingRight: 48 },
           multiline && { paddingTop: 20, textAlignVertical: 'top' },
         ]}
         value={value}
@@ -688,24 +691,20 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
 // ✅ OPTIMIZED STYLES
 const styles = StyleSheet.create({
   wrapper: {
-    marginVertical: 10,
+    marginVertical: 8,
   },
   container: {
+    ...shadows.card,
+
     flexDirection: 'row',
     alignItems: 'center',
     height: INPUT_HEIGHT,
     borderWidth: 1.5,
-    borderRadius: 12,
+    borderRadius: radii.md,
     backgroundColor: COLORS.WHITE,
-    shadowColor: COLORS.PRIMARY,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 6,
-    elevation: 0,
   },
   containerFocused: {
-    shadowOpacity: 0.12,
-    elevation: 3,
+    ...shadows.card,
   },
   containerError: {
     borderColor: COLORS.ERROR,
@@ -724,35 +723,37 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: '100%',
-    fontSize: 15,
+    fontFamily: fonts.body,
+        fontSize: 15,
     color: COLORS.GRAY_DARK,
-    paddingHorizontal: 15,
-    paddingTop: 6,
+    paddingHorizontal: space.xl,
+    paddingTop: 8,
   },
   errorText: {
-    marginTop: 5,
+    marginTop: 4,
     marginLeft: 4,
-    fontSize: 11.5,
+    fontFamily: fonts.bodyMedium,
+        fontSize: 11,
     color: COLORS.ERROR,
-    fontWeight: '500',
-  },
+    },
   dropdown: {
     borderWidth: 1,
     borderColor: COLORS.BORDER_LIGHT,
-    borderRadius: 12,
-    marginTop: 6,
+    borderRadius: radii.md,
+    marginTop: 8,
     backgroundColor: COLORS.WHITE,
     maxHeight: 200,
     overflow: 'hidden',
   },
   dropdownItem: {
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.BG_ITEM,
   },
   dropdownText: {
-    fontSize: 14,
+    fontFamily: fonts.body,
+        fontSize: 13,
     color: COLORS.GRAY_DARK,
   },
   selectedItem: {
@@ -762,8 +763,9 @@ const styles = StyleSheet.create({
   },
   selectedText: {
     color: COLORS.PRIMARY,
-    fontWeight: '600',
-  },
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+        },
 
   // ✅ iOS picker bottom-sheet
   pickerBackdrop: {
@@ -787,15 +789,15 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.BG_ITEM,
   },
   pickerCancel: {
-    fontSize: 16,
+    fontFamily: fonts.displayMedium,
+        fontSize: 15,
     color: COLORS.GRAY_MED,
-    fontWeight: '500',
-  },
+    },
   pickerDone: {
-    fontSize: 16,
+    fontFamily: fonts.display,
+        fontSize: 15,
     color: COLORS.PRIMARY,
-    fontWeight: '700',
-  },
+    },
   pickerSpinner: {
     alignSelf: 'stretch',
   },

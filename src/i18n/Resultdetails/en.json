@@ -1,20 +1,20 @@
 {
- "tabs": {
-    "raceInfo": "Live Results",
-    "timingPoint": "Checkpoint History",
-    "runnerInfo": " About Runner",
+  "tabs": {
+    "raceInfo": "Results",
+    "timingPoint": "Checkpoints",
+    "runnerInfo": "About",
     "awards": "Awards"
   },
   "raceInfo": {
     "finisher": "Finisher",
-    "raceTime": "RACE TIME",
-    "previousTimingPoint": "PREVIOUS TIMING POINT",
-    "nextTimingPoint": "NEXT TIMING POINT",
-    "overallRanking": "OVERALL\nRANKING",
-    "rankingInOpen": "CATEGORY\nRANKING",
-    "genderRanking": "GENDER\nRANKING",
-    "distanceCompleted": "DISTANCE\nCOMPLETED",
-    "elevationGain": "ELEVATION GAIN\nFROM START",
+    "raceTime": "Race time",
+    "previousTimingPoint": "Previous timing point",
+    "nextTimingPoint": "Next timing point",
+    "overallRanking": "Overall\nranking",
+    "rankingInOpen": "Category\nranking",
+    "genderRanking": "Gender\nranking",
+    "distanceCompleted": "Distance\ncompleted",
+    "elevationGain": "Elevation gain\nfrom start",
     "startsIn": "Race starts in",
     "raceStarted": "Race has started",
     "raceInProgress": "Race is in progress",
@@ -24,42 +24,56 @@
     "categoryRank": "Category",
     "in": "in",
     "minutes": "minutes",
-    "wavelabel":"Wave"
+    "wavelabel": "Wave",
+    "raceResult": "Race result",
+    "status": "Status",
+    "distance": "Distance",
+    "splits": "Splits",
+    "scratchPosition": "Scratch position",
+    "category": "Category",
+    "performance": "Performance",
+    "averagePace": "Average pace",
+    "finishers": "Finishers",
+    "perKm": "/ km",
+    "ofField": "{{finishers}} of {{total}}"
   },
   "timingPoint": {
     "checkpoint": "CHECKPOINT",
-    "startTime": "START TIME",
-    "arrivalTime": "ARRIVAL TIME",
-    "time": "RACE TIME",
+    "startTime": "Start time",
+    "arrivalTime": "Arrival time",
+    "time": "Race time",
     "ranking": "RANKING",
     "distance": "DISTANCE",
-    "elevationGain": "ELEVATION GAIN",
+    "elevationGain": "Elevation gain",
     "noData": "No timing data available",
     "pace": "PACE",
     "speed": "SPEED",
     "elevation": "Elevation",
-    "availableServices": "Available Services"
-
+    "availableServices": "Available services",
+    "toNextPoint": "To next point",
+    "segmentDistance": "Since last point",
+    "segmentElevation": "Climb since last point"
   },
   "runnerInfo": {
     "club": "CLUB",
     "category": "CATEGORY",
     "utmbIndex": "INDEX",
-    "utmbSeries": "WORLD SERIES",
+    "utmbSeries": "World series",
     "noClub": "—",
-    "viewOnMap": "View on map"
+    "viewOnMap": "View on map",
+    "thisRace": "This race"
   },
   "awards": {
     "time": "TIME",
     "country": "COUNTRY",
     "ranking": "RANKING",
-    "genderRanking": "GENDER RANKING",
+    "genderRanking": "Gender ranking",
     "distance": "DISTANCE",
-    "elevationGain": "ELEVATION GAIN",
+    "elevationGain": "Elevation gain",
     "noData": "—"
   },
   "status": {
-    "not_started": "Not Started",
+    "not_started": "Not started",
     "in_progress": "In Progress",
     "finished": "Finished",
     "DNF": "DNF",
@@ -87,5 +101,5 @@
   "errors": {
     "participant_not_found": "Participant not found.",
     "generic": "Something went wrong. Please try again."
-}
+  }
 }

@@ -1,9 +1,10 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { colors } from '../../styles/common.styles';
+import { palette } from '../../styles/common.styles';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { favstyle } from '../../styles/favourite.style';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
@@ -14,12 +15,12 @@ const getStatusColors = (status: string) => {
     switch (status) {
         // Green = finished, red = still out on course. These were inverted.
         case 'in_progress':
-            return { backgroundColor: colors.error, textColor: colors.white };
+            return { backgroundColor: palette.danger, textColor: palette.surface };
         case 'finished':
-            return { backgroundColor: colors.success, textColor: colors.white };
+            return { backgroundColor: palette.lime, textColor: palette.surface };
         case 'not_started':
         default:
-            return { backgroundColor: colors.gray500, textColor: colors.white };
+            return { backgroundColor: palette.textMuted, textColor: palette.surface };
     }
 };
 
@@ -107,67 +108,63 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
 
     return (     
             <View style={favstyle.card}>
-                <View style={favstyle.headerBar}>
-                    <View style={[favstyle.headerLeft, { backgroundColor: statusColors.backgroundColor }]}>
-                        <Text style={[favstyle.headerText, { color: statusColors.textColor }]}>
-                            {t(`resultdetails:status.${item.race_status}`)}
-                        </Text>
-                    </View>
-                    <View style={[favstyle.diagLeft, { borderTopColor: statusColors.backgroundColor }]} />
-                    <View style={favstyle.headerMiddle} />
-                    <View style={favstyle.diagRight} />
-                    <View style={favstyle.headerRight}>
-                        <Text style={[favstyle.headerText, { color: colors.white }]}>
-                            {item.distance_name}
-                        </Text>
-                    </View>
-                </View>
-
-                {/* ── Star + rank badge (interactive follow toggle) ── */}
-                <TouchableOpacity
-                    style={favstyle.cornerBadge}
-                    onPress={handleStarPress}
-                    activeOpacity={0.8}
-                    disabled={isLoading}
-                >
-                    <Text style={isFollowed ? favstyle.cornerStar : favstyle.cornerStarUnfilled}>★</Text>
-                    {/* Rank only when race has started; not_started → star only */}
-                    {!isNotStarted && (overallRank !== '' || genderRank) && (
-                        <View style={favstyle.cornerBadgeRight}>
-                            {overallRank !== '' && <Text style={favstyle.cornerNum}>{overallRank}</Text>}
-                            {genderRank && <Text style={favstyle.cornerGenderRank}>{genderRank}</Text>}
-                        </View>
-                    )}
-                </TouchableOpacity>
-
-                {/* ── Body (tap → ResultDetails) ── */}
+                {/* ── Identity row: avatar, name, bib · distance, status ── */}
                 <TouchableOpacity onPress={handleCardPress} activeOpacity={0.7}>
-                    <View style={favstyle.bodyRow}>
-                        {/* Left: name + bib + flag/nation/age */}
-                        <View style={favstyle.bodyLeft}>
-                            <Text style={favstyle.runnerName} numberOfLines={1}>{fullName}</Text>
-
-                            <Text style={favstyle.bibText}>
-                                {t('allrace:race.bibNumber')} {item.bib_number}
+                    <View style={favstyle.identityRow}>
+                        <View style={favstyle.cardAvatar}>
+                            <Text style={favstyle.cardAvatarText}>
+                                {(fullName || '?').split(/\s+/).filter(Boolean)
+                                    .slice(0, 2).map((n) => n[0]).join('').toUpperCase() || '?'}
                             </Text>
-
+                        </View>
+                        <View style={favstyle.identityText}>
+                            <Text style={favstyle.runnerName} numberOfLines={1}>{fullName}</Text>
                             <View style={favstyle.nationRow}>
                                 {item.nation_flag ? (
-                                    <SvgUri uri={item.nation_flag} width={20} height={14} />
+                                    <SvgUri uri={item.nation_flag} width={18} height={13} />
                                 ) : null}
                                 <Text style={favstyle.nationText} numberOfLines={1}>
-                                    {[item.nation, item.age].filter(Boolean).join(' · ')}
+                                    {[`${t('allrace:race.bibNumber')} ${item.bib_number}`,
+                                      item.distance_name, item.nation, item.age]
+                                        .filter(Boolean).join(' \u00b7 ')}
                                 </Text>
                             </View>
-
-                            {isLive && (
-                                <View style={{ marginTop: 6 }}>
-                                    <LiveTrackingBar />
-                                </View>
-                            )}
                         </View>
+
+                        <View style={[favstyle.headerLeft, { backgroundColor: statusColors.backgroundColor }]}>
+                            <Text style={[favstyle.headerText, { color: statusColors.textColor }]}>
+                                {t(`resultdetails:status.${item.race_status}`)}
+                            </Text>
+                        </View>
+
+                    {/* ── Star + rank badge (interactive follow toggle) ── */}
+                    <TouchableOpacity
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        style={favstyle.cornerBadge}
+                        onPress={handleStarPress}
+                        activeOpacity={0.8}
+                        disabled={isLoading}
+                    >
+                        <Ionicons
+                            name={isFollowed ? 'star' : 'star-outline'}
+                            size={26}
+                            color={isFollowed ? palette.lime : palette.placeholder}
+                        />
+                        {/* Rank only when race has started; not_started → star only */}
+                        {!isNotStarted && (overallRank !== '' || genderRank) && (
+                            <View style={favstyle.cornerBadgeRight}>
+                                {overallRank !== '' && <Text style={favstyle.cornerNum}>{overallRank}</Text>}
+                                {genderRank && <Text style={favstyle.cornerGenderRank}>{genderRank}</Text>}
+                            </View>
+                        )}
+                    </TouchableOpacity>
                     </View>
 
+                    {isLive && (
+                        <View style={{ marginTop: 8 }}>
+                            <LiveTrackingBar />
+                        </View>
+                    )}
                     {/* ── Separator ── */}
                     <View style={favstyle.separator} />
 
@@ -181,7 +178,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                                         ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
                                         : t('allrace:race.raceTime')}
                                 </Text>
-                                <Text style={[favstyle.statVal, { color: lastCrossed?.race_time ? '#22C55E' : '#9CA3AF' }]}>
+                                <Text style={[favstyle.statVal, { color: lastCrossed?.race_time ? palette.lime : palette.placeholder }]}>
                                     {lastCrossed?.race_time || item.time || '-'}
                                 </Text>
                             </View>

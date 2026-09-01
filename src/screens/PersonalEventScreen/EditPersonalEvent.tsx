@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar,
   Text,
   TouchableOpacity,
   View,
@@ -20,7 +19,7 @@ import { useEditPersonalEventForm } from '../../hooks/Useeditpersonaleventform';
 import { useEditFileUpload } from '../../hooks/Useeditfileupload';
 import { getPersonalEvent, updatePersonalEvent, formatFileSize, getDeviceTimezone } from '../../services/editPersonalEventService';
 import { tokenService } from '../../services/tokenService';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { personalStyles } from '../../styles/personalEvent.styles';
 import { EditPersonalEventpops } from '../../types/navigation';
 import { toastError, toastSuccess } from '../../../utils/toast';
@@ -217,20 +216,18 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
 
   if (isLoading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" />
-        <AppHeader showLogo showBack />
+      <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+        <AppHeader title={t('common:band.editPersonalEvent')} showLogo showBack />
         <View style={commonStyles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={palette.navy} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo showBack />
+    <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+      <AppHeader title={t('common:band.editPersonalEvent')} showLogo showBack />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -242,10 +239,6 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={personalStyles.section}>
-            <Text style={commonStyles.title}>{t('personal:editTitle')}</Text>
-          </View>
-
           <View style={personalStyles.formContainer}>
             {/* Event Name */}
             <View style={personalStyles.fieldWrapper}>
@@ -329,7 +322,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     style={{ marginLeft: 8, marginBottom: 8 }}
                   >
-                    <Ionicons name="close-circle" size={22} color={colors.gray500} />
+                    <Ionicons name="close-circle" size={22} color={palette.textMuted} />
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -357,14 +350,14 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                   >
                     {isPickingFile ? (                    
                       <>
-                        <ActivityIndicator size="large" color={colors.primary} />
+                        <ActivityIndicator size="large" color={palette.navy} />
                         <Text style={personalStyles.uploadTitle}>
                           {t('personal:file.loading')}
                         </Text>
                       </>
                     ) : (
                       <>
-                        <Ionicons name="cloud-upload-outline" size={40} color={colors.primary} />
+                        <Ionicons name="cloud-upload-outline" size={40} color={palette.navy} />
                         <Text style={personalStyles.uploadTitle}>{t('personal:file.uploadTitle')}</Text>
                         <Text style={personalStyles.uploadSubtitle}>
                           {t('personal:file.uploadSubtitle', { size: MB })}
@@ -413,7 +406,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
               activeOpacity={0.8}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color={colors.white} />
+                <ActivityIndicator size="small" color={palette.surface} />
               ) : (
                 <Text style={commonStyles.primaryButtonText}>{t('personal:button.save')}</Text>
               )}

@@ -11,8 +11,9 @@ import { useTranslation } from 'react-i18next';
 import FloatingLabelInput from '../../../components/FloatingLabelInput';
 import { authService } from '../../../services/authService';
 import { forgotStyles } from '../../../styles/forgetPassword.styles';
-import { commonStyles, colors } from '../../../styles/common.styles';
+import { commonStyles, palette } from '../../../styles/common.styles';
 import { analyticsService } from '../../../services/analyticsService';
+import { Button } from '../../../components/ui';
 
 interface NewPasswordStepProps {
   passwordResetToken: string;
@@ -133,7 +134,7 @@ const NewPasswordStep: React.FC<NewPasswordStepProps> = ({
     <View style={forgotStyles.container}>
       {/* Icon */}
       <View style={forgotStyles.iconCircle}>
-        <Ionicons name="shield-checkmark-outline" size={38} color={colors.primary} />
+        <Ionicons name="shield-checkmark-outline" size={38} color={palette.navy} />
       </View>
 
       {/* Title & Subtitle */}
@@ -167,24 +168,12 @@ const NewPasswordStep: React.FC<NewPasswordStepProps> = ({
         />
 
         {/* Reset Button */}
-        <TouchableOpacity
-          style={[
-            commonStyles.primaryButton,
-            { marginTop: 12 },
-            loading && { opacity: 0.7 }
-          ]}
+        <Button
+          label={t('forget:passwordStep.resetButton')}
           onPress={handleSubmit}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={commonStyles.primaryButtonText}>
-              {t('forget:passwordStep.resetButton')}
-            </Text>
-          )}
-        </TouchableOpacity>
+          loading={loading}
+          style={{ marginTop: 12 }}
+        />
       </View>
     </View>
   );

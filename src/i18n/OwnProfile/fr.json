@@ -1,55 +1,67 @@
 {
-    "tracking": {
+  "tracking": {
     "unlimited": "Vous avez des sessions de suivi en direct illimitées.",
     "remaining": "Il vous reste {{count}} session(s) de suivi en direct.",
     "exhausted": "Vous n'avez plus de sessions de suivi en direct.",
     "subtitle": "Suivez vos athlètes favoris en direct."
-    },
-    "menu": {
-        "events": {
-            "title": "Vos événements",
-            "subtitle": "Consultez vos résultats passés"
-        },
-        "training": {
-            "title": "Vos sessions d'entraînement",
-            "subtitle": "Consultez vos sessions passées ou téléchargez-en une nouvelle."
-        },
-        "account": {
-            "title": "Compte",
-            "subtitle": "Gérez les paramètres de votre compte"
-        },
-        "contact": {
-            "title": "Contact et retours",
-            "subtitle": "Questions, bugs ou idées"
-        }
-    },
-    "profile": {
-        "followers": "Abonnés",
-        "following": "Abonnements"
-    },
-    "backbtn": {
-        "events": "Vos Événements",
-        "training": "Sessions d'Entraînement"
-    },
-    "membershipCard": {
-        "liteTitle": "ABONNEMENT",
-        "sessionsLeft": "sessions de suivi en direct restantes",
-        "viewPlans": "Voir les forfaits et passer à un niveau supérieur",
-        "noMembershipTitle": "Aucun abonnement actif",
-        "noMembershipSubtitle": "Abonnez-vous à un forfait pour commencer le suivi en direct de vos sessions.",
-        "paymentProcessing": "Le paiement est en cours de traitement. Veuillez patienter environ 1 minute, puis appuyez sur Actualiser pour voir votre abonnement mis à jour.",
-         "refresh": "Actualiser"
+  },
+  "menu": {
+    "events": {
+      "title": "Vos événements",
+      "subtitle": "Consultez vos résultats passés"
     },
     "training": {
-        "create": "CRÉER UN ÉVÉNEMENT PERSONNEL"
+      "title": "Vos sessions d'entraînement",
+      "subtitle": "Consultez vos sessions passées ou téléchargez-en une nouvelle."
     },
-    "deleteEvent": {
+    "account": {
+      "title": "Compte",
+      "subtitle": "Gérez les paramètres de votre compte"
+    },
+    "contact": {
+      "title": "Contact et retours",
+      "subtitle": "Questions, bugs ou idées"
+    },
+    "membership": {
+      "title": "Abonnement",
+      "subtitle": "Formule, facturation et reçus"
+    },
+    "settings": {
+      "title": "Paramètres",
+      "subtitle": "Langue, visibilité et compte"
+    }
+  },
+  "profile": {
+    "followers": "Abonnés",
+    "following": "Abonnements",
+    "races": "Courses"
+  },
+  "backbtn": {
+    "events": "Vos Événements",
+    "training": "Sessions d'Entraînement"
+  },
+  "membershipCard": {
+    "liteTitle": "ABONNEMENT",
+    "sessionsLeft": "sessions de suivi en direct restantes",
+    "viewPlans": "Voir les forfaits et passer à un niveau supérieur",
+    "noMembershipTitle": "Aucun abonnement actif",
+    "noMembershipSubtitle": "Abonnez-vous à un forfait pour commencer le suivi en direct de vos sessions.",
+    "paymentProcessing": "Le paiement est en cours de traitement. Veuillez patienter environ 1 minute, puis appuyez sur Actualiser pour voir votre abonnement mis à jour.",
+    "refresh": "Actualiser"
+  },
+  "training": {
+    "create": "Créer un événement personnel"
+  },
+  "deleteEvent": {
     "deleteSuccess": "Événement supprimé avec succès",
-     "deleteFailed": "Échec de la suppression de l'événement",
+    "deleteFailed": "Échec de la suppression de l'événement",
     "confirmTitle": "Supprimer cet événement ?",
     "confirmMessage": "\"{{name}}\" sera supprimé définitivement. Cette action est irréversible.",
     "cancel": "Annuler",
     "confirm": "Supprimer",
     "trackingStartedError": "Cet événement ne peut plus être supprimé, car le suivi a déjà commencé."
-}
+  },
+  "events": {
+    "viewResult": "Voir le résultat"
+  }
 }

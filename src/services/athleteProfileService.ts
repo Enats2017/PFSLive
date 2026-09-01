@@ -20,8 +20,12 @@ export interface AthleteProfile {
   profile_picture: string;
   is_own_profile: number;
   password_protected: 0 | 1;
+  city: string;
+  country: string;
   followers_count: number;
   following_count: number;
+  /** Races this athlete appears in — the two tab totals combined. */
+  races_count: number;
    membership_info: MembershipInfo | null;
    in_process_payment: number | null;
 }
@@ -207,8 +211,11 @@ export const eventService = {
               email:"",
               is_own_profile: 0,
               password_protected: 0,
-              followers_count: 0, // ← add
+              city: "",
+              country: "",
+              followers_count: 0,
               following_count: 0,
+              races_count: 0,
               membership_info: null,
               in_process_payment: 0
             },

@@ -5,8 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
+import { EventListCard } from '../../components/EventListCard';
 import { EventItem } from '../../services/eventService';
 import { formatEventDate } from '../../utils/dateFormatter';
 import { API_CONFIG } from '../../constants/config';
@@ -49,24 +50,22 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
    const renderItem = useCallback(
         ({ item }: { item: EventItem }) => (
-            <TouchableOpacity
-                style={[
-                    commonStyles.card,
-                    {
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingHorizontal: spacing.lg,
-                        paddingVertical: spacing.md,
-                        marginBottom: spacing.md,
-                    },
-                ]}
+            <EventListCard
+                name={item.name}
+                date={formatEventDate(item.race_date, t)}
+                city={item.city}
+                country={item.country}
+                imageUrl={item.event_image}
+                badgeLabel={t('details:live')}
+                badgeTone="lime"
+                badgeCaps
                 onPress={async () => {
                     analyticsService.logInteraction(
                         ANALYTICS_SCREENS.EVENT_LIST,
                         ANALYTICS_BUTTONS.LIVE_EVENT,
                         'tap',
                         {
-                            [ANALYTICS_PARAMS.EVENT_NAME]: item.name, 
+                            [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
                             [ANALYTICS_PARAMS.TAB_NAME]: 'live',
                         }
                     );
@@ -77,42 +76,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         auto_register_id: null,
                     });
                 }}
-                activeOpacity={0.8}
-            >
-                <View style={eventStyles.eventCardInfo}>
-                    <Text style={[commonStyles.title,{marginBottom:4}]}>{item.name}</Text>
-                    <View style={eventStyles.eventCardDateRow}>
-                        <Ionicons name="calendar-outline" size={14} color={colors.gray500} />
-                        <Text style={commonStyles.date}>
-                            {formatEventDate(item.race_date, t)}
-                        </Text>
-                    </View>
-                </View>
-
-                <TouchableOpacity
-                    style={eventStyles.iconButtonBlue}
-                    onPress={ async () => {
-                        analyticsService.logInteraction(
-                        ANALYTICS_SCREENS.EVENT_LIST,
-                        ANALYTICS_BUTTONS.LIVE_EVENT,
-                        'tap',
-                        {
-                            [ANALYTICS_PARAMS.EVENT_NAME]: item.name, 
-                            [ANALYTICS_PARAMS.TAB_NAME]: 'live',
-                        }
-                    );
-                        navigation.navigate('EventDetails', {
-                            product_app_id: item.product_app_id,
-                            event_name: item.name,
-                            event_image: item.event_image ?? '',
-                            auto_register_id: null,
-                        })
-                    }}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="eye-outline" size={23} color={colors.primaryDark} />
-                </TouchableOpacity>
-            </TouchableOpacity>
+            />
         ),
         [navigation, t]
     );
@@ -127,7 +91,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
         return (
             <ActivityIndicator
                 size="small"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ marginVertical: spacing.md }}
             />
         );
@@ -154,7 +118,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
             onEndReachedThreshold={0.5}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-                paddingHorizontal: spacing.md,
+                paddingHorizontal: spacing.xl,
                 paddingTop: spacing.md,
                 paddingBottom: spacing.xxxxl,
                 flexGrow: 1,

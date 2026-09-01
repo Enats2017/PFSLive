@@ -5,8 +5,8 @@
     "Upcoming": "À Venir"
   },
   "official": {
-    "title": "ÉVÉNEMENTS PARTENAIRES OFFICIELS",
-    "button": "INSCRIVEZ-VOUS AU SUIVI EN DIRECT"
+    "title": "Événements partenaires officiels",
+    "button": "Inscrivez-vous au suivi en direct"
   },
   "past": {
     "button": "RÉSULTAT"
@@ -19,9 +19,9 @@
     "searchNoResults": "Aucun événement ne correspond à votre recherche"
   },
   "personal": {
-    "title": "ÉVÉNEMENTS PERSONNELS",
+    "title": "Événements personnels",
     "description": "Vous participez à un événement ou planifiez une session d'entraînement qui n'est pas un événement partenaire officiel ? Créez-le ici !",
-    "button": "CRÉER UN ÉVÉNEMENT PERSONNEL"
+    "button": "Créer un événement personnel"
   },
   "error": {
     "failed": "Échec du chargement des événements",

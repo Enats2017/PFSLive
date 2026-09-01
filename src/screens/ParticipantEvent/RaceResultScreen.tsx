@@ -5,13 +5,12 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  StatusBar,
   } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
 import { detailsStyles } from '../../styles/details.styles';
@@ -117,7 +116,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           {imageLoading && (
             <ActivityIndicator
               size="large"
-              color={colors.primary}
+              color={palette.navy}
               style={{ position: 'absolute', zIndex: 1 }}
             />
           )}
@@ -151,20 +150,20 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
               {item.distance_name}
             </Text>
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
+              <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
               <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.race_date_formatted}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="time-outline" size={15} color={colors.gray600} />
+              <Ionicons name="time-outline" size={15} color={palette.textBody} />
               <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {formatClockTime(item.race_time)}
               </Text>
             </View>
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Feather name="users" size={16} color={colors.gray500} />
+                <Feather name="users" size={16} color={palette.textMuted} />
                 <Text style={detailsStyles.metaText} numberOfLines={1}>
                   {item.participant_started_count} {t('details:athletes')}
                 </Text>
@@ -172,7 +171,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             )}
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
+                <Ionicons name="ribbon-outline" size={15} color={palette.textBody} />
                 <Text style={detailsStyles.metaText} numberOfLines={1}>
                   {item.finished_count} {t('details:finished')}
                 </Text>
@@ -180,7 +179,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             )}
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
+                <Ionicons name="close-circle-outline" size={15} color={palette.textBody} />
                 <Text style={detailsStyles.metaTextRed} numberOfLines={1}>
                   {item.dnf_count} {t('details:dnf')}
                 </Text>
@@ -217,11 +216,10 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   // ✅ LOADING STATE
   if (loading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" />
-        <AppHeader showLogo={false} showBack />
+      <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+        <AppHeader title={event_name} showLogo={false} showBack />
         <View style={commonStyles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={palette.navy} />
         </View>
         <BottomNavigation
           activeTab="Home"
@@ -236,8 +234,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   // ✅ ERROR STATE
   if (hasError && !loading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={commonStyles.container} edges={['bottom']}>
         <ErrorScreen
           type={error!.type}
           title={error!.title}
@@ -256,13 +253,8 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   }
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={false} showBack />
-
-      <View style={[detailsStyles.section]}>
-        <Text style={commonStyles.title}>{event_name}</Text>
-      </View>
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
+      <AppHeader title={event_name} showLogo={false} showBack />
 
       {results.length === 0 ? (
         <View style={{ marginTop: 40, alignItems: 'center', paddingHorizontal: spacing.lg }}>

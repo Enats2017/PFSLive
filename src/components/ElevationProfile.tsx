@@ -2,6 +2,8 @@ import React from 'react';
 import { View, StyleSheet, Dimensions, Text } from 'react-native';
 import { VictoryArea, VictoryChart, VictoryAxis, VictoryScatter, VictoryLine } from 'victory-native';
 import { ChartDataPoint, Station } from '../types';
+import { palette, chartColors, fonts, withAlpha } from '../styles/common.styles';
+import { useTranslation } from 'react-i18next';
 
 interface ElevationProfileProps {
 	chartData: ChartDataPoint[];
@@ -16,6 +18,7 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 	currentDistance,
 	totalDistance,
 }) => {
+  const { t } = useTranslation();
 	const width = Dimensions.get('window').width;
 	const height = 200;
 
@@ -24,7 +27,7 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 	const minEle = Math.min(...elevations);
 	const maxEle = Math.max(...elevations);
 	const eleRange = maxEle - minEle;
-	const yDomain = [minEle - eleRange * 0.1, maxEle + eleRange * 0.1];
+	const yDomain: [number, number] = [minEle - eleRange * 0.1, maxEle + eleRange * 0.1];
 
 	// Station points for the chart
 	const stationChartPoints = stations
@@ -36,7 +39,7 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 
 	return (
 		<View style={styles.container}>
-			<Text style={styles.title}>Elevation Profile</Text>
+			<Text style={styles.title}>{t('details:chart.elevationProfile')}</Text>
 			<VictoryChart
 				width={width}
 				height={height}
@@ -46,9 +49,10 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 				{/* X Axis */}
 				<VictoryAxis
 					style={{
-						axis: { stroke: '#ccc' },
-						tickLabels: { fontSize: 10, fill: '#666' },
-						grid: { stroke: '#e0e0e0', strokeDasharray: '3,3' },
+						axis: { stroke: chartColors.axis },
+						tickLabels: { fontFamily: fonts.body,
+        fontSize: 10, fill: palette.textBody },
+						grid: { stroke: palette.border, strokeDasharray: '3,3' },
 					}}
 					tickFormat={(t) => `${Math.round(t)}km`}
 					tickValues={[0, totalDistance * 0.25, totalDistance * 0.5, totalDistance * 0.75, totalDistance]}
@@ -58,9 +62,10 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 				<VictoryAxis
 					dependentAxis
 					style={{
-						axis: { stroke: '#ccc' },
-						tickLabels: { fontSize: 10, fill: '#666' },
-						grid: { stroke: '#e0e0e0', strokeDasharray: '3,3' },
+						axis: { stroke: chartColors.axis },
+						tickLabels: { fontFamily: fonts.body,
+        fontSize: 10, fill: palette.textBody },
+						grid: { stroke: palette.border, strokeDasharray: '3,3' },
 					}}
 					tickFormat={(t) => `${Math.round(t)}m`}
 				/>
@@ -70,8 +75,8 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 					data={chartData}
 					style={{
 						data: {
-							fill: 'rgba(220, 20, 60, 0.3)',
-							stroke: '#DC143C',
+							fill: withAlpha(chartColors.current, 0.3),
+							stroke: chartColors.current,
 							strokeWidth: 2,
 						},
 					}}
@@ -86,7 +91,7 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 							{ x: station.x, y: yDomain[1] },
 						]}
 						style={{
-							data: { stroke: '#000', strokeWidth: 1, strokeDasharray: '4,4' },
+							data: { stroke: palette.ink, strokeWidth: 1, strokeDasharray: '4,4' },
 						}}
 					/>
 				))}
@@ -97,8 +102,8 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 					size={5}
 					style={{
 						data: {
-							fill: '#000',
-							stroke: '#fff',
+							fill: palette.ink,
+							stroke: palette.surface,
 							strokeWidth: 2,
 						},
 					}}
@@ -111,7 +116,7 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 						{ x: currentDistance, y: yDomain[1] },
 					]}
 					style={{
-						data: { stroke: '#FF6B35', strokeWidth: 3 },
+						data: { stroke: chartColors.marker, strokeWidth: 3 },
 					}}
 				/>
 			</VictoryChart>
@@ -122,12 +127,12 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 const styles = StyleSheet.create({
 	container: {
 		backgroundColor: 'white',
-		paddingVertical: 10,
+		paddingVertical: 8,
 	},
 	title: {
-		fontSize: 14,
-		fontWeight: 'bold',
-		color: '#333',
+		fontFamily: fonts.bodySemi,
+        fontSize: 13,
+		color: palette.textBody,
 		marginLeft: 16,
 		marginBottom: 8,
 	},

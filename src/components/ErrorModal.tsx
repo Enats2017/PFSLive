@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles } from '../styles/common.styles';
+import { commonStyles, palette, fonts, shadows } from '../styles/common.styles';
 
 interface ErrorModalProps {
   visible: boolean;
@@ -47,7 +47,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
       <View style={styles.wrapper}>
         <View style={styles.card}>
           <View style={styles.iconWrapper}>
-            <Ionicons name="alert-circle" size={60} color={colors.error} />
+            <Ionicons name="alert-circle" size={60} color={palette.danger} />
           </View>
 
           <Text style={styles.title}>
@@ -102,42 +102,35 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: palette.surface,
+    borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 32,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: { elevation: 8 },
-    }),
+    ...shadows.card,
   },
   iconWrapper: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: colors.error + '15',
+    backgroundColor: palette.dangerBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
     marginBottom: 12,
   },
   message: {
-    fontSize: 14,
-    color: '#64748b',
+    fontFamily: fonts.body,
+        fontSize: 13,
+    color: palette.textMuted,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
@@ -148,6 +141,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   retryButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: palette.navy,
   },
 });

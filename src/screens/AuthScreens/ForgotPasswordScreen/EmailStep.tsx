@@ -9,9 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import FloatingLabelInput from '../../../components/FloatingLabelInput';
 import { authService } from '../../../services/authService';
-import { commonStyles, colors } from '../../../styles/common.styles';
+import { commonStyles, palette } from '../../../styles/common.styles';
 import { forgotStyles } from '../../../styles/forgetPassword.styles';
 import { analyticsService } from '../../../services/analyticsService';
+import { Button } from '../../../components/ui';
 
 interface EmailStepProps {
   onNext: (email: string, verificationToken: string) => void;
@@ -74,7 +75,7 @@ const EmailStep: React.FC<EmailStepProps> = ({ onNext, onBack }) => {
     <View style={forgotStyles.container}>
       {/* Icon */}
       <View style={forgotStyles.iconCircle}>
-        <Ionicons name="lock-open-outline" size={38} color={colors.primary} />
+        <Ionicons name="lock-open-outline" size={38} color={palette.navy} />
       </View>
 
       {/* Title & Subtitle */}
@@ -99,24 +100,12 @@ const EmailStep: React.FC<EmailStepProps> = ({ onNext, onBack }) => {
         />
 
         {/* Send OTP Button */}
-        <TouchableOpacity
-          style={[
-            commonStyles.primaryButton,
-            { marginTop: 12 },
-            loading && { opacity: 0.7 }
-          ]}
+        <Button
+          label={t('forget:emailStep.sendOtpButton')}
           onPress={handleSendOtp}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={commonStyles.primaryButtonText}>
-              {t('forget:emailStep.sendOtpButton')}
-            </Text>
-          )}
-        </TouchableOpacity>
+          loading={loading}
+          style={{ marginTop: 12 }}
+        />
 
         {/* ✅ FIX: Back to Login - Wrap icon and text separately */}
         <TouchableOpacity
@@ -124,11 +113,32 @@ const EmailStep: React.FC<EmailStepProps> = ({ onNext, onBack }) => {
           onPress={onBack}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back-outline" size={20} color="#6b7280" />
+          <Ionicons name="arrow-back-outline" size={20} color={palette.textMuted} />
           <Text style={forgotStyles.backButtonText}>
             {t('forget:emailStep.backtologin')}
           </Text>
         </TouchableOpacity>
+
+        {/* 06_ForgotPassword.png: tell people what the next two screens are,
+            so a reset that takes three steps does not look like a dead end. */}
+        <View style={forgotStyles.nextCard}>
+          <Text style={forgotStyles.nextTitle}>{t('forget:emailStep.next.title')}</Text>
+          {([1, 2, 3] as const).map((n) => (
+            <View key={n} style={forgotStyles.nextRow}>
+              <View style={forgotStyles.nextNum}>
+                <Text style={forgotStyles.nextNumText}>{n}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={forgotStyles.nextStepTitle}>
+                  {t(`forget:emailStep.next.s${n}`)}
+                </Text>
+                <Text style={forgotStyles.nextStepSub}>
+                  {t(`forget:emailStep.next.s${n}sub`)}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   );

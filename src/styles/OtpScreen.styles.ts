@@ -1,5 +1,5 @@
 import { StyleSheet, Platform } from 'react-native';
-import { colors, spacing, typography } from './common.styles';
+import { spacing, typography, palette, fonts, shadows, space, radii, withAlpha } from './common.styles';
 
 export const optStyles = StyleSheet.create({
   // ✅ CONTAINER
@@ -11,6 +11,43 @@ export const optStyles = StyleSheet.create({
   },
 
   // ✅ HEADER
+  // ── 05_OTP.png: the "Not arrived?" card ────────────────
+  // The spam-folder hint and the sending address, plus a way back to change a
+  // mistyped email. Without it the only options are wait or start over.
+  notArrivedCard: {
+    backgroundColor: palette.surface,
+    borderRadius: radii.md,
+    padding: space.lg,
+    marginTop: space.xl,
+    ...shadows.card,
+  },
+  notArrivedTitle: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
+    marginBottom: space.sm,
+  },
+  notArrivedBody: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+    lineHeight: 20,
+  },
+  notArrivedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
+    marginTop: space.md,
+    paddingTop: space.md,
+  },
+  notArrivedLink: {
+    fontFamily: fonts.display,
+    fontSize: 13,
+    color: palette.navy,
+  },
+
   headerSection: {
     alignItems: 'center',
     marginBottom: spacing.xxxl,
@@ -20,34 +57,37 @@ export const optStyles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: withAlpha(palette.navy, 0.08),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
     borderWidth: 2,
-    borderColor: colors.primary + '30',
+    borderColor: withAlpha(palette.navy, 0.19),
   },
 
   title: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
+    fontFamily: fonts.bodySemi,
+        fontSize: 26,
+
+        color: palette.ink,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
 
   subtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: palette.textBody,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: spacing.xs,
   },
 
   email: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.primary,
+    fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        color: palette.navy,
     marginTop: spacing.sm,
     textAlign: 'center',
   },
@@ -65,44 +105,35 @@ export const optStyles = StyleSheet.create({
     maxWidth: 52,
     height: 56,
     borderWidth: 1.5,
-    borderRadius: 12,
-    borderColor: colors.gray300,
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
-    backgroundColor: colors.white,
+    borderRadius: 14,
+    borderColor: palette.inputBorder,
+    fontFamily: fonts.display,
+    fontSize: 26,
+    color: palette.ink,
+    backgroundColor: palette.surface,
     textAlign: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 1,
-      },
-    }),
+    ...shadows.hairline,
   },
 
   otpInputFilled: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '10',
+    borderColor: palette.navy,
+    backgroundColor: withAlpha(palette.navy, 0.06),
   },
 
   otpInputError: {
-    borderColor: colors.error,
-    backgroundColor: colors.error + '10',
+    borderColor: palette.danger,
+    backgroundColor: palette.dangerBg,
   },
 
   // ✅ ERROR MESSAGE
   errorText: {
-    fontSize: typography.sizes.sm,
-    color: colors.error,
+    fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+    color: palette.danger,
     textAlign: 'center',
     marginBottom: spacing.lg,
-    fontWeight: typography.weights.medium,
-  },
+
+        },
 
   // ✅ VERIFY BUTTON
   verifyButton: {
@@ -119,19 +150,22 @@ export const optStyles = StyleSheet.create({
   },
 
   resendLabel: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textBody,
   },
 
   resendLink: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
-    fontWeight: typography.weights.bold,
-  },
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.navy,
+
+        },
 
   countdown: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
-    fontWeight: typography.weights.semibold,
-  },
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.textMuted,
+
+        },
 });

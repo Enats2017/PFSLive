@@ -8,9 +8,16 @@
     "ios": "expo run:ios",
     "clean": "rm -rf node_modules android ios .expo && rm -f package-lock.json",
     "generate-assets": "node generate-assets.js",
-    "prebuild": "npm run generate-assets && npx expo prebuild --clean"
+    "prebuild": "npm run generate-assets && npx expo prebuild --clean",
+    "design-audit": "node scripts/design-audit.mjs --strict",
+    "typecheck": "tsc --noEmit",
+    "design-report": "node scripts/design-report.mjs",
+    "design-check": "node scripts/design-report.mjs --selftest && node scripts/i18n-check.mjs --selftest && node scripts/data-loss-check.mjs --selftest && node scripts/design-report.mjs --strict && node scripts/design-audit.mjs --strict && node scripts/i18n-check.mjs --strict && tsc --noEmit",
+    "i18n-check": "node scripts/i18n-check.mjs",
+    "data-check": "node scripts/data-loss-check.mjs"
   },
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/poppins": "^0.4.1",
     "@expo/vector-icons": "^15.0.3",
     "@gorhom/bottom-sheet": "^4",

@@ -1,49 +1,50 @@
 {
-  "subtitle": "LIVE TRACKING & RESULTS",
-  "tagline": "SHARE YOUR RACE OR TRAINING WITH YOUR FRIENDS & FAMILY",
-  "subtext": "Live Results",
+  "subtitle": "Live tracking & results",
+  "tagline": "Share your race or training with your friends & family",
+  "subtext": "Live results",
   "participant": {
-    "title": "Live Tracking"
+    "title": "Live tracking"
   },
   "button": {
-    "Participant": "I AM A PARTICIPANT",
-    "Fan": "I AM A FAN"
+    "Participant": "I am a participant",
+    "Fan": "I am a fan"
   },
   "Logotagline": "Livio - official tracking & results app for the most beautiful races",
   "Event": {
-    "title": "Event Name",
+    "title": "Event name",
     "Date": "Date",
     "description": "You can start your live tracking from 1 hour before your start. Be sure to keep this app open all the time and do not close it!",
-    "buttonText": "START TRACKING",
-    "button": "STOP TRACKING"
+    "buttonText": "Start tracking",
+    "button": "Stop tracking"
   },
   "status": {
     "gpsActive": "GPS Active - Waiting for race to start",
-    "sendingData": "Sending Location Data",
+    "sendingData": "Sending location data",
     "sent": "Sent",
     "queued": "Queued",
     "interval": "Interval",
     "waitingForData": "Waiting for event data...",
     "loading": "Loading...",
-    "manualStartEnabled": "Manual Start Enabled",
+    "manualStartEnabled": "Manual start enabled",
     "manualStartDescription": "Data transmission is controlled manually",
-    "manualStartReady": "Ready to send (manual mode)"
+    "manualStartReady": "Ready to send (manual mode)",
+    "raceStartsIn": "Race starts in: {{time}}"
   },
   "tracking": {
-    "gpsActivated": "GPS Activated",
+    "gpsActivated": "GPS activated",
     "manualStartEnabled": "Manual start mode enabled. You can start sending data anytime.",
-    "raceStarted": "Race Started!",
+    "raceStarted": "Race started!",
     "nowSending": "Now sending location data.",
     "waitingForRace": "GPS activated. Data will be sent when race starts.",
     "waitingForRaceNoTime": "GPS activated. Waiting for race information.",
     "dataSendingStarted": "GPS activated. Data transmission started.",
-    "manualStart": "Manual Override",
+    "manualStart": "Manual override",
     "manualStartMessage": "Data transmission started manually",
-    "gpsStopped": "GPS Stopped",
+    "gpsStopped": "GPS stopped",
     "trackingStopped": "Tracking stopped. Sent: {{sent}}, Queued: {{queued}}",
-    "queueProcessed": "Queue Processed",
+    "queueProcessed": "Queue processed",
     "queuedSent": "{{count}} queued location(s) sent successfully",
-    "backgroundNotificationTitle": "Live Tracking Active",
+    "backgroundNotificationTitle": "Live tracking active",
     "backgroundNotificationBody": "Your location is being tracked for the race.",
     "retryQueue": "Send {{count}} unsent location(s)",
     "queueRetryFailed": "No network — try again later",
@@ -55,34 +56,34 @@
     }
   },
   "battery": {
-    "title": "Enable Background Tracking",
+    "title": "Enable background tracking",
     "message": "For reliable GPS tracking during your race, please allow unrestricted battery usage. This prevents Android from pausing location updates while the screen is off.",
     "allow": "Allow",
     "skip": "Skip",
-    "revertTitle": "Battery Setting",
+    "revertTitle": "Battery setting",
     "revertMessage": "You can revert battery usage back to Optimized in Settings → Apps → Livio → Battery.",
-    "revertSettings": "Open Settings",
+    "revertSettings": "Open settings",
     "revertLater": "Later"
   },
   "alerts": {
-    "overrideTitle": "Manual Override",
+    "overrideTitle": "Manual override",
     "overrideMessage": "Start sending location data immediately, bypassing the race start time?",
     "cancel": "Cancel",
-    "startNow": "Start Now"
+    "startNow": "Start now"
   },
   "errors": {
-    "missingInfo": "Missing Information",
+    "missingInfo": "Missing information",
     "missingInfoDescription": "Participant or event information not available",
-    "permissionRequired": "Permission Required",
+    "permissionRequired": "Permission required",
     "permissionDescription": "Location permission is required to track your progress",
-    "gpsError": "GPS Error",
+    "gpsError": "GPS error",
     "gpsErrorDescription": "Unable to get your location. Please check your GPS settings.",
     "trackingFailed": "Failed to start tracking"
   },
   "earlyTracking": {
-    "title": "Race Not Started Yet",
+    "title": "Race not started yet",
     "message": "Your race starts in {{hours}}. Do you still want to enable background location tracking?",
-    "yes": "Yes, Enable",
+    "yes": "Yes, enable",
     "no": "No, Cancel"
   },
   "powerSaving": {
@@ -92,16 +93,18 @@
     "disable": "Open battery settings"
   },
   "followingEvents": {
-    "sectionTitle": "EVENTS YOU FOLLOW",
-    "startsIn": "STARTS IN",
+    "sectionTitle": "Events you follow",
+    "startsIn": "Starts in",
     "live": "LIVE",
-    "routeButton": "Follow The Event"
+    "routeButton": "Follow the event",
+    "youFollow": "You follow",
+    "opensEventPage": "Opens the event page"
   },
   "startConfirm": {
-    "title": "Start Live Tracking?",
+    "title": "Start live tracking?",
     "message": "Your live location will be shared with your followers throughout the race. Keep Livio running and your phone with you until you finish. Ready to go?",
-    "yes": "Yes, Start Tracking",
-    "no": "Not Yet"
+    "yes": "Yes, start tracking",
+    "no": "Not yet"
   },
   "fanEmail": {
     "title": "Stay in the loop",
@@ -130,5 +133,22 @@
     "stepsIos": "Tap Location, then choose “Always”.",
     "stepsAndroid": "Choose “Allow all the time” on the next screen.",
     "stepsAndroidSettings": "Open Permissions → Location, then choose “Allow all the time”."
+  },
+  "hero": {
+    "title": "Your race is\nready to track",
+    "subtitle": "Follow your race and the athletes you follow"
+  },
+  "sections": {
+    "nextSession": "Next session"
+  },
+  "active": {
+    "trackingActive": "Tracking active",
+    "distance": "Distance",
+    "allSent": "All positions sent · {{ago}}",
+    "queued": "{{count}} waiting to send · {{ago}}",
+    "secAgo": "{{n}} sec ago",
+    "minAgo": "{{n}} min ago",
+    "justNow": "just now",
+    "keepOpen": "Lock your phone and put it away — Livio keeps tracking in the background. Just don’t close the app."
   }
 }

@@ -1,21 +1,21 @@
 {
-  "upcomingrace": "ZOEK EEN AANKOMENDE RACE",
-  "pastrace": "ZOEK EEN EERDERE RACE",
-  "athlete": "ZOEK EEN ATLEET",
-  "favourite": "FAVORIETE ATLETEN",
+  "upcomingrace": "Zoek een aankomende race",
+  "pastrace": "Zoek een eerdere race",
+  "athlete": "Zoek een atleet",
+  "favourite": "Favoriete atleten",
   "followers": "Mijn Volgerslijst",
-   "nextevetn": "VOLGENDE EVENEMENTEN",
+  "nextEvents": "Volgende evenementen",
   "viewAll": "Alles bekijken",
   "button": {
-    "upcoming": "TOON ALLE AANKOMENDE EVENEMENTEN",
-    "past": "TOON ALLE RESULTATEN",
+    "upcoming": "Toon alle aankomende evenementen",
+    "past": "Toon alle resultaten",
     "athlete": "Atleet zoeken",
-    "favourite": "LIJST VAN FAVORIETEN",
+    "favourite": "Lijst van favorieten",
     "remove": "VERWIJDEREN",
-    "followback": "TERUG VOLGEN"
+    "followback": "Terug volgen"
   },
   "search": {
-    "upcomgsearch": "Zoek race op evenementnaam",
+    "upcomingSearch": "Zoek race op evenementnaam",
     "athletesearch": "Deelnemer zoeken op naam of e-mail"
   },
   "empty": {
@@ -30,10 +30,10 @@
     "no_following_title": "Niemand Gevolgd",
     "no_following_msg": "Je volgt nog niemand. Gebruik \"Zoek een atleet\" om deelnemers te zoeken en te volgen."
   },
-  "nav":{
-    "upcomingsub":"Ontdek en bekijk komende wedstrijden",
-    "pastsub":"Zoek en bekijk resultaten van eerdere wedstrijden",
-    "athletesub":"Zoek een atleet op naam of e-mailadres",
-    "favouritesub":"Bekijk je favoriete atleten"
-}
+  "nav": {
+    "upcomingsub": "Ontdek en bekijk komende wedstrijden",
+    "pastsub": "Zoek en bekijk resultaten van eerdere wedstrijden",
+    "athletesub": "Zoek een atleet op naam of e-mailadres",
+    "favouritesub": "Bekijk je favoriete atleten"
+  }
 }

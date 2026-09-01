@@ -1,61 +1,67 @@
 import { StyleSheet } from "react-native";
-import { colors, spacing, typography } from "./common.styles";
+import { spacing, typography, type, palette, fonts, shadows, space, radii } from "./common.styles";
 
 export const resultListStyle = StyleSheet.create({
+  // 23_ParticipantSearch.png: "6 RESULTS FOR ..." above the list.
+  searchCount: {
+    ...type.label,
+    color: palette.textMuted,
+    paddingHorizontal: space.xl,
+    paddingTop: space.lg,
+    paddingBottom: space.sm,
+  },
+
   filterRow1: {
     flexDirection: "row",
-    paddingHorizontal: 15,
+    gap: space.sm,
+    paddingHorizontal: space.xl,
+    paddingTop: space.lg,
+    backgroundColor: palette.surface,
   },
   filterRow2: {
     flexDirection: "row",
-    paddingHorizontal: 15,
+    gap: space.sm,
+    paddingHorizontal: space.xl,
+    paddingTop: space.sm,
+    paddingBottom: space.lg,
+    backgroundColor: palette.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
   },
-
-
   filterTab: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
+    justifyContent: "space-between",
+    height: 38,
+    paddingHorizontal: space.md,
+    borderRadius: radii.sm,
+    backgroundColor: palette.page,
+    borderWidth: 1,
+    borderColor: palette.inputBorder,
   },
   tabrow: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingBottom: 7,
-    borderBottomWidth: 1.5,
-    borderColor: colors.info,
   },
-
   filterTabText: {
     flex: 1,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: palette.ink,
   },
-
-
-statisticsContainer: {
+  statisticsContainer: {
+    ...shadows.card,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    marginHorizontal: 10,
-     marginTop:3,
-    marginBottom: 3,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-   shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
-     borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-},
+    paddingVertical: space.lg,
+    paddingHorizontal: space.sm,
+    marginHorizontal: space.xl,
+    marginTop: space.lg,
+    backgroundColor: palette.surface,
+    borderRadius: radii.md,
+  },
 
 statItem: {
     flex: 1,
@@ -64,47 +70,47 @@ statItem: {
 },
 
 statValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.gray900,
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     marginBottom: 2,
 },
 
 statValueHighlight: {
-    color: "#E14B4B", // make DNF stand out, e.g. red/orange
+    color: palette.danger, // make DNF stand out, e.g. red/orange
 },
 
 statLabel: {
+    fontFamily: fonts.bodySemi,
     fontSize: 10,
-    fontWeight: "600",
-    color: colors.gray500 ,
+    color: palette.textMuted,
     textAlign: "center",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-   marginBottom: 4,
+    lineHeight: 13,
+    minHeight: 26,        // two lines — keeps all three values on one baseline
+    marginBottom: 4,
 },
 
 divider: {
     width: 1,
     height: "100%",
-    backgroundColor: colors.gray400,
+    backgroundColor: palette.placeholder,
 },
 
 
-  filterArrow: { fontSize: 13, color: colors.black, marginLeft: 6 },
-  filterArrowOpen: { color: colors.success },
+  filterArrow: { fontFamily: fonts.body,
+        fontSize: 13, color: palette.ink, marginLeft: 8 },
+  filterArrowOpen: { color: palette.lime },
 
   popup: {
+    ...shadows.card,
+
     position: "absolute",
-    backgroundColor: "#fff",
+    backgroundColor: palette.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.white,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 12,
+    borderColor: palette.surface,
     zIndex: 999,
     overflow: "hidden",
   },
@@ -113,103 +119,92 @@ divider: {
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingVertical: 12,
   },
   popupRowLast: { borderBottomWidth: 0 },
   popupRowActive: {
-    backgroundColor: colors.gray200,
+    backgroundColor: palette.border,
     marginTop: 12,
   },
   popupRowText: {
-    fontSize: 14,
-    color: colors.black,
-    fontWeight: typography.weights.semibold,
-  },
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.ink,
+    },
   popupRowTextActive: {
-    color: colors.black,
-    fontWeight: typography.weights.bold,
-  },
+    color: palette.ink,
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+        },
 
   card: {
-    backgroundColor: "#fff",
-    marginBottom: 10,
-    marginHorizontal: 10,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
+    ...shadows.card,
+    backgroundColor: palette.surface,
+    marginBottom: space.md,
+    marginHorizontal: space.xl,
+    borderRadius: radii.md,
+    padding: space.lg,
   },
 
+  // The women's category keeps a left accent; everything else is a plain card.
   cardWithLeftBorder: {
-    backgroundColor: "#fff",
-    marginBottom: 10,
-    marginHorizontal: 10,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
+    ...shadows.card,
+    backgroundColor: palette.surface,
+    marginBottom: space.md,
+    marginHorizontal: space.xl,
+    borderRadius: radii.md,
+    padding: space.lg,
   },
 
-  // ✅ Badge — row: star left | rank+gender right stacked
+  // ── Row head: rank circle | name + meta | star ────────────────────────
+  rowHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space.md,
+  },
+  rankCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: palette.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  // Kept as a no-op: the deck draws every rank circle lime, whatever the
+  // race status. Call sites still reference it.
+  rankCircleFinished: {},
+  rankText: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
+  },
+  rankTextFinished: {},
+  rankGender: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 10,
+    color: palette.ink,
+  },
+
+  // Kept so the old corner-badge keys still resolve while callers migrate.
   cornerBadge: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.primary,
-    borderBottomLeftRadius: 12,
-    borderTopRightRadius: 10,
-    paddingVertical: 10,
-    paddingLeft: 16,
-    paddingRight: 18,
-    zIndex: 20,
-    gap: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
   },
-
-  // ✅ Star icon
-  cornerStar: {
-    fontSize: 26,
-    color: '#FFD700',
-  },
-
-  cornerStarUnfilled: {
-    fontSize: 26,
-    color: '#FFFFFF',
-  },
-
-  // ✅ Right side — rank on top, gender below
   cornerBadgeRight: {
-    alignItems: "flex-start",
-    justifyContent: "center",
-    gap: 2,
-    overflow: "hidden",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
   cornerNum: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "600",
-    lineHeight: 20,
+    color: palette.ink,
+    fontFamily: fonts.display,
+    fontSize: 15,
   },
-
   cornerGenderRank: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "900",
-    lineHeight: 15,
+    color: palette.textMuted,
+    fontFamily: fonts.bodySemi,
+    fontSize: 10,
   },
 
   // Keep for backward compat
@@ -238,7 +233,7 @@ divider: {
     height: 0,
     borderTopWidth: 72,
     borderLeftWidth: 72,
-    borderTopColor: colors.primary,
+    borderTopColor: palette.navy,
     borderLeftColor: "transparent",
   },
   cornerStarBtn: {
@@ -259,37 +254,42 @@ divider: {
 
   // ── Card Content ──────────────────────────────────────────
   cardTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 2,
+    flexGrow: 1,
+    minWidth: 0,
   },
   cardTopLeft: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
+    flexGrow: 1,
+    minWidth: 0,
   },
   cardName: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.gray900,
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
   },
 
   bibText: {
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: colors.gray500,
-    marginTop: 2,
+    color: palette.textMuted,
+    marginTop: space.xs,
+  },
+
+  metaLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginTop: space.xs,
   },
 
   teamText: {
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: colors.gray500,
+    color: palette.textMuted,
   },
   waveText: {
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: colors.gray500,
+    color: palette.textMuted,
   },
 
   // ✅ The 10px gap belongs to the club/nation + wave BLOCK, not to whichever
@@ -298,35 +298,37 @@ divider: {
   // true for most events — so the wave line is usually absent. Hanging the
   // margin off waveText silently dropped the gap on every non-wave event.
   metaBlock: {
-    marginBottom: 10,
+    marginTop: 2,
   },
 
   // ── Stats Row ─────────────────────────────────────────────
   statsRow: {
-    flexDirection: "row",
-    padding: 12,
+    flexDirection: 'row',
+    marginTop: space.md,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
   },
 
   statCol: {
+    flexGrow: 1,
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   statColMid: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: colors.gray400,
+    borderColor: palette.placeholder,
   },
 
   statColLeft: {
     borderLeftWidth: 1,
-    borderColor: colors.gray400,
+    borderColor: palette.placeholder,
   },
 
   statFlagMid: {
     borderLeftWidth: 1,
-    borderColor: colors.gray400,
+    borderColor: palette.placeholder,
     alignItems: "center",
     justifyContent: "center",
     paddingLeft: 8,
@@ -340,10 +342,11 @@ divider: {
   },
   
   statVal: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.gray900,
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
     textAlign: "center",
+    marginTop: space.xs,
   },
 
   beforeRaceLeftHalf: {
@@ -361,7 +364,7 @@ divider: {
   utmbBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1a1a2e",
+    backgroundColor: palette.ink,
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -369,31 +372,31 @@ divider: {
   },
 
   utmbBadgeTextTop: {
-    color: colors.white,
-    fontSize: 8,
-    fontWeight: "800",
+    color: palette.surface,
+    fontFamily: fonts.bodySemi,
+        fontSize: 10,
     letterSpacing: 0.5,
   },
 
   utmbBadgeTextBottom: {
-    backgroundColor: colors.info,
+    backgroundColor: palette.navy,
     borderRadius: 3,
-    paddingHorizontal: 5,
+    paddingHorizontal: 4,
     paddingVertical: 1,
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: "900",
+    color: palette.surface,
+    fontFamily: fonts.bodySemi,
+        fontSize: 11,
     letterSpacing: 0.5,
   },
 
   utmbValue: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: colors.gray900,
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
   },
 
   list: {
-    paddingTop: 10,
+    paddingTop: 8,
     paddingBottom: 24,
   },
 
@@ -406,30 +409,32 @@ divider: {
   },
 
   loadingText: {
-    color: colors.gray600,
-    fontSize: 14,
+    color: palette.textBody,
+    fontFamily: fonts.body,
+        fontSize: 13,
     marginTop: 8,
     textAlign: "center",
   },
 
   errorText: {
-    color: "#555",
-    fontSize: 14,
+    color: palette.textMuted,
+    fontFamily: fonts.body,
+        fontSize: 13,
     textAlign: "center",
   },
 
   retryBtn: {
     marginTop: 4,
     paddingHorizontal: 28,
-    paddingVertical: 10,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
+    paddingVertical: 8,
+    backgroundColor: palette.navy,
+    borderRadius: 10,
   },
 
   retryText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
+    color: palette.surface,
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
   },
 
   filterOverlay: {
@@ -452,9 +457,10 @@ divider: {
   },
 
   statValSmall: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: colors.gray900,
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+
+        color: palette.ink,
     flexShrink: 1,
     flexWrap: 'wrap',
   },

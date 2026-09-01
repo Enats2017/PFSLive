@@ -32,44 +32,44 @@ const AwardsTab: React.FC = () => {
             {AWARDS_DATA.map((award, index) => (
                 <View key={index} style={resultInfoStyles.card}>
                     <View style={resultInfoStyles.cornerBadge}>
-                        <Text style={commonStyles.title}>{award.year}</Text>
+                        <Text style={resultInfoStyles.rowValue}>{award.year}</Text>
                     </View>
-                    <Text style={[commonStyles.title,{paddingHorizontal:spacing.sm}]}>{award.raceName}</Text>
+                    <Text style={[resultInfoStyles.rowValue,{paddingHorizontal:spacing.sm}]}>{award.raceName}</Text>
                     <View style={[resultInfoStyles.row,{marginTop:spacing.xl}]}>
                         <View style={resultInfoStyles.col}>
-                            <Text style={commonStyles.subtitle}>{t('awards.time')}</Text>
-                            <Text style={commonStyles.title}>{award.time}</Text>
+                            <Text style={resultInfoStyles.rowLabel}>{t('awards.time')}</Text>
+                            <Text style={resultInfoStyles.rowValue}>{award.time}</Text>
                         </View>
                         <View style={resultInfoStyles.colDivider} />
                         <View style={resultInfoStyles.col}>
-                            <Text style={commonStyles.subtitle}>{t('awards.country')}</Text>
+                            <Text style={resultInfoStyles.rowLabel}>{t('awards.country')}</Text>
                             <View style={resultInfoStyles.countryRow}>
-                                <Text style={commonStyles.title}>{award.countryFlag}</Text>
-                                <Text style={commonStyles.title}>{award.country}</Text>
+                                <Text style={resultInfoStyles.rowValue}>{award.countryFlag}</Text>
+                                <Text style={resultInfoStyles.rowValue}>{award.country}</Text>
                             </View>
                         </View>
                     </View>
                     <View style={[resultInfoStyles.row,{marginTop:spacing.xl}]}>
                         <View style={resultInfoStyles.col}>
-                            <Text style={commonStyles.subtitle}>{t('awards.ranking')}</Text>
-                            <Text style={commonStyles.title}>{award.ranking}</Text>
+                            <Text style={resultInfoStyles.rowLabel}>{t('awards.ranking')}</Text>
+                            <Text style={resultInfoStyles.rowValue}>{award.ranking}</Text>
                         </View>
                         <View style={resultInfoStyles.colDivider} />
                         <View style={resultInfoStyles.col}>
-                            <Text style={commonStyles.subtitle}>{t('awards.genderRanking')}</Text>
-                            <Text style={commonStyles.title}>{award.genderRanking}</Text>
+                            <Text style={resultInfoStyles.rowLabel}>{t('awards.genderRanking')}</Text>
+                            <Text style={resultInfoStyles.rowValue}>{award.genderRanking}</Text>
                         </View>
                     </View>
                     <View style={[resultInfoStyles.row,{marginTop:spacing.xl}]}>
                         <View style={resultInfoStyles.col}>
                             
-                            <Text style={commonStyles.subtitle}>{t('awards.distance')}</Text>
-                            <Text style={commonStyles.title}>{award.distance}</Text>
+                            <Text style={resultInfoStyles.rowLabel}>{t('awards.distance')}</Text>
+                            <Text style={resultInfoStyles.rowValue}>{award.distance}</Text>
                         </View>
                         <View style={resultInfoStyles.colDivider} />
                         <View style={resultInfoStyles.col}>
-                            <Text style={commonStyles.subtitle}>{t('awards.elevationGain')}</Text>
-                            <Text style={commonStyles.title}>{award.elevationGain}</Text>
+                            <Text style={resultInfoStyles.rowLabel}>{t('awards.elevationGain')}</Text>
+                            <Text style={resultInfoStyles.rowValue}>{award.elevationGain}</Text>
                         </View>
                     </View>
                 </View>

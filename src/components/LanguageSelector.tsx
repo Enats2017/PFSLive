@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useLanguageStore } from '../store/useLanguageStore';
 import { LANGUAGES, LanguageCode } from '../i18n';
+import { palette, fonts, space } from '../styles/common.styles';
 
 export const LanguageSelector: React.FC = () => {
   const { currentLanguage, changeLanguage } = useLanguageStore();
@@ -43,23 +44,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#F0F0F0',
+    paddingHorizontal: space.xl,
+    borderRadius: 10,
+    backgroundColor: palette.fill,
     gap: 6,
   },
   activeButton: {
-    backgroundColor: '#DC143C',
+    backgroundColor: palette.danger,
   },
   flag: {
-    fontSize: 20,
+    fontFamily: fonts.body,
+        fontSize: 20,
   },
   text: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-  },
+    fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+    color: palette.textBody,
+    },
   activeText: {
-    color: '#FFFFFF',
+    color: palette.surface,
   },
 });

@@ -5,6 +5,17 @@
 		 "jsx": "react-native",
 		"esModuleInterop": true,
 	    "skipLibCheck": true,
-	    "resolveJsonModule": true
+	    "resolveJsonModule": true,
+	    // Every @turf package ships types but none declare a "types" condition in its
+	    // package.json "exports" block, so resolution cannot find them and turf.point,
+	    // turf.lineString etc. come back as errors. Point at the .d.ts files directly —
+	    // dist/js first, package root second, which covers both layouts turf uses.
+	    "paths": {
+	      "@turf/turf": ["./node_modules/@turf/turf/index.d.ts"],
+	      "@turf/*": [
+	        "./node_modules/@turf/*/dist/js/index.d.ts",
+	        "./node_modules/@turf/*/index.d.ts"
+	      ]
+	    }
   	}
 }

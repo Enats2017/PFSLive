@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
-import { commonStyles, colors } from '../../styles/common.styles';
+import { commonStyles, palette } from '../../styles/common.styles';
 import { tokenService } from '../../services/tokenService';
 import { GuestTrackingSettings } from './GuestTrackingSettings';
 import { UserTrackingSettings } from './UserTrackingSettings';
@@ -18,10 +18,10 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
 
     if (isLoggedIn === null) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-                <AppHeader title={t('setting:liveTrackingSettings.header')} showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={t('common:band.trackingSettings')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                     <Text style={commonStyles.loadingText}>{t('setting:liveTrackingSettings.loadingText')}</Text>
                 </View>
             </SafeAreaView>
@@ -29,9 +29,8 @@ export const LiveTrackingSettingsScreen: React.FC = () => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-            <StatusBar barStyle="dark-content" backgroundColor="#F4F6FB" />
-            <AppHeader title={t('setting:liveTrackingSettings.header')} showLogo={true} showBack />
+        <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <AppHeader title={t('common:band.trackingSettings')} showLogo={true} showBack />
             {isLoggedIn ? <UserTrackingSettings /> : <GuestTrackingSettings />}
         </SafeAreaView>
     );

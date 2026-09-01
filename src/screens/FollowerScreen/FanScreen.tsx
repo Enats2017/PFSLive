@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
-    StatusBar,
     Text,
     TouchableOpacity,
     View,
@@ -9,7 +8,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { useDimensions } from '../../hooks/useDimensions';
 import SearchInput from '../../components/SearchInput';
 import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
@@ -32,13 +31,18 @@ interface NavCardProps {
 }
 
 const NavCard: React.FC<NavCardProps> = ({ icon, title, subtitle, onPress }) => (
-    <TouchableOpacity style={fanstyle.navCard} onPress={onPress} activeOpacity={0.82}>
-        <View style={fanstyle.navIconWrap}>{icon}</View>
-        <View style={fanstyle.navText}>
-            <Text style={fanstyle.navTitle}>{title}</Text>
-            <Text style={fanstyle.navSub}>{subtitle}</Text>
+    <TouchableOpacity
+        style={commonStyles.menuCard}
+        onPress={onPress}
+        activeOpacity={0.82}
+        accessibilityRole="button"
+    >
+        <View style={commonStyles.menuIconPlate}>{icon}</View>
+        <View style={commonStyles.menuText}>
+            <Text style={commonStyles.menuTitle}>{title}</Text>
+            <Text style={commonStyles.menuSub}>{subtitle}</Text>
         </View>
-        <Feather name="chevron-right" size={22} color={colors.white} />
+        <Feather name="chevron-right" size={22} color={palette.textMuted} />
     </TouchableOpacity>
 );
 
@@ -136,10 +140,9 @@ const FanScreen = () => {
     return (
         <SafeAreaView
             style={commonStyles.container}
-            edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}
+            edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}
         >
-            <StatusBar barStyle="dark-content" />
-            <AppHeader logoimg={true} showBack />
+            <AppHeader title={t('common:band.followRace')} logoimg={true} showBack />
 
             <ScrollView
                 contentContainerStyle={fanstyle.scrollContent}
@@ -148,7 +151,8 @@ const FanScreen = () => {
             >
                 <View style={fanstyle.section}>
                     <SearchInput
-                        placeholder={t('follow:search.upcomgsearch', 'Find an event by name…')}
+                        framed={false}
+                        placeholder={t('follow:search.upcomingSearch', 'Find an event by name…')}
                         value={searchQuery}
                         onChangeText={handleSearch}
                         icon="search"
@@ -163,25 +167,25 @@ const FanScreen = () => {
 
                 <View style={fanstyle.section}>
                     <NavCard
-                        icon={<Ionicons name="calendar-outline" size={26} color={colors.white} />}
+                        icon={<Ionicons name="calendar-outline" size={24} color={palette.navy} />}
                         title={t('follow:upcomingrace')}
                         subtitle={t('follow:nav.upcomingsub')}
                         onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Live' })}
                     />
                     <NavCard
-                        icon={<Ionicons name="trophy-outline" size={26} color={colors.white} />}
+                        icon={<Ionicons name="trophy-outline" size={24} color={palette.navy} />}
                         title={t('follow:pastrace')}
                         subtitle={t('follow:nav.pastsub')}
                         onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Past' })}
                     />
                     <NavCard
-                        icon={<Feather name="user" size={26} color={colors.white} />}
+                        icon={<Feather name="user" size={24} color={palette.navy} />}
                         title={t('follow:athlete')}
                         subtitle={t('follow:nav.athletesub')}
                         onPress={() => navigation.navigate('AthleteSearchScreen', {})}
                     />
                     <NavCard
-                        icon={<Ionicons name="heart-outline" size={26} color={colors.white} />}
+                        icon={<Ionicons name="heart-outline" size={24} color={palette.navy} />}
                         title={t('follow:button.favourite', 'FAVORITES')}
                         subtitle={t('follow:nav.favouritesub')}
                         onPress={() => navigation.navigate('UserFavouriteList')}
@@ -190,14 +194,14 @@ const FanScreen = () => {
 
                 <View style={fanstyle.nextEventsSection}>
                     <View style={fanstyle.nextEventsHeader}>
-                        <Text style={fanstyle.nextEventsTitle}>{t('follow:nextevetn')}</Text>
+                        <Text style={fanstyle.nextEventsTitle}>{t('follow:nextEvents')}</Text>
                         <TouchableOpacity
                             style={fanstyle.viewAllBtn}
                             onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Live' })}
                             activeOpacity={0.7}
                         >
                             <Text style={fanstyle.viewAllText}>{t('follow:viewAll')}</Text>
-                            <Feather name="chevron-right" size={14} color={colors.primary} />
+                            <Feather name="chevron-right" size={14} color={palette.navy} />
                         </TouchableOpacity>
                     </View>
                     <ScrollView

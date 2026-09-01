@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { LanguageSelector, LANGUAGE_OPTIONS, LanguageOption } from './LanguageSelector';
 import { guestSettingsService } from '../../services/guestSettingsService';
 import { toastError, toastSuccess } from '../../../utils/toast';
-import { commonStyles } from '../../styles/common.styles';
 import { styles } from '../../styles/liveTrackingSettings.styles';
 import { saveLanguage, getLanguageCodeFromId } from '../../i18n';
 import { useLanguageStore } from '../../store/useLanguageStore';
@@ -60,10 +59,10 @@ export const GuestTrackingSettings: React.FC = () => {
     };
 
     return (
-        <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 15 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
             <View style={styles.pageTitleRow}>
-                <Text style={commonStyles.title}>{t('setting:liveTrackingSettings.guestTitle')}</Text>
-                <Text style={commonStyles.subtitle}>{t('setting:liveTrackingSettings.guestSubtitle')}</Text>
+                <Text style={styles.pageTitle}>{t('setting:liveTrackingSettings.guestTitle')}</Text>
+                <Text style={styles.pageSubtitle}>{t('setting:liveTrackingSettings.guestSubtitle')}</Text>
             </View>
 
             <LanguageSelector

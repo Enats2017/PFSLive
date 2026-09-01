@@ -1,20 +1,20 @@
 {
-    "tabs": {
-    "raceInfo": "Live resultaten",
-    "timingPoint": "Geschiedenis controlepunten",
-    "runnerInfo": "Info loper",
+  "tabs": {
+    "raceInfo": "Resultaten",
+    "timingPoint": "Passages",
+    "runnerInfo": "Over",
     "awards": "Prijzen"
   },
   "raceInfo": {
     "finisher": "Finisher",
     "raceTime": "RACETIJD",
-    "previousTimingPoint": "VORIG TIMING POINT",
-    "nextTimingPoint": "VOLGEND TIMING POINT",
-    "overallRanking": "ALGEMEEN\nKLASSEMENT",
-    "rankingInOpen": "CATEGORIE\nKLASSEMENT",
-    "genderRanking": "GESLACHT\nKLASSEMENT",
-    "distanceCompleted": "AFSTAND\nAFGELEGD",
-    "elevationGain": "HOOGTEMETERS\nVANAF START",
+    "previousTimingPoint": "Vorig timing point",
+    "nextTimingPoint": "Volgend timing point",
+    "overallRanking": "Algemeen\nklassement",
+    "rankingInOpen": "Categorie\nklassement",
+    "genderRanking": "Geslacht\nklassement",
+    "distanceCompleted": "Afstand\nafgelegd",
+    "elevationGain": "Hoogtemeters\nvanaf start",
     "startsIn": "Race start over",
     "raceStarted": "Race is gestart",
     "raceInProgress": "Race is bezig",
@@ -24,7 +24,18 @@
     "categoryRank": "Categorie",
     "in": "over",
     "minutes": "minuten",
-    "wavelabel": "Golf"
+    "wavelabel": "Golf",
+    "raceResult": "Wedstrijdresultaat",
+    "status": "Status",
+    "distance": "Afstand",
+    "splits": "Tussentijden",
+    "scratchPosition": "Scratch klassement",
+    "category": "Categorie",
+    "performance": "Prestatie",
+    "averagePace": "Gemiddeld tempo",
+    "finishers": "Finishers",
+    "perKm": "/ km",
+    "ofField": "{{finishers}} van {{total}}"
   },
   "timingPoint": {
     "checkpoint": "CHECKPOINT",
@@ -38,21 +49,25 @@
     "pace": "TEMPO",
     "speed": "SNELHEID",
     "elevation": "Hoogte",
-    "availableServices": "Beschikbare diensten"
+    "availableServices": "Beschikbare diensten",
+    "toNextPoint": "Tot volgend punt",
+    "segmentDistance": "Sinds vorig punt",
+    "segmentElevation": "Klim sinds vorig punt"
   },
   "runnerInfo": {
     "club": "CLUB",
     "category": "CATEGORIE",
     "utmbIndex": "INDEX",
-    "utmbSeries": "WORLD SERIES",
+    "utmbSeries": "World series",
     "noClub": "—",
-    "viewOnMap": "Bekijk op de kaart"
+    "viewOnMap": "Bekijk op de kaart",
+    "thisRace": "Deze wedstrijd"
   },
   "awards": {
     "time": "TIJD",
     "country": "LAND",
     "ranking": "KLASSEMENT",
-    "genderRanking": "GESLACHT KLASSEMENT",
+    "genderRanking": "Geslacht klassement",
     "distance": "AFSTAND",
     "elevationGain": "HOOGTEMETERS",
     "noData": "—"
@@ -86,5 +101,5 @@
   "errors": {
     "participant_not_found": "Deelnemer niet gevonden.",
     "generic": "Er is iets misgegaan. Probeer het opnieuw."
-}
+  }
 }

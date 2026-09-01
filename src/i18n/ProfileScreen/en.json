@@ -4,15 +4,15 @@
     "Past": "Past"
   },
   "buttons": {
-    "editProfile": "Edit Profile",
-    "edit_personal_event": "EDIT PERSONAL EVENT",
-    "live_tracking_progress": "LIVE TRACKING IN PROGRESS",
-    "live_tracking_soon": "LIVE TRACKING STARTS SOON",
-    "enable_gps": "ENABLE GPS TO START TRACKING",
+    "editProfile": "Edit profile",
+    "edit_personal_event": "Edit personal event",
+    "live_tracking_progress": "Live tracking in progress",
+    "live_tracking_soon": "Live tracking starts soon",
+    "enable_gps": "Enable GPS to start tracking",
     "load_more": "Load more",
-    "save_changes": "SAVE CHANGES",
-    "edit_live_tracking_event": "EDIT LIVE TRACKING",
-    "live_tracking_ended": "LIVE TRACKING ENDED"
+    "save_changes": "Save changes",
+    "edit_live_tracking_event": "Edit live tracking",
+    "live_tracking_ended": "Live tracking ended"
   },
   "errors": {
     "user_not_found": "User not found. Please log in again.",
@@ -20,7 +20,7 @@
     "load_profile_api_failed": "Failed to load athlete profile.",
     "load_more_past_failed": "Failed to load more past events.",
     "load_more_live_failed": "Failed to load more live events.",
-    "permission_title": "Permission Required",
+    "permission_title": "Permission required",
     "permission_message": "Please allow photo access to change your avatar.",
     "camera_permission": "Camera permission is required to take photos.",
     "invalid_user_id": "Invalid user ID",
@@ -49,25 +49,25 @@
     "soon": "SOON",
     "finished": "FINISHED"
   },
- "empty": {
+  "empty": {
     "no_live_events": "No live events right now",
     "no_live_events_msg": "There are no ongoing events at the moment.\nPlease check back later."
   },
   "past": {
-    "view_results": "VIEW RESULTS",
+    "view_results": "View results",
     "no_events": "No past events found",
     "no_events_msg": "You haven’t participated in any events yet.\nYour past events will appear here."
   },
   "labels": {
-    "first_name": "First Name",
-    "last_name": "Last Name",
+    "first_name": "First name",
+    "last_name": "Last name",
     "email": "Email",
     "city": "City",
-    "dob": "Date of Birth",
+    "dob": "Date of birth",
     "gender": "Gender",
     "country": "Country",
-    "new_password": "New Password",
-    "confirm_password": "Confirm Password",
+    "new_password": "New password",
+    "confirm_password": "Confirm password",
     "language": "Language"
   },
   "gender": {
@@ -86,15 +86,16 @@
   },
   "avatar": {
     "remove_photo": "Remove photo",
-    "choose_source_title": "Choose Photo Source",
+    "choose_source_title": "Choose photo source",
     "choose_source_message": "Select where you want to pick your profile photo from",
-    "take_photo": "Take Photo",
+    "take_photo": "Take photo",
     "choose_gallery": "Choose from Gallery"
   },
   "sections": {
-    "personal_info": "PERSONAL INFO",
-    "change_password": "CHANGE PASSWORD",
-    "password_hint": "Leave blank to keep current"
+    "personal_info": "Personal info",
+    "change_password": "Change password",
+    "password_hint": "Leave blank to keep current",
+    "recentRaces": "Recent races"
   },
   "languages": {
     "english": "English",

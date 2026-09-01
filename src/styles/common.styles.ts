@@ -1,6 +1,200 @@
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet, TextStyle, ViewStyle } from 'react-native';
 
-// Colors
+// ══ Design tokens (Livio redesign, client-approved 2026-08-29) ══════════════
+// Lifted from the approved artboards in D:	emp_chrome_download\livio\Livio_UI_source.
+// These are the ONLY values new/migrated screens may use. The legacy `colors`,
+// `spacing` and `typography` exports below stay untouched until every screen that
+// reads them has moved over — changing them in place would shift 69 screens at once.
+
+/** Closed colour set. Nothing outside this may appear in a migrated screen. */
+export const palette = {
+  // Navy — headers, primary buttons, selected surfaces
+  navy: '#0F2447',
+  navyDeep: '#0A1A33',   // gradient start
+  navyLift: '#14294F',   // gradient end
+  ink: '#081C2C',        // headings on white, text on lime
+  inkSoft: '#0D2235',    // field values
+
+  // Brand
+  lime: '#C7D92C',       // title band, active nav pill, check marks
+
+  // Text
+  textBody: '#4A5A6A',   // paragraphs on white
+  textMuted: '#6B7C8D',  // captions, meta, secondary
+  textOnNavy: '#A9BDD1', // secondary text on a navy surface
+  placeholder: '#9CA3AF',
+
+  // Surfaces
+  page: '#F4F6F5',
+  surface: '#FFFFFF',
+  fill: '#EEF2F6',       // pills, avatars, inert chips
+  border: '#E4EAF0',
+  inputBorder: '#D1D5DB',
+
+  // Status
+  danger: '#DC143C',
+  dangerBg: '#FDECEF',
+  warning: '#B98900',        // the icon/accent amber only
+  warningBg: '#FFF8E6',
+  warningBorder: '#F0DFA8',
+  // The deck darkens amber COPY well below the accent: #B98900 on #FFF8E6 is
+  // too low-contrast to read, so title and body get their own values.
+  warningTitle: '#6B4E00',
+  warningText: '#7A5E10',
+  noticeBg: '#F5F8E8',   // lime-tinted info banner
+  noticeText: '#3C4A1E',
+} as const;
+
+/** 4pt spacing scale. */
+export const space = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+} as const;
+
+/** Three box radii — plus `pill` for anything circular. */
+export const radii = {
+  sm: 10,   // pills, badges, small chips
+  md: 14,   // cards, buttons, inputs
+  lg: 16,   // sheets, banners
+  pill: 999,
+} as const;
+
+// CSS blur maps to roughly half that value as an iOS shadowRadius, so the design's
+// `0 2px 12px` becomes offset 2 / radius 6. Android gets the nearest elevation.
+/** Four shadows. Nothing else. */
+export const shadows: Record<'card' | 'raised' | 'hairline' | 'overlay', ViewStyle> = {
+  card: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  raised: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  hairline: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25,
+    shadowRadius: 1.5,
+    elevation: 2,
+  },
+  overlay: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+};
+
+/**
+ * A token colour at partial opacity. Chart and map fills need a translucent
+ * tint of the same colour as their stroke; writing that by hand is how a
+ * retired blue survived under a navy outline.
+ */
+export const withAlpha = (hex: string, alpha: number): string => {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+};
+
+/**
+ * Map and chart colours.
+ *
+ * Kept separate from `palette` on purpose: these are DATA colours, not chrome.
+ * A route line and a checkpoint marker have to stay distinguishable from each
+ * other on a satellite basemap, which the navy/lime pair alone cannot do — but
+ * they still come from one declared set rather than being invented per file.
+ */
+export const mapColors = {
+  route: palette.navy,          // the course itself
+  routeCovered: palette.lime,   // distance already run
+  start: '#2E7D32',
+  finish: palette.danger,
+  checkpoint: palette.ink,
+  participant: palette.lime,    // the athlete you are following
+  follower: palette.navyLift,   // everyone else
+  offline: palette.textOnNavy,  // a stale fix
+  markerStroke: palette.surface,
+  markerText: palette.surface,
+  label: palette.ink,
+} as const;
+
+/**
+ * Race-category accents. Result cards mark the women's category with a colour;
+ * it carries information, so it is a token rather than a decoration.
+ */
+export const categoryColors = {
+  women: '#FF007F',
+  men: palette.navy,
+} as const;
+
+/** Chart axes, gridlines and series. */
+export const chartColors = {
+  axis: palette.border,
+  grid: palette.border,
+  label: palette.textMuted,
+  elevation: palette.navy,
+  elevationFill: palette.fill,
+  marker: palette.lime,
+  current: palette.danger,
+} as const;
+
+/**
+ * Font families. Loaded in App.tsx — until that resolves, RN falls back to the
+ * platform default, so never assume these exist at module scope.
+ */
+export const fonts = {
+  displayMedium: 'Poppins_500Medium',
+  display: 'Poppins_600SemiBold',
+  body: 'Inter_400Regular',
+  bodyMedium: 'Inter_500Medium',
+  bodySemi: 'Inter_600SemiBold',
+} as const;
+
+/**
+ * The type ramp — exactly the 14 combinations used in the approved artboards.
+ * Spread these; do not hand-roll a fontSize/fontWeight pair.
+ */
+export const type: Record<string, TextStyle> = {
+  // Poppins — display
+  display:    { fontFamily: fonts.display, fontSize: 40, color: palette.ink },
+  h1:         { fontFamily: fonts.display, fontSize: 26, color: palette.ink },
+  h2:         { fontFamily: fonts.display, fontSize: 20, color: palette.ink },
+  h3:         { fontFamily: fonts.display, fontSize: 15, color: palette.ink },
+  h3Medium:   { fontFamily: fonts.displayMedium, fontSize: 15, color: palette.ink },
+  numeral:    { fontFamily: fonts.display, fontSize: 12, color: palette.ink },
+
+  // Inter — body and UI
+  body:       { fontFamily: fonts.body, fontSize: 13, color: palette.textBody, lineHeight: 20 },
+  bodyMedium: { fontFamily: fonts.bodyMedium, fontSize: 13, color: palette.textBody, lineHeight: 20 },
+  small:      { fontFamily: fonts.body, fontSize: 12, color: palette.textMuted, lineHeight: 18 },
+  smallMedium:{ fontFamily: fonts.bodyMedium, fontSize: 12, color: palette.textMuted, lineHeight: 18 },
+  smallSemi:  { fontFamily: fonts.bodySemi, fontSize: 12, color: palette.ink },
+  caption:    { fontFamily: fonts.bodyMedium, fontSize: 11, color: palette.textMuted },
+  microMedium:{ fontFamily: fonts.bodyMedium, fontSize: 10, color: palette.textMuted },
+  // Section labels and badges. Uppercase via textTransform so fr/nl capitalise correctly.
+  label:      { fontFamily: fonts.bodySemi, fontSize: 10, letterSpacing: 0.7, textTransform: 'uppercase' },
+};
+
+/**
+ * @deprecated The pre-redesign palette. Nothing in `src/` reads it any more —
+ * every screen is on `palette` / `mapColors` / `chartColors` / `categoryColors`.
+ * Kept only so an in-flight branch does not fail to compile on merge; delete it
+ * once those have landed. Do NOT add call sites: `npm run design-audit` treats
+ * anything outside the token sets as a regression.
+ */
 export const colors = {
   // Primary colors
   primary: '#0f2a3f', // Orange color
@@ -43,22 +237,23 @@ export const colors = {
   inputBgSelected: '#fff5f5',  // BG_SELECTED
   inputBgItem: '#f3f4f6',      // BG_ITEM
 
-  themeiColor: '#d5da28',
+  // ✅ Client-approved lime, matched to my.liviolive.com. Was '#d5da28',
+  // which read as too bright next to the web app. Same value as palette.lime.
+  themeiColor: '#C7D92C',
   themeblue: '#0f2a40',
 
   
 };
 
 // Spacing
+/**
+ * Legacy alias of `space`, kept because 380 call sites still read it. The values
+ * are NOT duplicated — two independent spacing scales is how they drift apart.
+ * `xxxxl` is the one extra step: a bottom-scroll pad that clears the nav bar.
+ */
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  xxl: 24,
-  xxxl: 32,
-  xxxxl:90,
+  ...space,
+  xxxxl: 90,
 };
 
 // Typography
@@ -81,173 +276,239 @@ export const typography = {
 };
 
 // Common Styles
+// ✅ Redesign: `commonStyles` is the base 276 call sites across the app build on,
+// so migrating it is what actually moves the screens that were never touched
+// individually. Same keys, same meanings — redrawn on the tokens.
 export const commonStyles = StyleSheet.create({
   // Container
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: palette.page,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.white,
+    padding: space.xl,
+    backgroundColor: palette.page,
   },
-   section: {
-    alignItems: "center",
-    padding: 6,
-    backgroundColor: colors.gray300,
-    marginVertical: spacing.sm,
+  // Was a grey full-width strip; the deck labels sections in small caps on white.
+  section: {
+    paddingHorizontal: space.xl,
+    paddingTop: space.lg,
+    paddingBottom: space.sm,
   },
 
-  date:{
-     fontSize: typography.sizes.sm,
-      color: colors.gray600,
-      fontWeight: typography.weights.regular,
-      marginLeft: 5,
-
+  date: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: palette.textMuted,
+    marginLeft: space.xs,
   },
-  
+
   // Text
   text: {
-    fontSize: typography.sizes.md,
-    color: colors.black,
-    fontWeight: typography.weights.regular,
-    
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textBody,
+    lineHeight: 20,
   },
   title: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: palette.ink,
     marginBottom: 2,
-    
   },
-
-   textCenter: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
-    textAlign:"center"
-    
-  },
-  subtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.gray500,
-    fontWeight: typography.weights.medium,
-  },
-  subtitlered: {
-    fontSize: typography.sizes.md,
-    color: colors.error,
-    fontWeight: typography.weights.medium,
-  },
-  
-  // Loading
-  loadingText: {
-    fontSize: typography.sizes.md,
-    color: colors.gray500,
-    marginTop: spacing.md,
-  },
-  
-  // Error
-  errorText: {
-    fontSize: typography.sizes.lg,
-    color: colors.error,
-    fontWeight: typography.weights.semibold,
+  textCenter: {
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
   },
-  
-  // Buttons
+  subtitle: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: palette.textMuted,
+    lineHeight: 18,
+  },
+  subtitlered: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    color: palette.danger,
+    lineHeight: 18,
+  },
+
+  // Loading
+  loadingText: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+    marginTop: space.md,
+  },
+
+  // Error
+  errorText: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.danger,
+    textAlign: 'center',
+  },
+
+  // Buttons — 48pt, radius 14. Prefer <Button> from components/ui in new code;
+  // these remain for the call sites that have not migrated yet.
   primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
+    backgroundColor: palette.navy,
+    height: 48,
+    paddingHorizontal: space.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 120,
-     borderRadius: 8,
-   
+    flexDirection: 'row',
+    borderRadius: radii.md,
   },
   primaryButtonText: {
-    color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    color: palette.surface,
+    fontFamily: fonts.display,
+    fontSize: 15,
   },
-  secondaryButton: {
-    backgroundColor: colors.white,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: colors.primary,
+  // ── The deck's MENU ROW (07_Profile.png, 14_FanHub.png) ──
+  // A white card: a fill-tinted rounded-square icon plate, an ink title over a
+  // muted subtitle, and a chevron. Shared because both hub screens draw it, and
+  // they had drifted into two different things — bare icons on one, solid navy
+  // cards with white uppercase titles on the other.
+  menuCard: {
+    backgroundColor: palette.surface,
+    borderRadius: radii.md,
+    paddingVertical: space.lg,
+    paddingHorizontal: space.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.lg,
+    marginBottom: space.md,
+    ...shadows.card,
+  },
+  menuIconPlate: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.md,
+    backgroundColor: palette.fill,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 120,
+  },
+  menuText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  menuTitle: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
+  },
+  menuSub: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+    marginTop: 2,
+  },
+
+  // The deck uses three button weights and they carry meaning: filled navy is
+  // the primary action, OUTLINED is a secondary one of equal importance, and
+  // LIME marks the single most-wanted action on a screen. Screens that made
+  // every button filled navy lost that ordering.
+  outlineButton: {
+    backgroundColor: palette.surface,
+    borderWidth: 1.5,
+    borderColor: palette.navy,
+    height: 48,
+    paddingHorizontal: space.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderRadius: radii.md,
+  },
+  outlineButtonText: {
+    color: palette.navy,
+    fontFamily: fonts.display,
+    fontSize: 15,
+  },
+  limeButton: {
+    backgroundColor: palette.lime,
+    height: 48,
+    paddingHorizontal: space.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderRadius: radii.md,
+  },
+  limeButtonText: {
+    color: palette.ink,
+    fontFamily: fonts.display,
+    fontSize: 15,
+  },
+
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    height: 48,
+    paddingHorizontal: space.xl,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: palette.navy,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
   },
   secondaryButtonText: {
-    color: colors.primary,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    color: palette.navy,
+    fontFamily: fonts.display,
+    fontSize: 15,
   },
-  
+
   // Card
   card: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: spacing.lg,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
-     ...Platform.select({
-    ios: {
-      shadowOpacity: 0.15,
-      shadowRadius: 5,
-    },
-   
-  }),
-
+    backgroundColor: palette.surface,
+    borderRadius: radii.md,
+    padding: space.lg,
+    ...shadows.card,
   },
-  
-  // Shadow
+
+  // ✅ Redesign: the deck's list rows carry the lime accent on the row's LEFT
+  // EDGE. The old design drew the same 3px lime bar *inside* the row, between
+  // the avatar and the text — a device that appears nowhere in the deck.
+  // Compose with `card`; deliberately not merged into it, since most cards in
+  // the app are not list rows and must stay unaccented.
+  cardAccent: {
+    borderLeftWidth: 3,
+    borderLeftColor: palette.lime,
+  },
+
   shadow: {
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadows.card,
   },
 
-     favoriteButton: {
-    backgroundColor: colors.primaryLight,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    flex:1,
-    borderBottomRightRadius:7,
-    borderTopRightRadius:6,
-  
-    borderColor: colors.primary,
+  favoriteButton: {
+    backgroundColor: palette.navy,
+    height: 48,
+    paddingHorizontal: space.xl,
+    flex: 1,
+    borderBottomRightRadius: radii.md,
+    borderTopRightRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 120,
+    flexDirection: 'row',
   },
   favoriteButtonText: {
-     color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
+    color: palette.surface,
+    fontFamily: fonts.display,
+    fontSize: 15,
   },
-    livetracking: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderBottomLeftRadius:7,
-    borderTopLeftRadius:6,
-    paddingHorizontal: spacing.xl,
-    flex:1,
+  livetracking: {
+    backgroundColor: palette.lime,
+    height: 48,
+    borderBottomLeftRadius: radii.md,
+    borderTopLeftRadius: radii.md,
+    paddingHorizontal: space.xl,
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 120,
+    flexDirection: 'row',
   },
-
- 
 });

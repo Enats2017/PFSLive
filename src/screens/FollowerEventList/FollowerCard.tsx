@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { ParticipantItem } from '../../services/followerEvent';
-import { commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -73,6 +73,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
         <View
             style={[
                 commonStyles.card,
+                commonStyles.cardAccent,
                 { padding: 0, marginTop: spacing.md },
             ]}
         >
@@ -91,7 +92,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                             {avatarLoading && (
                                 <ActivityIndicator
                                     size="small"
-                                    color="#999"
+                                    color={palette.placeholder}
                                     style={{
                                         position: 'absolute',
                                         top: 0,
@@ -111,20 +112,15 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                     )}
                 </View>
 
-                <LinearGradient
-                    colors={['#e8341a', '#f4a100', '#1a73e8']}
-                    start={{ x: 0, y: 1 }}
-                    end={{ x: 1, y: 0 }}
-                    style={detailsStyles.divider}
-                />
 
                 <View style={detailsStyles.info}>
                     <Text style={commonStyles.title}>{fullName}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={commonStyles.text}>{item.city}</Text>
+                        <Text style={commonStyles.text} numberOfLines={1}>
+                            {[item.city, item.country].filter(Boolean).join(' · ')}
+                        </Text>
                         {flagImageUri && (
                             <>
-                                <Text style={commonStyles.text}>|</Text>
                                 <Image
                                     source={{ uri: flagImageUri }}
                                     cachePolicy="memory-disk"
@@ -141,9 +137,9 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                 </View>
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 6 }}>
+            <View style={detailsStyles.cardActionRow}>
                 <TouchableOpacity
-                    style={[commonStyles.favoriteButton, { borderRadius: 0 }]}
+                    style={detailsStyles.cardActionSecondary}
                     activeOpacity={0.8}
                     onPress={ async () => {
                         await analyticsService.logInteraction(
@@ -159,27 +155,24 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                         })
                     }}
                 >
-                    <Text style={commonStyles.primaryButtonText}>
+                    <Text style={detailsStyles.cardActionSecondaryText}>
                         {t('follower:button.viewprofile')}
                     </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                     style={[
-                        commonStyles.livetracking,
-                        {
-                            borderRadius: 0,
-                            opacity: isLoading ? 0.6 : 1,
-                        },
+                        detailsStyles.cardActionPrimary,
+                        { opacity: isLoading ? 0.6 : 1 },
                     ]}
                     onPress={onToggleFollow}
                     disabled={isLoading}
                     activeOpacity={0.8}
                 >
                     {isLoading ? (
-                        <ActivityIndicator size="small" color="#ffffff" />
+                        <ActivityIndicator size="small" color={palette.surface} />
                     ) : (
-                        <Text style={commonStyles.primaryButtonText}>
+                        <Text style={detailsStyles.cardActionPrimaryText}>
                             {isFollowed
                                 ? t('follower:button.unfollow')
                                 : item?.password_protected === 1

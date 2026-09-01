@@ -1,5 +1,5 @@
 import { StyleSheet, Platform } from "react-native";
-import { colors, spacing, typography } from "./common.styles";
+import { spacing, typography, palette, fonts, shadows, radii, space, withAlpha } from "./common.styles";
 
 export const homeStyles = StyleSheet.create({
   scrollView: {
@@ -11,185 +11,328 @@ export const homeStyles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: space.xl,
+    paddingTop: space.lg,
+    gap: space.md,
   },
 
-  // Logo section
-  cardscetion: {
-    marginTop:spacing.xl,
-    
-    marginBottom: 0,
-    alignItems:"center",
-    justifyContent:"center",
-   
+  // Section label — small caps on white, as the deck draws in-page sections.
+  // ── 01_Home.png: the "YOU FOLLOW" block inside a followed-event card ──
+  // The card lists the athletes you follow in that event; the data was already
+  // fetched (`followed_participants`) but nothing rendered it.
+  followLabel: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 10,
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
+    color: palette.textMuted,
+    marginBottom: space.sm,
   },
-
-  logo: {
-    width: "80%",
-    height: 170,
+  followRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    marginBottom: space.sm,
   },
-
-  textSection: {
+  followAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: palette.fill,
     alignItems: "center",
     justifyContent: "center",
   },
-  title: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
+  followAvatarText: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 12,
+    color: palette.navy,
+  },
+  followName: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: palette.ink,
+    flexShrink: 1,
+  },
+  followBib: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+  },
+  followCaption: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: palette.textMuted,
     textAlign: "center",
+    marginTop: space.sm,
+  },
+
+  // ── 02_Home-Tracking-Active.png ───────────────────────
+  // Two calm cards: the session clock inside a lime-edged card, then distance
+  // and send status. Replaces a diagnostic block of raw coordinates and counters.
+  activeCard: {
+    backgroundColor: palette.surface,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: palette.lime,
+    paddingVertical: space.xxl,
+    paddingHorizontal: space.xl,
+    alignItems: "center",
+    marginBottom: space.md,
+    ...shadows.card,
+  },
+  activeStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+  },
+  activeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: palette.lime,
+  },
+  activeStatusText: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 12,
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
+    color: palette.textBody,
+  },
+  activeClock: {
+    fontFamily: fonts.display,
+    fontSize: 40,
+    color: palette.ink,
+    marginTop: space.md,
+  },
+  activeEvent: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+    marginTop: space.sm,
+    textAlign: "center",
+  },
+  statCard: {
+    backgroundColor: palette.surface,
+    borderRadius: radii.md,
+    paddingVertical: space.xxl,
+    paddingHorizontal: space.xl,
+    alignItems: "center",
+    marginBottom: space.md,
+    ...shadows.card,
+  },
+  statValue: {
+    fontFamily: fonts.display,
+    fontSize: 40,
+    color: palette.ink,
+    marginTop: space.sm,
+  },
+  sendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    marginTop: space.lg,
+  },
+  sendText: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+  },
+  keepOpenNote: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+    textAlign: "center",
+    lineHeight: 20,
+    paddingHorizontal: space.lg,
+    marginBottom: space.xl,
+  },
+  stopButton: {
+    height: 56,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: palette.danger,
+    backgroundColor: palette.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stopButtonText: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.danger,
+  },
+
+  sectionLabel: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 10,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+    color: palette.textMuted,
+  },
+
+  // Logo section
+  // Hero block — sits on white directly under the lime band.
+  cardscetion: {
+    paddingHorizontal: space.xl,
+    paddingTop: space.xl,
+    paddingBottom: space.lg,
+    backgroundColor: palette.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
+  },
+  logo: {
+    width: 132,
+    height: 32,
+  },
+  textSection: {
+    justifyContent: "center",
+  },
+  title: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    lineHeight: 32,
+    color: palette.ink,
   },
 
   // Subtitle
   subtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.error,
-    fontWeight: typography.weights.semibold,
-    textAlign: "center",
-    letterSpacing: 1,
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+    marginTop: space.sm,
   },
 
   // Event info section
   textContainer: {
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.xl,
-    marginBottom: spacing.xxl,
+    backgroundColor: palette.surface,
+    borderRadius: radii.lg,
+    padding: space.xl,
+    ...shadows.raised,
   },
 
   // Event Name
   eventInfo: {
-    marginBottom: spacing.md,
+    flexDirection: "row",
+    gap: space.lg,
+    marginTop: space.md,
   },
   eventNameText: {
-    fontSize: typography.sizes.lg,
-    color: colors.black,
-    flexWrap: "wrap",
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: palette.ink,
+    marginTop: space.sm,
   },
   eventLabel: {
-    fontWeight: typography.weights.bold,
-    color: colors.black,
+    fontFamily: fonts.bodySemi,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: palette.textMuted,
   },
   eventValue: {
-    fontWeight: typography.weights.semibold,
-    color: colors.black,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textBody,
   },
-
   smallText: {
-    fontSize: typography.sizes.md,
-    color: colors.black,
-    textAlign: "left",
-    marginBottom: spacing.sm,
-    fontWeight: typography.weights.medium,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: palette.textMuted,
   },
-
   centeredText: {
-    fontSize: typography.sizes.md,
-    color: colors.black,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
     textAlign: "center",
-    marginBottom: spacing.sm,
-    fontWeight: typography.weights.medium,
-    paddingHorizontal: spacing.sm,
   },
-
   heading: {
-    fontSize: typography.sizes.md,
-    color: colors.black,
-    textAlign: "center",
-    marginVertical: spacing.lg,
-    lineHeight: 22,
-    fontWeight: typography.weights.medium,
-    paddingHorizontal: spacing.sm,
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: palette.ink,
   },
-
   tagline: {
-    fontSize: typography.sizes.lg,
-    color: colors.black,
-    textAlign: "center",
-    fontWeight: typography.weights.semibold,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.sm,
-    lineHeight: 24,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+    lineHeight: 20,
+    marginTop: space.sm,
   },
 
   // Tracking Status
   trackingStatus: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: colors.success + "20",
+    backgroundColor: withAlpha(palette.lime, 0.13),
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: spacing.lg,
     marginTop: spacing.md,
     width: "100%",
   },
   trackingStatusIcon: {
-    fontSize: 16,
+    fontFamily: fonts.body,
+        fontSize: 15,
     marginRight: spacing.md,
     marginTop: 2,
   },
   trackingStatusText: {
-    fontSize: typography.sizes.md,
-    color: colors.success,
-    fontWeight: typography.weights.bold,
-    marginBottom: 4,
+    fontFamily: fonts.bodySemi,
+        fontSize: 15,
+    color: palette.lime,
+
+        marginBottom: 4,
   },
   trackingLocationText: {
-    fontSize: typography.sizes.xs,
-    color: colors.success,
+    fontSize: 12,
+    color: palette.lime,
     fontFamily: "monospace",
     marginBottom: 4,
-    fontWeight: typography.weights.medium,
-  },
+
+        },
   trackingCountText: {
-    fontSize: typography.sizes.xs,
-    color: colors.success,
-    fontWeight: typography.weights.medium,
-    marginTop: 2,
+    fontFamily: fonts.bodyMedium,
+        fontSize: 12,
+    color: palette.lime,
+
+        marginTop: 2,
   },
 
   permissionWarning: {
-    backgroundColor: colors.warning + "20",
+    backgroundColor: palette.warningBg,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: spacing.lg,
     marginTop: spacing.md,
     width: "100%",
   },
   permissionWarningText: {
-    fontSize: typography.sizes.sm,
-    color: colors.warning,
-    fontWeight: typography.weights.semibold,
-    textAlign: "center",
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.warning,
+
+        textAlign: "center",
   },
 
   // Buttons
   button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 12,
+    height: 48,
+    borderRadius: radii.md,
+    backgroundColor: palette.navy,
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.md,
-    elevation: 3,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    justifyContent: "center",
+    gap: space.sm,
+    marginTop: space.lg,
   },
   buttonText: {
-    color: colors.white,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.surface,
   },
 
   buttonContainer: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
     marginTop: 0,
     gap: spacing.md,
   },
@@ -200,10 +343,11 @@ export const homeStyles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   footerText: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray400,
-    fontWeight: typography.weights.medium,
-  },
+    fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+    color: palette.placeholder,
+
+        },
 
   // ✅ Notification popup — consistent with SuccessCelebrationModal & UndoConfirmModal
   notifBackdrop: {
@@ -217,42 +361,36 @@ export const homeStyles = StyleSheet.create({
     padding: spacing.xl,
   },
   notifCard: {
-    backgroundColor: colors.white,
-    borderRadius: 20,
+    backgroundColor: palette.surface,
+    borderRadius: radii.lg,
     paddingHorizontal: spacing.xxl,
     paddingVertical: spacing.xxxl,
     width: "100%",
     maxWidth: 400,
     alignItems: "center",
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: { elevation: 8 },
-    }),
+    ...shadows.card,
   },
   notifIconWrapper: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.primary + "15",
+    backgroundColor: withAlpha(palette.navy, 0.08),
     justifyContent: "center",
     alignItems: "center",
     marginBottom: spacing.lg,
   },
   notifTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: "#0f172a",
+    fontFamily: fonts.bodySemi,
+        fontSize: 20,
+
+        color: palette.ink,
     textAlign: "center",
     marginBottom: spacing.sm,
   },
   notifBody: {
-    fontSize: typography.sizes.sm,
-    color: "#64748b",
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
     textAlign: "center",
     lineHeight: 22,
     marginBottom: spacing.xxl,
@@ -262,23 +400,24 @@ export const homeStyles = StyleSheet.create({
     gap: spacing.md,
   },
   notifViewButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: palette.navy,
   },
   logosSection: {
     marginTop: spacing.md,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
   },
   logosTitle: {
-    fontSize: spacing.md,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
     fontStyle: "italic",
-    color: colors.gray50,
+    color: palette.page,
     textTransform: "capitalize",
     letterSpacing: 2,
     textAlign: "center",
   },
   logosContainer: {
-    backgroundColor: colors.primary, // ← single dark navy bg
-    borderRadius: 8,
+    backgroundColor: palette.navy, // ← single dark navy bg
+    borderRadius: 10,
     padding: spacing.md,
   },
 
@@ -299,15 +438,15 @@ export const homeStyles = StyleSheet.create({
     gap: 10,
   },
 
-  section: { paddingBottom: 10 },
+  section: { paddingBottom: 8 },
 
-  section_followers: { paddingBottom: 10, paddingTop: 20, },
+  section_followers: { paddingBottom: 8, paddingTop: 20, },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 14,
+    marginBottom: space.md,
   },
 
   cardTop: { flexDirection: "row", alignItems: "center", gap: 12 },
@@ -315,31 +454,31 @@ export const homeStyles = StyleSheet.create({
   eventMeta: { flexDirection: "row", alignItems: "center" },
   countdownBlock: { alignItems: "flex-end" },
   countdownValue: {
-    fontSize: 15,
-    fontWeight: "500",
+    fontFamily: fonts.displayMedium,
+        fontSize: 15,
     letterSpacing: 0.3,
-    color: "#A32D2D",
+    color: palette.danger,
   },
 
   liveBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "#FDECEA",
-    borderRadius: 6,
+    backgroundColor: palette.dangerBg,
+    borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   liveDot: {
     width: 7,
     height: 7,
-    borderRadius: 4,
-    backgroundColor: "#A32D2D",
+    borderRadius: 3.5,
+    backgroundColor: palette.danger,
   },
   liveText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#A32D2D",
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.danger,
     letterSpacing: 0.5,
   },
 
@@ -350,18 +489,19 @@ export const homeStyles = StyleSheet.create({
   },
 
   followerBtn: {
-    backgroundColor: colors.themeiColor,
+    backgroundColor: palette.lime,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 120,
-     borderRadius: 8,   
+     borderRadius: 10,   
   },
 
   followerText:{
-    color: colors.black,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-  }
+    color: palette.ink,
+    fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        }
 });

@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  StatusBar,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -17,7 +16,7 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { useTranslation } from 'react-i18next'
 import FloatingLabelInput from '../../components/FloatingLabelInput'
 import CountrySelector from '../../components/CountrySelector'
-import { commonStyles } from '../../styles/common.styles'
+import { commonStyles, palette } from '../../styles/common.styles'
 import { useEditProfile } from '../../hooks/Useeditprofile'
 import { fetchProfileApi } from '../../services/profileServices'
 import { tokenService } from '../../services/tokenService'
@@ -215,11 +214,10 @@ const EditProfileScreen = () => {
 
     if (profileLoading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={t('common:band.account')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color="#e8341a" />
+                    <ActivityIndicator size="large" color={palette.danger} />
                 </View>
             </SafeAreaView>
         )
@@ -227,11 +225,10 @@ const EditProfileScreen = () => {
 
     if (profileError) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={t('common:band.account')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <Ionicons name="warning-outline" size={40} color="#e8341a" />
+                    <Ionicons name="warning-outline" size={40} color={palette.danger} />
                     <Text style={commonStyles.errorText}>{profileError}</Text>
                 </View>
             </SafeAreaView>
@@ -239,9 +236,8 @@ const EditProfileScreen = () => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} showBack />
+        <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <AppHeader title={t('common:band.account')} showLogo={true} showBack />
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -271,7 +267,7 @@ const EditProfileScreen = () => {
                                 </View>
                             )}
                             <View style={profileStyles.cameraBtn}>
-                                <Ionicons name="camera" size={16} color="#fff" />
+                                <Ionicons name="camera" size={16} color={palette.surface} />
                             </View>
                         </TouchableOpacity>
 
@@ -288,27 +284,32 @@ const EditProfileScreen = () => {
                         )}
                     </View>
 
-                    <FloatingLabelInput
-                        label={t('profile:labels.first_name')}
-                        value={form.firstname}
-                        onChangeText={(v) => setField('firstname', v)}
-                        iconName="person-outline"
-                        required
-                        editable={!loading}
-                        error={!!errors.firstname}
-                        errorMessage={errors.firstname}
-                    />
-
-                    <FloatingLabelInput
-                        label={t('profile:labels.last_name')}
-                        value={form.lastname}
-                        onChangeText={(v) => setField('lastname', v)}
-                        iconName="people-outline"
-                        required
-                        editable={!loading}
-                        error={!!errors.lastname}
-                        errorMessage={errors.lastname}
-                    />
+                    <View style={profileStyles.fieldRow}>
+                      <View style={profileStyles.fieldHalf}>
+                        <FloatingLabelInput
+                            label={t('profile:labels.first_name')}
+                            value={form.firstname}
+                            onChangeText={(v) => setField('firstname', v)}
+                            iconName="person-outline"
+                            required
+                            editable={!loading}
+                            error={!!errors.firstname}
+                            errorMessage={errors.firstname}
+                        />
+                      </View>
+                      <View style={profileStyles.fieldHalf}>
+                        <FloatingLabelInput
+                            label={t('profile:labels.last_name')}
+                            value={form.lastname}
+                            onChangeText={(v) => setField('lastname', v)}
+                            iconName="people-outline"
+                            required
+                            editable={!loading}
+                            error={!!errors.lastname}
+                            errorMessage={errors.lastname}
+                        />
+                      </View>
+                    </View>
 
                     <FloatingLabelInput
                         label={t('profile:labels.email')}
@@ -322,23 +323,28 @@ const EditProfileScreen = () => {
                         {t('profile:messages.email_readonly')}
                     </Text>
 
-                    <CountrySelector
-                        label={t('profile:labels.country')}
-                        value={form.countryName}
-                        onSelect={handleCountrySelect}
-                        isoCode={form.country_iso}
-                        error={errors.countryName}
-                    />
-
-                    <FloatingLabelInput
-                        label={t('profile:labels.city')}
-                        value={form.city}
-                        onChangeText={(v) => setField('city', v)}
-                        iconName="location-outline"
-                        editable={!loading}
-                        error={!!errors.city}
-                        errorMessage={errors.city}
-                    />
+                    <View style={profileStyles.fieldRow}>
+                      <View style={profileStyles.fieldHalf}>
+                        <CountrySelector
+                            label={t('profile:labels.country')}
+                            value={form.countryName}
+                            onSelect={handleCountrySelect}
+                            isoCode={form.country_iso}
+                            error={errors.countryName}
+                        />
+                      </View>
+                      <View style={profileStyles.fieldHalf}>
+                        <FloatingLabelInput
+                            label={t('profile:labels.city')}
+                            value={form.city}
+                            onChangeText={(v) => setField('city', v)}
+                            iconName="location-outline"
+                            editable={!loading}
+                            error={!!errors.city}
+                            errorMessage={errors.city}
+                        />
+                      </View>
+                    </View>
 
                     <FloatingLabelInput
                         label={t('profile:labels.dob')}
@@ -421,7 +427,7 @@ const EditProfileScreen = () => {
                         activeOpacity={0.85}
                     >
                         {loading ? (
-                            <ActivityIndicator color="#fff" size="small" />
+                            <ActivityIndicator color={palette.surface} size="small" />
                         ) : (
                             <Text style={commonStyles.primaryButtonText}>
                                 {t('profile:buttons.save_changes')}
@@ -431,7 +437,7 @@ const EditProfileScreen = () => {
 
                     {success && !emailChanged && (
                         <View style={profileStyles.successBanner}>
-                            <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
+                            <Ionicons name="checkmark-circle" size={18} color={palette.lime} />
                             <Text style={profileStyles.successText}>
                                 {t('profile:messages.success_profile_updated')}
                             </Text>

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
-import { commonStyles, typography } from '../../styles/common.styles';
+import { commonStyles, typography, fonts } from '../../styles/common.styles';
 import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/resultDetailsService';
 import { formatClockTime } from '../../utils/timeFormat';
 
@@ -23,6 +23,9 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
     const lastCheckpoint = [...(checkpoints || [])]
         .reverse()
         .find(cp => cp.is_crossed);
+
+    // Splits: every timing point the runner actually crossed, in race order.
+    const splits = (checkpoints || []).filter(cp => cp.is_crossed && !cp.is_start);
     
     const fmtRank = (v?: string) => (/^\d+$/.test(v ?? '') ? (v as string) : '—');
     
@@ -62,47 +65,69 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
             showsVerticalScrollIndicator={false}
         >
             <View style={resultInfoStyles.card}>
-                <View style={resultInfoStyles.headerBar}>
-                    <View style={resultInfoStyles.headerGreen}>
-                        <Text style={resultInfoStyles.text}>
-                            {statusText(raceInfo?.participant_status)}
-                        </Text>
-                    </View>
-                    <View style={resultInfoStyles.diagLeft} />
-                    <View style={resultInfoStyles.headerMiddle} />
-                    <View style={resultInfoStyles.diagRight} />
-                    <View style={resultInfoStyles.headerRed}>
-                        <Text
-                            style={resultInfoStyles.text}
-                            numberOfLines={1}
-                            adjustsFontSizeToFit
-                            minimumFontScale={0.7}
-                        >
-                            {event?.distance_name ?? '—'}
-                        </Text>
-                    </View>
+                {/* 29_RaceInfo.png: the card opens with a small-caps section label
+                    and lists everything as label/value rows. The status and
+                    distance chips were leftovers of the old diagonal banner. */}
+                <Text style={resultInfoStyles.sectionLabel}>{t('raceInfo.raceResult')}</Text>
+
+                {/* 29_RaceInfo.png row order: race time, scratch position,
+                    category with its rank, wave, status. */}
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.raceTime')}</Text>
+                    <Text style={resultInfoStyles.raceTimeText}>{raceInfo?.time ?? '—'}</Text>
                 </View>
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.title}>{raceInfo?.bib ?? '—'}</Text>
-                    <Text style={commonStyles.title}>{raceInfo?.name ?? '—'}</Text>
-                </View>
-                 {raceInfo?.wave && (
-                    <View style={resultInfoStyles.bibCard}>
-                        <Text style={commonStyles.title}>{t('raceInfo.wavelabel')}: {raceInfo?.wave}</Text>
-                    </View>
-                )}
-
-                <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.subtitle}>{t('raceInfo.raceTime')}</Text>
-                    <Text style={resultInfoStyles.raceTimeText}>
-                        {raceInfo?.time ?? '—'}
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.scratchPosition')}</Text>
+                    <Text style={resultInfoStyles.rowValue}>
+                        {fmtRankTotal(raceInfo?.position, raceInfo?.position_total)}
                     </Text>
                 </View>
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.subtitle}>{t('raceInfo.previousTimingPoint')}</Text>
-                    <Text style={commonStyles.text}>
+                    <Text style={resultInfoStyles.rowLabel}>
+                        {raceInfo?.category_name
+                            ? `${t('raceInfo.category')} ${raceInfo.category_name}`
+                            : t('raceInfo.category')}
+                    </Text>
+                    <Text style={resultInfoStyles.rowValue}>
+                        {fmtRankTotal(raceInfo?.category_rank, raceInfo?.category_rank_total)}
+                    </Text>
+                </View>
+
+                {!!raceInfo?.wave && (
+                    <View style={resultInfoStyles.bibCard}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.wavelabel')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>{raceInfo.wave}</Text>
+                    </View>
+                )}
+
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.status')}</Text>
+                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                        {statusText(raceInfo?.participant_status)}
+                    </Text>
+                </View>
+
+                {/* Kept beyond the mockup: values the app already showed and
+                    that the timing feed provides. */}
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.distance')}</Text>
+                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                        {event?.distance_name ?? '—'}
+                    </Text>
+                </View>
+
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.genderRank')}</Text>
+                    <Text style={resultInfoStyles.rowValue}>
+                        {fmtGenderRank(raceInfo?.gender_ranking, raceInfo?.gender_ranking_total, raceInfo?.gender)}
+                    </Text>
+                </View>
+
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.previousTimingPoint')}</Text>
+                    <Text style={resultInfoStyles.rowValue}>
                         {raceInfo?.previous_cp?.name ?? '—'}
                     </Text>
                     <Text style={resultInfoStyles.timingPointDate}>
@@ -112,39 +137,9 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                     </Text>
                 </View>
 
-                <View style={resultInfoStyles.rankingsCard}>
-                    {[
-                        {
-                            labelKey: 'raceInfo.overallRanking',
-                            value: fmtRankTotal(raceInfo?.position, raceInfo?.position_total),
-                        },
-                        {
-                            labelKey: 'raceInfo.rankingInOpen',
-                            value: fmtCategoryRank(raceInfo?.category_rank, raceInfo?.category_rank_total, raceInfo?.category_name),
-                        },
-                        {
-                            labelKey: 'raceInfo.genderRanking',
-                            value: fmtGenderRank(raceInfo?.gender_ranking, raceInfo?.gender_ranking_total, raceInfo?.gender),
-                        },
-                    ].map((item, i) => (
-                        <View
-                            key={item.labelKey}
-                            style={[
-                                resultInfoStyles.rankingCol,
-                                i === 1 && resultInfoStyles.rankingColBorder,
-                            ]}
-                        >
-                            <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
-                                {t(item.labelKey)}
-                            </Text>
-                            <Text style={[commonStyles.title,{textAlign:'center', fontSize:typography.sizes.lg}]}>{item.value}</Text>
-                        </View>
-                    ))}
-                </View>
-
                 <View style={resultInfoStyles.statsCard}>
                     <View style={resultInfoStyles.statsCol}>
-                        <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
+                        <Text style={resultInfoStyles.rowLabel}>
                             {t('raceInfo.distanceCompleted')}
                         </Text>
                         <Text style={resultInfoStyles.raceTimeText}>
@@ -155,7 +150,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                     </View>
                     <View style={resultInfoStyles.statsColBorder} />
                     <View style={resultInfoStyles.statsCol}>
-                        <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
+                        <Text style={resultInfoStyles.rowLabel}>
                             {t('raceInfo.elevationGain')}
                         </Text>
                         <Text style={resultInfoStyles.raceTimeText}>
@@ -166,6 +161,58 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                     </View>
                 </View>
             </View>
+
+            {(!!raceInfo?.average_pace || !!raceInfo?.finishers || !!raceInfo?.elevation_gain) && (
+                <View style={resultInfoStyles.card}>
+                    <Text style={resultInfoStyles.sectionLabel}>{t('raceInfo.performance')}</Text>
+
+                    {!!raceInfo?.average_pace && (
+                        <View style={resultInfoStyles.bibCard}>
+                            <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.averagePace')}</Text>
+                            <Text style={resultInfoStyles.rowValue}>
+                                {raceInfo.average_pace} {t('raceInfo.perKm')}
+                            </Text>
+                        </View>
+                    )}
+
+                    {!!raceInfo?.elevation_gain && (
+                        <View style={resultInfoStyles.bibCard}>
+                            <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.elevationGain')}</Text>
+                            <Text style={resultInfoStyles.rowValue}>
+                                {raceInfo.elevation_gain} {t('units.meterPlus')}
+                            </Text>
+                        </View>
+                    )}
+
+                    {!!raceInfo?.finishers && (
+                        <View style={resultInfoStyles.bibCard}>
+                            <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.finishers')}</Text>
+                            <Text style={resultInfoStyles.rowValue}>
+                                {raceInfo.field_size
+                                    ? t('raceInfo.ofField', {
+                                        finishers: raceInfo.finishers,
+                                        total: raceInfo.field_size,
+                                    })
+                                    : String(raceInfo.finishers)}
+                            </Text>
+                        </View>
+                    )}
+                </View>
+            )}
+
+            {splits.length > 0 && (
+                <View style={resultInfoStyles.card}>
+                    <Text style={resultInfoStyles.sectionLabel}>{t('raceInfo.splits')}</Text>
+                    {splits.map((cp, i) => (
+                        <View key={`${cp.name}-${i}`} style={resultInfoStyles.bibCard}>
+                            <Text style={resultInfoStyles.rowLabel} numberOfLines={1}>
+                                {cp.distance ? `${cp.distance} ${t('units.km')}` : cp.name}
+                            </Text>
+                            <Text style={resultInfoStyles.rowValue}>{cp.race_time || '—'}</Text>
+                        </View>
+                    ))}
+                </View>
+            )}
         </ScrollView>
     );
 };

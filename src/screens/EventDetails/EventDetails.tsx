@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  StatusBar,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,13 +46,8 @@ const EventDetails = ({ route }: EventDetailsProps) => {
   }, []);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} showBack />
-      <View style={detailsStyles.section}>
-        <Text style={detailsStyles.title}>{event_name}</Text>
-      </View>
-      
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+      <AppHeader title={event_name} showLogo={true} showBack />
       <View style={{ flex: 1 }}>
         {product_app_id ? (
           <DistanceTab

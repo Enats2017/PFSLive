@@ -1,15 +1,15 @@
 {
-  "title": "Create New Event",
-  "editTitle": "Update Your Event",
-  "name": "Event Name",
-  "type": "Event Type",
-  "category": "Category Type",
-  "date": "Event Date",
-  "startTime": "Start Time",
+  "title": "Create new event",
+  "editTitle": "Update your event",
+  "name": "Event name",
+  "type": "Event type",
+  "category": "Category type",
+  "date": "Event date",
+  "startTime": "Start time",
   "fileInfo": "Uploading a GPX file is optional but highly recommended for accurate tracking",
   "button": {
-    "gpx": "Upload GPX File",
-    "save": "SUBMIT EVENT"
+    "gpx": "Upload GPX file",
+    "save": "Submit event"
   },
   "success": {
     "title": "Success!",
@@ -28,13 +28,13 @@
     "invalidFileType": "Please select a valid GPX file (.gpx or .xml)",
     "filePickFailed": "Failed to pick file. Please try again",
     "createFailed": "Failed to create event. Please try again",
-    "createFailedTitle": "Creation Failed",
+    "createFailedTitle": "Creation failed",
     "createFailedMessage": "Unable to create your event. Please try again later.",
-    "customerInvalidTitle": "Account Issue",
+    "customerInvalidTitle": "Account issue",
     "customerInvalidMessage": "Your account is not properly configured. Please contact support.",
-    "validationErrorTitle": "Invalid Data",
+    "validationErrorTitle": "Invalid data",
     "validationErrorMessage": "Some fields contain invalid data. Please check and try again.",
-    "networkErrorTitle": "Network Error",
+    "networkErrorTitle": "Network error",
     "networkErrorMessage": "Unable to connect to the server. Please check your internet connection and try again.",
     "loadFailed": "Failed to load event details",
     "updateFailed": "Failed to update event",
@@ -50,11 +50,11 @@
     "categoryRequired": "Please select a category type"
   },
   "file": {
-    "uploadTitle": "Tap to Upload GPX File",
+    "uploadTitle": "Tap to upload GPX file",
     "uploadSubtitle": "Supported format: .gpx (Max {{size}}MB)",
-    "infoTitle": "File Info",
+    "infoTitle": "File info",
     "infoMessage": "Name: {{name}}\nSize: {{size}} KB",
-    "removeTitle": "Remove File",
+    "removeTitle": "Remove file",
     "removeMessage": "Are you sure you want to remove this file?",
     "removeButton": "Remove",
     "removed": "File removed",
@@ -72,5 +72,4 @@
     "running": "Running",
     "cycling": "Cycling"
   }
-   
 }

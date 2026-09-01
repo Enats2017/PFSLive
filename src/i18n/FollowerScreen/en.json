@@ -1,46 +1,39 @@
 {
-    "upcomingrace":"FIND AN UPCOMING RACE",
-    "pastrace":"FIND A PAST RACE",
-    "athlete":"FIND AN ATHLETE",
-    "favourite":"FAVOURITE ATHLETES ",
-    "followers":"My Followers List",
-    "nextevetn": "NEXT EVENTS",
-    "viewAll": "View all",
-
-    "nav":{
-        "upcomingsub":"Discover and browse upcoming races",
-        "pastsub":"Find and view results from past races",
-        "athletesub":"Search for an athlete by name or email",
-        "favouritesub":"View your favorite athletes"
-    },
-    
-    "button":{
-        "upcoming":"SHOW ALL UPCOMING EVENTS",
-        "past":"SHOW ALL RESULTS",
-         "athlete":"Search Athlete",
-        "favourite":"LIST OF  FAVOURITE",
-        "remove": "REMOVE",
-        "followback": "FOLLOW BACK"
-
-    },
-    "search":{
-        "upcomgsearch":"Search Race By Event Name",
-         "athletesearch":"Search Participant by Name or Email"
-
-    },
-     "empty": {
-        "emptyTitle": "Find Your Athlete",
-        "emptySubtitle": "Search by name or bib number to find and follow participants",
-        "favouriteEmptyTitle": "No Favourites Yet",
-        "favouriteEmptySubtitle": "We couldn't find any favourite matching",
-        "favouriteSearchEmpty": "No Athletes Found",
-        "followerSearchEmpty": "No Followers Found",
-        "no_followers_title": "No Followers Yet",
-        "no_followers_msg": "No one is following you yet. Share your profile to get followers.",
-        "no_following_title": "Not Following Anyone",
-        "no_following_msg": "You are not following anyone yet. Use \"Find an Athlete\" to search for participants and follow them."
-        
-    }
-
-
+  "upcomingrace": "Find an upcoming race",
+  "pastrace": "Find a past race",
+  "athlete": "Find an athlete",
+  "favourite": "Favourite athletes",
+  "followers": "My followers list",
+  "nextEvents": "Next events",
+  "viewAll": "View all",
+  "nav": {
+    "upcomingsub": "Discover and browse upcoming races",
+    "pastsub": "Find and view results from past races",
+    "athletesub": "Search for an athlete by name or email",
+    "favouritesub": "View your favourite athletes"
+  },
+  "button": {
+    "upcoming": "Show all upcoming events",
+    "past": "Show all results",
+    "athlete": "Search athlete",
+    "favourite": "List of favourite",
+    "remove": "REMOVE",
+    "followback": "Follow back"
+  },
+  "search": {
+    "upcomingSearch": "Search race by event name",
+    "athletesearch": "Search participant by name or email"
+  },
+  "empty": {
+    "emptyTitle": "Find your athlete",
+    "emptySubtitle": "Search by name or bib number to find and follow participants",
+    "favouriteEmptyTitle": "No favourites yet",
+    "favouriteEmptySubtitle": "We couldn't find any favourite matching",
+    "favouriteSearchEmpty": "No athletes found",
+    "followerSearchEmpty": "No followers found",
+    "no_followers_title": "No followers yet",
+    "no_followers_msg": "No one is following you yet. Share your profile to get followers.",
+    "no_following_title": "Not following anyone",
+    "no_following_msg": "You are not following anyone yet. Use \"Find an Athlete\" to search for participants and follow them."
+  }
 }

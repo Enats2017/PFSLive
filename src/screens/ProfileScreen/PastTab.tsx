@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { View, Text, FlatList, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { profileStyles } from '../../styles/Profile.styles';
 import { AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import EventCardPast from './EventCardPast';
@@ -62,7 +62,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
         return (
             <ActivityIndicator
                 size="small"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ marginVertical: spacing.md }}
             />
         );
@@ -90,7 +90,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
             nestedScrollEnabled={true}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-                paddingHorizontal: spacing.md,
+                paddingHorizontal: spacing.xl,
                 paddingTop: spacing.md,
                 paddingBottom: spacing.xxxxl,
                 flexGrow: 1,

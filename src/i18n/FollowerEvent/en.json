@@ -5,12 +5,12 @@
     "Upcoming": "Upcoming"
   },
   "official": {
-    "title": "OFFICIAL PARTNER EVENTS"
+    "title": "Official partner events"
   },
   "personal": {
-    "title": "FIND AN ATHLETE",
+    "title": "Find an athlete",
     "description": "Track your own activities",
-    "button": "GO TO PERSONAL EVENT"
+    "button": "Go to personal event"
   },
   "searching": "Searching...",
   "empty": {
@@ -20,9 +20,9 @@
     "searchNoResults": "No events match your search"
   },
   "success": {
-    "followTitle": "Follow Successful",
+    "followTitle": "Follow successful",
     "followMessage": "You are now following this athlete.",
-    "unfollowTitle": "Unfollow Successful",
+    "unfollowTitle": "Unfollow successful",
     "unfollowMessage": "You have unfollowed this athlete."
   },
   "error": {
@@ -38,10 +38,10 @@
   "button": {
     "viewprofile": "VIEW",
     "follower": "FOLLOW",
-    "show_event": "SHOW EVENT",
+    "show_event": "Show event",
     "unfollow": "UNFOLLOW",
-    "favourite": "ADD TO FAVOURITE",
+    "favourite": "Add to favourite",
     "remove": "REMOVE",
-    "followback": "FOLLOW BACK"
+    "followback": "Follow back"
   }
 }

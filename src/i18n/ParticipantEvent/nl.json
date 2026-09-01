@@ -5,8 +5,8 @@
     "Upcoming": "Binnenkort"
   },
   "official": {
-    "title": "OFFICIËLE PARTNER EVENEMENTEN",
-    "button": "MELD JE AAN VOOR LIVE TRACKING"
+    "title": "Officiële partner evenementen",
+    "button": "Meld je aan voor live tracking"
   },
   "past": {
     "button": "RESULTAAT"
@@ -19,9 +19,9 @@
     "searchNoResults": "Geen evenementen komen overeen met je zoekopdracht"
   },
   "personal": {
-    "title": "PERSOONLIJKE EVENEMENTEN",
+    "title": "Persoonlijke evenementen",
     "description": "Een evenement aan het racen of een trainingssessie plannen die geen officieel partnerevenement is? Maak het hier aan!",
-    "button": "PERSOONLIJK EVENEMENT AANMAKEN"
+    "button": "Persoonlijk evenement aanmaken"
   },
   "error": {
     "failed": "Kan evenementen niet laden",

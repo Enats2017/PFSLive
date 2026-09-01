@@ -1,55 +1,67 @@
 {
-    "tracking": {
-        "unlimited": "You have unlimited live tracking sessions.",
-        "remaining": "You have {{count}} live tracking session(s) left.",
-        "exhausted": "You have no live tracking sessions left.",
-         "subtitle": "Track your favourite athletes live."
-    },
-    "menu": {
-        "events": {
-            "title": "Your Events",
-            "subtitle": "Watch Your Past Result"
-        },
-        "training": {
-            "title": "Your training sessions",
-            "subtitle": "See Your Past Training Sessions or Upload a New One."
-        },
-        "account": {
-            "title": "Account",
-            "subtitle": "Manage Your Account Settings"
-        },
-        "contact":{
-            "title": "Contact and Feedback",
-            "subtitle": "Question, Bugs, or ideas"
-        }
-    },
-    "profile": {
-        "followers": "Followers",
-        "following": "Following"
-    },
-    "backbtn":{
-        "events":"Your Events",
-        "training": "Training Sessions"
-    },
-    "membershipCard": {
-        "liteTitle": "MEMBERSHIP",
-        "sessionsLeft": "live tracking sessions left",
-        "viewPlans": "View plans & upgrade",
-        "noMembershipTitle": "No Active Membership",
-        "noMembershipSubtitle": "Subscribe to a plan to start live tracking your sessions.",
-        "paymentProcessing": "Payment is being processed. Please wait about 1 minute, then tap Refresh to view your updated membership.",
-        "refresh": "Refresh"
+  "tracking": {
+    "unlimited": "You have unlimited live tracking sessions.",
+    "remaining": "You have {{count}} live tracking session(s) left.",
+    "exhausted": "You have no live tracking sessions left.",
+    "subtitle": "Track your favourite athletes live."
+  },
+  "menu": {
+    "events": {
+      "title": "Your events",
+      "subtitle": "Watch your past result"
     },
     "training": {
-        "create": "CREATE PERSONAL EVENT"
+      "title": "Your training sessions",
+      "subtitle": "See your past training sessions or upload a new one."
     },
-    "deleteEvent": {
-        "deleteSuccess": "Event deleted successfully",
-         "deleteFailed": "Failed to delete event",
-        "confirmTitle": "Delete this event?",
-        "confirmMessage": "\"{{name}}\" will be permanently removed. This can't be undone.",
-        "cancel": "Cancel",
-        "confirm": "Delete",
-        "trackingStartedError": "This event can no longer be deleted because tracking has already started."
+    "account": {
+      "title": "Account",
+      "subtitle": "Manage your account settings"
+    },
+    "contact": {
+      "title": "Contact and Feedback",
+      "subtitle": "Question, Bugs, or ideas"
+    },
+    "membership": {
+      "title": "Membership",
+      "subtitle": "Plan, billing and receipts"
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Language, visibility and account"
     }
+  },
+  "profile": {
+    "followers": "Followers",
+    "following": "Following",
+    "races": "Races"
+  },
+  "backbtn": {
+    "events": "Your events",
+    "training": "Training sessions"
+  },
+  "membershipCard": {
+    "liteTitle": "MEMBERSHIP",
+    "sessionsLeft": "live tracking sessions left",
+    "viewPlans": "View plans & upgrade",
+    "noMembershipTitle": "No active membership",
+    "noMembershipSubtitle": "Subscribe to a plan to start live tracking your sessions.",
+    "paymentProcessing": "Payment is being processed. Please wait about 1 minute, then tap Refresh to view your updated membership.",
+    "refresh": "Refresh"
+  },
+  "training": {
+    "create": "Create personal event"
+  },
+  "deleteEvent": {
+    "deleteSuccess": "Event deleted successfully",
+    "deleteFailed": "Failed to delete event",
+    "confirmTitle": "Delete this event?",
+    "confirmMessage": "\"{{name}}\" will be permanently removed. This can't be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete",
+    "trackingStartedError": "This event can no longer be deleted because tracking has already started."
+  },
+  "events": {
+    "viewResult": "View result"
+  }
 }

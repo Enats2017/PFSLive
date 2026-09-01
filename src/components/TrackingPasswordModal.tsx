@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import FloatingLabelInput from './FloatingLabelInput';
-import { commonStyles, colors } from '../styles/common.styles';
+import { commonStyles, palette, fonts, space } from '../styles/common.styles';
 
 interface Props {
     visible: boolean;
@@ -178,7 +178,7 @@ export const TrackingPasswordModal: React.FC<Props> = ({
                         activeOpacity={0.85}
                     >
                         {isVerifying
-                            ? <ActivityIndicator size="small" color="#fff" />
+                            ? <ActivityIndicator size="small" color={palette.surface} />
                             : <Text style={commonStyles.primaryButtonText}>
                                 {t('setting:passwordModal.submit')}
                               </Text>
@@ -193,10 +193,12 @@ export const TrackingPasswordModal: React.FC<Props> = ({
 const styles = StyleSheet.create({
     overlay:      { flex: 1, justifyContent: 'flex-end' },
     backdrop:     { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
-    sheet:        { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 14 },
-    handle:       { width: 40, height: 4, backgroundColor: '#E0E4F0', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
-    closeBtn:     { position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: 15, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
-    closeBtnText: { fontSize: 13, fontWeight: '700', color: colors.white },
-    divider:      { height: 1, backgroundColor: '#F0F2F8', marginVertical: 16 },
-    errorText:    { fontSize: 13, color: '#FF3B30', marginBottom: 6, marginTop: 4 },
+    sheet:        { backgroundColor: palette.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 24, paddingTop: 16 },
+    handle:       { width: 40, height: 4, backgroundColor: palette.border, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+    closeBtn:     { position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: 15, backgroundColor: palette.navy, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+    closeBtnText: { fontFamily: fonts.bodySemi,
+        fontSize: 13, color: palette.surface },
+    divider:      { height: 1, backgroundColor: palette.border, marginVertical: 16 },
+    errorText:    { fontFamily: fonts.body,
+        fontSize: 13, color: palette.danger, marginBottom: space.md, marginTop: 4 },
 });

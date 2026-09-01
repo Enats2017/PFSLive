@@ -1,11 +1,15 @@
 import { View, Text } from "react-native";
 import { PulsingDot } from "./PullingDot";
+import { palette, fonts } from '../styles/common.styles';
+import { useTranslation } from 'react-i18next';
 
- export const LiveTrackingBar: React.FC = () => (
+ export const LiveTrackingBar: React.FC = () => {
+  const { t } = useTranslation();
+  return (
     <View style={{
-        marginTop: 3,
-        marginBottom: 5,
-        borderRadius: 6,
+        marginTop: 4,
+        marginBottom: 4,
+        borderRadius: 10,
         alignItems:"center", 
         flexDirection: 'row', 
         gap: 6,
@@ -14,13 +18,14 @@ import { PulsingDot } from "./PullingDot";
       
 
         <Text style={{
-            color: '#FF3B30',
-            fontSize: 12,
-            fontWeight: '700',
+            color: palette.danger,
+            fontFamily: fonts.bodySemi,
+        fontSize: 12,
             letterSpacing: 1.5,
             textAlign:"center",
         }}>
-            LIVE TRACKING 
+            {t('livetracking:bar.label')}
         </Text>
     </View>
-);
+  );
+};

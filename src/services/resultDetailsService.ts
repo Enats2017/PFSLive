@@ -83,7 +83,12 @@ export interface RaceInfo {
     position_total?: string;
     category_rank_total?: string;
     gender_ranking_total?: string;
-    wave: string
+    wave: string;
+    /** Average pace as "M:SS" per km, or '' when there is no finish time. */
+    average_pace: string;
+    /** How many of the field finished, and how many started. */
+    finishers: number;
+    field_size: number;
 }
 
 export interface RunnerInfo {

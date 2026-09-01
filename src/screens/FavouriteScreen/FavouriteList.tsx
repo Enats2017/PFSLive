@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette, fonts } from '../../styles/common.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
@@ -19,6 +19,7 @@ import { useScreenError } from '../../hooks/useApiError';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { useDimensions } from '../../hooks/useDimensions';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
+import { Ionicons } from '@expo/vector-icons';
 
 const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const {
@@ -177,16 +178,16 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
 
     const renderEmptyComponent = useCallback(() => (
         <View style={commonStyles.centerContainer}>
-            <Text style={{ fontSize: 48, marginBottom: 10 }}>⭐</Text>
+                                <Ionicons name="star" size={34} color={palette.lime} />
             <Text style={commonStyles.title}>{t('favourite:message.nofavourite')}</Text>
-            <Text style={[commonStyles.subtitle, { textAlign: 'center', marginTop: 5 }]}>
+            <Text style={[commonStyles.subtitle, { textAlign: 'center', marginTop: 4 }]}>
                 {t('favourite:message.favouritemsg')}
             </Text>
         </View>
     ), [t]);
 
     const renderFooter = useCallback(() => {
-        if (loadingMore) return <ActivityIndicator size="small" style={{ paddingVertical: 14 }} />;
+        if (loadingMore) return <ActivityIndicator size="small" style={{ paddingVertical: 16 }} />;
         return null;
     }, [loadingMore]);
 
@@ -196,10 +197,10 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
 
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-                <AppHeader title={t('favourite:title')} showBack />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={event_name} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
                 {sectionType === 'follower' ? (
                     <BottomNavigationFollower activeTab='Favorites' />
@@ -212,9 +213,12 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showBack />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={event_name} showBack />
+                {/* 25_Favourites.png: one line saying what the list is. */}
+                <View style={favstyle.subHeader}>
+                    <Text style={favstyle.subHeaderText}>{t('favourite:subheader')}</Text>
+                </View>
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -226,8 +230,8 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
-            <AppHeader title={t('favourite:title')} showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={event_name} showBack />
 
             <FlatList
                 data={favourites}
@@ -251,7 +255,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     onPress={handleAddPress}
                 >
                     <View style={favstyle.iconWrapper}>
-                        <MaterialIcons name="person-add-alt" size={30} color={colors.white} />
+                        <MaterialIcons name="person-add-alt" size={30} color={palette.surface} />
                     </View>
                 </TouchableOpacity>
             </View>

@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Mapbox, { Camera, MapView, ShapeSource, LineLayer, CircleLayer, SymbolLayer } from '@rnmapbox/maps';
 import { TrackPoint, Station } from '../types';
+import { palette, mapColors } from '../styles/common.styles';
 
 interface RouteMapProps {
   trackPoints: TrackPoint[];
@@ -162,7 +163,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           <LineLayer
             id="routeOutline"
             style={{
-              lineColor: '#B71C1C',
+              lineColor: mapColors.finish,
               lineWidth: 8,
               lineOpacity: 0.8,
               lineCap: 'round',
@@ -172,7 +173,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           <LineLayer
             id="routeLine"
             style={{
-              lineColor: '#E53935',
+              lineColor: palette.danger,
               lineWidth: 6,
               lineCap: 'round',
               lineJoin: 'round',
@@ -186,16 +187,16 @@ export const RouteMap: React.FC<RouteMapProps> = ({
             id="stationsOutline"
             style={{
               circleRadius: 10,
-              circleColor: '#FFFFFF',
+              circleColor: mapColors.markerStroke,
               circleStrokeWidth: 2,
-              circleStrokeColor: '#000000',
+              circleStrokeColor: mapColors.checkpoint,
             }}
           />
           <CircleLayer
             id="stationsInner"
             style={{
               circleRadius: 7,
-              circleColor: '#000000',
+              circleColor: mapColors.checkpoint,
             }}
           />
         </ShapeSource>
@@ -207,7 +208,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
               id="participantGlow"
               style={{
                 circleRadius: 18,
-                circleColor: '#4CAF50',
+                circleColor: mapColors.start,
                 circleOpacity: 0.25,
               }}
             />
@@ -215,14 +216,14 @@ export const RouteMap: React.FC<RouteMapProps> = ({
               id="participantBorder"
               style={{
                 circleRadius: 13,
-                circleColor: '#FFFFFF',
+                circleColor: mapColors.markerStroke,
               }}
             />
             <CircleLayer
               id="participantInner"
               style={{
                 circleRadius: 10,
-                circleColor: '#4CAF50',
+                circleColor: mapColors.start,
               }}
             />
           </ShapeSource>

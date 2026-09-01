@@ -18,6 +18,9 @@ import { useVersionCheck } from './src/hooks/useVersionCheck';
 import { versionService } from './src/services/versionService';
 import { UpdateRequiredModal } from './src/components/UpdateRequiredModal';
 import { analyticsService } from './src/services/analyticsService';
+import { useFonts } from 'expo-font';
+import { Poppins_500Medium, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 
@@ -111,6 +114,19 @@ function RootUpdateGate() {
 export default function App() {
   const [isReady, setIsReady] = useState(false);
   const { changeLanguage } = useLanguageStore();
+
+  // ✅ The design system is Poppins (display) + Inter (body). Until this resolves
+  // every screen renders in the platform default, which is a visibly different
+  // face — so the app is held on the loading view until the fonts are in.
+  // `fontError` is deliberately treated as "carry on": a missing font is a
+  // cosmetic fallback, never a reason to block a runner from starting a race.
+  const [fontsLoaded, fontError] = useFonts({
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+  });
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -207,7 +223,7 @@ export default function App() {
     return () => subscription.remove();
   }, [isReady]);
 
-  if (!isReady) {
+  if (!isReady || (!fontsLoaded && !fontError)) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#DC143C" />

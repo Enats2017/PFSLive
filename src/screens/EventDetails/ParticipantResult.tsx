@@ -13,9 +13,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette, fonts } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { AppHeader } from '../../components/common/AppHeader';
+import NoticeCard from '../../components/NoticeCard';
 import SearchInput from '../../components/SearchInput';
 import { analyticsService } from '../../services/analyticsService';
 import ConfirmRaceResultModal from './ConfirmRaceResultModal';
@@ -302,53 +303,53 @@ const ParticipantResult = () => {
         registeringId === participantService.getParticipantId(participant);
 
       return (
-        <View style={[commonStyles.card, { padding: 0, marginBottom: spacing.lg }]}>
+        <View style={[commonStyles.card, commonStyles.cardAccent, { padding: 0, marginBottom: spacing.lg }]}>
           <View style={detailsStyles.topRow}>
-            <View style={detailsStyles.avatar}>
-              <Ionicons name="person-circle-outline" size={55} color="#9ca3af" style={detailsStyles.logo} />
-            </View>
-            <LinearGradient
-              colors={['#e8341a', '#f4a100', '#1a73e8']}
-              start={{ x: 0, y: 1 }}
-              end={{ x: 1, y: 0 }}
-              style={detailsStyles.divider}
-            />
-            <View style={detailsStyles.info}>
-              <Text style={commonStyles.title}>{fullName}</Text>
-              <Text style={commonStyles.text}>
-                {participant.city} | {participant.country}
+            <View style={detailsStyles.avatarFallback}>
+              <Text style={detailsStyles.avatarInitials}>
+                {(fullName || '?').split(/\s+/).filter(Boolean).slice(0, 2)
+                  .map((n) => n[0]).join('').toUpperCase() || '?'}
               </Text>
-              <Text style={commonStyles.subtitle}>{participant.race_distance}</Text>
-              {hasBibNumber && (
-                <Text style={[commonStyles.subtitle, { color: colors.primary, fontWeight: '600' }]}>
-                  {t('details:tracking.bib')}: {participant.bib_number}
-                </Text>
-              )}
+            </View>
+            <View style={detailsStyles.info}>
+              <Text style={commonStyles.title} numberOfLines={1}>{fullName}</Text>
+              <Text style={detailsStyles.rowMeta} numberOfLines={1}>
+                {[
+                  hasBibNumber ? `${t('details:tracking.bib')} ${participant.bib_number}` : null,
+                  participant.race_distance,
+                  participant.wave ? `${t('details:wave')} ${participant.wave}` : null,
+                ].filter(Boolean).join(' · ')}
+              </Text>
+              <Text style={detailsStyles.rowMeta} numberOfLines={1}>
+                {[participant.city, participant.country].filter(Boolean).join(' · ')}
+              </Text>
             </View>
           </View>
 
           {isLiveTracking && (
             <View style={detailsStyles.liveTrackingBadge}>
-              <Ionicons name="radio" size={14} color={colors.success} />
+              <Ionicons name="radio" size={14} color={palette.lime} />
               <Text style={detailsStyles.liveTrackingText}>{t('details:tracking.live')}</Text>
             </View>
           )}
 
+          <View style={detailsStyles.cardActionRow}>
           <TouchableOpacity
             style={[
-              commonStyles.primaryButton,
-              { borderRadius: 0, opacity: isThisRegistering ? 0.7 : 1, borderBottomLeftRadius: 12, borderBottomRightRadius: 12 },
+              detailsStyles.cardActionPrimary,
+              { opacity: isThisRegistering ? 0.7 : 1 },
             ]}
             onPress={() => handleThisIsMe(participant)}
             disabled={registerLoading}
             activeOpacity={0.8}
           >
             {isThisRegistering ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={palette.surface} />
             ) : (
-              <Text style={commonStyles.primaryButtonText}>{t('participantResult:button')}</Text>
+              <Text style={detailsStyles.cardActionPrimaryText}>{t('participantResult:button')}</Text>
             )}
           </TouchableOpacity>
+          </View>
         </View>
       );
     },
@@ -359,8 +360,8 @@ const ParticipantResult = () => {
     if (loadingMore) {
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
+          <ActivityIndicator size="small" color={palette.navy} />
+          <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
             {t('participantResult:loadingMore', { page, totalPages })}
           </Text>
         </View>
@@ -369,7 +370,7 @@ const ParticipantResult = () => {
     if (hasMorePages() && participants.length > 0) {
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-          <Text style={{ color: colors.gray500 }}>
+          <Text style={{ color: palette.textMuted }}>
             {t('participantResult:scrollForMore', { count: participants.length })}
           </Text>
         </View>
@@ -380,9 +381,9 @@ const ParticipantResult = () => {
 
   if (loading && searchText.length === 0) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <AppHeader showLogo={true} showBack />
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+      <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+        <AppHeader title={event_name} showLogo={true} showBack />
+        <ActivityIndicator size="large" color={palette.navy} style={{ marginTop: 40 }} />
       </SafeAreaView>
     );
   }
@@ -399,34 +400,19 @@ const ParticipantResult = () => {
   }
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <AppHeader showLogo={true} showBack />
+    <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+      <AppHeader title={event_name} showLogo={true} showBack />
 
       <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
-        <Text style={[commonStyles.title, { marginBottom: spacing.sm }]}>{event_name}</Text>
-
-        <View style={{
-          backgroundColor: '#FEF3C7',
-          borderLeftWidth: 4,
-          borderLeftColor: '#F59E0B',
-          borderRadius: 8,
-          padding: spacing.md,
-          marginBottom: spacing.lg,
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            <Ionicons name="information-circle" size={24} color="#F59E0B" style={{ marginRight: spacing.sm, marginTop: 2 }} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: '#92400E', marginBottom: 4 }}>
-                {t('participantResult:info.title')}
-              </Text>
-              <Text style={{ fontSize: 14, color: '#92400E', lineHeight: 20 }}>
-                {t('participantResult:info.message')}
-              </Text>
-            </View>
-          </View>
-        </View>
+        <NoticeCard
+          icon="information-circle-outline"
+          title={t('participantResult:info.title')}
+          message={t('participantResult:info.message')}
+        />
+        <View style={{ height: spacing.lg }} />
 
         <SearchInput
+                        framed={false}
           ref={searchInputRef}
           placeholder={t('details:participant.search')}
           value={searchText}
@@ -437,8 +423,8 @@ const ParticipantResult = () => {
 
       {loading && searchText.length > 0 && (
         <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
+          <ActivityIndicator size="small" color={palette.navy} />
+          <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
             {t('details:participant.searching')}
           </Text>
         </View>
@@ -497,7 +483,7 @@ const ParticipantResult = () => {
         <View style={mailStyles.backdrop}>
           <View style={mailStyles.card}>
             <View style={mailStyles.iconWrapper}>
-              <Text style={mailStyles.iconText}>📧</Text>
+              <Ionicons name="mail" size={28} color={palette.navy} />
             </View>
             <Text style={mailStyles.title}>{t('participantResult:mailSent.title')}</Text>
             <Text style={mailStyles.message}>{t('participantResult:mailSent.message')}</Text>
@@ -537,8 +523,8 @@ const mailStyles = StyleSheet.create({
     padding: 24,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    backgroundColor: palette.surface,
+    borderRadius: 16,
     padding: 32,
     alignItems: 'center',
     width: '100%',
@@ -547,24 +533,26 @@ const mailStyles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: palette.fill,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   iconText: {
-    fontSize: 32,
+    fontFamily: fonts.body,
+        fontSize: 26,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
     marginBottom: 12,
   },
   message: {
-    fontSize: 14,
-    color: '#64748b',
+    fontFamily: fonts.body,
+        fontSize: 13,
+    color: palette.textMuted,
     textAlign: 'center',
     lineHeight: 22,
   },

@@ -1,14 +1,14 @@
 {
   "liveTracking": {
-    "title": "INSCRIPTION AU SUIVI EN DIRECT",
+    "title": "Inscription au suivi en direct",
     "hint": "OU",
-    "showAll": "AFFICHER TOUS LES ÉVÉNEMENTS"
+    "showAll": "Afficher tous les événements"
   },
-   "nextevetn": "ÉVÉNEMENTS À VENIR",
+  "nextEvents": "Événements à venir",
   "viewAll": "Voir tout",
   "personalRace": {
-    "title": "CRÉER UNE COURSE PERSONNELLE",
+    "title": "Créer une course personnelle",
     "description": "Vous participez à un événement qui ne figure pas sur notre calendrier officiel ou vous planifiez une séance d'entraînement ? Créez votre session de suivi en direct ci-dessous. Le téléchargement GPX est facultatif.",
-    "createButton": "CRÉER UN ÉVÉNEMENT PERSONNEL"
+    "createButton": "Créer un événement personnel"
   }
 }

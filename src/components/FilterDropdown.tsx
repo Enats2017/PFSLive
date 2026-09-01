@@ -12,6 +12,7 @@ import {
 import Entypo from '@expo/vector-icons/Entypo';
 import { resultListStyle } from '../styles/ResultList.styles';
 import { useTranslation } from 'react-i18next';
+import { palette } from '../styles/common.styles';
 
 
 
@@ -113,7 +114,7 @@ const Dropdown: React.FC<DropdownProps> = ({
           <Entypo
             name="chevron-down"
             size={26}
-            color="black"
+            color={palette.ink}
             style={resultListStyle.filterArrow}
           />
         </View>

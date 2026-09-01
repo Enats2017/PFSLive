@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles } from '../styles/common.styles';
+import { commonStyles, palette, fonts, shadows, radii, withAlpha } from '../styles/common.styles';
 
 interface UndoConfirmModalProps {
   visible: boolean;
@@ -48,7 +48,7 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
         <View style={styles.card}>
           {/* Icon */}
           <View style={styles.iconWrapper}>
-            <Ionicons name="alert-circle-outline" size={60} color={colors.warning} />
+            <Ionicons name="alert-circle-outline" size={60} color={palette.warning} />
           </View>
 
           {/* Title */}
@@ -108,57 +108,50 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: palette.surface,
+    borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 32,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: { elevation: 8 },
-    }),
+    ...shadows.card,
   },
   iconWrapper: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: colors.warning + '15',
+    backgroundColor: palette.warningBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
     marginBottom: 8,
   },
   chip: {
-    backgroundColor: colors.primary + '15',
+    backgroundColor: withAlpha(palette.navy, 0.08),
     borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 20,
+    borderColor: palette.navy,
+    borderRadius: radii.pill,
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingVertical: 8,
     marginBottom: 16,
   },
   chipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
+    fontFamily: fonts.bodySemi,
+        fontSize: 12,
+    color: palette.navy,
     letterSpacing: 0.5,
   },
   message: {
-    fontSize: 14,
-    color: '#64748b',
+    fontFamily: fonts.body,
+        fontSize: 13,
+    color: palette.textMuted,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
@@ -168,6 +161,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   confirmButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: palette.navy,
   },
 });

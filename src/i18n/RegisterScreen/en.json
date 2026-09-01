@@ -1,13 +1,15 @@
 {
-  "firstName": "First Name",
-  "lastName": "Last Name",
-  "email": "Email Address",
+  "title": "Create your account",
+  "subtitle": "Takes a minute. You will verify by email.",
+  "firstName": "First name",
+  "lastName": "Last name",
+  "email": "Email address",
   "password": "Password",
   "country": "Country",
   "city": "City",
-  "dateOfBirth": "Date of Birth",
+  "dateOfBirth": "Date of birth",
   "account": "Already have an account?",
-  "loginNow": "Login Now",
+  "loginNow": "Login now",
   "Gender": {
     "gender": "Gender",
     "male": "Male",
@@ -15,8 +17,8 @@
     "other": "Other"
   },
   "termsAndConditions": "I agree to the Terms and Conditions",
-  "uploadPhoto": "Upload Profile Photo",
-  "success": "Registration Successful",
+  "uploadPhoto": "Upload profile photo",
+  "success": "Registration successful",
   "welcome": "Welcome, {{name}}!",
   "errors": {
     "firstnameRequired": "First name must be at least 2 characters",
@@ -40,16 +42,16 @@
     "profilePictureFailed": "Failed to upload profile photo. Please try again."
   },
   "imageSource": {
-    "title": "Choose Photo Source",
+    "title": "Choose photo source",
     "message": "Select where you want to pick your profile photo from",
-    "camera": "Take Photo",
+    "camera": "Take photo",
     "gallery": "Choose from Gallery"
   },
   "alerts": {
-    "permissionRequired": "Permission Required",
+    "permissionRequired": "Permission required",
     "cameraPermission": "Camera permission is required to take photos",
     "galleryPermission": "Gallery permission is required to select photos",
-    "deviceNotAllowed": "Device Not Allowed",
+    "deviceNotAllowed": "Device not allowed",
     "deviceNotAllowedMessage": "This device is not authorized for registration",
     "noConnection": "No Connection",
     "noConnectionMessage": "Please check your internet connection",

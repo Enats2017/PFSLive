@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles } from '../styles/common.styles';
+import { commonStyles, palette, fonts, shadows } from '../styles/common.styles';
 
 interface DeviceTransferModalProps {
   visible: boolean;
@@ -60,7 +60,7 @@ const DeviceTransferModal: React.FC<DeviceTransferModalProps> = ({
       <View style={styles.wrapper}>
         <View style={styles.card}>
           <View style={styles.iconWrapper}>
-            <Ionicons name="phone-portrait-outline" size={56} color={colors.warning} />
+            <Ionicons name="phone-portrait-outline" size={56} color={palette.warning} />
           </View>
 
           <Text style={styles.title}>{t('login:deviceTransfer.title')}</Text>
@@ -83,7 +83,7 @@ const DeviceTransferModal: React.FC<DeviceTransferModalProps> = ({
               activeOpacity={0.8}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={palette.surface} size="small" />
               ) : (
                 <Text style={commonStyles.primaryButtonText}>
                   {t('login:deviceTransfer.confirm')}
@@ -122,50 +122,44 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: palette.surface,
+    borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 32,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: { elevation: 8 },
-    }),
+    ...shadows.card,
   },
   iconWrapper: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: colors.warning + '15',
+    backgroundColor: palette.warningBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
     marginBottom: 12,
   },
   message: {
-    fontSize: 14,
+    fontFamily: fonts.body,
+        fontSize: 13,
     lineHeight: 21,
-    color: '#475569',
+    color: palette.textBody,
     textAlign: 'center',
     marginBottom: 12,
   },
   note: {
-    fontSize: 12,
+    fontFamily: fonts.body,
+        fontSize: 12,
     lineHeight: 18,
-    color: '#94a3b8',
+    color: palette.textMuted,
     textAlign: 'center',
     marginBottom: 24,
   },

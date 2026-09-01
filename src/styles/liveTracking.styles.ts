@@ -1,5 +1,5 @@
 import { StyleSheet, Dimensions } from 'react-native';
-import { colors, spacing, typography } from './common.styles';
+import { spacing, typography, type, palette, radii, fonts, shadows, space } from './common.styles';
 
 const { width, height } = Dimensions.get('window');
 
@@ -13,25 +13,22 @@ export const liveTrackingStyles = StyleSheet.create({
     chartContainer: {
         height: 240, // ✅ Match profileContainer
         borderTopWidth: 1,
-        borderTopColor: colors.gray200,
-        backgroundColor: colors.white,
+        borderTopColor: palette.border,
+        backgroundColor: palette.surface,
     },
     collapseBtn: {
+    ...shadows.card,
+
         position: 'absolute',
         bottom: 255, // ✅ Adjusted for new height (240 + 15)
         right: 16,
-        backgroundColor: colors.white,
+        backgroundColor: palette.surface,
         width: 40,
         height: 40,
         borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 5,
-    },
+  },
 
     // ── Map Loading Overlay ──────────────────────────────────
     mapLoadingOverlay: {
@@ -46,21 +43,19 @@ export const liveTrackingStyles = StyleSheet.create({
         zIndex: 100,
     },
     mapLoadingBox: {
-        backgroundColor: colors.white,
-        borderRadius: 12,
+    ...shadows.card,
+
+        backgroundColor: palette.surface,
+        borderRadius: 14,
         padding: spacing.xl,
         alignItems: 'center',
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 8,
-    },
+  },
     mapLoadingText: {
         marginTop: spacing.md,
-        fontSize: typography.sizes.md,
-        fontWeight: typography.weights.semibold,
-        color: colors.gray700,
+        fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        color: palette.textBody,
     },
 
     // ── Popup Overlay ────────────────────────────────────────
@@ -76,17 +71,14 @@ export const liveTrackingStyles = StyleSheet.create({
         zIndex: 1000,
     },
     popup: {
-        backgroundColor: colors.white,
+    ...shadows.card,
+
+        backgroundColor: palette.surface,
         borderRadius: 16,
         padding: spacing.xl,
         width: '90%',
         maxWidth: 400,
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 10,
-    },
+  },
     popupCloseBtn: {
         position: 'absolute',
         top: 12,
@@ -100,7 +92,7 @@ export const liveTrackingStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: spacing.lg,
-        paddingRight: 30,
+        paddingRight: 32,
     },
     avatar: {
         width: 60,
@@ -112,56 +104,62 @@ export const liveTrackingStyles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: colors.gray200,
+        backgroundColor: palette.border,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: spacing.md,
     },
     initials: {
-        fontSize: typography.sizes.xxl,
-        fontWeight: typography.weights.bold,
-        color: colors.primary,
+        fontFamily: fonts.bodySemi,
+        fontSize: 26,
+
+        color: palette.navy,
     },
     popupHeaderText: {
         flex: 1,
     },
     participantName: {
-        fontSize: typography.sizes.xl,
-        fontWeight: typography.weights.bold,
-        color: colors.gray900,
+        fontFamily: fonts.bodySemi,
+        fontSize: 20,
+
+        color: palette.ink,
         marginBottom: 4,
     },
     participantBib: {
-        fontSize: typography.sizes.md,
-        color: colors.gray600,
+        fontFamily: fonts.body,
+    fontSize: 15,
+        color: palette.textBody,
     },
     popupSection: {
         marginBottom: spacing.md,
         paddingBottom: spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: colors.gray200,
+        borderBottomColor: palette.border,
     },
     popupSectionTitle: {
-        fontSize: typography.sizes.md,
-        fontWeight: typography.weights.bold,
-        color: colors.gray700,
+        fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        color: palette.textBody,
         marginBottom: spacing.sm,
     },
     popupRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 6,
+        marginBottom: space.md,
     },
     popupLabel: {
-        fontSize: typography.sizes.md,
-        color: colors.gray600,
+        fontFamily: fonts.body,
+    fontSize: 15,
+        color: palette.textBody,
         flex: 1,
     },
     popupValue: {
-        fontSize: typography.sizes.md,
-        fontWeight: typography.weights.semibold,
-        color: colors.gray900,
+        fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        color: palette.ink,
         textAlign: 'right',
     },
     popupFooter: {
@@ -171,8 +169,9 @@ export const liveTrackingStyles = StyleSheet.create({
         marginTop: spacing.sm,
     },
     lastUpdateText: {
-        fontSize: typography.sizes.sm,
-        color: colors.gray500,
+        fontFamily: fonts.body,
+    fontSize: 13,
+        color: palette.textMuted,
         fontStyle: 'italic',
     },
 
@@ -181,13 +180,13 @@ export const liveTrackingStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: spacing.lg,
-        paddingRight: 30,
+        paddingRight: 32,
     },
     aidStationIconCircle: {
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: colors.black,
+        backgroundColor: palette.ink,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: spacing.md,
@@ -196,14 +195,16 @@ export const liveTrackingStyles = StyleSheet.create({
         flex: 1,
     },
     aidStationName: {
-        fontSize: typography.sizes.xl,
-        fontWeight: typography.weights.bold,
-        color: colors.gray900,
+        fontFamily: fonts.bodySemi,
+        fontSize: 20,
+
+        color: palette.ink,
         marginBottom: 4,
     },
     aidStationSubtitle: {
-        fontSize: typography.sizes.sm,
-        color: colors.gray600,
+        fontFamily: fonts.body,
+    fontSize: 13,
+        color: palette.textBody,
     },
     aidStationInfoRow: {
         flexDirection: 'row',
@@ -215,73 +216,113 @@ export const liveTrackingStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.sm,
-        backgroundColor: '#FFF3CD',
+        backgroundColor: palette.warningBg,
         padding: spacing.md,
-        borderRadius: 8,
+        borderRadius: 10,
         marginBottom: spacing.md,
     },
     warningText: {
         flex: 1,
-        fontSize: typography.sizes.sm,
-        color: '#856404',
-        fontWeight: typography.weights.medium,
-    },
+        fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+        color: palette.warning,
+
+        },
     directionsBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: spacing.sm,
-        backgroundColor: colors.primary,
-        paddingVertical: 14,
+        backgroundColor: palette.navy,
+        paddingVertical: 16,
         borderRadius: 10,
     },
     directionsBtnText: {
-        fontSize: typography.sizes.md,
-        fontWeight: typography.weights.bold,
-        color: colors.white,
+        fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        color: palette.surface,
     },
 
     // ── Elevation Profile ────────────────────────────────────
     profileContainer: {
         height: 240, // ✅ Increased from 180 to 240
-        backgroundColor: colors.white,
+        backgroundColor: palette.surface,
         borderTopWidth: 1,
-        borderTopColor: colors.gray200,
+        borderTopColor: palette.border,
         paddingTop: spacing.xs,
     },
+    // ✅ Section label — the deck titles the elevation chart with its small
+    // uppercase `.meta` line, the same treatment used everywhere else.
+    // 32_MapView.png: the label sits left, the route's total ascent right.
+    profileHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingRight: spacing.md,
+    },
+    profileGain: {
+        ...type.small,
+    },
+
     profileTitle: {
-        fontSize: typography.sizes.sm,
-        fontWeight: typography.weights.bold,
-        color: colors.gray900,
+        ...type.label,
+        color: palette.textMuted,
         marginLeft: spacing.md,
         marginBottom: spacing.xs,
-        paddingTop:spacing.sm
+        paddingTop: spacing.sm,
     },
     profileScrollView: {
         flex: 1,
     },
 
     // ── Distance Dropdown ────────────────────────────────────
+    // 32_MapView.png: "Live map" on the left of the band, a LIVE pill on the
+    // right, with the distance selector beneath.
+    mapHeadRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: spacing.sm,
+    },
+    mapHeadTitle: {
+        fontFamily: fonts.body,
+        fontSize: 15,
+        color: palette.ink,
+    },
+    mapLivePill: {
+        backgroundColor: palette.noticeBg,
+        borderRadius: radii.pill,
+        paddingHorizontal: space.md,
+        paddingVertical: 4,
+    },
+    mapLiveText: {
+        fontFamily: fonts.bodySemi,
+        fontSize: 12,
+        color: palette.ink,
+    },
+
     dropdownContainer: {
-        paddingHorizontal: spacing.md,
+        paddingHorizontal: space.xl,
         paddingVertical: spacing.sm,
-        backgroundColor: colors.white,
+        backgroundColor: palette.surface,
         borderBottomWidth: 1,
-        borderBottomColor: colors.gray200,
+        borderBottomColor: palette.border,
     },
     dropdownButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingVertical: spacing.md,
-        paddingHorizontal: spacing.md,
-        backgroundColor: colors.gray100,
-        borderRadius: 8,
+        paddingHorizontal: space.xl,
+        backgroundColor: palette.fill,
+        borderRadius: 10,
     },
     dropdownButtonText: {
-        fontSize: typography.sizes.md,
-        fontWeight: typography.weights.semibold,
-        color: colors.gray900,
+        fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        color: palette.ink,
     },
     dropdownModalOverlay: {
         flex: 1,
@@ -290,16 +331,13 @@ export const liveTrackingStyles = StyleSheet.create({
         alignItems: 'center',
     },
     dropdownModal: {
-        backgroundColor: colors.white,
-        borderRadius: 12,
+    ...shadows.card,
+
+        backgroundColor: palette.surface,
+        borderRadius: 14,
         width: '80%',
         maxHeight: '60%',
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 10,
-    },
+  },
     dropdownItem: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -307,17 +345,64 @@ export const liveTrackingStyles = StyleSheet.create({
         paddingVertical: spacing.md,
         paddingHorizontal: spacing.lg,
         borderBottomWidth: 1,
-        borderBottomColor: colors.gray200,
+        borderBottomColor: palette.border,
     },
     dropdownItemActive: {
-        backgroundColor: colors.gray100,
+        backgroundColor: palette.fill,
     },
     dropdownItemText: {
-        fontSize: typography.sizes.md,
-        color: colors.gray900,
+        fontFamily: fonts.body,
+    fontSize: 15,
+        color: palette.ink,
     },
     dropdownItemTextActive: {
-        fontWeight: typography.weights.bold,
-        color: colors.primary,
+        fontFamily: fonts.bodySemi,
+        fontSize: 13,
+        color: palette.navy,
+    },
+
+    // ── Map markers ──────────────────────────────────────
+    // Used by <ParticipantMarker> and <AidStationMarker>, which render inside a
+    // Mapbox.PointAnnotation — the annotation sizes itself to these views.
+    markerContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dot: {
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        borderWidth: 2,
+        borderColor: palette.surface,
+    },
+    greenDot: {
+        backgroundColor: palette.lime,
+    },
+    bibBadge: {
+        marginTop: 2,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 10,
+        backgroundColor: palette.navy,
+    },
+    bibText: {
+        fontFamily: fonts.bodySemi,
+        fontSize: 12,
+
+        color: palette.surface,
+    },
+    aidStationMarker: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    aidStationIcon: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: palette.navy,
+        borderWidth: 2,
+        borderColor: palette.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });

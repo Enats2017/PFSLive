@@ -4,14 +4,13 @@ import {
     Text,
     FlatList,
     ActivityIndicator,
-    StatusBar,
     RefreshControl,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
-import { colors, commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette, fonts } from '../../styles/common.styles';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { ResultListprops } from '../../types/navigation';
 import Dropdown from '../../components/FilterDropdown';
@@ -189,7 +188,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
 
     const ListFooter = useCallback(() =>
         pageLoad
-            ? <ActivityIndicator size="small" color={colors.primary} style={{ paddingVertical: 16 }} />
+            ? <ActivityIndicator size="small" color={palette.navy} style={{ paddingVertical: 16 }} />
             : null
         , [pageLoad]);
 
@@ -199,10 +198,9 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     );
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}>
-            <StatusBar barStyle="dark-content" />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
 
-            <AppHeader
+            <AppHeader title={event_name}
                 showLogo={true}
                 showSearch={true}
                 product_app_id={product_app_id}
@@ -263,7 +261,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                         <>
                             <StatItem label={t("allrace:filter.stat_started")} value={statistics.started} />
                             <Divider />
-                            <StatItem label={t("allrace:filter.is_finshed")} value={statistics.crossed} />
+                            <StatItem label={t("allrace:filter.isFinished")} value={statistics.crossed} />
                             <Divider />
                             <StatItem label={t("allrace:filter.stat_dnf")} value={statistics.dnf} highlight />
                         </>
@@ -272,7 +270,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             )}
             {initialLoad ? (
                 <View style={resultListStyle.center}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                     <Text style={resultListStyle.loadingText}>
                         {t('common:loading.loading')}
                     </Text>
@@ -286,7 +284,8 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 />
             ) : isFavTab && displayResults.length === 0 ? (
                 <View style={resultListStyle.center}>
-                    <Text style={{ fontSize: 48 }}>☆</Text>
+                    <Text style={{ fontFamily: fonts.body,
+        fontSize: 40 }}>☆</Text>
                     <Text style={resultListStyle.loadingText}>
                         {t('allrace:filter.noFavourites')}
                     </Text>
@@ -312,7 +311,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                             <RefreshControl
                                 refreshing={refreshing}
                                 onRefresh={onRefresh}
-                                tintColor={colors.primary}
+                                tintColor={palette.navy}
                             />
                         }
                         initialNumToRender={12}
@@ -323,7 +322,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     />
                     {filterLoad && (
                         <View style={resultListStyle.filterOverlay} pointerEvents="none">
-                            <ActivityIndicator size="large" color={colors.success} />
+                            <ActivityIndicator size="large" color={palette.lime} />
                         </View>
                     )}
                 </View>

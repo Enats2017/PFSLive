@@ -1,11 +1,9 @@
 {
-    "message":{
-        "follow":"Following You have successfully added to favourites",
-        "unfollow":"Unfollowed You have been removed from favourites"
-    },
-
-     "unfollow":"UNFOLLOW",
-     "favourite":"ADD TO FAVOURITE",
-     "follow":"FOLLOW"
-     
+  "message": {
+    "follow": "Following You have successfully added to favourites",
+    "unfollow": "Unfollowed You have been removed from favourites"
+  },
+  "unfollow": "UNFOLLOW",
+  "favourite": "Add to favourite",
+  "follow": "FOLLOW"
 }

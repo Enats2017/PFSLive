@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,7 +11,7 @@ import {
 } from 'react-native';
 import { personalStyles } from '../styles/personalEvent.styles';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/common.styles';
+import { palette } from '../styles/common.styles';
 import React from 'react';
 
 interface FileCardProps {
@@ -30,7 +29,7 @@ interface FileCardProps {
   <View style={personalStyles.fileCard}>
     <View style={personalStyles.fileLeft}>
       <View style={personalStyles.fileIconContainer}>
-        <Ionicons name="document-outline" size={28} color={colors.primary} />
+        <Ionicons name="document-outline" size={28} color={palette.navy} />
       </View>
       <View style={personalStyles.fileDetails}>
         <Text numberOfLines={1} style={personalStyles.fileName}>{fileName}</Text>
@@ -39,10 +38,10 @@ interface FileCardProps {
     </View>
     <View style={personalStyles.actions}>
       <TouchableOpacity style={personalStyles.actionButton} onPress={onSwapOrView} disabled={disabled}>
-        <Ionicons name={swapIcon} size={20} color={colors.gray600} />
+        <Ionicons name={swapIcon} size={20} color={palette.textBody} />
       </TouchableOpacity>
       <TouchableOpacity style={personalStyles.actionButton} onPress={onRemoveOrDiscard} disabled={disabled}>
-        <Ionicons name="close-circle" size={20} color={colors.error} />
+        <Ionicons name="close-circle" size={20} color={palette.danger} />
       </TouchableOpacity>
     </View>
   </View>

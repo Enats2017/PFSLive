@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { FollowingLiveEvent } from './HomeScreen';
-import { colors, commonStyles, spacing } from '../styles/common.styles';
+import { commonStyles, spacing, palette } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
 import { formatClockTime } from '../utils/timeFormat';
 import { useTranslation } from 'react-i18next';
@@ -38,7 +38,7 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
     return (
         <View style={homeStyles.section_followers}>
             <View style={homeStyles.header}>
-                <Text style={commonStyles.subtitle}>
+                <Text style={homeStyles.sectionLabel}>
                     {t('home:followingEvents.sectionTitle')}
                 </Text>
             </View>
@@ -61,8 +61,8 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                         style={[
                             commonStyles.card,
                             {
-                                borderWidth: 0.5,
-                                borderColor: isLive ? 'rgba(163,45,45,0.3)' : 'rgba(0,0,0,0.12)',
+                                borderWidth: 1,
+                                borderColor: palette.border,
                                 marginBottom: spacing.md,
                             },
                         ]}
@@ -76,14 +76,14 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                                 </Text>
                                
                                 <View style={homeStyles.eventMeta}>
-                                    <Ionicons name="time-outline" size={13} color="#888780" />
+                                    <Ionicons name="time-outline" size={13} color={palette.textMuted} />
                                     <Text style={commonStyles.date}>
                                         {formatClockTime(event.race_time)}
                                     </Text>
                                 </View>
                                  {event.race_distance ? (
                                     <View style={[homeStyles.eventMeta,{marginBottom:spacing.xs}]}>
-                                        <Ionicons name="location" size={13} color={colors.gray700} />  {/* ✅ map icon for distance */}
+                                        <Ionicons name="location" size={13} color={palette.textBody} />  {/* ✅ map icon for distance */}
                                         <Text style={commonStyles.date}>
                                             {event.race_distance}
                                         </Text>
@@ -115,16 +115,46 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
 
                         <View style={homeStyles.divider} />
 
+                        {event.followed_participants?.length > 0 && (
+                            <View style={{ marginBottom: spacing.md }}>
+                                <Text style={homeStyles.followLabel}>
+                                    {t('home:followingEvents.youFollow')}
+                                </Text>
+                                {event.followed_participants.map((p) => {
+                                    const name = [p.firstname, p.lastname].filter(Boolean).join(' ');
+                                    const initials = [p.firstname, p.lastname]
+                                        .filter(Boolean).map((n) => n[0]).join('').toUpperCase() || '?';
+                                    return (
+                                        <View key={p.participant_app_id} style={homeStyles.followRow}>
+                                            <View style={homeStyles.followAvatar}>
+                                                <Text style={homeStyles.followAvatarText}>{initials}</Text>
+                                            </View>
+                                            <Text style={homeStyles.followName} numberOfLines={1}>{name}</Text>
+                                            {!!p.bib_number && (
+                                                <Text style={homeStyles.followBib}>
+                                                    {t('common:bib', 'Bib')} {p.bib_number}
+                                                </Text>
+                                            )}
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        )}
+
                         <TouchableOpacity
                             style={[homeStyles.followerBtn, { flexDirection: 'row', gap: 6 }]}
                             onPress={() => onRoutePress(event)}
                             
                         >
-                            <MaterialIcons name="person-add-alt-1" size={24} color={colors.black} />
+                            <MaterialIcons name="person-add-alt-1" size={24} color={palette.ink} />
                             <Text style={homeStyles.followerText}>
                                 {t('home:followingEvents.routeButton')}
                             </Text>
                         </TouchableOpacity>
+
+                        <Text style={homeStyles.followCaption}>
+                            {t('home:followingEvents.opensEventPage')}
+                        </Text>
                     </View>
                 );
             })}

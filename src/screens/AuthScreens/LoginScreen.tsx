@@ -3,16 +3,14 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StatusBar,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator
 } from 'react-native';
-import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
+import { Button } from '../../components/ui';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
 import DeviceTransferModal from '../../components/DeviceTransferModal';
 import { authService } from '../../services/authService';
@@ -228,9 +226,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   }, [formData, navigation, setErrors, t]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} showBack />
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+      <AppHeader title={t('common:band.login')} showLogo={true} showBack />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -245,13 +242,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         >
           <View style={loginStyles.inner}>
             <View style={loginStyles.headerSection}>
-              <View style={loginStyles.cardscetion}>
-                <Image
-                  source={require('../../../assets/livio_logo_transparent.png')}
-                  style={loginStyles.logo}
-                  contentFit="contain"
-                />
-              </View>
               <Text style={loginStyles.title}>{t('login:title')}</Text>
               <Text style={loginStyles.subtitle}>{t('login:subtitle')}</Text>
             </View>
@@ -291,18 +281,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 <Text style={loginStyles.forgotText}>{t('login:forgotPassword')}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[commonStyles.primaryButton, loading && { opacity: 0.7 }]}
+              <Button
+                label={t('login:loginButton')}
                 onPress={handleLogin}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={commonStyles.primaryButtonText}>{t('login:loginButton')}</Text>
-                )}
-              </TouchableOpacity>
+                loading={loading}
+              />
 
               <View style={loginStyles.divider}>
                 <View style={loginStyles.dividerLine} />
@@ -317,10 +300,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 disabled={loading}
               >
                 <Text style={loginStyles.registerText}>
-                  {t('login:noAccount')}{' '}
-                  <Text style={loginStyles.registerLink}>{t('login:registerNow')}</Text>
+                  {t('login:createAccount')}
                 </Text>
               </TouchableOpacity>
+
+              {/* 03_Login.png: most of the app works signed out — say so. */}
+              <Text style={loginStyles.accountNote}>
+                {t('login:noAccountNote')}
+              </Text>
             </View>
           </View>
         </ScrollView>

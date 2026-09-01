@@ -2,13 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
-    StatusBar,
     Text,
     View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
@@ -29,7 +28,7 @@ interface PaginationState {
 
 const INITIAL_PAGINATION: PaginationState = { page: 1, total_pages: 1 };
 
-const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
+const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     const { t } = useTranslation(['follow', 'follower']);
     const { width } = useDimensions();
     const insets = useSafeAreaInsets(); 
@@ -206,7 +205,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
         return (
             <ActivityIndicator
                 size="small"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ marginTop: spacing.lg }}
             />
         );
@@ -225,24 +224,24 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
             title={t('follow:empty.no_following_title')}
             message={t('follow:empty.no_following_msg')}
             onRetry={() => {}}
+            emptyAction={{
+                label: t('follow:athlete'),
+                icon: 'search',
+                onPress: () => navigation.navigate('AthleteSearchScreen', {}),
+            }}
         />
     );
-}, [initialLoading, searching, searchText, t]);
+}, [initialLoading, searching, searchText, t, navigation]);
 
     const displayList = searchText.trim().length > 0 ? searchResults : favourites;
 
     const listFooter = (loadingMore || loadingMoreFav)
-        ? <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.md }} />
+        ? <ActivityIndicator size="small" color={palette.navy} style={{ marginVertical: spacing.md }} />
         : null;
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showBack />
-
-            <View style={follow.yellowHeader}>
-                <Text style={commonStyles.title}>{t('follow:favourite')}</Text>
-            </View>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={t('common:band.favouriteAthletes')} showBack />
 
             <FlatList
                 data={displayList}
@@ -255,7 +254,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
                 removeClippedSubviews={false}
                 contentContainerStyle={{
                     flexGrow: 1,
-                    paddingHorizontal: spacing.md,
+                    paddingHorizontal: spacing.xl,
                     paddingBottom: spacing.xxxxl,
                 }}
                 ListHeaderComponent={

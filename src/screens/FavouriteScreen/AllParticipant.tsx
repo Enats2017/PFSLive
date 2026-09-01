@@ -5,13 +5,12 @@ import {
     FlatList,
     ActivityIndicator,
     TouchableOpacity,
-    StatusBar,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
 import { API_CONFIG } from '../../constants/config';
@@ -201,7 +200,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
         if (loadingMore) {
             return (
                 <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color={colors.primary} />
+                    <ActivityIndicator size="small" color={palette.navy} />
                 </View>
             );
         }
@@ -221,9 +220,9 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
 
     if (loading && searchText.length === 0) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
             </SafeAreaView>
         );
@@ -231,9 +230,8 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showBack />
+            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+                <AppHeader title={t('common:band.favouriteAthletes')} showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -245,17 +243,16 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
-            <StatusBar barStyle="dark-content" />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top', 'bottom']}>
 
             <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom:spacing.sm }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 10 }}>
                     <TouchableOpacity
                         style={{ width: 32 }}
                         hitSlop={{ top: 8, bottom: 8, left: 10, right: 8 }}
                         onPress={() => navigation.goBack()}
                     >
-                        <Ionicons name="chevron-back" size={32} color={colors.gray900} />
+                        <Ionicons name="chevron-back" size={32} color={palette.ink} />
                     </TouchableOpacity>
                     <Text style={commonStyles.title}>{t('favourite:addRunner')}</Text>
                 </View>
@@ -270,8 +267,8 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
 
             {loading && searchText.length > 0 && (
                 <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                    <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
+                    <ActivityIndicator size="small" color={palette.navy} />
+                    <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
                         {t('details:participant.searching')}
                     </Text>
                 </View>

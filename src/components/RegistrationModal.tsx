@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../styles/common.styles';
+import { commonStyles, spacing, palette, fonts, shadows, space } from '../styles/common.styles';
 import { useNavigation } from '@react-navigation/native';
 
 type RegistrationStatus =
@@ -66,7 +66,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
         icon: t('details:registrationModal.connect_confirm.icon'),
         title: t('details:registrationModal.connect_confirm.title'),
         description: t('details:registrationModal.connect_confirm.description'),
-        accentColor: colors.primary,
+        accentColor: palette.navy,
         buttonLabel: t('details:registrationModal.connect_confirm.button'),
         notNowLabel: t('details:registrationModal.connect_confirm.notNowButton'),
       };
@@ -74,12 +74,12 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
      const showUpgradeButton = Platform.OS === 'ios' && UPGRADE_STATUSES.includes(status);
 
     const accentColors: Record<Exclude<RegistrationStatus, 'connect_confirm'>, string> = {
-      registered:           colors.primaryLight,
-      membership_required:  colors.primary,
-      limit_reached:        colors.primary,
-      membership_upcoming:  colors.warning,   // ✅ NEW — orange/amber for "future"
-      unavailable:          '#6b7280',
-      available:            '#f4a100',
+      registered:           palette.navyLift,
+      membership_required:  palette.navy,
+      limit_reached:        palette.navy,
+      membership_upcoming:  palette.warning,   // ✅ NEW — orange/amber for "future"
+      unavailable:          palette.textMuted,
+      available:            palette.warning,
     };
      const descriptionKey = showUpgradeButton
       ? `${baseKey}.iosDescription`
@@ -194,7 +194,6 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
           ]}
         >
           {/* Top accent bar */}
-          <View style={[styles.accentBar, { backgroundColor: config.accentColor }]} />
 
           {/* Close button */}
           <TouchableOpacity
@@ -210,7 +209,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
             style={[
               styles.iconWrapper,
               {
-                backgroundColor: config.accentColor,
+                backgroundColor: palette.fill,
                 transform: [{ scale: iconScale }],
               },
             ]}
@@ -248,21 +247,21 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, styles.confirmBtnRow, { backgroundColor: config.accentColor }]}
+                  style={[commonStyles.primaryButton, styles.confirmBtnRow, styles.modalPrimary]}
                   activeOpacity={0.85}
                   onPress={handleUpgradePress}
                 >
-                  <Text style={commonStyles.primaryButtonText}>{config.buttonLabel}</Text>
+                  <Text style={[commonStyles.primaryButtonText, styles.modalPrimaryText]}>{config.buttonLabel}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <>
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, { backgroundColor: config.accentColor }]}
+                  style={[commonStyles.primaryButton, styles.modalPrimary]}
                   activeOpacity={0.85}
                   onPress={handleUpgradePress}
                 >
-                  <Text style={commonStyles.primaryButtonText}>{config.buttonLabel}</Text>
+                  <Text style={[commonStyles.primaryButtonText, styles.modalPrimaryText]}>{config.buttonLabel}</Text>
                 </TouchableOpacity>
                 <Text style={[styles.description, { marginTop: spacing.sm }]}>
                   {t('details:iosnotnow')}
@@ -291,29 +290,21 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 380,
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: palette.surface,
+    borderRadius: 16,
     overflow: 'hidden',
     paddingHorizontal: 24,
     paddingTop: 40,
     paddingBottom: 32,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-      },
-      android: { elevation: 10 },
-    }),
+    ...shadows.raised,
   },
-  accentBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
+  // The deck's modal action is the lime button with ink text.
+  modalPrimary: {
+    backgroundColor: palette.lime,
+  },
+  modalPrimaryText: {
+    color: palette.ink,
   },
   closeBtn: {
     position: 'absolute',
@@ -322,15 +313,15 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: colors.primary,
+    backgroundColor: palette.navy,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
   },
   closeBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.white,
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.surface,
   },
   iconWrapper: {
     width: 72,
@@ -342,29 +333,30 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   iconText: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#ffffff',
+    fontFamily: fonts.display,
+    fontSize: 26,
+    color: palette.navy,
   },
   distanceName: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemi,
+        fontSize: 12,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 8,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: space.md,
     lineHeight: 28,
   },
   description: {
-    fontSize: 14,
+    fontFamily: fonts.body,
+        fontSize: 13,
     lineHeight: 22,
-    color: '#64748b',
+    color: palette.textMuted,
     textAlign: 'center',
     paddingHorizontal: 4,
   },

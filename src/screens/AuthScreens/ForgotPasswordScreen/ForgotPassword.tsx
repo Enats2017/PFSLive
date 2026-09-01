@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
-  StatusBar,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -73,9 +72,8 @@ const ForgotPassword: React.FC<ForgotPasswordScreenProps> = ({ navigation }) => 
   }, [currentStep, backStepMap]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} showBack />
+    <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+      <AppHeader title={t('common:band.resetPassword')} showLogo={true} showBack />
       
       {/* Progress Bar */}
       <View style={forgotStyles.progressContainer}>

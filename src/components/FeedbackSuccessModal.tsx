@@ -10,7 +10,7 @@ import {
     Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, commonStyles, spacing } from '../styles/common.styles';
+import { commonStyles, spacing, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
 
 interface FeedbackSuccessModalProps {
     visible: boolean;
@@ -113,7 +113,7 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
                                     transform: [{ scale: checkScale }],
                                 }}
                             >
-                                <Ionicons name="checkmark" size={38} color={colors.primaryDark} />
+                                <Ionicons name="checkmark" size={38} color={palette.ink} />
                             </Animated.View>
                         </Animated.View>
                     </View>
@@ -137,25 +137,22 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
 const styles = StyleSheet.create({
     backdrop: {
         flex: 1,
-        backgroundColor: 'rgba(15, 23, 42, 0.55)',
+        backgroundColor: withAlpha(palette.ink, 0.55),
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 24,
     },
     card: {
+    ...shadows.raised,
+
         width: CARD_WIDTH,
-        backgroundColor: colors.white,
-        borderRadius: 28,
+        backgroundColor: palette.surface,
+        borderRadius: 16,
         paddingTop: 36,
         paddingBottom: 24,
         paddingHorizontal: 28,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.18,
-        shadowRadius: 24,
-        elevation: 12,
-    },
+  },
     iconWrapper: {
         width: 84,
         height: 84,
@@ -164,28 +161,27 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     iconCircle: {
+    ...shadows.card,
+
         width: 68,
         height: 68,
         borderRadius: 34,
-        backgroundColor: colors.themeiColor,
+        backgroundColor: palette.lime,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.35,
-        shadowRadius: 7,
-        elevation: 6,
-    },
+  },
     title: {
-        fontSize: 19,
-        fontWeight: '700',
-        color: colors.gray900,
+        fontFamily: fonts.display,
+        fontSize: 20,
+        color: palette.ink,
         marginBottom: 8,
         textAlign: 'center',
     },
     subtitle: {
-        fontSize: 14,
+        fontFamily: fonts.body,
+        fontSize: 13,
         lineHeight: 20,
-        color: colors.gray400,
+        color: palette.placeholder,
         textAlign: 'center',
         marginBottom: 24,
     },
@@ -193,14 +189,14 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 52,
         borderRadius: 14,
-        backgroundColor: colors.primary,
+        backgroundColor: palette.navy,
         alignItems: 'center',
         justifyContent: 'center',
     },
     buttonText: {
-        color: colors.white,
+        color: palette.surface,
+        fontFamily: fonts.display,
         fontSize: 15,
-        fontWeight: '700',
         letterSpacing: 0.2,
     },
 });

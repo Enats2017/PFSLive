@@ -1,40 +1,49 @@
 {
   "emailStep": {
-    "title": "Forgot Password?",
-    "email": "Email Address",
+    "title": "Forgot password?",
+    "email": "Email address",
     "subtitle": "No worries! Enter your registered email and we'll send a 6-digit OTP to reset your password.",
     "sendOtpButton": "Send OTP",
-    "backtologin": "Back to Login",
-    "otp": "OTP Resent",
+    "backtologin": "Back to login",
+    "otp": "OTP resent",
     "otpmsg": "A new code has been sent to your email.",
     "errors": {
       "emailInvalid": "Please enter a valid email address",
       "emailNotFound": "Please enter your registered email address",
       "noConnection": "No connection. Please check your internet.",
       "genericError": "Something went wrong. Please try again."
+    },
+    "next": {
+      "title": "What happens next",
+      "s1": "Check your inbox",
+      "s1sub": "A six-digit code arrives within a minute.",
+      "s2": "Enter the code",
+      "s2sub": "It stays valid for 15 minutes.",
+      "s3": "Choose a new password",
+      "s3sub": "You stay signed in on this device."
     }
   },
   "otpStep": {
-    "title": "Check Your Email",
+    "title": "Check your email",
     "subtitle": "We've sent a 6-digit code to",
     "resendOtp": "Resend OTP",
     "resendIn": "Resend in 0:{{seconds}}",
-    "changeEmail": "Change Email"
+    "changeEmail": "Change email"
   },
   "passwordStep": {
-    "title": "Create New Password",
+    "title": "Create new password",
     "subtitle": "Almost done! Set a strong new password for your account.",
-    "resetButton": "Reset Password",
-    "newPassword": "New Password",
-    "confirmPassword": "Confirm Password",
-    "successTitle": "Password Reset Successful! 🎉",
+    "resetButton": "Reset password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "successTitle": "Password reset successful! 🎉",
     "successMessage": "Your password has been updated successfully. Please sign in with your new password to continue.",
     "errors": {
       "passwordShort": "Password must be at least 4 characters",
       "passwordLong": "Password must be less than 20 characters",
       "confirmRequired": "Please confirm your password",
       "passwordMismatch": "Passwords do not match",
-      "sessionExpired": "Session Expired",
+      "sessionExpired": "Session expired",
       "sessionExpiredMessage": "Your reset session has expired. Please start again.",
       "noConnection": "No Connection",
       "noConnectionMessage": "Please check your internet connection.",

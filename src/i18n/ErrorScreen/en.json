@@ -1,66 +1,66 @@
 {
   "network": {
-    "title": "No Internet Connection",
+    "title": "No internet connection",
     "message": "Your device isn't connected to the internet.\nCheck your Wi-Fi or mobile data and try again.",
-    "button": "Try Again"
+    "button": "Try again"
   },
   "server": {
-    "title": "Something Went Wrong",
+    "title": "Something went wrong",
     "message": "Our servers ran into an issue.\nPlease try again in a moment.",
-    "button": "Try Again"
+    "button": "Try again"
   },
   "empty": {
-    "title": "No Data Found",
+    "title": "No data found",
     "message": "We couldn't find anything here.\nTry again later.",
     "button": "Refresh"
   },
   "codes": {
     "results_not_available": {
-      "title": "Results Not Available",
+      "title": "Results not available",
       "message": "The race results aren't ready yet.\nCheck back after the event ends."
     },
     "not_found_in_race_result": {
-      "title": "No Race Results",
+      "title": "No race results",
       "message": "No results were recorded for this event."
     },
     "no_data": {
-      "title": "Nothing Here Yet",
+      "title": "Nothing here yet",
       "message": "There's no data to show right now.\nTry again later."
     },
     "record_not_found": {
-      "title": "Not Found",
+      "title": "Not found",
       "message": "We couldn't find what you're looking for."
     },
     "distance_not_found": {
-      "title": "No Distance Available",
+      "title": "No distance available",
       "message": "The distance information for this event is currently not available.\nCheck back later for updates."
     },
     "payment_failed": {
-      "title": "Payment Failed",
+      "title": "Payment failed",
       "message": "Your payment could not be processed.\nPlease try again."
     },
     "event_not_found": {
-      "title": "Event Not Found",
+      "title": "Event not found",
       "message": "This event no longer exists."
     },
     "registration_closed": {
-      "title": "Registration Closed",
+      "title": "Registration closed",
       "message": "Registration for this event has closed."
     },
     "session_expired": {
-      "title": "Session Expired",
+      "title": "Session expired",
       "message": "Please log in again to continue."
     },
     "permission_denied": {
-      "title": "Access Denied",
+      "title": "Access denied",
       "message": "You don't have permission to view this."
     },
     "maintenance": {
-      "title": "Under Maintenance",
+      "title": "Under maintenance",
       "message": "We're improving things.\nCheck back shortly."
     },
     "participant_not_found": {
-      "title": "Participant Not Available For This Event",
+      "title": "Participant not available for this event",
       "message": "We couldn't find this participant in the event right now.\nThey may not have registered or data isn't available yet."
     }
   }

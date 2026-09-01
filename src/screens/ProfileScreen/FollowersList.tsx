@@ -2,13 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
-    StatusBar,
     Text,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
@@ -170,7 +169,7 @@ const FollowersList: React.FC = () => {
         return (
             <ActivityIndicator
                 size="small"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ marginTop: spacing.lg }}
             />
         );
@@ -196,17 +195,12 @@ const FollowersList: React.FC = () => {
     const displayList = searchText.trim().length > 0 ? searchResults : followers;
 
     const listFooter = (loadingMore || loadingMoreFav)
-        ? <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.md }} />
+        ? <ActivityIndicator size="small" color={palette.navy} style={{ marginVertical: spacing.md }} />
         : null;
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showBack />
-            <View style={follow.yellowHeader}>
-                <Text style={commonStyles.title}>{t('follow:followers')}</Text>
-            </View>
-
+        <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <AppHeader title={t('common:band.myFollowers')} showBack />
             <FlatList
                 data={displayList}
                 keyExtractor={(item, index) => `follower_${item.customer_app_id}_${index}`}
@@ -218,7 +212,7 @@ const FollowersList: React.FC = () => {
                 removeClippedSubviews={false}
                 contentContainerStyle={{
                     flexGrow: 1,
-                    paddingHorizontal: spacing.md,
+                    paddingHorizontal: spacing.xl,
                     paddingBottom: spacing.xxxxl,
                 }}
                 ListHeaderComponent={

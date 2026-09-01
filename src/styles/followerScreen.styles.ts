@@ -1,27 +1,24 @@
 import { StyleSheet } from "react-native";
-import { colors, spacing } from "./common.styles";
+import { spacing, palette, space, type, radii, fonts } from './common.styles';
 
  export const follow = StyleSheet.create({
 
     section: {
-        paddingHorizontal: spacing.md, 
+        paddingHorizontal: space.xl, 
         gap: spacing.md,
     },
 
-    yellowHeader: {
+    sectionLabel: {
         flexDirection: 'row',
-        backgroundColor: colors.themeiColor,
-        paddingVertical: spacing.sm,
         alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: spacing.md
+        gap: space.sm,
+        paddingHorizontal: space.xl,
+        paddingTop: space.lg,
+        paddingBottom: space.sm,
     },
-    yellowHeaderText: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: '#1a1a1a',
-        letterSpacing: 0.5,
-        textTransform: 'uppercase',
+    sectionLabelText: {
+        ...type.label,
+        color: palette.textMuted,
     },
 
     dividerRow: {
@@ -32,18 +29,33 @@ import { colors, spacing } from "./common.styles";
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: colors.gray200,
+        backgroundColor: palette.border,
     },
   
+    // 18_FollowersList.png: "View" is a small chip on the right of the row,
+    // not a full-width bar welded under it.
+    viewChip: {
+        backgroundColor: palette.fill,
+        borderRadius: radii.sm,
+        paddingHorizontal: space.lg,
+        paddingVertical: space.sm,
+        alignSelf: 'center',
+    },
+    viewChipText: {
+        fontFamily: fonts.bodySemi,
+        fontSize: 13,
+        color: palette.ink,
+    },
+
     infoCard: {
         flexDirection: 'row',
-        backgroundColor: colors.white,
+        backgroundColor: palette.surface,
         borderRadius: 10,
         padding: spacing.lg,
         gap: spacing.sm,
         borderLeftWidth: 3,
          borderWidth: 0.5, 
-        borderLeftColor: colors.themeiColor,
+        borderLeftColor: palette.lime,
     },
 
 });

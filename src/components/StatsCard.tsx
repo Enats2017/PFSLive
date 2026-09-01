@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { palette, fonts } from '../styles/common.styles';
+import { useTranslation } from 'react-i18next';
 
 interface StatsCardProps {
 	distance: number;
@@ -14,14 +16,15 @@ export const StatsCard: React.FC<StatsCardProps> = ({
 	rank,
 	speed,
 }) => {
+  const { t } = useTranslation();
 	return (
 		<View style={styles.container}>
 			<View style={styles.statItem}>
-				<Text style={styles.label}>Distance</Text>
+				<Text style={styles.label}>{t('details:chart.distance')}</Text>
 				<Text style={styles.value}>{distance.toFixed(1)} km</Text>
 			</View>
 			<View style={styles.statItem}>
-				<Text style={styles.label}>Elevation</Text>
+				<Text style={styles.label}>{t('details:chart.elevation')}</Text>
 				<Text style={styles.value}>{Math.round(elevation)} m</Text>
 			</View>
 			<View style={styles.statItem}>
@@ -44,21 +47,21 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 16,
 		justifyContent: 'space-around',
 		borderBottomWidth: 1,
-		borderBottomColor: '#e0e0e0',
+		borderBottomColor: palette.border,
 	},
 	statItem: {
 		alignItems: 'center',
 	},
 	label: {
-		fontSize: 11,
-		color: '#666',
+		fontFamily: fonts.bodySemi,
+        fontSize: 11,
+		color: palette.textBody,
 		marginBottom: 2,
 		textTransform: 'uppercase',
-		fontWeight: '600',
-	},
+		},
 	value: {
-		fontSize: 16,
-		fontWeight: 'bold',
-		color: '#000',
+		fontFamily: fonts.display,
+        fontSize: 15,
+		color: palette.ink,
 	},
 });

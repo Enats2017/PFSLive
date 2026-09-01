@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ParticipantMapMarker } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
-import { colors } from '../../styles/common.styles';
+import { palette, fonts, space } from '../../styles/common.styles';
 
 interface ParticipantPopupProps {
     participant: ParticipantMapMarker;
@@ -68,7 +68,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
         <View style={liveTrackingStyles.popupOverlay}>
             <View style={liveTrackingStyles.popup}>
                 <TouchableOpacity style={liveTrackingStyles.popupCloseBtn} onPress={onClose}>
-                    <Ionicons name="close" size={24} color={colors.gray600} />
+                    <Ionicons name="close" size={24} color={palette.textBody} />
                 </TouchableOpacity>
 
                 <View style={liveTrackingStyles.popupHeader}>
@@ -102,11 +102,12 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                 {hasFinished ? null : participant.connection_status === 'offline' ? (
                     <View style={{
                         flexDirection: 'row', alignItems: 'center', gap: 6,
-                        backgroundColor: '#F1F5F9', borderColor: '#CBD5E1', borderWidth: 1,
-                        borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10, marginBottom: 12,
+                        backgroundColor: palette.fill, borderColor: palette.border, borderWidth: 1,
+                        borderRadius: 10, paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: 12,
                     }}>
-                        <Ionicons name="cloud-offline-outline" size={16} color="#475569" />
-                        <Text style={{ flex: 1, color: '#334155', fontSize: 12 }}>
+                        <Ionicons name="cloud-offline-outline" size={16} color={palette.textBody} />
+                        <Text style={{ flex: 1, color: palette.textBody, fontFamily: fonts.body,
+        fontSize: 12 }}>
                             {t('livetracking:offlineNotice', {
                                 time: formatLastUpdate(participant.last_update_time, participant.last_update_type),
                             })}
@@ -115,11 +116,12 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                 ) : participant.is_estimated ? (
                     <View style={{
                         flexDirection: 'row', alignItems: 'center', gap: 6,
-                        backgroundColor: '#FEF3C7', borderRadius: 8,
-                        paddingVertical: 6, paddingHorizontal: 10, marginBottom: 10,
+                        backgroundColor: palette.warningBg, borderRadius: 10,
+                        paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: space.md,
                     }}>
-                        <Ionicons name="cellular-outline" size={14} color="#B45309" />
-                        <Text style={{ flex: 1, color: '#92400E', fontSize: 12 }}>
+                        <Ionicons name="cellular-outline" size={14} color={palette.warning} />
+                        <Text style={{ flex: 1, color: palette.warning, fontFamily: fonts.body,
+        fontSize: 12 }}>
                             {t('livetracking:estimatedNotice')}
                         </Text>
                     </View>
@@ -128,11 +130,12 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                 {showLowBattery && (
                     <View style={{
                         flexDirection: 'row', alignItems: 'center', gap: 6,
-                        backgroundColor: '#FEE2E2', borderColor: '#EF4444', borderWidth: 1,
-                        borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10, marginBottom: 12,
+                        backgroundColor: palette.dangerBg, borderColor: palette.danger, borderWidth: 1,
+                        borderRadius: 10, paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: 12,
                     }}>
-                        <Ionicons name="battery-dead-outline" size={18} color="#DC2626" />
-                        <Text style={{ color: '#B91C1C', fontSize: 13, fontWeight: '600', flex: 1 }}>
+                        <Ionicons name="battery-dead-outline" size={18} color={palette.danger} />
+                        <Text style={{ color: palette.danger, fontFamily: fonts.bodySemi,
+        fontSize: 13, flex: 1 }}>
                             {t('livetracking:lowBattery', { level: battery })}
                         </Text>
                     </View>
@@ -212,7 +215,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                 </View>
 
                 <View style={liveTrackingStyles.popupFooter}>
-                    <Ionicons name="time-outline" size={14} color={colors.gray500} />
+                    <Ionicons name="time-outline" size={14} color={palette.textMuted} />
                     <Text style={liveTrackingStyles.lastUpdateText}>
                         {t('livetracking:lastUpdate')}: {formatLastUpdate(participant.last_update_time, participant.last_update_type)}
                     </Text>

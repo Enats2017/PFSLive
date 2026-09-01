@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform, Animated, Ke
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
-import { colors, spacing, commonStyles } from '../styles/common.styles';
+import { spacing, commonStyles, palette, fonts } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
 import FloatingLabelInput from './FloatingLabelInput';
 import { fanEmailApi } from '../services/Fanemailservice';
@@ -112,7 +112,7 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
                     >
 
                         <View style={homeStyles.notifIconWrapper}>
-                            <Ionicons name="mail-outline" size={36} color={colors.primary} />
+                            <Ionicons name="mail-outline" size={36} color={palette.navy} />
                         </View>
 
                         <Text style={homeStyles.notifTitle}>{t('home:fanEmail.title')}</Text>
@@ -170,12 +170,13 @@ const styles = StyleSheet.create({
         marginBottom: spacing.xs,
     },
     inputError: {
-        borderColor: colors.error,
+        borderColor: palette.danger,
     },
     errorText: {
         marginTop: spacing.xs,
+        fontFamily: fonts.body,
         fontSize: 12,
-        color: colors.error,
+        color: palette.danger,
     },
 });
 

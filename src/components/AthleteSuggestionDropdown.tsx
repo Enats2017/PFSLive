@@ -8,8 +8,9 @@ import {
   View
 } from 'react-native';
 import { Image } from 'expo-image';
-import { colors, spacing } from '../styles/common.styles';
+import { spacing, palette, fonts, shadows, space } from '../styles/common.styles';
 import { ParticipantItem } from '../services/followerEvent';
+import { useTranslation } from 'react-i18next';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,13 +35,14 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
     onSelect,
     onLoadMore,
 }) => {
+  const { t } = useTranslation();
     if (!visible) return null;
 
     if (loading) {
         return (
             <View style={styles.container}>
                 <View style={styles.centeredRow}>
-                    <ActivityIndicator size="small" color={colors.primary ?? '#F5C518'} />
+                    <ActivityIndicator size="small" color={palette.navy} />
                     <Text style={styles.loaderText}>Searching…</Text>
                 </View>
             </View>
@@ -51,7 +53,7 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
         return (
             <View style={styles.container}>
                 <View style={styles.centeredRow}>
-                    <Text style={styles.emptyText}>No athletes found</Text>
+                    <Text style={styles.emptyText}>{t('common:empty.noAthletes')}</Text>
                 </View>
             </View>
         );
@@ -125,7 +127,7 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
                 ListFooterComponent={
                     loadingMore ? (
                         <View style={styles.footerLoader}>
-                            <ActivityIndicator size="small" color={colors.primary ?? '#F5C518'} />
+                            <ActivityIndicator size="small" color={palette.navy} />
                         </View>
                     ) : null
                 }
@@ -138,23 +140,20 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#fff',
+    ...shadows.card,
+
+        backgroundColor: palette.surface,
         borderWidth: 1,
-        borderColor: '#E8E8E8',
+        borderColor: palette.border,
         borderRadius: 10,
         marginTop: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 6,
         overflow: 'hidden',
-    },
+  },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 14,
-        paddingVertical: 10,
+        paddingHorizontal: space.xl,
+        paddingVertical: 8,
         gap: 10,
     },
     avatar: {
@@ -170,19 +169,19 @@ const styles = StyleSheet.create({
     avatarFallback: {
         width: '100%',
         height: '100%',
-        backgroundColor: '#e8edf5',
+        backgroundColor: palette.fill,
         alignItems: 'center',
         justifyContent: 'center',
     },
     avatarInitials: {
+        fontFamily: fonts.bodySemi,
         fontSize: 13,
-        fontWeight: '700',
-        color: '#1a2e5a',
+        color: palette.navy,
     },
     name: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#1a1a1a',
+        fontFamily: fonts.bodySemi,
+        fontSize: 13,
+        color: palette.ink,
         marginBottom: 2,
     },
     locationRow: {
@@ -196,28 +195,31 @@ const styles = StyleSheet.create({
         borderRadius: 2,
     },
     city: {
+        fontFamily: fonts.body,
         fontSize: 12,
-        color: '#888',
+        color: palette.textMuted,
     },
     separator: {
         height: 1,
-        backgroundColor: '#F2F2F2',
-        marginHorizontal: 14,
+        backgroundColor: palette.fill,
+        marginHorizontal: 16,
     },
     centeredRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 14,
+        padding: 16,
         gap: 8,
     },
     loaderText: {
+        fontFamily: fonts.body,
         fontSize: 13,
-        color: '#888',
+        color: palette.textMuted,
     },
     emptyText: {
+        fontFamily: fonts.body,
         fontSize: 13,
-        color: '#aaa',
+        color: palette.placeholder,
     },
     footerLoader: {
         paddingVertical: spacing.sm,

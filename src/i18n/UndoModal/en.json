@@ -1,8 +1,8 @@
 {
-  "title": "Undo Registration?",
+  "title": "Undo registration?",
   "message": "Are you sure you want to undo your registration for this event? This action will remove you from live tracking.",
   "buttons": {
-    "confirm": "Yes, Undo Registration",
+    "confirm": "Yes, undo registration",
     "cancel": "Cancel"
   }
 }

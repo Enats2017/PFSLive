@@ -3,15 +3,16 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette, fonts } from '../../styles/common.styles';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
-import { RunnerInfo } from '../../services/resultDetailsService';
+import { RunnerInfo, RaceInfo } from '../../services/resultDetailsService';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { SvgUri } from 'react-native-svg';
 import { getImageUrl } from '../../constants/config';
 
 interface RunnerInfoProps {
     runnerInfo?: RunnerInfo;
+    raceInfo?: RaceInfo;
     showUtmbIndex?: boolean;
     liveTrackingActivated?: number;
     isFollowing?: boolean;
@@ -25,7 +26,7 @@ const getInitials = (name?: string): string => {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, liveTrackingActivated,isFollowing,onMapPress}) => {
+const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUtmbIndex, liveTrackingActivated,isFollowing,onMapPress}) => {
     const { t } = useTranslation('resultdetails');
     const initials = getInitials(runnerInfo?.name);
 
@@ -39,7 +40,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
 
     return (
         <View style={commonStyles.container}>
-            <View style={[resultInfoStyles.card, { marginTop: 10 }]}>
+            <View style={[resultInfoStyles.card, { marginTop: 8 }]}>
 
                 <View>
                     {runnerInfo?.profile_picture ? (
@@ -50,12 +51,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                         />
                     ) : (
                         <View style={resultInfoStyles.initials}>
-                            <Text style={{
-                                fontSize: 30,
-                                fontWeight: '600',
-                                color: colors.participantColor,
-                                letterSpacing: 1,
-                            }}>
+                            <Text style={resultInfoStyles.initialsText}>
                                 {initials}
                             </Text>
                         </View>
@@ -63,8 +59,8 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                 </View>
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.title}>{runnerInfo?.name ?? '—'}</Text>
-                    <View style={[resultListStyle.flagRow, { marginTop: 10, marginBottom: 8 }]}>
+                    <Text style={resultInfoStyles.checkpointName} numberOfLines={1}>{runnerInfo?.name ?? '—'}</Text>
+                    <View style={[resultListStyle.flagRow, { marginTop: 8, marginBottom: 8 }]}>
                         {runnerInfo?.nation_flag ? (
                             <SvgUri
                                 width={28}
@@ -82,8 +78,8 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
 
                 {/* <View style={resultInfoStyles.row}>
                     <View style={resultInfoStyles.col}>
-                        <Text style={commonStyles.subtitle}>{t('runnerInfo.club')}</Text>
-                        <Text style={commonStyles.subtitle}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('runnerInfo.club')}</Text>
+                        <Text style={resultInfoStyles.rowLabel}>
                             {runnerInfo?.club || '—'}
                         </Text>
                     </View>
@@ -91,8 +87,8 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                     <View style={resultInfoStyles.colDivider} />
 
                     <View style={resultInfoStyles.col}>
-                        <Text style={commonStyles.subtitle}>{t('runnerInfo.category')}</Text>
-                        <Text style={commonStyles.title}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('runnerInfo.category')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>
                             {runnerInfo?.category_name || '—'}
                         </Text>
                     </View>
@@ -114,7 +110,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                                     </View>
                                 </View>
 
-                                <Text style={commonStyles.title}>
+                                <Text style={resultInfoStyles.rowValue}>
                                     {runnerInfo.utmb_index}
                                 </Text>
                             </View>
@@ -129,29 +125,54 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                             !showUtmbIndex && resultInfoStyles.singleColumn,
                         ]}
                     >
-                        <Text style={commonStyles.subtitle}>
+                        <Text style={resultInfoStyles.rowLabel}>
                             {t('runnerInfo.category')}
                         </Text>
 
-                        <Text style={commonStyles.title}>
+                        <Text style={resultInfoStyles.rowValue}>
                             {runnerInfo?.category_name || '—'}
                         </Text>
-
-                        <Ionicons
-                            name="card-outline"
-                            size={28}
-                            color="#333"
-                        />
                     </View>
                 </View>
+            </View>
 
+            {!!raceInfo && (
+                <View style={resultInfoStyles.card}>
+                    <Text style={resultInfoStyles.sectionLabel}>{t('runnerInfo.thisRace')}</Text>
+
+                    <View style={resultInfoStyles.bibCard}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.raceTime')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>{raceInfo.time || '—'}</Text>
+                    </View>
+
+                    <View style={resultInfoStyles.bibCard}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.scratchPosition')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>
+                            {raceInfo.position
+                                ? (raceInfo.position_total
+                                    ? `${raceInfo.position} / ${raceInfo.position_total}`
+                                    : raceInfo.position)
+                                : '—'}
+                        </Text>
+                    </View>
+
+                    {!!raceInfo.wave && (
+                        <View style={resultInfoStyles.bibCard}>
+                            <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.wavelabel')}</Text>
+                            <Text style={resultInfoStyles.rowValue}>{raceInfo.wave}</Text>
+                        </View>
+                    )}
+                </View>
+            )}
+
+            <View>
                 {showMapButton && (
                     <TouchableOpacity
                         style={resultInfoStyles.mapButton}
                         onPress={onMapPress}
                         activeOpacity={0.8}
                     >
-                        <Ionicons name="map-outline" size={18} color={colors.white} />
+                        <Ionicons name="map-outline" size={18} color={palette.ink} />
                         <Text style={resultInfoStyles.mapButtonText}>
                             {t('runnerInfo.viewOnMap')}
                         </Text>

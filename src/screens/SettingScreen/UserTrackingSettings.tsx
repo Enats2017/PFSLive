@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette } from '../../styles/common.styles';
+import { Ionicons } from '@expo/vector-icons';
+import { Button, Card, SegmentedFilter } from '../../components/ui';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
 import { settingsService, Settings } from '../../services/settingsService';
 import { toastSuccess, toastError } from '../../../utils/toast';
@@ -232,13 +234,13 @@ export const UserTrackingSettings: React.FC = () => {
     return (
         <>
             <ScrollView
-                contentContainerStyle={{ flexGrow: 1, padding: 15 }}
+                contentContainerStyle={styles.screen}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
                 <View style={styles.pageTitleRow}>
-                    <Text style={commonStyles.title}>{t('setting:liveTrackingSettings.pageTitle')}</Text>
-                    <Text style={commonStyles.subtitle}>{t('setting:liveTrackingSettings.pageSubtitle')}</Text>
+                    <Text style={styles.pageTitle}>{t('setting:liveTrackingSettings.pageTitle')}</Text>
+                    <Text style={styles.pageSubtitle}>{t('setting:liveTrackingSettings.pageSubtitle')}</Text>
                 </View>
 
                 <LanguageSelector
@@ -247,58 +249,47 @@ export const UserTrackingSettings: React.FC = () => {
                      disabled={isUpdating || isLanguageUpdating}
                 />
 
-                <Animated.View style={[commonStyles.card, { transform: [{ scale: cardScale }] }]}>
-                    <View style={styles.cardHeader}>
-                        <View style={styles.cardIconWrap}>
-                            <Text style={commonStyles.title}>📍</Text>
+                <Animated.View style={{ transform: [{ scale: cardScale }] }}>
+                    <Card>
+                        <View style={styles.cardHeader}>
+                            <View style={styles.cardIconWrap}>
+                                <Ionicons name="location-outline" size={22} color={palette.navy} />
+                            </View>
+                            <View>
+                                <Text style={styles.cardTitle}>{t('setting:liveTrackingSettings.cardTitle')}</Text>
+                                <Text style={styles.cardSubtitle}>{t('setting:liveTrackingSettings.cardSubtitle')}</Text>
+                            </View>
                         </View>
-                        <View>
-                            <Text style={commonStyles.text}>{t('setting:liveTrackingSettings.cardTitle')}</Text>
-                            <Text style={styles.cardSubtitle}>{t('setting:liveTrackingSettings.cardSubtitle')}</Text>
-                        </View>
-                    </View>
 
-                    <View style={styles.divider} />
-                    <Text style={commonStyles.subtitle}>{t('setting:liveTrackingSettings.visibilityLabel')}</Text>
+                        <View style={styles.divider} />
+                        <Text style={styles.sectionLabel}>{t('setting:liveTrackingSettings.visibilityLabel')}</Text>
 
-                    <View style={styles.segmentedControl}>
-                        {(['public', 'private'] as Visibility[]).map((val) => (
-                            <TouchableOpacity
-                                key={val}
-                                style={[styles.segment, visibility === val && styles.segmentActive]}
-                                onPress={() => handleTabSwitch(val)}
-                                activeOpacity={0.8}
+                        <SegmentedFilter<Visibility>
+                            options={[
+                                { value: 'public', label: t('setting:liveTrackingSettings.public') },
+                                { value: 'private', label: t('setting:liveTrackingSettings.private') },
+                            ]}
+                            value={visibility}
+                            onChange={handleTabSwitch}
+                        />
+
+                        {visibility === 'public' ? (
+                            <Button
+                                label={t('setting:liveTrackingSettings.saveSettings')}
+                                onPress={() => handleSaveSettings('public')}
+                                loading={isUpdating}
+                                style={styles.actionSpacing}
+                            />
+                        ) : (
+                            <Button
+                                label={t('setting:liveTrackingSettings.editPassword')}
+                                onPress={openModal}
+                                variant="secondary"
                                 disabled={isUpdating}
-                            >
-                                <Text style={styles.segmentEmoji}>{val === 'public' ? '🌍' : '🔒'}</Text>
-                                <Text style={[commonStyles.text, visibility === val && styles.segmentTextActive]}>
-                                    {t(`setting:liveTrackingSettings.${val}`)}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-
-                    {visibility === 'public' ? (
-                        <TouchableOpacity
-                            style={[commonStyles.primaryButton, isUpdating && { opacity: 0.7 }]}
-                            onPress={() => handleSaveSettings('public')}
-                            activeOpacity={0.85}
-                            disabled={isUpdating}
-                        >
-                            {isUpdating
-                                ? <ActivityIndicator size="small" color="#fff" />
-                                : <Text style={commonStyles.primaryButtonText}>{t('setting:liveTrackingSettings.saveSettings')}</Text>}
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity
-                            style={commonStyles.secondaryButton}
-                            onPress={openModal}
-                            activeOpacity={0.85}
-                            disabled={isUpdating}
-                        >
-                            <Text style={commonStyles.secondaryButtonText}>{t('setting:liveTrackingSettings.editPassword')}</Text>
-                        </TouchableOpacity>
-                    )}
+                                style={styles.actionSpacing}
+                            />
+                        )}
+                    </Card>
                 </Animated.View>
 
                 {!!deletionUrl && (
@@ -322,10 +313,10 @@ export const UserTrackingSettings: React.FC = () => {
                             <Text style={styles.closeBtnText}>✕</Text>
                         </TouchableOpacity>
 
-                        <Text style={commonStyles.title}>{t('setting:liveTrackingSettings.modalTitle')}</Text>
-                        <Text style={commonStyles.subtitle}>{t('setting:liveTrackingSettings.modalSubtitle')}</Text>
+                        <Text style={styles.modalTitle}>{t('setting:liveTrackingSettings.modalTitle')}</Text>
+                        <Text style={styles.modalSubtitle}>{t('setting:liveTrackingSettings.modalSubtitle')}</Text>
                         <View style={styles.divider} />
-                        <Text style={commonStyles.text}>{t('setting:liveTrackingSettings.passwordLabel')}</Text>
+                        <Text style={styles.fieldLabel}>{t('setting:liveTrackingSettings.passwordLabel')}</Text>
 
                         <FloatingLabelInput
                             label={t('setting:liveTrackingSettings.passwordPlaceholder')}
@@ -353,13 +344,13 @@ export const UserTrackingSettings: React.FC = () => {
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={[commonStyles.primaryButton, { marginTop: 10 }, isUpdating && { opacity: 0.7 }]}
+                            style={[commonStyles.primaryButton, { marginTop: 8 }, isUpdating && { opacity: 0.7 }]}
                             onPress={() => handleSaveSettings('private')}
                             activeOpacity={0.85}
                             disabled={isUpdating}
                         >
                             {isUpdating
-                                ? <ActivityIndicator size="small" color="#fff" />
+                                ? <ActivityIndicator size="small" color={palette.surface} />
                                 : <Text style={commonStyles.primaryButtonText}>{t('setting:liveTrackingSettings.saveSettings')}</Text>}
                         </TouchableOpacity>
                     </Animated.View>

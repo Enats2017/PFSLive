@@ -1,11 +1,12 @@
 import React, { memo, useCallback } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { RaceResult } from '../../services/resultList';
 import { useNavigation } from '@react-navigation/native';
-import { colors } from '../../styles/common.styles';
+import { categoryColors, palette } from '../../styles/common.styles';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
@@ -71,38 +72,47 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
 
     return (
         <TouchableOpacity
-            style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: colors.pinkcolor }]}
+            style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: categoryColors.women }]}
             onPress={handlePress}
         >
-            {/* ✅ Badge: star only — no position before race */}
-            <TouchableOpacity
-                style={[resultListStyle.cornerBadge, isWomen && { backgroundColor: colors.pinkcolor }]}
-                onPress={handleStarPress}
-                activeOpacity={0.8}
-                disabled={isLoading}
-            >
-                <Text style={isFollowed ? resultListStyle.cornerStar : resultListStyle.cornerStarUnfilled}>
-                    ★
-                </Text>
-            </TouchableOpacity>
-
-            {/* Card Content */}
-            <View>
-                <View style={resultListStyle.cardTop}>
-                    <View style={resultListStyle.cardTopLeft}>
-                        <Text style={resultListStyle.cardName}>{item.name}</Text>
-                    </View>
-                    <View style={{ width: 60 }} />
+            {/* Row head — bib circle, identity, follow star. Matches
+                ResultCard / ResultCardLive; before the race there is no
+                position, so the circle carries the bib. */}
+            <View style={resultListStyle.rowHead}>
+                <View style={[resultListStyle.rankCircle, isWomen && { backgroundColor: categoryColors.women }]}>
+                    <Text style={resultListStyle.rankText}>{item.bib || '-'}</Text>
                 </View>
+                <View style={resultListStyle.cardTop}>
+                    <Text style={resultListStyle.cardName} numberOfLines={1}>{item.name}</Text>
+                    <View style={resultListStyle.metaLine}>
+                        {!!item.nation_flag && (
+                            <SvgUri uri={item.nation_flag} width={18} height={13} />
+                        )}
+                        <Text style={resultListStyle.bibText} numberOfLines={1}>
+                            {[`${t('allrace:race.bibNumber')} ${item.bib}`, item.club, item.nation, item.age,
+                              item.wave ? `${t('allrace:race.wavelabel')} ${item.wave}` : null]
+                                .filter(Boolean).join(' \u00b7 ')}
+                        </Text>
+                    </View>
+                </View>
+                <TouchableOpacity
+                    onPress={handleStarPress}
+                    activeOpacity={0.7}
+                    disabled={isLoading}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={isFollowed ? 'Unfollow athlete' : 'Follow athlete'}
+                >
+                    <Ionicons
+                        name={isFollowed ? 'star' : 'star-outline'}
+                        size={26}
+                        color={isFollowed ? palette.lime : palette.placeholder}
+                    />
+                </TouchableOpacity>
+            </View>
 
-                <Text style={resultListStyle.bibText}>
-                    {t('allrace:race.bibNumber')} {item.bib}
-                </Text>
-
+            <View>
                 <View style={resultListStyle.metaBlock}>
-                    <Text style={resultListStyle.teamText} numberOfLines={1}>
-                        {[item.club, item.nation].filter(Boolean).join(' · ')}
-                    </Text>
                     {item.wave ? (
                         <Text style={resultListStyle.waveText} numberOfLines={1}>
                             {t('allrace:race.wavelabel')}: {item.wave}
@@ -111,7 +121,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                 </View>
 
                 {isLive && (
-                    <View style={{ marginTop: 6 }}>
+                    <View style={{ marginTop: 8 }}>
                         <LiveTrackingBar />
                     </View>
                 )}

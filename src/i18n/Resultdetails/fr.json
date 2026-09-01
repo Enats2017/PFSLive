@@ -1,20 +1,20 @@
 {
   "tabs": {
-    "raceInfo": "Résultats en direct",
-    "timingPoint": "Historique des points de contrôle",
-    "runnerInfo": "Infos coureur",
+    "raceInfo": "Résultats",
+    "timingPoint": "Pointages",
+    "runnerInfo": "À propos",
     "awards": "Récompenses"
   },
   "raceInfo": {
     "finisher": "Finisher",
-    "raceTime": "TEMPS DE COURSE",
-    "previousTimingPoint": "POINT DE CHRONOMÉTRAGE PRÉCÉDENT",
-    "nextTimingPoint": "PROCHAIN POINT DE CHRONOMÉTRAGE",
-    "overallRanking": "CLASSEMENT\nGÉNÉRAL",
-    "rankingInOpen": "CLASSEMENT\nCATÉGORIE",
-    "genderRanking": "CLASSEMENT\nSEXE",
-    "distanceCompleted": "DISTANCE\nPARCOURUE",
-    "elevationGain": "DÉNIVELÉ POSITIF\nDEPUIS LE DÉPART",
+    "raceTime": "Temps de course",
+    "previousTimingPoint": "Point de chronométrage précédent",
+    "nextTimingPoint": "Prochain point de chronométrage",
+    "overallRanking": "Classement\ngénéral",
+    "rankingInOpen": "Classement\ncatégorie",
+    "genderRanking": "Classement\nsexe",
+    "distanceCompleted": "Distance\nparcourue",
+    "elevationGain": "Dénivelé positif\ndepuis le départ",
     "startsIn": "La course commence dans",
     "raceStarted": "La course a commencé",
     "raceInProgress": "La course est en cours",
@@ -24,37 +24,52 @@
     "categoryRank": "Catégorie",
     "in": "dans",
     "minutes": "minutes",
-    "wavelabel": "Vague"
+    "wavelabel": "Vague",
+    "raceResult": "Résultat de course",
+    "status": "Statut",
+    "distance": "Distance",
+    "splits": "Temps intermédiaires",
+    "scratchPosition": "Classement scratch",
+    "category": "Catégorie",
+    "performance": "Performance",
+    "averagePace": "Allure moyenne",
+    "finishers": "Finissants",
+    "perKm": "/ km",
+    "ofField": "{{finishers}} sur {{total}}"
   },
   "timingPoint": {
     "checkpoint": "CHECKPOINT",
-    "startTime": "HEURE DE DÉPART",
-    "arrivalTime": "HEURE D'ARRIVÉE",
-    "time": "TEMPS DE COURSE",
+    "startTime": "Heure de départ",
+    "arrivalTime": "Heure d'arrivée",
+    "time": "Temps de course",
     "ranking": "CLASSEMENT",
     "distance": "DISTANCE",
-    "elevationGain": "DÉNIVELÉ POSITIF",
+    "elevationGain": "Dénivelé positif",
     "noData": "Aucune donnée de chronométrage disponible",
     "pace": "ALLURE",
     "speed": "VITESSE",
     "elevation": "Altitude",
-    "availableServices": "Services disponibles"
+    "availableServices": "Services disponibles",
+    "toNextPoint": "Jusqu’au point suivant",
+    "segmentDistance": "Depuis le point précédent",
+    "segmentElevation": "Dénivelé depuis le point précédent"
   },
   "runnerInfo": {
     "club": "CLUB",
     "category": "CATÉGORIE",
     "utmbIndex": "INDEX",
-    "utmbSeries": "WORLD SERIES",
+    "utmbSeries": "World series",
     "noClub": "—",
-    "viewOnMap": "Voir sur la carte"
+    "viewOnMap": "Voir sur la carte",
+    "thisRace": "Cette course"
   },
   "awards": {
     "time": "TEMPS",
     "country": "PAYS",
     "ranking": "CLASSEMENT",
-    "genderRanking": "CLASSEMENT SEXE",
+    "genderRanking": "Classement sexe",
     "distance": "DISTANCE",
-    "elevationGain": "DÉNIVELÉ POSITIF",
+    "elevationGain": "Dénivelé positif",
     "noData": "—"
   },
   "status": {
@@ -86,5 +101,5 @@
   "errors": {
     "participant_not_found": "Participant introuvable.",
     "generic": "Une erreur s'est produite. Veuillez réessayer."
-}
+  }
 }

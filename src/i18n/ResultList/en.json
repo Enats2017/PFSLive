@@ -5,37 +5,38 @@
     "live": "LIVE",
     "bibNumber": "Bib number",
     "wavelabel": "Wave",
-    "raceTime": "RACE TIME",
-    "diffFirst": "DIFF 1ST",
+    "raceTime": "Race time",
+    "diffFirst": "Diff 1st",
     "ranking": "RANKING",
     "retry": "Retry",
     "errorLoad": "Failed to load results. Tap to retry.",
     "utmbIndex": "INDEX",
     "eta": "ETA",
-    "etaFinish": "ETA FINISH",
+    "etaFinish": "Eta finish",
     "finish": "FINISH"
   },
-
   "time": {
     "use12h": "1",
     "am": "AM",
     "pm": "PM"
   },
-
   "filter": {
     "results": "Results",
     "live": "Live",
-    "liveTracking": "Live Tracking",
+    "liveTracking": "Live tracking",
     "favourite": "Favourite",
     "noFavourites": "No favourites yet. Tap ☆ on any result to save it.",
-    "checkpoint":"Checkpoint",
-    "statistics":    "Statistics",
-    "stat_all":      "All",
-    "stat_started":  "Started",
-    "stat_crossed":  "Passed",
+    "checkpoint": "Checkpoint",
+    "statistics": "Statistics",
+    "stat_all": "All",
+    "stat_started": "Started",
+    "stat_crossed": "Passed",
     "stat_expected": "Expected",
-    "is_finshed": "FINISHED",
-    "stat_dnf":      "DNF",
+    "isFinished": "FINISHED",
+    "stat_dnf": "DNF",
     "all": "All"
+  },
+  "search": {
+    "resultsFor": "{{count}} results for “{{query}}”"
   }
 }

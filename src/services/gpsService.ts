@@ -39,6 +39,10 @@ export const BACKGROUND_LOCATION_TASK = 'background-location-task';
 
 const TRACKING_PARAMS_KEY = '@PFSLive:trackingParams';
 const LAST_SENT_KEY = '@PFSLive:lastSentAt';
+// ✅ When THIS tracking session began, for the elapsed timer on the home screen
+// (02_Home-Tracking-Active.png). Set only for a genuinely new race — a
+// mid-race relaunch must keep the original start or the timer resets to zero.
+const SESSION_START_KEY = '@PFSLive:sessionStartedAt';
 export const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
 const LAST_POSITION_KEY = '@PFSLive:lastPosition';
 const LAST_ALTITUDE_KEY = '@PFSLive:lastAltitude';
@@ -1707,6 +1711,44 @@ export const getTrackingParams = async (): Promise<{
 // session, onLocation isn't re-registered yet (that path also affects
 // background sends and is handled separately), so the live display may not
 // tick until tracking is re-initialised.
+/**
+ * Read-only session stats for the tracking-active screen
+ * (02_Home-Tracking-Active.png): how long this session has run, how far the
+ * device has travelled, and how long ago the last position was accepted.
+ *
+ * Display only — nothing here feeds the send path, and every part degrades to
+ * null rather than throwing, so a missing odometer cannot affect tracking.
+ */
+export const getSessionStats = async (): Promise<{
+  startedAt: number | null;
+  distanceKm: number | null;
+  lastSentAt: number | null;
+}> => {
+  let startedAt: number | null = null;
+  let distanceKm: number | null = null;
+  let lastSentAt: number | null = null;
+
+  try {
+    const raw = await AsyncStorage.getItem(SESSION_START_KEY);
+    const n = raw ? Number(raw) : NaN;
+    if (Number.isFinite(n) && n > 0) startedAt = n;
+  } catch { /* display only */ }
+
+  try {
+    // Transistor's own accumulator — no distance maths of ours on the GPS path.
+    const metres = await BackgroundGeolocation.getOdometer();
+    if (Number.isFinite(metres) && metres >= 0) distanceKm = metres / 1000;
+  } catch { /* display only */ }
+
+  try {
+    const raw = await AsyncStorage.getItem(LAST_SENT_KEY);
+    const n = raw ? Number(raw) : NaN;
+    if (Number.isFinite(n) && n > 0) lastSentAt = n;
+  } catch { /* display only */ }
+
+  return { startedAt, distanceKm, lastSentAt };
+};
+
 export const attachUi = async (
   callback: (position: GPSPosition) => void,
   intervalSeconds: number = 30,
@@ -1805,6 +1847,9 @@ export const ensureBackgroundTaskAlive = async (
 };
 
 export const gpsService = {
+  /** Read-only session stats for the tracking-active screen. See getSessionStats. */
+  getSessionStats,
+
   /**
    * DEAD CODE — do not call. Kept only because removing an exported method is a
    * wider change than this warrants.
@@ -2071,6 +2116,14 @@ export const gpsService = {
       // wiped accumulated segments of long events, leaving only the first ~500
       // entries. A genuinely new race still gets a fresh log.
       if (!_isSameRaceResume) {
+        // A new race starts the clock and the odometer from zero. On a resume
+        // both are left alone so the elapsed time and distance survive an OS kill.
+        await AsyncStorage.setItem(SESSION_START_KEY, String(Date.now()));
+        try {
+          await BackgroundGeolocation.setOdometer(0);
+        } catch {
+          // Odometer is display-only; never let it break the start path.
+        }
         await AsyncStorage.removeItem(TRACKING_LOG_KEY);
         await _resetLogBuffer();
       }
@@ -2161,7 +2214,9 @@ export const gpsService = {
             notification: {
               title: notificationTitle ?? 'Live Tracking Active',
               text:  notificationBody  ?? 'Your location is being tracked.',
-              color: '#1a73e8',
+              // palette.navy, inlined so the headless graph stays free of the
+              // stylesheet module. Keep in step with the token.
+              color: '#0F2447', // design-audit-ignore
             },
             // ✅ rationale goes here, in the app (AppConfig) domain
             backgroundPermissionRationale: {

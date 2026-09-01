@@ -1,38 +1,38 @@
 {
   "defaultEventName": "Event",
   "subtitle": "Select your profile from the participants below to register",
-  "button": "THIS IS ME",
+  "button": "This is me",
   "info": {
-    "title": "Manual Selection Required",
+    "title": "Manual selection required",
     "message": "We couldn't automatically match your account email with the race registration data. Please find and select your profile from the list below to complete registration."
   },
   "loadingMore": "Loading more... ({{page}}/{{totalPages}})",
   "scrollForMore": "Scroll for more ({{count}} loaded)",
   "mailSent": {
-    "title": "Verification Email Sent!",
+    "title": "Verification email sent!",
     "message": "We've sent a confirmation email to your registered address. Please click the link in the email to complete your registration.",
     "button": "Got it"
   },
   "error": {
-    "missingParamsTitle": "Missing Information",
+    "missingParamsTitle": "Missing information",
     "missingParamsMessage": "Unable to load participants. Required information is missing.",
-    "missingDataTitle": "Missing Data",
+    "missingDataTitle": "Missing data",
     "missingDataMessage": "Registration data is incomplete. Please try again.",
-    "noBibNumberTitle": "No Bib Number",
+    "noBibNumberTitle": "No bib number",
     "noBibNumberMessage": "This participant has no bib number and cannot be registered.",
-    "registrationFailedTitle": "Registration Failed",
+    "registrationFailedTitle": "Registration failed",
     "registrationFailedMessage": "Unable to register. Please try again.",
-    "invalidDataTitle": "Invalid Data",
+    "invalidDataTitle": "Invalid data",
     "invalidDataMessage": "Missing confirmation data. Please try again.",
-    "confirmationFailedTitle": "Confirmation Failed",
+    "confirmationFailedTitle": "Confirmation failed",
     "confirmationFailedMessage": "Unable to confirm registration. Please try again.",
-    "alreadyRegisteredTitle": "Already Registered",
+    "alreadyRegisteredTitle": "Already registered",
     "alreadyRegisteredMessage": "You are already registered for this event.",
-    "invalidBibTitle": "Verification Failed",
+    "invalidBibTitle": "Verification failed",
     "invalidBibMessage": "We couldn't verify your registration in the race results. Please check your information or contact the event organizer.",
-    "validationErrorTitle": "Invalid Data",
+    "validationErrorTitle": "Invalid data",
     "validationErrorMessage": "Some information is missing or invalid.",
-    "networkErrorTitle": "Connection Error",
+    "networkErrorTitle": "Connection error",
     "networkErrorMessage": "Unable to connect. Please check your internet and try again."
   }
 }

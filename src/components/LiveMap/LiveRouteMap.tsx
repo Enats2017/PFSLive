@@ -5,27 +5,27 @@ import { GPXTrackPoint, GPXAidStation } from '../../services/gpxService';
 import { getCheckpointName } from '../../utils/checkpointName';
 import { ParticipantMapMarker, AidStationMapMarker, CheckpointData } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
-import { colors } from '../../styles/common.styles';
+import { palette, mapColors } from '../../styles/common.styles';
 import { useTranslation } from 'react-i18next';
 
 // ── Map marker colors ────────────────────────────────────────────────────────
 // Each marker type has a distinct color so they're easy to tell apart at a glance.
 const MARKER_COLORS = {
-    start: '#22C55E', // green  — universally understood as start
-    finish: '#EF4444', // red    — universally understood as finish
-    checkpoint: '#1a1a2e', // dark   — intermediate checkpoints
-    participant: '#F97316', // orange — tracked athletes
-    follower: '#6366F1', // indigo — "you are here" marker (viewer's own position)
-    offline: '#94A3B8', // slate  — frozen "no signal" position (offline)
+    start: mapColors.start, // green  — universally understood as start
+    finish: mapColors.finish, // red    — universally understood as finish
+    checkpoint: mapColors.checkpoint, // dark   — intermediate checkpoints
+    participant: mapColors.participant, // orange — tracked athletes
+    follower: mapColors.follower, // indigo — "you are here" marker (viewer's own position)
+    offline: mapColors.offline, // slate  — frozen "no signal" position (offline)
 } as const;
 
 // ── Distance-marker styling ───────────────────────────────────────────────────
-const KM_MARKER_COLOR  = '#475569'; // slate — neutral dot anchor (labels tinted per leg)
+const KM_MARKER_COLOR  = palette.textBody; // slate — neutral dot anchor (labels tinted per leg)
 const MINOR_KM_MIN_ZOOM = 13;       // every-km markers appear once zoomed in past this
                                     // (major 5km markers are always visible)
 
-const ROUTE_OUT_COLOR = '#3B82F6'; // blue   — outbound ("going")
-const ROUTE_IN_COLOR  = '#3B82F6'; // purple — inbound ("coming back")
+const ROUTE_OUT_COLOR = mapColors.route; // blue   — outbound ("going")
+const ROUTE_IN_COLOR  = mapColors.route; // purple — inbound ("coming back")
 
 // const INBOUND_OFFSET_M = 15; // metres the inbound lane is shifted sideways from outbound
 const LANE_SEPARATION_M = 5;
@@ -1008,7 +1008,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         id="route-line-out-casing"
                         filter={['==', ['get', 'leg'], 'out'] as any}
                         style={{
-                            lineColor: '#1E293B',
+                            lineColor: mapColors.checkpoint,
                             lineWidth: 7,            // wider than the 4px line on top
                             lineCap: 'round',
                             lineJoin: 'round',
@@ -1019,7 +1019,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         id="route-line-in-casing"
                         filter={['==', ['get', 'leg'], 'in'] as any}
                         style={{
-                            lineColor: '#1E293B',
+                            lineColor: mapColors.checkpoint,
                             lineWidth: 7,
                             lineCap: 'round',
                             lineJoin: 'round',
@@ -1061,7 +1061,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                             symbolSpacing: 140,
                             textField: '▶',                 // swap to '>' if blank
                             textSize: 14,
-                            textColor: '#FFFFFF',
+                            textColor: mapColors.markerStroke,
                             textHaloColor: ROUTE_OUT_COLOR,
                             textHaloWidth: 1.5,
                             textKeepUpright: false,
@@ -1081,7 +1081,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                             symbolSpacing: 140,
                             textField: '▶',
                             textSize: 14,
-                            textColor: '#FFFFFF',
+                            textColor: mapColors.markerStroke,
                             textHaloColor: ROUTE_IN_COLOR,
                             textHaloWidth: 1.5,
                             textKeepUpright: false,
@@ -1114,7 +1114,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                     16, 5,   // zoomed in → normal
                                 ] as any,
                                 circleStrokeWidth: 2,
-                                circleStrokeColor: '#FFFFFF',
+                                circleStrokeColor: mapColors.markerStroke,
                                 circlePitchAlignment: 'map',
                                 // Estimated (weak signal) → translucent so it reads as provisional.
                                 circleOpacity: ['case', ['==', ['get', 'is_estimated'], true], 0.55, 1] as any,
@@ -1132,7 +1132,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                     16, 11,
                                 ] as any,
                                 textColor: ['case', ['==', ['get', 'leg'], 'in'], ROUTE_IN_COLOR, ROUTE_OUT_COLOR] as any,
-                                textHaloColor: '#FFFFFF',
+                                textHaloColor: mapColors.markerStroke,
                                 textHaloWidth: 2,
                                 textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
                                 textOffset: [0, -0.9],
@@ -1151,7 +1151,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                 circleColor: KM_MARKER_COLOR,
                                 circleRadius: 4,
                                 circleStrokeWidth: 2,
-                                circleStrokeColor: '#FFFFFF',
+                                circleStrokeColor: mapColors.markerStroke,
                                 circlePitchAlignment: 'map',
                                 circleOpacity: 0.9,
                             }}
@@ -1164,7 +1164,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                 textField: ['get', 'label'] as any,
                                 textSize: 10,
                                 textColor: ['case', ['==', ['get', 'leg'], 'in'], ROUTE_IN_COLOR, ROUTE_OUT_COLOR] as any,
-                                textHaloColor: '#FFFFFF',
+                                textHaloColor: mapColors.markerStroke,
                                 textHaloWidth: 2,
                                 textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
                                 textOffset: [0, -0.9],
@@ -1193,7 +1193,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                             ] as any,
                             circleRadius: 14,
                             circleStrokeWidth: 3,
-                            circleStrokeColor: '#FFFFFF',
+                            circleStrokeColor: mapColors.markerStroke,
                             circlePitchAlignment: 'map',
                             circleOpacity: 1,
                         }}
@@ -1208,7 +1208,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         style={{
                             iconImage: 'restaurant-15',
                             iconSize: 1.2,
-                            iconColor: '#FFFFFF',
+                            iconColor: mapColors.markerStroke,
                             iconAllowOverlap: true,
                             iconIgnorePlacement: true,
                         }}
@@ -1226,7 +1226,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                 'F',
                             ] as any,
                             textSize: 14,
-                            textColor: '#FFFFFF',
+                            textColor: mapColors.markerStroke,
                             textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
                             textAllowOverlap: true,
                             iconAllowOverlap: true,
@@ -1254,7 +1254,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                 ] as any,
                                 circleRadius: 13,
                                 circleStrokeWidth: 4,
-                                circleStrokeColor: '#FFFFFF',
+                                circleStrokeColor: mapColors.markerStroke,
                                 circlePitchAlignment: 'map',
                                 // Translucent ONLY when the dot is an actual dead-reckoned
                                 // estimate. A merely-stale fix still showing the real last
@@ -1272,7 +1272,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                             style={{
                                 textField: ['get', 'initials'],
                                 textSize: 11,
-                                textColor: '#FFFFFF',          // white text on the orange dot
+                                textColor: mapColors.markerStroke,          // white text on the orange dot
                                 textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
                                 textAllowOverlap: true,
                                 textIgnorePlacement: true,
@@ -1292,7 +1292,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                 circleColor: MARKER_COLORS.follower,
                                 circleRadius: 10,
                                 circleStrokeWidth: 3,
-                                circleStrokeColor: '#FFFFFF',
+                                circleStrokeColor: mapColors.markerStroke,
                                 circlePitchAlignment: 'map',
                             }}
                         />
@@ -1302,7 +1302,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                                 textField: 'YOU',
                                 textSize: 10,
                                 textColor: MARKER_COLORS.follower,
-                                textHaloColor: '#FFFFFF',
+                                textHaloColor: mapColors.markerStroke,
                                 textHaloWidth: 2,
                                 textOffset: [0, 1.8],
                                 textAnchor: 'top',
@@ -1317,9 +1317,9 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
             {isLoadingParticipants && (
                 <View style={liveTrackingStyles.mapLoadingOverlay}>
                     <View style={liveTrackingStyles.mapLoadingBox}>
-                        <ActivityIndicator size="large" color={colors.primary} />
+                        <ActivityIndicator size="large" color={palette.navy} />
                         <Text style={liveTrackingStyles.mapLoadingText}>
-                            Loading participants...
+                            {t('common:loading.participants')}
                         </Text>
                     </View>
                 </View>

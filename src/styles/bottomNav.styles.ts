@@ -1,42 +1,48 @@
 import { StyleSheet } from 'react-native';
-import { colors, spacing, typography } from './common.styles';
+import { palette, radii, space, fonts } from './common.styles';
 
 export const bottomNavStyles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
+    backgroundColor: palette.surface,
     borderTopWidth: 1,
-    borderTopColor: colors.gray100,
-    paddingBottom: spacing.sm,
-    paddingTop: spacing.sm,
-    elevation: 8,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderTopColor: palette.border,
+    paddingTop: space.sm,
+    // The artboard's 16pt foot. The bottom safe-area inset is owned by the
+    // screen's SafeAreaView, not here — adding it in both places double-pads.
+    paddingBottom: space.lg,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    gap: space.xs,
   },
-  icon: {
-    fontSize: 24,
-    marginBottom: 4,
-    opacity: 0.6,
+  // ✅ The active tab is a lime pill around the icon — this replaced the old
+  // blue tint (`colors.accent`, #4A9EFF), which was the only blue in the app.
+  pill: {
+    backgroundColor: palette.lime,
+    borderRadius: radii.md,
+    paddingVertical: space.xs,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  iconActive: {
-    opacity: 1,
+  // Keeps the inactive icon on the same baseline as one sitting in a pill.
+  pillGhost: {
+    paddingVertical: space.xs,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray500,
-    fontWeight: typography.weights.medium,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
+    color: palette.textMuted,
   },
   labelActive: {
-    color: colors.accent,
-    fontWeight: typography.weights.semibold,
+    fontFamily: fonts.bodySemi,
+    color: palette.navy,
   },
   iconImage: {
     // Square, to match the normalized icon canvases: each glyph is centred
@@ -46,14 +52,13 @@ export const bottomNavStyles = StyleSheet.create({
     // glyph only filled part of the image.
     width: 26,
     height: 26,
-    marginBottom: 4,
     // ⚠️ The tint is NOT set here any more, and must not be moved back.
     //
     // The icons render through expo-image, which — unlike RN's <Image> — ignores
     // tintColor (and resizeMode) in a StyleSheet and reads them only as props.
     // Both now live on the component: see BottomNavigation.tsx /
     // BottomNavigationFollower.tsx, which pass
-    // tintColor={isActive ? colors.accent : colors.gray500} and
+    // tintColor={isActive ? palette.ink : palette.textMuted} and
     // contentFit="contain". Putting them back in this object silently does
     // nothing and the icons lose their grey/active state.
     //

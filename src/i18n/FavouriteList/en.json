@@ -1,6 +1,6 @@
 {
   "title": "Favourites",
-  "addRunner": "All Runners",
+  "addRunner": "All runners",
   "message": {
     "follow": "Following! You have successfully added to favourites",
     "unfollow": "Unfollowed! You have been removed from favourites",
@@ -10,6 +10,7 @@
   "status": {
     "in_progress": "In Progress",
     "finished": "Finished",
-    "not_started": "Not Started"
-  }
+    "not_started": "Not started"
+  },
+  "subheader": "Athletes you are following in this race"
 }

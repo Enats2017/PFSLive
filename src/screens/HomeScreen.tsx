@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
   TouchableOpacity,
-  StatusBar,
   ScrollView,
   Alert,
   AppState,
@@ -45,7 +44,7 @@ import { followerApi } from '../services/registerFollowerServices';
 import { syncFollowDataFromAPI } from '../utils/followStorage';
 
 // Styles
-import { colors, spacing, typography, commonStyles } from '../styles/common.styles';
+import { spacing, typography, commonStyles, palette, fonts } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
 import FollowingLiveEventsSection from './FollowingLiveEventsSection';
 import { useDimensions } from '../hooks/useDimensions';
@@ -231,6 +230,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [isSendingData, setIsSendingData] = useState(false);
   const [locationUpdateCount, setLocationUpdateCount] = useState(0);
   const [queuedCount, setQueuedCount] = useState(0);
+  // ✅ 02_Home-Tracking-Active.png — session clock, odometer and send status.
+  // Display only: read from gpsService, never written back into it.
+  const [sessionStats, setSessionStats] = useState<{
+    startedAt: number | null; distanceKm: number | null; lastSentAt: number | null;
+  }>({ startedAt: null, distanceKm: null, lastSentAt: null });
+  const [nowTick, setNowTick] = useState(Date.now());
+
+  // "00:42:18" since the session began, and "12 sec ago" since the last accepted
+  // position. Both recompute from `nowTick`, which only runs while tracking is on.
+  const elapsedLabel = useMemo(() => {
+    if (!sessionStats.startedAt) return '00:00:00';
+    const secs = Math.max(0, Math.floor((nowTick - sessionStats.startedAt) / 1000));
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(Math.floor(secs / 3600))}:${pad(Math.floor((secs % 3600) / 60))}:${pad(secs % 60)}`;
+  }, [sessionStats.startedAt, nowTick]);
+
+  const lastSentLabel = useMemo(() => {
+    if (!sessionStats.lastSentAt) return t('home:active.justNow');
+    const secs = Math.max(0, Math.floor((nowTick - sessionStats.lastSentAt) / 1000));
+    if (secs < 5) return t('home:active.justNow');
+    if (secs < 60) return t('home:active.secAgo', { n: secs });
+    return t('home:active.minAgo', { n: Math.floor(secs / 60) });
+  }, [sessionStats.lastSentAt, nowTick, t]);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [hasPermission, setHasPermission] = useState(false);
   const [raceStartTime, setRaceStartTime] = useState<Date | null>(null);
@@ -341,6 +363,25 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ==================== NOTIFICATION HANDLERS ====================
 
   // ✅ Log push token when ready (DEBUG only)
+  // ✅ While tracking is on, refresh the clock every second and the session
+  // stats every five. Stops dead when tracking stops — nothing polls at rest.
+  useEffect(() => {
+    if (!isGPSActive) return;
+
+    let cancelled = false;
+    const readStats = async () => {
+      try {
+        const stats = await gpsService.getSessionStats();
+        if (!cancelled) setSessionStats(stats);
+      } catch { /* display only */ }
+    };
+
+    void readStats();
+    const tick = setInterval(() => setNowTick(Date.now()), 1000);
+    const stats = setInterval(() => { void readStats(); }, 5000);
+    return () => { cancelled = true; clearInterval(tick); clearInterval(stats); };
+  }, [isGPSActive]);
+
   useEffect(() => {
     if (API_CONFIG.DEBUG && expoPushToken) {
       console.log('📲 Expo push token ready:', expoPushToken);
@@ -1704,11 +1745,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <AppHeader showLogo={true} />
+      <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+        <AppHeader title={t('common:band.home')} logoimg showLogo={true} />
         <View style={commonStyles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={palette.navy} />
           <Text style={[commonStyles.loadingText, { marginTop: spacing.lg }]}>
             {t('home:status.loading')}
           </Text>
@@ -1724,9 +1764,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     : `${Math.round(hoursUntilRace)}h`;
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <AppHeader />
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
+      <AppHeader title={t('common:band.home')} logoimg showLogo={true} />
 
       {Platform.OS === 'android' && (
         <Modal
@@ -1739,7 +1778,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <View style={homeStyles.notifWrapper}>
               <View style={homeStyles.notifCard}>
                 <View style={homeStyles.notifIconWrapper}>
-                  <Ionicons name="battery-charging" size={36} color={colors.primary} />
+                  <Ionicons name="battery-charging" size={36} color={palette.navy} />
                 </View>
                 <Text style={homeStyles.notifTitle}>{t('home:battery.title')}</Text>
                 <Text style={homeStyles.notifBody}>{t('home:battery.message')}</Text>
@@ -1771,7 +1810,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={homeStyles.notifWrapper}>
             <View style={homeStyles.notifCard}>
               <View style={homeStyles.notifIconWrapper}>
-                <Ionicons name="navigate-circle-outline" size={36} color={colors.primary} />
+                <Ionicons name="navigate-circle-outline" size={36} color={palette.navy} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:startConfirm.title')}</Text>
               <Text style={homeStyles.notifBody}>{t('home:startConfirm.message')}</Text>
@@ -1808,7 +1847,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={homeStyles.notifWrapper}>
             <View style={homeStyles.notifCard}>
               <View style={homeStyles.notifIconWrapper}>
-                <Ionicons name="time-outline" size={36} color={colors.warning} />
+                <Ionicons name="time-outline" size={36} color={palette.warning} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:earlyTracking.title')}</Text>
               <Text style={homeStyles.notifBody}>
@@ -1848,7 +1887,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={homeStyles.notifWrapper}>
             <View style={homeStyles.notifCard}>
               <View style={homeStyles.notifIconWrapper}>
-                <Ionicons name="location-outline" size={36} color={colors.error} />
+                <Ionicons name="location-outline" size={36} color={palette.danger} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:gpsHealth.title')}</Text>
               <Text style={homeStyles.notifBody}>
@@ -1962,7 +2001,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
               {/* Icon */}
               <View style={homeStyles.notifIconWrapper}>
-                <Ionicons name="battery-dead-outline" size={36} color={colors.error} />
+                <Ionicons name="battery-dead-outline" size={36} color={palette.danger} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:powerSaving.title')}</Text>
               {/* Platform-specific on purpose. This previously read
@@ -2034,16 +2073,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={homeStyles.notifCard}>
             {/* Close button */}
             <TouchableOpacity
-              style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}
+              style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: palette.fill, justifyContent: 'center', alignItems: 'center', zIndex: 10 }}
               onPress={closeNotificationPopup}
               activeOpacity={0.7}
             >
-              <Ionicons name="close" size={20} color="#64748b" />
+              <Ionicons name="close" size={20} color={palette.textMuted} />
             </TouchableOpacity>
 
             {/* Icon */}
             <View style={homeStyles.notifIconWrapper}>
-              <Ionicons name="notifications" size={36} color={colors.primary} />
+              <Ionicons name="notifications" size={36} color={palette.navy} />
             </View>
 
             {/* Title */}
@@ -2083,13 +2122,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}
       >
-        {/* Logo & Title */}
+        {/* Hero — the mark itself is in the header band above. */}
         <View style={homeStyles.cardscetion}>
-          <Image
-            source={require('../../assets/livio_logo_transparent.png')}
-            style={homeStyles.logo}
-            contentFit="contain"
-          />
+          <Text style={homeStyles.title}>{t('home:hero.title')}</Text>
+          <Text style={homeStyles.subtitle}>{t('home:hero.subtitle')}</Text>
         </View>
 
 
@@ -2097,6 +2133,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={homeStyles.textContainer}>
           {homeData?.show_start_track === 1 ? (
             <>
+              <Text style={homeStyles.sectionLabel}>{t('home:sections.nextSession')}</Text>
               <View style={commonStyles.card}>
                 <View style={homeStyles.eventInfo}>
                   <Text style={homeStyles.eventNameText}>
@@ -2106,19 +2143,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </View>
 
                 <Text style={homeStyles.smallText}>
-                  <Text style={{ fontWeight: typography.weights.bold }}>{t('home:Event.Date')}:</Text>
+                  <Text style={{ fontFamily: fonts.bodySemi,
+        fontSize: 13,
+        }}>{t('home:Event.Date')}:</Text>
                   {' '}
                   {formatDate(homeData.next_race_date!)}
                 </Text>
                 {/* Manual Start Indicator */}
                 {homeData?.manual_start === 1 && (
-                  <View style={[homeStyles.trackingStatus, { backgroundColor: colors.warning + '20' }]}>
-                    <Text style={homeStyles.trackingStatusIcon}>🔓</Text>
+                  <View style={[homeStyles.trackingStatus, { backgroundColor: palette.warningBg }]}>
+                    <Ionicons name="lock-open-outline" size={16} color={palette.warning} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[homeStyles.trackingStatusText, { color: colors.warning }]}>
+                      <Text style={[homeStyles.trackingStatusText, { color: palette.warning }]}>
                         {t('home:status.manualStartEnabled')}
                       </Text>
-                      <Text style={[homeStyles.trackingCountText, { color: colors.warning }]}>
+                      <Text style={[homeStyles.trackingCountText, { color: palette.warning }]}>
                         {t('home:status.manualStartDescription')}
                       </Text>
                     </View>
@@ -2130,35 +2169,82 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     assume it's broken (it isn't) and stop it — exactly the
                     missed-start incident. Show a clear pre-race / sending state. */}
                 {isGPSActive && (
-                  <View style={homeStyles.trackingStatus}>
-                    <Text style={homeStyles.trackingStatusIcon}>{isSendingData ? '🟢' : '🟡'}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={homeStyles.trackingStatusText}>
-                        {isSendingData ? t('home:status.sendingData') : t('home:status.gpsActive')}
-                      </Text>
+                  <>
+                    {/* Session clock — 02_Home-Tracking-Active.png */}
+                    <View style={homeStyles.activeCard}>
+                      <View style={homeStyles.activeStatusRow}>
+                        <View style={homeStyles.activeDot} />
+                        <Text style={homeStyles.activeStatusText}>
+                          {isSendingData
+                            ? t('home:active.trackingActive')
+                            : t('home:status.gpsActive')}
+                        </Text>
+                      </View>
+
+                      <Text style={homeStyles.activeClock}>{elapsedLabel}</Text>
+
+                      {!!homeData?.next_race_name && (
+                        <Text style={homeStyles.activeEvent} numberOfLines={2}>
+                          {homeData.next_race_name}
+                        </Text>
+                      )}
 
                       {!isSendingData && timeUntilRace && (
-                        <Text style={homeStyles.trackingCountText}>
+                        <Text style={homeStyles.activeEvent}>
                           {homeData?.manual_start === 1
                             ? t('home:status.manualStartReady')
-                            : `Race starts in: ${timeUntilRace}`}
+                            : t('home:status.raceStartsIn', { time: timeUntilRace })}
                         </Text>
                       )}
-
-                      {currentLocation && (
-                        <Text style={homeStyles.trackingLocationText}>
-                          {currentLocation.lat.toFixed(6)}, {currentLocation.lon.toFixed(6)}
-                        </Text>
-                      )}
-                      <Text style={homeStyles.trackingCountText}>
-                        {t('home:status.sent')}: {locationUpdateCount} | {t('home:status.queued')}:{' '}
-                        {queuedCount}
-                      </Text>
-                      <Text style={homeStyles.trackingCountText}>
-                        {t('home:status.interval')}: {sendingInterval}s
-                      </Text>
                     </View>
-                  </View>
+
+                    {/* Distance covered and whether everything reached the server */}
+                    <View style={homeStyles.statCard}>
+                      <Text style={homeStyles.sectionLabel}>{t('home:active.distance')}</Text>
+                      <Text style={homeStyles.statValue}>
+                        {sessionStats.distanceKm != null
+                          ? `${sessionStats.distanceKm.toFixed(1)} ${t('units.km', 'km')}`
+                          : '—'}
+                      </Text>
+
+                      <View style={homeStyles.sendRow}>
+                        <Ionicons
+                          name={queuedCount > 0 ? 'time-outline' : 'checkmark-circle'}
+                          size={16}
+                          color={queuedCount > 0 ? palette.warning : palette.lime}
+                        />
+                        <Text style={homeStyles.sendText}>
+                          {queuedCount > 0
+                            ? t('home:active.queued', { count: queuedCount, ago: lastSentLabel })
+                            : t('home:active.allSent', { ago: lastSentLabel })}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={homeStyles.keepOpenNote}>{t('home:active.keepOpen')}</Text>
+
+                    {/* The raw readouts stay, but only where they are useful:
+                        support and dev builds. They are diagnostics, not UI. */}
+                    {(API_CONFIG.DEBUG || __DEV__) && (
+                      <View style={homeStyles.trackingStatus}>
+                        <Text style={homeStyles.trackingStatusIcon}>{isSendingData ? '🟢' : '🟡'}</Text>
+                        <View style={{ flex: 1 }}>
+                          {currentLocation && (
+                            <Text style={homeStyles.trackingLocationText}>
+                              {currentLocation.lat.toFixed(6)}, {currentLocation.lon.toFixed(6)}
+                            </Text>
+                          )}
+                          <Text style={homeStyles.trackingCountText}>
+                            {t('home:status.sent')}: {locationUpdateCount} | {t('home:status.queued')}:{' '}
+                            {queuedCount}
+                          </Text>
+                          <Text style={homeStyles.trackingCountText}>
+                            {t('home:status.interval')}: {sendingInterval}s
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  </>
                 )}
 
                 {/* ✅ Tracking log panel — DEBUG only */}
@@ -2166,8 +2252,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   <ScrollView
                     style={{
                       maxHeight: 200,
-                      backgroundColor: '#0f172a',
-                      borderRadius: 8,
+                      backgroundColor: palette.ink,
+                      borderRadius: 10,
                       padding: 8,
                       marginBottom: spacing.md,
                     }}
@@ -2182,7 +2268,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       return (
                         <Text
                           key={`${entry.ts}-${origIdx}`}
-                          style={{ fontFamily: 'monospace', fontSize: 10, color: '#e2e8f0', marginBottom: 2 }}
+                          style={{ fontFamily: 'monospace', fontSize: 10, color: palette.border, marginBottom: 2 }}
                         >
                           {time} {entry.icon} {entry.msg}
                         </Text>
@@ -2236,17 +2322,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     args keeps the manual-stop path explicit. */}
                 <TouchableOpacity
                   style={[
-                    homeStyles.button,
+                    isGPSActive ? homeStyles.stopButton : homeStyles.button,
                     { width: '100%', marginBottom: spacing.md },
-                    (!participantId || !eventId) && {
-                      backgroundColor: colors.gray400,
+                    !isGPSActive && (!participantId || !eventId) && {
+                      backgroundColor: palette.placeholder,
                       opacity: 0.6,
                     },
                   ]}
                   onPress={isGPSActive ? () => { void stopGPSTracking(); } : confirmStartTracking}
                   disabled={!isGPSActive && (!participantId || !eventId)}
+                  accessibilityRole="button"
                 >
-                  <Text style={homeStyles.buttonText}>
+                  <Text style={isGPSActive ? homeStyles.stopButtonText : homeStyles.buttonText}>
                     {isGPSActive
                       ? t('home:Event.button')
                       : !participantId || !eventId
@@ -2260,7 +2347,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 <TouchableOpacity
                   style={[
                     homeStyles.button,
-                    { width: '100%', marginBottom: spacing.md, backgroundColor: colors.warning },
+                    { width: '100%', marginBottom: spacing.md, backgroundColor: palette.warning },
                   ]}
                   onPress={async () => {
                     try {
@@ -2302,7 +2389,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       homeStyles.button,
                       {
                         width: '100%',
-                        backgroundColor: colors.warning,
+                        backgroundColor: palette.warning,
                         marginBottom: spacing.xl,
                       },
                     ]}

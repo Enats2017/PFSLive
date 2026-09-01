@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { AthleteEvent } from '../../services/athleteProfileService';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette, radii } from '../../styles/common.styles';
 import { profileStyles } from '../../styles/Profile.styles';
 import { Feather, MaterialCommunityIcons,Ionicons} from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
@@ -73,7 +73,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
             <View style={styles.info}>
                 <Text style={commonStyles.title} numberOfLines={1}>{item.name}</Text>
                 <View style={styles.dateRow}>
-                    <MaterialCommunityIcons name="calendar-month-outline" size={13} color="#888" style={{ marginRight: 4 }} />
+                    <MaterialCommunityIcons name="calendar-month-outline" size={13} color={palette.textMuted} style={{ marginRight: 4 }} />
                     {/* ✅ flexShrink + numberOfLines so a long "26 August 2026 12:00 AM" ellipsises
                         instead of running under the delete/edit/view buttons. RN defaults flex
                         items to flexShrink: 0, so without this the Text keeps its intrinsic width
@@ -87,8 +87,13 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
             {isOwnProfile ? (
                 <View style = {{flexDirection:'row', alignItems:'center', gap:6}}>
                     {canDelete && (
-                        <TouchableOpacity style={styles.iconBtn} onPress={handleDeletePress} activeOpacity={0.8}>
-                            <Ionicons name="trash-outline" size={22} color={colors.primaryDark} />
+                        <TouchableOpacity
+                            style={[styles.iconBtn, styles.iconBtnDanger]}
+                            onPress={handleDeletePress}
+                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                        >
+                            <Ionicons name="trash-outline" size={22} color={palette.danger} />
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity
@@ -97,14 +102,14 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
                         activeOpacity={isEditDisabled ? 1 : 0.8}
                         disabled={isEditDisabled}
                     >
-                    <Ionicons name="pencil-outline" size={23} color={colors.primaryDark} />
+                    <Ionicons name="pencil-outline" size={22} color={palette.navy} />
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.iconBtn}
                         onPress={handleTrackingPress}
                         activeOpacity={0.8}
                     >
-                        <Ionicons name="eye-outline" size={23} color={colors.primaryDark} />
+                        <Ionicons name="eye-outline" size={22} color={palette.navy} />
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -113,7 +118,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
                     onPress={handleTrackingPress}
                     activeOpacity={0.8}
                 >
-                    <Ionicons name="eye-outline" size={23} color={colors.primaryDark} />
+                    <Ionicons name="eye-outline" size={23} color={palette.ink} />
                 </TouchableOpacity>
             )}
         </View>
@@ -135,12 +140,15 @@ const styles = StyleSheet.create({
     },
 
     iconBtn: {
-        backgroundColor: colors.themeiColor,
-        borderRadius: 8,
-        width: 45,
-        height: 40,
+        backgroundColor: palette.fill,
+        borderRadius: radii.sm,
+        width: 48,
+        height: 44,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    iconBtnDanger: {
+        backgroundColor: palette.dangerBg,
     },
     disabledBtn: {
         opacity: 0.4,

@@ -1,8 +1,8 @@
 {
   "header": {
-    "label": "LIDMAATSCHAP",
-    "title": "Kies je abonnement",
-    "subtitle": "Blijf je atleten live volgen."
+    "label": "Abonnement",
+    "title": "Choisissez votre formule",
+    "subtitle": "Continuez à suivre vos athlètes en direct."
   },
   "infoBanner": {
     "text": "Vous avez utilisé votre session gratuite. Choisissez un abonnement pour vous inscrire et suivre votre course le jour de l'événement.",
@@ -17,51 +17,60 @@
   },
   "plans": {
     "lite": {
-      "name": "LITE",
-      "badge": "2 sessies / jaar",
+      "name": "Lite",
+      "badge": "{{count}} sessions / an",
       "price": "€ 14,99",
-      "period": "/ jaar",
+      "period": "/ an",
       "features": [
-        "2 live trackingsessies",
-        "Live GPS-kaart en resultaten",
+        "2 sessions de suivi en direct",
+        "Carte GPS et résultats en direct",
         "Le suivi de votre activité est toujours gratuit pour vos fans"
       ]
     },
     "basic": {
-      "name": "BASIC",
-      "badge": "5 sessies / jaar",
+      "name": "Basic",
+      "badge": "5 sessions / an",
       "price": "€ 29,99",
-      "period": "/ jaar",
+      "period": "/ an",
       "features": [
-        "5 live trackingsessies",
-        "Live GPS-kaart en resultaten",
-        "Voorrang bij populaire evenementen",
+        "5 sessions de suivi en direct",
+        "Carte GPS et résultats en direct",
+        "Priorité sur les événements populaires",
         "Le suivi de votre activité est toujours gratuit pour vos fans"
       ],
-      "popularLabel": "MEEST GEKOZEN"
+      "popularLabel": "Le plus choisi"
     },
     "pro": {
-      "name": "PRO",
-      "badge": "Onbeperkt",
+      "name": "Pro",
+      "badge": "Illimité",
       "price": "€ 59,99",
-      "period": "/ jaar",
+      "period": "/ an",
       "features": [
-        "Onbeperkt aantal trackingsessies",
-        "Live GPS-kaart en resultaten",
+        "Sessions de suivi illimitées",
+        "Carte GPS et résultats en direct",
         "Le suivi de votre activité est toujours gratuit pour vos fans"
       ]
     }
   },
-  "footerNote": "Jaarlijks abonnement, wordt automatisch verlengd.\nOp elk moment opzegbaar. Prijs weergegeven door de App Store.",
+  "footerNote": "Abonnement annuel, renouvelé automatiquement.\nAnnulable à tout moment. Prix affiché par l'App Store.",
   "legal": {
     "privacy": "Politique de confidentialité",
     "terms": "Conditions d'utilisation (CLUF)"
   },
   "retry": "Réessayer",
   "restorePurchases": "Restaurer les achats",
-  "restoreSuccess": { "title": "Achats restaurés", "message": "Votre abonnement a été restauré avec succès." },
-  "restoreNone": { "title": "Rien à restaurer", "message": "Aucun achat précédent n'a été trouvé pour cet identifiant Apple." },
-  "restoreError": { "title": "Échec de la restauration", "message": "Nous n'avons pas pu restaurer vos achats. Veuillez réessayer." },
+  "restoreSuccess": {
+    "title": "Achats restaurés",
+    "message": "Votre abonnement a été restauré avec succès."
+  },
+  "restoreNone": {
+    "title": "Rien à restaurer",
+    "message": "Aucun achat précédent n'a été trouvé pour cet identifiant Apple."
+  },
+  "restoreError": {
+    "title": "Échec de la restauration",
+    "message": "Nous n'avons pas pu restaurer vos achats. Veuillez réessayer."
+  },
   "subscriptionInfo": "Les abonnements sont facturés annuellement et se renouvellent automatiquement, sauf annulation au moins 24 heures avant la fin de la période en cours. Vous pouvez gérer ou annuler votre abonnement dans les réglages de votre compte App Store.",
   "cta": {
     "continueWith": "Continuer avec {{planName}}"
@@ -87,5 +96,13 @@
       "description": "Vous êtes actuellement abonné via le site web. Gérez votre abonnement depuis celui-ci.",
       "confirm": "J'ai compris"
     }
+  },
+  "purchase": {
+    "processingTitle": "Paiement en cours",
+    "processingBody": "Veuillez patienter pendant que nous confirmons votre achat auprès d'Apple…",
+    "successTitle": "Tout est prêt !",
+    "successBody": "Votre abonnement est actif. Bon suivi de vos athlètes !",
+    "errorTitle": "Une erreur s'est produite",
+    "errorBody": "Nous n'avons pas pu vérifier votre achat. Réessayez ou contactez le support."
   }
 }

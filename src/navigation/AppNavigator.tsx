@@ -46,7 +46,7 @@ import ContactFeedbackScreen from '../screens/ProfileScreen/ContactFeedbackScree
 
 // ✅ SERVICES & CONTEXT
 import { tokenService } from '../services/tokenService';
-import { colors } from '../styles/common.styles';
+import { palette } from '../styles/common.styles';
 import { AuthContext } from '../context/AuthContext';
 import { navigationRef } from './navigationRef';
 
@@ -98,7 +98,7 @@ export const AppNavigator: React.FC = () => {
   if (isLoggedIn === null) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={palette.navy} />
       </View>
     );
   }

@@ -10,7 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
  
 import LiveTab from './LiveTab';
@@ -117,7 +117,7 @@ const EventsContent: React.FC<EventsContentProps> = ({
     return (
         <View style={{ flex: 1 }} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
             <TouchableOpacity style={ownProfile.backRow} onPress={onBack} activeOpacity={0.7}>
-                <Ionicons name="arrow-back" size={22} color={colors.gray900} />
+                <Ionicons name="arrow-back" size={22} color={palette.ink} />
                 <Text style={ownProfile.backLabel}>{t('ownProfile:backbtn.events')}</Text>
             </TouchableOpacity>
 
@@ -127,21 +127,13 @@ const EventsContent: React.FC<EventsContentProps> = ({
                     return (
                         <TouchableOpacity
                             key={tab}
-                            style={detailsStyles.tabItem}
+                            style={[detailsStyles.tabItem, isActive && detailsStyles.tabItemActive]}
                             onPress={() => handleTabPress(tab)}
                             activeOpacity={0.7}
                         >
                             <Text style={[commonStyles.subtitle, isActive && detailsStyles.activeTabText]}>
                                 {t(`profile:tab.${tab}`)}
                             </Text>
-                            {isActive && (
-                                <LinearGradient
-                                    colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={detailsStyles.underline}
-                                />
-                            )}
                         </TouchableOpacity>
                     );
                 })}

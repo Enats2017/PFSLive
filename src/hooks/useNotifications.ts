@@ -46,7 +46,8 @@ async function setupAndroidChannel(): Promise<void> {
       importance: Notifications.AndroidImportance.MAX,
       sound: "default",                 // ← the missing piece: plays the default tone
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#FF231F7C",
+      // design-audit-ignore: Android LED colour, #AARRGGBB — opaque palette.lime.
+      lightColor: "#FFC7D92C",
       enableVibrate: true,
       enableLights: true,
       showBadge: true,

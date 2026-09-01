@@ -9,6 +9,8 @@ import {
     StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { palette, radii, shadows, space, fonts, type, withAlpha } from '../styles/common.styles';
+import { useTranslation } from 'react-i18next';
 
 type PurchaseStatus = 'processing' | 'success' | 'error';
 
@@ -25,6 +27,7 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
     errorMessage,
     onClose,
 }) => {
+  const { t } = useTranslation();
     const scale = useRef(new Animated.Value(0.85)).current;
     const opacity = useRef(new Animated.Value(0)).current;
 
@@ -52,12 +55,12 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
         if (status === 'processing') {
             return (
                 <>
-                    <View style={[styles.iconHalo, { backgroundColor: '#EFF6FF' }]}>
-                        <ActivityIndicator size="large" color="#3B82F6" />
+                    <View style={[styles.iconHalo, { backgroundColor: palette.fill }]}>
+                        <ActivityIndicator size="large" color={palette.navy} />
                     </View>
-                    <Text style={styles.title}>Processing Payment</Text>
+                    <Text style={styles.title}>{t('membership:purchase.processingTitle')}</Text>
                     <Text style={styles.description}>
-                        Please wait while we confirm your purchase with Apple...
+                        {t('membership:purchase.processingBody')}
                     </Text>
                 </>
             );
@@ -66,14 +69,14 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
         if (status === 'success') {
             return (
                 <>
-                    <View style={[styles.iconHalo, { backgroundColor: '#EAFAD0' }]}>
-                        <View style={[styles.iconCore, { backgroundColor: '#C8F04F33' }]}>
-                            <Ionicons name="checkmark-circle" size={34} color="#1A2E35" />
+                    <View style={[styles.iconHalo, { backgroundColor: palette.noticeBg }]}>
+                        <View style={[styles.iconCore, { backgroundColor: palette.lime }]}>
+                            <Ionicons name="checkmark-circle" size={34} color={palette.ink} />
                         </View>
                     </View>
-                    <Text style={styles.title}>You're all set!</Text>
+                    <Text style={styles.title}>{t('membership:purchase.successTitle')}</Text>
                     <Text style={styles.description}>
-                        Your membership has been activated successfully. Enjoy tracking your athletes!
+                        {t('membership:purchase.successBody')}
                     </Text>
                 </>
             );
@@ -81,17 +84,17 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
 
         return (
             <>
-                <View style={[styles.iconHalo, { backgroundColor: '#FEE2E2' }]}>
-                    <View style={[styles.iconCore, { backgroundColor: '#FCA5A533' }]}>
-                        <Ionicons name="close-circle" size={34} color="#DC2626" />
+                <View style={[styles.iconHalo, { backgroundColor: palette.dangerBg }]}>
+                    <View style={[styles.iconCore, { backgroundColor: palette.dangerBg }]}>
+                        <Ionicons name="close-circle" size={34} color={palette.danger} />
                     </View>
                 </View>
-                <Text style={styles.title}>Something went wrong</Text>
+                <Text style={styles.title}>{t('membership:purchase.errorTitle')}</Text>
                 <Text style={styles.description}>
-                    {errorMessage || 'We could not verify your purchase. Please try again or contact support.'}
+                    {errorMessage || t('membership:purchase.errorBody')}
                 </Text>
                 <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.85}>
-                    <Text style={styles.closeButtonText}>Close</Text>
+                    <Text style={styles.closeButtonText}>{t('common:buttons.close')}</Text>
                 </TouchableOpacity>
             </>
         );
@@ -113,16 +116,8 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
                     ]}
                 >
                     <TouchableOpacity style={styles.iconclose} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name="close" size={20} color="#6B7280" />
+                        <Ionicons name="close" size={20} color={palette.textMuted} />
                     </TouchableOpacity>
-                    <View style={[
-                        styles.accentBar,
-                        {
-                            backgroundColor:
-                                status === 'processing' ? '#3B82F6' :
-                                status === 'success' ? '#C8F04F' : '#DC2626'
-                        }
-                    ]} />
                     <View style={styles.body}>
                         {renderContent()}
                     </View>
@@ -135,7 +130,7 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
 const styles = StyleSheet.create({
     backdrop: {
         flex: 1,
-        backgroundColor: 'rgba(15,23,32,0.6)',
+        backgroundColor: withAlpha(palette.ink, 0.6),
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 28,
@@ -143,32 +138,24 @@ const styles = StyleSheet.create({
     card: {
         width: '100%',
         maxWidth: 360,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 28,
+        backgroundColor: palette.surface,
+        borderRadius: radii.lg,
         overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 14 },
-        shadowOpacity: 0.22,
-        shadowRadius: 24,
-        elevation: 14,
-    },
-    accentBar: {
-        height: 5,
-        width: '100%',
+        ...shadows.overlay,
     },
     body: {
-        paddingTop: 30,
+        paddingTop: 32,
         paddingBottom: 28,
-        paddingHorizontal: 26,
+        paddingHorizontal: 24,
         alignItems: 'center',
     },
     iconHalo: {
         width: 84,
         height: 84,
-        borderRadius: 42,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 18,
+        marginBottom: space.md,
     },
     iconCore: {
         width: 60,
@@ -178,32 +165,27 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     title: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#111827',
+        ...type.h2,
         textAlign: 'center',
-        marginBottom: 10,
-        letterSpacing: -0.2,
+        marginBottom: space.sm,
     },
     description: {
-        fontSize: 14.5,
-        color: '#6B7280',
+        ...type.body,
+        color: palette.textMuted,
         textAlign: 'center',
-        lineHeight: 21,
-        paddingHorizontal: 4,
     },
     closeButton: {
-        marginTop: 22,
+        marginTop: 24,
         width: '100%',
-        paddingVertical: 14,
-        borderRadius: 16,
-        backgroundColor: '#1A2E35',
+        paddingVertical: 16,
+        borderRadius: radii.md,
+        backgroundColor: palette.navy,
         alignItems: 'center',
     },
     closeButtonText: {
+        fontFamily: fonts.display,
         fontSize: 15,
-        fontWeight: '700',
-        color: '#FFFFFF',
+        color: palette.surface,
     },
     iconclose:{
           position: 'absolute',
@@ -213,10 +195,9 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: palette.fill,
         alignItems: 'center',
         justifyContent: 'center',
-
     }
 });
 

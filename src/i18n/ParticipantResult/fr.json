@@ -1,7 +1,7 @@
 {
   "defaultEventName": "Événement",
   "subtitle": "Sélectionnez votre profil parmi les participants ci-dessous pour vous inscrire",
-  "button": "C'EST MOI",
+  "button": "C'est moi",
   "info": {
     "title": "Sélection manuelle requise",
     "message": "Nous n'avons pas pu faire correspondre automatiquement l'e-mail de votre compte avec les données d'inscription à la course. Veuillez trouver et sélectionner votre profil dans la liste ci-dessous pour finaliser l'inscription."

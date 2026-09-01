@@ -3,7 +3,7 @@ import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
-import { colors, commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette, space } from '../../styles/common.styles';
 import { CheckpointDetail } from '../../services/resultDetailsService';
 import { getFeatureIcon } from '../../utils/featureIcons';
 import { formatClockTime } from '../../utils/timeFormat';
@@ -17,8 +17,8 @@ interface LiveTimingPointProps {
 const AmenityIcons = (({ features, t }: { features?: string[]; t: any }) => {
     if (!features || features.length === 0) return null;
     return (
-        <View style={{ paddingBottom:5,justifyContent:"center", alignItems:"center"}}>
-            <Text style={commonStyles.subtitle}>
+        <View style={{ paddingBottom: 4,justifyContent:"center", alignItems:"center"}}>
+            <Text style={resultInfoStyles.rowLabel}>
                 {t('timingPoint.availableServices')}
             </Text>
             <View style={{ flexDirection: 'row',  gap: 6, flexWrap: 'wrap' }}>
@@ -26,13 +26,13 @@ const AmenityIcons = (({ features, t }: { features?: string[]; t: any }) => {
                     <View key={feature} style={{
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: colors.gray100,
-                        borderRadius: 8,
+                        backgroundColor: palette.fill,
+                        borderRadius: 10,
                         padding: 8,
                         minWidth: 36,
-                        marginTop:7
+                        marginTop: 8
                     }}>
-                        <Ionicons name={getFeatureIcon(feature)} size={18} color={colors.gray900} />
+                        <Ionicons name={getFeatureIcon(feature)} size={18} color={palette.ink} />
                     </View>
                 ))}
             </View>
@@ -99,21 +99,21 @@ const StatRow = memo(({
 }) => (
     <View style={resultInfoStyles.twoColRow}>
         <View style={resultInfoStyles.twoColLeft}>
-            <Text style={[commonStyles.subtitle, { textAlign: "center" }]}>{leftLabel}</Text>
-            <Text style={commonStyles.title}>{leftVal}</Text>
+            <Text style={resultInfoStyles.statLabel}>{leftLabel}</Text>
+            <Text style={resultInfoStyles.statValue}>{leftVal}</Text>
         </View>
         <View style={resultInfoStyles.verticalDivider} />
         <View style={resultInfoStyles.twoColRight}>
-            <Text style={[commonStyles.subtitle, { textAlign: "center" }]}>{rightLabel}</Text>
-            <Text style={commonStyles.title}>{rightVal}</Text>
+            <Text style={resultInfoStyles.statLabel}>{rightLabel}</Text>
+            <Text style={resultInfoStyles.statValue}>{rightVal}</Text>
         </View>
     </View>
 ));
 
 const StatCol = memo(({ label, value }: { label: string; value: string }) => (
     <View style={resultInfoStyles.bibCard}>
-        <Text style={commonStyles.subtitle}>{label}</Text>
-        <Text style={commonStyles.title}>{value}</Text>
+        <Text style={resultInfoStyles.rowLabel}>{label}</Text>
+        <Text style={resultInfoStyles.rowValue}>{value}</Text>
     </View>
 ));
 
@@ -123,38 +123,71 @@ const CenteredDistanceElevation = memo(({
     leftLabel: string; leftVal: string;
     rightLabel: string; rightVal: string;
 }) => (
-    <View style={{
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 40,
-    }}>
-        <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            width: '100%',
-        }}>
-            <View style={{
-                flex: 1,
-                alignItems: 'center',
-                gap: 8,
-            }}>
-                <Text style={commonStyles.subtitle}>{leftLabel}</Text>
-                <Text style={commonStyles.title}>{leftVal}</Text>
-            </View>
-            <View style={resultInfoStyles.verticalDivider} />
-            <View style={{
-                flex: 1,
-                alignItems: 'center',
-                gap: 8,
-            }}>
-                <Text style={commonStyles.subtitle}>{rightLabel}</Text>
-                <Text style={commonStyles.title}>{rightVal}</Text>
-            </View>
+    <View style={resultInfoStyles.twoColRow}>
+        <View style={resultInfoStyles.twoColLeft}>
+            <Text style={resultInfoStyles.statLabel}>{leftLabel}</Text>
+            <Text style={resultInfoStyles.statValue}>{leftVal}</Text>
+        </View>
+        <View style={resultInfoStyles.verticalDivider} />
+        <View style={resultInfoStyles.twoColRight}>
+            <Text style={resultInfoStyles.statLabel}>{rightLabel}</Text>
+            <Text style={resultInfoStyles.statValue}>{rightVal}</Text>
         </View>
     </View>
 ));
 
+
+// 30_CheckpointHistory.png: badge, name over distance, time over ranking.
+// The mockup has no timeline rail, so this head carries the identity that the
+// rail used to; the detail rows below it keep the data the old card showed.
+// The two values the old timeline rail carried: the length of the leg just
+// completed and the climb in it. The API computes both as "this checkpoint
+// minus the previous one", so they describe the leg BEHIND this point.
+const SegmentRow = memo(({ item, t }: { item: CheckpointDetail; t: any }) => {
+    if (!item.segment_distance && !item.segment_elevation_gain) return null;
+    return (
+        <StatRow
+            leftLabel={t('timingPoint.segmentDistance')}
+            leftVal={item.segment_distance ? `${item.segment_distance} ${t('units.km')}` : '—'}
+            rightLabel={t('timingPoint.segmentElevation')}
+            rightVal={item.segment_elevation_gain
+                ? `${item.segment_elevation_gain} ${t('units.meterPlus')}`
+                : '—'}
+        />
+    );
+});
+
+const CheckpointHead = memo(({
+    item, t, gender, showTime,
+}: { item: CheckpointDetail; t: any; gender?: string; showTime: boolean }) => (
+    <View style={resultInfoStyles.cpHead}>
+        <View style={[
+            resultInfoStyles.cpBadge,
+            item.is_finish && resultInfoStyles.cpBadgeFinish,
+            !item.is_crossed && resultInfoStyles.cpBadgePending,
+        ]}>
+            <Ionicons
+                name={item.is_finish ? 'flag' : item.is_crossed ? 'checkmark' : 'time-outline'}
+                size={20}
+                color={item.is_finish ? palette.lime : item.is_crossed ? palette.ink : palette.textMuted}
+            />
+        </View>
+
+        <View style={resultInfoStyles.cpHeadText}>
+            <Text style={resultInfoStyles.cpName} numberOfLines={1}>{item.name}</Text>
+            <Text style={resultInfoStyles.cpSub} numberOfLines={1}>{dist(item.distance, t)}</Text>
+        </View>
+
+        {showTime && (
+            <View style={resultInfoStyles.cpRight}>
+                <Text style={resultInfoStyles.cpTime}>{time(item.race_time, t)}</Text>
+                <Text style={resultInfoStyles.cpRank} numberOfLines={1}>
+                    {rankingWithGender(item.ranking, gender, item.rank_gender, t)}
+                </Text>
+            </View>
+        )}
+    </View>
+));
 
 const CheckpointCard = memo(({
     item,
@@ -177,15 +210,13 @@ const CheckpointCard = memo(({
     if (isUpcomingRace) {
         return (
             <View style={resultInfoStyles.timingcard}>
-                <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.title}>{item.name}</Text>
-                </View>
-                <CenteredDistanceElevation
-                    leftLabel={t('timingPoint.distance')}
-                    leftVal={dist(item.distance, t)}
-                    rightLabel={t('timingPoint.elevationGain')}
-                    rightVal={elevation(item.elevation_gain, t)}
+                <CheckpointHead item={item} t={t} gender={gender} showTime={false} />
+                <View style={resultInfoStyles.cpDivider} />
+                <StatCol
+                    label={t('timingPoint.elevationGain')}
+                    value={elevation(item.elevation_gain, t)}
                 />
+                <SegmentRow item={item} t={t} />
 
             </View>
         );
@@ -194,9 +225,7 @@ const CheckpointCard = memo(({
     if (isFirstCheckpoint && isStartedOrPastRace) {
         return (
             <View style={resultInfoStyles.timingcard}>
-                <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.title}>{item.name}</Text>
-                </View>
+                <Text style={resultInfoStyles.checkpointName} numberOfLines={1}>{item.name}</Text>
                 <StatCol
                     label={t('timingPoint.startTime')}
                     value={item.day_name
@@ -216,7 +245,6 @@ const CheckpointCard = memo(({
                     rightLabel={t('timingPoint.ranking')}
                     rightVal={rankingWithGender(item.ranking, gender, item.rank_gender, t)}
                 />
-                <View style={{ height: 30 }} />
             </View>
         );
     }
@@ -224,15 +252,13 @@ const CheckpointCard = memo(({
     if (isStartedOrPastRace && !isCrossed) {
         return (
             <View style={resultInfoStyles.timingcard}>
-                <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.title}>{item.name}</Text>
-                </View>
-                <CenteredDistanceElevation
-                    leftLabel={t('timingPoint.distance')}
-                    leftVal={dist(item.distance, t)}
-                    rightLabel={t('timingPoint.elevationGain')}
-                    rightVal={elevation(item.elevation_gain, t)}
+                <CheckpointHead item={item} t={t} gender={gender} showTime={false} />
+                <View style={resultInfoStyles.cpDivider} />
+                <StatCol
+                    label={t('timingPoint.elevationGain')}
+                    value={elevation(item.elevation_gain, t)}
                 />
+                <SegmentRow item={item} t={t} />
 
 
             </View>
@@ -242,9 +268,8 @@ const CheckpointCard = memo(({
     if (isStartedOrPastRace && isCrossed) {
         return (
             <View style={resultInfoStyles.timingcard}>
-                <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.title}>{item.name}</Text>
-                </View>
+                <CheckpointHead item={item} t={t} gender={gender} showTime />
+                <View style={resultInfoStyles.cpDivider} />
                 <StatCol
                     label={t('timingPoint.arrivalTime')}
                     value={item.day_name
@@ -252,18 +277,11 @@ const CheckpointCard = memo(({
                         : clockTime(item.actual_time, t)
                     }
                 />
-                <StatRow
-                    leftLabel={t('timingPoint.distance')}
-                    leftVal={dist(item.distance, t)}
-                    rightLabel={t('timingPoint.elevationGain')}
-                    rightVal={elevation(item.elevation_gain, t)}
+                <StatCol
+                    label={t('timingPoint.elevationGain')}
+                    value={elevation(item.elevation_gain, t)}
                 />
-                <StatRow
-                    leftLabel={t('timingPoint.time')}
-                    leftVal={time(item.race_time, t)}
-                    rightLabel={t('timingPoint.ranking')}
-                    rightVal={rankingWithGender(item.ranking, gender, item.rank_gender, t)}
-                />
+                <SegmentRow item={item} t={t} />
                 <StatRow
                     leftLabel={t('timingPoint.speed')}
                     leftVal={speed(item.speed, t)}
@@ -286,7 +304,7 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
     if (!checkpoints || checkpoints.length === 0) {
         return (
             <View style={resultInfoStyles.scrollContent}>
-                <Text style={commonStyles.subtitle}>
+                <Text style={resultInfoStyles.rowLabel}>
                     {t('timingPoint.noData')}
                 </Text>
             </View>
@@ -308,56 +326,11 @@ const LiveTimingPoint: React.FC<LiveTimingPointProps> = ({ checkpoints, raceStat
 
     return (
         <ScrollView
-            contentContainerStyle={[resultInfoStyles.scrollContent, { paddingHorizontal: 10 }]}
+            contentContainerStyle={[resultInfoStyles.scrollContent, { paddingHorizontal: space.xl }]}
             showsVerticalScrollIndicator={false}
         >
             {reversed.map((item, index) => (
-                <View key={index} style={resultInfoStyles.headerBar}>
-                    <View style={resultInfoStyles.leftCol}>
-                        {index === 0
-                            ? <View style={resultInfoStyles.iconSpacer} />
-                            : <View style={resultInfoStyles.lineTop} />
-                        }
-
-                        <View style={[
-                            resultInfoStyles.iconCircle,
-                            item.is_crossed && resultInfoStyles.iconCircleDone
-                        ]}>
-                            <Ionicons
-                                name={item.is_crossed ? 'checkmark' : 'time-outline'}
-                                size={14}
-                                color="#fff"
-                            />
-                        </View>
-
-                        {index < lastIndex && (
-                            <View style={resultInfoStyles.lineBottomWrap}>
-                                <View style={resultInfoStyles.lineBottom} />
-
-                                {/* Distance at TOP of line (blue) */}
-                                {/* ✅ Use reversed[index] — in descending order, the segment
-                                    between current and next item belongs to current item.
-                                    e.g. Finish.segment_distance = dist(CP2→Finish) */}
-                                {reversed[index]?.segment_distance && (
-                                    <View style={resultInfoStyles.segmentDistanceLabel}>
-                                        <Text style={resultInfoStyles.segmentDistanceText}>
-                                            {reversed[index].segment_distance} {t('units.km')}
-                                        </Text>
-                                    </View>
-                                )}
-
-                                {/* Elevation at BOTTOM of line (green) */}
-                                {reversed[index]?.segment_elevation_gain && (
-                                    <View style={resultInfoStyles.segmentElevationLabel}>
-                                        <Text style={resultInfoStyles.segmentElevationText}>
-                                            {reversed[index].segment_elevation_gain} {t('units.meterPlus')}
-                                        </Text>
-                                    </View>
-                                )}
-                            </View>
-                        )}
-                    </View>
-
+                <View key={index} style={resultInfoStyles.timelineRow}>
                     <CheckpointCard
                         item={item}
                         t={t}

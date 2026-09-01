@@ -9,7 +9,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, commonStyles } from '../styles/common.styles';
+import { commonStyles, palette, fonts, shadows } from '../styles/common.styles';
+import { useTranslation } from 'react-i18next';
 
 interface SuccessCelebrationModalProps {
   visible: boolean;
@@ -26,6 +27,7 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
   title = "Registration Successful!",
   onClose,
 }) => {
+  const { t } = useTranslation();
   const confettiAnims = useRef(
     Array.from({ length: 20 }, () => ({
       translateY: new Animated.Value(0),
@@ -96,11 +98,11 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
               left: Math.random() * width,
               top: -20,
               backgroundColor: [
-                colors.primary,
-                colors.success,
-                '#FFD700',
-                '#FF69B4',
-                '#00CED1',
+                palette.navy,
+                palette.lime,
+                palette.lime,
+                palette.navy,
+                palette.navyLift,
               ][index % 5],
               transform: [
                 { translateY: anim.translateY },
@@ -121,12 +123,12 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
             onPress={handleClose}
             activeOpacity={0.7}
           >
-            <Ionicons name="close" size={24} color="#64748b" />
+            <Ionicons name="close" size={24} color={palette.textMuted} />
           </TouchableOpacity>
 
           {/* Success Icon */}
           <View style={styles.iconWrapper}>
-            <Ionicons name="checkmark-circle" size={80} color={colors.primary} />
+            <Ionicons name="checkmark-circle" size={80} color={palette.navy} />
           </View>
 
           {/* Title */}
@@ -141,7 +143,7 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
             onPress={handleClose}
             activeOpacity={0.8}
           >
-            <Text style={commonStyles.primaryButtonText}>Got It!</Text>
+            <Text style={commonStyles.primaryButtonText}>{t('common:buttons.gotIt')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -163,18 +165,15 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
+    ...shadows.raised,
+
+    backgroundColor: palette.surface,
+    borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 40,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 12,
   },
   closeButton: {
     position: 'absolute',
@@ -183,7 +182,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: palette.fill,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -192,15 +191,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: fonts.display,
+        fontSize: 26,
+    color: palette.ink,
     textAlign: 'center',
     marginBottom: 12,
   },
   message: {
-    fontSize: 15,
-    color: '#64748b',
+    fontFamily: fonts.body,
+        fontSize: 15,
+    color: palette.textMuted,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 28,
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    backgroundColor: colors.primary,
+    backgroundColor: palette.navy,
   },
   confetti: {
     position: 'absolute',
