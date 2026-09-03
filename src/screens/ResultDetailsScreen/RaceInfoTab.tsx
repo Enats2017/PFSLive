@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Share } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
 import { commonStyles, typography, fonts } from '../../styles/common.styles';
 import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/resultDetailsService';
 import { formatClockTime } from '../../utils/timeFormat';
+import { Button } from '../../components/ui';
 
 // participant_status is open-ended: the API passes through whatever non-numeric
 // text the timing feed puts in `pos`, uppercased, alongside its own
@@ -19,10 +20,6 @@ interface Props {
 
 const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
     const { t } = useTranslation(['resultdetails', 'common']);
-
-    const lastCheckpoint = [...(checkpoints || [])]
-        .reverse()
-        .find(cp => cp.is_crossed);
 
     // Splits: every timing point the runner actually crossed, in race order.
     const splits = (checkpoints || []).filter(cp => cp.is_crossed && !cp.is_start);
@@ -50,6 +47,33 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                 ? t('common:gender.men')
                 : '';
         return genderLabel ? `${rt} ${genderLabel}` : rt;
+    };
+
+    // 29_RaceInfo.png closes the performance card with a full-width outlined
+    // "Share result" button. There is no public result URL to link to yet, so
+    // this shares the result as text - name, event, distance, time and place.
+    const handleShare = async () => {
+        const position = fmtRankTotal(raceInfo?.position, raceInfo?.position_total);
+        const params = {
+            name: raceInfo?.name ?? '',
+            event: event?.race_name ?? '',
+            distance: event?.distance_name ?? '',
+            time: raceInfo?.time ?? '',
+            position,
+        };
+        try {
+            await Share.share({
+                message: t(
+                    position === '—'
+                        ? 'raceInfo.shareBodyNoPosition'
+                        : 'raceInfo.shareBody',
+                    params,
+                ),
+            });
+        } catch {
+            // The user dismissed the sheet, or the platform refused it. Nothing
+            // to recover - never surface an error for a cancelled share.
+        }
     };
 
     // Never default to "finished": a missing status is not a finish, and an
@@ -197,6 +221,15 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                             </Text>
                         </View>
                     )}
+
+                    <View style={resultInfoStyles.shareRow}>
+                        <Button
+                            label={t('raceInfo.shareResult')}
+                            variant="secondary"
+                            icon="share-outline"
+                            onPress={handleShare}
+                        />
+                    </View>
                 </View>
             )}
 

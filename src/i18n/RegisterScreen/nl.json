@@ -1,6 +1,7 @@
 {
   "title": "Maak je account aan",
   "subtitle": "Duurt een minuut. Je bevestigt via e-mail.",
+  "createAccount": "Account aanmaken",
   "firstName": "Voornaam",
   "lastName": "Achternaam",
   "email": "E-mailadres",

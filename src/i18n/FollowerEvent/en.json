@@ -36,12 +36,13 @@
     "generic": "Something went wrong. Please try again."
   },
   "button": {
-    "viewprofile": "VIEW",
-    "follower": "FOLLOW",
+    "viewprofile": "View",
+    "follower": "Follow",
+    "following": "Following",
     "show_event": "Show event",
-    "unfollow": "UNFOLLOW",
+    "unfollow": "Unfollow",
     "favourite": "Add to favourite",
-    "remove": "REMOVE",
+    "remove": "Remove",
     "followback": "Follow back"
   }
 }

@@ -1,7 +1,7 @@
 {
   "button": {
-    "result": "RESULT",
-    "route": "ROUTE"
+    "result": "Result",
+    "route": "Route"
   },
   "noResults": "No finished events yet",
   "error": {

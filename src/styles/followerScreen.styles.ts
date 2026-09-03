@@ -47,6 +47,43 @@ import { spacing, palette, space, type, radii, fonts } from './common.styles';
         color: palette.ink,
     },
 
+    // 17_AthleteSearch.png: one inline action per row. Not following -> a filled
+    // navy "Follow" pill; already following -> the same fill chip as `viewChip`,
+    // reading "Following" as a state rather than an action.
+    followChip: {
+        backgroundColor: palette.navy,
+        borderRadius: radii.sm,
+        paddingHorizontal: space.lg,
+        paddingVertical: space.sm,
+        alignSelf: 'center',
+        minWidth: 92,
+        alignItems: 'center',
+    },
+    followChipText: {
+        fontFamily: fonts.bodySemi,
+        fontSize: 13,
+        color: palette.surface,
+    },
+
+    // 19_FavouriteAthletes.png: the row's only action is destructive, and the
+    // deck draws it in the danger colour - white ground, red hairline, red label.
+    removeChip: {
+        backgroundColor: palette.surface,
+        borderWidth: 1.5,
+        borderColor: palette.danger,
+        borderRadius: radii.sm,
+        paddingHorizontal: space.lg,
+        paddingVertical: space.sm,
+        alignSelf: 'center',
+        minWidth: 92,
+        alignItems: 'center',
+    },
+    removeChipText: {
+        fontFamily: fonts.bodySemi,
+        fontSize: 13,
+        color: palette.danger,
+    },
+
     infoCard: {
         flexDirection: 'row',
         backgroundColor: palette.surface,

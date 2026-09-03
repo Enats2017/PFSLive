@@ -1,7 +1,7 @@
 {
   "button": {
-    "result": "RESULTAAT",
-    "route": "ROUTE"
+    "result": "Resultaat",
+    "route": "Route"
   },
   "noResults": "Nog geen afgelopen evenementen",
   "error": {

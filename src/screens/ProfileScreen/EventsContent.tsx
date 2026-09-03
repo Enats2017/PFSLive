@@ -10,7 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { commonStyles, spacing, palette } from '../../styles/common.styles';
+import { spacing, palette } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
  
 import LiveTab from './LiveTab';
@@ -131,7 +131,7 @@ const EventsContent: React.FC<EventsContentProps> = ({
                             onPress={() => handleTabPress(tab)}
                             activeOpacity={0.7}
                         >
-                            <Text style={[commonStyles.subtitle, isActive && detailsStyles.activeTabText]}>
+                            <Text style={[detailsStyles.tabText, isActive && detailsStyles.activeTabText]}>
                                 {t(`profile:tab.${tab}`)}
                             </Text>
                         </TouchableOpacity>

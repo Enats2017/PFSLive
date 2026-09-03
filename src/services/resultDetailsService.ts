@@ -103,6 +103,15 @@ export interface RunnerInfo {
     age: string;
     gender: string;
     profile_picture: string;
+    /**
+     * Career totals for the 28_RunnerInfo.png card, sent only for a runner
+     * linked to a Livio account (0 otherwise). `podiums` is null until finish
+     * positions are joined from the partner results feed - they are not in our
+     * tables - so the row renders a dash.
+     */
+    races?: number;
+    career_distance?: number;
+    podiums?: number | null;
 }
 
 export interface ResultDetailResponse {

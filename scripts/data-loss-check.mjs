@@ -43,7 +43,31 @@ if (process.argv.includes('--selftest')) {
   process.exit(ok1 && ok2 ? 0 : 1);
 }
 
-const changed = execSync('git diff --name-only HEAD', { encoding: 'utf8' })
+
+// Baseline to compare against. Defaults to HEAD, which is the right answer
+// while the work is still uncommitted. Once it is COMMITTED the tree is clean
+// and HEAD makes this check vacuous - it reports 0 by construction, not by
+// verification. Pass the branch base instead:
+//   node scripts/data-loss-check.mjs <ref>
+// The redesign baseline is f471d86 (the commit design_newv0.2 forked from).
+const BASE = process.argv.slice(2).find((a) => !a.startsWith('--')) || 'HEAD';
+
+// `git show` writes "fatal: path ... exists on disk, but not in <ref>" to
+// stderr for every file added since BASE. Those are expected, not errors, so
+// swallow them rather than letting them drown the report.
+const showAt = (file) => {
+  try {
+    return execSync(`git show ${BASE}:"${file}"`, {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      maxBuffer: 32 * 1024 * 1024,
+    });
+  } catch {
+    return null; // added since BASE - nothing to lose
+  }
+};
+
+const changed = execSync(`git diff --name-only ${BASE}`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] })
   .split('\n')
   .filter((f) => f.endsWith('.tsx') || f.endsWith('.ts'))
   .filter((f) => existsSync(f));
@@ -52,12 +76,8 @@ let totalLost = 0;
 const rows = [];
 
 for (const file of changed) {
-  let head;
-  try {
-    head = execSync(`git show HEAD:${file}`, { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
-  } catch {
-    continue; // new file — nothing to lose
-  }
+  const head = showAt(file);
+  if (head === null) continue;
   const before = extract(head);
   const after = extract(readFileSync(file, 'utf8'));
   const lost = [...before].filter((x) => !after.has(x));
@@ -67,7 +87,7 @@ for (const file of changed) {
   }
 }
 
-console.log('\nData-loss check (working tree vs HEAD)');
+console.log(`\nData-loss check (working tree vs ${BASE})`);
 console.log('──────────────────────────────────────');
 console.log(`  ${changed.length} changed files, ${rows.length} with something no longer rendered\n`);
 rows.sort((a, b) => b[1].length - a[1].length);

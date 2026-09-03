@@ -36,12 +36,13 @@
     "generic": "Er is iets misgegaan. Probeer het opnieuw."
   },
   "button": {
-    "viewprofile": "BEKIJK",
-    "follower": "VOLGEN",
+    "viewprofile": "Bekijk",
+    "follower": "Volgen",
+    "following": "Volgend",
     "show_event": "Toon evenement",
-    "unfollow": "ONTVOLGEN",
+    "unfollow": "Ontvolgen",
     "favourite": "Toevoegen aan favorieten",
-    "remove": "VERWIJDEREN",
-    "followback": "TERUGVOLGEN"
+    "remove": "Verwijderen",
+    "followback": "Terugvolgen"
   }
 }

@@ -35,7 +35,10 @@
     "averagePace": "Average pace",
     "finishers": "Finishers",
     "perKm": "/ km",
-    "ofField": "{{finishers}} of {{total}}"
+    "ofField": "{{finishers}} of {{total}}",
+    "shareResult": "Share result",
+    "shareBody": "{{name}} - {{event}} {{distance}}: {{time}}, position {{position}}",
+    "shareBodyNoPosition": "{{name}} - {{event}} {{distance}}: {{time}}"
   },
   "timingPoint": {
     "checkpoint": "CHECKPOINT",
@@ -61,7 +64,11 @@
     "utmbSeries": "World series",
     "noClub": "—",
     "viewOnMap": "View on map",
-    "thisRace": "This race"
+    "thisRace": "This race",
+    "career": "Career",
+    "races": "Races",
+    "totalDistance": "Distance",
+    "podiums": "Podiums"
   },
   "awards": {
     "time": "TIME",

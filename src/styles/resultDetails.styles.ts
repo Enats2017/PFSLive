@@ -57,6 +57,9 @@ export const resultInfoStyles = StyleSheet.create({
     flexDirection: "row",
     gap: space.xxl,
     paddingHorizontal: space.xl,
+    // Matches `tabBarUnderline` in details.styles.ts / event.ts — the in-page
+    // tab strip has one vertical rhythm wherever it appears.
+    paddingTop: space.lg,
     backgroundColor: palette.surface,
   },
   tabItem: {
@@ -66,7 +69,8 @@ export const resultInfoStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  // ✅ Redesign: the active tab is a navy pill, matching the shared tab bar.
+  // ✅ Redesign: these are IN-PAGE content tabs, so the active state is the
+  // lime underline — not the navy pill used for filter groups.
   tabItemActive: {
     borderBottomColor: palette.lime,
   },
@@ -79,13 +83,12 @@ export const resultInfoStyles = StyleSheet.create({
     fontFamily: fonts.display,
     color: palette.ink,
   },
-  tabUnderline: {
-    position: "absolute",
-    bottom: 0,
-    left: 8,
-    right: 8,
-    height: 3,
-    borderRadius: 2,
+  // 29_RaceInfo.png: the performance card closes with a full-width outlined
+  // button, inset to the card's own padding and separated from the last row.
+  shareRow: {
+    // `card` already supplies the horizontal padding the rows sit in, so
+    // the button only needs separating from the last row above it.
+    paddingTop: space.lg,
   },
   pageList: {
     flex: 1,

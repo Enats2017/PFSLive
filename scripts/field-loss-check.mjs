@@ -12,6 +12,7 @@
 // shell heredoc collapses it to a literal backspace, which silently matches
 // nothing — this file reported "0 fields lost" for exactly that reason once.
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 const OBJECTS = ['item', 'raceInfo', 'runnerInfo', 'profile', 'participant', 'cp'];
 const PATTERN = String.raw`\b(?:OBJ)\??\.([A-Za-z_][A-Za-z0-9_]*)\b`
@@ -65,7 +66,28 @@ if (process.argv.includes('--selftest')) {
   process.exit(ok ? 0 : 1);
 }
 
-const changed = execSync('git diff --name-only -- "src/**/*.tsx"', { encoding: 'utf8' })
+
+// Baseline to compare against. Defaults to HEAD, which is the right answer
+// while the work is still uncommitted. Once it is COMMITTED the tree is clean
+// and HEAD makes this check vacuous - it reports 0 by construction, not by
+// verification. Pass the branch base instead:
+//   node scripts/field-loss-check.mjs <ref>
+// The redesign baseline is f471d86 (the commit design_newv0.2 forked from).
+const BASE = process.argv.slice(2).find((a) => !a.startsWith('--')) || 'HEAD';
+
+// `git show` writes "fatal: path ... exists on disk, but not in <ref>" to
+// stderr for every file added since BASE, and `git diff` warns about line
+// endings. Both are expected, not errors, so keep stderr out of the report.
+const QUIET = { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] };
+const showAt = (file) => {
+  try {
+    return execSync(`git show ${BASE}:"${file}"`, QUIET);
+  } catch {
+    return null; // added since BASE - nothing to lose
+  }
+};
+
+const changed = execSync(`git diff --name-only ${BASE} -- "src/**/*.tsx"`, QUIET)
   .split('\n').map((s) => s.trim()).filter(Boolean);
 
 console.log('\nData fields the redesign stopped rendering');
@@ -74,12 +96,12 @@ console.log('  Each is a judgement call: a de-duplicated value, or one to put ba
 
 let total = 0;
 for (const file of changed) {
-  let before;
+  const before = showAt(file);
+  if (before === null) continue;
   let after;
   try {
-    before = execSync(`git show HEAD:"${file}"`, { encoding: 'utf8' });
-    after = execSync(`git show :"${file}" 2>/dev/null || cat "${file}"`, { encoding: 'utf8' });
-  } catch { continue; }
+    after = readFileSync(file, 'utf8');
+  } catch { continue; } // deleted since BASE
   const now = fieldsOf(after);
   const lost = [...fieldsOf(before)].filter((f) => !now.has(f)).sort();
   if (lost.length) {

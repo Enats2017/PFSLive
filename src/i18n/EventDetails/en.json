@@ -6,7 +6,7 @@
   "button": "Live tracking",
   "register": "Register",
   "undo": "Undo for signup",
-  "gpx": "Download GPX",
+  "gpx": "GPX",
   "live": "Live",
   "countdown": {
     "live": "Live",
@@ -31,7 +31,7 @@
     "noResults": "No participants found for",
     "favorite": "Add to favourite",
     "unknownName": "Unknown participant",
-    "results": "RESULTS"
+    "results": "Results"
   },
   "tracking": {
     "live": "Live tracking active",
@@ -138,7 +138,7 @@
     "noResultsMessage": "The GPX route file is not available for this event yet."
   },
   "iosnotnow": "Not now",
-  "map": "MAP",
+  "map": "Map",
   "wave": "Wave",
   "chart": {
     "elevationProfile": "Elevation profile",

@@ -185,7 +185,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     const renderCard = useCallback(
         ({ item }: { item: FavouriteItem }) => (
             <FanEventCard
-                analyticsScreenName={ANALYTICS_SCREENS.USER_FAVOURITES}
+                variant="favourite"
                 item={item}
                 isFollowed={isFollowed(item.customer_app_id)}
                 isLoading={isLoading(item.customer_app_id)}

@@ -35,7 +35,10 @@
     "averagePace": "Gemiddeld tempo",
     "finishers": "Finishers",
     "perKm": "/ km",
-    "ofField": "{{finishers}} van {{total}}"
+    "ofField": "{{finishers}} van {{total}}",
+    "shareResult": "Resultaat delen",
+    "shareBody": "{{name}} - {{event}} {{distance}}: {{time}}, positie {{position}}",
+    "shareBodyNoPosition": "{{name}} - {{event}} {{distance}}: {{time}}"
   },
   "timingPoint": {
     "checkpoint": "CHECKPOINT",
@@ -61,7 +64,11 @@
     "utmbSeries": "World series",
     "noClub": "—",
     "viewOnMap": "Bekijk op de kaart",
-    "thisRace": "Deze wedstrijd"
+    "thisRace": "Deze wedstrijd",
+    "career": "Carrière",
+    "races": "Wedstrijden",
+    "totalDistance": "Afstand",
+    "podiums": "Podiums"
   },
   "awards": {
     "time": "TIJD",

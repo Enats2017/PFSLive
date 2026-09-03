@@ -13,6 +13,7 @@
 // A guard that vanished is a rule that no longer applies. Judgement is still
 // required: some were removed on purpose.
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 /** `{cond && (`, `{cond ? `, and `cond ? x : y` inside JSX props. */
 const GUARD = /\{\s*([^{}]{2,90}?)\s*&&\s*\(/g;
@@ -55,7 +56,28 @@ if (process.argv.includes('--selftest')) {
   process.exit(ok ? 0 : 1);
 }
 
-const changed = execSync('git diff --name-only -- "src/**/*.tsx"', { encoding: 'utf8' })
+
+// Baseline to compare against. Defaults to HEAD, which is the right answer
+// while the work is still uncommitted. Once it is COMMITTED the tree is clean
+// and HEAD makes this check vacuous - it reports 0 by construction, not by
+// verification. Pass the branch base instead:
+//   node scripts/condition-check.mjs <ref>
+// The redesign baseline is f471d86 (the commit design_newv0.2 forked from).
+const BASE = process.argv.slice(2).find((a) => !a.startsWith('--')) || 'HEAD';
+
+// `git show` writes "fatal: path ... exists on disk, but not in <ref>" to
+// stderr for every file added since BASE, and `git diff` warns about line
+// endings. Both are expected, not errors, so keep stderr out of the report.
+const QUIET = { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] };
+const showAt = (file) => {
+  try {
+    return execSync(`git show ${BASE}:"${file}"`, QUIET);
+  } catch {
+    return null; // added since BASE - nothing to lose
+  }
+};
+
+const changed = execSync(`git diff --name-only ${BASE} -- "src/**/*.tsx"`, QUIET)
   .split('\n').map((s) => s.trim()).filter(Boolean);
 
 console.log('\nShow/hide rules the redesign dropped');
@@ -65,12 +87,12 @@ console.log('  each still needs a human call.\n');
 
 let total = 0;
 for (const file of changed) {
-  let before;
+  const before = showAt(file);
+  if (before === null) continue;
   let after;
   try {
-    before = execSync(`git show HEAD:"${file}"`, { encoding: 'utf8' });
-    after = execSync(`cat "${file}"`, { encoding: 'utf8' });
-  } catch { continue; }
+    after = readFileSync(file, 'utf8');
+  } catch { continue; } // deleted since BASE
   const now = guardsOf(after);
   const lost = [...guardsOf(before)].filter((g) => !now.has(g));
   if (lost.length) {

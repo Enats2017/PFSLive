@@ -36,12 +36,13 @@
     "generic": "Une erreur s'est produite. Veuillez réessayer."
   },
   "button": {
-    "viewprofile": "VOIR",
-    "follower": "SUIVRE",
+    "viewprofile": "Voir",
+    "follower": "Suivre",
+    "following": "Suivi",
     "show_event": "Afficher l'événement",
     "unfollow": "Ne plus suivre",
     "favourite": "Ajouter aux favoris",
-    "remove": "SUPPRIMER",
+    "remove": "Supprimer",
     "followback": "Suivre en retour"
   }
 }

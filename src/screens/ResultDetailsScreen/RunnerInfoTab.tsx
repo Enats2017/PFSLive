@@ -165,6 +165,39 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
                 </View>
             )}
 
+            {/* 28_RunnerInfo.png closes with a career card. It only exists for a
+                runner linked to a Livio account - an unlinked bib has no history
+                to count, and the API sends 0. Podiums stays a dash: finishing
+                positions live in the partner results feed, not in our tables. */}
+            {!!runnerInfo?.races && (
+                <View style={resultInfoStyles.card}>
+                    <Text style={resultInfoStyles.sectionLabel}>{t('runnerInfo.career')}</Text>
+
+                    <View style={resultInfoStyles.bibCard}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('runnerInfo.races')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>{runnerInfo.races}</Text>
+                    </View>
+
+                    {!!runnerInfo.career_distance && (
+                        <View style={resultInfoStyles.bibCard}>
+                            <Text style={resultInfoStyles.rowLabel}>
+                                {t('runnerInfo.totalDistance')}
+                            </Text>
+                            <Text style={resultInfoStyles.rowValue}>
+                                {runnerInfo.career_distance} {t('units.km')}
+                            </Text>
+                        </View>
+                    )}
+
+                    <View style={resultInfoStyles.bibCard}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('runnerInfo.podiums')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>
+                            {typeof runnerInfo.podiums === 'number' ? runnerInfo.podiums : '—'}
+                        </Text>
+                    </View>
+                </View>
+            )}
+
             <View>
                 {showMapButton && (
                     <TouchableOpacity

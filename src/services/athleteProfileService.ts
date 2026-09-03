@@ -40,6 +40,10 @@ export interface AthleteEvent {
   name: string;
   race_date_formatted: string;
   race_time: string;
+  // 09_YourEvents.png prefixes the meta line with the distance. The API has
+  // always sent it (participant_profile_api.php formatEvents) — it was simply
+  // never declared here, so the card could not read it.
+  race_distance?: string;
   event_source: string;
   race_status?: "not_started" | "in_progress" | "finished";
    can_delete?: number;

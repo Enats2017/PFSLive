@@ -6,7 +6,7 @@
   "button": "Suivi en direct",
   "undo": "Annuler l'inscription",
   "register": "S'inscrire",
-  "gpx": "Télécharger GPX",
+  "gpx": "GPX",
   "live": "En direct",
   "countdown": {
     "live": "En direct",
@@ -31,7 +31,7 @@
     "noResults": "Aucun participant trouvé pour",
     "favorite": "Ajouter aux favoris",
     "unknownName": "Participant inconnu",
-    "results": "RÉSULTATS"
+    "results": "Résultats"
   },
   "tracking": {
     "live": "Suivi en Direct Actif",
@@ -138,7 +138,7 @@
     "noResultsMessage": "Le fichier de tracé GPX n'est pas encore disponible pour cet événement."
   },
   "iosnotnow": "Not Now",
-  "map": "CARTE",
+  "map": "Carte",
   "wave": "Vague",
   "chart": {
     "elevationProfile": "Profil altimétrique",

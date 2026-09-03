@@ -5,8 +5,8 @@
   },
   "button": "Live Tracking",
   "register": "Registreren",
-  "undo": "AFMELDEN",
-  "gpx": "Download GPX",
+  "undo": "Afmelden",
+  "gpx": "GPX",
   "live": "Live",
   "countdown": {
     "live": "Live",
@@ -31,7 +31,7 @@
     "noResults": "Geen deelnemers gevonden voor",
     "favorite": "Toevoegen aan favorieten",
     "unknownName": "Onbekende deelnemer",
-    "results": "RESULTATEN"
+    "results": "Resultaten"
   },
   "tracking": {
     "live": "Live Tracking Actief",

@@ -1,6 +1,7 @@
 {
   "title": "Create your account",
   "subtitle": "Takes a minute. You will verify by email.",
+  "createAccount": "Create account",
   "firstName": "First name",
   "lastName": "Last name",
   "email": "Email address",

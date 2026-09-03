@@ -18,12 +18,27 @@ interface EventCardPastProps {
 }
 
 const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastProps) => {
-    const { t } = useTranslation(['profile', 'ownProfile']);
+    const { t } = useTranslation(['profile', 'ownProfile', 'resultdetails']);
     const navigation = useNavigation<NavigationProp>();
 
     const canShowResultButton = useCallback(() => {
         return item.race_result_status === 1 && !!item.race_result_api_url;
     }, [item.race_result_status, item.race_result_api_url]);
+
+    // 09_YourEvents.png reads "42 km · 25 August 2026" — the distance leads the
+    // meta line. `race_distance` comes straight from the participant row, so its
+    // shape varies across timing feeds ("42", "42 km", "42K"); only append the
+    // unit when the value is a bare number. Parts are joined the way ResultCard
+    // does it, so a missing one leaves no stray separator.
+    const metaLine = [
+        item.race_distance
+            ? (/^[\d.,]+$/.test(item.race_distance.trim())
+                ? `${item.race_distance.trim()} ${t('resultdetails:units.km')}`
+                : item.race_distance.trim())
+            : null,
+        item.race_date_formatted,
+        formatClockTime(item.race_time),
+    ].filter(Boolean).join(' · ');
 
     const handlePress = useCallback(() => {
         if (isOwnProfile) {
@@ -62,7 +77,7 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
                     <MaterialCommunityIcons name="calendar-month-outline" size={16} color={palette.textMuted} style={{ marginRight: 4 }} />
                     {/* ✅ Same overflow guard as EventCardLive — see the note there. */}
                     <Text style={[commonStyles.date, { flexShrink: 1 }]} numberOfLines={1}>
-                        {item.race_date_formatted} {formatClockTime(item.race_time)}
+                        {metaLine}
                     </Text>
                 </View>
             </View>

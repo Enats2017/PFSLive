@@ -28,6 +28,12 @@ const BUDGETS = [
   { name: 'bottom nav label', match: /^common:nav\./, px: 10, budget: 89 },
   { name: 'lime band title', match: /^common:band\./, px: 12, budget: 350, weight: 0.62 },
   { name: 'result-detail tab', match: /^Resultdetails:tabs\./, px: 15, budget: 150 },
+  // The distance-row action buttons (detailsStyles.routeButton /
+  // .resultsButton) are minWidth 130 less space.xl of padding each side, so
+  // about 90pt of room at 13px display. They sit in a row beside a flexible
+  // distance name, so an over-long label does not clip - the button grows
+  // and squeezes the name instead, which is just as wrong and less visible.
+  { name: 'distance action button', match: /^(EventDetails:(gpx|map)$|RaceResult:button\.)/, px: 13, budget: 90, weight: 0.6 },
 ];
 
 const flatten = (obj, prefix = '', out = {}) => {
@@ -80,7 +86,12 @@ if (process.argv.includes('--selftest')) {
 }
 
 // ── wiring: what does index.ts actually load, per language? ────────────────
-const indexSrc = readFileSync(join(I18N, 'index.ts'), 'utf8');
+// index.ts is CRLF on Windows. The block regex below anchors on `},` + a
+// newline, and a stray CR between them made it match NOTHING - which left
+// `wiredFolders` empty, so every namespace was reported as an ORPHAN and
+// SKIPPED. PARITY/LEAK/WIDTH then read 0 because nothing was ever checked.
+// Normalise the line endings before parsing.
+const indexSrc = readFileSync(join(I18N, 'index.ts'), 'utf8').replace(/\r\n/g, '\n');
 const symbolFolder = {};
 for (const m of indexSrc.matchAll(/import\s+(\w+)\s+from\s+["']\.\/([\w]+)\/\w+\.json["']/g)) {
   symbolFolder[m[1]] = m[2];
@@ -105,6 +116,14 @@ for (const [alias, langs] of Object.entries(aliasFolders)) {
   for (const lang of LANGS) {
     if (!langs[lang]) findings.MAPPING.push(`${alias} has no ${lang} entry in index.ts`);
   }
+}
+
+// If the wiring parse comes back empty the checks below are vacuous, so say
+// so loudly instead of printing a clean bill of health.
+if (wiredFolders.size === 0) {
+  console.error('\n  i18n-check: could not parse any namespace wiring out of i18n/index.ts.');
+  console.error('  Every check below would read 0 for that reason alone. Aborting.\n');
+  process.exit(1);
 }
 
 const namespaces = readdirSync(I18N).filter((d) => statSync(join(I18N, d)).isDirectory());

@@ -402,7 +402,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                                 onPress={() => handleTabPress(tab)}
                                 activeOpacity={0.7}
                             >
-                                <Text style={[commonStyles.subtitle, isActive && detailsStyles.activeTabText]}>
+                                <Text style={[detailsStyles.tabText, isActive && detailsStyles.activeTabText]}>
                                     {t(`profile:tab.${tab}`)}
                                 </Text>
                             </TouchableOpacity>

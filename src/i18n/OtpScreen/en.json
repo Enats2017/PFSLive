@@ -1,6 +1,6 @@
 {
-  "title": "Verify your email",
-  "subtitle": "We sent a 6-digit verification code to",
+  "title": "Check your inbox",
+  "subtitle": "We sent a six-digit code to",
   "verifyButton": "Verify",
   "didntReceive": "Didn't receive the code?",
   "resend": "Resend",

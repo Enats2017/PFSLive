@@ -566,7 +566,9 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
             {/* Submit Button */}
             <View style={registerStyles.buttonSection}>
               <Button
-                label={t('common:buttons.save')}
+                // 04_Register.png names the primary CTA "Create account" - the
+                // generic Save label belongs to edit forms, not to sign-up.
+                label={t('register:createAccount')}
                 onPress={handleSubmit}
                 loading={loading}
               />
