@@ -118,7 +118,8 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                             </Text>
                         </View>
                         <View style={favstyle.identityText}>
-                            <Text style={favstyle.runnerName} numberOfLines={1}>{fullName}</Text>
+                            {/* Long names wrap rather than truncate (review request). */}
+                            <Text style={favstyle.runnerName} numberOfLines={2}>{fullName}</Text>
                             {/* Two lines so nothing is hidden. The first is the
                                 deck's line (25_Favourites.png: "Bib 640 · 80 km");
                                 the second carries the nationality and age the app

@@ -71,7 +71,7 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                         <View style={homeStyles.cardTop}>
                             {/* Left: name + time */}
                             <View style={homeStyles.eventBody}>
-                                <Text style={[commonStyles.title,{marginBottom:spacing.xs}]} numberOfLines={1}>
+                                <Text style={commonStyles.title} numberOfLines={1}>
                                     {event.event_name}
                                 </Text>
                                
@@ -82,7 +82,7 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                                     </Text>
                                 </View>
                                  {event.race_distance ? (
-                                    <View style={[homeStyles.eventMeta,{marginBottom:spacing.xs}]}>
+                                    <View style={homeStyles.eventMeta}>
                                         <Ionicons name="location" size={13} color={palette.textBody} />  {/* ✅ map icon for distance */}
                                         <Text style={commonStyles.date}>
                                             {event.race_distance}

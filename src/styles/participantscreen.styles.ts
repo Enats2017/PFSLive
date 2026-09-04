@@ -26,7 +26,10 @@ import { spacing, palette, radii, space, type, fonts } from './common.styles';
     },
 
     dividerRow: {
-        paddingVertical: space.xl,
+        // Only ABOVE: the section label that follows already brings 20pt of its
+        // own, and 20 + 20 left a 40pt hole between the OR rule and the heading.
+        paddingTop: space.xl,
+        paddingBottom: 0,
         // Without this the OR rule ran the full screen width while everything
         // around it was inset.
         paddingHorizontal: space.xl,

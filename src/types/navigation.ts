@@ -22,6 +22,11 @@ export type RootStackParamList = {
     event_name: string;
     event_image?: string; 
     auto_register_id: number | null;
+    /**
+     * Which list the event was opened from. A PAST event cannot be registered
+     * for or tracked, so its card shows the Results button alone.
+     */
+    sourceTab?: 'live' | 'past' | 'upcoming';
   };
   ParticipantResult: {
     product_app_id: string | number;

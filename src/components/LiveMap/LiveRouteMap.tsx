@@ -20,7 +20,7 @@ const MARKER_COLORS = {
 } as const;
 
 // ── Distance-marker styling ───────────────────────────────────────────────────
-const KM_MARKER_COLOR  = palette.textBody; // slate — neutral dot anchor (labels tinted per leg)
+const KM_MARKER_COLOR  = mapColors.kmMarker; // slate — neutral dot anchor (labels tinted per leg)
 const MINOR_KM_MIN_ZOOM = 13;       // every-km markers appear once zoomed in past this
                                     // (major 5km markers are always visible)
 
@@ -1008,7 +1008,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         id="route-line-out-casing"
                         filter={['==', ['get', 'leg'], 'out'] as any}
                         style={{
-                            lineColor: mapColors.checkpoint,
+                            lineColor: mapColors.routeCasing,
                             lineWidth: 7,            // wider than the 4px line on top
                             lineCap: 'round',
                             lineJoin: 'round',
@@ -1019,7 +1019,7 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                         id="route-line-in-casing"
                         filter={['==', ['get', 'leg'], 'in'] as any}
                         style={{
-                            lineColor: mapColors.checkpoint,
+                            lineColor: mapColors.routeCasing,
                             lineWidth: 7,
                             lineCap: 'round',
                             lineJoin: 'round',

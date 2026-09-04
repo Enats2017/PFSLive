@@ -192,11 +192,13 @@ export const favstyle = StyleSheet.create({
     gap: space.md,
   },
 
-  // 25_Favourites.png left-aligns the three stat columns under the divider;
-  // centring them left ragged gaps that read as uneven spacing.
+  // Centred between the separator rules. 25_Favourites.png draws these columns
+  // left-aligned AND without rules; since the rules are kept (review request),
+  // centring is what reads correctly between them - left-aligned content sat
+  // against the rule on its left.
   statCol: {
     flex: 1,
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "center",
   },
 
@@ -218,7 +220,7 @@ export const favstyle = StyleSheet.create({
     fontFamily: fonts.bodySemi,
     fontSize: 10,
     color: palette.textMuted,
-    textAlign: "left",
+    textAlign: "center",
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: space.xs,
@@ -228,7 +230,7 @@ export const favstyle = StyleSheet.create({
     fontFamily: fonts.bodySemi,
     fontSize: 20,
     color: palette.ink,
-    textAlign: "left",
+    textAlign: "center",
   },
 
   // ── Finish time (kept for backward compatibility) ────────
@@ -293,6 +295,9 @@ export const favstyle = StyleSheet.create({
     color: palette.textBody,
   },
 
+  // Shared with ResultList/ParticipantCard, which puts INITIALS in this circle,
+  // not a bib number - so the neutral fill stays here. The lime treatment is
+  // `bibBoxLime` below, for the circle that really does hold a bib.
   bibBox: {
     width: 46,
     height: 46,
@@ -300,6 +305,16 @@ export const favstyle = StyleSheet.create({
     backgroundColor: palette.fill,
     justifyContent: "center",
     alignItems: "center",
+    flexShrink: 0,
+  },
+  // All Runners: a lime circle, as asked - the deck's rank-circle treatment
+  // (26_ResultList.png), which makes the bib number the first thing you see.
+  //
+  // The number stays NAVY, not white. White on this lime measures 1.57:1, far
+  // under the 4.5:1 AA floor, and would be LESS legible than what it replaced;
+  // navy on lime is 9.82:1, and is what the deck's lime circles use.
+  bibBoxLime: {
+    backgroundColor: palette.lime,
   },
   bibBoxText: {
     fontFamily: fonts.display,
@@ -326,7 +341,8 @@ export const favstyle = StyleSheet.create({
     borderColor: palette.inputBorder,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 4,
+    // No marginRight: `participantcard`'s gap already spaces it from the name.
+    flexShrink: 0,
   },
 
   righticon: {

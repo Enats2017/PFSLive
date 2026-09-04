@@ -31,14 +31,16 @@ const AllParticipantCard: React.FC<AllParticipantCardProps> = React.memo(({
 
     return (
         <View style={favstyle.participantcard}>
-            <View style={favstyle.bibBox}>
+            <View style={[favstyle.bibBox, favstyle.bibBoxLime]}>
                 {/* `primaryButtonText` is WHITE - on `bibBox`'s light fill the
                     bib number was invisible. `bibBoxText` was defined for this
                     and never wired up. */}
                 <Text style={favstyle.bibBoxText}>{item.bib_number}</Text>
             </View>
             <View style={favstyle.content}>
-                <Text numberOfLines={1} style={commonStyles.title}>
+                {/* Long names wrap inside the card instead of running into the
+                    add button (review request). */}
+                <Text numberOfLines={2} style={commonStyles.title}>
                     {fullName}
                 </Text>
                 <Text style={commonStyles.subtitle}>{item.race_distance}</Text>

@@ -26,7 +26,7 @@ const EventDetails = ({ route }: EventDetailsProps) => {
   const isGestureNav = insets.bottom > 0;
   const [raceDate, setRaceDate] = useState<string | null>(null);
 
-  const { product_app_id, event_name, auto_register_id, event_image} = route.params;
+  const { product_app_id, event_name, auto_register_id, event_image, sourceTab } = route.params;
 
   const [showResults, setShowResults] = useState(true);
 
@@ -56,6 +56,7 @@ const EventDetails = ({ route }: EventDetailsProps) => {
             event_name={event_name}
             event_image={event_image}
             auto_register_id={auto_register_id ?? null}
+            sourceTab={sourceTab}
             onRefresh={handleRefresh}
             onResultsAvailability={setShowResults}
              onRaceDateAvailable={setRaceDate}

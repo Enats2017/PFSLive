@@ -28,6 +28,7 @@
     "raceResult": "Wedstrijdresultaat",
     "status": "Status",
     "distance": "Afstand",
+    "runner": "Loper",
     "splits": "Tussentijden",
     "scratchPosition": "Scratch klassement",
     "category": "Categorie",

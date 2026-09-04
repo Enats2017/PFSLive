@@ -186,6 +186,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         event_name: item.name,
                         event_image: item.event_image ?? '',
                         auto_register_id: null,
+                        sourceTab: 'past',
                     });
                 }}
             />

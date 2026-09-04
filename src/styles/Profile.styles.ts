@@ -225,7 +225,11 @@ export const profileStyles = StyleSheet.create({
     backgroundColor: withAlpha(palette.lime, 0.08),
     borderRadius: 10,
   },
-  successText: { 
+  // Sits in the `successBanner` ROW beside an icon: without flex it sized to
+  // its content and ran outside the banner instead of wrapping in it.
+  successText: {
+    flex: 1,
+    minWidth: 0,
     fontFamily: fonts.bodySemi,
         fontSize: 13, 
     color: palette.lime, 

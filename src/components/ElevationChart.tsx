@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, G, Circle, Line } from 'react-native-svg';
 import { commonStyles, palette, mapColors } from '../styles/common.styles';
@@ -99,6 +99,12 @@ const ElevationChart: React.FC<ElevationChartProps> = ({
         return gpxPoints.filter((_, i) => i % step === 0);
     }, [gpxPoints]);
 
+    // The chart used to draw at the full SCREEN width while sitting inside a
+    // padded card, so it hung over the card's edges on both sides. Measure the
+    // space actually available and draw into that. SCREEN_WIDTH is only the
+    // first-paint estimate, before onLayout reports the real width.
+    const [chartWidth, setChartWidth] = useState(SCREEN_WIDTH);
+
     const distKm = parseFloat(distanceCompleted ?? '0');
     const progressIndex = useMemo(
         () => getProgressIndex(sampledPoints, distKm),
@@ -106,13 +112,13 @@ const ElevationChart: React.FC<ElevationChartProps> = ({
     );
 
     const filledPath = useMemo(
-        () => buildSmoothPath(elevations, SCREEN_WIDTH, CHART_HEIGHT),
-        [elevations]
+        () => buildSmoothPath(elevations, chartWidth, CHART_HEIGHT),
+        [elevations, chartWidth]
     );
 
     const runner = useMemo(
-        () => getRunnerPos(elevations, SCREEN_WIDTH, CHART_HEIGHT, progressIndex),
-        [elevations, progressIndex]
+        () => getRunnerPos(elevations, chartWidth, CHART_HEIGHT, progressIndex),
+        [elevations, progressIndex, chartWidth]
     );
 
     if (loading) {
@@ -126,8 +132,11 @@ const ElevationChart: React.FC<ElevationChartProps> = ({
     if (elevations.length < 2) return null;
 
     return (
-        <View style={styles.container}>
-            <Svg width={SCREEN_WIDTH} height={CHART_HEIGHT}>
+        <View
+            style={styles.container}
+            onLayout={(e) => setChartWidth(e.nativeEvent.layout.width)}
+        >
+            <Svg width={chartWidth} height={CHART_HEIGHT}>
                 <Defs>
                     <LinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
                         <Stop offset="0%" stopColor={palette.navyLift} stopOpacity="1" />

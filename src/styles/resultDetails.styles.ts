@@ -209,10 +209,9 @@ export const resultInfoStyles = StyleSheet.create({
   },
 
   rankingsCard: {
-    flex: 1,
     flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 24,
+    alignItems: "flex-start",
+    paddingVertical: space.xl,
   },
   // 28_RunnerInfo.png DOES rule this two-column block, so the border stays -
   // but the columns need real clearance from it, not 4pt.
@@ -221,6 +220,21 @@ export const resultInfoStyles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: space.md,
   },
+  // The value was centred with an inline override while the label was not, so a
+  // label that wrapped to two lines sat ragged under a centred value.
+  rankingLabel: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textBody,
+    textAlign: "center",
+    marginBottom: space.xs,
+  },
+  rankingValue: {
+    fontFamily: fonts.body,
+    fontSize: 20,
+    color: palette.ink,
+    textAlign: "center",
+  },
   rankingColBorder: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
@@ -228,14 +242,17 @@ export const resultInfoStyles = StyleSheet.create({
   },
 
   statsCard: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    padding: 4,
+    // `flex: 1` on a child of a scroll view fought the row's own height, and
+    // 4pt of padding let the 20pt values sit against the card edge.
+    paddingVertical: space.md,
   },
   statsCol: {
     flex: 1,
+    minWidth: 0,
     alignItems: "center",
+    paddingHorizontal: space.sm,
   },
   statsColBorder: {
     paddingVertical: 16,
@@ -393,18 +410,38 @@ export const resultInfoStyles = StyleSheet.create({
   },
 
   // ── Row / Col Layout ─────────────────────────────────────
+  // Shared by AwardsTab (3 uses) and RunnerInfoTab - keep it plain. The
+  // About tab's ruled variant is `statDividerRow` below; putting the border
+  // here drew three stray hairlines across the Awards tab.
   row: {
     flexDirection: "row",
-    marginBottom: 20,
+    alignItems: "center",
+    marginBottom: space.xl,
   },
+  // 28_RunnerInfo.png separates the UTMB INDEX / CATEGORY block from the
+  // identity above it with a hairline, then rules the two columns.
+  statDividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: space.lg,
+    marginBottom: space.xl,
+    paddingTop: space.lg,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
+  },
+  // The same trap as the favourite card's stat columns: a divider with no
+  // clearance either side, so the content sat on the rule.
   col: {
     flex: 1,
+    minWidth: 0,
     alignItems: "center",
-    gap: 12,
+    paddingHorizontal: space.md,
+    gap: space.sm,
   },
   colDivider: {
     width: 1,
-    backgroundColor: palette.placeholder,
+    alignSelf: "stretch",
+    backgroundColor: palette.border,
   },
 
   // ── UTMB Badges ──────────────────────────────────────────

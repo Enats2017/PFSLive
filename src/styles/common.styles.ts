@@ -118,17 +118,31 @@ export const withAlpha = (hex: string, alpha: number): string => {
  * they still come from one declared set rather than being invented per file.
  */
 export const mapColors = {
-  route: palette.navy,          // the course itself
-  routeCovered: palette.lime,   // distance already run
-  start: '#2E7D32',
-  finish: palette.danger,
-  checkpoint: palette.ink,
-  participant: palette.lime,    // the athlete you are following
-  follower: palette.navyLift,   // everyone else
-  offline: palette.textOnNavy,  // a stale fix
-  markerStroke: palette.surface,
-  markerText: palette.surface,
-  label: palette.ink,
+  // ── Restored to the pre-redesign values (2026-09-04 request) ─────────────
+  // These are DATA colours on a satellite basemap, not chrome. The redesign
+  // re-pointed them at the navy/lime brand palette, which lost the distinctions
+  // the map relies on: start vs finish vs checkpoint vs you vs everyone else
+  // have to stay apart at a glance, and lime route lines disappeared over
+  // terrain. The literals below are the ones the old map shipped with.
+
+  // ── Live tracking map (LiveMap/LiveRouteMap.tsx) ──
+  route: '#3B82F6',        // was palette.navy      — the course line, blue
+  routeCasing: '#1E293B',  // was mapColors.checkpoint — the outline under it
+  kmMarker: '#475569',     // was palette.textBody  — neutral km dot anchor
+  start: '#22C55E',        // was #2E7D32           — green
+  finish: '#EF4444',       // was palette.danger    — red
+  checkpoint: '#1a1a2e',   // was palette.ink       — dark
+  participant: '#F97316',  // was palette.lime      — orange, tracked athletes
+  follower: '#6366F1',     // was palette.navyLift  — indigo, YOUR own marker
+  offline: '#94A3B8',      // was palette.textOnNavy — slate, a stale fix
+
+  // ── Static GPX route preview (RouteMap.tsx) ──
+  gpxRoute: '#E53935',        // was palette.danger
+  gpxRouteCasing: '#B71C1C',  // was mapColors.finish
+  gpxKmStroke: '#000000',     // was mapColors.checkpoint
+  gpxParticipant: '#4CAF50',  // was mapColors.start
+
+  markerStroke: '#FFFFFF',
 } as const;
 
 /**

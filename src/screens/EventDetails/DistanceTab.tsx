@@ -41,6 +41,8 @@ interface DistanceTabProps {
   auto_register_id?: number | null;
   onRefresh?: () => void;
   onResultsAvailability?: (show: boolean) => void;
+  /** Which list the event was opened from — see RootStackParamList.EventDetails. */
+  sourceTab?: 'live' | 'past' | 'upcoming';
   onRaceDateAvailable?: (date: string | null) => void; 
 }
 
@@ -51,9 +53,10 @@ const DistanceTab = ({
   auto_register_id,
   onRefresh,
   onResultsAvailability,
+  sourceTab,
   onRaceDateAvailable,
 }: DistanceTabProps) => {
-  const { t } = useTranslation(['details']);
+  const { t } = useTranslation(['details', 'result']);
   const navigation = useNavigation<any>();
   const [distances, setDistances] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +69,12 @@ const DistanceTab = ({
   const [gpxRestrictedVisible, setGpxRestrictedVisible] = useState(false);
   const [gpxRestrictedItem, setGpxRestrictedItem] = useState<Distance | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
+  const isPast = sourceTab === 'past';
+  // The event image is not always passed in the route params - the pencil on
+  // Your Events navigates from `AthleteEvent`, which has no image field at all.
+  // event_detail_api.php returns one, so fall back to that instead of showing a
+  // headerless card. Any caller that can pass an image still wins.
+  const [fetchedImage, setFetchedImage] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [showResultsStats, setShowResultsStats] = useState(false);
   const [rrUrl, setRrUrl] = useState<string>('');
@@ -93,6 +102,7 @@ const DistanceTab = ({
         setServerTime(result.server_datetime);
 
         setRrUrl(result.event?.rr_url ?? '');
+        setFetchedImage(result.event?.image?.trim() ? result.event.image : null);
       setEventRegisterUrl(result.event?.event_register_url ?? '');
 
         // Results button/tab only when RR results are published (status 1) AND a URL exists.
@@ -354,9 +364,11 @@ const handleExternalRegister = useCallback((url: string) => {
     setSelectedUndoItem(null);
   }, [selectedUndoItem, handleDelete]);
 
+  const headerImage = event_image || fetchedImage;
+
   React.useEffect(() => {
     setImageLoading(true);
-  }, [event_image]);
+  }, [headerImage]);
 
 
   const renderListHeader = useCallback(() => {
@@ -365,7 +377,7 @@ const handleExternalRegister = useCallback((url: string) => {
     );
     return (
       <View>
-        {event_image ? (
+        {headerImage ? (
           <View style={{ width: '100%', aspectRatio: 612 / 428, justifyContent: 'center', alignItems: 'center',}}>
             {imageLoading && (
               <ActivityIndicator
@@ -376,7 +388,7 @@ const handleExternalRegister = useCallback((url: string) => {
             )}
 
             <Image
-              source={{ uri: event_image }}
+              source={{ uri: headerImage }}
               contentFit="cover"
               cachePolicy="memory-disk"
               style={{
@@ -386,7 +398,7 @@ const handleExternalRegister = useCallback((url: string) => {
               }}
               onLoad={() => setImageLoading(false)}
               onError={(e) => {
-                console.log('❌ Image failed:', event_image, e?.error);
+                console.log('❌ Image failed:', headerImage, e?.error);
                 setImageLoading(false);
               }}
             />
@@ -404,7 +416,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
       </View>
     );
-  }, [event_name, event_image, distances, imageLoading]);
+  }, [event_name, headerImage, distances, imageLoading]);
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isRegistering =
@@ -474,60 +486,92 @@ const handleExternalRegister = useCallback((url: string) => {
           <View style={detailsStyles.verticalDivider} />
 
           <View style={{ gap: spacing.sm }} >
-            <TouchableOpacity
-                style={[detailsStyles.resultsButton]}
-                onPress={() => {
-                  if (isRegisterMode) {
-                    handleExternalRegister(eventRegisterUrl);
-                    return;
-                  }
-                  item.registration_status === 'registered'
-                    ? handleUndoClick(item)
-                    : handleConnectClick(item);
-                }}
-                disabled={isRegistering}
+            {isPast ? (
+              /* A past event cannot be registered for or tracked, so the only
+                 action that means anything is looking at the results. */
+              showResults && (
+                <TouchableOpacity
+                  style={detailsStyles.resultsButton}
+                  onPress={() => {
+                    analyticsService.logInteraction(
+                      ANALYTICS_SCREENS.EVENT_DETAILS,
+                      ANALYTICS_BUTTONS.RESULT,
+                    );
+                    navigation.navigate('ResultList', {
+                      product_app_id,
+                      product_option_value_app_id: Number(item.product_option_value_app_id),
+                      event_name,
+                      event_image,
+                      sourceScreen: 'EventDetails',
+                      sectionType: 'participant',
+                      sourceTab: 'past',
+                    });
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={detailsStyles.resultsButtonText}>
+                    {t('result:button.result')}
+                  </Text>
+                </TouchableOpacity>
+              )
+            ) : (
+              <>
+              <TouchableOpacity
+                  style={[detailsStyles.resultsButton]}
+                  onPress={() => {
+                    if (isRegisterMode) {
+                      handleExternalRegister(eventRegisterUrl);
+                      return;
+                    }
+                    item.registration_status === 'registered'
+                      ? handleUndoClick(item)
+                      : handleConnectClick(item);
+                  }}
+                  disabled={isRegistering}
+                  activeOpacity={0.8}
+                >
+                {isRegistering ? (
+                  <ActivityIndicator size="small" color={palette.surface} />
+                ) : (
+                  <Text style={detailsStyles.resultsButtonText}>
+                  {item.registration_status === 'registered'
+                    ? t('details:undo')
+                    : isRegisterMode
+                      ? t('details:register')
+                      : t('details:button')}
+                </Text>
+                )}
+              </TouchableOpacity>
+
+              {/* ✅ GPX button ALWAYS visible */}
+              <TouchableOpacity
+                style={detailsStyles.routeButton}
+                //onPress={() => handleGpxClick(item)}
+                onPress={() => handleDownloadGpx(item)}
                 activeOpacity={0.8}
               >
-              {isRegistering ? (
-                <ActivityIndicator size="small" color={palette.surface} />
-              ) : (
-                <Text style={detailsStyles.resultsButtonText}>
-                {item.registration_status === 'registered'
-                  ? t('details:undo')
-                  : isRegisterMode
-                    ? t('details:register')
-                    : t('details:button')}
-              </Text>
-              )}
-            </TouchableOpacity>
+                <Text style={detailsStyles.routeButtonText}>
+                  {t('details:gpx')}
+                </Text>
+              </TouchableOpacity>
 
-            {/* ✅ GPX button ALWAYS visible */}
-            <TouchableOpacity
-              style={detailsStyles.routeButton}
-              //onPress={() => handleGpxClick(item)}
-              onPress={() => handleDownloadGpx(item)}
-              activeOpacity={0.8}
-            >
-              <Text style={detailsStyles.routeButtonText}>
-                {t('details:gpx')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* ✅ MAP button — live tracking map for this distance */}
-            <TouchableOpacity
-              style={detailsStyles.routeButton}
-              onPress={() => handleMapClick(item)}
-              activeOpacity={0.8}
-            >
-              <Text style={detailsStyles.routeButtonText}>
-                {t('details:map')}
-              </Text>
-            </TouchableOpacity>
+              {/* ✅ MAP button — live tracking map for this distance */}
+              <TouchableOpacity
+                style={detailsStyles.routeButton}
+                onPress={() => handleMapClick(item)}
+                activeOpacity={0.8}
+              >
+                <Text style={detailsStyles.routeButtonText}>
+                  {t('details:map')}
+                </Text>
+              </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </View>
     );
-  }, [CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode]);
+  }, [isPast, navigation, product_app_id, event_name, event_image, CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode]);
 
   if (loading) {
     return (

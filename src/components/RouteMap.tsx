@@ -163,7 +163,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           <LineLayer
             id="routeOutline"
             style={{
-              lineColor: mapColors.finish,
+              lineColor: mapColors.gpxRouteCasing,
               lineWidth: 8,
               lineOpacity: 0.8,
               lineCap: 'round',
@@ -173,7 +173,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
           <LineLayer
             id="routeLine"
             style={{
-              lineColor: palette.danger,
+              lineColor: mapColors.gpxRoute,
               lineWidth: 6,
               lineCap: 'round',
               lineJoin: 'round',
@@ -189,14 +189,14 @@ export const RouteMap: React.FC<RouteMapProps> = ({
               circleRadius: 10,
               circleColor: mapColors.markerStroke,
               circleStrokeWidth: 2,
-              circleStrokeColor: mapColors.checkpoint,
+              circleStrokeColor: mapColors.gpxKmStroke,
             }}
           />
           <CircleLayer
             id="stationsInner"
             style={{
               circleRadius: 7,
-              circleColor: mapColors.checkpoint,
+              circleColor: mapColors.gpxKmStroke,
             }}
           />
         </ShapeSource>
@@ -208,7 +208,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
               id="participantGlow"
               style={{
                 circleRadius: 18,
-                circleColor: mapColors.start,
+                circleColor: mapColors.gpxParticipant,
                 circleOpacity: 0.25,
               }}
             />
@@ -223,7 +223,7 @@ export const RouteMap: React.FC<RouteMapProps> = ({
               id="participantInner"
               style={{
                 circleRadius: 10,
-                circleColor: mapColors.start,
+                circleColor: mapColors.gpxParticipant,
               }}
             />
           </ShapeSource>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,8 +39,15 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
         const showMapButton = liveTrackingActivated === 1 && !!isFollowing;
 
     return (
-        <View style={commonStyles.container}>
-            <View style={[resultInfoStyles.card, { marginTop: 8 }]}>
+        // Every other tab lays its cards out in a padded scroll view
+        // (`scrollContent`). This one used a bare container with an 8pt inline
+        // margin, so the About card ran to the screen edges while the Results
+        // and Checkpoints cards beside it were inset 20.
+        <ScrollView
+            contentContainerStyle={resultInfoStyles.scrollContent}
+            showsVerticalScrollIndicator={false}
+        >
+            <View style={resultInfoStyles.card}>
 
                 <View style={resultInfoStyles.identityBlock}>
                     {runnerInfo?.profile_picture ? (
@@ -95,7 +102,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
                     </View>
                 </View> */}
 
-                <View style={resultInfoStyles.row}>
+                <View style={resultInfoStyles.statDividerRow}>
                     {showUtmbIndex && hasUtmbIndex && (
                         <>
                             <View style={resultInfoStyles.col}>
@@ -213,7 +220,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
                     </TouchableOpacity>
                 )}
             </View>
-        </View>
+        </ScrollView>
     );
 };
 

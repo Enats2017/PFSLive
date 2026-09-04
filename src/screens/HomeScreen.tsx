@@ -2325,7 +2325,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 <TouchableOpacity
                   style={[
                     isGPSActive ? homeStyles.stopButton : homeStyles.button,
-                    { width: '100%', marginBottom: spacing.md },
+                    // Equal space above and below: the button had a bottom
+                    // margin only, so it sat flush against the tracking
+                    // description above it.
+                    { width: '100%', marginTop: spacing.md, marginBottom: spacing.md },
                     !isGPSActive && (!participantId || !eventId) && {
                       backgroundColor: palette.placeholder,
                       opacity: 0.6,

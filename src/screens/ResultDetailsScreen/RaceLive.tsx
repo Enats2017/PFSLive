@@ -107,9 +107,15 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                     </Text>
                 </View>
 
-                <Text style={resultInfoStyles.checkpointName} numberOfLines={1}>
-                    {raceInfo?.name ?? '—'}
-                </Text>
+                {/* The runner's name was a bare heading wedged between two
+                    label/value rows. It reads as one of them now, matching the
+                    Distance row above it. */}
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.runner')}</Text>
+                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                        {raceInfo?.name ?? '—'}
+                    </Text>
+                </View>
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.bib', 'Bib')}</Text>
                     <Text style={resultInfoStyles.rowValue}>{raceInfo?.bib ?? '—'}</Text>
@@ -201,21 +207,17 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                                 i === 1 && resultInfoStyles.rankingColBorder,
                             ]}
                         >
-                            <Text style={resultInfoStyles.rowLabel}>
+                            <Text style={resultInfoStyles.rankingLabel}>
                                 {t(item.labelKey)}
                             </Text>
-                            <Text style={[resultInfoStyles.rowValue,{textAlign:'center', fontFamily: fonts.body,
-    fontSize: 20}]}>{item.value}</Text>
+                            <Text style={resultInfoStyles.rankingValue}>{item.value}</Text>
                         </View>
                     ))}
                 </View>
 
                 <View style={resultInfoStyles.statsCard}>
                     <View style={resultInfoStyles.statsCol}>
-                        <Text style={[resultInfoStyles.rowLabel, {
-                            textAlign: 'center',
-                            marginBottom: 8,
-                        }]}>
+                        <Text style={resultInfoStyles.rankingLabel}>
                             {t('raceInfo.distanceCompleted')}
                         </Text>
                         <Text style={resultInfoStyles.raceTimeText}>
@@ -226,10 +228,7 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                     </View>
                     <View style={resultInfoStyles.statsColBorder} />
                     <View style={resultInfoStyles.statsCol}>
-                        <Text style={[resultInfoStyles.rowLabel, {
-                            textAlign: 'center',
-                            marginBottom: 8,
-                        }]}>
+                        <Text style={resultInfoStyles.rankingLabel}>
                             {t('raceInfo.elevationGain')}
                         </Text>
                         <Text style={resultInfoStyles.raceTimeText}>

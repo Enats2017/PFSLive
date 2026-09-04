@@ -451,7 +451,16 @@ export const homeStyles = StyleSheet.create({
 
   cardTop: { flexDirection: "row", alignItems: "center", gap: 12 },
   eventBody: { flex: 1 },
-  eventMeta: { flexDirection: "row", alignItems: "center" },
+  // Icon + value, one per line (time, distance). It had no gap, so the icon sat
+  // against its text, and the two rows carried ad-hoc inline margins that made
+  // the spacing between them uneven. Matches `eventMetaRow` on the
+  // next-session card.
+  eventMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    marginTop: space.xs,
+  },
   countdownBlock: { alignItems: "flex-end" },
   countdownValue: {
     fontFamily: fonts.displayMedium,
@@ -483,9 +492,9 @@ export const homeStyles = StyleSheet.create({
   },
 
   divider: {
-    height: 0.5,
-    backgroundColor: "rgba(0,0,0,0.2)",
-    marginVertical: 12,
+    height: 1,
+    backgroundColor: palette.border,
+    marginVertical: space.md,
   },
 
   followerBtn: {

@@ -28,6 +28,7 @@
     "raceResult": "Race result",
     "status": "Status",
     "distance": "Distance",
+    "runner": "Runner",
     "splits": "Splits",
     "scratchPosition": "Scratch position",
     "category": "Category",

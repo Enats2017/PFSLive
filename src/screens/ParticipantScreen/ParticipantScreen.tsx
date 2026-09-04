@@ -145,7 +145,10 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                 <View style={particpant.section}>
                     <View style={particpant.infoCard}>
                         <MaterialCommunityIcons name="map-marker-path" size={22} color={palette.lime} />
-                        <Text style={[commonStyles.text, { lineHeight: 20 }]}>
+                        {/* `infoCard` is a ROW: without flex the text sized to
+                            its content and ran outside the card instead of
+                            wrapping inside it. */}
+                        <Text style={[commonStyles.text, { flex: 1, minWidth: 0, lineHeight: 20 }]}>
                             {t('participant:personalRace.description')}
                         </Text>
                     </View>
