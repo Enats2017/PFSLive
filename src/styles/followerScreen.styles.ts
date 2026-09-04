@@ -49,24 +49,6 @@ import { spacing, palette, space, type, radii, fonts } from './common.styles';
         color: palette.ink,
     },
 
-    // 19_FavouriteAthletes.png: the row's only action is destructive, and the
-    // deck draws it in the danger colour - white ground, red hairline, red label.
-    removeChip: {
-        backgroundColor: palette.surface,
-        borderWidth: 1.5,
-        borderColor: palette.danger,
-        borderRadius: radii.sm,
-        paddingHorizontal: space.lg,
-        paddingVertical: space.sm,
-        alignSelf: 'center',
-        minWidth: 92,
-        alignItems: 'center',
-    },
-    removeChipText: {
-        fontFamily: fonts.bodySemi,
-        fontSize: 13,
-        color: palette.danger,
-    },
 
     infoCard: {
         flexDirection: 'row',

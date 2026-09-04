@@ -120,7 +120,7 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                     <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.bib', 'Bib')}</Text>
                     <Text style={resultInfoStyles.rowValue}>{raceInfo?.bib ?? '—'}</Text>
                 </View>
-                 {raceInfo?.wave && (
+                 {!!raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
                         <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.wavelabel')}</Text>
                         <Text style={resultInfoStyles.rowValue}>{raceInfo?.wave}</Text>

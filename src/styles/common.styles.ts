@@ -159,6 +159,12 @@ export const categoryColors = {
    * A wash this light keeps the navy/muted text well clear of AA contrast.
    */
   womenSurface: withAlpha('#FF007F', 0.06),
+  /**
+   * The stats divider on a women-tinted card. `palette.border` is a cool grey
+   * that reads as a hard dark line across the warm tint; this is the same hue
+   * as the card, just strong enough to separate the rows.
+   */
+  womenDivider: withAlpha('#FF007F', 0.18),
 } as const;
 
 /** Chart axes, gridlines and series. */

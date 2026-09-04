@@ -42,7 +42,7 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                     <Text style={resultInfoStyles.rowValue}>{raceInfo?.bib ?? '—'}</Text>
                     <Text style={resultInfoStyles.rowValue}>{raceInfo?.name ?? '—'}</Text>
                 </View>
-                {raceInfo?.wave && (
+                {!!raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
                         <Text style={resultInfoStyles.rowValue}>{t('raceInfo.wavelabel')}: {raceInfo?.wave}</Text>
                     </View>

@@ -10,15 +10,19 @@ interface DistanceDropdownProps {
     distances: DistanceOption[];
     selectedDistance: DistanceOption;
     onSelect: (distance: DistanceOption) => void;
-    /** Show the LIVE pill beside the "Live map" title. */
-    isLive?: boolean;
+    /**
+     * Which state the race is in. The pill used to be a boolean that showed
+     * "LIVE" or nothing at all, so a finished or not-yet-started race said
+     * nothing about itself.
+     */
+    raceState?: 'live' | 'finished' | 'upcoming';
 }
 
 export const DistanceDropdown: React.FC<DistanceDropdownProps> = ({
     distances,
     selectedDistance,
     onSelect,
-    isLive = false,
+    raceState,
 }) => {
     const { t } = useTranslation(['livetracking']);
     const [isOpen, setIsOpen] = useState(false);
@@ -32,9 +36,22 @@ export const DistanceDropdown: React.FC<DistanceDropdownProps> = ({
         <View style={liveTrackingStyles.dropdownContainer}>
             <View style={liveTrackingStyles.mapHeadRow}>
                 <Text style={liveTrackingStyles.mapHeadTitle}>{t('livetracking:liveMap')}</Text>
-                {isLive && (
-                    <View style={liveTrackingStyles.mapLivePill}>
-                        <Text style={liveTrackingStyles.mapLiveText}>{t('livetracking:live', 'LIVE')}</Text>
+                {!!raceState && (
+                    <View
+                        style={[
+                            liveTrackingStyles.mapLivePill,
+                            raceState === 'finished' && liveTrackingStyles.mapPillFinished,
+                            raceState === 'upcoming' && liveTrackingStyles.mapPillUpcoming,
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                liveTrackingStyles.mapLiveText,
+                                raceState !== 'live' && liveTrackingStyles.mapPillMutedText,
+                            ]}
+                        >
+                            {t(`livetracking:raceState_${raceState}`)}
+                        </Text>
                     </View>
                 )}
             </View>

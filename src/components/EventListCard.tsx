@@ -106,11 +106,19 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
     ...shadows.card,
   },
+  // Clips the image itself. `card` sets overflow: 'hidden' with a borderRadius,
+  // but it also carries elevation (shadows.card) - and on Android an elevated
+  // view does not reliably clip children to its rounded corners, so the
+  // absolutely-filled image spilled past the card edge. This container has no
+  // elevation, so its clip holds.
   thumb: {
     width: 104,
     backgroundColor: palette.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    borderTopLeftRadius: radii.md,
+    borderBottomLeftRadius: radii.md,
   },
   thumbOverlay: {
     ...StyleSheet.absoluteFillObject,

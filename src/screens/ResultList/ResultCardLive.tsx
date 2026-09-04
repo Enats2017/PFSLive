@@ -220,7 +220,10 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     </View>
                 )}
 
-                <View style={resultListStyle.statsRow}>
+                <View style={[
+                    resultListStyle.statsRow,
+                    isWomen && { borderTopColor: categoryColors.womenDivider },
+                ]}>
                     {isCheckpointMode ? (
                         renderCpColumn(cp1, fromLive === 1 && !cp1?.is_crossed ? { alignItems: 'flex-start' } : undefined)
                     ) : (

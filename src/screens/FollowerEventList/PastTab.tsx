@@ -3,7 +3,7 @@ import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { commonStyles, spacing, palette, space } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import { EventItem, eventService } from '../../services/followerEvent';
 import { formatEventDate } from '../../utils/dateFormatter';
@@ -206,14 +206,16 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
     return (
         <>
-            <View style={{ paddingHorizontal: space.xl, paddingTop: spacing.md, paddingBottom: spacing.sm }}>
-                <SearchInput
-                    placeholder={t('event:search')}
-                    value={searchText}
-                    onChangeText={setSearchText}
-                    icon="search"
-                />
-            </View>
+            {/* Full-bleed, like every other search screen. SearchInput draws
+                its own white sub-header band with its own padding; the wrapper
+                here inset that band 20pt from each edge and doubled the padding
+                before the field. */}
+            <SearchInput
+                placeholder={t('event:search')}
+                value={searchText}
+                onChangeText={setSearchText}
+                icon="search"
+            />
 
             {searching && (
                 <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>

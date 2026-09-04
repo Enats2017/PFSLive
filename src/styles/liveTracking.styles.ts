@@ -301,6 +301,17 @@ export const liveTrackingStyles = StyleSheet.create({
         fontSize: 12,
         color: palette.ink,
     },
+    // A finished race is over and an upcoming one has not begun: neither should
+    // wear the lime "happening now" tint.
+    mapPillFinished: {
+        backgroundColor: palette.fill,
+    },
+    mapPillUpcoming: {
+        backgroundColor: palette.fill,
+    },
+    mapPillMutedText: {
+        color: palette.textBody,
+    },
 
     dropdownContainer: {
         paddingHorizontal: space.xl,

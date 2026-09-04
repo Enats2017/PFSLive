@@ -153,7 +153,10 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                     </View>
                 )}
 
-                <View style={resultListStyle.statsRow}>
+                <View style={[
+                    resultListStyle.statsRow,
+                    isWomen && { borderTopColor: categoryColors.womenDivider },
+                ]}>
                     <View style={resultListStyle.statCol}>
                         <Text style={resultListStyle.statLabel}>{t('allrace:race.raceTime')}</Text>
                         <Text style={resultListStyle.statVal}>{item.time || "-"}</Text>
@@ -184,7 +187,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                         <>
                             <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
                                 <View style={resultListStyle.flagRow}>
-                                    {item.nation_flag && (
+                                    {!!item.nation_flag && (
                                         <SvgUri width={28} height={20} uri={item.nation_flag} />
                                     )}
                                     <Text style={resultListStyle.statVal} numberOfLines={2}>

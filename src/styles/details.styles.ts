@@ -97,6 +97,25 @@ export const detailsStyles = StyleSheet.create({
     color: palette.navy,
   },
 
+  // Destructive twin of `cardActionSecondary` - 19_FavouriteAthletes.png draws
+  // Remove in the danger colour, and it keeps that weight when it shares a row
+  // with View.
+  cardActionDanger: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: palette.danger,
+    backgroundColor: palette.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardActionDangerText: {
+    fontFamily: fonts.display,
+    fontSize: 13,
+    color: palette.danger,
+  },
+
   // ✅ Section label — the deck's `.meta` treatment: the small uppercase line
   // that titles a block of content ("Recent races").
   sectionLabel: {

@@ -40,5 +40,8 @@
     "label": "Live tracking"
   },
   "meterDPlus": "m D+",
-  "liveMap": "Live map"
+  "liveMap": "Live map",
+  "raceState_live": "Live",
+  "raceState_finished": "Finished",
+  "raceState_upcoming": "Upcoming"
 }

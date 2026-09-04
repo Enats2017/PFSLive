@@ -135,7 +135,10 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                     </View>
                 )}
 
-                <View style={resultListStyle.statsRow}>
+                <View style={[
+                    resultListStyle.statsRow,
+                    isWomen && { borderTopColor: categoryColors.womenDivider },
+                ]}>
                     {showUtmbIndex && (
                         <View style={resultListStyle.statCol}>
                             {hasUtmbIndex ? (
@@ -171,7 +174,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                         showUtmbIndex ? resultListStyle.statFlagMid : resultListStyle.statFlagFullNoBorder,
                     ]}>
                         <View style={resultListStyle.flagRow}>
-                            {item.nation_flag && (
+                            {!!item.nation_flag && (
                                 <SvgUri width={28} height={20} uri={item.nation_flag} />
                             )}
                             <Text style={resultListStyle.statVal} numberOfLines={2}>

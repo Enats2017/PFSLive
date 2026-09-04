@@ -69,6 +69,29 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [showResults, setShowResults] = useState(false);
     const [raceDate, setRaceDate] = useState<string | null>(null);
     const isRrActive = !isCustomEvent && showResults;
+
+    /**
+     * What the map's status pill says. `sourceTab` is the list the user came
+     * from and is the only status the screen is handed, so it leads. When it is
+     * absent, fall back to the event's own date: a race whose day has passed is
+     * finished, one still ahead is upcoming, and today's is live.
+     */
+    const raceState: 'live' | 'finished' | 'upcoming' = useMemo(() => {
+        if (sourceTab === 'past') return 'finished';
+        if (sourceTab === 'upcoming') return 'upcoming';
+        if (sourceTab === 'live') return 'live';
+        const day = (raceDate ?? '').slice(0, 10);
+        if (!day) return isRrActive ? 'live' : 'upcoming';
+        // LOCAL calendar date, not toISOString(): that returns UTC, and the race
+        // date is a plain local day. In Belgium (UTC+1/+2) the UTC date is still
+        // yesterday until 01:00-02:00 local, so a 04:00 trail start would have
+        // read as "Upcoming" on its own race morning.
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        if (day < today) return 'finished';
+        if (day > today) return 'upcoming';
+        return 'live';
+    }, [sourceTab, raceDate, isRrActive]);
     const [trainingFree, setTrainingFree] = useState(false);
     
 
@@ -610,7 +633,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     distances={distances}
                     selectedDistance={selectedDistance}
                     onSelect={handleDistanceChange}
-                    isLive={isRrActive}
+                    raceState={raceState}
                 />
             )}
             <View style={{ flex: 1 }}>

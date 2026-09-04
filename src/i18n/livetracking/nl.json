@@ -40,5 +40,8 @@
     "label": "Live volgen"
   },
   "meterDPlus": "m D+",
-  "liveMap": "Live kaart"
+  "liveMap": "Live kaart",
+  "raceState_live": "Live",
+  "raceState_finished": "Afgelopen",
+  "raceState_upcoming": "Binnenkort"
 }

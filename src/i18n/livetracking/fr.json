@@ -40,5 +40,8 @@
     "label": "Suivi en direct"
   },
   "meterDPlus": "m D+",
-  "liveMap": "Carte en direct"
+  "liveMap": "Carte en direct",
+  "raceState_live": "En direct",
+  "raceState_finished": "Terminé",
+  "raceState_upcoming": "À venir"
 }

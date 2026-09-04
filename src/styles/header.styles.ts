@@ -56,20 +56,4 @@ export const headerStyles = StyleSheet.create({
     color: palette.ink,
     textAlign: 'center',
   },
-
-  // Kept for the screens that still render the pre-redesign white bar.
-  legacyContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.lg,
-    paddingVertical: space.md,
-    backgroundColor: palette.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-    height: 60,
-  },
-  legacyRadius: {
-    borderRadius: radii.md,
-  },
 });

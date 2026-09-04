@@ -10,20 +10,22 @@ import { useNavigation } from '@react-navigation/native';
 
 interface FanEventCardProps {
     /**
-     * Which artboard this row follows. The deck draws ONE inline action per
-     * row, and a different one per screen:
-     *   'search'    17_AthleteSearch.png     - Follow (navy) / Following (fill)
-     *   'favourite' 19_FavouriteAthletes.png - Remove (red outline)
-     * The old shared "View profile + Follow" pair appears on neither. Profiles
-     * are still reachable from the participant list, the fan hub and the
-     * followers list.
+     * Which screen this row is on. Both variants show View plus a second
+     * action; only the second differs:
+     *   'search'    17_AthleteSearch.png     - View + Follow / Following
+     *   'favourite' 19_FavouriteAthletes.png - View + Remove (red)
+     *
+     * Both artboards draw a SINGLE inline chip, but the 2026-09-04 reviews
+     * asked for View on both screens, and three controls beside a 60pt avatar
+     * leave about 68pt for the name. So both use the deck's other two-action
+     * pattern instead (22_ParticipantList.png): identity on top, buttons on
+     * their own row. This is a deliberate departure from those two artboards.
      */
     variant: 'search' | 'favourite';
     item: ParticipantItem;
     isFollowed: boolean;
     isLoading: boolean;
     onToggleFollow: () => void;
-    password_protected?: 0 | 1;
 }
 
 const FanEventCard: React.FC<FanEventCardProps> = ({
@@ -136,10 +138,31 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                     </View>
                 </View>
 
-                {variant === 'favourite' && (
-                    // 19_FavouriteAthletes.png - one destructive action, in red.
+            </View>
+
+            {/* Both variants carry two actions, so both use the deck's
+                two-action pattern (22_ParticipantList.png): identity on top,
+                buttons on their own row. Inline chips do not fit - avatar plus
+                two of them left about 68pt for the name. */}
+            <View style={detailsStyles.cardActionRow}>
+                <TouchableOpacity
+                    style={detailsStyles.cardActionSecondary}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    onPress={() =>
+                        navigation.navigate('ProfileScreen', {
+                            customer_app_id: item.customer_app_id,
+                        })
+                    }
+                >
+                    <Text style={detailsStyles.cardActionSecondaryText}>
+                        {t('follower:button.viewprofile')}
+                    </Text>
+                </TouchableOpacity>
+
+                {variant === 'favourite' ? (
                     <TouchableOpacity
-                        style={[follow.removeChip, { opacity: isLoading ? 0.6 : 1 }]}
+                        style={[detailsStyles.cardActionDanger, { opacity: isLoading ? 0.6 : 1 }]}
                         onPress={onToggleFollow}
                         disabled={isLoading}
                         activeOpacity={0.8}
@@ -148,42 +171,14 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                         {isLoading ? (
                             <ActivityIndicator size="small" color={palette.danger} />
                         ) : (
-                            <Text style={follow.removeChipText}>
+                            <Text style={detailsStyles.cardActionDangerText}>
                                 {t('follower:button.remove')}
                             </Text>
                         )}
                     </TouchableOpacity>
-                )}
-            </View>
-
-            {variant === 'search' && (
-                /* 17_AthleteSearch.png draws a single inline Follow chip, which
-                   leaves no room for the View button the 2026-09-04 review asks
-                   for: avatar + two chips left about 68pt for the name. So the
-                   search row uses the deck's OTHER two-action pattern, the one
-                   22_ParticipantList uses - identity on top, actions on their
-                   own row - and the name gets the full card width. */
-                <View style={detailsStyles.cardActionRow}>
+                ) : (
                     <TouchableOpacity
-                        style={detailsStyles.cardActionSecondary}
-                        activeOpacity={0.8}
-                        accessibilityRole="button"
-                        onPress={() =>
-                            navigation.navigate('ProfileScreen', {
-                                customer_app_id: item.customer_app_id,
-                            })
-                        }
-                    >
-                        <Text style={detailsStyles.cardActionSecondaryText}>
-                            {t('follower:button.viewprofile')}
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[
-                            detailsStyles.cardActionPrimary,
-                            { opacity: isLoading ? 0.6 : 1 },
-                        ]}
+                        style={[detailsStyles.cardActionPrimary, { opacity: isLoading ? 0.6 : 1 }]}
                         onPress={onToggleFollow}
                         disabled={isLoading}
                         activeOpacity={0.8}
@@ -201,8 +196,8 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                             </Text>
                         )}
                     </TouchableOpacity>
-                </View>
-            )}
+                )}
+            </View>
         </View>
     );
 };

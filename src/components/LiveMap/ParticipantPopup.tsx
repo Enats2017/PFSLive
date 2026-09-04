@@ -164,7 +164,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                                 </Text>
                             </View>
                         )}
-                        {participant.position_category && (
+                        {!!participant.position_category && (
                             <View style={liveTrackingStyles.popupRow}>
                                 <Text style={liveTrackingStyles.popupLabel}>
                                     {t('livetracking:category')}:
