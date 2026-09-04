@@ -42,7 +42,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
         <View style={commonStyles.container}>
             <View style={[resultInfoStyles.card, { marginTop: 8 }]}>
 
-                <View>
+                <View style={resultInfoStyles.identityBlock}>
                     {runnerInfo?.profile_picture ? (
                         <Image
                             source={{ uri: getImageUrl(runnerInfo?.profile_picture) || undefined }}
@@ -56,11 +56,12 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
                             </Text>
                         </View>
                     )}
-                </View>
 
-                <View style={resultInfoStyles.bibCard}>
-                    <Text style={resultInfoStyles.checkpointName} numberOfLines={1}>{runnerInfo?.name ?? '—'}</Text>
-                    <View style={[resultListStyle.flagRow, { marginTop: 8, marginBottom: 8 }]}>
+                    <Text style={resultInfoStyles.identityName} numberOfLines={2}>
+                        {runnerInfo?.name ?? '—'}
+                    </Text>
+
+                    <View style={resultInfoStyles.identityRow}>
                         {runnerInfo?.nation_flag ? (
                             <SvgUri
                                 width={28}

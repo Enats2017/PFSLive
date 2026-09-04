@@ -15,12 +15,17 @@ export const headerStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
+    gap: space.xs,
     height: 44,
   },
-  // Icons are small targets; the hit area is widened with hitSlop rather than
-  // padding so the row keeps the artboard's 8pt rhythm.
+  // Every icon sits in the SAME 24pt slot. Without a fixed slot each button was
+  // only as wide as its own glyph - chevron 23, home 21, the rest 20 - so a flat
+  // gap produced visibly uneven spacing across search / settings / profile.
+  // Slot + gap = 28pt centre-to-centre, which is what the artboards measure.
+  // The touch target stays comfortable via hitSlop, not via padding.
   iconBtn: {
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { Participant } from '../../services/participantService';
-import { commonStyles, spacing, palette, fonts } from '../../styles/common.styles';
+import { commonStyles, spacing, space, palette, fonts } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -124,7 +124,10 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
       style={[
         commonStyles.card,
         detailsStyles.rowAccent,
-        { marginBottom: spacing.md, marginHorizontal: spacing.md },
+        // The page gutter is 20 everywhere else in the app (result list,
+        // favourites, distances); at 12 these cards sat 8pt wider than
+        // their neighbours on every other list.
+        { marginBottom: spacing.md, marginHorizontal: space.xl },
       ]}
     >
       <View style={detailsStyles.topRow}>

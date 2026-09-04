@@ -275,7 +275,7 @@ const DistanceTab = ({
                 onPress={() => handleDownloadGpx(item)}
                 activeOpacity={0.8}
               >
-                <Text style={commonStyles.primaryButtonText}>
+                <Text style={detailsStyles.routeButtonText}>
                   {t('details:gpx')}
                 </Text>
               </TouchableOpacity>

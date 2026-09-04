@@ -138,6 +138,13 @@ export const mapColors = {
 export const categoryColors = {
   women: '#FF007F',
   men: palette.navy,
+  /**
+   * Card ground for a result list filtered to the women's category.
+   * 26_ResultList.png draws no left accent on a result card, so the category
+   * cannot be shown as an edge stripe there - the whole card tints instead.
+   * A wash this light keeps the navy/muted text well clear of AA contrast.
+   */
+  womenSurface: withAlpha('#FF007F', 0.06),
 } as const;
 
 /** Chart axes, gridlines and series. */

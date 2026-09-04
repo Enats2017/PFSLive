@@ -190,7 +190,7 @@ const OtpStep: React.FC<OtpStepProps> = ({
             </View>
 
             {/* Title & Subtitle */}
-            <Text style={commonStyles.title}>
+            <Text style={[commonStyles.title, forgotStyles.stepTitle]}>
                 {t('forget:otpStep.title')}
             </Text>
             <Text style={[commonStyles.subtitle, forgotStyles.subtitle]}>

@@ -72,7 +72,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
 
     return (
         <TouchableOpacity
-            style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: categoryColors.women }]}
+            style={[resultListStyle.cardWithLeftBorder, isWomen && { backgroundColor: categoryColors.womenSurface }]}
             onPress={handlePress}
         >
             {/* Row head — bib circle, identity, follow star. Matches
@@ -177,6 +177,8 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
 },
 (prev, next) =>
     prev.item.bib === next.item.bib &&
+    // Without this the card never repaints when the Women filter is toggled.
+    prev.isWomen === next.isWomen &&
     prev.isFollowed === next.isFollowed &&
     prev.isLoading === next.isLoading &&
     prev.item.utmb_index === next.item.utmb_index &&

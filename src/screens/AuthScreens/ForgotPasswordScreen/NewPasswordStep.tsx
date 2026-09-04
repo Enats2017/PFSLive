@@ -138,7 +138,7 @@ const NewPasswordStep: React.FC<NewPasswordStepProps> = ({
       </View>
 
       {/* Title & Subtitle */}
-      <Text style={commonStyles.title}>
+      <Text style={[commonStyles.title, forgotStyles.stepTitle]}>
         {t('forget:passwordStep.title')}
       </Text>
       <Text style={[commonStyles.subtitle, forgotStyles.subtitle]}>

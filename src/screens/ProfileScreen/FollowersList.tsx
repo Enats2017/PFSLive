@@ -201,6 +201,13 @@ const FollowersList: React.FC = () => {
     return (
         <SafeAreaView style={commonStyles.container} edges={['bottom']}>
             <AppHeader title={t('common:band.myFollowers')} showBack />
+            <SearchInput
+                placeholder={t('follow:search.athletesearch')}
+                value={searchText}
+                onChangeText={setSearchText}
+                icon="search"
+            />
+
             <FlatList
                 data={displayList}
                 keyExtractor={(item, index) => `follower_${item.customer_app_id}_${index}`}
@@ -213,16 +220,11 @@ const FollowersList: React.FC = () => {
                 contentContainerStyle={{
                     flexGrow: 1,
                     paddingHorizontal: spacing.xl,
+                    // The search band above is full-bleed white; the list needs
+                    // its own top inset so the first card is not welded to it.
+                    paddingTop: spacing.lg,
                     paddingBottom: spacing.xxxxl,
                 }}
-                ListHeaderComponent={
-                    <SearchInput
-                        placeholder={t('follow:search.athletesearch')}
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        icon="search"
-                    />
-                }
                 ListEmptyComponent={renderEmpty}
                 ListFooterComponent={listFooter}
             />

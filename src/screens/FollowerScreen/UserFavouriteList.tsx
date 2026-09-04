@@ -243,6 +243,13 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
             <AppHeader title={t('common:band.favouriteAthletes')} showBack />
 
+            <SearchInput
+                placeholder={t('follow:search.athletesearch')}
+                value={searchText}
+                onChangeText={setSearchText}
+                icon="search"
+            />
+
             <FlatList
                 data={displayList}
                 keyExtractor={(item, index) => `fav_${item.customer_app_id}_${index}`}
@@ -255,16 +262,11 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
                 contentContainerStyle={{
                     flexGrow: 1,
                     paddingHorizontal: spacing.xl,
+                    // The search band above is full-bleed white; the list needs
+                    // its own top inset so the first card is not welded to it.
+                    paddingTop: spacing.lg,
                     paddingBottom: spacing.xxxxl,
                 }}
-                ListHeaderComponent={
-                    <SearchInput
-                        placeholder={t('follow:search.athletesearch')}
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        icon="search"
-                    />
-                }
                 ListEmptyComponent={renderEmpty}
                 ListFooterComponent={listFooter}
             />

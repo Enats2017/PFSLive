@@ -54,3 +54,27 @@ export const formatClockTime = (raw?: string | null): string => {
   // Suffix may be empty (locale chooses not to show am/pm) — trim trailing space.
   return `${h12}:${mm}${suffix ? ' ' + suffix : ''}`.trim();
 };
+
+/**
+ * "1 Aug 2026" - the event-date format the 2026-09-04 design review asks for on
+ * the home card, and what 01_Home.png draws.
+ *
+ * Parses the "YYYY-MM-DD" string directly instead of going through `new Date()`:
+ * a date-only string is parsed as UTC midnight, so in any negative-offset zone
+ * `getDate()` returns the PREVIOUS day. The API sends event dates as plain
+ * calendar dates - they must not be shifted by the device's timezone.
+ *
+ * Month names come from the caller so the string follows the app language:
+ *   t('common:monthsShort', { returnObjects: true })
+ */
+export const formatEventDate = (
+  raw: string | null | undefined,
+  monthsShort: string[],
+): string => {
+  if (!raw) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw.trim());
+  if (!m) return raw;
+  const [, year, month, day] = m;
+  const name = monthsShort[Number(month) - 1] ?? month;
+  return `${Number(day)} ${name} ${year}`;
+};

@@ -110,6 +110,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                                 value={liveUpcoming.query}
                                 onChangeText={liveUpcoming.handleSearch}
                                 icon="search"
+                                framed={false}
                             />
                             <SuggestionDropdown
                                 suggestions={liveUpcoming.suggestions}
@@ -119,7 +120,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                             />
                         </View>
                         <TouchableOpacity
-                            style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.md }]}
+                            style={[commonStyles.primaryButton, { flexDirection: 'row' }]}
                             onPress={() => navigation.navigate('ParticipantEvent')}
                             activeOpacity={0.8}
                         >
@@ -149,12 +150,12 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                         </Text>
                     </View>
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, { flexDirection: 'row' }]}
+                        style={commonStyles.limeButton}
                         onPress={handlePersonalEventPress}
                         activeOpacity={0.8}
                     >
-                        <Feather name="plus" size={15} color={palette.surface} style={{ marginRight: 8 }} />
-                        <Text style={commonStyles.primaryButtonText}>
+                        <Feather name="plus" size={15} color={palette.ink} style={{ marginRight: 8 }} />
+                        <Text style={commonStyles.limeButtonText}>
                             {t('participant:personalRace.createButton')}
                         </Text>
                     </TouchableOpacity>

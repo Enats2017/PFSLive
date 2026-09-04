@@ -98,7 +98,11 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                     category with its rank, wave, status. */}
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.raceTime')}</Text>
-                    <Text style={resultInfoStyles.raceTimeText}>{raceInfo?.time ?? '—'}</Text>
+                    {/* 29_RaceInfo.png sets every value in this card at one size.
+                        At 20pt the race-time row stood a third taller than the
+                        four below it and broke the card's vertical rhythm. The
+                        20pt treatment stays on the stat blocks further down. */}
+                    <Text style={resultInfoStyles.rowValue}>{raceInfo?.time ?? '—'}</Text>
                 </View>
 
                 <View style={resultInfoStyles.bibCard}>

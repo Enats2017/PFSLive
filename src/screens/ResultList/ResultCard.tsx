@@ -98,7 +98,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 
 
     return (
-        <View style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: categoryColors.women }]}>
+        <View style={[resultListStyle.cardWithLeftBorder, isWomen && { backgroundColor: categoryColors.womenSurface }]}>
 
             {/* Row head — rank circle, identity, follow star. */}
             <View style={resultListStyle.rowHead}>
@@ -221,6 +221,8 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 }, (prev, next) =>
     prev.fromLive === next.fromLive &&
     prev.item.bib === next.item.bib &&
+    // Without this the card never repaints when the Women filter is toggled.
+    prev.isWomen === next.isWomen &&
     prev.isFollowed === next.isFollowed &&
     prev.isLoading === next.isLoading &&
     prev.item.position === next.item.position &&

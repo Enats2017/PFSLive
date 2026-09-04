@@ -79,7 +79,7 @@ const EmailStep: React.FC<EmailStepProps> = ({ onNext, onBack }) => {
       </View>
 
       {/* Title & Subtitle */}
-      <Text style={commonStyles.title}>
+      <Text style={[commonStyles.title, forgotStyles.stepTitle]}>
         {t('forget:emailStep.title')}
       </Text>
       <Text style={[commonStyles.subtitle, forgotStyles.subtitle]}>

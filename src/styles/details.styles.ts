@@ -143,11 +143,15 @@ export const detailsStyles = StyleSheet.create({
     gap:spacing.md,
    
   },
+  // Avatar | name+meta | action. Reviewer note (2026-09-04): the avatar and the
+  // name block were welded together - the row had padding but no gap, so the
+  // text started at the edge of the 60pt circle on every card that uses this
+  // row (participant list, athlete search, favourites, followers).
   topRow: {
     flexDirection: "row",
     alignItems: "center",
-     padding: spacing.md,
-   
+    gap: space.md,
+    padding: space.lg,
   },
   
     distanceInfo: {

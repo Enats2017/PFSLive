@@ -105,13 +105,21 @@ export const optStyles = StyleSheet.create({
     maxWidth: 52,
     height: 56,
     borderWidth: 1.5,
-    borderRadius: 14,
+    borderRadius: radii.md,
     borderColor: palette.inputBorder,
     fontFamily: fonts.display,
     fontSize: 26,
     color: palette.ink,
     backgroundColor: palette.surface,
     textAlign: 'center',
+    // A TextInput does NOT vertically centre its own text. Android defaults to
+    // textAlignVertical 'top' and both platforms add their own vertical padding,
+    // so a 26pt digit in a fixed 56pt box sits high in the box rather than in
+    // the middle of it. `textAlign` only ever handled the horizontal axis.
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
     ...shadows.hairline,
   },
 

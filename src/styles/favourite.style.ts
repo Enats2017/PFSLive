@@ -67,8 +67,10 @@ export const favstyle = StyleSheet.create({
   },
   headerLeft: {
     borderRadius: radii.sm,
-    paddingHorizontal: space.sm,
-    paddingVertical: space.xs,
+    paddingHorizontal: space.md,
+    minHeight: 26,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // ✅ Header label text (status + distance)
@@ -157,19 +159,23 @@ export const favstyle = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: palette.border,
-    marginHorizontal: 16,
+    // Spans the card's content width - the card already supplies the inset.
+    marginHorizontal: 0,
+    marginTop: space.md,
+    marginBottom: space.lg,
   },
 
   // ── Stats row (3 columns) ────────────────────────────────
   statsRow: {
     flexDirection: "row",
-    paddingVertical: 16,
-    paddingHorizontal: 8,
+    gap: space.md,
   },
 
+  // 25_Favourites.png left-aligns the three stat columns under the divider;
+  // centring them left ragged gaps that read as uneven spacing.
   statCol: {
     flex: 1,
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "center",
   },
 
@@ -181,20 +187,19 @@ export const favstyle = StyleSheet.create({
 
   statLabel: {
     fontFamily: fonts.bodySemi,
-        fontSize: 10,
+    fontSize: 10,
     color: palette.textMuted,
-    textAlign: "center",
+    textAlign: "left",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginBottom: 4,
+    marginBottom: space.xs,
   },
 
   statVal: {
     fontFamily: fonts.bodySemi,
-        fontSize: 20,
-
-        color: palette.ink,
-    textAlign: "center",
+    fontSize: 20,
+    color: palette.ink,
+    textAlign: "left",
   },
 
   // ── Finish time (kept for backward compatibility) ────────

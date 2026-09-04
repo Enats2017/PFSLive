@@ -6,6 +6,7 @@ import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { useTranslation } from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 
 interface FanEventCardProps {
     /**
@@ -33,6 +34,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
     onToggleFollow,
 }) => {
     const { t } = useTranslation(['follower', 'common']);
+    const navigation = useNavigation<any>();
     const [avatarLoading, setAvatarLoading] = useState(true);
 
     const fullName = useMemo(() =>
@@ -133,7 +135,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                     </View>
                 </View>
 
-                {variant === 'favourite' ? (
+                {variant === 'favourite' && (
                     // 19_FavouriteAthletes.png - one destructive action, in red.
                     <TouchableOpacity
                         style={[follow.removeChip, { opacity: isLoading ? 0.6 : 1 }]}
@@ -150,11 +152,35 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                             </Text>
                         )}
                     </TouchableOpacity>
-                ) : (
-                    // 17_AthleteSearch.png - Follow, or Following once followed.
+                )}
+            </View>
+
+            {variant === 'search' && (
+                /* 17_AthleteSearch.png draws a single inline Follow chip, which
+                   leaves no room for the View button the 2026-09-04 review asks
+                   for: avatar + two chips left about 68pt for the name. So the
+                   search row uses the deck's OTHER two-action pattern, the one
+                   22_ParticipantList uses - identity on top, actions on their
+                   own row - and the name gets the full card width. */
+                <View style={detailsStyles.cardActionRow}>
+                    <TouchableOpacity
+                        style={detailsStyles.cardActionSecondary}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        onPress={() =>
+                            navigation.navigate('ProfileScreen', {
+                                customer_app_id: item.customer_app_id,
+                            })
+                        }
+                    >
+                        <Text style={detailsStyles.cardActionSecondaryText}>
+                            {t('follower:button.viewprofile')}
+                        </Text>
+                    </TouchableOpacity>
+
                     <TouchableOpacity
                         style={[
-                            isFollowed ? follow.viewChip : follow.followChip,
+                            detailsStyles.cardActionPrimary,
                             { opacity: isLoading ? 0.6 : 1 },
                         ]}
                         onPress={onToggleFollow}
@@ -163,12 +189,9 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                         accessibilityRole="button"
                     >
                         {isLoading ? (
-                            <ActivityIndicator
-                                size="small"
-                                color={isFollowed ? palette.navy : palette.surface}
-                            />
+                            <ActivityIndicator size="small" color={palette.surface} />
                         ) : (
-                            <Text style={isFollowed ? follow.viewChipText : follow.followChipText}>
+                            <Text style={detailsStyles.cardActionPrimaryText}>
                                 {isFollowed
                                     ? t('follower:button.following')
                                     : item?.password_protected === 1
@@ -177,8 +200,8 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                             </Text>
                         )}
                     </TouchableOpacity>
-                )}
-            </View>
+                </View>
+            )}
         </View>
     );
 };

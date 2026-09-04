@@ -32,26 +32,56 @@ const LIGHT_TEXT = [
   'activeTabText',
 ];
 
+// Judge each BUTTON OCCURRENCE, not the file. The first version bailed out as
+// soon as the correct label style appeared anywhere in the file - so a screen
+// with three `routeButton`s, two labelled correctly and one white-on-white,
+// read as clean. That is exactly the bug it exists to catch, and it shipped.
 export function findMismatch(src) {
   const bad = [];
   for (const [btn, want] of Object.entries(PAIRS)) {
-    if (!src.includes(btn)) continue;
-    if (src.includes(want)) continue;          // correct pair present
-    for (const light of LIGHT_TEXT) {
-      if (src.includes(light)) bad.push(`${btn} + ${light}`);
+    let from = 0;
+    for (;;) {
+      const at = src.indexOf(btn, from);
+      if (at === -1) break;
+      from = at + btn.length;
+      // `routeButtonText` contains `routeButton` - skip the label style itself.
+      if (src.startsWith(want, at)) continue;
+
+      // Look only as far as this button's own element: the next occurrence of
+      // any pair key, or the closing tag, whichever comes first.
+      let end = src.indexOf('</TouchableOpacity>', from);
+      if (end === -1) end = src.length;
+      for (const other of Object.keys(PAIRS)) {
+        const nxt = src.indexOf(other, from);
+        if (nxt !== -1 && nxt < end) end = nxt;
+      }
+      const window = src.slice(from, end);
+
+      if (window.includes(want)) continue;      // correctly labelled
+      for (const light of LIGHT_TEXT) {
+        if (window.includes(light)) bad.push(`${btn} + ${light}`);
+      }
     }
   }
   return bad;
 }
 
 if (process.argv.includes('--selftest')) {
-  const ok1 = findMismatch('style={s.routeButton}><Text style={c.primaryButtonText}>').length === 1;
-  const ok2 = findMismatch('style={s.routeButton}><Text style={s.routeButtonText}>').length === 0;
+  const ok1 = findMismatch('style={s.routeButton}><Text style={c.primaryButtonText}></TouchableOpacity>').length === 1;
+  const ok2 = findMismatch('style={s.routeButton}><Text style={s.routeButtonText}></TouchableOpacity>').length === 0;
   const ok3 = findMismatch('<Text style={c.primaryButtonText}>').length === 0;  // no light button
+  // The regression this check was rewritten for: one bad occurrence hiding
+  // behind two good ones in the same file.
+  const mixed =
+    'style={s.routeButton}><Text style={s.routeButtonText}></TouchableOpacity>' +
+    'style={s.routeButton}><Text style={s.routeButtonText}></TouchableOpacity>' +
+    'style={s.routeButton}><Text style={c.primaryButtonText}></TouchableOpacity>';
+  const ok4 = findMismatch(mixed).length === 1;
   console.log(`  ${ok1 ? 'PASS' : 'FAIL'}  catches a light label on a light button`);
   console.log(`  ${ok2 ? 'PASS' : 'FAIL'}  quiet when the pair matches`);
   console.log(`  ${ok3 ? 'PASS' : 'FAIL'}  quiet when there is no light button`);
-  const ok = ok1 && ok2 && ok3;
+  console.log(`  ${ok4 ? 'PASS' : 'FAIL'}  catches one bad occurrence among good ones`);
+  const ok = ok1 && ok2 && ok3 && ok4;
   console.log(ok ? '\nself-test passed' : '\nSELF-TEST FAILED');
   process.exit(ok ? 0 : 1);
 }

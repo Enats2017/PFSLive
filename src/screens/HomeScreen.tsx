@@ -50,6 +50,7 @@ import FollowingLiveEventsSection from './FollowingLiveEventsSection';
 import { useDimensions } from '../hooks/useDimensions';
 import { FanEmailModal } from '../components/Fanemailmodal';
 import { fanEmailStorage } from '../utils/fanEmailStorage';
+import { formatClockTime, formatEventDate } from '../utils/timeFormat';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../constants/analyticsScreens';
 
 interface StandardApiResponse<T = any> {
@@ -203,6 +204,12 @@ const openLocationSettingsFor = async (reason: PermissionBlockReason): Promise<v
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['home', 'common']);
+
+  // Short month names for the next-session card's date, in the app language.
+  const monthsShort = useMemo(
+    () => t('common:monthsShort', { returnObjects: true }) as string[],
+    [t],
+  );
   const { width } = useDimensions();
   const insets = useSafeAreaInsets();
   const isGestureNav = insets.bottom > 0;
@@ -453,21 +460,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const getServerTime = useCallback((): Date => {
     const deviceTime = new Date();
     return new Date(deviceTime.getTime() + serverTimeOffsetRef.current);
-  }, []);
-
-  const formatDate = useCallback((dateString: string): string => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return dateString;
-
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-
-      return `${day}-${month}-${year}`;
-    } catch (error) {
-      return dateString;
-    }
   }, []);
 
   const hasRaceStarted = useCallback((): boolean => {
@@ -2135,20 +2127,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <>
               <Text style={homeStyles.sectionLabel}>{t('home:sections.nextSession')}</Text>
               <View style={commonStyles.card}>
-                <View style={homeStyles.eventInfo}>
-                  <Text style={homeStyles.eventNameText}>
-                    <Text style={homeStyles.eventLabel}>{t('home:Event.title')}: </Text>
-                    <Text style={homeStyles.eventValue}>{homeData.next_race_name}</Text>
+                {/* 01_Home.png: the event NAME leads the card, then a single
+                    meta line carrying the date and the start time. The old
+                    "Event name: x" / "Date: y" label prefixes are not in the
+                    deck and pushed the values down to caption size. */}
+                <Text style={homeStyles.eventName} numberOfLines={2}>
+                  {homeData.next_race_name}
+                </Text>
+
+                <View style={homeStyles.eventMetaRow}>
+                  <Ionicons name="calendar-outline" size={16} color={palette.textMuted} />
+                  <Text style={homeStyles.eventMetaText}>
+                    {formatEventDate(homeData.next_race_date, monthsShort)}
                   </Text>
+                  {!!homeData.next_race_time && (
+                    <>
+                      <Ionicons name="time-outline" size={16} color={palette.textMuted} />
+                      <Text style={homeStyles.eventMetaText}>
+                        {formatClockTime(homeData.next_race_time)}
+                      </Text>
+                    </>
+                  )}
                 </View>
 
-                <Text style={homeStyles.smallText}>
-                  <Text style={{ fontFamily: fonts.bodySemi,
-        fontSize: 13,
-        }}>{t('home:Event.Date')}:</Text>
-                  {' '}
-                  {formatDate(homeData.next_race_date!)}
-                </Text>
+                <View style={homeStyles.cardDivider} />
                 {/* Manual Start Indicator */}
                 {homeData?.manual_start === 1 && (
                   <View style={[homeStyles.trackingStatus, { backgroundColor: palette.warningBg }]}>
@@ -2277,7 +2279,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </ScrollView>
                 )}
 
-                <Text style={homeStyles.heading}>{t('home:Event.description')}</Text>
+                <Text style={homeStyles.eventDescription}>{t('home:Event.description')}</Text>
                 {/* GPS-HEALTH WARNING BANNER.
                     Seven sessions on 2026-08-23 showed "GPS Active" for hours
                     while recording nothing, and none of them recovered. This is

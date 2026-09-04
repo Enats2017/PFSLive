@@ -83,10 +83,16 @@ export const forgotStyles = StyleSheet.create({
   title: {
     ...type.h1,
   },
+  // Reviewer note (2026-09-04): centre the step header. NOTE this differs from
+  // 06_ForgotPassword.png, which draws the title and description left-aligned.
+  stepTitle: {
+    textAlign: 'center',
+  },
   subtitle: {
     ...type.body,
     marginTop: space.sm,
     marginBottom: space.lg,
+    textAlign: 'center',
   },
 
   iconCircle: {
@@ -96,6 +102,9 @@ export const forgotStyles = StyleSheet.create({
     backgroundColor: palette.fill,
     justifyContent: 'center',
     alignItems: 'center',
+    // The title and description below are centred (review note), so a
+    // left-hugging icon left the whole header block lopsided.
+    alignSelf: 'center',
     marginBottom: space.xl,
   },
 
@@ -114,9 +123,12 @@ export const forgotStyles = StyleSheet.create({
     ...type.smallMedium,
   },
 
+  // Sits directly under the centred subtitle, so it centres with it - matching
+  // how the registration OTP screen draws the same line (OtpScreen.styles.ts).
   email: {
     ...type.h3,
     color: palette.navy,
+    textAlign: 'center',
     marginTop: space.xs,
     marginBottom: space.xxl,
   },
@@ -127,6 +139,8 @@ export const forgotStyles = StyleSheet.create({
     width: '100%',
     marginBottom: space.md,
   },
+  // Same control as the registration OTP box (OtpScreen.styles.ts) - it was
+  // 20pt in a softer ink, so the two screens drew the same field differently.
   otpInput: {
     width: 48,
     height: 56,
@@ -134,10 +148,18 @@ export const forgotStyles = StyleSheet.create({
     borderRadius: radii.md,
     borderColor: palette.inputBorder,
     fontFamily: fonts.display,
-    fontSize: 20,
-    color: palette.inkSoft,
+    fontSize: 26,
+    color: palette.ink,
     backgroundColor: palette.surface,
     textAlign: 'center',
+    // A TextInput does NOT vertically centre its own text. Android defaults to
+    // textAlignVertical 'top' and both platforms add their own vertical padding,
+    // so a 26pt digit in a fixed 56pt box sits high in the box rather than in
+    // the middle of it. `textAlign` only ever handled the horizontal axis.
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   // A filled box reads as progress, so it takes the navy edge — not a tint,
   // which fought the error state at a glance.
@@ -164,6 +186,8 @@ export const forgotStyles = StyleSheet.create({
   resendRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.xs,
     marginTop: space.xl,
     marginBottom: space.md,
   },

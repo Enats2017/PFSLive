@@ -101,7 +101,9 @@ export const resultInfoStyles = StyleSheet.create({
     backgroundColor: palette.surface,
     borderRadius: radii.md,
     padding: space.lg,
-    marginBottom: space.md,
+    // 29_RaceInfo.png leaves ~20pt between stacked cards. At 12 the sections ran
+    // together, which is the "clearer section separation" the review asks for.
+    marginBottom: space.xl,
     ...shadows.card,
   },
   headerBar: {
@@ -130,6 +132,31 @@ export const resultInfoStyles = StyleSheet.create({
     justifyContent: "space-between",
     gap: space.md,
     paddingVertical: space.sm,
+    minHeight: 36,
+  },
+
+  // 28_RunnerInfo.png centres the whole identity block: avatar, then the name
+  // below it, then the country under the name. The name and country used to sit
+  // in a `bibCard` - a space-between row - so the country was flung to the far
+  // edge of the card, nowhere near the name it belongs to (review note
+  // 2026-09-04: "name below the profile image, country and flag alongside").
+  identityBlock: {
+    alignItems: "center",
+    marginTop: space.md,
+  },
+  identityName: {
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: palette.ink,
+    textAlign: "center",
+  },
+  identityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: space.sm,
+    marginTop: space.xs,
   },
   // Small-caps section label at the head of a card (29_RaceInfo.png).
   sectionLabel: {

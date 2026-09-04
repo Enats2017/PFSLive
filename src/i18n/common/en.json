@@ -52,6 +52,20 @@
     "november": "November",
     "december": "December"
   },
+  "monthsShort": [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+  ],
   "week": {
     "mon": "Mon",
     "tue": "Tue",

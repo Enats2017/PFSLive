@@ -231,6 +231,13 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
             <AppHeader title={t('common:band.findAthlete')} showBack />
 
+            <SearchInput
+                placeholder={t('follow:search.athletesearch')}
+                value={searchText}
+                onChangeText={setSearchText}
+                icon="search"
+            />
+
             <FlatList
                 data={displayEvents}
                 keyExtractor={(item, index) => `${item.customer_app_id}_${index}`}
@@ -242,16 +249,11 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
                 removeClippedSubviews={false}
                 contentContainerStyle={{
                     paddingHorizontal: spacing.xl,
+                    // The search band above is full-bleed white; the list needs
+                    // its own top inset so the first card is not welded to it.
+                    paddingTop: spacing.lg,
                     paddingBottom: spacing.xxxxl,
                 }}
-                ListHeaderComponent={
-                    <SearchInput
-                        placeholder={t('follow:search.athletesearch')}
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        icon="search"
-                    />
-                }
                 ListEmptyComponent={renderEmpty}
                 ListFooterComponent={
                     loadingMore || loadingMoreParticipant ? (

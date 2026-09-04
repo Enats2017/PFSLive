@@ -3,9 +3,12 @@ import { spacing, palette, radii, space, type, fonts } from './common.styles';
 
  export const particpant = StyleSheet.create({
 
+    // 12_ParticipantHub.png insets every element by the same 20pt page gutter.
+    // This was 8 while `sectionLabel` below used 20, so each label sat 12pt to
+    // the left of the block it introduced.
     section: {
-        paddingHorizontal: spacing.sm,
-        gap: spacing.xl,
+        paddingHorizontal: space.xl,
+        gap: space.md,
     },
 
     sectionLabel: {
@@ -13,8 +16,9 @@ import { spacing, palette, radii, space, type, fonts } from './common.styles';
         alignItems: 'center',
         gap: space.sm,
         paddingHorizontal: space.xl,
-        paddingTop: space.lg,
-        paddingBottom: space.sm,
+        paddingTop: space.xl,
+        // Separates the heading from the block it introduces (review note).
+        paddingBottom: space.md,
     },
     sectionLabelText: {
         ...type.label,
@@ -22,7 +26,10 @@ import { spacing, palette, radii, space, type, fonts } from './common.styles';
     },
 
     dividerRow: {
-        paddingVertical: spacing.xl,
+        paddingVertical: space.xl,
+        // Without this the OR rule ran the full screen width while everything
+        // around it was inset.
+        paddingHorizontal: space.xl,
         flexDirection: 'row',
         alignItems: 'center',
         gap: space.md,
@@ -42,12 +49,16 @@ import { spacing, palette, radii, space, type, fonts } from './common.styles';
         letterSpacing: 1,
     },
 
+    // The lime-tinted note above "Create personal event". The deck gives it real
+    // padding and lets the copy breathe; at 12pt padding with a 4pt gap the icon
+    // was welded to the first word.
     infoCard: {
         flexDirection: 'row',
+        alignItems: 'flex-start',
         backgroundColor: palette.noticeBg,
         borderRadius: radii.md,
-        padding: spacing.md,
-        gap: spacing.xs,
+        padding: space.lg,
+        gap: space.md,
         borderLeftWidth: 3,
         borderLeftColor: palette.lime,
     },

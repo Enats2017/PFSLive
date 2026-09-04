@@ -9,13 +9,6 @@ export const homeStyles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: spacing.xxxxl,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: space.xl,
-    paddingTop: space.lg,
-    gap: space.md,
-  },
-
   // Section label — small caps on white, as the deck draws in-page sections.
   // ── 01_Home.png: the "YOU FOLLOW" block inside a followed-event card ──
   // The card lists the athletes you follow in that event; the data was already
@@ -104,9 +97,12 @@ export const homeStyles = StyleSheet.create({
     color: palette.ink,
     marginTop: space.md,
   },
+  // 02_Home-Tracking-Active.png sets the event line at 15, not caption size -
+  // it is the only thing on the card that says WHICH race is being tracked.
   activeEvent: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 15,
+    lineHeight: 22,
     color: palette.textMuted,
     marginTop: space.sm,
     textAlign: "center",
@@ -202,52 +198,56 @@ export const homeStyles = StyleSheet.create({
   },
 
   // Event info section
+  // The home body is a LAYOUT container, not a card. It used to be a white
+  // rounded panel with its own shadow, so the next-session card - itself white
+  // with a shadow - sat inside a second white card, and the whole block ran
+  // edge to edge with no page gutter. 01_Home.png puts the cards on the page
+  // tint, inset 20pt, with even spacing between them.
   textContainer: {
-    backgroundColor: palette.surface,
-    borderRadius: radii.lg,
-    padding: space.xl,
-    ...shadows.raised,
+    paddingHorizontal: space.xl,
+    paddingTop: space.lg,
+    gap: space.md,
   },
 
-  // Event Name
-  eventInfo: {
-    flexDirection: "row",
-    gap: space.lg,
+  // ── Next-session card (01_Home.png) ──────────────────────────────────────
+  // Review note 2026-09-04: the name rendered at 13 (body) and the date at 12,
+  // while the description below them ran at 20 (display) - the card read upside
+  // down. The deck's ramp is name 26 / meta 15 / description 15.
+  eventName: {
+    fontFamily: fonts.display,
+    fontSize: 26,
+    color: palette.ink,
+  },
+  eventMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: space.sm,
     marginTop: space.md,
   },
-  eventNameText: {
-    fontFamily: fonts.display,
-    fontSize: 20,
-    color: palette.ink,
-    marginTop: space.sm,
-  },
-  eventLabel: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 10,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-    color: palette.textMuted,
-  },
-  eventValue: {
-    fontFamily: fonts.body,
-    fontSize: 13,
+  eventMetaText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 15,
     color: palette.textBody,
   },
-  smallText: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: palette.textMuted,
+  // Separates the event's identity from the instruction below it.
+  cardDivider: {
+    height: 1,
+    backgroundColor: palette.border,
+    marginVertical: space.lg,
   },
+  eventDescription: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: palette.textMuted,
+    lineHeight: 22,
+  },
+
   centeredText: {
     fontFamily: fonts.body,
     fontSize: 13,
     color: palette.textMuted,
     textAlign: "center",
-  },
-  heading: {
-    fontFamily: fonts.display,
-    fontSize: 20,
-    color: palette.ink,
   },
   tagline: {
     fontFamily: fonts.body,
