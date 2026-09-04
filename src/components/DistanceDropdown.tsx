@@ -5,6 +5,7 @@ import { DistanceOption } from '../services/liveTrackingService';
 import { liveTrackingStyles } from '../styles/liveTracking.styles';
 import { palette } from '../styles/common.styles';
 import { useTranslation } from 'react-i18next';
+import { RaceStatePill } from './RaceStatePill';
 
 interface DistanceDropdownProps {
     distances: DistanceOption[];
@@ -36,24 +37,7 @@ export const DistanceDropdown: React.FC<DistanceDropdownProps> = ({
         <View style={liveTrackingStyles.dropdownContainer}>
             <View style={liveTrackingStyles.mapHeadRow}>
                 <Text style={liveTrackingStyles.mapHeadTitle}>{t('livetracking:liveMap')}</Text>
-                {!!raceState && (
-                    <View
-                        style={[
-                            liveTrackingStyles.mapLivePill,
-                            raceState === 'finished' && liveTrackingStyles.mapPillFinished,
-                            raceState === 'upcoming' && liveTrackingStyles.mapPillUpcoming,
-                        ]}
-                    >
-                        <Text
-                            style={[
-                                liveTrackingStyles.mapLiveText,
-                                raceState !== 'live' && liveTrackingStyles.mapPillMutedText,
-                            ]}
-                        >
-                            {t(`livetracking:raceState_${raceState}`)}
-                        </Text>
-                    </View>
-                )}
+                {!!raceState && <RaceStatePill raceState={raceState} />}
             </View>
 
             <TouchableOpacity

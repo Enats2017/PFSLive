@@ -24,7 +24,25 @@ interface LiveTabProps {
 
 const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-    const { t } = useTranslation(['event', 'common']);
+    const { t } = useTranslation(['event', 'common', 'livetracking']);
+
+    // The live tab is a WINDOW (today-2 .. today+5 on event_list_api.php), so it
+    // also holds races that have already finished and ones that have not begun.
+    // `event_status` says which each row actually is.
+    //
+    // No status -> NO BADGE. Defaulting to 'live' is what made a 2026-09-06 race
+    // claim to be live: the second page of this tab comes from a different query
+    // that was not sending the field. Showing nothing is honest; asserting the
+    // one state we cannot verify is not.
+    const eventBadge = useCallback((status?: 'live' | 'finished' | 'upcoming') => {
+        if (!status) return {};
+        return {
+            badgeLabel: t(`livetracking:raceState_${status}`),
+            badgeTone: (status === 'live' ? 'lime' : 'neutral') as 'lime' | 'neutral',
+            badgeCaps: true,
+        };
+    }, [t]);
+
 
     // ✅ SIMPLIFIED: Just check hasMore and loadingMore (EXACT PROFILESCREEN PATTERN)
     const handleLoadMore = useCallback(() => {
@@ -56,9 +74,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 city={item.city}
                 country={item.country}
                 imageUrl={item.event_image}
-                badgeLabel={t('details:live')}
-                badgeTone="lime"
-                badgeCaps
+                {...eventBadge(item.event_status)}
                 onPress={async () => {
                     analyticsService.logInteraction(
                         ANALYTICS_SCREENS.EVENT_LIST,

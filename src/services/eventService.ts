@@ -12,6 +12,13 @@ export interface EventItem {
   event_image: string; 
   result_url: string;
   race_result_api_url: string;
+  /**
+   * Where the event sits today, from event_list_api.php. Only the LIVE tab
+   * sends it: that tab is a WINDOW (today-2 .. today+5), so it also holds
+   * races that already finished and ones that have not started. Absent on the
+   * past and upcoming tabs, where the tab itself is the answer.
+   */
+  event_status?: 'live' | 'finished' | 'upcoming';
 }
 
 export interface EventTabs {

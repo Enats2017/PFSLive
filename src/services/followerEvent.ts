@@ -13,6 +13,12 @@ export interface EventItem {
  category_id:  any;
   race_result_api_url: string;
   event_image: string; 
+  /**
+   * Same field as eventService.EventItem - both tabs read event_list_api.php.
+   * Only the LIVE tab sends it: that tab is a window (today-2 .. today+5), so
+   * it also holds finished and not-yet-started races.
+   */
+  event_status?: 'live' | 'finished' | 'upcoming';
 }
 
 export interface EventTabs {

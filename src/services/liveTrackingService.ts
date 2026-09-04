@@ -87,6 +87,22 @@ export interface LiveTrackingResponse {
         checkpoints: LiveTrackingCheckpoint[];
         race_result_status?: number;
         show_results?: number;
+        /**
+         * Where the race is in its own window, computed server-side from the
+         * per-distance race_date + start_time + end_time in the EVENT's
+         * timezone (get_live_tracking_data_api.php::buildCountdown), so it
+         * handles multi-day events and starts that cross midnight.
+         *
+         * This is the authoritative race state. `sourceTab` is not: six of the
+         * eight screens that open the map hardcode `sourceTab: 'live'`, because
+         * it means "which tab I came from", not "what state the race is in".
+         */
+        countdown?: {
+            status: 'not_started' | 'in_progress' | 'finished';
+            days: number;
+            hours: number;
+            minutes: number;
+        };
         race_date?: string | null;
         /**
          * Training event (custom, event_type 3): free-form session. Distance is an

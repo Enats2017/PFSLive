@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../components/common/AppHeader';
+import { RaceStatePill } from '../components/RaceStatePill';
 import { BottomNavigation } from '../components/common/BottomNavigation';
 import { BottomNavigationFollower } from '../components/common/BottomNavigationFollower';
 import { LiveTrackingScreenProps } from '../types/navigation';
@@ -68,6 +69,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [loadedGpxUrl, setLoadedGpxUrl] = useState<string | null>(null);
     const [showResults, setShowResults] = useState(false);
     const [raceDate, setRaceDate] = useState<string | null>(null);
+    const [countdownStatus, setCountdownStatus] =
+        useState<'not_started' | 'in_progress' | 'finished' | null>(null);
     const isRrActive = !isCustomEvent && showResults;
 
     /**
@@ -77,9 +80,18 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
      * finished, one still ahead is upcoming, and today's is live.
      */
     const raceState: 'live' | 'finished' | 'upcoming' = useMemo(() => {
+        // The API's countdown leads. It is computed from the per-distance
+        // race_date + start_time + end_time in the event's own timezone, so it
+        // is right for multi-day events and midnight-crossing starts.
+        if (countdownStatus === 'finished') return 'finished';
+        if (countdownStatus === 'not_started') return 'upcoming';
+        if (countdownStatus === 'in_progress') return 'live';
+
+        // `sourceTab` is only a hint, and a weak one: BottomNavigation,
+        // HomeScreen, EventCardLive and the participant DistanceTab all pass a
+        // hardcoded 'live'. Trust it only to say "not live".
         if (sourceTab === 'past') return 'finished';
         if (sourceTab === 'upcoming') return 'upcoming';
-        if (sourceTab === 'live') return 'live';
         const day = (raceDate ?? '').slice(0, 10);
         if (!day) return isRrActive ? 'live' : 'upcoming';
         // LOCAL calendar date, not toISOString(): that returns UTC, and the race
@@ -91,7 +103,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         if (day < today) return 'finished';
         if (day > today) return 'upcoming';
         return 'live';
-    }, [sourceTab, raceDate, isRrActive]);
+    }, [countdownStatus, sourceTab, raceDate, isRrActive]);
     const [trainingFree, setTrainingFree] = useState(false);
     
 
@@ -438,6 +450,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 response?.data?.show_results === 1;
 
             setRaceDate(response?.data?.product_race_date ?? null);
+            setCountdownStatus(response?.data?.countdown?.status ?? null);
 
             console.log("livetrackingscreen",raceDate );
             
@@ -628,6 +641,19 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
             <AppHeader title={event_name} showLogo={true} showBack />
+            {/* A custom event has no distances, so no dropdown to carry the
+                status pill - it gets the same header row on its own. */}
+            {!showDistanceDropdown && (
+                <View style={liveTrackingStyles.dropdownContainer}>
+                    <View style={liveTrackingStyles.mapHeadRow}>
+                        <Text style={liveTrackingStyles.mapHeadTitle}>
+                            {t('livetracking:liveMap')}
+                        </Text>
+                        <RaceStatePill raceState={raceState} />
+                    </View>
+                </View>
+            )}
+
             {showDistanceDropdown && selectedDistance && (
                 <DistanceDropdown
                     distances={distances}
