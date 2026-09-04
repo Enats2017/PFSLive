@@ -21,6 +21,7 @@ import { useFollowManager } from '../../hooks/useFollowManager';
 import { useDimensions } from '../../hooks/useDimensions';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface PaginationState {
     page: number;
@@ -53,9 +54,16 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
         passwordError,
         handlePasswordSubmit,
         handlePasswordModalClose,
+        refreshFollowedUsers,
     } = useFollowManager(t, undefined, undefined, {
         screenName: ANALYTICS_SCREENS.ATHLETE_SEARCH,
     });
+    
+    useFocusEffect(
+        useCallback(() => {
+            refreshFollowedUsers();
+        }, [refreshFollowedUsers])
+    );
 
     const displayEvents = searchText.trim().length > 0 ? searchResults : participants;
 

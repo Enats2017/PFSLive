@@ -167,20 +167,20 @@ const DistanceTab = ({
             </Text>
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {item.race_date_formatted}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>
               <Ionicons name="time-outline" size={15} color={colors.gray600} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {formatClockTime(item.race_time)}
               </Text>
             </View>
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Feather name="users" size={16} color={colors.gray500} />
-                <Text style={commonStyles.subtitle} numberOfLines={1}>
+                <Text style={detailsStyles.metaText} numberOfLines={1}>
                   {item.participant_started_count} {t('details:athletes')}
                 </Text>
               </View>
@@ -188,7 +188,7 @@ const DistanceTab = ({
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
-                <Text style={commonStyles.subtitle} numberOfLines={1}>
+                <Text style={detailsStyles.metaText} numberOfLines={1}>
                   {item.finished_count} {t('details:finished')}
                 </Text>
               </View>
@@ -196,7 +196,7 @@ const DistanceTab = ({
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
-                <Text style={commonStyles.subtitlered} numberOfLines={1}>
+                <Text style={detailsStyles.metaText} numberOfLines={1}>
                   {item.dnf_count} {t('details:dnf')}
                 </Text>
               </View>
@@ -237,7 +237,7 @@ const DistanceTab = ({
                   }}
                 activeOpacity={0.8}
               >
-                <Text style={commonStyles.primaryButtonText}>
+                <Text style={[commonStyles.primaryButtonText,{fontSize: 11.5}]}>
                   {t('button.result')}
                 </Text>
               </TouchableOpacity>
@@ -263,7 +263,7 @@ const DistanceTab = ({
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={commonStyles.primaryButtonText}>
+                <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
                   {t('button.route')}
                 </Text>
               </TouchableOpacity>
@@ -275,7 +275,7 @@ const DistanceTab = ({
                 onPress={() => handleDownloadGpx(item)}
                 activeOpacity={0.8}
               >
-                <Text style={commonStyles.primaryButtonText}>
+                <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
                   {t('details:gpx')}
                 </Text>
               </TouchableOpacity>
