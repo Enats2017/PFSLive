@@ -151,9 +151,12 @@ export const registerStyles = StyleSheet.create({
         },
 
   // ✅ REGISTER LINK
+  // Same undersized text link as loginStyles.forgotButton - see the note there.
   registerButton: {
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    justifyContent: 'center',
+    paddingVertical: space.md,
+    minHeight: 44,
     marginBottom: spacing.md,
   },
 

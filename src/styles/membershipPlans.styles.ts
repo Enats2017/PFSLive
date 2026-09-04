@@ -181,10 +181,15 @@ export const membershipPlansStyle = StyleSheet.create({
         textAlign: 'center',
         marginTop: space.md,
     },
+    // Same undersized text link as loginStyles.forgotButton: 4pt padding around
+    // 12pt text is ~25pt, well under the 44/48pt minimum.
     restoreButton: {
         alignSelf: 'center',
+        justifyContent: 'center',
         marginTop: space.md,
-        paddingVertical: space.xs,
+        paddingVertical: space.md,
+        paddingHorizontal: space.md,
+        minHeight: 44,
     },
     restoreButtonText: {
         fontFamily: fonts.bodySemi,

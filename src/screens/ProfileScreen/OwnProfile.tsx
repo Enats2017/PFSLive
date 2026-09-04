@@ -529,7 +529,11 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                                     </Text>
                                 </View>
                             )}
+                            {/* A 26pt circle is well under the minimum target;
+                                the badge stays small by design, so the hit area
+                                is widened with hitSlop rather than padding. */}
                             <TouchableOpacity style={ownProfile.cameraBadge}
+                                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                                 onPress={() => navigation.navigate('EditProfileScreen' as never)} >
                                 <Ionicons name="camera-sharp" size={16} color={palette.ink} />
                             </TouchableOpacity>

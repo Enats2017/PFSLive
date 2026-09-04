@@ -34,7 +34,14 @@ export const loginStyles = StyleSheet.create({
 
   forgotButton: {
     alignSelf: 'flex-end',
-    paddingVertical: space.xs,
+    // A text link still needs a real touch target. At 4pt padding this was about
+    // 26pt tall - well under the 44pt (iOS) / 48pt (Android) minimum - and it
+    // carried no hitSlop, so it read as "not clickable" rather than as a link
+    // that was merely hard to hit.
+    paddingVertical: space.md,
+    paddingHorizontal: space.xs,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   forgotText: {
     fontFamily: fonts.bodyMedium,

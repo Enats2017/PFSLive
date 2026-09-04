@@ -352,7 +352,11 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
           <View style={optStyles.resendContainer}>
             <Text style={optStyles.resendLabel}>{t('otp:didntReceive')} </Text>
             {canResend ? (
-              <TouchableOpacity onPress={handleResend} disabled={resending}>
+              <TouchableOpacity
+                  onPress={handleResend}
+                  disabled={resending}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
                 {resending ? (
                   <ActivityIndicator size="small" color={palette.warning} />
                 ) : (

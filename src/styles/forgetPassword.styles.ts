@@ -112,13 +112,17 @@ export const forgotStyles = StyleSheet.create({
     width: '100%',
   },
 
+  // Had NO vertical padding at all - the touch target was the 18pt text line.
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: space.md,
+    minHeight: 44,
     marginTop: space.xl,
     gap: 6,
   },
+
   backButtonText: {
     ...type.smallMedium,
   },
