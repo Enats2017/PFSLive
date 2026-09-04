@@ -57,8 +57,12 @@ const FINISH_APPROACH_KEY      = '@PFSLive:finishApproach';
 // Read by HomeScreen 1s timer to auto-stop tracking from React context.
 export const RACE_FINISHED_KEY = '@PFSLive:raceFinished';
 // ✅ Near-finish flag — set when distance_to_finish_km ≤ 1km for the first
-// time. Persists across sends so auto-stop works even for fast cyclists who
-// skip from 1.5km directly to 0.02km in a single 30s interval.
+// time, and CLEARED again as soon as the server reports > 1km. It still covers
+// fast cyclists who skip from 1.5km directly to 0.02km in a single 30s interval,
+// because the ≤1km branch sets it before the auto-stop check reads it within the
+// same fix. It is deliberately NOT a race-long latch: on a course that passes
+// its own finish mid-race, one early pass would otherwise disarm the `distance`
+// auto-stop guard for good.
 const NEAR_FINISH_KEY = '@PFSLive:nearFinish';
 // ✅ Transistor-active flag — set after BackgroundGeolocation.start() succeeds,
 // cleared on stop / start failure. Defensive: with Option B, only Transistor
@@ -1170,6 +1174,14 @@ const _processLocationForSendInternal = async (
         await addLog('🔄', `Finish approach reset — now ${distToFinish.toFixed(2)}km from finish${tag}`);
       }
       await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
+      // ✅ Clear the near-finish latch too. It used to be set-once-for-the-race,
+      // which meant a course that passes its own finish mid-race (a lap, or an
+      // aid station beside the line) permanently disarmed the `distance` auto-stop
+      // guard below after the first pass. The fast-cyclist case the latch exists
+      // for (1.5km → 0.02km in one 30s interval) still works: within a single
+      // fix the ≤1km branch above SETS the latch before the auto-stop check
+      // READS it, so it only has to survive within a fix, not across the race.
+      await AsyncStorage.removeItem(NEAR_FINISH_KEY);
     }
 
     // ✅ Auto-stop detection — RR vs distance authority split.

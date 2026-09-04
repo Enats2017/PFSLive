@@ -20,6 +20,7 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useDimensions } from '../../hooks/useDimensions';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface PaginationState {
     page: number;
@@ -84,9 +85,11 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     // ✅ Keep ref in sync with latest loadInitial
     onFollowSuccessRef.current = loadInitial;
 
-    useEffect(() => {
-        loadInitial();
-    }, [loadInitial]);
+    useFocusEffect(
+        useCallback(() => {
+            loadInitial();
+        }, [loadInitial])
+    );
 
     // Search with debounce
     useEffect(() => {

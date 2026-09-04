@@ -10,6 +10,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // LIVE before finishBackgroundStop reads it for the tracking-log upload.
 const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
 
+// Mirror of gpsService's FINISH_LINE_THRESHOLD_KM (0.05 = 50m) — the distance
+// under which a `finish_source: 'distance'` finish is believed.
+const FINISH_LINE_THRESHOLD_KM = 0.05;
+
 // How many times one queued fix may be rejected by the server before it is
 // discarded to unblock everything behind it. Only counts CLIENT-side rejections
 // (see the drain's catch) — transient failures never increment it.
@@ -431,7 +435,36 @@ export const locationService = {
           // MIN_FIXES_FOR_FINISH guard can hold it to a later backlog fix), so we
           // check EVERY drained fix. Idempotent: if the foreground stop later runs,
           // LOG_UPLOADED_KEY prevents a double upload and _doFullStop is safe twice.
-          if (qResult && (qResult.finished === 1 || (qResult.finished as any) === '1')) {
+          // ✅ Same authority split as the live path (gpsService's shouldStop):
+          // 'rr' is definitive and needs no GPS corroboration — that is exactly
+          // the 4.5h-outage case described below, where RaceResult had already
+          // recorded the finish. A 'distance' finish is only the server's read of
+          // the GPS, so require the server to also say the runner is ON the line
+          // (≤50m) and past the opening fixes. Before this, ANY finished=1 on any
+          // drained fix tore the session down irreversibly with nothing to veto it.
+          //
+          // Deliberately NOT checking gpsService's nearFinish latch here, unlike
+          // the live path: that latch tracks where the runner is NOW, while these
+          // fixes are a replay of where they WERE. A runner who went offline at
+          // km 10 and crossed the line offline never had a live ≤1km fix to set
+          // it, so requiring it would veto exactly the finish this drain exists
+          // to catch. sentCount is safe to use — the drain bumps it itself above.
+          let qFinished = qResult && (qResult.finished === 1 || (qResult.finished as any) === '1');
+          if (qFinished && (qResult!.finish_source ?? 'distance') !== 'rr') {
+            const qDtf = qResult!.distance_to_finish_km ?? null;
+            let qSent = 0;
+            try {
+              qSent = parseInt((await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY)) || '0', 10) || 0;
+            } catch { /* silent — a storage failure must not fabricate a finish */ }
+            if (!(qDtf !== null && qDtf <= FINISH_LINE_THRESHOLD_KM && qSent >= 3)) {
+              if (API_CONFIG.DEBUG) {
+                console.log(`⏭️ Drained fix reported finished=1 (source=distance) but failed the GPS guards — dtf=${qDtf}, sent=${qSent} — not finishing`);
+              }
+              qFinished = false;
+            }
+          }
+
+          if (qFinished) {
             // ⚠️ DO NOT tear down or clear the queue here while a backlog remains.
             //
             // The fixes still queued are NOT "post-finish stragglers". On a long
