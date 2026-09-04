@@ -13,6 +13,7 @@ import { API_CONFIG } from '../../constants/config';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import { EventListCard } from '../../components/EventListCard';
+import ErrorScreen from '../../components/ErrorScreen';
 
 interface UpcomingTabProps {
     events: EventItem[];
@@ -93,11 +94,7 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
     }, [loadingMore]);
 
     const ListEmptyComponent = useCallback(() => (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing.xxl }}>
-            <Text style={commonStyles.errorText}>
-                {t('event:empty.upcoming')}
-            </Text>
-        </View>
+        <ErrorScreen type="empty" title={t('event:empty.upcoming')} onRetry={() => { }} />
     ), [t]);
 
     return (

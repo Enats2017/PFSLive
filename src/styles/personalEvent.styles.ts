@@ -47,9 +47,11 @@ export const personalStyles = StyleSheet.create({
   },
 
   // ✅ FORM CONTAINER
+  // The page gutter is 20 across the app; this form was on 16 with a thin 12pt
+  // top inset, so it sat closer to the lime band than every other screen.
   formContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingHorizontal: space.xl,
+    paddingTop: space.lg,
     paddingBottom: spacing.xl,
   },
 

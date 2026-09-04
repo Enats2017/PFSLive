@@ -22,6 +22,10 @@ export const PAIRS = {
   cardActionSecondary: 'cardActionSecondaryText',
   outlineButton: 'outlineButtonText',
   limeButton: 'limeButtonText',
+  // Not a button, but the same trap: a light-filled circle whose matching navy
+  // label style existed and was never wired up, so the bib number was drawn in
+  // white on `palette.fill` and could not be read.
+  bibBox: 'bibBoxText',
 };
 
 /** Label styles that render LIGHT text — fatal on a light button. */
@@ -36,7 +40,19 @@ const LIGHT_TEXT = [
 // soon as the correct label style appeared anywhere in the file - so a screen
 // with three `routeButton`s, two labelled correctly and one white-on-white,
 // read as clean. That is exactly the bug it exists to catch, and it shipped.
-export function findMismatch(src) {
+/**
+ * Comments are not code. A note explaining WHY a light label style must not be
+ * used here was itself read as a use of it, so the fixed file kept reporting the
+ * bug it had just fixed. `://` is spared so URLs survive.
+ */
+export function stripComments(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+}
+
+export function findMismatch(rawSrc) {
+  const src = stripComments(rawSrc);
   const bad = [];
   for (const [btn, want] of Object.entries(PAIRS)) {
     let from = 0;
@@ -77,11 +93,21 @@ if (process.argv.includes('--selftest')) {
     'style={s.routeButton}><Text style={s.routeButtonText}></TouchableOpacity>' +
     'style={s.routeButton}><Text style={c.primaryButtonText}></TouchableOpacity>';
   const ok4 = findMismatch(mixed).length === 1;
+  // A comment naming a light label style is not a use of it. The fixed file
+  // kept reporting its own fix until the scanner stopped reading comments.
+  const commented =
+    'style={s.routeButton}>' +
+    '{/* primaryButtonText is WHITE - do not use it here */}' +
+    '<Text style={s.routeButtonText}></TouchableOpacity>';
+  const ok5 = findMismatch(commented).length === 0;
+  const ok6 = stripComments('const u = "https://a.b"; // note').includes('https://a.b');
   console.log(`  ${ok1 ? 'PASS' : 'FAIL'}  catches a light label on a light button`);
   console.log(`  ${ok2 ? 'PASS' : 'FAIL'}  quiet when the pair matches`);
   console.log(`  ${ok3 ? 'PASS' : 'FAIL'}  quiet when there is no light button`);
   console.log(`  ${ok4 ? 'PASS' : 'FAIL'}  catches one bad occurrence among good ones`);
-  const ok = ok1 && ok2 && ok3 && ok4;
+  console.log(`  ${ok5 ? 'PASS' : 'FAIL'}  does not read a comment as a use`);
+  console.log(`  ${ok6 ? 'PASS' : 'FAIL'}  leaves a URL alone`);
+  const ok = ok1 && ok2 && ok3 && ok4 && ok5 && ok6;
   console.log(ok ? '\nself-test passed' : '\nSELF-TEST FAILED');
   process.exit(ok ? 0 : 1);
 }

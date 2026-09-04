@@ -114,11 +114,20 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 </View>
                 <View style={resultListStyle.cardTop}>
                     <Text style={resultListStyle.cardName} numberOfLines={1}>{item.name}</Text>
+                    {/* Two lines, matching the live and before-race cards. Four
+                        values on one clamped line needed ~252pt in a 234pt
+                        column, so the club and country were cut off on every row
+                        that had a club. */}
                     <Text style={resultListStyle.bibText} numberOfLines={1}>
-                        {[`${t('allrace:race.bibNumber')} ${item.bib}`, item.club, item.nation,
+                        {[`${t('allrace:race.bibNumber')} ${item.bib}`,
                           item.wave ? `${t('allrace:race.wavelabel')} ${item.wave}` : null]
                             .filter(Boolean).join(' \u00b7 ')}
                     </Text>
+                    {!!(item.club || item.nation) && (
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
+                            {[item.club, item.nation].filter(Boolean).join(' \u00b7 ')}
+                        </Text>
+                    )}
                 </View>
                 <TouchableOpacity
                     onPress={handleStarPress}

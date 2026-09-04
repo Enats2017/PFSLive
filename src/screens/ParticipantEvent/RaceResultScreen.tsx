@@ -257,9 +257,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
       <AppHeader title={event_name} showLogo={false} showBack />
 
       {results.length === 0 ? (
-        <View style={{ marginTop: 40, alignItems: 'center', paddingHorizontal: spacing.lg }}>
-          <Text style={commonStyles.errorText}>{t('result:noResults')}</Text>
-        </View>
+        <ErrorScreen type="empty" title={t('result:noResults')} onRetry={() => { }} />
       ) : (
         <FlatList
           data={results}

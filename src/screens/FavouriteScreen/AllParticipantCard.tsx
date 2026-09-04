@@ -32,7 +32,10 @@ const AllParticipantCard: React.FC<AllParticipantCardProps> = React.memo(({
     return (
         <View style={favstyle.participantcard}>
             <View style={favstyle.bibBox}>
-                <Text style={commonStyles.primaryButtonText}>{item.bib_number}</Text>
+                {/* `primaryButtonText` is WHITE - on `bibBox`'s light fill the
+                    bib number was invisible. `bibBoxText` was defined for this
+                    and never wired up. */}
+                <Text style={favstyle.bibBoxText}>{item.bib_number}</Text>
             </View>
             <View style={favstyle.content}>
                 <Text numberOfLines={1} style={commonStyles.title}>

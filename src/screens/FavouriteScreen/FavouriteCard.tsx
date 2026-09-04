@@ -119,45 +119,61 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                         </View>
                         <View style={favstyle.identityText}>
                             <Text style={favstyle.runnerName} numberOfLines={1}>{fullName}</Text>
+                            {/* Two lines so nothing is hidden. The first is the
+                                deck's line (25_Favourites.png: "Bib 640 · 80 km");
+                                the second carries the nationality and age the app
+                                shows on top of it. Squeezed onto one line these
+                                needed ~180pt in a 149pt column, so the country and
+                                age were always cut off. */}
+                            <Text style={[favstyle.nationText, favstyle.metaLine]} numberOfLines={1}>
+                                {[`${t('allrace:race.bibNumber')} ${item.bib_number}`,
+                                  item.distance_name]
+                                    .filter(Boolean).join(' · ')}
+                            </Text>
+
                             <View style={favstyle.nationRow}>
                                 {item.nation_flag ? (
                                     <SvgUri uri={item.nation_flag} width={18} height={13} />
                                 ) : null}
                                 <Text style={favstyle.nationText} numberOfLines={1}>
-                                    {[`${t('allrace:race.bibNumber')} ${item.bib_number}`,
-                                      item.distance_name, item.nation, item.age]
-                                        .filter(Boolean).join(' \u00b7 ')}
+                                    {[item.nation,
+                                      item.age ? `${t('allrace:race.age')} ${item.age}` : null]
+                                        .filter(Boolean).join(' · ')}
                                 </Text>
                             </View>
                         </View>
 
-                        <View style={[favstyle.headerLeft, { backgroundColor: statusColors.backgroundColor }]}>
-                            <Text style={[favstyle.headerText, { color: statusColors.textColor }]}>
-                                {t(`resultdetails:status.${item.race_status}`)}
-                            </Text>
-                        </View>
-
-                    {/* ── Star + rank badge (interactive follow toggle) ── */}
-                    <TouchableOpacity
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        style={favstyle.cornerBadge}
-                        onPress={handleStarPress}
-                        activeOpacity={0.8}
-                        disabled={isLoading}
-                    >
-                        <Ionicons
-                            name={isFollowed ? 'star' : 'star-outline'}
-                            size={26}
-                            color={isFollowed ? palette.lime : palette.placeholder}
-                        />
-                        {/* Rank only when race has started; not_started → star only */}
-                        {!isNotStarted && (overallRank !== '' || genderRank) && (
-                            <View style={favstyle.cornerBadgeRight}>
-                                {overallRank !== '' && <Text style={favstyle.cornerNum}>{overallRank}</Text>}
-                                {genderRank && <Text style={favstyle.cornerGenderRank}>{genderRank}</Text>}
+                        {/* Status and the star/rank stack, so the pair costs the
+                            row the width of the wider one rather than both. */}
+                        <View style={favstyle.identityMeta}>
+                            <View style={[favstyle.headerLeft, { backgroundColor: statusColors.backgroundColor }]}>
+                                <Text style={[favstyle.headerText, { color: statusColors.textColor }]}>
+                                    {t(`resultdetails:status.${item.race_status}`)}
+                                </Text>
                             </View>
-                        )}
-                    </TouchableOpacity>
+
+                            {/* ── Star + rank badge (interactive follow toggle) ── */}
+                            <TouchableOpacity
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                style={favstyle.cornerBadge}
+                                onPress={handleStarPress}
+                                activeOpacity={0.8}
+                                disabled={isLoading}
+                            >
+                                <Ionicons
+                                    name={isFollowed ? 'star' : 'star-outline'}
+                                    size={26}
+                                    color={isFollowed ? palette.lime : palette.placeholder}
+                                />
+                                {/* Rank only when race has started; not_started → star only */}
+                                {!isNotStarted && (overallRank !== '' || genderRank) && (
+                                    <View style={favstyle.cornerBadgeRight}>
+                                        {overallRank !== '' && <Text style={favstyle.cornerNum}>{overallRank}</Text>}
+                                        {genderRank && <Text style={favstyle.cornerGenderRank}>{genderRank}</Text>}
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {isLive && (

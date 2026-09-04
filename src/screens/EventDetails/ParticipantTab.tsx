@@ -336,13 +336,13 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
       )}
 
       {!loading && participants.length === 0 ? (
-        <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
-          <Text style={commonStyles.errorText}>
-            {searchText
-              ? `${t('details:participant.noResults')} "${searchText}"`
-              : t('details:participant.empty')}
-          </Text>
-        </View>
+        <ErrorScreen
+          type="empty"
+          title={searchText
+            ? `${t('details:participant.noResults')} "${searchText}"`
+            : t('details:participant.empty')}
+          onRetry={() => { }}
+        />
       ) : (
         <FlatList
           data={participants}

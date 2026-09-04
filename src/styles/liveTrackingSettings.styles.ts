@@ -151,7 +151,10 @@ export const styles = StyleSheet.create({
         fontSize: 13,
         color: palette.surface,
     },
-    modalTitle: { ...type.h2 },
+    // The close button is absolutely positioned 14pt inside the content box
+    // and is 30pt wide, so the title needs 44pt of clearance. Without it the
+    // French and Dutch titles run underneath it.
+    modalTitle: { ...type.h2, paddingRight: 44 },
     modalSubtitle: { ...type.body, marginTop: space.xs },
     fieldLabel: { ...type.label, color: palette.textMuted, marginTop: space.sm },
 

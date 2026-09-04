@@ -14,7 +14,6 @@ import { eventDetailService, Distance } from '../../services/eventDetailService'
 import { useNavigation } from '@react-navigation/native';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
@@ -295,8 +294,12 @@ const DistanceTab = ({
   }
 
   if (hasError && !loading) {
+    // A TAB, not a screen. The parent screen owns both insets - it renders
+    // AppHeader (which carries the status bar) inside its own SafeAreaView with
+    // edges={['bottom']}. A SafeAreaView here claimed 'top' a second time and
+    // pushed the error state down below the header, so this is a plain View.
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
+      <View style={commonStyles.container}>
         <StatusBar barStyle="dark-content" />
         <ErrorScreen
           type={error!.type}
@@ -304,18 +307,14 @@ const DistanceTab = ({
           message={error!.message}
           onRetry={() => { clearError(); fetchResults(); }}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
     <View style={{ flex: 1 }}>
       {results.length === 0 ? (
-        <View style={{ marginTop: 40, alignItems: 'center' }}>
-          <Text style={commonStyles.errorText}>
-            {t('result:noResults')}
-          </Text>
-        </View>
+        <ErrorScreen type="empty" title={t('result:noResults')} onRetry={() => { }} />
       ) : (
         <FlatList
           data={results}

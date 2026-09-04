@@ -270,8 +270,19 @@ divider: {
   bibText: {
     fontFamily: fonts.body,
     fontSize: 12,
+    lineHeight: 17,
     color: palette.textMuted,
     marginTop: space.xs,
+  },
+  // The SECOND meta line (club · country · age). `bibText`'s 4pt top margin is
+  // the gap to the NAME; between two meta lines a hairline is enough.
+  bibTextTight: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    lineHeight: 17,
+    color: palette.textMuted,
+    marginTop: 2,
+    flexShrink: 1,
   },
 
   metaLine: {
@@ -279,6 +290,13 @@ divider: {
     alignItems: 'center',
     gap: space.sm,
     marginTop: space.xs,
+  },
+  // Same row, as the second meta line.
+  metaLineTight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginTop: 2,
   },
 
   teamText: {
@@ -304,8 +322,11 @@ divider: {
   // ── Stats Row ─────────────────────────────────────────────
   statsRow: {
     flexDirection: 'row',
+    // Holds each column's content clear of the separator beside it. Without a
+    // gap the columns sit flush and their text lands on the rules.
+    gap: space.md,
     marginTop: space.md,
-    paddingTop: 16,
+    paddingTop: space.lg,
     borderTopWidth: 1,
     borderTopColor: palette.border,
   },
@@ -315,15 +336,20 @@ divider: {
     flex: 1,
   },
 
+  // Separators between the stat columns. These carried borders with NO
+  // horizontal padding: `statCol` sets no alignItems, so the text started at
+  // x=0 and sat directly on the rule. The padding is what makes them work.
   statColMid: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderColor: palette.placeholder,
+    paddingHorizontal: space.md,
   },
 
   statColLeft: {
     borderLeftWidth: 1,
     borderColor: palette.placeholder,
+    paddingLeft: space.md,
   },
 
   statFlagMid: {
@@ -331,7 +357,7 @@ divider: {
     borderColor: palette.placeholder,
     alignItems: "center",
     justifyContent: "center",
-    paddingLeft: 8,
+    paddingLeft: space.md,
   },
 
   // Flag is the only remaining column (UTMB was to its left) → no divider.

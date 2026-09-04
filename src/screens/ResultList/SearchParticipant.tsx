@@ -4,12 +4,10 @@ import {
     Text,
     FlatList,
     ActivityIndicator,
-    TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import SearchInput from '../../components/SearchInput';
@@ -189,14 +187,15 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
         ) : null
     , [loadingMore]);
 
+    // Same designed empty state as everywhere else - see AllParticipant.tsx.
     const renderEmpty = useCallback(() => (
-        <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
-            <Text style={commonStyles.errorText}>
-                {searchText
-                    ? `${t('details:participant.noResults')} "${searchText}"`
-                    : t('details:participant.empty')}
-            </Text>
-        </View>
+        <ErrorScreen
+            type="empty"
+            title={searchText
+                ? `${t('details:participant.noResults')} "${searchText}"`
+                : t('details:participant.empty')}
+            onRetry={() => { }}
+        />
     ), [searchText, t]);
 
     if (loading && searchText.length === 0) {
@@ -224,27 +223,21 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top', 'bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
 
-            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 10 }}>
-                    <TouchableOpacity
-                        style={{ width: 32 }}
-                        hitSlop={{ top: 8, bottom: 8, left: 10, right: 8 }}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Ionicons name="chevron-back" size={32} color={palette.ink} />
-                    </TouchableOpacity>
-                    <Text style={commonStyles.title}>{t('favourite:addRunner')}</Text>
-                </View>
-                <SearchInput
-                    ref={searchInputRef}
-                    placeholder={t('details:participant.search')}
-                    value={searchText}
-                    onChangeText={setSearchText}
-                    icon="search"
-                />
-            </View>
+            {/* Was a hand-rolled back chevron and title on white - the same old
+                chrome AllParticipant.tsx carried, and the same mismatch with
+                this screen's own error state, which already used AppHeader.
+                `edges` must not include 'top': AppHeader carries that inset. */}
+            <AppHeader title={t('common:band.searchParticipants')} showLogo={true} showBack />
+
+            <SearchInput
+                ref={searchInputRef}
+                placeholder={t('details:participant.search')}
+                value={searchText}
+                onChangeText={setSearchText}
+                icon="search"
+            />
 
             {searchText.trim().length > 0 && participants.length > 0 && (
                 <Text style={resultListStyle.searchCount}>
@@ -274,7 +267,9 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
                 contentContainerStyle={{
-                    paddingHorizontal: spacing.sm,
+                    // The card carries its own 20pt gutter; this only holds the
+                    // first card clear of the search band above it.
+                    paddingTop: spacing.sm,
                     paddingBottom: spacing.xxxl,
                     flexGrow: 1,
                 }}

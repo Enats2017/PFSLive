@@ -12,6 +12,7 @@ import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
+import ErrorScreen from '../../components/ErrorScreen';
 import FanEventCard from '../FollowerEventList/FollowerCard';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import { eventService, ParticipantItem } from '../../services/followerEvent';
@@ -209,9 +210,11 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
         }
         if (searchText.trim().length > 0) {
             return (
-                <Text style={[commonStyles.errorText, { textAlign: 'center', marginTop: 40 }]}>
-                    {t('follow:empty.favouriteSearchEmpty')}
-                </Text>
+                <ErrorScreen
+                    type="empty"
+                    title={t('follow:empty.favouriteSearchEmpty')}
+                    onRetry={() => { }}
+                />
             );
         }
         return (

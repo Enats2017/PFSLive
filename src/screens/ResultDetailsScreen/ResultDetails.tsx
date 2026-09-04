@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'rea
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, Entypo } from '@expo/vector-icons';
+import { Entypo } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ResultDetailspops } from '../../types/navigation';
 import RaceInfoTab from './RaceInfoTab';
@@ -183,19 +183,12 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
 
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']} >
-                <View style={s.header}>
-                    <TouchableOpacity
-                        style={s.headerBackBtn}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Ionicons name="chevron-back" size={32} color={palette.ink} />
-                    </TouchableOpacity>
-                    <View style={s.headerCenter}>
-                        <Text style={commonStyles.title}>...</Text>
-                    </View>
-                </View>
+            <SafeAreaView style={commonStyles.container} edges={['bottom']} >
+                {/* The loading state kept the pre-redesign bar - a chevron and a
+                    "..." placeholder on white - while the loaded and error
+                    states both use AppHeader, so the screen changed shape as it
+                    finished loading. */}
+                <AppHeader showBack />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={palette.navy} />
                 </View>

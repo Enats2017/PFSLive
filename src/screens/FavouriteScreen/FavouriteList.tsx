@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { commonStyles, spacing, palette, fonts } from '../../styles/common.styles';
+import { commonStyles, spacing, space, palette, fonts } from '../../styles/common.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
@@ -233,6 +233,14 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
             <AppHeader title={event_name} showBack />
 
+            {/* 25_Favourites.png: one line saying what the list is. It was only
+                rendered in the error branch, so the populated list - the state
+                people actually see - had nothing between the lime band and the
+                first card, and the cards read as glued to the header. */}
+            <View style={favstyle.subHeader}>
+                <Text style={favstyle.subHeaderText}>{t('favourite:subheader')}</Text>
+            </View>
+
             <FlatList
                 data={favourites}
                 keyExtractor={keyExtractor}
@@ -240,7 +248,9 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                 onEndReached={loadMore}
                 onEndReachedThreshold={0.5}
                 contentContainerStyle={{
-                    paddingHorizontal: spacing.sm,
+                    // The page gutter is 20 everywhere else; this list was at 8.
+                    paddingHorizontal: space.xl,
+                    paddingTop: spacing.lg,
                     paddingBottom: spacing.xxxl,
                     flexGrow: 1,
                 }}

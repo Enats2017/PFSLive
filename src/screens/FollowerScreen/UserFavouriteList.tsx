@@ -212,9 +212,11 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     }
     if (searchText.trim().length > 0) {
         return (
-            <Text style={[commonStyles.errorText, { textAlign: 'center', marginTop: 40 }]}>
-                {t('follow:empty.favouriteSearchEmpty')}
-            </Text>
+            <ErrorScreen
+                type="empty"
+                title={t('follow:empty.favouriteSearchEmpty')}
+                onRetry={() => { }}
+            />
         );
     }
     // ✅ No following at all

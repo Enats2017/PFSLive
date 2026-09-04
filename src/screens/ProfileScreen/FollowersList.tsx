@@ -176,9 +176,11 @@ const FollowersList: React.FC = () => {
     }
     if (searchText.trim().length > 0) {
         return (
-            <Text style={[commonStyles.errorText, { textAlign: 'center', marginTop: 40 }]}>
-                {t('follow:empty.followerSearchEmpty')}
-            </Text>
+            <ErrorScreen
+                type="empty"
+                title={t('follow:empty.followerSearchEmpty')}
+                onRetry={() => { }}
+            />
         );
     }
     // ✅ No followers at all

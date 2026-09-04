@@ -168,8 +168,12 @@ export const profileStyles = StyleSheet.create({
         fontSize: 13, 
     color: palette.navy, 
     },
-  sectionHeader: {  
-    marginBottom: spacing.sm 
+  // Introduces a new block of fields, so it needs air ABOVE it as well as below.
+  // With only a bottom margin the "Change password" heading sat 8pt under the
+  // field before it - closer to the previous block than to its own.
+  sectionHeader: {
+    marginTop: space.xl,
+    marginBottom: space.sm,
   },
   sectionTitle: {
     fontFamily: fonts.bodySemi,
@@ -205,6 +209,9 @@ export const profileStyles = StyleSheet.create({
     marginTop: -4,
     marginBottom: spacing.sm,
     marginLeft: 4,
+  },
+  saveButton: {
+    marginTop: space.xl,
   },
   saveBtnDisabled: { 
     opacity: 0.6 

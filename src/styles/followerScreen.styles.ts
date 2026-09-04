@@ -8,13 +8,15 @@ import { spacing, palette, space, type, radii, fonts } from './common.styles';
         gap: spacing.md,
     },
 
+    // Kept in step with participantscreen.styles.ts `sectionLabel` - these two
+    // hubs are the same screen for the two audiences and must not drift.
     sectionLabel: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: space.sm,
         paddingHorizontal: space.xl,
-        paddingTop: space.lg,
-        paddingBottom: space.sm,
+        paddingTop: space.xl,
+        paddingBottom: space.md,
     },
     sectionLabelText: {
         ...type.label,

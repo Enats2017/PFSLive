@@ -420,6 +420,7 @@ const EditProfileScreen = () => {
                     <TouchableOpacity
                         style={[
                             commonStyles.primaryButton,
+                            profileStyles.saveButton,
                             loading && profileStyles.saveBtnDisabled
                         ]}
                         onPress={handleSave}

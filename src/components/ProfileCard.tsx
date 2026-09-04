@@ -74,8 +74,10 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                     <Text style={profileStyles.identityName} numberOfLines={1}>
                         {fullName || '—'}
                     </Text>
+                    {/* City + country is one phrase: it wraps rather than being
+                        cut, so a long place name stays readable. */}
                     {!!(profile?.city || profile?.country) && (
-                        <Text style={profileStyles.identityPlace} numberOfLines={1}>
+                        <Text style={profileStyles.identityPlace} numberOfLines={2}>
                             {[profile?.city, profile?.country].filter(Boolean).join(' · ')}
                         </Text>
                     )}

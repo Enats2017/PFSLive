@@ -320,7 +320,8 @@ const ParticipantResult = () => {
                   participant.wave ? `${t('details:wave')} ${participant.wave}` : null,
                 ].filter(Boolean).join(' · ')}
               </Text>
-              <Text style={detailsStyles.rowMeta} numberOfLines={1}>
+              {/* City + country is one phrase: it wraps rather than being cut. */}
+              <Text style={detailsStyles.rowMeta} numberOfLines={2}>
                 {[participant.city, participant.country].filter(Boolean).join(' · ')}
               </Text>
             </View>
@@ -431,13 +432,13 @@ const ParticipantResult = () => {
       )}
 
       {!loading && participants.length === 0 ? (
-        <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
-          <Text style={commonStyles.errorText}>
-            {searchText
-              ? `${t('details:participant.noResults')} "${searchText}"`
-              : t('details:participant.empty')}
-          </Text>
-        </View>
+        <ErrorScreen
+          type="empty"
+          title={searchText
+            ? `${t('details:participant.noResults')} "${searchText}"`
+            : t('details:participant.empty')}
+          onRetry={() => { }}
+        />
       ) : (
         <FlatList
           data={participants}

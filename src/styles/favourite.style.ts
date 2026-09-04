@@ -48,7 +48,8 @@ export const favstyle = StyleSheet.create({
     backgroundColor: palette.fill,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: space.md,
+    // No marginRight: `identityRow` already supplies the gap, and having both
+    // took 24pt out of the name column instead of 12.
   },
   cardAvatarText: {
     fontFamily: fonts.display,
@@ -64,6 +65,18 @@ export const favstyle = StyleSheet.create({
   identityText: {
     flex: 1,
     minWidth: 0,
+  },
+
+  // The status chip and the star/rank badge used to sit SIDE BY SIDE at the end
+  // of the row, so together with the avatar they took 220 of the card's 315pt
+  // and left 95pt for the name - every name and bib line was cropped. Stacked,
+  // they take the width of the wider one instead of the sum of both.
+  identityMeta: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    // Never give up width to a long name: `identityText` truncates instead.
+    flexShrink: 0,
+    gap: space.sm,
   },
   headerLeft: {
     borderRadius: radii.sm,
@@ -127,11 +140,12 @@ export const favstyle = StyleSheet.create({
     paddingRight: 88, // ✅ leave room for the badge on the right
   },
 
+  // 15, matching resultListStyle.cardName and detailsStyles.rowName - this is
+  // the same athlete row, and at 20 it needed ~143pt for a 13-character name.
   runnerName: {
-    fontFamily: fonts.bodySemi,
-        fontSize: 20,
-
-        color: palette.ink,
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
   },
 
   bibText: {
@@ -141,16 +155,23 @@ export const favstyle = StyleSheet.create({
     marginTop: 4,
   },
 
+  // Meta line 1 (bib · distance), under the name.
+  metaLine: {
+    marginTop: space.xs,
+  },
+  // Meta line 2 (flag · country · age). 8pt was the gap to the NAME when this
+  // was the only meta line; as the second of two it only needs a hairline.
   nationRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 8,
+    marginTop: 2,
   },
 
   nationText: {
     fontFamily: fonts.body,
-        fontSize: 12,
+    fontSize: 12,
+    lineHeight: 17,
     color: palette.textMuted,
     flexShrink: 1,
   },
@@ -179,10 +200,18 @@ export const favstyle = StyleSheet.create({
     justifyContent: "center",
   },
 
+  // The middle column carries the separators. It originally had the borders and
+  // NO horizontal padding, so once the columns were left-aligned its label and
+  // value sat hard against the left rule. The padding is what makes the rules
+  // work - never add the borders back without it.
+  //
+  // Columns 1 and 3 need nothing: `statsRow`'s 12pt gap already holds their
+  // content clear of the rules on either side.
   statColMid: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderColor: palette.inputBorder,
+    paddingHorizontal: space.md,
   },
 
   statLabel: {
@@ -286,7 +315,7 @@ export const favstyle = StyleSheet.create({
 
   content: {
     flex: 1,
-    marginLeft: 8,
+    minWidth: 0,
   },
 
   addBtn: {
@@ -317,11 +346,14 @@ export const favstyle = StyleSheet.create({
     ...shadows.card,
     flexDirection: "row",
     alignItems: "center",
+    // 12pt padding and an 8pt marginLeft on the text block, against the 16/12
+    // every other card in the app uses.
+    gap: space.md,
     backgroundColor: palette.surface,
     borderRadius: radii.md,
     borderLeftWidth: 3,
     borderLeftColor: palette.lime,
-    padding: space.md,
+    padding: space.lg,
     marginTop: space.md,
     marginHorizontal: space.xl,
   },

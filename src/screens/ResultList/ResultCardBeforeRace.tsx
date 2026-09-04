@@ -84,13 +84,22 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                 </View>
                 <View style={resultListStyle.cardTop}>
                     <Text style={resultListStyle.cardName} numberOfLines={1}>{item.name}</Text>
-                    <View style={resultListStyle.metaLine}>
+                    {/* Two lines. Five values on one clamped line needed ~306pt
+                        in a 234pt column, so the club, country and age were cut
+                        off on every row that had them. Line 1 is the race entry
+                        (always visible), line 2 is who the athlete is. */}
+                    <Text style={resultListStyle.bibText} numberOfLines={1}>
+                        {[`${t('allrace:race.bibNumber')} ${item.bib}`,
+                          item.wave ? `${t('allrace:race.wavelabel')} ${item.wave}` : null]
+                            .filter(Boolean).join(' \u00b7 ')}
+                    </Text>
+                    <View style={resultListStyle.metaLineTight}>
                         {!!item.nation_flag && (
                             <SvgUri uri={item.nation_flag} width={18} height={13} />
                         )}
-                        <Text style={resultListStyle.bibText} numberOfLines={1}>
-                            {[`${t('allrace:race.bibNumber')} ${item.bib}`, item.club, item.nation, item.age,
-                              item.wave ? `${t('allrace:race.wavelabel')} ${item.wave}` : null]
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
+                            {[item.club, item.nation,
+                              item.age ? `${t('allrace:race.age')} ${item.age}` : null]
                                 .filter(Boolean).join(' \u00b7 ')}
                         </Text>
                     </View>

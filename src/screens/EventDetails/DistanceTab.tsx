@@ -25,7 +25,6 @@ import { API_CONFIG } from '../../constants/config';
 import { toastSuccess } from '../../../utils/toast';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/common/AppHeader';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
@@ -537,8 +536,12 @@ const handleExternalRegister = useCallback((url: string) => {
   }
 
   if (hasError && !loading) {
+    // A TAB, not a screen. The parent screen owns both insets - it renders
+    // AppHeader (which carries the status bar) inside its own SafeAreaView with
+    // edges={['bottom']}. A SafeAreaView here claimed 'top' a second time and
+    // pushed the error state down below the header, so this is a plain View.
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
+      <View style={commonStyles.container}>
         <StatusBar barStyle="dark-content" />
         <ErrorScreen
           type={error!.type}
@@ -546,15 +549,13 @@ const handleExternalRegister = useCallback((url: string) => {
           message={error!.message}
           onRetry={() => { clearError(); fetchDistances(); }}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (distances.length === 0) {
     return (
-      <View style={{ marginTop: 40, alignItems: 'center' }}>
-        <Text style={commonStyles.errorText}>{t('details:distance.empty')}</Text>
-      </View>
+      <ErrorScreen type="empty" title={t('details:distance.empty')} onRetry={() => { }} />
     );
   }
 

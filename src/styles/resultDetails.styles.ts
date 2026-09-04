@@ -31,9 +31,6 @@ export const resultInfoStyles = StyleSheet.create({
     paddingVertical: space.lg,
     backgroundColor: palette.surface,
   },
-  headerBackBtn: {
-    width: 32,
-  },
   headerCenter: {
     flex: 1,
   },
@@ -217,10 +214,12 @@ export const resultInfoStyles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 24,
   },
+  // 28_RunnerInfo.png DOES rule this two-column block, so the border stays -
+  // but the columns need real clearance from it, not 4pt.
   rankingCol: {
     flex: 1,
     alignItems: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: space.md,
   },
   rankingColBorder: {
     borderLeftWidth: 1,

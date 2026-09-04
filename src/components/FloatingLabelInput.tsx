@@ -354,6 +354,18 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
               styles.input,
               {
                 paddingLeft: iconName ? 44 : 15,
+                // The chevron / clear button is absolutely positioned at
+                // `right: 14` and is up to 20pt wide, so the value needs 48pt of
+                // clearance - the same figure the plain input uses for its eye
+                // button. Without it `styles.input`'s 20pt right padding let the
+                // value run underneath the icon, which is visible as soon as the
+                // field is half-width (birth date and gender share a row on
+                // 04_Register.png) and the value is a full date.
+                paddingRight: 48,
+                // `lineHeight: INPUT_HEIGHT` already centres the single line in
+                // the 56pt box; `styles.input`'s paddingTop: 8 then pushed it
+                // 8pt below centre and clipped the descenders.
+                paddingTop: 0,
                 lineHeight: INPUT_HEIGHT,
                 color: value ? COLORS.GRAY_DARK : COLORS.GRAY_MED,
               },
@@ -449,10 +461,23 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
               styles.input,
               {
                 paddingLeft: iconName ? 44 : 15,
+                // The chevron / clear button is absolutely positioned at
+                // `right: 14` and is up to 20pt wide, so the value needs 48pt of
+                // clearance - the same figure the plain input uses for its eye
+                // button. Without it `styles.input`'s 20pt right padding let the
+                // value run underneath the icon, which is visible as soon as the
+                // field is half-width (birth date and gender share a row on
+                // 04_Register.png) and the value is a full date.
+                paddingRight: 48,
+                // `lineHeight: INPUT_HEIGHT` already centres the single line in
+                // the 56pt box; `styles.input`'s paddingTop: 8 then pushed it
+                // 8pt below centre and clipped the descenders.
+                paddingTop: 0,
                 lineHeight: INPUT_HEIGHT,
                 color: value ? COLORS.GRAY_DARK : COLORS.GRAY_MED,
               },
             ]}
+            numberOfLines={1}
           >
             {/* ✅ Only show the placeholder once the label has floated out of the way.
                 The label animates up on `isFocused || value || showTimePicker` (see the
@@ -546,10 +571,23 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
               styles.input,
               {
                 paddingLeft: iconName ? 44 : 15,
+                // The chevron / clear button is absolutely positioned at
+                // `right: 14` and is up to 20pt wide, so the value needs 48pt of
+                // clearance - the same figure the plain input uses for its eye
+                // button. Without it `styles.input`'s 20pt right padding let the
+                // value run underneath the icon, which is visible as soon as the
+                // field is half-width (birth date and gender share a row on
+                // 04_Register.png) and the value is a full date.
+                paddingRight: 48,
+                // `lineHeight: INPUT_HEIGHT` already centres the single line in
+                // the 56pt box; `styles.input`'s paddingTop: 8 then pushed it
+                // 8pt below centre and clipped the descenders.
+                paddingTop: 0,
                 lineHeight: INPUT_HEIGHT,
                 color: value ? COLORS.GRAY_DARK : COLORS.GRAY_MED,
               },
             ]}
+            numberOfLines={1}
           >
             {/* ✅ Same as the time picker above — the placeholder must not be drawn while
                 the label is still un-floated, or "Date of Birth" and "DD-MM-YYYY" overlap. */}

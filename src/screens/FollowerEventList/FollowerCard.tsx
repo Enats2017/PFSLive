@@ -115,7 +115,8 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                 <View style={detailsStyles.info}>
                     <Text style={commonStyles.title}>{fullName}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={commonStyles.text} numberOfLines={1}>
+                        {/* City + country is one phrase: it wraps rather than being cut. */}
+                        <Text style={commonStyles.text} numberOfLines={2}>
                             {[item.city, item.country].filter(Boolean).join(' · ')}
                         </Text>
                         {flagImageUri && (
