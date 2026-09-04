@@ -103,7 +103,10 @@ export const detailsStyles = StyleSheet.create({
     ...type.label,
     color: palette.textMuted,
     paddingHorizontal: space.xl,
-    paddingTop: space.lg,
+    paddingTop: space.xl,
+    // "Recent races" sat flush against the Past/Live pills below it: this style
+    // had top padding only, and `tabBar` has no top margin of its own.
+    paddingBottom: space.md,
   },
 
   // ✅ In-page content tabs (EventDetail, RunnerInfo, RaceInfo, CheckpointHistory,

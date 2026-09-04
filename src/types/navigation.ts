@@ -22,11 +22,6 @@ export type RootStackParamList = {
     event_name: string;
     event_image?: string; 
     auto_register_id: number | null;
-    /**
-     * Which list the event was opened from. A PAST event cannot be registered
-     * for or tracked, so its card shows the Results button alone.
-     */
-    sourceTab?: 'live' | 'past' | 'upcoming';
   };
   ParticipantResult: {
     product_app_id: string | number;
@@ -41,7 +36,12 @@ export type RootStackParamList = {
   };
   RaceResultScreen: {
     product_app_id: number;
-    product_option_value_app_id: number;
+    /**
+     * Optional: the screen never reads it, and neither BottomNavigation nor the
+     * Past tab has one to give. Declaring it required made those call sites
+     * invent a value.
+     */
+    product_option_value_app_id?: number;
     event_image: string; 
     event_name: string;
   };

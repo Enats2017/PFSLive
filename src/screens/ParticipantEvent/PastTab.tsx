@@ -181,12 +181,13 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                             [ANALYTICS_PARAMS.TAB_NAME]: 'past',
                         }
                     );
-                    navigation.navigate('EventDetails', {
+                    // A past event goes straight to its results - there is
+                    // nothing to register for or track. Live and Upcoming still
+                    // open Event Details.
+                    navigation.navigate('RaceResultScreen', {
                         product_app_id: Number(item.product_app_id),
                         event_name: item.name,
                         event_image: item.event_image ?? '',
-                        auto_register_id: null,
-                        sourceTab: 'past',
                     });
                 }}
             />
