@@ -49,7 +49,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const isLandscape = windowWidth ;
     const isGestureNav = insets.bottom > 0;
 
-    const TAB_CONTENT_HEIGHT = height * 0.6;
+    const TAB_CONTENT_HEIGHT = height * 0.5;
     const width = containerWidth || windowWidth;
     const flatListRef = useRef<FlatList>(null);
 

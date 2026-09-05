@@ -11,7 +11,7 @@ export const liveTrackingStyles = StyleSheet.create({
     },
     
     chartContainer: {
-        height: 240, // ✅ Match profileContainer
+        height: 234, // ✅ Match profileContainer
         borderTopWidth: 1,
         borderTopColor: palette.border,
         backgroundColor: palette.surface,

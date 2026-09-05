@@ -413,7 +413,7 @@ const ParticipantResult = () => {
         <View style={{ height: spacing.lg }} />
 
         <SearchInput
-                        framed={false}
+          framed={false}
           ref={searchInputRef}
           placeholder={t('details:participant.search')}
           value={searchText}
@@ -451,6 +451,7 @@ const ParticipantResult = () => {
             paddingHorizontal: spacing.lg,
             paddingBottom: spacing.xxxl,
             flexGrow: 1,
+            marginTop:spacing.lg
           }}
           keyboardShouldPersistTaps="handled"
           removeClippedSubviews={false}

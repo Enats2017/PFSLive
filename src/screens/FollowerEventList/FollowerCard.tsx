@@ -189,7 +189,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                         ) : (
                             <Text style={detailsStyles.cardActionPrimaryText}>
                                 {isFollowed
-                                    ? t('follower:button.following')
+                                    ? t('follower:button.unfollow')
                                     : item?.password_protected === 1
                                         ? `🔒 ${t('follower:button.follower')}`
                                         : t('follower:button.follower')}
