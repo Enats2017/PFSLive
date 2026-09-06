@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ChartDataPoint } from '../../types';
 import { GPXAidStation } from '../../services/gpxService';
 import { ParticipantMapMarker, AidStationMapMarker, CheckpointData } from '../../types/liveTracking';
-import { liveTrackingStyles } from '../../styles/liveTracking.styles';
+import { liveTrackingStyles, ELEVATION_CHART_HEIGHT } from '../../styles/liveTracking.styles';
 import { palette, mapColors, fonts, withAlpha } from '../../styles/common.styles';
 
 interface LiveElevationProfileProps {
@@ -75,7 +75,11 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
 
     const routeWidthCm = totalDistance / kmPerCm;
     const chartWidth   = Math.max(screenWidth, routeWidthCm * DP_PER_CM);
-    const chartHeight = 220;
+    // 12 top + 180 plot + 4 bottom. Both axes below are fully transparent
+    // (axis, tickLabels AND grid), so the old 20/20 padding reserved 40pt for
+    // furniture that is never drawn - 20 of it as dead space directly under the
+    // chart. Keep a little at the top so a peak is not clipped.
+    const chartHeight = ELEVATION_CHART_HEIGHT;
 
     const elevationRange = maxElevation - minElevation;
     const topBuffer = elevationRange * 0.15;
@@ -290,7 +294,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     <VictoryChart
                         width={chartWidth}
                         height={chartHeight}
-                        padding={{ top: 20, bottom: 20, left: 0, right: 0 }}
+                        padding={{ top: 12, bottom: 4, left: 0, right: 0 }}
                         domain={{ x: [0, totalDistance] as [number, number], y: yDomain }}
                     >
                         <VictoryAxis

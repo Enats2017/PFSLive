@@ -6,7 +6,6 @@ import {
     FlatList,
     ActivityIndicator,
     StyleSheet,
-    Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, spacing, palette } from '../../styles/common.styles';
@@ -28,8 +27,6 @@ interface TrainingContentProps {
     };
     onDeleteEvent: (event: AthleteEvent) => void;
 }
-const { width, height } = Dimensions.get('window');
-const TAB_CONTENT_HEIGHT = height * 0.56;
 
 const TrainingContent: React.FC<TrainingContentProps> = ({
     onBack,

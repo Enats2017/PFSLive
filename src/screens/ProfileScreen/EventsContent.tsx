@@ -4,7 +4,6 @@ import {
     Text,
     TouchableOpacity,
     FlatList,
-    Dimensions,
     
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,13 +18,11 @@ import { AthleteEvent, AthleteProfile, eventService } from '../../services/athle
 import { API_CONFIG } from '../../constants/config';
 import { ownProfile } from '../../styles/ownProfile.styles';
 import { useDimensions } from '../../hooks/useDimensions';
-
-const { width, height } = Dimensions.get('window');
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Tab = 'Past' | 'Live';
 const TABS: Tab[] = ['Past', 'Live'];
 const LIVE_INDEX = TABS.indexOf('Live');
-const TAB_CONTENT_HEIGHT = height * 0.56;
 
 interface PaginationState {
     live: { page: number; total_pages: number };
@@ -56,9 +53,17 @@ const EventsContent: React.FC<EventsContentProps> = ({
     pagination,
 }) => {
     const { t } = useTranslation(['profile','ownProfile']);
-    const { width: windowWidth } = useDimensions(); // ← tablet/iPad fallback
+    const { width: windowWidth, height: windowHeight } = useDimensions(); // ← tablet/iPad fallback
+    const insets = useSafeAreaInsets();
     const [containerWidth, setContainerWidth] = useState(0);
     const width = containerWidth || windowWidth;
+
+    // The pager sits inside a ScrollView, so it cannot use flex:1 and needs an
+    // explicit height. This used to be `Dimensions.get('window').height * 0.56`
+    // read at MODULE scope - captured once at import, so it never updated on
+    // rotation. It also ignored the bottom inset, which is what let the last
+    // card sit under the fixed bar.
+    const TAB_CONTENT_HEIGHT = windowHeight * 0.56 - insets.bottom;
     const flatListRef = useRef<FlatList>(null);
     const activeTabRef = useRef<Tab>('Live');
     const [activeTab, setActiveTab] = React.useState<Tab>('Live');
