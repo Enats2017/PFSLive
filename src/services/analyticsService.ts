@@ -9,6 +9,7 @@ import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { tokenService } from "./tokenService";
+import { ANALYTICS_PARAMS } from "../constants/analyticsScreens";
 
 const analytics = getAnalytics();
 
@@ -322,7 +323,7 @@ export const analyticsService = {
    */
   async logTrackingStarted(params?: {
     // null accepted: HomeScreen's eventId is `string | null` before a race is
-    // selected. When absent the event_id param is omitted entirely (below)
+    // selected. When absent the race_id param is omitted entirely (below)
     // rather than sent as an empty string.
     eventId?: string | number | null;
     manualStart?: boolean;
@@ -338,7 +339,7 @@ export const analyticsService = {
       // Omitted rather than sent as "" — see omitEmptyParams. GA4 counts an
       // empty string as a real value and it becomes its own row in reports.
       ...(params?.eventId !== undefined && params?.eventId !== null && params.eventId !== ""
-        ? { event_id: String(params.eventId) }
+        ? { [ANALYTICS_PARAMS.RACE_ID]: String(params.eventId) }
         : {}),
       manual_start: params?.manualStart ? "yes" : "no",
       interval_seconds: params?.intervalSeconds ?? 0,
@@ -399,8 +400,8 @@ export const analyticsService = {
         ? { distance_km: Math.round(params.distanceKm) }
         : {}),
       // Race context, when the caller has it. tracking_started already sends
-      // event_id; this closes the asymmetry.
-      ...(params.eventId ? { event_id: String(params.eventId) } : {}),
+      // race_id; this closes the asymmetry.
+      ...(params.eventId ? { [ANALYTICS_PARAMS.RACE_ID]: String(params.eventId) } : {}),
       ...(params.raceName ? { race_name: params.raceName } : {}),
     });
 

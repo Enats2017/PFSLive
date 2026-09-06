@@ -82,6 +82,17 @@ export const ANALYTICS_PARAMS = {
   // reserved user_id from this same value — a param called customer_id would be
   // a second name for something GA4 already tracks, which is exactly the kind of
   // ambiguity that makes a dimension unusable.
+  // Renamed from 'event_id' for the same reason EVENT_NAME sends 'race_name':
+  // GA4 has its own event_id concept (used for de-duplication in gtag and the
+  // Measurement Protocol), so a custom parameter of that name is ambiguous at
+  // best. 'race_id' also pairs with 'race_name' instead of reading like a GA
+  // internal. Nothing is lost by renaming — event_id was never registered as a
+  // custom dimension, so no standard report depends on it; only BigQuery has
+  // history, where the two names can be unioned.
+  //
+  // This is the ONLY race identifier on tracking_started / tracking_completed,
+  // which is what the catalogue calls the main obstacle to per-race reporting.
+  RACE_ID: 'race_id',
   ATHLETE_ID: 'athlete_id',
   BIB_NUMBER: 'bib_number',
 
@@ -167,6 +178,13 @@ export function normaliseEventStatus(
   // relabelling a finished event as live. Compare on a normalised copy.
   const v = raw.trim().toLowerCase();
   if (v === 'finished') return 'past';
+  // The countdown vocabulary ('not_started' | 'in_progress' | 'finished') is a
+  // second way an event's status is expressed in this codebase, and web feeds it
+  // straight into its copy of this function. Accepted here too so the two stay
+  // genuinely identical — otherwise a future call site that passes a countdown
+  // status would silently drop the dimension on mobile only.
+  if (v === 'in_progress') return 'live';
+  if (v === 'not_started') return 'upcoming';
   if (v === 'live' || v === 'upcoming' || v === 'past') return v;
   // Genuinely unknown (a future 'cancelled', 'postponed', …). Returning
   // undefined makes omitEmptyParams DROP the param, which is correct: an absent
