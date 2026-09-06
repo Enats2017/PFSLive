@@ -76,6 +76,33 @@ const syncUserProperties = async (
   return role;
 };
 
+/**
+ * ✅ Drop params that carry no value instead of sending them.
+ *
+ * GA4 treats an empty string as a REAL value, so `race_name: ""` becomes its own
+ * row in reports and silently pollutes every breakdown by that dimension — worse
+ * than the parameter simply being absent. Call sites legitimately write
+ * `event_name ?? ''` when the name is optional on that route (see
+ * RootStackParamList — `event_name` is optional on two screens), so filtering
+ * happens here rather than at ~20 call sites. Same rule useFollowManager already
+ * applies to its own params, and logEventView to `race_name`.
+ *
+ * `0` and `false` are KEPT — they are real values, not "missing". A falsiness
+ * check (`if (!value)`) would drop them, which is why this tests for
+ * null/undefined and empty strings explicitly.
+ */
+const omitEmptyParams = (
+  params?: Record<string, string | number | boolean>,
+): Record<string, string | number | boolean> => {
+  const clean: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "string" && value.trim() === "") continue;
+    clean[key] = value;
+  }
+  return clean;
+};
+
 export const analyticsService = {
   // ─────────────────────────────────────────────────────────────
   // EXISTING — unchanged
@@ -170,11 +197,13 @@ export const analyticsService = {
     action: string = "tap",
     extraParams?: Record<string, string | number | boolean>,
   ) {
+    const cleanParams = omitEmptyParams(extraParams);
+
     await logEvent(analytics, "ui_interaction", {
       ui_screen: screenName,
       ui_button: buttonName,
       ui_action: action,
-      ...(extraParams ?? {}),
+      ...cleanParams,
     });
 
     console.log(
@@ -182,7 +211,7 @@ export const analyticsService = {
       screenName,
       buttonName,
       action,
-      extraParams ?? "",
+      cleanParams,
     );
   },
 
@@ -411,12 +440,13 @@ export const analyticsService = {
     followScope: "athlete" | "event",
     extraParams?: Record<string, string | number | boolean>,
   ) {
+    const cleanParams = omitEmptyParams(extraParams);
     await logEvent(analytics, "follow_toggle", {
       follow_action: action,
       follow_scope: followScope,
-      ...(extraParams ?? {}),
+      ...cleanParams,
     });
-    console.log("📊 [Analytics] follow_toggle:", action, followScope, extraParams ?? "");
+    console.log("📊 [Analytics] follow_toggle:", action, followScope, cleanParams);
   },
 
   // ─────────────────────────────────────────────────────────────
@@ -462,7 +492,7 @@ export const analyticsService = {
     await logEvent(analytics, "search_performed", {
       search_type: searchType,
       result_count: resultCount,
-      ...(extraParams ?? {}),
+      ...omitEmptyParams(extraParams),
     });
   },
 

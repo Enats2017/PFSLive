@@ -24,6 +24,8 @@ interface ResultCardProps {
     showUtmbIndex: boolean;
     selectedCheckpoint?: FilterOption | null;
     analyticsScreenName: string;
+    /** Analytics only — race attribution for the tap logged here. */
+    analyticsRaceName: string;
 }
 
 const ResultCard: React.FC<ResultCardProps> = memo(({
@@ -39,6 +41,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     showUtmbIndex,
     selectedCheckpoint,
     analyticsScreenName,
+    analyticsRaceName,
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
@@ -77,7 +80,10 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
             analyticsScreenName,
             ANALYTICS_BUTTONS.PARTICIPANT_PROFILE,
             'tap',
-            { [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib },
+            {
+                [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib,
+                [ANALYTICS_PARAMS.EVENT_NAME]: analyticsRaceName,
+            },
         );
 
         // ADD
@@ -89,7 +95,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
             bib: item.bib,
             raceStatus
         });
-    }, [navigation, product_app_id, currentPovId, item.bib, raceStatus, analyticsScreenName]);
+    }, [navigation, product_app_id, currentPovId, item.bib, raceStatus, analyticsScreenName, analyticsRaceName]);
 
     const handleStarPress = useCallback(() => {
         if (!isLoading) onToggleFollow();

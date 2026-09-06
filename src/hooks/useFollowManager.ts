@@ -380,12 +380,15 @@ export function useFollowManager(
           await smartFollow(productId, bib, customerAppId);
           onFollowSuccess?.();
           await analyticsService.markAsFollowerActive('follow_participant');
-          // EVENT scope: followed by bib, so it applies to this race only —
-          // race_name and product_app_id are meaningful here.
+          // EVENT scope: followed by bib, so it applies to this race only.
+          // followParams() already carries race_name. The raw product_app_id that
+          // used to ride along here was unregistered, so GA4 collected it but no
+          // report could slice by it — an unqueryable machine id sitting next to
+          // the human-readable name that already answers the same question.
           void analyticsService.logFollowToggle(
             'follow',
             'event',
-            followParams({ product_app_id: productId }),
+            followParams(),
           );
           toastSuccess(
             t("follower:success.followTitle"),
@@ -397,7 +400,7 @@ export function useFollowManager(
           void analyticsService.logFollowToggle(
             'unfollow',
             'event',
-            followParams({ product_app_id: productId }),
+            followParams(),
           );
           toastSuccess(
             t("follower:success.unfollowTitle"),

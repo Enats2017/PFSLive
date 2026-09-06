@@ -501,7 +501,10 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             liveScreenName,
             ANALYTICS_BUTTONS.DISTANCE_SELECT,
             'select',
-            { distance_name: distance.distance_name },
+            {
+                [ANALYTICS_PARAMS.DISTANCE_NAME]: distance.distance_name,
+                [ANALYTICS_PARAMS.EVENT_NAME]: event_name,
+            },
         );
 
         const isSameDistance = selectedDistance?.product_option_value_app_id === distance.product_option_value_app_id;
@@ -521,6 +524,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             liveScreenName,
             ANALYTICS_BUTTONS.MAP_PARTICIPANT,
             'tap',
+            { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
         );
         setPopupState({ type: 'participant', data: participant });
     };
@@ -531,6 +535,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             liveScreenName,
             ANALYTICS_BUTTONS.MAP_AID_STATION,
             'tap',
+            { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
         );
         setPopupState({ type: 'aidstation', data: station });
     };
@@ -673,6 +678,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                                 liveScreenName,
                                 ANALYTICS_BUTTONS.ELEVATION_TOGGLE,
                                 profileCollapsed ? 'expand' : 'collapse',
+                                { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
                             );
                             setProfileCollapsed(!profileCollapsed);
                         }}

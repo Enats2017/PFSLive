@@ -49,6 +49,7 @@ export const ANALYTICS_BUTTONS = {
   RESULT: 'result',
   PARTICIPANT_PROFILE: 'participant_profile',
   VIEW_PROFILE: 'view_profile',
+  LANGUAGE_SELECT: 'language_select',
   PARTICIPANT_MODE: 'participant_mode',
   FAN_MODE: 'fan_mode',
   VISIBILITY_SAVE: 'visibility_save',
@@ -70,8 +71,39 @@ export const ANALYTICS_BUTTONS = {
 } as const;
 
 export const ANALYTICS_PARAMS = {
-  PARTICIPANT_ID: 'customer_id',
+  // Renamed from PARTICIPANT_ID / 'customer_id' to match web exactly. Both
+  // platforms carry the same customer_app_id here, and one shared GA4 property
+  // cannot report on it while the two send different key names.
+  //
+  // 'athlete_id' rather than 'customer_id' because web already sets GA4's
+  // reserved user_id from this same value — a param called customer_id would be
+  // a second name for something GA4 already tracks, which is exactly the kind of
+  // ambiguity that makes a dimension unusable.
+  ATHLETE_ID: 'athlete_id',
   BIB_NUMBER: 'bib_number',
+
+  // Intent of a follow-button press, kept OFF ui_action so that stays a pure
+  // gesture ('tap' / 'swipe' / 'select'). Same registered dimension
+  // follow_toggle uses — and needed separately because follow_toggle only fires
+  // AFTER the API call succeeds, so a failed follow would lose its direction.
+  // Mirrors the web constant of the same name.
+  FOLLOW_ACTION: 'follow_action',
+
+  // Which language was chosen. Web has sent this since changeover 1; mobile
+  // tracked language changes not at all, so the breakdown was web-only.
+  LANGUAGE: 'language',
+
+  // Registered event-scope dimension. Was sent as a raw key at the one call
+  // site, so it bypassed ANALYTICS_PARAMS like product_app_id used to.
+  DISTANCE_NAME: 'distance_name',
+  // What the event actually IS, as opposed to which tab it was tapped from.
+  // The Live tab is a MIXED list — the API returns event_status 'live' or
+  // 'finished' for its rows — so tab_name alone reported a finished event as
+  // live. tab_name now means "where the user was", event_status means "what the
+  // thing is". Web has sent this since changeover 1; mobile never did, so every
+  // event-status breakdown was web-only.
+  EVENT_STATUS: 'event_status',
+
   TAB_NAME: 'tab_name',
 
   // The KEY stays EVENT_NAME so no call site needs editing, but the VALUE
@@ -96,3 +128,31 @@ export const ANALYTICS_PARAMS = {
 //     values per day into an "(other)" bucket, which degrades reports built on
 //     the same table. Keep sending them (useful in BigQuery), just leave them
 //     unregistered.
+/**
+ * The API says 'finished'; web has always sent 'past' for the same thing, and
+ * both platforms report into one GA4 property on one registered dimension. Map
+ * here rather than at the call sites, or the dimension splits in two.
+ *
+ * Returns undefined when the API sends null — the Past and Upcoming tabs are
+ * homogeneous so the API leaves event_status empty there, and those call sites
+ * pass their own literal instead. Undefined is dropped by omitEmptyParams.
+ */
+export function normaliseEventStatus(
+  raw?: string | null,
+): 'live' | 'upcoming' | 'past' | undefined {
+  if (!raw) return undefined;
+  if (raw === 'finished') return 'past';
+  if (raw === 'live' || raw === 'upcoming' || raw === 'past') return raw;
+  return undefined;
+}
+
+/**
+ * Button name derived from the true status, mirroring web's EVENT_STATUS_ELEMENT.
+ * Without this a finished event tapped in the Live tab reports ui_button
+ * 'live_event', which is what made the two platforms disagree.
+ */
+export const EVENT_STATUS_BUTTON: Record<string, string> = {
+  live: ANALYTICS_BUTTONS.LIVE_EVENT,
+  upcoming: ANALYTICS_BUTTONS.UPCOMING_EVENT,
+  past: ANALYTICS_BUTTONS.PAST_EVENT,
+};
