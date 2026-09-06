@@ -126,7 +126,9 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
       setActiveTab(swipedTab);
       setVisitedTabs(prev => new Set(prev).add(swipedTab));
     }
-  }, [width]);
+    // event_name is read above for analytics — handleTabPress already lists it,
+    // and a stale closure here would tag swipes with the previous event's name.
+  }, [width, event_name]);
 
   return (
     <SafeAreaView

@@ -185,7 +185,10 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         isFollowed, isLoading, handleFollowPress,
         raceStatus, raceProgressStatus, sourceTab, fromLive,
         product_app_id, currentPovId, showUtmbIndex, selectedCategory,
-        selectedCheckpoint, selectedCheckpoint, resultListScreenName
+        selectedCheckpoint, resultListScreenName,
+        // renderItem closes over event_name via commonProps.analyticsRaceName;
+        // without it the cards keep a stale race name after an event switch.
+        event_name,
     ]);
 
     const ListFooter = useCallback(() =>

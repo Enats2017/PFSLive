@@ -202,9 +202,9 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     <ActivityIndicator size="large" color={colors.primary} />
                 </View>
                 {sectionType === 'follower' ? (
-                    <BottomNavigationFollower activeTab='Favorites' />
+                    <BottomNavigationFollower activeTab='Favorites' event_name={event_name} />
                 ) : (
-                    <BottomNavigation activeTab="Results" />
+                    <BottomNavigation activeTab="Results" event_name={event_name} />
                 )}
             </SafeAreaView>
         );

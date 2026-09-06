@@ -12,14 +12,10 @@ import { formatEventDate } from '../../utils/dateFormatter';
 import { API_CONFIG } from '../../constants/config';
 import ErrorScreen from '../../components/ErrorScreen';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS, EVENT_STATUS_BUTTON, normaliseEventStatus } from '../../constants/analyticsScreens';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS, EVENT_STATUS_BUTTON, liveTabStatus } from '../../constants/analyticsScreens';
 
-// The Live tab is a MIXED list: the API returns event_status 'live' or 'finished'
-// for its rows. Falls back to 'live' only when the API sends nothing, which is
-// the tab's own meaning. normaliseEventStatus maps 'finished' -> 'past' so both
-// platforms feed one dimension.
-const liveStatus = (item: { event_status?: string | null }): string =>
-  normaliseEventStatus(item.event_status) ?? 'live';
+// Status of a Live-tab row — see liveTabStatus in analyticsScreens.ts.
+const liveStatus = liveTabStatus;
 
 interface LiveTabProps {
     events: EventItem[];
@@ -70,7 +66,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 onPress={ async () => {
                     await analyticsService.logInteraction(
                         ANALYTICS_SCREENS.FOLLOWER_EVENT_LIST,
-                        EVENT_STATUS_BUTTON[liveStatus(item)] ?? ANALYTICS_BUTTONS.LIVE_EVENT,
+                        EVENT_STATUS_BUTTON[liveStatus(item) ?? 'live'] ?? ANALYTICS_BUTTONS.LIVE_EVENT,
                         'tap',
                         {
                             [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
@@ -103,7 +99,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     onPress={ async () => {
                         await analyticsService.logInteraction(
                             ANALYTICS_SCREENS.FOLLOWER_EVENT_LIST,
-                            EVENT_STATUS_BUTTON[liveStatus(item)] ?? ANALYTICS_BUTTONS.LIVE_EVENT,
+                            EVENT_STATUS_BUTTON[liveStatus(item) ?? 'live'] ?? ANALYTICS_BUTTONS.LIVE_EVENT,
                             'tap',
                             {
                                 [ANALYTICS_PARAMS.EVENT_NAME]: item.name,

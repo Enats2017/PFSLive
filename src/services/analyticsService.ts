@@ -77,6 +77,13 @@ const syncUserProperties = async (
 };
 
 /**
+ * Params as CALL SITES have them — a value may legitimately be absent (an
+ * optional route param, a status the API didn't send). omitEmptyParams strips
+ * those, so the loggers accept the loose shape and emit the strict one.
+ */
+type AnalyticsParams = Record<string, string | number | boolean | null | undefined>;
+
+/**
  * ✅ Drop params that carry no value instead of sending them.
  *
  * GA4 treats an empty string as a REAL value, so `race_name: ""` becomes its own
@@ -85,19 +92,35 @@ const syncUserProperties = async (
  * `event_name ?? ''` when the name is optional on that route (see
  * RootStackParamList — `event_name` is optional on two screens), so filtering
  * happens here rather than at ~20 call sites. Same rule useFollowManager already
- * applies to its own params, and logEventView to `race_name`.
+ * applies to its own params (`if (analyticsRaceName) …`), and the fixed-param
+ * events below apply it inline via conditional spread.
  *
  * `0` and `false` are KEPT — they are real values, not "missing". A falsiness
  * check (`if (!value)`) would drop them, which is why this tests for
  * null/undefined and empty strings explicitly.
  */
+// GA4 drops a parameter whose value exceeds 100 characters — silently, so an
+// over-long race name would just be missing from reports with no error anywhere.
+// Race names are free text out of the DB and nothing upstream bounds them.
+const GA4_MAX_PARAM_VALUE = 100;
+
 const omitEmptyParams = (
-  params?: Record<string, string | number | boolean>,
+  params?: AnalyticsParams,
 ): Record<string, string | number | boolean> => {
   const clean: Record<string, string | number | boolean> = {};
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value === undefined || value === null) continue;
-    if (typeof value === "string" && value.trim() === "") continue;
+    if (typeof value === "string") {
+      // Trim what we keep, not just what we test. Otherwise " Marathon " and
+      // "Marathon" are two distinct rows in every breakdown on this dimension.
+      const trimmed = value.trim();
+      if (trimmed === "") continue;
+      clean[key] =
+        trimmed.length > GA4_MAX_PARAM_VALUE
+          ? trimmed.slice(0, GA4_MAX_PARAM_VALUE)
+          : trimmed;
+      continue;
+    }
     clean[key] = value;
   }
   return clean;
@@ -195,7 +218,7 @@ export const analyticsService = {
     screenName: string,
     buttonName: string,
     action: string = "tap",
-    extraParams?: Record<string, string | number | boolean>,
+    extraParams?: AnalyticsParams,
   ) {
     const cleanParams = omitEmptyParams(extraParams);
 
@@ -299,7 +322,8 @@ export const analyticsService = {
    */
   async logTrackingStarted(params?: {
     // null accepted: HomeScreen's eventId is `string | null` before a race is
-    // selected. The `?? ""` below already normalises it.
+    // selected. When absent the event_id param is omitted entirely (below)
+    // rather than sent as an empty string.
     eventId?: string | number | null;
     manualStart?: boolean;
     intervalSeconds?: number;
@@ -311,7 +335,11 @@ export const analyticsService = {
     }
 
     await logEvent(analytics, "tracking_started", {
-      event_id: String(params?.eventId ?? ""),
+      // Omitted rather than sent as "" — see omitEmptyParams. GA4 counts an
+      // empty string as a real value and it becomes its own row in reports.
+      ...(params?.eventId !== undefined && params?.eventId !== null && params.eventId !== ""
+        ? { event_id: String(params.eventId) }
+        : {}),
       manual_start: params?.manualStart ? "yes" : "no",
       interval_seconds: params?.intervalSeconds ?? 0,
     });
@@ -438,7 +466,7 @@ export const analyticsService = {
   async logFollowToggle(
     action: "follow" | "unfollow",
     followScope: "athlete" | "event",
-    extraParams?: Record<string, string | number | boolean>,
+    extraParams?: AnalyticsParams,
   ) {
     const cleanParams = omitEmptyParams(extraParams);
     await logEvent(analytics, "follow_toggle", {
@@ -487,7 +515,7 @@ export const analyticsService = {
       | "favourite"     // searching your own favourites
       | "follower",     // searching your own followers
     resultCount: number,
-    extraParams?: Record<string, string | number | boolean>,
+    extraParams?: AnalyticsParams,
   ) {
     await logEvent(analytics, "search_performed", {
       search_type: searchType,
@@ -543,7 +571,7 @@ export const analyticsService = {
       auth_step: step,
       // Server error CODE only (e.g. 'otp_expired') — never a message, never
       // anything the user typed.
-      auth_reason: reason ?? "",
+      ...(reason ? { auth_reason: reason } : {}),
     });
   },
 
@@ -572,7 +600,7 @@ export const analyticsService = {
     await logEvent(analytics, "register_step", {
       register_step: step,
       // Server error CODE only — never a message, never user input.
-      register_reason: reason ?? "",
+      ...(reason ? { register_reason: reason } : {}),
       // Registration always happens against one race, so it can be attributed.
       ...(raceName ? { race_name: raceName } : {}),
     });
@@ -594,7 +622,7 @@ export const analyticsService = {
       create_event_step: step,
       // Server action/error CODE only — never a message, never the event name
       // the user typed.
-      create_event_reason: reason ?? "",
+      ...(reason ? { create_event_reason: reason } : {}),
     });
   },
 

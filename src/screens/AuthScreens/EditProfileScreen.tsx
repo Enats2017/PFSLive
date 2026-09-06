@@ -194,7 +194,7 @@ const EditProfileScreen = () => {
             const langCode = getLanguageCodeFromId(form.language_id)
             if (langCode) {
                 await saveLanguage(langCode)
-                await changeLanguage(langCode, ANALYTICS_SCREENS.PROFILE)
+                await changeLanguage(langCode, { screenName: ANALYTICS_SCREENS.EDIT_PROFILE, userInitiated: true })
             }
 
             const customer_app_id = await tokenService.getCustomerId()

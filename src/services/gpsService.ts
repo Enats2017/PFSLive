@@ -52,13 +52,20 @@ const FINISH_APPROACH_KEY      = '@PFSLive:finishApproach';
 // ✅ Race finished flag — set when distance_to_finish_km ≤ 50m.
 // Read by HomeScreen 1s timer to auto-stop tracking from React context.
 export const RACE_FINISHED_KEY = '@PFSLive:raceFinished';
-// ✅ Near-finish flag — set when distance_to_finish_km ≤ 1km for the first
-// time, and CLEARED again as soon as the server reports > 1km. It still covers
-// fast cyclists who skip from 1.5km directly to 0.02km in a single 30s interval,
-// because the ≤1km branch sets it before the auto-stop check reads it within the
-// same fix. It is deliberately NOT a race-long latch: on a course that passes
-// its own finish mid-race, one early pass would otherwise disarm the `distance`
-// auto-stop guard for good.
+// ✅ Near-finish flag — set when distance_to_finish_km ≤ 1km, and cleared again
+// when the server reports > 1km, so it reflects "near the finish NOW" rather
+// than "was near it once".
+//
+// ⚠️ Be aware, before relying on this in shouldStop below: as the conditions
+// stand, `nearFinish === '1'` is IMPLIED by the other conjuncts and can never
+// veto anything. shouldStop needs distance_to_finish_km ≤ 0.05 and sentCount ≥ 3;
+// distToFinish is that same field under the same sentCount gate, so ≤ 0.05 also
+// means ≤ 1km, so the ≤1km branch has already set this flag earlier in the very
+// same handler. That was equally true when the flag was a permanent latch — the
+// conjunct has never actually gated a stop. Clearing it makes the value honest
+// and costs one storage write on >1km fixes; it does not change any outcome.
+// Making it a real guard means tracking "left the finish area since it was last
+// armed" (an edge, not a level) — worth doing if lap courses ever need it.
 const NEAR_FINISH_KEY = '@PFSLive:nearFinish';
 // ✅ Transistor-active flag — set after BackgroundGeolocation.start() succeeds,
 // cleared on stop / start failure. Defensive: with Option B, only Transistor
@@ -1170,13 +1177,11 @@ const _processLocationForSendInternal = async (
         await addLog('🔄', `Finish approach reset — now ${distToFinish.toFixed(2)}km from finish${tag}`);
       }
       await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
-      // ✅ Clear the near-finish latch too. It used to be set-once-for-the-race,
-      // which meant a course that passes its own finish mid-race (a lap, or an
-      // aid station beside the line) permanently disarmed the `distance` auto-stop
-      // guard below after the first pass. The fast-cyclist case the latch exists
-      // for (1.5km → 0.02km in one 30s interval) still works: within a single
-      // fix the ≤1km branch above SETS the latch before the auto-stop check
-      // READS it, so it only has to survive within a fix, not across the race.
+      // Clear the near-finish flag too, so it means "near the finish now".
+      // The fast-cyclist case it was introduced for (1.5km → 0.02km in one 30s
+      // interval) is unaffected: the ≤1km branch above sets it before the
+      // auto-stop check reads it within this same handler. See the declaration
+      // for why that check cannot currently veto a stop either way.
       await AsyncStorage.removeItem(NEAR_FINISH_KEY);
     }
 

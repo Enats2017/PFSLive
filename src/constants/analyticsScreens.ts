@@ -31,6 +31,9 @@ export const ANALYTICS_SCREENS = {
   FAVOURITE_LIST: 'favourite_list',
   ALL_PARTICIPANTS: 'all_participants',
   PROFILE: 'profile',
+  // Distinct from PROFILE: the language change happens on the EDIT screen, and
+  // conflating them makes 'profile' cover both viewing and editing.
+  EDIT_PROFILE: 'edit_profile',
 } as const;
 
 export const ANALYTICS_BUTTONS = {
@@ -91,11 +94,23 @@ export const ANALYTICS_PARAMS = {
 
   // Which language was chosen. Web has sent this since changeover 1; mobile
   // tracked language changes not at all, so the breakdown was web-only.
+  // Stays 'language' deliberately, despite GA4 having a built-in Language
+  // dimension (the device locale) — two reasons, both stronger than the
+  // ambiguity:
+  //   1. WEB already sends 'language' for this. Renaming on mobile only would
+  //      split one dimension across two keys, which is the exact failure this
+  //      file avoids everywhere else (see EVENT_NAME, follow_scope).
+  //   2. 'app_language' is NOT free: analyticsService already sets a USER-scoped
+  //      property of that name. Reusing it for an event param would put the same
+  //      name in the dimension picker at two different scopes.
+  // The built-in Language is device locale; this is the in-app language chosen.
+  // Distinguish them by scope in reports, not by renaming one platform.
   LANGUAGE: 'language',
 
   // Registered event-scope dimension. Was sent as a raw key at the one call
   // site, so it bypassed ANALYTICS_PARAMS like product_app_id used to.
   DISTANCE_NAME: 'distance_name',
+  VISIBILITY: 'visibility',
   // What the event actually IS, as opposed to which tab it was tapped from.
   // The Live tab is a MIXED list — the API returns event_status 'live' or
   // 'finished' for its rows — so tab_name alone reported a finished event as
@@ -120,6 +135,11 @@ export const ANALYTICS_PARAMS = {
 // NOTE ON REGISTERING CUSTOM DIMENSIONS IN GA4:
 //   Register:      tab_name, race_name, ui_screen, ui_button, ui_action,
 //                  role_at_time, follow_scope  (all Event scope)
+//   ALSO register before shipping this changeover — new in it, and useless
+//   unregistered because registration is not retroactive:
+//                  event_status, follow_action, language, distance_name,
+//                  visibility  (all Event scope)
+//   athlete_id replaces customer_id — same "do NOT register" reasoning below.
 //   follow_scope is shared with the web app — same dimension, one property.
 //   Registration is NOT retroactive: register before shipping, never after.
 //                  has_followed, user_role  (User scope)
@@ -141,10 +161,34 @@ export function normaliseEventStatus(
   raw?: string | null,
 ): 'live' | 'upcoming' | 'past' | undefined {
   if (!raw) return undefined;
-  if (raw === 'finished') return 'past';
-  if (raw === 'live' || raw === 'upcoming' || raw === 'past') return raw;
+  // Tolerate case and padding. The value comes from a PHP API as free-ish text,
+  // so 'Finished' / 'LIVE' / ' live ' are all realistic and used to fall through
+  // to undefined — which the Live tab then defaulted to 'live', silently
+  // relabelling a finished event as live. Compare on a normalised copy.
+  const v = raw.trim().toLowerCase();
+  if (v === 'finished') return 'past';
+  if (v === 'live' || v === 'upcoming' || v === 'past') return v;
+  // Genuinely unknown (a future 'cancelled', 'postponed', …). Returning
+  // undefined makes omitEmptyParams DROP the param, which is correct: an absent
+  // dimension is honest, whereas guessing would file it under a real status.
   return undefined;
 }
+
+/**
+ * Status of a row in the LIVE tab, which is a MIXED list — the API returns
+ * 'live' or 'finished' for its rows.
+ *
+ * The default is applied to the INPUT, not the output. Defaulting the output
+ * (`normaliseEventStatus(x) ?? 'live'`) also swallowed unrecognised values, so a
+ * future 'cancelled' would have reported as live. This way "API sent nothing"
+ * still means the tab's own meaning, while a genuinely unknown status returns
+ * undefined and omitEmptyParams drops the param.
+ *
+ * Lives here rather than being copy-pasted into each Live tab — it was, and the
+ * two copies had to be fixed in lockstep.
+ */
+export const liveTabStatus = (item: { event_status?: string | null }) =>
+  normaliseEventStatus(item.event_status ?? 'live');
 
 /**
  * Button name derived from the true status, mirroring web's EVENT_STATUS_ELEMENT.

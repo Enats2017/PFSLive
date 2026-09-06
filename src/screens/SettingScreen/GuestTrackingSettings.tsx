@@ -47,7 +47,7 @@ export const GuestTrackingSettings: React.FC = () => {
              const langCode = getLanguageCodeFromId(option.value);
         if (langCode) {
             await saveLanguage(langCode);
-            await changeLanguage(langCode);
+            await changeLanguage(langCode, { userInitiated: true });
         }
         toastSuccess(t('setting:liveTrackingSettings.toastSuccess'));
         } catch (e: any) {

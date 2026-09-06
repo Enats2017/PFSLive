@@ -48,7 +48,13 @@ const ParticipantResult = () => {
   const params = route.params as ParticipantResultRouteParams | undefined;
   const product_app_id = params?.product_app_id;
   const product_option_value_app_id = params?.product_option_value_app_id;
+  // Display name falls back to a TRANSLATED placeholder ('Event'/'Événement'/
+  // 'Evenement'). That is right for the heading and wrong for analytics — it
+  // would put three locale-dependent fake race names into the race_name
+  // dimension. Analytics uses the raw param, so an absent name is simply
+  // omitted by omitEmptyParams.
   const event_name = params?.event_name || t('participantResult:defaultEventName');
+  const analyticsRaceName = params?.event_name;
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,7 +147,7 @@ const ParticipantResult = () => {
           void analyticsService.logSearchPerformed(
             'participant',
             result.pagination.total ?? result.participants.length,
-            { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
+            { [ANALYTICS_PARAMS.EVENT_NAME]: analyticsRaceName },
           );
         }
       } catch (err: any) {
