@@ -7,6 +7,8 @@ import { detailsStyles } from '../../styles/details.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
+import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 interface FanEventCardProps {
     /**
@@ -22,6 +24,8 @@ interface FanEventCardProps {
      * their own row. This is a deliberate departure from those two artboards.
      */
     variant: 'search' | 'favourite';
+    /** ANALYTICS_SCREENS key of the host screen, for the View-profile event. */
+    analyticsScreenName: string;
     item: ParticipantItem;
     isFollowed: boolean;
     isLoading: boolean;
@@ -30,6 +34,7 @@ interface FanEventCardProps {
 
 const FanEventCard: React.FC<FanEventCardProps> = ({
     variant,
+    analyticsScreenName,
     item,
     isFollowed,
     isLoading,
@@ -149,11 +154,19 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                     style={detailsStyles.cardActionSecondary}
                     activeOpacity={0.8}
                     accessibilityRole="button"
-                    onPress={() =>
+                    onPress={async () => {
+                        await analyticsService.logInteraction(
+                            analyticsScreenName,
+                            ANALYTICS_BUTTONS.VIEW_PROFILE,
+                            'tap',
+                            {
+                                [ANALYTICS_PARAMS.ATHLETE_ID]: item.customer_app_id,
+                            }
+                        );
                         navigation.navigate('ProfileScreen', {
                             customer_app_id: item.customer_app_id,
-                        })
-                    }
+                        });
+                    }}
                 >
                     <Text style={detailsStyles.cardActionSecondaryText}>
                         {t('follower:button.viewprofile')}

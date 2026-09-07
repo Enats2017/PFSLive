@@ -457,9 +457,15 @@ export const locationService = {
               qSent = parseInt((await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY)) || '0', 10) || 0;
             } catch { /* silent — a storage failure must not fabricate a finish */ }
             if (!(qDtf !== null && qDtf <= FINISH_LINE_THRESHOLD_KM && qSent >= 3)) {
-              if (API_CONFIG.DEBUG) {
-                console.log(`⏭️ Drained fix reported finished=1 (source=distance) but failed the GPS guards — dtf=${qDtf}, sent=${qSent} — not finishing`);
-              }
+              // addLog, NOT console.log: this is the one drain decision that can
+              // swallow a finish, and Metro's release minifier drops console.*
+              // (see CLAUDE.md) — it would have been invisible in production,
+              // exactly where you need it. Matches the 'Drain halted' and 'Fix
+              // rejected' lines above, which go into the uploaded tracking log.
+              try {
+                const { addLog } = require('./gpsService');
+                await addLog('⏭️', `Finish held during drain — server said finished but source=distance and dtf=${qDtf}, sent=${qSent} (need dtf<=${FINISH_LINE_THRESHOLD_KM} and sent>=3)`);
+              } catch { /* logging must never break the drain */ }
               qFinished = false;
             }
           }

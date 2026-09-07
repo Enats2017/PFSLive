@@ -17,7 +17,7 @@ import type { followerDetailspops } from '../../types/navigation';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 import { useDimensions } from '../../hooks/useDimensions';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 type Tab = 'Participant' | 'Distance';
 const TABS: Tab[] = ['Participant', 'Distance'];
@@ -80,6 +80,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
             product_app_id={product_app_id}
             event_image={event_image}
             showResults={showResults}
+            event_name={event_name}
           />
         );
       default:
@@ -92,14 +93,17 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
       ANALYTICS_SCREENS.FOLLOWER_DETAILS,
       ANALYTICS_BUTTONS.TAB,
       'tap',
-      { tab_name: tab },
+      {
+        [ANALYTICS_PARAMS.TAB_NAME]: tab,
+        [ANALYTICS_PARAMS.EVENT_NAME]: event_name,
+      },
     );
     const index = TABS.indexOf(tab);
     activeTabRef.current = tab;
     setActiveTab(tab);
     setVisitedTabs(prev => new Set(prev).add(tab));
     flatListRef.current?.scrollToIndex({ index, animated: true });
-  }, []);
+  }, [event_name]);
 
   const handleSwipe = useCallback((e: any) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / width);
@@ -109,13 +113,18 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
         ANALYTICS_SCREENS.FOLLOWER_DETAILS,
         ANALYTICS_BUTTONS.TAB,
         'swipe',
-        { tab_name: swipedTab },
+        {
+          [ANALYTICS_PARAMS.TAB_NAME]: swipedTab,
+          [ANALYTICS_PARAMS.EVENT_NAME]: event_name,
+        },
       );
       activeTabRef.current = swipedTab;
       setActiveTab(swipedTab);
       setVisitedTabs(prev => new Set(prev).add(swipedTab));
     }
-  }, [width]);
+    // event_name is read above for analytics — handleTabPress already lists it,
+    // and a stale closure here would tag swipes with the previous event's name.
+  }, [width, event_name]);
 
   return (
     <SafeAreaView

@@ -25,6 +25,8 @@ interface AppHeaderProps {
   logoimg?: boolean;
   showSearch?: boolean;
   product_app_id?: number;
+  /** Analytics only — forwarded to the SearchParticipant route. */
+  event_name?: string;
   product_option_value_app_id?: number | null;
   raceStatus?: 'finished' | 'in_progress' | 'not_started';
   showBack?: boolean;            // show a back arrow on the left
@@ -39,6 +41,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   logoimg = false,
   showSearch = false,
   product_app_id,
+  event_name,
   product_option_value_app_id,
   raceStatus,
   showBack = false,
@@ -80,6 +83,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       product_app_id,
       product_option_value_app_id: product_option_value_app_id ?? undefined,
       raceStatus,
+      event_name,
     });
   };
 

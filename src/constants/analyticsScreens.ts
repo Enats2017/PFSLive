@@ -31,6 +31,9 @@ export const ANALYTICS_SCREENS = {
   FAVOURITE_LIST: 'favourite_list',
   ALL_PARTICIPANTS: 'all_participants',
   PROFILE: 'profile',
+  // Distinct from PROFILE: the language change happens on the EDIT screen, and
+  // conflating them makes 'profile' cover both viewing and editing.
+  EDIT_PROFILE: 'edit_profile',
 } as const;
 
 export const ANALYTICS_BUTTONS = {
@@ -49,6 +52,7 @@ export const ANALYTICS_BUTTONS = {
   RESULT: 'result',
   PARTICIPANT_PROFILE: 'participant_profile',
   VIEW_PROFILE: 'view_profile',
+  LANGUAGE_SELECT: 'language_select',
   PARTICIPANT_MODE: 'participant_mode',
   FAN_MODE: 'fan_mode',
   VISIBILITY_SAVE: 'visibility_save',
@@ -70,8 +74,62 @@ export const ANALYTICS_BUTTONS = {
 } as const;
 
 export const ANALYTICS_PARAMS = {
-  PARTICIPANT_ID: 'customer_id',
+  // Renamed from PARTICIPANT_ID / 'customer_id' to match web exactly. Both
+  // platforms carry the same customer_app_id here, and one shared GA4 property
+  // cannot report on it while the two send different key names.
+  //
+  // 'athlete_id' rather than 'customer_id' because web already sets GA4's
+  // reserved user_id from this same value — a param called customer_id would be
+  // a second name for something GA4 already tracks, which is exactly the kind of
+  // ambiguity that makes a dimension unusable.
+  // Renamed from 'event_id' for the same reason EVENT_NAME sends 'race_name':
+  // GA4 has its own event_id concept (used for de-duplication in gtag and the
+  // Measurement Protocol), so a custom parameter of that name is ambiguous at
+  // best. 'race_id' also pairs with 'race_name' instead of reading like a GA
+  // internal. Nothing is lost by renaming — event_id was never registered as a
+  // custom dimension, so no standard report depends on it; only BigQuery has
+  // history, where the two names can be unioned.
+  //
+  // This is the ONLY race identifier on tracking_started / tracking_completed,
+  // which is what the catalogue calls the main obstacle to per-race reporting.
+  RACE_ID: 'race_id',
+  ATHLETE_ID: 'athlete_id',
   BIB_NUMBER: 'bib_number',
+
+  // Intent of a follow-button press, kept OFF ui_action so that stays a pure
+  // gesture ('tap' / 'swipe' / 'select'). Same registered dimension
+  // follow_toggle uses — and needed separately because follow_toggle only fires
+  // AFTER the API call succeeds, so a failed follow would lose its direction.
+  // Mirrors the web constant of the same name.
+  FOLLOW_ACTION: 'follow_action',
+
+  // Which language was chosen. Web has sent this since changeover 1; mobile
+  // tracked language changes not at all, so the breakdown was web-only.
+  // Stays 'language' deliberately, despite GA4 having a built-in Language
+  // dimension (the device locale) — two reasons, both stronger than the
+  // ambiguity:
+  //   1. WEB already sends 'language' for this. Renaming on mobile only would
+  //      split one dimension across two keys, which is the exact failure this
+  //      file avoids everywhere else (see EVENT_NAME, follow_scope).
+  //   2. 'app_language' is NOT free: analyticsService already sets a USER-scoped
+  //      property of that name. Reusing it for an event param would put the same
+  //      name in the dimension picker at two different scopes.
+  // The built-in Language is device locale; this is the in-app language chosen.
+  // Distinguish them by scope in reports, not by renaming one platform.
+  LANGUAGE: 'language',
+
+  // Registered event-scope dimension. Was sent as a raw key at the one call
+  // site, so it bypassed ANALYTICS_PARAMS like product_app_id used to.
+  DISTANCE_NAME: 'distance_name',
+  VISIBILITY: 'visibility',
+  // What the event actually IS, as opposed to which tab it was tapped from.
+  // The Live tab is a MIXED list — the API returns event_status 'live' or
+  // 'finished' for its rows — so tab_name alone reported a finished event as
+  // live. tab_name now means "where the user was", event_status means "what the
+  // thing is". Web has sent this since changeover 1; mobile never did, so every
+  // event-status breakdown was web-only.
+  EVENT_STATUS: 'event_status',
+
   TAB_NAME: 'tab_name',
 
   // The KEY stays EVENT_NAME so no call site needs editing, but the VALUE
@@ -88,6 +146,11 @@ export const ANALYTICS_PARAMS = {
 // NOTE ON REGISTERING CUSTOM DIMENSIONS IN GA4:
 //   Register:      tab_name, race_name, ui_screen, ui_button, ui_action,
 //                  role_at_time, follow_scope  (all Event scope)
+//   ALSO register before shipping this changeover — new in it, and useless
+//   unregistered because registration is not retroactive:
+//                  event_status, follow_action, language, distance_name,
+//                  visibility  (all Event scope)
+//   athlete_id replaces customer_id — same "do NOT register" reasoning below.
 //   follow_scope is shared with the web app — same dimension, one property.
 //   Registration is NOT retroactive: register before shipping, never after.
 //                  has_followed, user_role  (User scope)
@@ -96,3 +159,62 @@ export const ANALYTICS_PARAMS = {
 //     values per day into an "(other)" bucket, which degrades reports built on
 //     the same table. Keep sending them (useful in BigQuery), just leave them
 //     unregistered.
+/**
+ * The API says 'finished'; web has always sent 'past' for the same thing, and
+ * both platforms report into one GA4 property on one registered dimension. Map
+ * here rather than at the call sites, or the dimension splits in two.
+ *
+ * Returns undefined when the API sends null — the Past and Upcoming tabs are
+ * homogeneous so the API leaves event_status empty there, and those call sites
+ * pass their own literal instead. Undefined is dropped by omitEmptyParams.
+ */
+export function normaliseEventStatus(
+  raw?: string | null,
+): 'live' | 'upcoming' | 'past' | undefined {
+  if (!raw) return undefined;
+  // Tolerate case and padding. The value comes from a PHP API as free-ish text,
+  // so 'Finished' / 'LIVE' / ' live ' are all realistic and used to fall through
+  // to undefined — which the Live tab then defaulted to 'live', silently
+  // relabelling a finished event as live. Compare on a normalised copy.
+  const v = raw.trim().toLowerCase();
+  if (v === 'finished') return 'past';
+  // The countdown vocabulary ('not_started' | 'in_progress' | 'finished') is a
+  // second way an event's status is expressed in this codebase, and web feeds it
+  // straight into its copy of this function. Accepted here too so the two stay
+  // genuinely identical — otherwise a future call site that passes a countdown
+  // status would silently drop the dimension on mobile only.
+  if (v === 'in_progress') return 'live';
+  if (v === 'not_started') return 'upcoming';
+  if (v === 'live' || v === 'upcoming' || v === 'past') return v;
+  // Genuinely unknown (a future 'cancelled', 'postponed', …). Returning
+  // undefined makes omitEmptyParams DROP the param, which is correct: an absent
+  // dimension is honest, whereas guessing would file it under a real status.
+  return undefined;
+}
+
+/**
+ * Status of a row in the LIVE tab, which is a MIXED list — the API returns
+ * 'live' or 'finished' for its rows.
+ *
+ * The default is applied to the INPUT, not the output. Defaulting the output
+ * (`normaliseEventStatus(x) ?? 'live'`) also swallowed unrecognised values, so a
+ * future 'cancelled' would have reported as live. This way "API sent nothing"
+ * still means the tab's own meaning, while a genuinely unknown status returns
+ * undefined and omitEmptyParams drops the param.
+ *
+ * Lives here rather than being copy-pasted into each Live tab — it was, and the
+ * two copies had to be fixed in lockstep.
+ */
+export const liveTabStatus = (item: { event_status?: string | null }) =>
+  normaliseEventStatus(item.event_status ?? 'live');
+
+/**
+ * Button name derived from the true status, mirroring web's EVENT_STATUS_ELEMENT.
+ * Without this a finished event tapped in the Live tab reports ui_button
+ * 'live_event', which is what made the two platforms disagree.
+ */
+export const EVENT_STATUS_BUTTON: Record<string, string> = {
+  live: ANALYTICS_BUTTONS.LIVE_EVENT,
+  upcoming: ANALYTICS_BUTTONS.UPCOMING_EVENT,
+  past: ANALYTICS_BUTTONS.PAST_EVENT,
+};

@@ -19,15 +19,17 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
+import { ANALYTICS_SCREENS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 interface ParticipantTabProps {
   product_app_id: string | number;
    event_image?: string;
    showResults?: boolean;
+   /** Analytics only — forwarded to ParticipantCard for race attribution. */
+   event_name?: string;
 }
 
-const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_image, showResults = true,   }) => {
+const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_image, showResults = true, event_name,   }) => {
   const { t } = useTranslation(['details', 'follower']);
 
   const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
@@ -43,6 +45,10 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     handlePasswordModalClose,
   } = useFollowManager(t, productId, undefined, {
     screenName: ANALYTICS_SCREENS.PARTICIPANT_LIST,
+    // This is the in-event Participants tab — the primary follow surface for a
+    // race — and every follow from it was landing with no race attribution.
+    // event_name is already a prop; ui_interaction below has always used it.
+    raceName: event_name,
   });
 
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -115,13 +121,13 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
         // Sends pagination.total (all matches), not participants.length, which is
         // capped at one page. Never the query text.
         if (pageNum === 1 && search.trim().length > 0) {
-          // In-race search. Only the product id is in scope here — no event
-          // name reaches this component — so attribute by id rather than
-          // sending an empty race_name.
+          // In-race search, attributed by race_name. The raw product id it used to
+          // send is unregistered, so GA4 collected it but no report could slice by
+          // it — the same trap web's useParticipants had.
           void analyticsService.logSearchPerformed(
             'participant',
             result.pagination.total ?? result.participants.length,
-            { product_app_id: productId },
+            { [ANALYTICS_PARAMS.EVENT_NAME]: event_name ?? '' },
           );
         }
 
@@ -205,6 +211,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
           item={item}
           product_app_id={productId}
           showResults={showResults} 
+          raceName={event_name}
           isFollowed={isFollowed(productId, bib, item.customer_app_id)}
           isLoading={isLoading(productId, bib, item.customer_app_id)}
           onToggleFollow={() => {

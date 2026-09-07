@@ -192,6 +192,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
         ({ item }: { item: ParticipantItem }) => (
             <FanEventCard
                 variant="search"
+                analyticsScreenName={ANALYTICS_SCREENS.ATHLETE_SEARCH}
                 item={item}
                 isFollowed={isFollowed(item.customer_app_id)}
                 isLoading={isLoading(item.customer_app_id)}

@@ -179,6 +179,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         {
                             [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
                             [ANALYTICS_PARAMS.TAB_NAME]: 'past',
+                            [ANALYTICS_PARAMS.EVENT_STATUS]: 'past',
                         }
                     );
                     // A past event goes straight to its results - there is
