@@ -98,3 +98,5 @@ firebase-service-account.json
 service-account-key.json
 google-services.json
 GoogleService-Info.plist
+# device-check.mjs output (logcat + screenshots)
+.device/
