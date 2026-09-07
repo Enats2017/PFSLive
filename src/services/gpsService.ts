@@ -947,19 +947,25 @@ const _processLocationForSendInternal = async (
         // elevation_gain NULL, all of them queued through here. Same reads, same
         // order as lines ~1053-1073; a fix routed through this guard is a real
         // fix that WILL be sent, so it deserves the same fields.
+        // Own try/catch, like the battery read below. Everything here runs inside
+        // the enclosing `try { } catch { /* silent */ }` that ends in `return`, so
+        // an AsyncStorage hiccup thrown from enrichment would skip addToQueue and
+        // silently DROP the fix. Enrichment must never cost us the position.
         let guardElevationGain: number | undefined;
-        if (raw.altitude !== null && raw.altitude !== undefined) {
-          const lastAltStr = await AsyncStorage.getItem(LAST_ALTITUDE_KEY);
-          if (lastAltStr) {
-            const lastAlt = parseFloat(lastAltStr);
-            if (!isNaN(lastAlt) && raw.altitude > lastAlt) {
-              guardElevationGain = parseFloat((raw.altitude - lastAlt).toFixed(1));
+        try {
+          if (raw.altitude !== null && raw.altitude !== undefined) {
+            const lastAltStr = await AsyncStorage.getItem(LAST_ALTITUDE_KEY);
+            if (lastAltStr) {
+              const lastAlt = parseFloat(lastAltStr);
+              if (!isNaN(lastAlt) && raw.altitude > lastAlt) {
+                guardElevationGain = parseFloat((raw.altitude - lastAlt).toFixed(1));
+              }
             }
+            // Advance the baseline here too. Skipping it left the next non-guarded
+            // fix computing its gain against a stale altitude.
+            await AsyncStorage.setItem(LAST_ALTITUDE_KEY, String(raw.altitude));
           }
-          // Advance the baseline here too. Skipping it left the next non-guarded
-          // fix computing its gain against a stale altitude.
-          await AsyncStorage.setItem(LAST_ALTITUDE_KEY, String(raw.altitude));
-        }
+        } catch { /* silent */ }
 
         let guardBatteryLevel: number | undefined;
         let guardBatteryCharging: boolean | undefined;
