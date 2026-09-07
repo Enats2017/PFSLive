@@ -327,7 +327,13 @@ export const locationService = {
     // all callers within the same JS context.
     if (_isProcessingQueue) {
       if (API_CONFIG.DEBUG) console.log('⏭️ processQueue: already running — skipping to prevent duplicates');
-      return 0;
+      // -1 = "busy", NOT "drained nothing". Returning 0 made the caller's wedge guard
+      // count a healthy skip as a failed drain: HomeScreen's 10s queueProcessor and the
+      // live-send drain contend constantly, so two collisions opened a 60s offline
+      // cooldown on a perfectly good network. That signature ("Drain stalled 2× —
+      // backing off network for 60s") appeared in 65 of 141 logs on 2026-09-05/06.
+      // Every other caller guards with `> 0`, so -1 is inert for them.
+      return -1;
     }
 
     const hasNetwork = await locationQueueService.hasNetwork();

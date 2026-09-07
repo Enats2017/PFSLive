@@ -62,6 +62,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         {
             screenName: ANALYTICS_SCREENS.FAVOURITE_LIST,
             raceName: event_name,
+            raceId: product_app_id,
         },
     );
 

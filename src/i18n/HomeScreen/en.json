@@ -81,7 +81,7 @@
   },
   "earlyTracking": {
     "title": "Race Not Started Yet",
-    "message": "Your race starts in {{hours}}. Do you still want to enable background location tracking?",
+    "message": "Your race starts in {{hours}}. Nothing is recorded until the start — leave the app running and tracking begins automatically at the gun. Enable background location tracking now?",
     "yes": "Yes, Enable",
     "no": "No, Cancel"
   },

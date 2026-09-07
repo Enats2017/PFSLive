@@ -385,7 +385,21 @@ const _readFullLog = async (): Promise<TrackingLogEntry[]> => {
       }
     } catch { /* silent */ }
   }
-  return all;
+
+  // Collapse adjacent identical entries. Uploaded logs carried each Transistor
+  // fix twice — 824 redundant entries in one 5,538-entry log on 2026-09-05, ~15%
+  // of the volume, in a table that had reached 370 MB. Two entries sharing BOTH
+  // the millisecond timestamp and the exact message carry no extra information,
+  // whichever path emitted them, so dropping the repeat is lossless. Done here at
+  // assembly rather than in the seal/hydrate path, which has a history of
+  // log-loss regressions and is not worth disturbing for a size problem.
+  const deduped: TrackingLogEntry[] = [];
+  for (const entry of all) {
+    const prev = deduped[deduped.length - 1];
+    if (prev && prev.ts === entry.ts && prev.msg === entry.msg) continue;
+    deduped.push(entry);
+  }
+  return deduped;
 };
 
 // ✅ Rehydrate the current (unsealed) segment buffer from disk ONCE per JS
@@ -758,6 +772,9 @@ const _processLocationForSendInternal = async (
         const { locationService } = require('./locationService');
         const drainStart = Date.now();
         let totalFlushed = 0;
+        // processQueue returns -1 when another caller already holds the mutex. That is
+        // contention, not a network failure, and must not feed the wedge guard below.
+        let drainWasBusy = false;
 
         for (let batch = 0; batch < MAX_DRAIN_BATCHES; batch++) {
           const flushed = await locationService.processQueue(participantId, eventId);
@@ -769,6 +786,7 @@ const _processLocationForSendInternal = async (
           // Stop when drained, when a batch made no progress (network failed
           // again — don't spin), or when the wake-time budget is spent.
           if (qCount === 0) break;
+          if (flushed < 0) { drainWasBusy = true; break; }
           if (flushed === 0) break;
           if (Date.now() - drainStart >= DRAIN_TIME_BUDGET_MS) break;
           // Finish was detected & the engine torn down inside processQueue —
@@ -804,7 +822,7 @@ const _processLocationForSendInternal = async (
           if (totalFlushed > 0) {
             await AsyncStorage.removeItem(DRAIN_FAILS_KEY);
             await AsyncStorage.removeItem(OFFLINE_UNTIL_KEY);
-          } else if (qCount > 0) {
+          } else if (qCount > 0 && !drainWasBusy) {
             const fStr = await AsyncStorage.getItem(DRAIN_FAILS_KEY);
             const fails = (fStr ? (parseInt(fStr) || 0) : 0) + 1;
             await AsyncStorage.setItem(DRAIN_FAILS_KEY, String(fails));
@@ -921,7 +939,7 @@ const _processLocationForSendInternal = async (
         // So: only bypass the throttle when we actually have network (real drain).
         // Offline → route through the normal THROTTLED insert so the queue grows
         // at the interval rate, exactly like a first-fix offline queue would.
-        //const online = await locationQueueService.hasNetwork();
+        const online = await locationQueueService.hasNetwork();
 
         await locationQueueService.addToQueue({
           latitude:         raw.latitude,
@@ -933,13 +951,31 @@ const _processLocationForSendInternal = async (
           speed:            raw.speed ?? undefined,
           heading:          raw.heading ?? undefined,
           isMock:           raw.mocked || false,
+          // Carried so a queued fix is not stored with is_moving NULL. 2,401 of the
+          // 29,883 weekend rows (8%) had is_moving AND battery_level NULL together —
+          // all queued through this guard, because the enrichment that derives them
+          // runs further down, after this early return. Same derivation as line ~1008.
+          // (battery_level / elevation_gain still need that enrichment and remain
+          // NULL for guard-queued fixes.)
+          isMoving:         raw.speed !== null && raw.speed !== undefined
+                              ? raw.speed > 0.5
+                              : undefined,
           participantId,
           eventId,
           queuedAt:         new Date().toISOString(),
           retryCount:       0,
-        }, /* throttle = */ true);   // always spaced at the interval; ordering unaffected
+        }, /* throttle = */ !online);
 
-        await addLog('📥', `Backlog present — current fix queued behind it (throttled to interval)${tag}`);
+        // Bypass the queue throttle ONLY while online (a real drain): the fix has
+        // already cleared the send throttle above, so throttling it again just
+        // discarded it — "Queue-throttled — fix dropped" appeared in 94 of 141 logs
+        // on 2026-09-05/06 and is a main reason tracks came back thinned.
+        // While OFFLINE the backlog is not draining, and bypassing the throttle
+        // would queue every onLocation fire (~5-10s) instead of one per interval,
+        // filling the 500-fix cap several times faster and shifting out real
+        // positions. That is what the note above warns about. Spacing is already
+        // enforced upstream; the queue's job here is ordering, not rate limiting.
+        await addLog('📥', `Backlog present — current fix queued behind it${tag}`);
       } catch { /* silent */ }
       return;
     }

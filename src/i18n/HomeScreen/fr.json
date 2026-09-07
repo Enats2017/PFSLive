@@ -81,7 +81,7 @@
   },
   "earlyTracking": {
     "title": "Course pas encore commencée",
-    "message": "Votre course commence dans {{hours}}. Voulez-vous quand même activer le suivi en arrière-plan ?",
+    "message": "Votre course commence dans {{hours}}. Rien n'est enregistré avant le départ — laissez l'application ouverte et le suivi démarrera automatiquement. Activer le suivi en arrière-plan maintenant ?",
     "yes": "Oui, activer",
     "no": "Non, annuler"
   },

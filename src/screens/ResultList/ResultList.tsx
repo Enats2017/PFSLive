@@ -76,6 +76,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     } = useFollowManager(t, product_app_id, undefined, {
         screenName: resultListScreenName,
         raceName: event_name,
+        raceId: product_app_id,
     });
 
     const initialType = sourceTab === 'live' ? TYPE_OPTIONS[1] : TYPE_OPTIONS[0];

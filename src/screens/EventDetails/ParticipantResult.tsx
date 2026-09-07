@@ -147,7 +147,10 @@ const ParticipantResult = () => {
           void analyticsService.logSearchPerformed(
             'participant',
             result.pagination.total ?? result.participants.length,
-            { [ANALYTICS_PARAMS.EVENT_NAME]: analyticsRaceName },
+            {
+              [ANALYTICS_PARAMS.EVENT_NAME]: analyticsRaceName,
+              [ANALYTICS_PARAMS.RACE_ID]: product_app_id,
+            },
           );
         }
       } catch (err: any) {
