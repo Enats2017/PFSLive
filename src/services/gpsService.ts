@@ -941,6 +941,36 @@ const _processLocationForSendInternal = async (
         // at the interval rate, exactly like a first-fix offline queue would.
         const online = await locationQueueService.hasNetwork();
 
+        // Enrichment for a guard-queued fix. The main enrichment block sits after
+        // the movement gate further down, which this early return never reaches —
+        // so 2,401 of the 29,883 weekend rows (8%) stored battery_level AND
+        // elevation_gain NULL, all of them queued through here. Same reads, same
+        // order as lines ~1053-1073; a fix routed through this guard is a real
+        // fix that WILL be sent, so it deserves the same fields.
+        let guardElevationGain: number | undefined;
+        if (raw.altitude !== null && raw.altitude !== undefined) {
+          const lastAltStr = await AsyncStorage.getItem(LAST_ALTITUDE_KEY);
+          if (lastAltStr) {
+            const lastAlt = parseFloat(lastAltStr);
+            if (!isNaN(lastAlt) && raw.altitude > lastAlt) {
+              guardElevationGain = parseFloat((raw.altitude - lastAlt).toFixed(1));
+            }
+          }
+          // Advance the baseline here too. Skipping it left the next non-guarded
+          // fix computing its gain against a stale altitude.
+          await AsyncStorage.setItem(LAST_ALTITUDE_KEY, String(raw.altitude));
+        }
+
+        let guardBatteryLevel: number | undefined;
+        let guardBatteryCharging: boolean | undefined;
+        try {
+          const level = await Battery.getBatteryLevelAsync();
+          const state = await Battery.getBatteryStateAsync();
+          guardBatteryLevel = Math.round(level * 100);
+          guardBatteryCharging = state === Battery.BatteryState.CHARGING ||
+                                 state === Battery.BatteryState.FULL;
+        } catch { /* silent */ }
+
         await locationQueueService.addToQueue({
           latitude:         raw.latitude,
           longitude:        raw.longitude,
@@ -955,11 +985,12 @@ const _processLocationForSendInternal = async (
           // 29,883 weekend rows (8%) had is_moving AND battery_level NULL together —
           // all queued through this guard, because the enrichment that derives them
           // runs further down, after this early return. Same derivation as line ~1008.
-          // (battery_level / elevation_gain still need that enrichment and remain
-          // NULL for guard-queued fixes.)
           isMoving:         raw.speed !== null && raw.speed !== undefined
                               ? raw.speed > 0.5
                               : undefined,
+          elevationGain:    guardElevationGain,
+          batteryLevel:     guardBatteryLevel,
+          batteryCharging:  guardBatteryCharging,
           participantId,
           eventId,
           queuedAt:         new Date().toISOString(),
