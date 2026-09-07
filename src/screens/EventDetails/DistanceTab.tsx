@@ -509,17 +509,23 @@ const handleExternalRegister = useCallback((url: string) => {
               )}
             </TouchableOpacity>
 
-            {/* ✅ GPX button ALWAYS visible */}
-            <TouchableOpacity
-              style={detailsStyles.routeButton}
-              //onPress={() => handleGpxClick(item)}
-              onPress={() => handleDownloadGpx(item)}
-              activeOpacity={0.8}
-            >
-              <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
-                {t('details:gpx')}
-              </Text>
-            </TouchableOpacity>
+            {/* Hidden once this distance has finished: its route is no longer useful,
+                and the web app hides it at the same point. Keyed on the distance's own
+                countdown.status, which the API computes — so it is timezone-correct and
+                handles a multi-day event, where race_date is day 1 only and the earlier
+                days are already over while the event as a whole is still live. */}
+            {item.countdown.status !== 'finished' && (
+              <TouchableOpacity
+                style={detailsStyles.routeButton}
+                //onPress={() => handleGpxClick(item)}
+                onPress={() => handleDownloadGpx(item)}
+                activeOpacity={0.8}
+              >
+                <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
+                  {t('details:gpx')}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* ✅ MAP button — live tracking map for this distance */}
             <TouchableOpacity
