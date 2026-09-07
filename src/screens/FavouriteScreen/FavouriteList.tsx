@@ -191,8 +191,8 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     }, [loadingMore]);
 
     const handleAddPress = useCallback(() => {
-        navigation.navigate('AllParticipant', { product_app_id });
-    }, [navigation, product_app_id]);
+        navigation.navigate('AllParticipant', { product_app_id, event_name });
+    }, [navigation, product_app_id, event_name]);
 
     if (loading) {
         return (

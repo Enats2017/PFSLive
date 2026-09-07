@@ -1644,13 +1644,21 @@ export const finishBackgroundStop = async (
   try {
     const { analyticsService } = require('./analyticsService');
     const { locationQueueService } = require('./locationQueueService');
+    let _bgRaceName: string | undefined;
+    try {
+      const _tp = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+      if (_tp) _bgRaceName = JSON.parse(_tp)?.raceName;
+    } catch { /* silent — analytics must never break the finish */ }
     await analyticsService.logTrackingCompleted({
       endReason: 'finish_crossed',
       pointsSent: sentCount,
       queuedRemaining: await locationQueueService.getQueueSize(),
-      // No race NAME reaches gpsService — it only ever holds ids — so send the
-      // id alone rather than an empty race_name.
       eventId: eventId ?? undefined,
+      // The race name now travels in the session params, so the BACKGROUND finish
+      // is attributed the same way the foreground one is. It used to send the id
+      // alone — and this is the path a runner who pockets the phone actually
+      // takes, so the completions you most want were the ones without a name.
+      raceName: _bgRaceName,
     });
   } catch { /* silent */ }
 
@@ -1763,6 +1771,9 @@ export const ensureBackgroundTaskAlive = async (
   manualStart: number | undefined,
   notificationTitle: string,
   notificationBody: string,
+  // Analytics only. Stored in the session params so the BACKGROUND finish path
+  // can attach a race name — gpsService otherwise only ever holds ids.
+  raceName?: string,
 ): Promise<boolean> => {
   try {
     // 🚫 Never resurrect a finished/stopped session. _doFullStop clears
@@ -1796,6 +1807,11 @@ export const ensureBackgroundTaskAlive = async (
     if (API_CONFIG.DEBUG) console.log('⚠️ Transistor was stopped — restarting...');
 
     // Re-store params in case they were cleared.
+    let _wdRaceName: string | undefined;
+    try {
+      const _prev = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+      if (_prev) _wdRaceName = JSON.parse(_prev)?.raceName;
+    } catch { /* silent — a missing name must not break the watchdog */ }
     await AsyncStorage.setItem(TRACKING_PARAMS_KEY, JSON.stringify({
       participantId,
       eventId,
@@ -1803,6 +1819,10 @@ export const ensureBackgroundTaskAlive = async (
       categoryId,
       raceStartTime,
       manualStart,
+      // Preserve the race name the session started with. The watchdog does not
+      // receive it, and re-storing without it would silently strip the only copy
+      // the background finish path has.
+      raceName: _wdRaceName,
     }));
 
     await BackgroundGeolocation.start();
@@ -2016,6 +2036,9 @@ export const gpsService = {
     categoryId?: number,
     raceStartTime?: string | null,
     manualStart?: number,
+    // Analytics only. Stored in the session params so the BACKGROUND finish path
+    // can attach a race name — gpsService otherwise only ever holds ids.
+    raceName?: string,
   ): Promise<{ remove: () => void }> {
     try {
       // ✅ Guard: foreground service cannot start when app is backgrounded.
@@ -2064,12 +2087,14 @@ export const gpsService = {
       // every start wiped the accumulated segments of long events, so only the
       // first ~500 entries ever survived to the finish upload.
       let _isSameRaceResume = false;
+      let _priorRaceName: string | undefined;
       try {
         if (_priorParamsRaw) {
           const _pp = JSON.parse(_priorParamsRaw);
           _isSameRaceResume =
             String(_pp?.participantId) === String(participantId) &&
             String(_pp?.eventId) === String(eventId);
+          _priorRaceName = _pp?.raceName;
         }
       } catch { /* treat as new race */ }
 
@@ -2081,6 +2106,12 @@ export const gpsService = {
         categoryId,
         raceStartTime,
         manualStart,
+        // Carried so the BACKGROUND finish can attach a race name. That path is
+        // the normal one for a runner who finishes with the phone pocketed, and
+        // it sent race_id alone — so the completions you most want were the ones
+        // without a name. Headless handlers cannot see React state, so this has
+        // to travel through AsyncStorage like the rest of the session.
+        raceName: raceName ?? _priorRaceName,
       }));
 
       // ✅ Clear session-scoped state — but preserve the LOG on a same-race resume

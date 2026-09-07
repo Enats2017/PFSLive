@@ -944,6 +944,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         raceData?.next_race_category_id,                      // ✅ movement threshold per sport
         raceStartTimeRef.current?.toISOString() ?? null,      // ✅ background task race check
         raceData?.manual_start,                               // ✅ skip race check if manual
+        raceData?.next_race_name,                             // ✅ analytics only — lets the
+                                                              //    BACKGROUND finish send race_name
       );
 
       gpsWatchRef.current = gpsWatch;
@@ -1559,6 +1561,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   homeData?.manual_start,
                   trackingParamsRef.current.notificationTitle,
                   trackingParamsRef.current.notificationBody,
+                  homeData?.next_race_name,
                 ).then(alive => {
                   if (API_CONFIG.DEBUG) console.log('🔍 Background task alive:', alive);
                 });

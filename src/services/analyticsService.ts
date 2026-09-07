@@ -648,10 +648,19 @@ export const analyticsService = {
     console.log("📊 [Analytics] app_language →", languageCode);
   },
 
-  /** App was opened by tapping a push notification. */
-  async logNotificationOpened(notificationType?: string) {
+  /**
+   * App was opened by tapping a push notification.
+   *
+   * raceId matters here: this is the direct measure of "did the checkpoint push
+   * bring people back into the app for THIS race", and the push payload already
+   * carries it. Sent as race_id rather than the payload's event_name because the
+   * name is the base, unlocalised string while follower interactions carry a
+   * per-language one — race_id is the only identifier that joins across both.
+   */
+  async logNotificationOpened(notificationType?: string, raceId?: string | number | null) {
     await logEvent(analytics, "notification_opened", {
       notification_type: notificationType ?? "unknown",
+      ...omitEmptyParams({ [ANALYTICS_PARAMS.RACE_ID]: raceId != null ? String(raceId) : undefined }),
     });
   },
 };

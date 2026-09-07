@@ -89,7 +89,9 @@ export type RootStackParamList = {
     sourceTab?: "past" | "live" | "upcoming";
   };
   AllParticipant:{
-    product_app_id:number 
+    product_app_id:number,
+    /** Analytics only — race attribution, same as SearchParticipant below. */
+    event_name?: string;
   },
    MembershipPlansScreen:undefined;
   SearchParticipant:{

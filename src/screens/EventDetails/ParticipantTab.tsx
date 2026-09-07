@@ -45,6 +45,10 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     handlePasswordModalClose,
   } = useFollowManager(t, productId, undefined, {
     screenName: ANALYTICS_SCREENS.PARTICIPANT_LIST,
+    // This is the in-event Participants tab — the primary follow surface for a
+    // race — and every follow from it was landing with no race attribution.
+    // event_name is already a prop; ui_interaction below has always used it.
+    raceName: event_name,
   });
 
   const [participants, setParticipants] = useState<Participant[]>([]);
