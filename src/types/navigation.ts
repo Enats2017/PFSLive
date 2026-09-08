@@ -112,8 +112,13 @@ export type RootStackParamList = {
       customer_app_id?: number;
   };
 
-  UserFavouriteList:undefined;
-  FollowersList:undefined;
+  UserFavouriteList: {
+    device_id?: string;   
+  };
+
+  FollowersList: {
+    customer_app_id?: number;
+  };
 
 };
 

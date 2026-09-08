@@ -28,6 +28,7 @@ export interface AthleteProfile {
   races_count: number;
    membership_info: MembershipInfo | null;
    in_process_payment: number | null;
+   device_id: string | null
 }
 
 
@@ -221,7 +222,8 @@ export const eventService = {
               following_count: 0,
               races_count: 0,
               membership_info: null,
-              in_process_payment: 0
+              in_process_payment: 0,
+              device_id:null
             },
             tabs: {
               past: eventsData.past || [],

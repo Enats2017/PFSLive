@@ -9,6 +9,8 @@ import { AthleteProfile } from '../services/athleteProfileService';
 import { profileStyles } from '../styles/Profile.styles';
 import { API_CONFIG } from '../constants/config';
 import { useTranslation } from 'react-i18next';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types/navigation';
 
 interface ProfileCardProps {
     profile: AthleteProfile | null;
@@ -28,7 +30,7 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
     onToggleFollow,
 }) => {
     const { t } = useTranslation(['follower', 'profile', 'ownProfile']);
-    const navigation = useNavigation();
+        const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
     const fullName = profile
         ? `${profile.firstname} ${profile.lastname}`
@@ -74,20 +76,44 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                     <Text style={profileStyles.identityName} numberOfLines={1}>
                         {fullName || '—'}
                     </Text>
-                    {/* City + country is one phrase: it wraps rather than being
-                        cut, so a long place name stays readable. */}
                     {!!(profile?.city || profile?.country) && (
                         <Text style={profileStyles.identityPlace} numberOfLines={2}>
                             {[profile?.city, profile?.country].filter(Boolean).join(' · ')}
                         </Text>
                     )}
-                    <Text style={profileStyles.identityMeta} numberOfLines={1}>
-                        {`${profile?.races_count ?? 0} ${t('ownProfile:profile.races')}`}
-                        {'   '}
-                        {`${profile?.followers_count ?? 0} ${t('ownProfile:profile.followers')}`}
-                        {'   '}
-                        {`${profile?.following_count ?? 0} ${t('ownProfile:profile.following')}`}
-                    </Text>
+
+                    {/* ✅ Split into pressable segments for followers/following, races stays plain */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={profileStyles.identityMeta} numberOfLines={1}>
+                            {`${profile?.races_count ?? 0} ${t('ownProfile:profile.races')}`}
+                            {'   '}
+                        </Text>
+
+                        <TouchableOpacity
+                             onPress={() =>navigation.navigate('FollowersList', {customer_app_id})}
+                            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                        >
+                            <Text style={profileStyles.identityMeta} numberOfLines={1}>
+                                {`${profile?.followers_count ?? 0} ${t('ownProfile:profile.followers')}`}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <Text style={profileStyles.identityMeta}>{'   '}</Text>
+
+                        <TouchableOpacity
+                            onPress={() =>
+                                navigation.navigate('UserFavouriteList', {
+                                device_id: profile?.device_id ?? undefined,
+                            })
+                            }
+        
+                            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                        >
+                            <Text style={profileStyles.identityMeta} numberOfLines={1}>
+                                {`${profile?.following_count ?? 0} ${t('ownProfile:profile.following')}`}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
 
@@ -157,6 +183,7 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
         prevProps.profile?.firstname === nextProps.profile?.firstname &&
         prevProps.profile?.lastname === nextProps.profile?.lastname &&
         prevProps.profile?.profile_picture === nextProps.profile?.profile_picture &&
+        prevProps.profile?.device_id === nextProps.profile?.device_id &&
         prevProps.profile?.is_own_profile === nextProps.profile?.is_own_profile &&
         prevProps.password_protected === nextProps.password_protected
     );

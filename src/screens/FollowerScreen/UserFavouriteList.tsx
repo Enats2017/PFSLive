@@ -20,7 +20,7 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useDimensions } from '../../hooks/useDimensions';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect,useRoute } from '@react-navigation/native';
 
 interface PaginationState {
     page: number;
@@ -31,6 +31,8 @@ const INITIAL_PAGINATION: PaginationState = { page: 1, total_pages: 1 };
 
 const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     const { t } = useTranslation(['follow', 'follower']);
+    const route = useRoute<any>();
+    const targetDeviceId = route.params?.device_id;
     const { width } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
@@ -45,6 +47,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     const [loadingMoreFav, setLoadingMoreFav]   = useState(false);
     const [favPagination, setFavPagination]     = useState<PaginationState>(INITIAL_PAGINATION);
     const [searchPagination, setSearchPagination] = useState<PaginationState>(INITIAL_PAGINATION);
+    const [isOwnList, setIsOwnList] = useState(false);
 
     const isLoadingMoreSearch = useRef(false);
 
@@ -72,15 +75,16 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     const loadInitial = useCallback(async () => {
         try {
             setInitialLoading(true);
-            const result = await userfavouriteService.getFavourites({ page: 1 });
+            const result = await userfavouriteService.getFavourites({ page: 1, device_id: targetDeviceId  });
             setFavourites(result.favourites);
+            setIsOwnList(result.is_own === 1);
             setFavPagination({ page: 1, total_pages: result.pagination.total_pages });
         } catch (err) {
             console.error('❌ Favourites initial load failed:', err);
         } finally {
             setInitialLoading(false);
         }
-    }, []);
+    }, [targetDeviceId]);
 
     // ✅ Keep ref in sync with latest loadInitial
     onFollowSuccessRef.current = loadInitial;
@@ -104,6 +108,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
                 const result = await userfavouriteService.getFavourites({
                     search: searchText.trim(),
                     page: 1,
+                    device_id: targetDeviceId, 
                 });
                 setSearchResults(result.favourites);
                 setSearchPagination({ page: 1, total_pages: result.pagination.total_pages });
@@ -119,7 +124,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
             }
         }, 350);
         return () => clearTimeout(timer);
-    }, [searchText]);
+    }, [searchText, targetDeviceId]);
 
     const loadMoreSearchResults = useCallback(async () => {
         if (isLoadingMoreSearch.current) return;
@@ -141,6 +146,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
             const result = await userfavouriteService.getFavourites({
                 search: searchText,
                 page: nextPage,
+                device_id: targetDeviceId,
             });
             setSearchResults(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
@@ -153,14 +159,14 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
             isLoadingMoreSearch.current = false;
             setLoadingMore(false);
         }
-    }, [searchText]);
+    }, [searchText, targetDeviceId]);
 
     const loadMoreFavourites = useCallback(async () => {
         if (loadingMoreFav || favPagination.page >= favPagination.total_pages) return;
         try {
             setLoadingMoreFav(true);
             const nextPage = favPagination.page + 1;
-            const result = await userfavouriteService.getFavourites({ page: nextPage });
+            const result = await userfavouriteService.getFavourites({ page: nextPage, device_id: targetDeviceId, });
             setFavourites(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
                 return [...prev, ...result.favourites.filter(i => !ids.has(i.customer_app_id))];
@@ -171,7 +177,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
         } finally {
             setLoadingMoreFav(false);
         }
-    }, [loadingMoreFav, favPagination]);
+    }, [loadingMoreFav, favPagination,targetDeviceId]);
 
     const handleLoadMore = useCallback(() => {
         if (searchText.trim().length > 0) {
@@ -189,9 +195,10 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
         ({ item }: { item: FavouriteItem }) => (
             <FanEventCard
                 variant="favourite"
-                item={item}
+                item={item} 
                 isFollowed={isFollowed(item.customer_app_id)}
                 isLoading={isLoading(item.customer_app_id)}
+                showRemoveButton={isOwnList} 
                 onToggleFollow={() =>
                     handleFollowPress({
                         customer_app_id: item.customer_app_id,

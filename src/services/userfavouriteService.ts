@@ -23,16 +23,20 @@ export interface FavouritePagination {
 export interface FavouritesResponse {
   favourites: FavouriteItem[];
   pagination: FavouritePagination;
+  is_own: number; 
 }
 
 export interface GetFavouritesParams {
   search?: string;
   page?: number;
+  device_id?: string;
+  
 }
 
 interface FavouritesData {
   favourites?: FavouriteItem[];
   pagination?: FavouritePagination;
+  is_own?: number; 
 }
 
 interface FavouritesApiResponse {
@@ -46,7 +50,7 @@ export const userfavouriteService = {
     params: GetFavouritesParams = {},
   ): Promise<FavouritesResponse> {
     try {
-      const deviceId = await getDeviceId();
+      const deviceId = params.device_id ?? await getDeviceId();
 
       if (API_CONFIG.DEBUG) {
         console.log("📡 Fetching favourites:", { deviceId, params });
@@ -80,7 +84,9 @@ export const userfavouriteService = {
             per_page: 0, // unknown — API didn't return it
             total: 0,
             total_pages: 1,
+            
           },
+          is_own: response.data.is_own ?? 0,
         };
       }
 

@@ -16,6 +16,7 @@ import { userFollowersService, FollowerItem } from '../../services/followerListS
 import FollowerListCard from './FollowerListCard';
 import ErrorScreen from '../../components/ErrorScreen';
 import { analyticsService } from '../../services/analyticsService';
+import { FollowersListpops } from '../../types/navigation';
 
 interface PaginationState {
     page: number;
@@ -24,9 +25,11 @@ interface PaginationState {
 
 const INITIAL_PAGINATION: PaginationState = { page: 1, total_pages: 1 };
 
-const FollowersList: React.FC = () => {
+const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
     const { t } = useTranslation(['follow', 'follower']);
-
+    const { customer_app_id } = route.params || {};
+    console.log("followerlist");
+    
     const [searchText, setSearchText]             = useState('');
     const [followers, setFollowers]               = useState<FollowerItem[]>([]);
     const [searchResults, setSearchResults]       = useState<FollowerItem[]>([]);
@@ -47,7 +50,7 @@ const FollowersList: React.FC = () => {
         
         try {
             setInitialLoading(true);
-            const result = await userFollowersService.getFollowers({ page: 1 });
+            const result = await userFollowersService.getFollowers({ customer_app_id, page: 1 });
             setFollowers(result.followers);
             setFavPagination({ page: 1, total_pages: result.pagination.total_pages });
         } catch (err) {
@@ -55,7 +58,7 @@ const FollowersList: React.FC = () => {
         } finally {
             setInitialLoading(false);
         }
-    }, []);
+    }, [customer_app_id]);
 
     // ✅ Keep ref in sync with latest loadInitial
 
@@ -74,6 +77,7 @@ const FollowersList: React.FC = () => {
             try {
                 setSearching(true);
                 const result = await userFollowersService.getFollowers({
+                    customer_app_id,
                     search: searchText.trim(),
                     page: 1,
                 });
@@ -91,7 +95,7 @@ const FollowersList: React.FC = () => {
             }
         }, 350);
         return () => clearTimeout(timer);
-    }, [searchText]);
+    }, [searchText,customer_app_id]);
 
     const loadMoreSearchResults = useCallback(async () => {
         if (isLoadingMoreSearch.current) return;
@@ -111,6 +115,7 @@ const FollowersList: React.FC = () => {
             setLoadingMore(true);
             const nextPage = currentPage + 1;
             const result = await userFollowersService.getFollowers({
+                 customer_app_id,
                 search: searchText,
                 page: nextPage,
             });
@@ -125,14 +130,14 @@ const FollowersList: React.FC = () => {
             isLoadingMoreSearch.current = false;
             setLoadingMore(false);
         }
-    }, [searchText]);
+    }, [searchText, customer_app_id]);
 
     const loadMoreFollowers = useCallback(async () => {
         if (loadingMoreFav || favPagination.page >= favPagination.total_pages) return;
         try {
             setLoadingMoreFav(true);
             const nextPage = favPagination.page + 1;
-            const result = await userFollowersService.getFollowers({ page: nextPage });
+            const result = await userFollowersService.getFollowers({  customer_app_id, page: nextPage });
             setFollowers(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
                 return [...prev, ...result.followers.filter(i => !ids.has(i.customer_app_id))];
@@ -143,7 +148,7 @@ const FollowersList: React.FC = () => {
         } finally {
             setLoadingMoreFav(false);
         }
-    }, [loadingMoreFav, favPagination]);
+    }, [loadingMoreFav, favPagination, customer_app_id]);
 
     const handleLoadMore = useCallback(() => {
         if (searchText.trim().length > 0) {

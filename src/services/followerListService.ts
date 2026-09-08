@@ -28,6 +28,7 @@ export interface FollowersResponse {
 }
 
 export interface GetFollowersParams {
+    customer_app_id?: number;
     search?: string;
     page?: number;
 }
@@ -50,6 +51,7 @@ export const userFollowersService = {
             const headers = await API_CONFIG.getHeaders();
 
             const requestBody = {
+                customer_app_id: params.customer_app_id,
                 search: params.search ?? "",
                 page: params.page ?? 1,
             };

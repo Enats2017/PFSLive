@@ -26,6 +26,7 @@ interface FanEventCardProps {
     isFollowed: boolean;
     isLoading: boolean;
     onToggleFollow: () => void;
+    showRemoveButton?: boolean;
 }
 
 const FanEventCard: React.FC<FanEventCardProps> = ({
@@ -34,6 +35,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
     isFollowed,
     isLoading,
     onToggleFollow,
+    showRemoveButton = false,
 }) => {
     const { t } = useTranslation(['follower', 'common']);
     const navigation = useNavigation<any>();
@@ -151,7 +153,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                     accessibilityRole="button"
                     onPress={() =>
                         navigation.navigate('ProfileScreen', {
-                            customer_app_id: item.customer_app_id,
+                            customer_app_id: item.customer_app_id
                         })
                     }
                 >
@@ -161,6 +163,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                 </TouchableOpacity>
 
                 {variant === 'favourite' ? (
+                    showRemoveButton ? (
                     <TouchableOpacity
                         style={[detailsStyles.cardActionDanger, { opacity: isLoading ? 0.6 : 1 }]}
                         onPress={onToggleFollow}
@@ -176,6 +179,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                             </Text>
                         )}
                     </TouchableOpacity>
+                ) : null  
                 ) : (
                     <TouchableOpacity
                         style={[detailsStyles.cardActionPrimary, { opacity: isLoading ? 0.6 : 1 }]}
