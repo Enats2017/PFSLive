@@ -3,6 +3,7 @@ import {
   setUserId,
   setUserProperty,
   setAnalyticsCollectionEnabled,
+  setDefaultEventParameters,
   logEvent,
 } from "@react-native-firebase/analytics";
 import * as Location from "expo-location";
@@ -149,6 +150,34 @@ export const analyticsService = {
       hasUsedFollowerFeature ? "yes" : "no",
     );
     return role;
+  },
+
+  /**
+   * Attach race_id to EVERY subsequent event, until it is cleared.
+   *
+   * The alternative was adding race_id to ~55 individual logInteraction calls.
+   * This does the same job in one place and, more importantly, also covers the
+   * events nobody would have remembered to edit — screen_view, follow_toggle,
+   * search_performed, and anything added later.
+   *
+   * ⚠️ It is ambient state, so a STALE value is the real hazard: a wrong race_id
+   * on a cross-event screen silently corrupts every breakdown and looks
+   * plausible, which is worse than the attribution simply being absent. It is
+   * therefore driven from ONE place — AppNavigator's onStateChange, which
+   * re-evaluates on every navigation and clears whenever the route has no
+   * product_app_id. Do not call this from individual screens; there is no
+   * discipline that survives a screen forgetting its cleanup.
+   *
+   * Passing null for the key REMOVES just that default rather than clearing the
+   * whole map, so any future default parameter is left alone.
+   */
+  async setRaceContext(raceId?: string | number | null) {
+    const value = raceId != null && String(raceId).trim() !== "" ? String(raceId) : null;
+    try {
+      await setDefaultEventParameters(analytics, { [ANALYTICS_PARAMS.RACE_ID]: value });
+    } catch {
+      // Never let attribution break navigation.
+    }
   },
 
   async setUserIdentity(userId: string) {

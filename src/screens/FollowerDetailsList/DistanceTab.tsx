@@ -274,7 +274,11 @@ const DistanceTab = ({
               </TouchableOpacity>
             )}
 
-            {!isPast && (
+            {/* isPast is the TAB the user came from; countdown.status is this distance's
+                own state. An event stays in the live tab while any distance is still to
+                run, and on a multi-day event the earlier days are already over — both
+                kept offering a finished route. Matches the web app. */}
+            {!isPast && item.countdown.status !== 'finished' && (
               <TouchableOpacity
                 style={detailsStyles.routeButton}
                 onPress={() => handleDownloadGpx(item)}

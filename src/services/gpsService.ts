@@ -190,6 +190,31 @@ const MOVEMENT_THRESHOLD: Record<number, number> = {
 };
 const DEFAULT_MOVEMENT_METRES = 5;
 
+// ✅ The same thresholds expressed as a PACE, for use where the gap between
+// fixes is not the configured interval.
+//
+// MOVEMENT_THRESHOLD above is calibrated for one ~30s interval, so it cannot be
+// reused verbatim on a path that fires every ~5s: a runner covers ~15m in 5s,
+// which is exactly the 15m running threshold, so a flat comparison there would
+// discard real motion and thin the track — the regression dc2eabf existed to
+// undo. Dividing each threshold by the 30s it was derived from gives the
+// minimum sustained pace it encodes, which holds at ANY gap.
+const MIN_PACE_MPS: Record<number, number> = {
+  64: 3 / 30,    // Walking — 0.10 m/s
+  59: 15 / 30,   // Running — 0.50 m/s
+  60: 30 / 30,   // Cycling — 1.00 m/s
+};
+const DEFAULT_MIN_PACE_MPS = DEFAULT_MOVEMENT_METRES / 30;
+// Absolute floor. Deliberately TINY, and it exists only so that a zero elapsed
+// time (a missing or corrupt LAST_SENT_KEY) cannot produce a zero requirement
+// that waves through byte-identical re-fires of one fix.
+//
+// It must NOT be raised to something like 1m: at a 5s gap the slowest walker
+// covers 0.7m, so a 1m floor would discard real movement — the precise failure
+// this whole scaling exists to avoid. Verified by simulation before shipping.
+// Only an exact re-fire measures below 0.1m; real GPS never repeats.
+const GUARD_MIN_MOVE_METRES = 0.1;
+
 // ✅ Tracking log — written by engine handlers, read by HomeScreen 1s timer for
 // live display. TRACKING_LOG_KEY holds the CURRENT (unsealed) segment; older
 // entries are archived into immutable numbered segment keys so the whole ride is
@@ -389,7 +414,21 @@ const _readFullLog = async (): Promise<TrackingLogEntry[]> => {
       }
     } catch { /* silent */ }
   }
-  return all;
+
+  // Collapse adjacent identical entries. Uploaded logs carried each Transistor
+  // fix twice — 824 redundant entries in one 5,538-entry log on 2026-09-05, ~15%
+  // of the volume, in a table that had reached 370 MB. Two entries sharing BOTH
+  // the millisecond timestamp and the exact message carry no extra information,
+  // whichever path emitted them, so dropping the repeat is lossless. Done here at
+  // assembly rather than in the seal/hydrate path, which has a history of
+  // log-loss regressions and is not worth disturbing for a size problem.
+  const deduped: TrackingLogEntry[] = [];
+  for (const entry of all) {
+    const prev = deduped[deduped.length - 1];
+    if (prev && prev.ts === entry.ts && prev.msg === entry.msg) continue;
+    deduped.push(entry);
+  }
+  return deduped;
 };
 
 // ✅ Rehydrate the current (unsealed) segment buffer from disk ONCE per JS
@@ -567,6 +606,21 @@ function distanceMetres(lat1: number, lon1: number, lat2: number, lon2: number):
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * How far the participant must have moved to count as moving, given how long it
+ * has actually been since the anchor position.
+ *
+ * Never stricter than the flat MOVEMENT_THRESHOLD (so it cannot suppress
+ * anything the normal gate would have let through, however long a backlog
+ * lasts) and never looser than GUARD_MIN_MOVE_METRES.
+ */
+function requiredMoveMetres(categoryIdNum: number, elapsedMs: number): number {
+  const pace = MIN_PACE_MPS[categoryIdNum] ?? DEFAULT_MIN_PACE_MPS;
+  const cap  = MOVEMENT_THRESHOLD[categoryIdNum] ?? DEFAULT_MOVEMENT_METRES;
+  const scaled = pace * (Math.max(0, elapsedMs) / 1000);
+  return Math.min(cap, Math.max(GUARD_MIN_MOVE_METRES, scaled));
 }
 
 // Normalised location shape produced by the engine before handing off to the
@@ -762,6 +816,9 @@ const _processLocationForSendInternal = async (
         const { locationService } = require('./locationService');
         const drainStart = Date.now();
         let totalFlushed = 0;
+        // processQueue returns -1 when another caller already holds the mutex. That is
+        // contention, not a network failure, and must not feed the wedge guard below.
+        let drainWasBusy = false;
 
         for (let batch = 0; batch < MAX_DRAIN_BATCHES; batch++) {
           const flushed = await locationService.processQueue(participantId, eventId);
@@ -773,6 +830,7 @@ const _processLocationForSendInternal = async (
           // Stop when drained, when a batch made no progress (network failed
           // again — don't spin), or when the wake-time budget is spent.
           if (qCount === 0) break;
+          if (flushed < 0) { drainWasBusy = true; break; }
           if (flushed === 0) break;
           if (Date.now() - drainStart >= DRAIN_TIME_BUDGET_MS) break;
           // Finish was detected & the engine torn down inside processQueue —
@@ -808,7 +866,7 @@ const _processLocationForSendInternal = async (
           if (totalFlushed > 0) {
             await AsyncStorage.removeItem(DRAIN_FAILS_KEY);
             await AsyncStorage.removeItem(OFFLINE_UNTIL_KEY);
-          } else if (qCount > 0) {
+          } else if (qCount > 0 && !drainWasBusy) {
             const fStr = await AsyncStorage.getItem(DRAIN_FAILS_KEY);
             const fails = (fStr ? (parseInt(fStr) || 0) : 0) + 1;
             await AsyncStorage.setItem(DRAIN_FAILS_KEY, String(fails));
@@ -925,7 +983,89 @@ const _processLocationForSendInternal = async (
         // So: only bypass the throttle when we actually have network (real drain).
         // Offline → route through the normal THROTTLED insert so the queue grows
         // at the interval rate, exactly like a first-fix offline queue would.
-        //const online = await locationQueueService.hasNetwork();
+        const online = await locationQueueService.hasNetwork();
+
+        // ✅ Movement gate for the guard path.
+        //
+        // This block returns before BOTH the time throttle (LAST_SENT_KEY) and
+        // the movement gate further down, so until now a fix queued here was
+        // never movement-checked at all — one failed POST was enough to start
+        // queueing every SDK fire (~5s), unthrottled and unfiltered, for as
+        // long as the backlog lasted. A phone sitting still then posts a full
+        // track of its own GPS noise. (The old comment below claimed the fix
+        // "has already cleared the send throttle above"; it had not — that
+        // throttle is read further down, after this early return.)
+        //
+        // The flat MOVEMENT_THRESHOLD cannot be reused here: it is calibrated
+        // for one 30s interval and this path fires every ~5s. requiredMoveMetres
+        // scales the same invariant to the real gap, so genuine motion still
+        // passes at any cadence while noise does not. In the finish zone the
+        // main gate's 1m floor applies unchanged — every metre near the line
+        // still counts.
+        const anchorStr = await AsyncStorage.getItem(LAST_POSITION_KEY);
+        if (anchorStr) {
+          const anchor = JSON.parse(anchorStr);
+          const lastSentRaw = await AsyncStorage.getItem(LAST_SENT_KEY);
+          const lastSentMs = lastSentRaw ? parseInt(lastSentRaw) : 0;
+          // A missing, corrupt or future timestamp must not fabricate a huge gap
+          // and with it a large requirement — fall back to the floor.
+          const elapsedMs = (!lastSentMs || isNaN(lastSentMs) || lastSentMs > now)
+            ? 0
+            : now - lastSentMs;
+          const movedM = distanceMetres(anchor.lat, anchor.lon, raw.latitude, raw.longitude);
+          const needM = finishApproach === '1'
+            ? FINISH_APPROACH_MIN_MOVE_METRES
+            : requiredMoveMetres(Number(categoryId), elapsedMs);
+
+          if (movedM < needM) {
+            await addLog('🚶', `Skipped — backlog fix moved only ${movedM.toFixed(1)}m (need ${needM.toFixed(1)}m)${tag}`);
+            return;
+          }
+
+          // Advance the anchor: this fix IS being kept, it just travels via the
+          // queue. Without this every subsequent backlog fix would compare
+          // against the same stale position and pass regardless of movement.
+          await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
+            lat: raw.latitude,
+            lon: raw.longitude,
+          }));
+        }
+
+        // Enrichment for a guard-queued fix. The main enrichment block sits after
+        // the movement gate further down, which this early return never reaches —
+        // so 2,401 of the 29,883 weekend rows (8%) stored battery_level AND
+        // elevation_gain NULL, all of them queued through here. Same reads, same
+        // order as lines ~1053-1073; a fix routed through this guard is a real
+        // fix that WILL be sent, so it deserves the same fields.
+        // Own try/catch, like the battery read below. Everything here runs inside
+        // the enclosing `try { } catch { /* silent */ }` that ends in `return`, so
+        // an AsyncStorage hiccup thrown from enrichment would skip addToQueue and
+        // silently DROP the fix. Enrichment must never cost us the position.
+        let guardElevationGain: number | undefined;
+        try {
+          if (raw.altitude !== null && raw.altitude !== undefined) {
+            const lastAltStr = await AsyncStorage.getItem(LAST_ALTITUDE_KEY);
+            if (lastAltStr) {
+              const lastAlt = parseFloat(lastAltStr);
+              if (!isNaN(lastAlt) && raw.altitude > lastAlt) {
+                guardElevationGain = parseFloat((raw.altitude - lastAlt).toFixed(1));
+              }
+            }
+            // Advance the baseline here too. Skipping it left the next non-guarded
+            // fix computing its gain against a stale altitude.
+            await AsyncStorage.setItem(LAST_ALTITUDE_KEY, String(raw.altitude));
+          }
+        } catch { /* silent */ }
+
+        let guardBatteryLevel: number | undefined;
+        let guardBatteryCharging: boolean | undefined;
+        try {
+          const level = await Battery.getBatteryLevelAsync();
+          const state = await Battery.getBatteryStateAsync();
+          guardBatteryLevel = Math.round(level * 100);
+          guardBatteryCharging = state === Battery.BatteryState.CHARGING ||
+                                 state === Battery.BatteryState.FULL;
+        } catch { /* silent */ }
 
         await locationQueueService.addToQueue({
           latitude:         raw.latitude,
@@ -937,13 +1077,38 @@ const _processLocationForSendInternal = async (
           speed:            raw.speed ?? undefined,
           heading:          raw.heading ?? undefined,
           isMock:           raw.mocked || false,
+          // Carried so a queued fix is not stored with is_moving NULL. 2,401 of the
+          // 29,883 weekend rows (8%) had is_moving AND battery_level NULL together —
+          // all queued through this guard, because the enrichment that derives them
+          // runs further down, after this early return. Same derivation as line ~1008.
+          isMoving:         raw.speed !== null && raw.speed !== undefined
+                              ? raw.speed > 0.5
+                              : undefined,
+          elevationGain:    guardElevationGain,
+          batteryLevel:     guardBatteryLevel,
+          batteryCharging:  guardBatteryCharging,
           participantId,
           eventId,
           queuedAt:         new Date().toISOString(),
           retryCount:       0,
-        }, /* throttle = */ true);   // always spaced at the interval; ordering unaffected
+        }, /* throttle = */ !online);
 
-        await addLog('📥', `Backlog present — current fix queued behind it (throttled to interval)${tag}`);
+        // Bypass the queue throttle ONLY while online (a real drain): throttling
+        // a drained fix again just discarded it — "Queue-throttled — fix dropped"
+        // appeared in 94 of 141 logs on 2026-09-05/06 and is a main reason tracks
+        // came back thinned.
+        //
+        // CORRECTION: this used to justify itself with "the fix has already
+        // cleared the send throttle above". It had not — LAST_SENT_KEY is not
+        // read until well after this block returns. Nothing gated this path at
+        // all, which is why the movement check above was added; spacing is left
+        // to that check rather than to the queue's own throttle.
+        // While OFFLINE the backlog is not draining, and bypassing the throttle
+        // would queue every onLocation fire (~5-10s) instead of one per interval,
+        // filling the 500-fix cap several times faster and shifting out real
+        // positions. That is what the note above warns about. Spacing is already
+        // enforced upstream; the queue's job here is ordering, not rate limiting.
+        await addLog('📥', `Backlog present — current fix queued behind it${tag}`);
       } catch { /* silent */ }
       return;
     }

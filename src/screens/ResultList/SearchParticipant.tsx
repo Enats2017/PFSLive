@@ -106,7 +106,10 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
                     void analyticsService.logSearchPerformed(
                         'participant',
                         result.pagination.total ?? result.participants.length,
-                        { [ANALYTICS_PARAMS.EVENT_NAME]: event_name ?? '' },
+                        {
+                            [ANALYTICS_PARAMS.EVENT_NAME]: event_name ?? '',
+                            [ANALYTICS_PARAMS.RACE_ID]: product_app_id,
+                        },
                     );
                 }
 

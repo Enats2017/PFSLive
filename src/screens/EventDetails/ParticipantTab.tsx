@@ -49,6 +49,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     // race — and every follow from it was landing with no race attribution.
     // event_name is already a prop; ui_interaction below has always used it.
     raceName: event_name,
+    raceId: productId,
   });
 
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -127,7 +128,10 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
           void analyticsService.logSearchPerformed(
             'participant',
             result.pagination.total ?? result.participants.length,
-            { [ANALYTICS_PARAMS.EVENT_NAME]: event_name ?? '' },
+            {
+              [ANALYTICS_PARAMS.EVENT_NAME]: event_name ?? '',
+              [ANALYTICS_PARAMS.RACE_ID]: productId,
+            },
           );
         }
 

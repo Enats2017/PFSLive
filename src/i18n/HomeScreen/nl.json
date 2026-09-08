@@ -82,7 +82,7 @@
   },
   "earlyTracking": {
     "title": "Race nog niet begonnen",
-    "message": "Je race begint over {{hours}}. Wil je toch achtergrondlocatie inschakelen?",
+    "message": "Je race begint over {{hours}}. Er wordt niets opgeslagen vóór de start — laat de app open, het volgen begint automatisch bij het startschot. Achtergrondlocatie nu inschakelen?",
     "yes": "Ja, inschakelen",
     "no": "Nee, annuleren"
   },

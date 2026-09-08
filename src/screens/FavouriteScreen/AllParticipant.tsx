@@ -45,6 +45,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
         // SearchParticipant already carries this; AllParticipant was missed, so
         // follows from here had no race attribution.
         raceName: event_name,
+        raceId: productId,
     });
 
     const [participants, setParticipants] = useState<Participant[]>([]);

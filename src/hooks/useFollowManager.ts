@@ -62,6 +62,17 @@ export interface FollowAnalyticsContext {
   screenName?: string;
   /** Race title. Only meaningful for bib (event-scoped) follows. */
   raceName?: string;
+  /**
+   * oc_product_app.product_app_id. Sent ALONGSIDE raceName, not instead of it.
+   *
+   * race_name is the LOCALISED title — event_list_api.php returns
+   * COALESCE(pla.name, pa.name) for the caller's language — so one race can reach
+   * GA4 under several names (Dinant arrives as three). It is also a different
+   * column from the one participant-side events use, so follower and participant
+   * events for the same race never join on name. race_id is stable across both
+   * languages and both families, which makes it the only sound join key.
+   */
+  raceId?: number | string;
 }
 
 export function useFollowManager(
@@ -74,6 +85,7 @@ export function useFollowManager(
   // identity changes every render and would invalidate the useCallbacks below.
   const analyticsScreen = analyticsContext?.screenName;
   const analyticsRaceName = analyticsContext?.raceName;
+  const analyticsRaceId = analyticsContext?.raceId;
 
   // Only include keys that actually have a value — GA4 treats an empty string
   // as a real value in reports, which is worse than the row being absent.
@@ -82,9 +94,12 @@ export function useFollowManager(
       const params: Record<string, string | number | boolean> = { ...(extra ?? {}) };
       if (analyticsScreen) params.ui_screen = analyticsScreen;
       if (analyticsRaceName) params[ANALYTICS_PARAMS.EVENT_NAME] = analyticsRaceName;
+      if (analyticsRaceId != null && String(analyticsRaceId) !== '') {
+        params[ANALYTICS_PARAMS.RACE_ID] = String(analyticsRaceId);
+      }
       return params;
     },
-    [analyticsScreen, analyticsRaceName],
+    [analyticsScreen, analyticsRaceName, analyticsRaceId],
   );
 
   const [followedUsers, setFollowedUsers] = useState<Set<number>>(new Set());
