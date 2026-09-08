@@ -26,6 +26,8 @@ interface ResultCardLiveProps {
     isCheckpointMode?: boolean;              // true when a checkpoint is selected in the dropdown
     selectedCheckpointIndex?: number | null; // index into the no-START checkpoints array
     analyticsScreenName: string;
+    /** Analytics only — race attribution for the tap logged here. */
+    analyticsRaceName: string;
 }
 
 const getActiveCheckpoints = (checkpoints: RaceResult['checkpoints']) => {
@@ -69,6 +71,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     isCheckpointMode = false,
     selectedCheckpointIndex = null,
     analyticsScreenName,
+    analyticsRaceName,
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
@@ -113,7 +116,10 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
             analyticsScreenName,
             ANALYTICS_BUTTONS.PARTICIPANT_PROFILE,
             'tap',
-            { [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib },
+            {
+                [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib,
+                [ANALYTICS_PARAMS.EVENT_NAME]: analyticsRaceName,
+            },
         );
 
         // ADD
@@ -125,7 +131,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
             bib: item.bib,
             raceStatus
         });
-    }, [navigation, product_app_id, currentPovId, item.bib, raceStatus, analyticsScreenName]);
+    }, [navigation, product_app_id, currentPovId, item.bib, raceStatus, analyticsScreenName, analyticsRaceName]);
 
     const hasUtmbIndex = showUtmbIndex &&
         item.utmb_index &&

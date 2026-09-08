@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { commonStyles, spacing, palette, fonts } from '../../styles/common.styles';
+import { commonStyles, spacing, space, palette, fonts } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import NoticeCard from '../../components/NoticeCard';
@@ -49,7 +49,13 @@ const ParticipantResult = () => {
   const params = route.params as ParticipantResultRouteParams | undefined;
   const product_app_id = params?.product_app_id;
   const product_option_value_app_id = params?.product_option_value_app_id;
+  // Display name falls back to a TRANSLATED placeholder ('Event'/'Événement'/
+  // 'Evenement'). That is right for the heading and wrong for analytics — it
+  // would put three locale-dependent fake race names into the race_name
+  // dimension. Analytics uses the raw param, so an absent name is simply
+  // omitted by omitEmptyParams.
   const event_name = params?.event_name || t('participantResult:defaultEventName');
+  const analyticsRaceName = params?.event_name;
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,7 +148,10 @@ const ParticipantResult = () => {
           void analyticsService.logSearchPerformed(
             'participant',
             result.pagination.total ?? result.participants.length,
-            { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
+            {
+              [ANALYTICS_PARAMS.EVENT_NAME]: analyticsRaceName,
+              [ANALYTICS_PARAMS.RACE_ID]: product_app_id,
+            },
           );
         }
       } catch (err: any) {
@@ -404,7 +413,7 @@ const ParticipantResult = () => {
     <SafeAreaView style={commonStyles.container} edges={['bottom']}>
       <AppHeader title={event_name} showLogo={true} showBack />
 
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: space.md }}>
         <NoticeCard
           icon="information-circle-outline"
           title={t('participantResult:info.title')}
@@ -448,10 +457,13 @@ const ParticipantResult = () => {
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           contentContainerStyle={{
-            paddingHorizontal: spacing.lg,
+            // The card carries its own 20pt gutter (ParticipantCard.tsx), so a
+            // 16pt one here made a 36pt inset - every other list in the app is
+            // on 20. `marginTop` on a content container alongside flexGrow is
+            // unreliable; paddingTop is the predictable form.
+            paddingTop: space.lg,
             paddingBottom: spacing.xxxl,
             flexGrow: 1,
-            marginTop:spacing.lg
           }}
           keyboardShouldPersistTaps="handled"
           removeClippedSubviews={false}

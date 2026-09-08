@@ -31,7 +31,7 @@ import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vect
 import { formatClockTime } from '../../utils/timeFormat';
 import useGpxDownload from '../../hooks/useGpxDownload';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 
 interface DistanceTabProps {
@@ -297,10 +297,15 @@ const DistanceTab = ({
           return;
         }
         downloadGpx(item);
-        analyticsService.logInteraction(ANALYTICS_SCREENS.EVENT_DETAILS, ANALYTICS_BUTTONS.DOWNLOAD_GPX);
+        analyticsService.logInteraction(
+          ANALYTICS_SCREENS.EVENT_DETAILS,
+          ANALYTICS_BUTTONS.DOWNLOAD_GPX,
+          'tap',
+          { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
+        );
       },
       
-      [downloadGpx, rrUrl]
+      [downloadGpx, rrUrl, event_name]
     );
 
   const isRegisterMode = useMemo(
@@ -322,6 +327,8 @@ const handleExternalRegister = useCallback((url: string) => {
       analyticsService.logInteraction(
         ANALYTICS_SCREENS.EVENT_DETAILS,     // correct as is — participant side
         ANALYTICS_BUTTONS.MAP,
+        'tap',
+        { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
       );
 
       void analyticsService.markAsFollowerActive('view_live_route');  // was: await
@@ -509,17 +516,23 @@ const handleExternalRegister = useCallback((url: string) => {
               )}
             </TouchableOpacity>
 
-            {/* ✅ GPX button ALWAYS visible */}
-            <TouchableOpacity
-              style={detailsStyles.routeButton}
-              //onPress={() => handleGpxClick(item)}
-              onPress={() => handleDownloadGpx(item)}
-              activeOpacity={0.8}
-            >
-              <Text style={detailsStyles.routeButtonText}>
-                {t('details:gpx')}
-              </Text>
-            </TouchableOpacity>
+            {/* Hidden once this distance has finished: its route is no longer useful,
+                and the web app hides it at the same point. Keyed on the distance's own
+                countdown.status, which the API computes — so it is timezone-correct and
+                handles a multi-day event, where race_date is day 1 only and the earlier
+                days are already over while the event as a whole is still live. */}
+            {item.countdown.status !== 'finished' && (
+              <TouchableOpacity
+                style={detailsStyles.routeButton}
+                //onPress={() => handleGpxClick(item)}
+                onPress={() => handleDownloadGpx(item)}
+                activeOpacity={0.8}
+              >
+                <Text style={detailsStyles.routeButtonText}>
+                  {t('details:gpx')}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* ✅ MAP button — live tracking map for this distance */}
             <TouchableOpacity

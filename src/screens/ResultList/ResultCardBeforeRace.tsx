@@ -22,6 +22,8 @@ interface ResultCardBeforeRaceProps {
     currentPovId: number;
     isWomen?: boolean;
     analyticsScreenName: string;
+    /** Analytics only — race attribution for the tap logged here. */
+    analyticsRaceName: string;
 }
 
 const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
@@ -35,6 +37,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
     currentPovId,
     isWomen,
     analyticsScreenName,
+    analyticsRaceName,
 }) => {
     const { t } = useTranslation(['allrace', 'common']);
     const navigation = useNavigation<any>();
@@ -52,7 +55,10 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
             analyticsScreenName,
             ANALYTICS_BUTTONS.PARTICIPANT_PROFILE,
             'tap',
-            { [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib },
+            {
+                [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib,
+                [ANALYTICS_PARAMS.EVENT_NAME]: analyticsRaceName,
+            },
         );
 
         // ADD

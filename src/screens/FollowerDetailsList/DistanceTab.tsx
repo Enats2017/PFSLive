@@ -18,7 +18,7 @@ import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import useGpxDownload from '../../hooks/useGpxDownload';
 import ErrorModal from '../../components/ErrorModal';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -107,9 +107,11 @@ const DistanceTab = ({
       analyticsService.logInteraction(
         ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,
         ANALYTICS_BUTTONS.DOWNLOAD_GPX,
+        'tap',
+        { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
       );
     },
-    [downloadGpx, rrUrl],
+    [downloadGpx, rrUrl, event_name],
   );
 
   const renderListHeader = useCallback(() => (
@@ -222,6 +224,8 @@ const DistanceTab = ({
                     analyticsService.logInteraction(
                       ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,      // was: not logged
                       ANALYTICS_BUTTONS.RESULT,
+                      'tap',
+                      { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
                     );
                     void analyticsService.markAsFollowerActive('view_result');   // was: await
                     navigation.navigate('ResultList', {
@@ -248,6 +252,8 @@ const DistanceTab = ({
                   analyticsService.logInteraction(
                     ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,      // was: EVENT_DETAILS
                     ANALYTICS_BUTTONS.ROUTE,                       // was: MAP
+                    'tap',
+                    { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
                   );
                   void analyticsService.markAsFollowerActive('view_live_route');  // was: await
                   navigation.navigate('LiveTracking', {
@@ -268,7 +274,11 @@ const DistanceTab = ({
               </TouchableOpacity>
             )}
 
-            {!isPast && (
+            {/* isPast is the TAB the user came from; countdown.status is this distance's
+                own state. An event stays in the live tab while any distance is still to
+                run, and on a multi-day event the earlier days are already over — both
+                kept offering a finished route. Matches the web app. */}
+            {!isPast && item.countdown.status !== 'finished' && (
               <TouchableOpacity
                 style={detailsStyles.routeButton}
                 onPress={() => handleDownloadGpx(item)}

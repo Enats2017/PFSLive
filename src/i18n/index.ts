@@ -140,11 +140,14 @@ export type LanguageCode = keyof typeof LANGUAGES;
  */
 const getDeviceLanguage = (): LanguageCode => {
   try {
-    // ✅ Localization.locale was removed from expo-localization — getLocales() is
-    // the only supported reader now, and it returns [] on a device with no locale.
+    // Localization.locale was removed from expo-localization; getLocales() is
+    // the supported replacement. languageTag ('en-US') before languageCode
+    // ('en') because the split below already reduces it to the base language.
+    let deviceLocale: string | undefined;
     const locales = Localization.getLocales();
-    const deviceLocale =
-      locales && locales.length > 0 ? locales[0].languageTag || locales[0].languageCode : null;
+    if (locales && locales.length > 0) {
+      deviceLocale = locales[0].languageTag || locales[0].languageCode || undefined;
+    }
 
     if (!deviceLocale) {
       console.warn('⚠️ Could not detect device locale, using English');
@@ -257,9 +260,11 @@ const getInitialLanguage = (): LanguageCode => {
 const initialLanguage = getInitialLanguage();
 
 i18n.use(initReactI18next).init({
-  // ✅ No compatibilityJSON: the v3 JSON format was dropped in i18next v23, so the
-  // flag did nothing here and the `_plural` keys never resolved. Plurals now use the
-  // v4 suffixes `_one` / `_other` — see src/i18n/livetracking/*.json.
+  // v4, not v3. i18next dropped JSON-v3 support at v23 and this project is on
+  // 25.x, so 'v3' was inert: every `key_plural` silently never resolved and
+  // plural counts rendered the singular ('5 sec ago'). The livetracking keys
+  // are migrated to the v4 `_one`/`_other` shape to match.
+  compatibilityJSON: 'v4',
   resources: {
     en: {
       common: commonEN,

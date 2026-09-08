@@ -327,7 +327,13 @@ export const locationService = {
     // all callers within the same JS context.
     if (_isProcessingQueue) {
       if (API_CONFIG.DEBUG) console.log('⏭️ processQueue: already running — skipping to prevent duplicates');
-      return 0;
+      // -1 = "busy", NOT "drained nothing". Returning 0 made the caller's wedge guard
+      // count a healthy skip as a failed drain: HomeScreen's 10s queueProcessor and the
+      // live-send drain contend constantly, so two collisions opened a 60s offline
+      // cooldown on a perfectly good network. That signature ("Drain stalled 2× —
+      // backing off network for 60s") appeared in 65 of 141 logs on 2026-09-05/06.
+      // Every other caller guards with `> 0`, so -1 is inert for them.
+      return -1;
     }
 
     const hasNetwork = await locationQueueService.hasNetwork();
@@ -457,9 +463,15 @@ export const locationService = {
               qSent = parseInt((await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY)) || '0', 10) || 0;
             } catch { /* silent — a storage failure must not fabricate a finish */ }
             if (!(qDtf !== null && qDtf <= FINISH_LINE_THRESHOLD_KM && qSent >= 3)) {
-              if (API_CONFIG.DEBUG) {
-                console.log(`⏭️ Drained fix reported finished=1 (source=distance) but failed the GPS guards — dtf=${qDtf}, sent=${qSent} — not finishing`);
-              }
+              // addLog, NOT console.log: this is the one drain decision that can
+              // swallow a finish, and Metro's release minifier drops console.*
+              // (see CLAUDE.md) — it would have been invisible in production,
+              // exactly where you need it. Matches the 'Drain halted' and 'Fix
+              // rejected' lines above, which go into the uploaded tracking log.
+              try {
+                const { addLog } = require('./gpsService');
+                await addLog('⏭️', `Finish held during drain — server said finished but source=distance and dtf=${qDtf}, sent=${qSent} (need dtf<=${FINISH_LINE_THRESHOLD_KM} and sent>=3)`);
+              } catch { /* logging must never break the drain */ }
               qFinished = false;
             }
           }

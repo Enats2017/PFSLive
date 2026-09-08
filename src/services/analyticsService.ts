@@ -3,12 +3,14 @@ import {
   setUserId,
   setUserProperty,
   setAnalyticsCollectionEnabled,
+  setDefaultEventParameters,
   logEvent,
 } from "@react-native-firebase/analytics";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { tokenService } from "./tokenService";
+import { ANALYTICS_PARAMS } from "../constants/analyticsScreens";
 
 const analytics = getAnalytics();
 
@@ -76,6 +78,56 @@ const syncUserProperties = async (
   return role;
 };
 
+/**
+ * Params as CALL SITES have them — a value may legitimately be absent (an
+ * optional route param, a status the API didn't send). omitEmptyParams strips
+ * those, so the loggers accept the loose shape and emit the strict one.
+ */
+type AnalyticsParams = Record<string, string | number | boolean | null | undefined>;
+
+/**
+ * ✅ Drop params that carry no value instead of sending them.
+ *
+ * GA4 treats an empty string as a REAL value, so `race_name: ""` becomes its own
+ * row in reports and silently pollutes every breakdown by that dimension — worse
+ * than the parameter simply being absent. Call sites legitimately write
+ * `event_name ?? ''` when the name is optional on that route (see
+ * RootStackParamList — `event_name` is optional on two screens), so filtering
+ * happens here rather than at ~20 call sites. Same rule useFollowManager already
+ * applies to its own params (`if (analyticsRaceName) …`), and the fixed-param
+ * events below apply it inline via conditional spread.
+ *
+ * `0` and `false` are KEPT — they are real values, not "missing". A falsiness
+ * check (`if (!value)`) would drop them, which is why this tests for
+ * null/undefined and empty strings explicitly.
+ */
+// GA4 drops a parameter whose value exceeds 100 characters — silently, so an
+// over-long race name would just be missing from reports with no error anywhere.
+// Race names are free text out of the DB and nothing upstream bounds them.
+const GA4_MAX_PARAM_VALUE = 100;
+
+const omitEmptyParams = (
+  params?: AnalyticsParams,
+): Record<string, string | number | boolean> => {
+  const clean: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "string") {
+      // Trim what we keep, not just what we test. Otherwise " Marathon " and
+      // "Marathon" are two distinct rows in every breakdown on this dimension.
+      const trimmed = value.trim();
+      if (trimmed === "") continue;
+      clean[key] =
+        trimmed.length > GA4_MAX_PARAM_VALUE
+          ? trimmed.slice(0, GA4_MAX_PARAM_VALUE)
+          : trimmed;
+      continue;
+    }
+    clean[key] = value;
+  }
+  return clean;
+};
+
 export const analyticsService = {
   // ─────────────────────────────────────────────────────────────
   // EXISTING — unchanged
@@ -98,6 +150,34 @@ export const analyticsService = {
       hasUsedFollowerFeature ? "yes" : "no",
     );
     return role;
+  },
+
+  /**
+   * Attach race_id to EVERY subsequent event, until it is cleared.
+   *
+   * The alternative was adding race_id to ~55 individual logInteraction calls.
+   * This does the same job in one place and, more importantly, also covers the
+   * events nobody would have remembered to edit — screen_view, follow_toggle,
+   * search_performed, and anything added later.
+   *
+   * ⚠️ It is ambient state, so a STALE value is the real hazard: a wrong race_id
+   * on a cross-event screen silently corrupts every breakdown and looks
+   * plausible, which is worse than the attribution simply being absent. It is
+   * therefore driven from ONE place — AppNavigator's onStateChange, which
+   * re-evaluates on every navigation and clears whenever the route has no
+   * product_app_id. Do not call this from individual screens; there is no
+   * discipline that survives a screen forgetting its cleanup.
+   *
+   * Passing null for the key REMOVES just that default rather than clearing the
+   * whole map, so any future default parameter is left alone.
+   */
+  async setRaceContext(raceId?: string | number | null) {
+    const value = raceId != null && String(raceId).trim() !== "" ? String(raceId) : null;
+    try {
+      await setDefaultEventParameters(analytics, { [ANALYTICS_PARAMS.RACE_ID]: value });
+    } catch {
+      // Never let attribution break navigation.
+    }
   },
 
   async setUserIdentity(userId: string) {
@@ -168,13 +248,15 @@ export const analyticsService = {
     screenName: string,
     buttonName: string,
     action: string = "tap",
-    extraParams?: Record<string, string | number | boolean>,
+    extraParams?: AnalyticsParams,
   ) {
+    const cleanParams = omitEmptyParams(extraParams);
+
     await logEvent(analytics, "ui_interaction", {
       ui_screen: screenName,
       ui_button: buttonName,
       ui_action: action,
-      ...(extraParams ?? {}),
+      ...cleanParams,
     });
 
     console.log(
@@ -182,7 +264,7 @@ export const analyticsService = {
       screenName,
       buttonName,
       action,
-      extraParams ?? "",
+      cleanParams,
     );
   },
 
@@ -270,7 +352,8 @@ export const analyticsService = {
    */
   async logTrackingStarted(params?: {
     // null accepted: HomeScreen's eventId is `string | null` before a race is
-    // selected. The `?? ""` below already normalises it.
+    // selected. When absent the race_id param is omitted entirely (below)
+    // rather than sent as an empty string.
     eventId?: string | number | null;
     manualStart?: boolean;
     intervalSeconds?: number;
@@ -282,7 +365,11 @@ export const analyticsService = {
     }
 
     await logEvent(analytics, "tracking_started", {
-      event_id: String(params?.eventId ?? ""),
+      // Omitted rather than sent as "" — see omitEmptyParams. GA4 counts an
+      // empty string as a real value and it becomes its own row in reports.
+      ...(params?.eventId !== undefined && params?.eventId !== null && params.eventId !== ""
+        ? { [ANALYTICS_PARAMS.RACE_ID]: String(params.eventId) }
+        : {}),
       manual_start: params?.manualStart ? "yes" : "no",
       interval_seconds: params?.intervalSeconds ?? 0,
     });
@@ -342,8 +429,8 @@ export const analyticsService = {
         ? { distance_km: Math.round(params.distanceKm) }
         : {}),
       // Race context, when the caller has it. tracking_started already sends
-      // event_id; this closes the asymmetry.
-      ...(params.eventId ? { event_id: String(params.eventId) } : {}),
+      // race_id; this closes the asymmetry.
+      ...(params.eventId ? { [ANALYTICS_PARAMS.RACE_ID]: String(params.eventId) } : {}),
       ...(params.raceName ? { race_name: params.raceName } : {}),
     });
 
@@ -409,14 +496,15 @@ export const analyticsService = {
   async logFollowToggle(
     action: "follow" | "unfollow",
     followScope: "athlete" | "event",
-    extraParams?: Record<string, string | number | boolean>,
+    extraParams?: AnalyticsParams,
   ) {
+    const cleanParams = omitEmptyParams(extraParams);
     await logEvent(analytics, "follow_toggle", {
       follow_action: action,
       follow_scope: followScope,
-      ...(extraParams ?? {}),
+      ...cleanParams,
     });
-    console.log("📊 [Analytics] follow_toggle:", action, followScope, extraParams ?? "");
+    console.log("📊 [Analytics] follow_toggle:", action, followScope, cleanParams);
   },
 
   // ─────────────────────────────────────────────────────────────
@@ -457,12 +545,12 @@ export const analyticsService = {
       | "favourite"     // searching your own favourites
       | "follower",     // searching your own followers
     resultCount: number,
-    extraParams?: Record<string, string | number | boolean>,
+    extraParams?: AnalyticsParams,
   ) {
     await logEvent(analytics, "search_performed", {
       search_type: searchType,
       result_count: resultCount,
-      ...(extraParams ?? {}),
+      ...omitEmptyParams(extraParams),
     });
   },
 
@@ -513,7 +601,7 @@ export const analyticsService = {
       auth_step: step,
       // Server error CODE only (e.g. 'otp_expired') — never a message, never
       // anything the user typed.
-      auth_reason: reason ?? "",
+      ...(reason ? { auth_reason: reason } : {}),
     });
   },
 
@@ -542,7 +630,7 @@ export const analyticsService = {
     await logEvent(analytics, "register_step", {
       register_step: step,
       // Server error CODE only — never a message, never user input.
-      register_reason: reason ?? "",
+      ...(reason ? { register_reason: reason } : {}),
       // Registration always happens against one race, so it can be attributed.
       ...(raceName ? { race_name: raceName } : {}),
     });
@@ -564,7 +652,7 @@ export const analyticsService = {
       create_event_step: step,
       // Server action/error CODE only — never a message, never the event name
       // the user typed.
-      create_event_reason: reason ?? "",
+      ...(reason ? { create_event_reason: reason } : {}),
     });
   },
 
@@ -589,10 +677,19 @@ export const analyticsService = {
     console.log("📊 [Analytics] app_language →", languageCode);
   },
 
-  /** App was opened by tapping a push notification. */
-  async logNotificationOpened(notificationType?: string) {
+  /**
+   * App was opened by tapping a push notification.
+   *
+   * raceId matters here: this is the direct measure of "did the checkpoint push
+   * bring people back into the app for THIS race", and the push payload already
+   * carries it. Sent as race_id rather than the payload's event_name because the
+   * name is the base, unlocalised string while follower interactions carry a
+   * per-language one — race_id is the only identifier that joins across both.
+   */
+  async logNotificationOpened(notificationType?: string, raceId?: string | number | null) {
     await logEvent(analytics, "notification_opened", {
       notification_type: notificationType ?? "unknown",
+      ...omitEmptyParams({ [ANALYTICS_PARAMS.RACE_ID]: raceId != null ? String(raceId) : undefined }),
     });
   },
 };

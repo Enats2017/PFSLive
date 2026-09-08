@@ -195,7 +195,8 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
         ({ item }: { item: FavouriteItem }) => (
             <FanEventCard
                 variant="favourite"
-                item={item} 
+                analyticsScreenName={ANALYTICS_SCREENS.USER_FAVOURITES}
+                item={item}
                 isFollowed={isFollowed(item.customer_app_id)}
                 isLoading={isLoading(item.customer_app_id)}
                 showRemoveButton={isOwnList} 

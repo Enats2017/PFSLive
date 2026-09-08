@@ -3,6 +3,21 @@ import { spacing, typography, type, palette, radii, fonts, shadows, space } from
 
 const { width, height } = Dimensions.get('window');
 
+/**
+ * The elevation panel's vertical budget, in one place.
+ *
+ * These four numbers are coupled: the Victory chart, the panel that holds it,
+ * the map's absolute wrapper, and the collapse button pegged just above them.
+ * They used to be hand-tuned separately (234 / 240 / 255) and had already
+ * drifted — the wrapper was 6pt SHORTER than the panel it wrapped, while the
+ * panel held ~244pt of content.
+ */
+export const ELEVATION_CHART_HEIGHT = 196;                       // 12 + 180 plot + 4
+const ELEVATION_HEADER_HEIGHT = 24;                              // title / D+ row
+const ELEVATION_PANEL_PADDING_TOP = 4;                           // profileContainer paddingTop
+export const ELEVATION_PANEL_HEIGHT =
+  ELEVATION_CHART_HEIGHT + ELEVATION_HEADER_HEIGHT + ELEVATION_PANEL_PADDING_TOP;   // 224
+
 export const liveTrackingStyles = StyleSheet.create({
     // ── Main Screen ──────────────────────────────────────────
     mapContainer: {
@@ -11,7 +26,7 @@ export const liveTrackingStyles = StyleSheet.create({
     },
     
     chartContainer: {
-        height: 234, // ✅ Match profileContainer
+        height: ELEVATION_PANEL_HEIGHT,
         borderTopWidth: 1,
         borderTopColor: palette.border,
         backgroundColor: palette.surface,
@@ -20,7 +35,7 @@ export const liveTrackingStyles = StyleSheet.create({
     ...shadows.card,
 
         position: 'absolute',
-        bottom: 255, // ✅ Adjusted for new height (240 + 15)
+        bottom: ELEVATION_PANEL_HEIGHT + 15,   // sits just above the panel
         right: 16,
         backgroundColor: palette.surface,
         width: 40,
@@ -246,11 +261,11 @@ export const liveTrackingStyles = StyleSheet.create({
 
     // ── Elevation Profile ────────────────────────────────────
     profileContainer: {
-        height: 240, // ✅ Increased from 180 to 240
+        height: ELEVATION_PANEL_HEIGHT,
         backgroundColor: palette.surface,
         borderTopWidth: 1,
         borderTopColor: palette.border,
-        paddingTop: spacing.xs,
+        paddingTop: ELEVATION_PANEL_PADDING_TOP,
     },
     // ✅ Section label — the deck titles the elevation chart with its small
     // uppercase `.meta` line, the same treatment used everywhere else.

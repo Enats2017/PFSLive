@@ -20,6 +20,8 @@ interface ParticipantCardProps {
   onToggleFollow: () => void;
   password_protected?: 0 | 1;
   showResults?: boolean;
+  /** Analytics only — race attribution for the taps logged here. */
+  raceName?: string;
 }
 
 const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
@@ -29,6 +31,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
   isLoading,
   onToggleFollow,
    showResults = true, 
+  raceName,
 }) => {
   const { t } = useTranslation(['details', 'follower']);
   const navigation = useNavigation<any>();
@@ -82,6 +85,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
       'tap',
       {
         [ANALYTICS_PARAMS.BIB_NUMBER]: item.bib_number,
+        [ANALYTICS_PARAMS.EVENT_NAME]: raceName ?? '',
       }
     );
     navigation.navigate('ResultDetails', {
@@ -100,7 +104,8 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
         ANALYTICS_BUTTONS.VIEW_PROFILE,
         'tap',
         {
-           [ANALYTICS_PARAMS.PARTICIPANT_ID]: item.customer_app_id ?? 0,
+           [ANALYTICS_PARAMS.ATHLETE_ID]: item.customer_app_id ?? 0,
+           [ANALYTICS_PARAMS.EVENT_NAME]: raceName ?? '',
         }
     );
     navigation.navigate('ProfileScreen', {

@@ -12,8 +12,12 @@ import { formatEventDate } from '../../utils/dateFormatter';
 import { API_CONFIG } from '../../constants/config';
 import ErrorScreen from '../../components/ErrorScreen';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS, EVENT_STATUS_BUTTON, liveTabStatus } from '../../constants/analyticsScreens';
+
 import { EventListCard } from '../../components/EventListCard';
+
+// Status of a Live-tab row — see liveTabStatus in analyticsScreens.ts.
+const liveStatus = liveTabStatus;
 
 interface LiveTabProps {
     events: EventItem[];
@@ -30,11 +34,15 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
     // also holds races that have already finished and ones that have not begun.
     // `event_status` says which each row actually is.
     //
+    // Deliberately NOT liveTabStatus (analyticsScreens.ts), which defaults a
+    // missing status to 'live' — for analytics that is right, because the tab
+    // itself is the attribution. On screen it would be a claim we cannot back.
+    //
     // No status -> NO BADGE. Defaulting to 'live' is what made a 2026-09-06 race
     // claim to be live: the second page of this tab comes from a different query
     // that was not sending the field. Showing nothing is honest; asserting the
     // one state we cannot verify is not.
-    const eventBadge = useCallback((status?: 'live' | 'finished' | 'upcoming') => {
+    const eventBadge = useCallback((status?: 'live' | 'finished' | 'upcoming' | null) => {
         if (!status) return {};
         return {
             badgeLabel: t(`livetracking:raceState_${status}`),
@@ -78,11 +86,12 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 onPress={async () => {
                     await analyticsService.logInteraction(
                         ANALYTICS_SCREENS.FOLLOWER_EVENT_LIST,
-                        ANALYTICS_BUTTONS.LIVE_EVENT,
+                        EVENT_STATUS_BUTTON[liveStatus(item) ?? 'live'] ?? ANALYTICS_BUTTONS.LIVE_EVENT,
                         'tap',
                         {
                             [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
                             [ANALYTICS_PARAMS.TAB_NAME]: 'live',
+                            [ANALYTICS_PARAMS.EVENT_STATUS]: liveStatus(item),
                         }
                     );
                     navigation.navigate('FollowDetails', {

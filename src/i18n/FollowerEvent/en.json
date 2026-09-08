@@ -38,7 +38,6 @@
   "button": {
     "viewprofile": "View",
     "follower": "Follow",
-    "following": "Following",
     "show_event": "Show event",
     "unfollow": "Unfollow",
     "favourite": "Add to favourite",

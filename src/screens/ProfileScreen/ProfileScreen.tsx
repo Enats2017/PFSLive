@@ -49,7 +49,10 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const isLandscape = windowWidth ;
     const isGestureNav = insets.bottom > 0;
 
-    const TAB_CONTENT_HEIGHT = height * 0.5;
+    // The pager is inside a ScrollView, so it needs an explicit height rather
+    // than flex:1. Reserve the bottom inset: without it the page ended level
+    // with the screen edge and the last card sat under the fixed bar.
+    const TAB_CONTENT_HEIGHT = height * 0.5 - insets.bottom;
     const width = containerWidth || windowWidth;
     const flatListRef = useRef<FlatList>(null);
 

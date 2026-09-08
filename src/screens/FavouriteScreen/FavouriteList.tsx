@@ -63,6 +63,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         {
             screenName: ANALYTICS_SCREENS.FAVOURITE_LIST,
             raceName: event_name,
+            raceId: product_app_id,
         },
     );
 
@@ -192,8 +193,8 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     }, [loadingMore]);
 
     const handleAddPress = useCallback(() => {
-        navigation.navigate('AllParticipant', { product_app_id });
-    }, [navigation, product_app_id]);
+        navigation.navigate('AllParticipant', { product_app_id, event_name });
+    }, [navigation, product_app_id, event_name]);
 
     if (loading) {
         return (
@@ -203,9 +204,9 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                     <ActivityIndicator size="large" color={palette.navy} />
                 </View>
                 {sectionType === 'follower' ? (
-                    <BottomNavigationFollower activeTab='Favorites' />
+                    <BottomNavigationFollower activeTab='Favorites' event_name={event_name} />
                 ) : (
-                    <BottomNavigation activeTab="Results" />
+                    <BottomNavigation activeTab="Results" event_name={event_name} />
                 )}
             </SafeAreaView>
         );

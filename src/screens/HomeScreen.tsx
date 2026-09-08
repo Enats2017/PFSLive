@@ -109,7 +109,6 @@ interface HomeData {
 const BATTERY_PROMPTED_KEY = '@PFSLive:batteryOptimizationPrompted';
 
 // ✅ Hours threshold — show early tracking warning if race is more than this far away
-const EARLY_TRACKING_WARNING_HOURS = 24;
 
 // ==================== BATTERY OPTIMIZATION ====================
 
@@ -977,6 +976,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         raceData?.next_race_category_id,                      // ✅ movement threshold per sport
         raceStartTimeRef.current?.toISOString() ?? null,      // ✅ background task race check
         raceData?.manual_start,                               // ✅ skip race check if manual
+        raceData?.next_race_name,                             // ✅ analytics only — lets the
+                                                              //    BACKGROUND finish send race_name
       );
 
       gpsWatchRef.current = gpsWatch;
@@ -1053,11 +1054,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     }
 
+    // Warn for ANY start before the gun, not just >24h out.
+    //
+    // The threshold used to be EARLY_TRACKING_WARNING_HOURS (24), so a runner
+    // starting 5-60 minutes early — by far the common case — saw nothing, while
+    // the engine silently discarded every fix with PRESTART_SKIP. On 2026-09-05/06
+    // that cost 8 participants their entire track: they started early, saw a green
+    // "tracking" banner, waited, gave up and closed the app before the start. One
+    // was 4.4 minutes from the gun.
     const hoursUntilRace = homeData?.next_race_in_hours ?? 0;
-    if (
-      homeData?.manual_start !== 1 &&
-      hoursUntilRace > EARLY_TRACKING_WARNING_HOURS
-    ) {
+    if (homeData?.manual_start !== 1 && hoursUntilRace > 0) {
       setShowEarlyTrackingModal(true);
       return;
     }
@@ -1592,6 +1598,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   homeData?.manual_start,
                   trackingParamsRef.current.notificationTitle,
                   trackingParamsRef.current.notificationBody,
+                  homeData?.next_race_name,
                 ).then(alive => {
                   if (API_CONFIG.DEBUG) console.log('🔍 Background task alive:', alive);
                 });
@@ -1694,8 +1701,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               const remaining = await locationQueueService.getQueueSize();
               const sentStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
               const sent = sentStr ? (parseInt(sentStr) || 0) : 0;
-              await locationService.saveTrackingLog(pid, eid, logs, sent, remaining);
+              // CLAIM BEFORE UPLOADING — same rule as _uploadTrackingLogOnFinish.
+              //
+              // This effect runs on mount AND on every foreground transition, so
+              // setting the flag after the upload left a multi-second window in
+              // which a second foreground re-uploaded the identical payload. On
+              // 2026-09-06 participant 1896 wrote 7 byte-identical 527 KB rows in
+              // 2 seconds this way; 1775, 1860, 1703 and 1735 did the same.
+              // It also ignored the return value, marking a FAILED upload as done.
               await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');
+              const uploaded = await locationService.saveTrackingLog(pid, eid, logs, sent, remaining);
+              if (uploaded === false) {
+                // Release the claim so a later foreground retries.
+                try { await AsyncStorage.removeItem(LOG_UPLOADED_KEY); } catch { /* silent */ }
+                return;
+              }
             }
           }
         }
@@ -1751,9 +1771,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // ✅ Format hours for early tracking modal message
   const hoursUntilRace = homeData?.next_race_in_hours ?? 0;
+  // Sub-hour starts are now the common case for this modal, so minutes matter:
+  // Math.round() alone rendered "0h" for a runner 4 minutes from the gun.
   const hoursDisplay = hoursUntilRace >= 24
     ? `${Math.floor(hoursUntilRace / 24)}d ${Math.round(hoursUntilRace % 24)}h`
-    : `${Math.round(hoursUntilRace)}h`;
+    : hoursUntilRace >= 1
+      ? `${Math.floor(hoursUntilRace)}h ${Math.round((hoursUntilRace % 1) * 60)}m`
+      : `${Math.max(1, Math.round(hoursUntilRace * 60))}m`;
 
   return (
     <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>

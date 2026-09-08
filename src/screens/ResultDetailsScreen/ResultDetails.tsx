@@ -20,7 +20,7 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { AppHeader } from '../../components/common/AppHeader';
 import { useDimensions } from '../../hooks/useDimensions';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 type TabKey = 'raceInfo' | 'timingPoint' | 'runnerInfo';
 const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo'];
@@ -56,10 +56,19 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     } = useFollowManager(t, product_app_id, undefined, {
         screenName: ANALYTICS_SCREENS.RESULT_DETAILS,
         raceName: data?.event?.race_name,
+        raceId: product_app_id,
     });
 
     const [activeTab, setActiveTab] = useState<TabKey>('raceInfo');
     const activeTabRef = useRef<TabKey>('raceInfo');
+    // Race name for analytics, held in a ref rather than read from `data` inside
+    // the tab callbacks: those are useCallback'd on [] / [width] and adding data
+    // to their deps would rebuild them on every poll. A ref keeps the callbacks
+    // stable and still reports the current race.
+    const raceNameRef = useRef<string>('');
+    useEffect(() => {
+        raceNameRef.current = data?.event?.race_name ?? '';
+    }, [data?.event?.race_name]);
     const flatListRef = useRef<FlatList<TabKey>>(null);
     const tabScrollRef = useRef<ScrollView>(null);
 
@@ -88,7 +97,11 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         void analyticsService.logInteraction(
             ANALYTICS_SCREENS.RESULT_DETAILS,
             ANALYTICS_BUTTONS.FOLLOW,
-            Followed ? 'unfollow' : 'follow',
+            'tap',
+            {
+                [ANALYTICS_PARAMS.FOLLOW_ACTION]: Followed ? 'unfollow' : 'follow',
+                [ANALYTICS_PARAMS.EVENT_NAME]: data?.event?.race_name ?? '',
+            },
         );
         handleFollowPress({
             customer_app_id: data?.race_info?.customer_app_id,
@@ -105,7 +118,10 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
             ANALYTICS_SCREENS.RESULT_DETAILS,
             ANALYTICS_BUTTONS.TAB,
             'tap',
-            { tab_name: tab },
+            {
+                [ANALYTICS_PARAMS.TAB_NAME]: tab,
+                [ANALYTICS_PARAMS.EVENT_NAME]: raceNameRef.current,
+            },
         );
         const index = TAB_KEYS.indexOf(tab);
         activeTabRef.current = tab;
@@ -126,7 +142,10 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     ANALYTICS_SCREENS.RESULT_DETAILS,
                     ANALYTICS_BUTTONS.TAB,
                     'swipe',
-                    { tab_name: tab },
+                    {
+                        [ANALYTICS_PARAMS.TAB_NAME]: tab,
+                        [ANALYTICS_PARAMS.EVENT_NAME]: raceNameRef.current,
+                    },
                 );
                 activeTabRef.current = tab;
                 setActiveTab(tab);
@@ -166,6 +185,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                                 ANALYTICS_SCREENS.RESULT_DETAILS,
                                 ANALYTICS_BUTTONS.MAP,
                                 'tap',
+                                { [ANALYTICS_PARAMS.EVENT_NAME]: data?.event?.race_name ?? '' },
                             );
                              navigation.navigate('LiveTracking', {
                                 product_app_id: data?.event?.product_app_id ?? product_app_id,
