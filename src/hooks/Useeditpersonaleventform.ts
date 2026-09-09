@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PersonalEvent } from '../services/editPersonalEventService';
+import { isValidDate } from '../services/personalEventService';
+import { isPastDate } from '../utils/dateValidation';
 
 export interface EventTypeOption {
   label: string;
@@ -71,8 +73,15 @@ export const useEditPersonalEventForm = () => {
   const [formData, setFormData] = useState<EditFormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<EditFormErrors>({});
 
+  // ✅ The date the event already had when the screen loaded. An event that has
+  // already started is still editable (name, category, GPX…), so validateForm
+  // must not reject its own stored race_date as "past" — only a date the user
+  // actively picks is held to that rule.
+  const [loadedDate, setLoadedDate] = useState<string>('');
+
   const initFormFromEvent = useCallback(
     (event: PersonalEvent) => {
+      setLoadedDate(event.race_date ?? '');
       setFormData({
         name: event.name ?? '',
         selectedEventType: matchEventType(event.event_type, eventTypeOptions),
@@ -104,22 +113,15 @@ export const useEditPersonalEventForm = () => {
     [],
   );
 
-  const isPastDate = (dateString: string): boolean => {
-    if (!dateString) return false;
-    const inputDate = new Date(dateString);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    inputDate.setHours(0, 0, 0, 0);
-    return inputDate < today;
-  };
-
   const handlers = useMemo(
     () => ({
       handleNameChange:      (v: string) => setField('name', v),
       handleEventTypeChange: (v: EventTypeOption) => setField('selectedEventType', v),
       handleCategoryChange:   (v: CategoryOption | null) => setField('selectedCategory', v),
       handleDateChange: (v: string) => {
-        if (isPastDate(v)) {
+        // ✅ v === loadedDate means the user re-picked the event's own date,
+        // which stays legal even once it is in the past — see loadedDate above.
+        if (v !== loadedDate && isPastDate(v)) {
           setErrors((prev) => ({
             ...prev,
             date: t('personal:errors.pastDateNotAllowed'),
@@ -139,7 +141,7 @@ export const useEditPersonalEventForm = () => {
         });
       },
     }),
-    [setField,t],
+    [setField, loadedDate, t],
   );
 
   const setFieldError = useCallback(
@@ -163,8 +165,12 @@ export const useEditPersonalEventForm = () => {
       e.category = t('personal:errors.categoryRequired');
     }
     if (!formData.date.trim()) {
-        e.date = t('personal:errors.dateRequired');
-    } else if (isPastDate(formData.date)) {
+      e.date = t('personal:errors.dateRequired');
+    } else if (!isValidDate(formData.date)) {
+      e.date = t('personal:errors.invalidDate');
+    } else if (formData.date !== loadedDate && isPastDate(formData.date)) {
+      // ✅ Skipped while the date is still the one the event was loaded with —
+      // see the loadedDate note above.
       e.date = t('personal:errors.pastDateNotAllowed');
     }
     // ✅ startTime optional — only validate format if provided
@@ -174,13 +180,14 @@ export const useEditPersonalEventForm = () => {
 
     setErrors(e);
     return Object.keys(e).length === 0;
-  }, [formData, t]);
+  }, [formData, loadedDate, t]);
 
   return {
     formData,
     errors,
+    loadedDate,
     eventTypeOptions,
-    categoryOptions, 
+    categoryOptions,
     initFormFromEvent,
     setFieldError,
     clearAllErrors,

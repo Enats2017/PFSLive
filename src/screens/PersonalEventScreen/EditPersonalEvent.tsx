@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -17,6 +17,7 @@ import { AppHeader } from '../../components/common/AppHeader';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
 import { API_CONFIG } from '../../constants/config';
 import { useEditPersonalEventForm } from '../../hooks/Useeditpersonaleventform';
+import { parseLocalDate, startOfToday } from '../../utils/dateValidation';
 import { useEditFileUpload } from '../../hooks/Useeditfileupload';
 import { getPersonalEvent, updatePersonalEvent, formatFileSize, getDeviceTimezone } from '../../services/editPersonalEventService';
 import { tokenService } from '../../services/tokenService';
@@ -43,7 +44,16 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
     clearAllErrors,
     validateForm,
     handlers,
+    loadedDate,
   } = useEditPersonalEventForm();
+
+  // ✅ Normally today, but an already-started event keeps its own race_date
+  // selectable so the picker can still open on the value being edited.
+  const minDate = useMemo(() => {
+    const today = startOfToday();
+    const loaded = parseLocalDate(loadedDate);
+    return loaded && loaded < today ? loaded : today;
+  }, [loadedDate]);
 
   const {
     existingFile,
@@ -301,6 +311,9 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                 onChangeText={handlers.handleDateChange}
                 iconName="calendar-outline"
                 isDatePicker
+                // ✅ Past dates greyed out in the picker; handleDateChange still
+                // guards, since some Android OEM pickers ignore minimumDate.
+                minimumDate={minDate}
                 required
                 editable={!isSubmitting}
                 error={!!errors.date}

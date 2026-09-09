@@ -28,6 +28,7 @@ import {
 } from '../../services/personalEventService';
 import { API_CONFIG } from '../../constants/config';
 import { usePersonalEventForm } from '../../hooks/usePersonalEventForm';
+import { startOfToday } from '../../utils/dateValidation';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useDimensions } from '../../hooks/useDimensions';
 import { tokenService } from '../../services/tokenService';
@@ -75,6 +76,9 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
     validateForm,
     resetForm,
   } = usePersonalEventForm();
+
+  // ✅ A brand-new event can never be back-dated, so the picker floor is today.
+  const minDate = useMemo(() => startOfToday(), []);
 
   const { selectedFile, setSelectedFile, pickFile, viewFile, removeFile, clearFile } = useFileUpload(
     MAX_FILE_SIZE,
@@ -349,6 +353,9 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
                 onChangeText={handlers.handleDateChange}
                 iconName="calendar-outline"
                 isDatePicker
+                // ✅ Past dates greyed out in the picker; handleDateChange still
+                // guards, since some Android OEM pickers ignore minimumDate.
+                minimumDate={minDate}
                 required
                 editable={!isSubmitting}
                 error={!!errors.date}

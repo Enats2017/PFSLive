@@ -5,6 +5,7 @@ import {
   isValidTime,
   isValidEventType,
 } from '../services/personalEventService';
+import { isPastDate, getTodayDate } from '../utils/dateValidation';
 
 interface FieldErrors {
   name?: string;
@@ -24,23 +25,6 @@ interface CategoryType {
   label: string;
   value: number;
 }
-
-const getTodayDate = (): string => {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-};
-
-const isPastDate = (dateString: string): boolean => {
-  if (!dateString) return false;
-  const inputDate = new Date(dateString);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  inputDate.setHours(0, 0, 0, 0);
-  return inputDate < today;
-};
 
 export const usePersonalEventForm = () => {
   // ✅ All validation messages come from the language file via t()
