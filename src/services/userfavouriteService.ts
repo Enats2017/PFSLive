@@ -6,7 +6,8 @@ export interface FavouriteItem {
   customer_app_id: number;
   firstname: string;
   lastname: string;
-  email: string;
+  // No email: the API stopped returning it (see buildParticipantEntries in
+  // get_favourite_all_api.php) — no card ever rendered it.
   city: string;
   country: string;
   profile_picture?: string;
@@ -47,10 +48,17 @@ export const userfavouriteService = {
     params: GetFavouritesParams = {},
   ): Promise<FavouritesResponse> {
     try {
+      // Two identities, because two kinds of user reach this screen.
+      // customer_app_id is null for a logged-out fan, and the fan flow
+      // (FanScreen / FollowerScreen) is not gated behind login — device_id is
+      // the fan identity the API falls back to. Sending both keeps the
+      // logged-out list working without changing the logged-in behaviour:
+      // server-side customer_app_id wins whenever it resolves.
       const customer_app_id = await tokenService.getCustomerId();
+      const device_id = await getDeviceId();
 
       if (API_CONFIG.DEBUG) {
-        console.log("📡 Fetching favourites:", { customer_app_id, params });
+        console.log("📡 Fetching favourites:", { customer_app_id, device_id, params });
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.GET_ALL_FAVOURITES);
@@ -58,6 +66,7 @@ export const userfavouriteService = {
 
       const requestBody = {
         customer_app_id,
+        device_id,
         search: params.search ?? "",
         page: params.page ?? 1,
       };
