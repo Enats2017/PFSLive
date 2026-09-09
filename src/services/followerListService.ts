@@ -2,6 +2,7 @@
 
 import { apiClient } from "./api";
 import { API_CONFIG, getApiEndpoint } from "../constants/config";
+import { tokenService } from "./tokenService";
 
 export interface FollowerItem {
     customer_app_id: number;
@@ -43,15 +44,16 @@ export const userFollowersService = {
         params: GetFollowersParams = {},
     ): Promise<FollowersResponse> {
         try {
+            const customer_app_id = params.customer_app_id ?? await tokenService.getCustomerId();
             if (API_CONFIG.DEBUG) {
-                console.log("📡 Fetching followers:", { params });
+                console.log("📡 Fetching followers:", {customer_app_id, params });
             }
 
             const url = getApiEndpoint(API_CONFIG.ENDPOINTS.GET_MY_FOLLOWERS); // 👈 add this endpoint
             const headers = await API_CONFIG.getHeaders();
 
             const requestBody = {
-                customer_app_id: params.customer_app_id,
+                customer_app_id,
                 search: params.search ?? "",
                 page: params.page ?? 1,
             };

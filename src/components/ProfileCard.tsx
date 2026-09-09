@@ -103,7 +103,7 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                         <TouchableOpacity
                             onPress={() =>
                                 navigation.navigate('UserFavouriteList', {
-                                device_id: profile?.device_id ?? undefined,
+                                    customer_app_id
                             })
                             }
         

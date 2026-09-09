@@ -32,7 +32,7 @@ const INITIAL_PAGINATION: PaginationState = { page: 1, total_pages: 1 };
 const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     const { t } = useTranslation(['follow', 'follower']);
     const route = useRoute<any>();
-    const targetDeviceId = route.params?.device_id;
+     const targetCustomerAppId = route.params?.customer_app_id;
     const { width } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
@@ -75,7 +75,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     const loadInitial = useCallback(async () => {
         try {
             setInitialLoading(true);
-            const result = await userfavouriteService.getFavourites({ page: 1, device_id: targetDeviceId  });
+            const result = await userfavouriteService.getFavourites({ page: 1, customer_app_id: targetCustomerAppId  });
             setFavourites(result.favourites);
             setIsOwnList(result.is_own === 1);
             setFavPagination({ page: 1, total_pages: result.pagination.total_pages });
@@ -84,7 +84,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
         } finally {
             setInitialLoading(false);
         }
-    }, [targetDeviceId]);
+    }, [targetCustomerAppId]);
 
     // ✅ Keep ref in sync with latest loadInitial
     onFollowSuccessRef.current = loadInitial;
@@ -108,7 +108,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
                 const result = await userfavouriteService.getFavourites({
                     search: searchText.trim(),
                     page: 1,
-                    device_id: targetDeviceId, 
+                    customer_app_id: targetCustomerAppId, 
                 });
                 setSearchResults(result.favourites);
                 setSearchPagination({ page: 1, total_pages: result.pagination.total_pages });
@@ -124,7 +124,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
             }
         }, 350);
         return () => clearTimeout(timer);
-    }, [searchText, targetDeviceId]);
+    }, [searchText, targetCustomerAppId]);
 
     const loadMoreSearchResults = useCallback(async () => {
         if (isLoadingMoreSearch.current) return;
@@ -146,7 +146,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
             const result = await userfavouriteService.getFavourites({
                 search: searchText,
                 page: nextPage,
-                device_id: targetDeviceId,
+                customer_app_id: targetCustomerAppId,
             });
             setSearchResults(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
@@ -159,14 +159,14 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
             isLoadingMoreSearch.current = false;
             setLoadingMore(false);
         }
-    }, [searchText, targetDeviceId]);
+    }, [searchText, targetCustomerAppId]);
 
     const loadMoreFavourites = useCallback(async () => {
         if (loadingMoreFav || favPagination.page >= favPagination.total_pages) return;
         try {
             setLoadingMoreFav(true);
             const nextPage = favPagination.page + 1;
-            const result = await userfavouriteService.getFavourites({ page: nextPage, device_id: targetDeviceId, });
+            const result = await userfavouriteService.getFavourites({ page: nextPage, customer_app_id: targetCustomerAppId, });
             setFavourites(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
                 return [...prev, ...result.favourites.filter(i => !ids.has(i.customer_app_id))];
@@ -177,7 +177,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
         } finally {
             setLoadingMoreFav(false);
         }
-    }, [loadingMoreFav, favPagination,targetDeviceId]);
+    }, [loadingMoreFav, favPagination,targetCustomerAppId]);
 
     const handleLoadMore = useCallback(() => {
         if (searchText.trim().length > 0) {
