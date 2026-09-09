@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PersonalEvent } from '../services/editPersonalEventService';
+import { isValidDate } from '../services/personalEventService';
+import { isPastDate } from '../utils/dateValidation';
 
 export interface EventTypeOption {
   label: string;
@@ -71,8 +73,15 @@ export const useEditPersonalEventForm = () => {
   const [formData, setFormData] = useState<EditFormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<EditFormErrors>({});
 
+  // ✅ The date the event already had when the screen loaded. An event that has
+  // already started is still editable (name, category, GPX…), so validateForm
+  // must not reject its own stored race_date as "past" — only a date the user
+  // actively picks is held to that rule.
+  const [loadedDate, setLoadedDate] = useState<string>('');
+
   const initFormFromEvent = useCallback(
     (event: PersonalEvent) => {
+      setLoadedDate(event.race_date ?? '');
       setFormData({
         name: event.name ?? '',
         selectedEventType: matchEventType(event.event_type, eventTypeOptions),
@@ -109,7 +118,19 @@ export const useEditPersonalEventForm = () => {
       handleNameChange:      (v: string) => setField('name', v),
       handleEventTypeChange: (v: EventTypeOption) => setField('selectedEventType', v),
       handleCategoryChange:   (v: CategoryOption | null) => setField('selectedCategory', v),
-      handleDateChange:      (v: string) => setField('date', v),
+      handleDateChange: (v: string) => {
+        // ✅ v === loadedDate means the user re-picked the event's own date,
+        // which stays legal even once it is in the past — see loadedDate above.
+        if (v !== loadedDate && isPastDate(v)) {
+          setErrors((prev) => ({
+            ...prev,
+            date: t('personal:errors.pastDateNotAllowed'),
+          }));
+          return;
+        }
+
+        setField('date', v);
+      },
       handleStartTimeChange: (v: string) => setField('startTime', v),
       // ✅ Clears start time — exposed so UI can show a clear button
       handleClearStartTime:  () => {
@@ -120,7 +141,7 @@ export const useEditPersonalEventForm = () => {
         });
       },
     }),
-    [setField],
+    [setField, loadedDate, t],
   );
 
   const setFieldError = useCallback(
@@ -143,8 +164,14 @@ export const useEditPersonalEventForm = () => {
     if (!formData.selectedCategory) {
       e.category = t('personal:errors.categoryRequired');
     }
-    if (!formData.date) {
+    if (!formData.date.trim()) {
       e.date = t('personal:errors.dateRequired');
+    } else if (!isValidDate(formData.date)) {
+      e.date = t('personal:errors.invalidDate');
+    } else if (formData.date !== loadedDate && isPastDate(formData.date)) {
+      // ✅ Skipped while the date is still the one the event was loaded with —
+      // see the loadedDate note above.
+      e.date = t('personal:errors.pastDateNotAllowed');
     }
     // ✅ startTime optional — only validate format if provided
     if (formData.startTime.trim() && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]/.test(formData.startTime)) {
@@ -153,13 +180,14 @@ export const useEditPersonalEventForm = () => {
 
     setErrors(e);
     return Object.keys(e).length === 0;
-  }, [formData, t]);
+  }, [formData, loadedDate, t]);
 
   return {
     formData,
     errors,
+    loadedDate,
     eventTypeOptions,
-    categoryOptions, 
+    categoryOptions,
     initFormFromEvent,
     setFieldError,
     clearAllErrors,
