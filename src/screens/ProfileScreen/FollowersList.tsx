@@ -17,6 +17,7 @@ import { userFollowersService, FollowerItem } from '../../services/followerListS
 import FollowerListCard from './FollowerListCard';
 import ErrorScreen from '../../components/ErrorScreen';
 import { analyticsService } from '../../services/analyticsService';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface PaginationState {
     page: number;
@@ -58,11 +59,16 @@ const FollowersList: React.FC = () => {
         }
     }, []);
 
-    // ✅ Keep ref in sync with latest loadInitial
-
-    useEffect(() => {
-        loadInitial();
-    }, [loadInitial]);
+    // ✅ Refresh on focus, not just on mount — same as UserFavouriteList.
+    //    This screen stays mounted in the native stack, so a plain useEffect
+    //    ran once and the list then went stale: follow/unfollow elsewhere, or
+    //    a follower gained while the screen sat behind another, never showed
+    //    up until the app was restarted.
+    useFocusEffect(
+        useCallback(() => {
+            loadInitial();
+        }, [loadInitial])
+    );
 
     // Search with debounce
     useEffect(() => {
