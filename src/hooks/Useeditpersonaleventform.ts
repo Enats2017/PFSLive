@@ -104,12 +104,31 @@ export const useEditPersonalEventForm = () => {
     [],
   );
 
+  const isPastDate = (dateString: string): boolean => {
+    if (!dateString) return false;
+    const inputDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    inputDate.setHours(0, 0, 0, 0);
+    return inputDate < today;
+  };
+
   const handlers = useMemo(
     () => ({
       handleNameChange:      (v: string) => setField('name', v),
       handleEventTypeChange: (v: EventTypeOption) => setField('selectedEventType', v),
       handleCategoryChange:   (v: CategoryOption | null) => setField('selectedCategory', v),
-      handleDateChange:      (v: string) => setField('date', v),
+      handleDateChange: (v: string) => {
+        if (isPastDate(v)) {
+          setErrors((prev) => ({
+            ...prev,
+            date: t('personal:errors.pastDateNotAllowed'),
+          }));
+          return;
+        }
+
+        setField('date', v);
+      },
       handleStartTimeChange: (v: string) => setField('startTime', v),
       // ✅ Clears start time — exposed so UI can show a clear button
       handleClearStartTime:  () => {
@@ -120,7 +139,7 @@ export const useEditPersonalEventForm = () => {
         });
       },
     }),
-    [setField],
+    [setField,t],
   );
 
   const setFieldError = useCallback(
@@ -143,8 +162,10 @@ export const useEditPersonalEventForm = () => {
     if (!formData.selectedCategory) {
       e.category = t('personal:errors.categoryRequired');
     }
-    if (!formData.date) {
-      e.date = t('personal:errors.dateRequired');
+    if (!formData.date.trim()) {
+        e.date = t('personal:errors.dateRequired');
+    } else if (isPastDate(formData.date)) {
+      e.date = t('personal:errors.pastDateNotAllowed');
     }
     // ✅ startTime optional — only validate format if provided
     if (formData.startTime.trim() && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]/.test(formData.startTime)) {
