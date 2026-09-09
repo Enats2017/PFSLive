@@ -1,5 +1,5 @@
 import { apiClient } from "./api";
-import { API_CONFIG, getApiEndpoint } from "../constants/config";
+import { API_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
 import { tokenService } from "./tokenService";
 
 export interface FavouriteItem {
@@ -52,10 +52,23 @@ export const userfavouriteService = {
     params: GetFavouritesParams = {},
   ): Promise<FavouritesResponse> {
     try {
+      // Two identities, because two kinds of user reach this screen.
+      // customer_app_id is null for a logged-out fan, and the fan flow
+      // (FanScreen / FollowerScreen) is not gated behind login — device_id is
+      // the fan identity the API falls back to. Sending both keeps the
+      // logged-out list working without changing the logged-in behaviour:
+      // server-side customer_app_id wins whenever it resolves.
+      //
+      // params.customer_app_id names ANOTHER athlete when this screen was
+      // opened from their profile. It has to win over the logged-in id, and
+      // the device_id sent alongside is harmless: the API treats device_id as
+      // a fallback, never an override, so a target never resolves to the
+      // viewer's own list.
       const customer_app_id = params.customer_app_id ?? await tokenService.getCustomerId();
+      const device_id = await getDeviceId();
 
       if (API_CONFIG.DEBUG) {
-        console.log("📡 Fetching favourites:", { customer_app_id, params });
+        console.log("📡 Fetching favourites:", { customer_app_id, device_id, params });
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.GET_ALL_FAVOURITES);
@@ -63,6 +76,7 @@ export const userfavouriteService = {
 
       const requestBody = {
         customer_app_id,
+        device_id,
         search: params.search ?? "",
         page: params.page ?? 1,
       };
