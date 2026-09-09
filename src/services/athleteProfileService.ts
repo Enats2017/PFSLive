@@ -157,8 +157,9 @@ export const eventService = {
         }
       }
 
-      console.log("atheleterequest",requestBody);
-      
+      if (API_CONFIG.DEBUG) {
+        console.log("📦 Athlete profile request body:", requestBody);
+      }
 
       const response = await apiClient.post<EventsData>(url, requestBody, {
         headers,
