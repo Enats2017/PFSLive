@@ -1,5 +1,6 @@
 import { apiClient } from "./api";
 import { API_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
+import { tokenService } from "./tokenService";
 
 export interface FavouriteItem {
   customer_app_id: number;
@@ -46,17 +47,17 @@ export const userfavouriteService = {
     params: GetFavouritesParams = {},
   ): Promise<FavouritesResponse> {
     try {
-      const deviceId = await getDeviceId();
+      const customer_app_id = await tokenService.getCustomerId();
 
       if (API_CONFIG.DEBUG) {
-        console.log("📡 Fetching favourites:", { deviceId, params });
+        console.log("📡 Fetching favourites:", { customer_app_id, params });
       }
 
       const url = getApiEndpoint(API_CONFIG.ENDPOINTS.GET_ALL_FAVOURITES);
       const headers = await API_CONFIG.getHeaders();
 
       const requestBody = {
-        device_id: deviceId,
+        customer_app_id,
         search: params.search ?? "",
         page: params.page ?? 1,
       };
