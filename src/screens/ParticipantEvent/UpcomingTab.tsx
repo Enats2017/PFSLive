@@ -67,7 +67,8 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                         'tap',
                         {
                             [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
-                            [ANALYTICS_PARAMS.TAB_NAME]: 'upcoming', 
+                            [ANALYTICS_PARAMS.TAB_NAME]: 'upcoming',
+                            [ANALYTICS_PARAMS.EVENT_STATUS]: 'upcoming',
                         }
                     );
                     navigation.navigate('EventDetails', {
@@ -100,7 +101,8 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                             'tap',
                             {
                                 [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
-                                [ANALYTICS_PARAMS.TAB_NAME]: 'upcoming', 
+                                [ANALYTICS_PARAMS.TAB_NAME]: 'upcoming',
+                                [ANALYTICS_PARAMS.EVENT_STATUS]: 'upcoming',
                             }
                         );
                         navigation.navigate('EventDetails', {

@@ -76,6 +76,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     } = useFollowManager(t, product_app_id, undefined, {
         screenName: resultListScreenName,
         raceName: event_name,
+        raceId: product_app_id,
     });
 
     const initialType = sourceTab === 'live' ? TYPE_OPTIONS[1] : TYPE_OPTIONS[0];
@@ -141,6 +142,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 bib_number: item.bib,
             }),
             analyticsScreenName: resultListScreenName,
+            analyticsRaceName: event_name ?? '',
         };
 
         if (raceStatus === 'not_started' || (raceStatus === 'in_progress' && raceProgressStatus === 'not_started')) {
@@ -184,7 +186,10 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         isFollowed, isLoading, handleFollowPress,
         raceStatus, raceProgressStatus, sourceTab, fromLive,
         product_app_id, currentPovId, showUtmbIndex, selectedCategory,
-        selectedCheckpoint, selectedCheckpoint, resultListScreenName
+        selectedCheckpoint, resultListScreenName,
+        // renderItem closes over event_name via commonProps.analyticsRaceName;
+        // without it the cards keep a stale race name after an event switch.
+        event_name,
     ]);
 
     const ListFooter = useCallback(() =>
@@ -206,6 +211,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 showLogo={true}
                 showSearch={true}
                 product_app_id={product_app_id}
+                event_name={event_name}
                 product_option_value_app_id={currentPovId}
                 raceStatus={raceStatus as 'finished' | 'in_progress' | 'not_started'}
                 showBack

@@ -151,7 +151,7 @@ const FanEventCard: React.FC<FanEventCardProps> = ({
                             ANALYTICS_BUTTONS.VIEW_PROFILE,
                             'tap',
                             {
-                                [ANALYTICS_PARAMS.PARTICIPANT_ID]: item.customer_app_id,
+                                [ANALYTICS_PARAMS.ATHLETE_ID]: item.customer_app_id,
                             }
                         );
                         navigation.navigate('ProfileScreen', {

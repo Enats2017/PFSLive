@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { colors } from '../../styles/common.styles';
 import { bottomNavStyles } from '../../styles/bottomNav.styles';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
+import { ANALYTICS_SCREENS, ANALYTICS_PARAMS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
 
 type TabName = 'Home' | 'Favorites' | 'Results' | 'Map';
 
@@ -91,6 +91,12 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     void analyticsService.logInteraction(
       ANALYTICS_SCREENS.BOTTOM_NAV,
       NAV_BUTTONS[tabName],
+      'tap',
+      // The nav renders inside a race context on the race screens and outside it
+      // elsewhere, so event_name is optional here. omitEmptyParams drops it when
+      // absent rather than sending an empty string, which GA4 would treat as a
+      // real value and let pollute the race_name breakdown.
+      { [ANALYTICS_PARAMS.EVENT_NAME]: event_name ?? '' },
     );
 
     switch (tabName) {

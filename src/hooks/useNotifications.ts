@@ -266,7 +266,7 @@ export function useNotifications(): UseNotificationsReturn {
     // app from a notification", not "received one". `type` is 'checkpoint' or
     // 'finish' per NotificationData, both low-cardinality and safe as a
     // registered dimension.
-    void analyticsService.logNotificationOpened(data?.type ?? "unknown");
+    void analyticsService.logNotificationOpened(data?.type ?? "unknown", data?.race_id);
 
     if (data?.race_id && data?.event_name && onNotificationTapRef.current) {
       onNotificationTapRef.current(data as NotificationData);

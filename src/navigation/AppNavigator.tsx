@@ -112,7 +112,28 @@ export const AppNavigator: React.FC = () => {
         }}
         onStateChange={async () => {
           const previous = routeNameRef.current;
-          const current = navigationRef.current?.getCurrentRoute()?.name;
+          const route = navigationRef.current?.getCurrentRoute();
+          const current = route?.name;
+
+          // ✅ Race attribution for EVERY event, driven from this one place.
+          //
+          // race_name alone is not a usable key: the API returns the LOCALISED
+          // title (COALESCE(pla.name, pa.name) on the caller's language), so one
+          // race reaches GA4 under several names — Dinant arrives as three, and
+          // an exact filter on any one of them dropped 57% of its interactions.
+          // race_id is stable across languages, and across the participant and
+          // follower event families, which read different name columns.
+          //
+          // Set here rather than in ~55 logInteraction calls: this also covers
+          // screen_view, follow_toggle, search_performed and anything added
+          // later. Crucially it re-evaluates on EVERY navigation, so leaving a
+          // race screen clears it automatically — the stale-value hazard that
+          // makes ambient state dangerous cannot build up. A route without
+          // product_app_id clears it, which is why the else branch matters.
+          const raceId = (route?.params as { product_app_id?: string | number } | undefined)
+            ?.product_app_id;
+          void analyticsService.setRaceContext(raceId ?? null);
+
           if (current && previous !== current) {
             await logScreenView(getAnalytics(), {
               screen_name: current,

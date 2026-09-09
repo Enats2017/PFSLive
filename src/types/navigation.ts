@@ -89,13 +89,17 @@ export type RootStackParamList = {
     sourceTab?: "past" | "live" | "upcoming";
   };
   AllParticipant:{
-    product_app_id:number 
+    product_app_id:number,
+    /** Analytics only — race attribution, same as SearchParticipant below. */
+    event_name?: string;
   },
    MembershipPlansScreen:undefined;
   SearchParticipant:{
     product_app_id:number,
     product_option_value_app_id: number;
     raceStatus?: 'finished' | 'in_progress' | 'not_started' ; 
+    /** Analytics only — race attribution for the in-race participant search. */
+    event_name?: string;
   },
   LiveTrackingSettings:undefined,
   ParticipantScreen:undefined,

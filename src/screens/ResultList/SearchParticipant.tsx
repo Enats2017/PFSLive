@@ -22,9 +22,10 @@ import { useScreenError } from '../../hooks/useApiError';
 import { AppHeader } from '../../components/common/AppHeader';
 import { useDimensions } from '../../hooks/useDimensions';
 import { analyticsService } from '../../services/analyticsService';
+import { ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation }) => {
-    const { product_app_id, product_option_value_app_id, raceStatus } = route.params;
+    const { product_app_id, product_option_value_app_id, raceStatus, event_name } = route.params;
     const { t } = useTranslation(['details', 'follower']);
     const { width } = useDimensions();
     const insets = useSafeAreaInsets(); 
@@ -107,7 +108,10 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
                     void analyticsService.logSearchPerformed(
                         'participant',
                         result.pagination.total ?? result.participants.length,
-                        { product_app_id },
+                        {
+                            [ANALYTICS_PARAMS.EVENT_NAME]: event_name ?? '',
+                            [ANALYTICS_PARAMS.RACE_ID]: product_app_id,
+                        },
                     );
                 }
 

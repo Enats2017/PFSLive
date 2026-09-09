@@ -14,7 +14,7 @@ import { LanguageSelector, LanguageOption, LANGUAGE_OPTIONS } from './LanguageSe
 import { saveLanguage, getLanguageCodeFromId } from '../../i18n';
 import { useLanguageStore } from '../../store/useLanguageStore';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
 type Visibility = 'public' | 'private';
 
@@ -127,7 +127,7 @@ export const UserTrackingSettings: React.FC = () => {
                 ANALYTICS_SCREENS.TRACKING_SETTINGS,
                 ANALYTICS_BUTTONS.VISIBILITY_SAVE,
                 'submit',
-                { visibility: vis } // 'public' or 'private'
+                { [ANALYTICS_PARAMS.VISIBILITY]: vis } // 'public' or 'private'
             );
             toastSuccess(t('setting:liveTrackingSettings.toastSuccess'));
             return true;
@@ -168,7 +168,7 @@ export const UserTrackingSettings: React.FC = () => {
              const langCode = getLanguageCodeFromId(option.value);
         if (langCode) {
             await saveLanguage(langCode);
-            await changeLanguage(langCode);
+            await changeLanguage(langCode, { userInitiated: true });
         }
         toastSuccess(t('setting:liveTrackingSettings.toastSuccess'));
         } catch (e: any) {

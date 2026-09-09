@@ -26,7 +26,7 @@ import { useDimensions } from '../../hooks/useDimensions';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => {
-    const { product_app_id } = route.params;
+    const { product_app_id, event_name } = route.params;
     const { t } = useTranslation(['details', 'follower']);
     const { width } = useDimensions();
     const insets = useSafeAreaInsets(); 
@@ -45,6 +45,10 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
         handlePasswordModalClose,
     } = useFollowManager(t, productId, undefined, {
         screenName: ANALYTICS_SCREENS.ALL_PARTICIPANTS,
+        // SearchParticipant already carries this; AllParticipant was missed, so
+        // follows from here had no race attribution.
+        raceName: event_name,
+        raceId: productId,
     });
 
     const [participants, setParticipants] = useState<Participant[]>([]);

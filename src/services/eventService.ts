@@ -12,6 +12,8 @@ export interface EventItem {
   event_image: string; 
   result_url: string;
   race_result_api_url: string;
+  /** 'live' | 'finished' from the API, and only on the live tab — null elsewhere. */
+  event_status?: string | null;
 }
 
 export interface EventTabs {

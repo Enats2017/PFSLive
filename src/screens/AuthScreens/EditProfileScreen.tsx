@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next'
 import FloatingLabelInput from '../../components/FloatingLabelInput'
 import CountrySelector from '../../components/CountrySelector'
 import { commonStyles } from '../../styles/common.styles'
+import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens'
 import { useEditProfile } from '../../hooks/Useeditprofile'
 import { fetchProfileApi } from '../../services/profileServices'
 import { tokenService } from '../../services/tokenService'
@@ -193,7 +194,7 @@ const EditProfileScreen = () => {
             const langCode = getLanguageCodeFromId(form.language_id)
             if (langCode) {
                 await saveLanguage(langCode)
-                await changeLanguage(langCode)
+                await changeLanguage(langCode, { screenName: ANALYTICS_SCREENS.EDIT_PROFILE, userInitiated: true })
             }
 
             const customer_app_id = await tokenService.getCustomerId()

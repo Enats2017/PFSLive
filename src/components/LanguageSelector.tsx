@@ -15,7 +15,7 @@ export const LanguageSelector: React.FC = () => {
             styles.button,
             currentLanguage === lang && styles.activeButton,
           ]}
-          onPress={() => changeLanguage(lang)}
+          onPress={() => changeLanguage(lang, { userInitiated: true })}
         >
           <Text style={styles.flag}>{LANGUAGES[lang].flag}</Text>
           <Text

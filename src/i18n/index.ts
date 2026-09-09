@@ -140,13 +140,13 @@ export type LanguageCode = keyof typeof LANGUAGES;
  */
 const getDeviceLanguage = (): LanguageCode => {
   try {
-    let deviceLocale = Localization.locale;
-
-    if (!deviceLocale) {
-      const locales = Localization.getLocales();
-      if (locales && locales.length > 0) {
-        deviceLocale = locales[0].languageCode || 'en';
-      }
+    // Localization.locale was removed from expo-localization; getLocales() is
+    // the supported replacement. languageTag ('en-US') before languageCode
+    // ('en') because the split below already reduces it to the base language.
+    let deviceLocale: string | undefined;
+    const locales = Localization.getLocales();
+    if (locales && locales.length > 0) {
+      deviceLocale = locales[0].languageTag || locales[0].languageCode || undefined;
     }
 
     if (!deviceLocale) {
@@ -260,7 +260,11 @@ const getInitialLanguage = (): LanguageCode => {
 const initialLanguage = getInitialLanguage();
 
 i18n.use(initReactI18next).init({
-  compatibilityJSON: 'v3',
+  // v4, not v3. i18next dropped JSON-v3 support at v23 and this project is on
+  // 25.x, so 'v3' was inert: every `key_plural` silently never resolved and
+  // plural counts rendered the singular ('5 sec ago'). The livetracking keys
+  // are migrated to the v4 `_one`/`_other` shape to match.
+  compatibilityJSON: 'v4',
   resources: {
     en: {
       common: commonEN,

@@ -12,7 +12,10 @@ import { formatEventDate } from '../../utils/dateFormatter';
 import { API_CONFIG } from '../../constants/config';
 import ErrorScreen from '../../components/ErrorScreen';
 import { analyticsService } from '../../services/analyticsService';
-import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS, EVENT_STATUS_BUTTON, liveTabStatus } from '../../constants/analyticsScreens';
+
+// Status of a Live-tab row — see liveTabStatus in analyticsScreens.ts.
+const liveStatus = liveTabStatus;
 
 interface LiveTabProps {
     events: EventItem[];
@@ -63,11 +66,12 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 onPress={async () => {
                     analyticsService.logInteraction(
                         ANALYTICS_SCREENS.EVENT_LIST,
-                        ANALYTICS_BUTTONS.LIVE_EVENT,
+                        EVENT_STATUS_BUTTON[liveStatus(item) ?? 'live'] ?? ANALYTICS_BUTTONS.LIVE_EVENT,
                         'tap',
                         {
                             [ANALYTICS_PARAMS.EVENT_NAME]: item.name, 
                             [ANALYTICS_PARAMS.TAB_NAME]: 'live',
+                            [ANALYTICS_PARAMS.EVENT_STATUS]: liveStatus(item),
                         }
                     );
                     navigation.navigate('EventDetails', {
@@ -94,11 +98,12 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     onPress={ async () => {
                         analyticsService.logInteraction(
                         ANALYTICS_SCREENS.EVENT_LIST,
-                        ANALYTICS_BUTTONS.LIVE_EVENT,
+                        EVENT_STATUS_BUTTON[liveStatus(item) ?? 'live'] ?? ANALYTICS_BUTTONS.LIVE_EVENT,
                         'tap',
                         {
                             [ANALYTICS_PARAMS.EVENT_NAME]: item.name, 
                             [ANALYTICS_PARAMS.TAB_NAME]: 'live',
+                            [ANALYTICS_PARAMS.EVENT_STATUS]: liveStatus(item),
                         }
                     );
                         navigation.navigate('EventDetails', {

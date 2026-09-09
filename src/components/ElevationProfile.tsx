@@ -24,7 +24,7 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 	const minEle = Math.min(...elevations);
 	const maxEle = Math.max(...elevations);
 	const eleRange = maxEle - minEle;
-	const yDomain = [minEle - eleRange * 0.1, maxEle + eleRange * 0.1];
+	const yDomain: [number, number] = [minEle - eleRange * 0.1, maxEle + eleRange * 0.1];
 
 	// Station points for the chart
 	const stationChartPoints = stations
