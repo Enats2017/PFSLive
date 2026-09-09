@@ -1,12 +1,13 @@
 import { apiClient } from "./api";
-import { API_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
+import { API_CONFIG, getApiEndpoint } from "../constants/config";
 import { tokenService } from "./tokenService";
 
 export interface FavouriteItem {
   customer_app_id: number;
   firstname: string;
   lastname: string;
-  email: string;
+  // No email: the API stopped returning it (see buildParticipantEntries in
+  // get_favourite_all_api.php) — no card ever rendered it.
   city: string;
   country: string;
   profile_picture?: string;

@@ -8,7 +8,8 @@ export interface FollowerItem {
     customer_app_id: number;
     firstname: string;
     lastname: string;
-    email: string;
+    // No email: the API stopped returning it (see buildParticipantEntries in
+    // get_my_favourites_all_api.php) — no card ever rendered it.
     city: string;
     country: string;
     profile_picture?: string;
