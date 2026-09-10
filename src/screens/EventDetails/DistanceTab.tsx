@@ -29,7 +29,7 @@ import { AppHeader } from '../../components/common/AppHeader';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
-import useGpxDownload from '../../hooks/useGpxDownload';
+import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
@@ -63,8 +63,6 @@ const DistanceTab = ({
   const [selectedUndoItem, setSelectedUndoItem] = useState<Distance | null>(null);
   const [pendingRefresh, setPendingRefresh] = useState(false);
   const { downloadGpx, downloadingId } = useGpxDownload();
-  const [gpxRestrictedVisible, setGpxRestrictedVisible] = useState(false);
-  const [gpxRestrictedItem, setGpxRestrictedItem] = useState<Distance | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
   // The event image is not always passed in the route params - the pencil on
   // Your Events navigates from `AthleteEvent`, which has no image field at all.
@@ -291,11 +289,9 @@ const DistanceTab = ({
 
     const handleDownloadGpx = useCallback(
       (item: Distance) => {
-        if (!rrUrl) {
-          setGpxRestrictedItem(item);
-          setGpxRestrictedVisible(true);
-          return;
-        }
+        // No rr_url gate: that is the Race Result results feed, not a statement
+        // about whether a route file exists. canShowGpxButton already requires
+        // gpx_url, so by the time this runs there is a file to fetch.
         downloadGpx(item);
         analyticsService.logInteraction(
           ANALYTICS_SCREENS.EVENT_DETAILS,
@@ -305,7 +301,7 @@ const DistanceTab = ({
         );
       },
       
-      [downloadGpx, rrUrl, event_name]
+      [downloadGpx, event_name]
     );
 
   const isRegisterMode = useMemo(
@@ -516,12 +512,9 @@ const handleExternalRegister = useCallback((url: string) => {
               )}
             </TouchableOpacity>
 
-            {/* Hidden once this distance has finished: its route is no longer useful,
-                and the web app hides it at the same point. Keyed on the distance's own
-                countdown.status, which the API computes — so it is timezone-correct and
-                handles a multi-day event, where race_date is day 1 only and the earlier
-                days are already over while the event as a whole is still live. */}
-            {item.countdown.status !== 'finished' && (
+            {/* Visibility rule lives in useGpxDownload.canShowGpxButton so this
+                tab and the follower one cannot drift apart. */}
+            {canShowGpxButton(item) && (
               <TouchableOpacity
                 style={detailsStyles.routeButton}
                 //onPress={() => handleGpxClick(item)}
@@ -636,15 +629,6 @@ const handleExternalRegister = useCallback((url: string) => {
         onRetry={handleErrorRetry}
       />
 
-     <ErrorModal
-        visible={gpxRestrictedVisible}
-        titleKey="details:gpxRestricted.noResultsTitle"
-        messageKey="details:gpxRestricted.noResultsMessage"
-        onClose={() => {
-          setGpxRestrictedVisible(false);
-          setGpxRestrictedItem(null);
-        }}
-      />
       <RegistrationModal
         visible={liveTrackingModalVisible}
         status="connect_confirm"

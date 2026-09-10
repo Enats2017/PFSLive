@@ -8,6 +8,7 @@ import { eventService, AthleteEvent, AthleteProfile } from '../../services/athle
 import { FlatList } from 'react-native-gesture-handler'
 import { OwnProfileprops } from '../../types/navigation';
 import { useScreenError } from '../../hooks/useApiError';
+import { useFollowStore } from '../../store/useFollowStore';
 import { useTranslation } from 'react-i18next';
 import { API_CONFIG } from '../../constants/config';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -244,6 +245,13 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const [loadingMorePartnerPast, setLoadingMorePartnerPast] = useState(false);
     const [loadingMoreCustomLive, setLoadingMoreCustomLive] = useState(false);
     const isInitialMount = useRef(true);
+    // followers_count / following_count are computed server-side, so a follow
+    // made on ANY other screen can only be picked up by refetching. This screen
+    // deliberately does not refetch on every focus (see the scroll-only branch
+    // below), so it watches the follow-graph version instead and refetches only
+    // when it actually moved.
+    const followVersion = useFollowStore((s) => s.version);
+    const lastSeenFollowVersion = useRef(followVersion);
     const isFetching = useRef(false);
     const fromEditFetched = useRef(false);
     const activeTabRef = useRef<Tab>('Live');
@@ -327,7 +335,16 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                     await fetchProfile(true);
                 } else if (isInitialMount.current) {
                     isInitialMount.current = false;
+                    lastSeenFollowVersion.current = followVersion;
                     await fetchProfile(false);
+                } else if (followVersion !== lastSeenFollowVersion.current) {
+                    lastSeenFollowVersion.current = followVersion;
+                    if (API_CONFIG.DEBUG) {
+                        console.log('Follow graph changed - refetching counts');
+                    }
+                    // bustCache: the counts live in a 30s server-side file cache
+                    // (athlete_profile_*.json) that _t bypasses.
+                    await fetchProfile(true);
                 } else {
                     if (API_CONFIG.DEBUG) {
                         console.log('Returning to screen - syncing scroll only');
@@ -342,7 +359,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
             return () => {
                 isFetching.current = false;
             };
-        }, [fetchProfile, fromEdit, targetId])
+        }, [fetchProfile, fromEdit, targetId, followVersion])
     );
 
     const handleRefresh = useCallback(async () => {

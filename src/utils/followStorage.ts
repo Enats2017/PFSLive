@@ -1,8 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { apiClient } from '../services/api';
+import { useFollowStore } from '../store/useFollowStore';
 
 const STORAGE_KEY = 'followed_users';
+// Set when an upload fails, cleared when one succeeds. Its only job is to say
+// "local is ahead of the server", which syncFollowDataFromAPI must not trample.
+const SYNC_PENDING_KEY = '@PFSLive:followSyncPending';
 const STORAGE_KEY_BIBS = 'followed_bibs_by_product';
 const FOLLOWER_ID_KEY = 'FOLLOWER_ID';
 const DEVICE_ID_KEY = 'device_id';
@@ -163,11 +167,37 @@ async function syncFollowDataToAPI(): Promise<void> {
     if (API_CONFIG.DEBUG) {
       console.log('✅ Follow data synced to API');
     }
+
+    // ✅ Tell the screens that show SERVER-derived counts to refetch.
+    //    Bumped here, after the POST resolves, so all four callers
+    //    (followUser / unfollowUser / followBib / unfollowBib) are covered by
+    //    one line. Deliberately NOT bumped in the catch below: when the sync
+    //    failed the server state genuinely did not change, so a refetch would
+    //    redisplay the old number and read as a second bug.
+    useFollowStore.getState().bump();
+
+    // Local and server agree again.
+    try {
+      await AsyncStorage.removeItem(SYNC_PENDING_KEY);
+    } catch {
+      // A failure here only risks one redundant re-upload later. Harmless.
+    }
   } catch (error: any) {
     if (API_CONFIG.DEBUG) {
       console.error('❌ Failed to sync follow data to API:', error);
     }
-    // Don't throw - sync failure shouldn't break the app
+
+    // Still don't throw — following has to keep working with no signal, which
+    // at a race is exactly when people use it. But record that local is now
+    // AHEAD of the server, so syncFollowDataFromAPI does not overwrite this
+    // change with older server state and silently undo the follow. The retry
+    // happens on the next follow action (this function posts the whole set) or
+    // on the next download-sync, which pushes before it pulls.
+    try {
+      await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
+    } catch {
+      // If even the flag cannot be written we are no worse off than before.
+    }
   }
 }
 
@@ -388,11 +418,33 @@ export async function smartUnfollow(
 // ✅ Export sync function for manual triggers if needed
 export { syncFollowDataToAPI };
 
+/** True when a local follow/unfollow has not reached the server yet. */
+export async function hasPendingFollowSync(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(SYNC_PENDING_KEY)) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export async function syncFollowDataFromAPI(
   followed_customers: number[],
   followed_bibs: Record<string, string[]>,
 ): Promise<void> {
   try {
+    // This OVERWRITES local storage, so it must never run while local holds a
+    // change the server has not seen — that is how a follow made offline used
+    // to disappear a moment later. Push local up instead; if that succeeds the
+    // flag clears and the next call proceeds normally, and if it fails local
+    // stays authoritative until it can be delivered.
+    if (await hasPendingFollowSync()) {
+      if (API_CONFIG.DEBUG) {
+        console.log('⏭️ Local follow data not yet synced — pushing instead of overwriting');
+      }
+      await syncFollowDataToAPI();
+      return;
+    }
+
     const customerSet = new Set(
       followed_customers
         .map(toValidId)

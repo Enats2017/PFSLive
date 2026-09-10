@@ -131,12 +131,6 @@
     "noFileTitle": "No GPX file",
     "noFileMessage": "No GPX file available."
   },
-  "gpxRestricted": {
-    "title": "GPX not available",
-    "message": "You need to register for this event to download the GPX file.",
-    "noResultsTitle": "GPX not available",
-    "noResultsMessage": "The GPX route file is not available for this event yet."
-  },
   "iosnotnow": "Not now",
   "map": "Map",
   "wave": "Wave",

@@ -58,6 +58,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
         isFollowed,
         isLoading,
         handleFollowPress,
+        refreshFollowedUsers,
         passwordModalVisible,
         isVerifying,
         passwordError,
@@ -91,8 +92,18 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
 
     useFocusEffect(
         useCallback(() => {
+            // Two separate things go stale here, and loadInitial only fixed one.
+            // loadInitial refetches the LIST from the server; the follow/unfollow
+            // BUTTON reads useFollowManager's own followedUsers state, which is
+            // populated once when the hook mounts. Following someone on another
+            // screen (AthleteSearchScreen) therefore showed the new athlete in
+            // the list with a "Follow" button, until the screen happened to
+            // remount. refreshFollowedUsers() re-reads local storage — same
+            // pairing ParticipantTab, AllParticipant, FavouriteList, ResultList
+            // and AthleteSearchScreen already use.
+            refreshFollowedUsers();
             loadInitial();
-        }, [loadInitial])
+        }, [loadInitial, refreshFollowedUsers])
     );
 
     // Search with debounce

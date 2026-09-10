@@ -12,6 +12,7 @@ import { resultInfoStyles as s } from '../../styles/resultDetails.styles';
 import { commonStyles, palette } from '../../styles/common.styles';
 import RaceLive from './RaceLive';
 import { useFollowManager } from '../../hooks/useFollowManager';
+import { useFocusEffect } from '@react-navigation/native';
 import LiveTimingPoint from './LiveTimingPoint';
 import { useResultDetail } from '../../hooks/useResultDetail';
 import UpcomingRace from './UpcomingRace';
@@ -58,6 +59,16 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         raceName: data?.event?.race_name,
         raceId: product_app_id,
     });
+
+    // refreshFollowedUsers was destructured above but never called, so the
+    // follow button here kept whatever state the hook read at mount — following
+    // the same athlete from another screen left this one showing "Follow".
+    // Same pairing every other follow-capable screen uses.
+    useFocusEffect(
+        useCallback(() => {
+            refreshFollowedUsers();
+        }, [refreshFollowedUsers])
+    );
 
     const [activeTab, setActiveTab] = useState<TabKey>('raceInfo');
     const activeTabRef = useRef<TabKey>('raceInfo');
