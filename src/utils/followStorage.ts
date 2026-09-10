@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { apiClient } from '../services/api';
+import { useFollowStore } from '../store/useFollowStore';
 
 const STORAGE_KEY = 'followed_users';
 const STORAGE_KEY_BIBS = 'followed_bibs_by_product';
@@ -163,6 +164,14 @@ async function syncFollowDataToAPI(): Promise<void> {
     if (API_CONFIG.DEBUG) {
       console.log('✅ Follow data synced to API');
     }
+
+    // ✅ Tell the screens that show SERVER-derived counts to refetch.
+    //    Bumped here, after the POST resolves, so all four callers
+    //    (followUser / unfollowUser / followBib / unfollowBib) are covered by
+    //    one line. Deliberately NOT bumped in the catch below: when the sync
+    //    failed the server state genuinely did not change, so a refetch would
+    //    redisplay the old number and read as a second bug.
+    useFollowStore.getState().bump();
   } catch (error: any) {
     if (API_CONFIG.DEBUG) {
       console.error('❌ Failed to sync follow data to API:', error);
