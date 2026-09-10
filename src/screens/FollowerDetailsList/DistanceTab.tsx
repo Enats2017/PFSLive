@@ -20,8 +20,7 @@ import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
-import useGpxDownload from '../../hooks/useGpxDownload';
-import ErrorModal from '../../components/ErrorModal';
+import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 
@@ -57,9 +56,6 @@ const DistanceTab = ({
   // (screens/EventDetails/DistanceTab.tsx). The hook owns the download,
   // permissions and its own alerts; this screen only decides when to allow it.
   const { downloadGpx } = useGpxDownload();
-  const [gpxRestrictedVisible, setGpxRestrictedVisible] = useState(false);
-  // Event-level gate: an event with no RaceResult URL has no route file wired up.
-  const [rrUrl, setRrUrl] = useState<string>('');
 
   const fetchResults = useCallback(async () => {
     try {
@@ -73,8 +69,6 @@ const DistanceTab = ({
       
       setShowResults(canShowResults);
       onResultsAvailability?.(canShowResults);
-
-      setRrUrl(result.event?.rr_url ?? '');
 
       const canShowResultsStats =
         result.event?.show_results === 1;
@@ -95,15 +89,11 @@ const DistanceTab = ({
     setImageLoading(true);
   }, [event_image]);
 
-  // ✅ Same gate as the participant tab: the button is always shown, and the
-  // check happens on tap. An event with no RaceResult URL has no route file
-  // published, so explain that rather than failing silently.
+  // No rr_url gate: that is the Race Result results feed, not a statement about
+  // whether a route file exists. canShowGpxButton already requires gpx_url, so
+  // by the time this runs there is a file to fetch.
   const handleDownloadGpx = useCallback(
     (item: Distance) => {
-      if (!rrUrl) {
-        setGpxRestrictedVisible(true);
-        return;
-      }
       downloadGpx(item);
       analyticsService.logInteraction(
         ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,
@@ -112,7 +102,7 @@ const DistanceTab = ({
         { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
       );
     },
-    [downloadGpx, rrUrl, event_name],
+    [downloadGpx, event_name],
   );
 
   const renderListHeader = useCallback(() => (
@@ -275,11 +265,9 @@ const DistanceTab = ({
               </TouchableOpacity>
             )}
 
-            {/* isPast is the TAB the user came from; countdown.status is this distance's
-                own state. An event stays in the live tab while any distance is still to
-                run, and on a multi-day event the earlier days are already over — both
-                kept offering a finished route. Matches the web app. */}
-            {!isPast && item.countdown.status !== 'finished' && (
+            {/* Visibility rule lives in useGpxDownload.canShowGpxButton so this
+                tab and the participant one cannot drift apart. */}
+            {canShowGpxButton(item, sourceTab) && (
               <TouchableOpacity
                 style={detailsStyles.routeButton}
                 onPress={() => handleDownloadGpx(item)}
@@ -339,12 +327,6 @@ const DistanceTab = ({
         />
       )}
 
-      <ErrorModal
-        visible={gpxRestrictedVisible}
-        titleKey="details:gpxRestricted.noResultsTitle"
-        messageKey="details:gpxRestricted.noResultsMessage"
-        onClose={() => setGpxRestrictedVisible(false)}
-      />
     </View>
   );
 };
