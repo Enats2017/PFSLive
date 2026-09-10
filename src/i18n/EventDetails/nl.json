@@ -130,12 +130,6 @@
     "noFileTitle": "Geen GPX-bestand",
     "noFileMessage": "Geen GPX-bestand beschikbaar."
   },
-  "gpxRestricted": {
-    "title": "GPX niet beschikbaar",
-    "message": "U moet zich inschrijven voor dit evenement om het GPX-bestand te downloaden.",
-    "noResultsTitle": "GPX niet beschikbaar",
-    "noResultsMessage": "Het GPX-routebestand is nog niet beschikbaar voor dit evenement."
-  },
   "iosnotnow":"Not Now",
   "map": "Kaart",
   "wave": "Golf"

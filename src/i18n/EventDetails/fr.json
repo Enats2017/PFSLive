@@ -130,12 +130,6 @@
     "noFileTitle": "Aucun fichier GPX",
     "noFileMessage": "Aucun fichier GPX disponible."
   },
-  "gpxRestricted": {
-    "title": "GPX non disponible",
-    "message": "Vous devez vous inscrire à cet événement pour télécharger le fichier GPX.",
-    "noResultsTitle": "GPX non disponible",
-    "noResultsMessage": "Le fichier de tracé GPX n'est pas encore disponible pour cet événement."
-  },
   "iosnotnow":"Not Now",
   "map": "CARTE",
   "wave": "Vague"
