@@ -25,7 +25,6 @@ const EMPTY_CODES = new Set([
   "participant_not_found",
   "event_not_found",
   "registration_closed",
-  "session_expired",
   "permission_denied",
   "maintenance",
 ]);
@@ -203,6 +202,22 @@ class ApiClient {
         error.code === "ETIMEDOUT"
       ) {
         return new AppError("network", "network_error");
+      }
+
+      // ✅ An expired or rejected token must never look like "no data".
+      //
+      // This branch has to sit AHEAD of the EMPTY_CODES / status >= 400 checks
+      // below: a 401 is a 4xx, so it used to fall into `new AppError("empty")`
+      // and every screen in the app rendered its empty state — "No Followers
+      // Yet", "Not Following Anyone" — for a user whose session had simply run
+      // out. Tokens are a hard 90-day expiry server-side (AuthToken.php,
+      // TOKEN_LIFETIME_DAYS), so this is a path real users reach, not an edge
+      // case.
+      //
+      // Type "server", NOT "empty": ErrorScreen hides its action button for
+      // type="empty", and this is the one error the user can actually fix.
+      if (status === 401 || code === "unauthorized" || code === "session_expired") {
+        return new AppError("server", "session_expired");
       }
 
       if (EMPTY_CODES.has(code) || status === 404 || status === 204) {

@@ -49,7 +49,8 @@
     },
     "session_expired": {
       "title": "Session expirée",
-      "message": "Veuillez vous reconnecter pour continuer."
+      "message": "Veuillez vous reconnecter pour continuer.",
+      "button": "Se connecter"
     },
     "permission_denied": {
       "title": "Accès refusé",
