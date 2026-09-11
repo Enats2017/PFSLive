@@ -17,6 +17,8 @@ import { userfavouriteService, FavouriteItem } from '../../services/userfavourit
 import { UserFavouriteListpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
+import { useSessionExpired } from '../../hooks/useSessionExpired';
 import { useDimensions } from '../../hooks/useDimensions';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
@@ -30,7 +32,7 @@ interface PaginationState {
 const INITIAL_PAGINATION: PaginationState = { page: 1, total_pages: 1 };
 
 const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
-    const { t } = useTranslation(['follow', 'follower']);
+    const { t } = useTranslation(['follow', 'follower', 'errorScreen']);
     const route = useRoute<any>();
      const targetCustomerAppId = route.params?.customer_app_id;
     const { width } = useDimensions();
@@ -50,6 +52,28 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     const [isOwnList, setIsOwnList] = useState(false);
 
     const isLoadingMoreSearch = useRef(false);
+
+    // ✅ Every load takes a ticket; only the newest one may commit its result.
+    //    Without this a "load more" that resolves after the next keystroke
+    //    splices the OLD query's page 2 onto the NEW query's page 1, and leaves
+    //    the pagination state describing a query nobody is looking at.
+    const requestIdRef = useRef(0);
+
+    // ✅ Rows unfollowed in this visit, hidden immediately.
+    //    The alternative — waiting for the refetch — leaves the row on screen
+    //    for the whole round-trip, and leaves it there FOREVER if the refetch
+    //    fails. Deliberately not cleared when `favourites` changes, so it survives
+    //    the refetch that would otherwise hand the athlete straight back; it is
+    //    cleared on focus instead, so a fresh visit always shows server truth.
+    const [removedIds, setRemovedIds] = useState<Set<number>>(new Set());
+
+    // ✅ An unfollow has already been reflected locally by removedIds, so the
+    //    page-1 refetch it would otherwise trigger is pure loss: it discards
+    //    pages 2..N and the scroll position to tell us something we know.
+    const skipNextRefetchRef = useRef(false);
+
+    const { error, isAuthError, handleApiError, clearError } = useScreenError();
+    const handleSessionExpired = useSessionExpired();
 
     // ✅ Stable ref to break circular dependency between useFollowManager and loadInitial
     const onFollowSuccessRef = useRef<(() => void) | null>(null);
@@ -74,21 +98,40 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
 
     // ✅ useCallback so the ref always holds a stable, up-to-date reference
     const loadInitial = useCallback(async () => {
+        const requestId = ++requestIdRef.current;
         try {
             setInitialLoading(true);
-            const result = await userfavouriteService.getFavourites({ page: 1, customer_app_id: targetCustomerAppId  });
+            clearError();
+            const result = await userfavouriteService.getFavourites({ page: 1, customer_app_id: targetCustomerAppId });
+            if (requestId !== requestIdRef.current) return;
             setFavourites(result.favourites);
             setIsOwnList(result.is_own === 1);
             setFavPagination({ page: 1, total_pages: result.pagination.total_pages });
         } catch (err) {
+            if (requestId !== requestIdRef.current) return;
             console.error('❌ Favourites initial load failed:', err);
+            handleApiError(err);
         } finally {
-            setInitialLoading(false);
+            if (requestId === requestIdRef.current) setInitialLoading(false);
         }
+    // handleApiError / clearError are intentionally NOT deps: this callback
+    // feeds useFocusEffect, and FavouriteList.tsx keeps them out for the same
+    // reason — a changing identity would re-subscribe the focus effect.
     }, [targetCustomerAppId]);
 
+    const retry = useCallback(() => {
+        clearError();
+        loadInitial();
+    }, [clearError, loadInitial]);
+
     // ✅ Keep ref in sync with latest loadInitial
-    onFollowSuccessRef.current = loadInitial;
+    onFollowSuccessRef.current = () => {
+        if (skipNextRefetchRef.current) {
+            skipNextRefetchRef.current = false;
+            return;
+        }
+        loadInitial();
+    };
 
     useFocusEffect(
         useCallback(() => {
@@ -101,6 +144,9 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
             // remount. refreshFollowedUsers() re-reads local storage — same
             // pairing ParticipantTab, AllParticipant, FavouriteList, ResultList
             // and AthleteSearchScreen already use.
+            // A new visit starts from server truth: anything hidden by the
+            // optimistic set last time has had its sync round-trip by now.
+            setRemovedIds(new Set());
             refreshFollowedUsers();
             loadInitial();
         }, [loadInitial, refreshFollowedUsers])
@@ -114,13 +160,16 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
             return;
         }
         const timer = setTimeout(async () => {
+            const requestId = ++requestIdRef.current;
             try {
                 setSearching(true);
+                clearError();
                 const result = await userfavouriteService.getFavourites({
                     search: searchText.trim(),
                     page: 1,
                     customer_app_id: targetCustomerAppId, 
                 });
+                if (requestId !== requestIdRef.current) return;
                 setSearchResults(result.favourites);
                 setSearchPagination({ page: 1, total_pages: result.pagination.total_pages });
 
@@ -129,9 +178,11 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
                 // Count only, never the query text (unbounded cardinality).
                 void analyticsService.logSearchPerformed('favourite', result.favourites.length);
             } catch (err) {
+                if (requestId !== requestIdRef.current) return;
                 console.error('❌ Favourites search failed:', err);
+                handleApiError(err);
             } finally {
-                setSearching(false);
+                if (requestId === requestIdRef.current) setSearching(false);
             }
         }, 350);
         return () => clearTimeout(timer);
@@ -153,12 +204,14 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
         try {
             isLoadingMoreSearch.current = true;
             setLoadingMore(true);
+            const requestId = ++requestIdRef.current;
             const nextPage = currentPage + 1;
             const result = await userfavouriteService.getFavourites({
                 search: searchText,
                 page: nextPage,
                 customer_app_id: targetCustomerAppId,
             });
+            if (requestId !== requestIdRef.current) return;
             setSearchResults(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
                 return [...prev, ...result.favourites.filter(i => !ids.has(i.customer_app_id))];
@@ -176,8 +229,10 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
         if (loadingMoreFav || favPagination.page >= favPagination.total_pages) return;
         try {
             setLoadingMoreFav(true);
+            const requestId = ++requestIdRef.current;
             const nextPage = favPagination.page + 1;
-            const result = await userfavouriteService.getFavourites({ page: nextPage, customer_app_id: targetCustomerAppId, });
+            const result = await userfavouriteService.getFavourites({ page: nextPage, customer_app_id: targetCustomerAppId });
+            if (requestId !== requestIdRef.current) return;
             setFavourites(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
                 return [...prev, ...result.favourites.filter(i => !ids.has(i.customer_app_id))];
@@ -210,16 +265,31 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
                 item={item}
                 isFollowed={isFollowed(item.customer_app_id)}
                 isLoading={isLoading(item.customer_app_id)}
-                showRemoveButton={isOwnList} 
-                onToggleFollow={() =>
+                showRemoveButton={isOwnList}
+                onToggleFollow={() => {
+                    // This list IS the follow list, so a toggle on a followed
+                    // athlete is a removal — hide the row now, and tell the
+                    // success callback not to refetch over it.
+                    const removing = isFollowed(item.customer_app_id);
+                    if (removing) {
+                        setRemovedIds(prev => new Set(prev).add(item.customer_app_id));
+                    }
+                    // Assigned on BOTH directions, not only on removal: a
+                    // failed toggle never reaches onFollowSuccess, so a flag
+                    // that is only ever set would be left armed and would
+                    // swallow the refetch belonging to the next action.
+                    skipNextRefetchRef.current = removing;
                     handleFollowPress({
                         customer_app_id: item.customer_app_id,
                         password_protected: item.password_protected ?? 0,
-                    })
-                }
+                    });
+                }}
             />
         ),
-        [isFollowed, isLoading, handleFollowPress],
+        // isOwnList drives showRemoveButton and is set by loadInitial, i.e. AFTER
+        // the first render. Left out of the deps the card kept the closure that
+        // captured false, and the Remove button never appeared at all.
+        [isFollowed, isLoading, handleFollowPress, isOwnList],
     );
 
    const renderEmpty = useCallback(() => {
@@ -229,6 +299,20 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
                 size="small"
                 color={palette.navy}
                 style={{ marginTop: spacing.lg }}
+            />
+        );
+    }
+    // ✅ Before either empty branch: a failed request also leaves the list
+    //    empty, and answering a network or session failure with "Not Following
+    //    Anyone" is a lie the user cannot act on.
+    if (error) {
+        return (
+            <ErrorScreen
+                type={error.type}
+                title={error.title}
+                message={error.message}
+                buttonLabel={isAuthError ? t('errorScreen:codes.session_expired.button') : undefined}
+                onRetry={isAuthError ? () => { void handleSessionExpired(); } : retry}
             />
         );
     }
@@ -255,9 +339,12 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
             }}
         />
     );
-}, [initialLoading, searching, searchText, t, navigation]);
+}, [initialLoading, searching, searchText, t, navigation, error, isAuthError, handleSessionExpired, retry]);
 
-    const displayList = searchText.trim().length > 0 ? searchResults : favourites;
+    const rawList = searchText.trim().length > 0 ? searchResults : favourites;
+    const displayList = removedIds.size > 0
+        ? rawList.filter(item => !removedIds.has(item.customer_app_id))
+        : rawList;
 
     const listFooter = (loadingMore || loadingMoreFav)
         ? <ActivityIndicator size="small" color={palette.navy} style={{ marginVertical: spacing.md }} />

@@ -1,4 +1,4 @@
-import { apiClient } from "./api";
+import { apiClient, AppError } from "./api";
 import { API_CONFIG, getApiEndpoint, getDeviceId } from "../constants/config";
 import { tokenService } from "./tokenService";
 
@@ -38,7 +38,11 @@ export interface GetFavouritesParams {
 interface FavouritesData {
   favourites?: FavouriteItem[];
   pagination?: FavouritePagination;
-  is_own?: number; 
+  is_own?: number;
+  // get_favourite_all_api.php answers a token it cannot verify with
+  // HTTP 200 + success:true + action:"unauthorized" — not an error status —
+  // so this never reaches apiClient.handleError. See getFavourites().
+  action?: string;
 }
 
 interface FavouritesApiResponse {
@@ -84,6 +88,23 @@ export const userfavouriteService = {
       const response = await apiClient.post<FavouritesData>(url, requestBody, {
         headers,
       });
+
+      // ✅ An unusable token comes back as a 200, not a 401.
+      //
+      // get_favourite_all_api.php sets $has_token_attempt on ANY non-empty
+      // Authorization header, then answers respondSuccess(action:"unauthorized")
+      // when AuthToken::verify() rejects it. Without this branch the payload
+      // falls through with no `favourites` key, we return an empty array, and
+      // the screen tells a logged-out user they are "Not Following Anyone".
+      //
+      // Throwing the same code api.ts emits for a real 401 keeps both paths on
+      // one handler in the screens.
+      if (response.success && (response.data as FavouritesData)?.action === "unauthorized") {
+        if (API_CONFIG.DEBUG) {
+          console.log("🔐 Favourites: token rejected by server (action: unauthorized)");
+        }
+        throw new AppError("server", "session_expired");
+      }
 
       if (response.success && response.data) {
         if (API_CONFIG.DEBUG) {

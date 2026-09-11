@@ -38,6 +38,7 @@ import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
 import { tokenService } from '../services/tokenService';
+import { useAuth } from '../context/AuthContext';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { useNotifications, NotificationData } from '../hooks/useNotifications';
 import { followerApi } from '../services/registerFollowerServices';
@@ -225,6 +226,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     isRegistering,
     setOnNotificationTap,
   } = useNotifications();
+
+  // ✅ Clearing the token is only half a logout: it leaves the logged-in
+  //    screen group mounted and the Firebase user id attached. logout() is what
+  //    swaps the navigator and calls clearUserIdentity().
+  const { logout } = useAuth();
 
   // Core states
   const [homeData, setHomeData] = useState<HomeData | null>(null);
@@ -622,6 +628,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
 
         await tokenService.removeToken();
+        logout();
         setHasToken(false);
         setHomeData(null);
         setLoading(false);
@@ -677,6 +684,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
 
         await tokenService.removeToken();
+        logout();
         setHasToken(false);
         setHomeData(null);
         return null;
@@ -690,7 +698,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setLoading(false);
     }
     return null;
-  }, []);
+  }, [logout]);
 
   // ==================== GPS TRACKING ====================
 

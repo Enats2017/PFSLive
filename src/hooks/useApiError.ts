@@ -19,6 +19,9 @@ const CODE_MESSAGES = new Set([
 
 ]);
 
+// The single code api.ts emits for an expired or rejected token.
+export const AUTH_ERROR_CODE = "session_expired";
+
 export interface ScreenError {
   type: ErrorType;
   title?: string;
@@ -28,6 +31,11 @@ export interface ScreenError {
 interface UseScreenErrorReturn {
   error: ScreenError | null;
   hasError: boolean;
+  // ✅ True when the failure was an expired/rejected session rather than a
+  //    network or server fault. Screens use it to swap the retry button for a
+  //    "log in" action — retrying the same request with the same dead token
+  //    can only fail again.
+  isAuthError: boolean;
   handleApiError: (err: unknown) => void;
   clearError: () => void;
 }
@@ -74,6 +82,7 @@ export function useScreenError(): UseScreenErrorReturn {
   return {
     error,
     hasError: error !== null,
+    isAuthError: errorCode === AUTH_ERROR_CODE,
     handleApiError,
     clearError,
   };

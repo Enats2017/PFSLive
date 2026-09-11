@@ -15,6 +15,8 @@ import { userFollowersService, FollowerItem } from '../../services/followerListS
 
 import FollowerListCard from './FollowerListCard';
 import ErrorScreen from '../../components/ErrorScreen';
+import { useScreenError } from '../../hooks/useApiError';
+import { useSessionExpired } from '../../hooks/useSessionExpired';
 import { analyticsService } from '../../services/analyticsService';
 import { useFocusEffect } from '@react-navigation/native';
 import { FollowersListpops } from '../../types/navigation';
@@ -27,7 +29,7 @@ interface PaginationState {
 const INITIAL_PAGINATION: PaginationState = { page: 1, total_pages: 1 };
 
 const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
-    const { t } = useTranslation(['follow', 'follower']);
+    const { t } = useTranslation(['follow', 'follower', 'errorScreen']);
     const { customer_app_id } = route.params || {};
     console.log("followerlist");
     
@@ -43,23 +45,42 @@ const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
 
     const isLoadingMoreSearch = useRef(false);
 
-    // ✅ Stable ref to break circular dependency between useFollowManager and loadInitial
+    // ✅ Every load takes a ticket; only the newest one may commit its result.
+    //    Without this a "load more" that resolves after the next keystroke
+    //    splices the OLD query's page 2 onto the NEW query's page 1, and leaves
+    //    the pagination state describing a query nobody is looking at.
+    const requestIdRef = useRef(0);
+
+    const { error, isAuthError, handleApiError, clearError } = useScreenError();
+    const handleSessionExpired = useSessionExpired();
     
 
     // ✅ useCallback so the ref always holds a stable, up-to-date reference
     const loadInitial = useCallback(async () => {
-        
+        const requestId = ++requestIdRef.current;
         try {
             setInitialLoading(true);
+            clearError();
             const result = await userFollowersService.getFollowers({ customer_app_id, page: 1 });
+            if (requestId !== requestIdRef.current) return;
             setFollowers(result.followers);
             setFavPagination({ page: 1, total_pages: result.pagination.total_pages });
         } catch (err) {
+            if (requestId !== requestIdRef.current) return;
             console.error('❌ Followers initial load failed:', err);
+            handleApiError(err);
         } finally {
-            setInitialLoading(false);
+            if (requestId === requestIdRef.current) setInitialLoading(false);
         }
+    // handleApiError / clearError are intentionally NOT deps: this callback
+    // feeds useFocusEffect, and FavouriteList.tsx keeps them out for the same
+    // reason — a changing identity would re-subscribe the focus effect.
     }, [customer_app_id]);
+
+    const retry = useCallback(() => {
+        clearError();
+        loadInitial();
+    }, [clearError, loadInitial]);
 
     // ✅ Refresh on focus, not just on mount — same as UserFavouriteList.
     //    This screen stays mounted in the native stack, so a plain useEffect
@@ -80,13 +101,16 @@ const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
             return;
         }
         const timer = setTimeout(async () => {
+            const requestId = ++requestIdRef.current;
             try {
                 setSearching(true);
+                clearError();
                 const result = await userFollowersService.getFollowers({
                     customer_app_id,
                     search: searchText.trim(),
                     page: 1,
                 });
+                if (requestId !== requestIdRef.current) return;
                 setSearchResults(result.followers);
                 setSearchPagination({ page: 1, total_pages: result.pagination.total_pages });
 
@@ -95,9 +119,11 @@ const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
                 // Count only, never the query text (unbounded cardinality).
                 void analyticsService.logSearchPerformed('follower', result.followers.length);
             } catch (err) {
+                if (requestId !== requestIdRef.current) return;
                 console.error('❌ Followers search failed:', err);
+                handleApiError(err);
             } finally {
-                setSearching(false);
+                if (requestId === requestIdRef.current) setSearching(false);
             }
         }, 350);
         return () => clearTimeout(timer);
@@ -119,12 +145,14 @@ const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
         try {
             isLoadingMoreSearch.current = true;
             setLoadingMore(true);
+            const requestId = ++requestIdRef.current;
             const nextPage = currentPage + 1;
             const result = await userFollowersService.getFollowers({
                  customer_app_id,
                 search: searchText,
                 page: nextPage,
             });
+            if (requestId !== requestIdRef.current) return;
             setSearchResults(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
                 return [...prev, ...result.followers.filter(i => !ids.has(i.customer_app_id))];
@@ -142,8 +170,10 @@ const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
         if (loadingMoreFav || favPagination.page >= favPagination.total_pages) return;
         try {
             setLoadingMoreFav(true);
+            const requestId = ++requestIdRef.current;
             const nextPage = favPagination.page + 1;
-            const result = await userFollowersService.getFollowers({  customer_app_id, page: nextPage });
+            const result = await userFollowersService.getFollowers({ customer_app_id, page: nextPage });
+            if (requestId !== requestIdRef.current) return;
             setFollowers(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
                 return [...prev, ...result.followers.filter(i => !ids.has(i.customer_app_id))];
@@ -185,6 +215,20 @@ const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
             />
         );
     }
+    // ✅ Before either empty branch: a failed request also leaves the list
+    //    empty, and answering a network or session failure with "No Followers
+    //    Yet" is a lie the user cannot act on.
+    if (error) {
+        return (
+            <ErrorScreen
+                type={error.type}
+                title={error.title}
+                message={error.message}
+                buttonLabel={isAuthError ? t('errorScreen:codes.session_expired.button') : undefined}
+                onRetry={isAuthError ? () => { void handleSessionExpired(); } : retry}
+            />
+        );
+    }
     if (searchText.trim().length > 0) {
         return (
             <ErrorScreen
@@ -203,7 +247,7 @@ const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
             onRetry={() => {}}
         />
     );
-}, [initialLoading, searching, searchText, t]);
+}, [initialLoading, searching, searchText, t, error, isAuthError, handleSessionExpired, retry]);
 
     const displayList = searchText.trim().length > 0 ? searchResults : followers;
 
