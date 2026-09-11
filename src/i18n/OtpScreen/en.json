@@ -46,6 +46,12 @@
     "successTitle": "Device changed",
     "successMessage": "Your account has moved to this phone. Your other device has been signed out."
   },
+  "emailChange": {
+    "title": "Confirm your new email",
+    "subtitle": "We sent a 6-digit code to",
+    "successTitle": "Email changed",
+    "successMessage": "Your email has been updated. Your other devices remain signed in."
+  },
   "notArrived": {
     "title": "Not arrived?",
     "spam": "Check your spam folder — the code is sent from no-reply@liviolive.com.",

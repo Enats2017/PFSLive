@@ -47,7 +47,8 @@ interface FloatingLabelInputProps extends Omit<TextInputProps, 'onChangeText'> {
   maximumDate?: Date;              // e.g. DOB field passes new Date() to block future dates
   minimumDate?: Date;
   pickerDoneLabel?: string;        // pass t('common:buttons.done')
-  pickerCancelLabel?: string;      // pass t('common:buttons.cancel')
+  pickerCancelLabel?: string; 
+  labelAccessory?: React.ReactNode;     // pass t('common:buttons.cancel')
 }
 
 // ✅ CONSTANTS
@@ -126,6 +127,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   pickerCancelLabel = 'Cancel',
    multiline = false,
   inputHeight = 120,
+  labelAccessory,
   ...props
 }) => {
   // ✅ STATE
@@ -204,6 +206,36 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     fontWeight: '500' as const,
     letterSpacing: 0.3,
   }), [animatedValue, labelLeft, error]);
+
+   const labelContainerStyle = useMemo(() => ({
+    position: 'absolute' as const,
+    left: labelLeft,
+    maxWidth: '75%' as const,
+    top: animatedValue.interpolate({
+      inputRange: [0, 1],
+      outputRange: [17, -9],
+    }),
+    backgroundColor: COLORS.WHITE,
+    paddingHorizontal: 4,
+    zIndex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+  }), [animatedValue, labelLeft]);
+
+  const labelTextStyle = useMemo(() => ({
+    fontSize: animatedValue.interpolate({
+      inputRange: [0, 1],
+      outputRange: [15, 11],
+    }),
+    color: animatedValue.interpolate({
+      inputRange: [0, 1],
+      outputRange: [COLORS.GRAY_MED, error ? COLORS.ERROR : COLORS.PRIMARY],
+    }),
+    fontWeight: '500' as const,
+    letterSpacing: 0.3,
+  }), [animatedValue, error]);
+
+  
 
   // ══════════════════════════════════════════════════════════
   //  DATE / TIME PICKER CALLBACKS
@@ -666,10 +698,18 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
         </View>
       )}
 
-      <Animated.Text style={labelStyle} pointerEvents="none" numberOfLines={1} ellipsizeMode="tail" >
-        {label}
-        {required && <Animated.Text style={{ color: COLORS.ERROR }}> *</Animated.Text>}
-      </Animated.Text>
+      <Animated.View style={labelContainerStyle} pointerEvents="box-none">
+        <Animated.Text style={labelTextStyle} pointerEvents="none" numberOfLines={1} ellipsizeMode="tail">
+          {label}
+          {required && <Animated.Text style={{ color: COLORS.ERROR }}> *</Animated.Text>}
+        </Animated.Text>
+        {labelAccessory && (
+          <View style={{ marginLeft: 6 }}>
+            {labelAccessory}
+          </View>
+        )}
+      </Animated.View>
+
 
       <TextInput
         ref={inputRef}

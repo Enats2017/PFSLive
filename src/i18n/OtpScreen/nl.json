@@ -46,6 +46,12 @@
     "successTitle": "Apparaat gewijzigd",
     "successMessage": "Uw account is naar deze telefoon verplaatst. Uw andere apparaat is afgemeld."
   },
+  "emailChange": {
+    "title": "Bevestig uw nieuwe e-mail",
+    "subtitle": "We hebben een 6-cijferige code gestuurd naar",
+    "successTitle": "E-mail gewijzigd",
+    "successMessage": "Uw e-mail is bijgewerkt. Uw andere apparaten blijven ingelogd."
+  },
   "notArrived": {
     "title": "Niets ontvangen?",
     "spam": "Kijk in je spammap — de code komt van no-reply@liviolive.com.",

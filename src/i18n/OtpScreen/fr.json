@@ -46,6 +46,12 @@
     "successTitle": "Appareil modifié",
     "successMessage": "Votre compte a été transféré vers ce téléphone. Votre autre appareil a été déconnecté."
   },
+  "emailChange": {
+    "title": "Confirmez votre nouvel e-mail",
+    "subtitle": "Nous avons envoyé un code à 6 chiffres à",
+    "successTitle": "E-mail modifié",
+    "successMessage": "Votre e-mail a été mis à jour. Vos autres appareils restent connectés."
+  },
   "notArrived": {
     "title": "Rien reçu ?",
     "spam": "Vérifiez vos spams — le code est envoyé depuis no-reply@liviolive.com.",

@@ -41,6 +41,7 @@ const EditProfileScreen = () => {
     const [profileLoading, setProfileLoading] = useState(true)
     const [profileError, setProfileError] = useState('')
     const [profile, setProfile] = useState<Awaited<ReturnType<typeof fetchProfileApi>> | null>(null)
+    const [showEmailTooltip, setShowEmailTooltip] = useState(false)
 
     // ✅ Language options — id matches API expectation
     const LANGUAGE_OPTIONS = [
@@ -185,23 +186,32 @@ const EditProfileScreen = () => {
 
     const { changeLanguage } = useLanguageStore();
 
-    const handleSave = useCallback(async () => {
-        const ok = await submit()
-        if (ok) {
-            toastSuccess(t('profile:messages.success_profile_updated'))
+      const handleSave = useCallback(async () => {
+        const result = await submit()
+        if (!result.ok) return
 
-            const langCode = getLanguageCodeFromId(form.language_id)
-            if (langCode) {
-                await saveLanguage(langCode)
-                await changeLanguage(langCode, { screenName: ANALYTICS_SCREENS.EDIT_PROFILE, userInitiated: true })
-            }
-
-            const customer_app_id = await tokenService.getCustomerId()
-            navigation.navigate('OwnProfile', {
-                customer_app_id: customer_app_id || 0,
-                fromEdit: true,
-            })
+        const langCode = getLanguageCodeFromId(form.language_id)
+        if (langCode) {
+            await saveLanguage(langCode)
+            await changeLanguage(langCode, { screenName: ANALYTICS_SCREENS.EDIT_PROFILE, userInitiated: true })
         }
+
+        if (result.isEmailChange && result.emailChangeToken && result.pendingEmail) {
+            navigation.navigate('OTPVerificationScreen', {
+                purpose: 'email_change',
+                verification_token: result.emailChangeToken,
+                email: result.pendingEmail,
+            })
+            return
+        }
+
+        toastSuccess(t('profile:messages.success_profile_updated'))
+
+        const customer_app_id = await tokenService.getCustomerId()
+        navigation.navigate('OwnProfile', {
+            customer_app_id: customer_app_id || 0,
+            fromEdit: true,
+        })
     }, [submit, navigation, t, form.language_id, changeLanguage])
 
     const avatarUri: string | null = picture
@@ -312,17 +322,34 @@ const EditProfileScreen = () => {
                       </View>
                     </View>
 
-                    <FloatingLabelInput
-                        label={t('profile:labels.email')}
-                        value={form.email}
-                        onChangeText={() => {}}
-                        iconName="mail-outline"
-                        editable={false}
-                        error={false}
-                    />
-                    <Text style={profileStyles.readOnlyHint}>
-                        {t('profile:messages.email_readonly')}
-                    </Text>
+                   <View style={profileStyles.emailFieldWrapper}>
+                        <FloatingLabelInput
+                            label={t('profile:labels.email')}
+                            value={form.email}
+                            onChangeText={(value) => setField('email', value)}
+                            iconName="mail-outline"
+                            editable={!loading}
+                            error={!!errors.email}
+                            errorMessage={errors.email}
+                            labelAccessory={
+                                <TouchableOpacity
+                                    onPress={() => setShowEmailTooltip((visible) => !visible)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t('profile:messages.email_change_tooltip')}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <Ionicons name="information-circle-outline" size={14} color={profileStyles.emailInfoIcon.color} />
+                                </TouchableOpacity>
+                            }
+                        />
+                        {showEmailTooltip && (
+                            <View style={profileStyles.emailTooltip}>
+                                <Text style={profileStyles.emailTooltipText}>
+                                    {t('profile:messages.email_change_tooltip')}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
 
                     <View style={profileStyles.fieldRow}>
                       <View style={profileStyles.fieldHalf}>

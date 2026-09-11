@@ -78,6 +78,7 @@
   },
   "messages": {
     "email_readonly": "E-mail kan hier niet worden gewijzigd.",
+    "email_change_tooltip": "Het wijzigen van uw e-mailadres vereist OTP-verificatie die wordt verzonden naar het nieuwe e-mailadres.",
     "verify_email_title": "Verifieer uw e-mail",
     "verify_email_message": "Een verificatiecode is verzonden naar uw nieuwe e-mailadres.",
     "saved_title": "Opgeslagen",

@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { spacing, palette, fonts, shadows, space, withAlpha } from "./common.styles";
+import { spacing, palette, fonts, shadows, space, withAlpha, colors } from "./common.styles";
 
 export const profileStyles = StyleSheet.create({
   textsection: {
@@ -234,4 +234,32 @@ export const profileStyles = StyleSheet.create({
         fontSize: 13, 
     color: palette.lime, 
     },
+
+     emailFieldWrapper: {
+    marginBottom: spacing.sm,
+  },
+  emailInfoRow: {
+    alignItems: "flex-start",
+    marginTop: -spacing.xs,
+  },
+  emailInfoButton: {
+    padding: 2,
+  },
+  emailInfoIcon: {
+    color: colors.gray400,
+  },
+  emailTooltip: {
+    alignSelf: "flex-start",
+    maxWidth: "90%",
+    marginTop: -spacing.xs,
+    marginLeft: 28,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.gray900,
+    borderRadius: 6,
+  },
+  emailTooltipText: {
+    fontSize: 12,
+    color: colors.white,
+  },
 });

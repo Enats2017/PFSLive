@@ -594,7 +594,9 @@ export const analyticsService = {
       | "reset_completed"
       | "device_change_requested" // transfer OTP sent to the account email
       | "device_change_failed"    // refused: cooldown, device taken, throttle
-      | "device_change_verified", // account moved, old device signed out
+      | "device_change_verified"
+      | "email_change_verified",  // email changed, existing session remains valid
+      // account moved, old device signed out
     reason?: string,
   ) {
     await logEvent(analytics, "auth_step", {
