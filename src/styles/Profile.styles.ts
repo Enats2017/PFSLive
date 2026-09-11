@@ -172,6 +172,33 @@ export const profileStyles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginLeft: 4,
   },
+  emailFieldWrapper: {
+    marginBottom: spacing.sm,
+  },
+  emailInfoRow: {
+    alignItems: "flex-start",
+    marginTop: -spacing.xs,
+  },
+  emailInfoButton: {
+    padding: 2,
+  },
+  emailInfoIcon: {
+    color: colors.gray400,
+  },
+  emailTooltip: {
+    alignSelf: "flex-start",
+    maxWidth: "90%",
+    marginTop: -spacing.xs,
+    marginLeft: 28,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.gray900,
+    borderRadius: 6,
+  },
+  emailTooltipText: {
+    fontSize: 12,
+    color: colors.white,
+  },
   saveBtnDisabled: { 
     opacity: 0.6 
   },

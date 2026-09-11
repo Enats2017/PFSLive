@@ -11,7 +11,13 @@
     "title": "Vérification Réussie",
     "message": "Votre e-mail a été vérifié avec succès!"
   },
-  "errors": {
+  "emailChange": {
+    "title": "Confirmez votre nouvelle adresse e-mail",
+    "subtitle": "Entrez le code envoyé à",
+    "successTitle": "Adresse e-mail mise à jour",
+    "successMessage": "Votre adresse e-mail a été modifiée avec succès."
+  },
+    "errors": {
     "incomplete": "Veuillez entrer le code complet à 6 chiffres",
     "invalidTitle": "Code Invalide",
     "invalid": "Le code que vous avez entré est incorrect. Veuillez réessayer.",
@@ -38,7 +44,9 @@
     "maxResendsTitle": "Plus de codes",
     "maxResends": "Vous avez demandé trop de codes. Veuillez recommencer depuis l'écran de connexion.",
     "accountDisabledTitle": "Compte indisponible",
-    "accountDisabled": "Ce compte n'est pas actif. Veuillez contacter le support."
+    "accountDisabled": "Ce compte n'est pas actif. Veuillez contacter le support.",
+    "emailTakenTitle": "E-mail déjà utilisé",
+    "emailTaken": "Cette adresse e-mail est déjà liée à un autre compte."
   },
   "deviceChange": {
     "title": "Confirmez votre nouveau téléphone",

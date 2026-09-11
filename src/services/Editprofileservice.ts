@@ -9,6 +9,7 @@ import { Profile } from './profileServices';
 export interface EditProfilePayload {
     firstname?: string;
     lastname?: string;
+    email?: string;
     city?: string;
     country_id?: number;
     dob?: string;
@@ -23,6 +24,7 @@ export interface EditProfileResponse {
     message: 'profile_updated' | 'profile_updated_verify_email';
     profile: Profile;
     verification_token?: string;
+    email_change_token?: string;
 }
 
 export type FieldError =
@@ -99,19 +101,21 @@ export const editProfileApi = async (
         'Content-Type': 'multipart/form-data',
     };
 
-    const response = await apiClient.post<EditProfileResponse>(
+    const response = await apiClient.postRaw<EditProfileResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.upadte_profile),
         formData,
         { headers: multipartHeaders }
     );
 
-    if (!response.success) {
+    const responseData = response.data as any;
+
+    if (!responseData.success) {
         // Validation errors with field list
-        if (response.error === 'validation_failed' && (response as any).fields) {
-            throw new ValidationError((response as any).fields);
+        if (responseData.error === 'validation_failed' && Array.isArray(responseData.fields)) {
+            throw new ValidationError(responseData.fields);
         }
-        throw new Error(response.error || 'edit_profile_failed');
+        throw new Error(responseData.error || 'edit_profile_failed');
     }
 
-    return response.data;
+    return responseData.data;
 };

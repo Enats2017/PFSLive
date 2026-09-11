@@ -32,7 +32,7 @@ export type RootStackParamList = {
   OTPVerificationScreen: {
     email: string;
     verification_token: string;
-    purpose:'registration' | 'forgot_password' | 'device_change';
+    purpose:'registration' | 'forgot_password' | 'device_change'| 'email_change';
   };
   RaceResultScreen: {
     product_app_id: number;

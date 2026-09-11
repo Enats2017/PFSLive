@@ -11,6 +11,13 @@
     "title": "Verification Successful",
     "message": "Your email has been verified successfully!"
   },
+
+   "emailChange": {
+    "title": "Confirm your new email",
+    "subtitle": "Enter the code sent to",
+    "successTitle": "Email updated",
+    "successMessage": "Your email address has been changed successfully."
+  },
   "errors": {
     "incomplete": "Please enter the complete 6-digit code",
     "invalidTitle": "Invalid Code",
@@ -38,7 +45,9 @@
     "maxResendsTitle": "No more codes",
     "maxResends": "You've requested too many codes. Please start again from the login screen.",
     "accountDisabledTitle": "Account unavailable",
-    "accountDisabled": "This account is not active. Please contact support."
+    "accountDisabled": "This account is not active. Please contact support.",
+    "emailTakenTitle": "Email already in use",
+    "emailTaken": "This email address is already linked to another account."
   },
   "deviceChange": {
     "title": "Confirm your new phone",

@@ -11,6 +11,12 @@
     "title": "Verificatie Gelukt",
     "message": "Uw e-mail is succesvol geverifieerd!"
   },
+  "emailChange": {
+    "title": "Bevestig uw nieuwe e-mail",
+    "subtitle": "Voer de code in die is verzonden naar",
+    "successTitle": "E-mail bijgewerkt",
+    "successMessage": "Uw e-mailadres is succesvol gewijzigd."
+  },
   "errors": {
     "incomplete": "Voer de volledige 6-cijferige code in",
     "invalidTitle": "Ongeldige Code",
@@ -38,7 +44,9 @@
     "maxResendsTitle": "Geen codes meer",
     "maxResends": "U heeft te veel codes aangevraagd. Begin opnieuw vanaf het inlogscherm.",
     "accountDisabledTitle": "Account niet beschikbaar",
-    "accountDisabled": "Dit account is niet actief. Neem contact op met support."
+    "accountDisabled": "Dit account is niet actief. Neem contact op met support.",
+    "emailTakenTitle": "E-mail al in gebruik",
+    "emailTaken": "Dit e-mailadres is al gekoppeld aan een ander account."
   },
   "deviceChange": {
     "title": "Bevestig uw nieuwe telefoon",

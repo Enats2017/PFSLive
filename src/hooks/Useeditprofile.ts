@@ -35,6 +35,7 @@ const fieldErrorMap: Partial<Record<FieldError, keyof EditProfileForm>> = {
     dob_invalid_format: 'dob',
     dob_underage: 'dob',
     dob_invalid: 'dob',
+    email_already_taken: 'email',
     gender_invalid: 'gender',
     country_invalid: 'countryName',
     country_not_found: 'countryName',
@@ -65,6 +66,8 @@ export const useEditProfile = (initialProfile: Profile | null) => {
     const [loading, setLoading] = useState(false)
     const [success, setSuccess] = useState(false)
     const [emailChanged, setEmailChanged] = useState(false)
+    const [emailChangeToken, setEmailChangeToken] = useState<string | null>(null)   // NEW
+    const [pendingEmail, setPendingEmail] = useState<string | null>(null) 
 
     const [picture, setPicture] = useState<{
         uri: string
@@ -124,6 +127,12 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         if (form.city.trim().length < 2)
             newErrors.city = t('profile:validation.city_invalid')
 
+        const trimmedEmail = form.email.trim()
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+            newErrors.email = t('profile:validation.email_invalid')
+        }
+
         if (form.dob) {
             const dobDate = new Date(form.dob)
 
@@ -149,8 +158,13 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         return Object.keys(newErrors).length === 0
     }
 
-    const submit = useCallback(async (): Promise<boolean> => {
-        if (!validate()) return false
+    const submit = useCallback(async (): Promise<{
+        ok: boolean
+        isEmailChange: boolean
+        emailChangeToken: string | null
+        pendingEmail: string | null
+    }> => {
+        if (!validate()) return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
 
         setLoading(true)
         setSuccess(false)
@@ -158,6 +172,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         const payload: EditProfilePayload = {
             firstname: form.firstname.trim(),
             lastname: form.lastname.trim(),
+            email: form.email.trim().toLowerCase(),
             city: form.city.trim(),
             dob: form.dob.trim(),
             gender: form.gender || undefined,
@@ -172,7 +187,14 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             const result = await editProfileApi(payload, picture ?? undefined)
 
             setSuccess(true)
-            setEmailChanged(result.message === 'profile_updated_verify_email')
+             const isEmailChange = result.message === 'profile_updated_verify_email'
+            const emailChangeToken = isEmailChange ? result.email_change_token ?? null : null
+            const pendingEmail = isEmailChange ? result.profile.pending_email ?? null : null
+
+            setSuccess(true)
+            setEmailChanged(isEmailChange)
+            setEmailChangeToken(emailChangeToken)
+            setPendingEmail(pendingEmail)
 
             setForm(prev => ({
                 ...prev,
@@ -183,7 +205,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             setPicture(null)
             setRemovePicture(false)
 
-            return true
+            return { ok: true, isEmailChange, emailChangeToken, pendingEmail }
         } catch (err) {
             if (err instanceof ValidationError) {
                 const newErrors: FormErrors = {}
@@ -195,7 +217,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
                 })
                 setErrors(newErrors)
             }
-            return false
+            return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
         } finally {
             setLoading(false)
         }
@@ -224,5 +246,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         removePicture,
         setRemovePicture,
         submit,
+        emailChangeToken,   // NEW
+        pendingEmail, 
     }
 }

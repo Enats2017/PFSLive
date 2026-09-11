@@ -40,6 +40,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
   // ✅ Moving an account to a new phone reuses this whole screen; only the
   // copy and a couple of analytics calls differ.
   const isDeviceChange = purpose === 'device_change';
+  const isEmailChange = purpose === 'email_change';
 
   const { handleAfterAuth } = usePendingRegistration(navigation);
 
@@ -120,6 +121,21 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
           purpose,
           ...(isDeviceChange ? { device_id: await getDeviceId() } : {}),
         });
+
+        if (isEmailChange && data.success) {
+          // No token is issued for email_change — the existing session stays
+          // valid, so skip saveToken/saveCustomerId/login() entirely.
+          void analyticsService.logAuthStep('email_change_verified');
+
+          toastSuccess(t('otp:emailChange.successTitle'), t('otp:emailChange.successMessage'));
+
+          const customer_app_id = await tokenService.getCustomerId()
+            navigation.navigate('OwnProfile', {
+                customer_app_id: customer_app_id || 0,
+                fromEdit: true,
+            })
+              return;
+            }
 
         if (data.success && data.data?.token) {
           const customerId = data.data?.customer?.customer_app_id ?? 0;
@@ -205,6 +221,13 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
               t('otp:errors.deviceTaken'),
             );
             break;
+            case 'email_already_taken':
+            showErrorToast(t('otp:errors.emailTakenTitle'), t('otp:errors.emailTaken'));
+            break;
+          case 'email_change_invalid':
+          case 'email_change_conflict':
+            showErrorToast(t('otp:errors.genericErrorTitle'), t('otp:errors.genericError'));
+            break;
           case 'otp_max_resends':
             setError(t('otp:errors.maxResends'));
             showErrorToast(t('otp:errors.maxResendsTitle'), t('otp:errors.maxResends'));
@@ -230,7 +253,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
     // `purpose` / `isDeviceChange` must be listed: they now drive which request
     // is sent and which copy is shown, so a stale closure would submit the
     // wrong purpose.
-    [otp, verification_token, purpose, isDeviceChange, handleAfterAuth, login, showErrorToast, t, navigation]
+    [otp, verification_token, purpose, isDeviceChange,isEmailChange, handleAfterAuth, login, showErrorToast, t, navigation]
   );
 
   const handleResend = useCallback(async () => {

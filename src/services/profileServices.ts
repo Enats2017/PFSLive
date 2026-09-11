@@ -19,6 +19,8 @@ export interface Profile {
     profile_picture: string;
     language_id: number;
     email_verified: number;
+     pending_email?: string | null;
+    
 }
 
 interface ProfileResponseData {
