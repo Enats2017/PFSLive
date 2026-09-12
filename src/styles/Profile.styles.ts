@@ -165,39 +165,68 @@ export const profileStyles = StyleSheet.create({
     backgroundColor: colors.gray200, 
     marginTop: 6 
   },
-  readOnlyHint: {
-    fontSize: 12,
-    color: colors.gray400,
-    marginTop: -4,
-    marginBottom: spacing.sm,
-    marginLeft: 4,
-  },
   emailFieldWrapper: {
     marginBottom: spacing.sm,
   },
-  emailInfoRow: {
+  // ✅ Shown only while the typed email differs from the saved one — the
+  // consequence (an OTP round-trip) is only worth saying at the moment the
+  // user actually triggers it. The confirm modal on Save is the hard gate;
+  // this is the early warning.
+  emailChangeHintRow: {
+    flexDirection: "row",
     alignItems: "flex-start",
+    gap: spacing.xs,
     marginTop: -spacing.xs,
+    marginLeft: 4,
+    paddingRight: spacing.sm,
   },
-  emailInfoButton: {
-    padding: 2,
+  emailChangeHintIcon: {
+    color: colors.gray400,
+    marginTop: 1,
   },
-  emailInfoIcon: {
+  emailChangeHintText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.gray400,
   },
-  emailTooltip: {
-    alignSelf: "flex-start",
-    maxWidth: "90%",
+  // ✅ The save commits pending_email server-side *before* the OTP screen
+  // opens, so backing out of that screen leaves state the user cannot see.
+  // This banner is the only surface that state has.
+  pendingEmailBanner: {
     marginTop: -spacing.xs,
-    marginLeft: 28,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.gray900,
-    borderRadius: 6,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.warning + '15',
+    borderRadius: 8,
   },
-  emailTooltipText: {
-    fontSize: 12,
-    color: colors.white,
+  pendingEmailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  pendingEmailText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.gray900,
+  },
+  pendingEmailActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.lg,
+    marginTop: spacing.sm,
+    marginLeft: 28,
+  },
+  pendingEmailAction: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  pendingEmailActionMuted: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.gray400,
   },
   saveBtnDisabled: { 
     opacity: 0.6 

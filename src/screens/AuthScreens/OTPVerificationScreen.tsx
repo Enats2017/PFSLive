@@ -330,10 +330,18 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
               />
             </View>
             <Text style={optStyles.title}>
-              {isDeviceChange ? t('otp:deviceChange.title') : t('otp:title')}
+              {isDeviceChange
+                ? t('otp:deviceChange.title')
+                : isEmailChange
+                  ? t('otp:emailChange.title')
+                  : t('otp:title')}
             </Text>
             <Text style={optStyles.subtitle}>
-              {isDeviceChange ? t('otp:deviceChange.subtitle') : t('otp:subtitle')}
+              {isDeviceChange
+                ? t('otp:deviceChange.subtitle')
+                : isEmailChange
+                  ? t('otp:emailChange.subtitle')
+                  : t('otp:subtitle')}
             </Text>
             <Text style={optStyles.email}>{email ?? ''}</Text>
           </View>

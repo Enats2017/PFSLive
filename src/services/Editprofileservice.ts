@@ -17,6 +17,9 @@ export interface EditProfilePayload {
     language_id?: number;
     password?: string;
     remove_profile_picture?: '1' | '';
+    // ✅ Discards a staged-but-unconfirmed email. Nothing else clears it —
+    // verify_otp_api.php only releases those columns on a successful code entry.
+    cancel_email_change?: '1';
     // profile_picture is handled as FormData (multipart)
 }
 

@@ -27,6 +27,11 @@ export interface EditProfileForm {
 
 export type FormErrors = Partial<Record<keyof EditProfileForm, string>>
 
+// ✅ Exported so EditProfileScreen can decide whether to open the email-change
+// confirm modal without duplicating the pattern. validate() below is still the
+// authority — this is only used to avoid prompting on an obviously bad address.
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const fieldErrorMap: Partial<Record<FieldError, keyof EditProfileForm>> = {
     firstname_invalid: 'firstname',
     lastname_invalid: 'lastname',
@@ -115,26 +120,25 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         setErrors(prev => ({ ...prev, countryName: undefined }))
     }, [])
 
-    const validate = (): boolean => {
+    const validate = (candidate: EditProfileForm): boolean => {
         const newErrors: FormErrors = {}
 
-        if (form.firstname.trim().length < 2)
+        if (candidate.firstname.trim().length < 2)
             newErrors.firstname = t('profile:validation.firstname_invalid')
 
-        if (form.lastname.trim().length < 2)
+        if (candidate.lastname.trim().length < 2)
             newErrors.lastname = t('profile:validation.lastname_invalid')
 
-        if (form.city.trim().length < 2)
+        if (candidate.city.trim().length < 2)
             newErrors.city = t('profile:validation.city_invalid')
 
-        const trimmedEmail = form.email.trim()
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+        const trimmedEmail = candidate.email.trim()
+        if (!trimmedEmail || !EMAIL_REGEX.test(trimmedEmail)) {
             newErrors.email = t('profile:validation.email_invalid')
         }
 
-        if (form.dob) {
-            const dobDate = new Date(form.dob)
+        if (candidate.dob) {
+            const dobDate = new Date(candidate.dob)
 
             if (isNaN(dobDate.getTime())) {
                 newErrors.dob = t('profile:validation.dob_invalid_format')
@@ -148,50 +152,63 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             }
         }
 
-        if (form.password && form.password.length < 4)
+        if (candidate.password && candidate.password.length < 4)
             newErrors.password = t('profile:validation.password_too_short')
 
-        if (form.password && form.password !== form.confirmPassword)
+        if (candidate.password && candidate.password !== candidate.confirmPassword)
             newErrors.confirmPassword = t('profile:validation.passwords_do_not_match')
 
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
 
-    const submit = useCallback(async (): Promise<{
+    // ✅ `overrides` exists for the pending-email banner: "Verify now" re-submits
+    // the pending address to get a fresh token and "Cancel change" re-submits the
+    // confirmed one to clear it. Both need a different email than the one sitting
+    // in `form`, and setField-then-submit would read a stale closure.
+    const submit = useCallback(async (
+        overrides?: Partial<EditProfileForm>,
+        opts?: { cancelEmailChange?: boolean }
+    ): Promise<{
         ok: boolean
         isEmailChange: boolean
         emailChangeToken: string | null
         pendingEmail: string | null
     }> => {
-        if (!validate()) return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
+        const effective: EditProfileForm = { ...form, ...overrides }
+
+        if (!validate(effective)) return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
 
         setLoading(true)
         setSuccess(false)
 
         const payload: EditProfilePayload = {
-            firstname: form.firstname.trim(),
-            lastname: form.lastname.trim(),
-            email: form.email.trim().toLowerCase(),
-            city: form.city.trim(),
-            dob: form.dob.trim(),
-            gender: form.gender || undefined,
-            country_id: form.country_id ? Number(form.country_id) : undefined,
+            firstname: effective.firstname.trim(),
+            lastname: effective.lastname.trim(),
+            email: effective.email.trim().toLowerCase(),
+            city: effective.city.trim(),
+            dob: effective.dob.trim(),
+            gender: effective.gender || undefined,
+            country_id: effective.country_id ? Number(effective.country_id) : undefined,
             // ✅ Use language selected in form instead of getCurrentLanguageId()
-            language_id: form.language_id,
-            ...(form.password && { password: form.password }),
+            language_id: effective.language_id,
+            ...(effective.password && { password: effective.password }),
             ...(removePicture && { remove_profile_picture: '1' as '1' }),
+            ...(opts?.cancelEmailChange && { cancel_email_change: '1' as '1' }),
         }
 
         try {
             const result = await editProfileApi(payload, picture ?? undefined)
 
-            setSuccess(true)
-             const isEmailChange = result.message === 'profile_updated_verify_email'
+            const isEmailChange = result.message === 'profile_updated_verify_email'
             const emailChangeToken = isEmailChange ? result.email_change_token ?? null : null
             const pendingEmail = isEmailChange ? result.profile.pending_email ?? null : null
 
-            setSuccess(true)
+            // ✅ The inline banner means "your edits were saved". Cancelling a
+            // pending email change is its own action with its own toast, so it
+            // must not raise the banner too. `success` was already reset to false
+            // at the top of submit(), so this settles it without a flash.
+            setSuccess(!opts?.cancelEmailChange)
             setEmailChanged(isEmailChange)
             setEmailChangeToken(emailChangeToken)
             setPendingEmail(pendingEmail)
