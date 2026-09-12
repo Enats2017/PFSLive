@@ -102,5 +102,23 @@
     "english": "Engels",
     "dutch": "Nederlands",
     "french": "Frans"
+  },
+   "emailChange": {
+    "title": "E-mailadres wijzigen?",
+    "body": "We sturen een 6-cijferige code naar {{email}}.",
+    "note": "Je huidige e-mailadres blijft werken totdat je de code invoert.",
+    "confirm": "Code versturen",
+    "cancel": "Annuleren",
+    "hint": "Je moet deze wijziging bevestigen met een code die naar {{email}} wordt gestuurd.",
+    "code_sent_toast_title": "Code verstuurd",
+    "code_sent_toast_message": "Voer de code in die we naar {{email}} hebben gestuurd om je nieuwe adres te bevestigen.",
+    "pending_banner": "Wacht op bevestiging: {{email}}",
+    "pending_verify": "Nu verifiëren",
+    "pending_cancel": "Wijziging annuleren",
+    "pending_cancelled_title": "Wijziging geannuleerd",
+    "pending_cancelled_message": "Je e-mailadres blijft ongewijzigd.",
+    "resend_failed_title": "Kan geen nieuwe code versturen",
+    "resend_failed_message": "Probeer je e-mailadres opnieuw te wijzigen."
   }
+  
 }

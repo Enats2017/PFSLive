@@ -102,5 +102,22 @@
     "english": "Anglais",
     "dutch": "Néerlandais",
     "french": "Français"
+  },
+  "emailChange": {
+    "title": "Changer votre e-mail ?",
+    "body": "Nous enverrons un code à 6 chiffres à {{email}}.",
+    "note": "Votre e-mail actuel continue de fonctionner jusqu'à ce que vous saisissiez le code.",
+    "confirm": "Envoyer le code",
+    "cancel": "Annuler",
+    "hint": "Vous devrez confirmer ce changement avec un code envoyé à {{email}}.",
+    "code_sent_toast_title": "Code envoyé",
+    "code_sent_toast_message": "Entrez le code que nous avons envoyé à {{email}} pour confirmer votre nouvelle adresse.",
+    "pending_banner": "En attente de confirmation : {{email}}",
+    "pending_verify": "Vérifier maintenant",
+    "pending_cancel": "Annuler le changement",
+    "pending_cancelled_title": "Changement annulé",
+    "pending_cancelled_message": "Votre adresse e-mail reste inchangée.",
+    "resend_failed_title": "Impossible d'envoyer un nouveau code",
+    "resend_failed_message": "Veuillez réessayer de changer votre e-mail."
   }
 }

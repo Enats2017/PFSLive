@@ -87,9 +87,7 @@ export const otpService = {
       if (API_CONFIG.DEBUG) {
         console.log('📤 Resend OTP request');
       }
-      console.log("111",payload);
-      
-
+    
       const response = await axios.post<OtpResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.RESEND_OTP),
         payload,

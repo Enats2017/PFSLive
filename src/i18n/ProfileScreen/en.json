@@ -102,5 +102,22 @@
     "english": "English",
     "dutch": "Dutch",
     "french": "French"
+  },
+   "emailChange": {
+    "title": "Change your email?",
+    "body": "We'll send a 6-digit code to {{email}}.",
+    "note": "Your current email keeps working until you enter the code.",
+    "confirm": "Send code",
+    "cancel": "Cancel",
+    "hint": "You'll need to confirm this change with a code sent to {{email}}.",
+    "code_sent_toast_title": "Code sent",
+    "code_sent_toast_message": "Enter the code we sent to {{email}} to confirm your new address.",
+    "pending_banner": "Waiting for confirmation: {{email}}",
+    "pending_verify": "Verify now",
+    "pending_cancel": "Cancel change",
+    "pending_cancelled_title": "Change cancelled",
+    "pending_cancelled_message": "Your email address stays unchanged.",
+    "resend_failed_title": "Couldn't send a new code",
+    "resend_failed_message": "Please try changing your email again."
   }
 }
