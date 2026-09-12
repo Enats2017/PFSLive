@@ -289,6 +289,11 @@ export function useFollowManager(
             // tagging it would overstate how much a given race drove permanent
             // follows. Matches lib/analytics.ts on the web.
             void analyticsService.logFollowToggle('follow', 'athlete', followParams());
+            // Was missing here while the unfollow branch below had it, so a
+            // screen wired to this callback (UserFavouriteList) reloaded after
+            // an unfollow but not after a follow. The bib branch calls it on
+            // both paths; this makes the customer branch match.
+            onFollowSuccess?.();
             toastSuccess(
               t("follower:success.followTitle"),
               t("follower:success.followMessage"),

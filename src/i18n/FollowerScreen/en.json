@@ -2,7 +2,7 @@
     "upcomingrace":"FIND AN UPCOMING RACE",
     "pastrace":"FIND A PAST RACE",
     "athlete":"FIND AN ATHLETE",
-    "favourite":"FAVOURITE ATHLETES ",
+    "favourite":"FAVOURITE ATHLETES",
     "followers":"My Followers List",
     "nextevetn": "NEXT EVENTS",
     "viewAll": "View all",
@@ -18,7 +18,7 @@
         "upcoming":"SHOW ALL UPCOMING EVENTS",
         "past":"SHOW ALL RESULTS",
          "athlete":"Search Athlete",
-        "favourite":"LIST OF  FAVOURITE",
+        "favourite":"LIST OF FAVOURITES",
         "remove": "REMOVE",
         "followback": "FOLLOW BACK"
 
