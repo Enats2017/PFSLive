@@ -1,7 +1,6 @@
 {
   "button": {
-    "result": "RÉSULTAT",
-    "route": "ITINÉRAIRE"
+    "result": "RÉSULTAT"
   },
   "noResults": "Aucun événement terminé pour le moment",
   "error": {

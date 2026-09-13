@@ -27,7 +27,11 @@ const { StorageAccessFramework } = FileSystem;
  *   • gpx_url — whether a route file actually exists. The API sends null when
  *     gpx_path is empty, so availability is known from the payload; without
  *     this the button renders for distances whose only possible outcome is the
- *     "no file" alert.
+ *     "no file" alert. It is also nulled when the organiser has switched the
+ *     download off, so an installed build honours that with no release.
+ *   • showGpx — the organiser's own switch (oc_product_app.show_gpx, set per
+ *     event in eventpanel). Redundant with the line above by design; stating
+ *     it here keeps the rule readable. Undefined means on.
  *
  * NOT gated on rr_url. That is the Race Result *results* feed, a different
  * fact from whether a route file exists. The old gate assumed "no rr_url =>
@@ -41,10 +45,12 @@ const { StorageAccessFramework } = FileSystem;
 export const canShowGpxButton = (
   item: Distance,
   sourceTab?: 'past' | 'live' | 'upcoming',
+  showGpx: boolean = true,
 ): boolean =>
   sourceTab !== 'past' &&
   item.countdown.status !== 'finished' &&
-  !!item.gpx_url;
+  !!item.gpx_url &&
+  showGpx;
 
 const useGpxDownload = () => {
   const { t } = useTranslation(['details']);
