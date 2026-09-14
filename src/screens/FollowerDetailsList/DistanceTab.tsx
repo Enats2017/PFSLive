@@ -46,6 +46,9 @@ const DistanceTab = ({
   const { t } = useTranslation(['result', 'details', 'common']);
   const [results, setResults] = useState<Distance[]>([]);
   const [showResults, setShowResults] = useState(false);
+  // Organiser's per-event Download GPX switch. Undefined on an older payload
+  // means on — the column defaults to 1 for every existing event.
+  const [showGpx, setShowGpx] = useState<boolean>(true);
   const [showResultsStats, setShowResultsStats] = useState(false);
   const [loading, setLoading] = useState(true);
   const [imageLoading, setImageLoading] = useState(true);
@@ -63,6 +66,7 @@ const DistanceTab = ({
       clearError();
       const result = await eventDetailService.getEventDetails(product_app_id);
       setResults(result.distances);
+      setShowGpx(result.event?.show_gpx !== 0);
       // Results button/tab only when RR results are published (status 1) AND a URL exists.
       const canShowResults =
           result.event?.show_results === 1;
@@ -242,7 +246,7 @@ const DistanceTab = ({
                 onPress={async () => {
                   analyticsService.logInteraction(
                     ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,      // was: EVENT_DETAILS
-                    ANALYTICS_BUTTONS.ROUTE,                       // was: MAP
+                    ANALYTICS_BUTTONS.ROUTE,                       // shared 'route' element
                     'tap',
                     { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
                   );
@@ -260,14 +264,14 @@ const DistanceTab = ({
                 activeOpacity={0.8}
               >
                 <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
-                  {t('button.route')}
+                  {t('details:map')}
                 </Text>
               </TouchableOpacity>
             )}
 
             {/* Visibility rule lives in useGpxDownload.canShowGpxButton so this
                 tab and the participant one cannot drift apart. */}
-            {canShowGpxButton(item, sourceTab) && (
+            {canShowGpxButton(item, sourceTab, showGpx) && (
               <TouchableOpacity
                 style={detailsStyles.routeButton}
                 onPress={() => handleDownloadGpx(item)}
@@ -282,7 +286,7 @@ const DistanceTab = ({
         </View>
       </View>
     );
-  }, [navigation, product_app_id, event_name, event_image, sourceTab, t, showResults, showResultsStats, handleDownloadGpx]);
+  }, [navigation, product_app_id, event_name, event_image, sourceTab, t, showResults, showResultsStats, handleDownloadGpx, showGpx]);
 
   if (loading) {
     return (

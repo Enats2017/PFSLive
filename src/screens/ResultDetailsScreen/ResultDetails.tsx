@@ -193,7 +193,8 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                         onMapPress={() => {
                             void analyticsService.logInteraction(
                                 ANALYTICS_SCREENS.RESULT_DETAILS,
-                                ANALYTICS_BUTTONS.MAP,
+                                // Shared 'route' element — see EventDetails/DistanceTab.
+                                ANALYTICS_BUTTONS.ROUTE,
                                 'tap',
                                 { [ANALYTICS_PARAMS.EVENT_NAME]: data?.event?.race_name ?? '' },
                             );
