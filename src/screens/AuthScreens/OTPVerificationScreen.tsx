@@ -325,7 +325,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
               <Ionicons
                 name={isDeviceChange ? 'phone-portrait-outline' : 'mail-outline'}
                 size={40}
-                color="{palette.navy}"
+                color={palette.navy}
               />
             </View>
             <Text style={optStyles.title}>

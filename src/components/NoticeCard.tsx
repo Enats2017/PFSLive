@@ -16,12 +16,17 @@ export const NoticeCard: React.FC<{
   title: string;
   message: string;
   icon?: keyof typeof Ionicons.glyphMap;
-}> = ({ title, message, icon = 'warning-outline' }) => (
+  /** Optional actions rendered under the message — e.g. a "Verify now" /
+   *  "Cancel change" row. Kept out of the component so the notice stays a
+   *  presentational card and the screen owns the handlers. */
+  children?: React.ReactNode;
+}> = ({ title, message, icon = 'warning-outline', children }) => (
   <View style={styles.card} accessibilityRole="alert">
     <Ionicons name={icon} size={20} color={palette.warning} style={styles.icon} />
     <View style={styles.body}>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
+      {children}
     </View>
   </View>
 );

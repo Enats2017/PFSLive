@@ -16,7 +16,8 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { useTranslation } from 'react-i18next'
 import FloatingLabelInput from '../../components/FloatingLabelInput'
 import CountrySelector from '../../components/CountrySelector'
-import { commonStyles, palette, colors } from '../../styles/common.styles'
+import { commonStyles, palette } from '../../styles/common.styles'
+import NoticeCard from '../../components/NoticeCard'
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens'
 import { EMAIL_REGEX, useEditProfile } from '../../hooks/Useeditprofile'
 import { fetchProfileApi } from '../../services/profileServices'
@@ -459,39 +460,38 @@ const EditProfileScreen = () => {
                         nothing in the app ever says so. Hidden mid-edit; the hint
                         above is the relevant message then. */}
                     {!!serverPendingEmail && !emailDirty && (
-                        <View style={profileStyles.pendingEmailBanner}>
-                            <View style={profileStyles.pendingEmailRow}>
-                                <Ionicons name="time-outline" size={20} color={colors.warning} />
-                                <Text style={profileStyles.pendingEmailText}>
-                                    {t('profile:emailChange.pending_banner', { email: serverPendingEmail })}
-                                </Text>
-                            </View>
+                        <View style={profileStyles.pendingEmailWrapper}>
+                            <NoticeCard
+                                icon="time-outline"
+                                title={t('profile:emailChange.pending_title')}
+                                message={t('profile:emailChange.pending_message', { email: serverPendingEmail })}
+                            >
+                                <View style={profileStyles.pendingEmailActions}>
+                                    <TouchableOpacity
+                                        onPress={handleVerifyPending}
+                                        disabled={pendingBusy}
+                                        accessibilityRole="button"
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                        <Text style={profileStyles.pendingEmailAction}>
+                                            {t('profile:emailChange.pending_verify')}
+                                        </Text>
+                                    </TouchableOpacity>
 
-                            <View style={profileStyles.pendingEmailActions}>
-                                <TouchableOpacity
-                                    onPress={handleVerifyPending}
-                                    disabled={pendingBusy}
-                                    accessibilityRole="button"
-                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                >
-                                    <Text style={profileStyles.pendingEmailAction}>
-                                        {t('profile:emailChange.pending_verify')}
-                                    </Text>
-                                </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={handleCancelPending}
+                                        disabled={pendingBusy}
+                                        accessibilityRole="button"
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                        <Text style={profileStyles.pendingEmailActionMuted}>
+                                            {t('profile:emailChange.pending_cancel')}
+                                        </Text>
+                                    </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    onPress={handleCancelPending}
-                                    disabled={pendingBusy}
-                                    accessibilityRole="button"
-                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                >
-                                    <Text style={profileStyles.pendingEmailActionMuted}>
-                                        {t('profile:emailChange.pending_cancel')}
-                                    </Text>
-                                </TouchableOpacity>
-
-                                {pendingBusy && <ActivityIndicator size="small" color={colors.primary} />}
-                            </View>
+                                    {pendingBusy && <ActivityIndicator size="small" color={palette.navy} />}
+                                </View>
+                            </NoticeCard>
                         </View>
                     )}
 

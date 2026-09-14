@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { spacing, palette, fonts, shadows, space, withAlpha, colors } from "./common.styles";
+import { spacing, palette, fonts, shadows, space, withAlpha } from "./common.styles";
 
 export const profileStyles = StyleSheet.create({
   textsection: {
@@ -251,51 +251,38 @@ export const profileStyles = StyleSheet.create({
     paddingRight: spacing.sm,
   },
   emailChangeHintIcon: {
-    color: colors.gray400,
+    color: palette.textMuted,
     marginTop: 1,
   },
   emailChangeHintText: {
     flex: 1,
+    fontFamily: fonts.body,
     fontSize: 12,
     lineHeight: 17,
-    color: colors.gray400,
+    color: palette.textMuted,
   },
   // ✅ The save commits pending_email server-side *before* the OTP screen
   // opens, so backing out of that screen leaves state the user cannot see.
-  // This banner is the only surface that state has.
-  pendingEmailBanner: {
-    marginTop: -spacing.xs,
-    marginBottom: spacing.sm,
-    padding: spacing.md,
-    backgroundColor: colors.warning + '15',
-    borderRadius: 8,
-  },
-  pendingEmailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  pendingEmailText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.gray900,
+  // The banner itself is <NoticeCard> — the deck's amber notice — so only the
+  // action row below its message is styled here.
+  pendingEmailWrapper: {
+    marginTop: -space.xs,
+    marginBottom: space.sm,
   },
   pendingEmailActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.lg,
-    marginTop: spacing.sm,
-    marginLeft: 28,
+    gap: space.lg,
+    marginTop: space.sm,
   },
   pendingEmailAction: {
+    fontFamily: fonts.bodySemi,
     fontSize: 13,
-    fontWeight: "700",
-    color: colors.primary,
+    color: palette.navy,
   },
   pendingEmailActionMuted: {
+    fontFamily: fonts.bodyMedium,
     fontSize: 13,
-    fontWeight: "600",
-    color: colors.gray400,
+    color: palette.textMuted,
   },
 });
