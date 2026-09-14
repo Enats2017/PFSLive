@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, palette, fonts, shadows } from '../styles/common.styles';
+import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
 
 interface ErrorModalProps {
   visible: boolean;
@@ -47,7 +47,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
       <View style={styles.wrapper}>
         <View style={styles.card}>
           <View style={styles.iconWrapper}>
-            <Ionicons name="alert-circle" size={60} color={palette.danger} />
+            <Ionicons name="alert-circle" size={56} color={palette.danger} />
           </View>
 
           <Text style={styles.title}>
@@ -93,7 +93,7 @@ export default ErrorModal;
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
   },
   wrapper: {
     flex: 1,
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    ...shadows.card,
+    ...shadows.overlay,
   },
   iconWrapper: {
     width: 90,
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   message: {
     fontFamily: fonts.body,
         fontSize: 13,
-    color: palette.textMuted,
+    color: palette.textBody,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,

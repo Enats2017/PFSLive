@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, spacing, palette, fonts, space } from '../styles/common.styles';
+import { commonStyles, spacing, palette, fonts, space, shadows, withAlpha } from '../styles/common.styles';
 import { AthleteEvent } from '../services/athleteProfileService';
 
 interface Props {
@@ -62,7 +62,7 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
     if (!internalVisible) return null;
 
     return (
-        <Modal transparent visible={internalVisible} animationType="none" onRequestClose={onCancel}>
+        <Modal statusBarTranslucent transparent visible={internalVisible} animationType="none" onRequestClose={onCancel}>
             <View style={styles.overlay}>
                 <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onCancel} />
 
@@ -73,7 +73,7 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
                     ]}
                 >
                     <View style={styles.iconWrap}>
-                        <Ionicons name="trash-outline" size={30} color={palette.danger} />
+                        <Ionicons name="trash-outline" size={56} color={palette.danger} />
                     </View>
 
                     <Text style={commonStyles.title}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
@@ -113,29 +113,31 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        backgroundColor: withAlpha(palette.ink, 0.6),
         paddingHorizontal: spacing.lg,   // NEW — keeps the card off the screen edges
     },
     backdrop: { ...StyleSheet.absoluteFillObject },
     sheet: {
         width: '100%',
+        maxWidth: 400,
         backgroundColor: palette.surface,
         borderRadius: 16,    
                 // NEW — all corners rounded now that it's centered
-        paddingHorizontal: spacing.lg,
+        paddingHorizontal: 24,
         paddingTop: spacing.lg,
         paddingBottom: spacing.lg,
         alignItems: 'center',
+        ...shadows.overlay,
     },
     iconWrap: {
-        width: 60, height: 60, borderRadius: 30,
+        width: 90, height: 90, borderRadius: 45,
         backgroundColor: palette.dangerBg, alignItems: 'center', justifyContent: 'center',
         marginBottom: spacing.md,
     },
     title: { fontFamily: fonts.display,
         fontSize: 20, color: palette.ink, marginBottom: space.md, textAlign: 'center' },
     message: { fontFamily: fonts.body,
-        fontSize: 15, color: palette.textBody, textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
+        fontSize: 13, color: palette.textBody, textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
     actions: { flexDirection: 'row', width: '100%', gap: 12 },
     btn: { flex: 1, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
     cancelBtn: { backgroundColor: palette.fill },

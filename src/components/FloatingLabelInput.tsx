@@ -13,7 +13,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { palette, radii, fonts, shadows, space } from '../styles/common.styles';
+import { palette, radii, fonts, shadows, space, withAlpha } from '../styles/common.styles';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 // ✅ TYPES
@@ -810,7 +810,7 @@ const styles = StyleSheet.create({
   // ✅ iOS picker bottom-sheet
   pickerBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
     justifyContent: 'flex-end',
   },
   pickerSheet: {

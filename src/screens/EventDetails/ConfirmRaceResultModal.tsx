@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { RaceResultData } from '../../services/eventDetailService';
-import { commonStyles, palette, fonts, shadows, radii, space } from '../../styles/common.styles';
+import { commonStyles, palette, fonts, shadows, radii, space, withAlpha } from '../../styles/common.styles';
 import { Ionicons } from '@expo/vector-icons';
 
 interface ConfirmRaceResultModalProps {
@@ -82,7 +82,7 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
 
           {/* Icon */}
           <View style={styles.iconWrapper}>
-            <Ionicons name="flag" size={28} color={palette.navy} />
+            <Ionicons name="flag" size={56} color={palette.navy} />
           </View>
 
           {/* Title */}
@@ -185,7 +185,7 @@ const Row = ({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
   },
   wrapper: {
     flex: 1,
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     paddingTop: 36,
     paddingBottom: 72,
     maxHeight: '75%',
-    ...shadows.raised,
+    ...shadows.overlay,
   },
   closeBtn: {
     position: 'absolute',
@@ -222,10 +222,10 @@ const styles = StyleSheet.create({
   },
   iconWrapper: {
     alignSelf: 'center',
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: palette.warningBg,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: withAlpha(palette.navy, 0.08),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: space.md,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   },
   chip: {
     alignSelf: 'center',
-    backgroundColor: palette.warningBg,
+    backgroundColor: withAlpha(palette.navy, 0.08),
     borderWidth: 1,
     borderColor: palette.navy,
     borderRadius: radii.pill,

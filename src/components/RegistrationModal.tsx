@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, spacing, palette, fonts, shadows, space } from '../styles/common.styles';
+import { commonStyles, spacing, palette, fonts, shadows, space, withAlpha } from '../styles/common.styles';
 import { useNavigation } from '@react-navigation/native';
 
 type RegistrationStatus =
@@ -279,7 +279,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
   },
   wrapper: {
     flex: 1,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 400,
     backgroundColor: palette.surface,
     borderRadius: 16,
     overflow: 'hidden',
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 32,
     alignItems: 'center',
-    ...shadows.raised,
+    ...shadows.overlay,
   },
   // The deck's modal action is the lime button with ink text.
   modalPrimary: {
@@ -324,9 +324,9 @@ const styles = StyleSheet.create({
     color: palette.surface,
   },
   iconWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
         fontSize: 13,
     lineHeight: 22,
-    color: palette.textMuted,
+    color: palette.textBody,
     textAlign: 'center',
     paddingHorizontal: 4,
   },

@@ -45,7 +45,7 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
         <View style={styles.container}>
           {/* Icon */}
           <View style={styles.iconContainer}>
-            <Ionicons name="refresh" size={30} color={palette.navy} />
+            <Ionicons name="refresh" size={56} color={palette.navy} />
           </View>
 
           {/* Title from API */}
@@ -116,7 +116,7 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
@@ -128,12 +128,12 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    ...shadows.card,
+    ...shadows.overlay,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     backgroundColor: withAlpha(palette.navy, 0.13),
     justifyContent: 'center',
     alignItems: 'center',
@@ -144,16 +144,19 @@ const styles = StyleSheet.create({
         fontSize: 40,
   },
   title: {
-    fontFamily: fonts.bodySemi,
-        fontSize: 26,
-
-        color: palette.ink,
+    // fonts.display/20 like every other modal. This was bodySemi/26 — bodySemi
+    // is the screen-heading face (see OtpScreen h1) and read as a different
+    // typeface in a dialog, and 26 turned out to be shared with two other
+    // modals rather than deliberate, so it was drift, not emphasis.
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
   message: {
     fontFamily: fonts.body,
-    fontSize: 15,
+    fontSize: 13,
     color: palette.textBody,
     textAlign: 'center',
     lineHeight: 22,
@@ -189,7 +192,7 @@ const styles = StyleSheet.create({
   },
   button: {
     paddingVertical: spacing.lg,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -200,7 +203,7 @@ const styles = StyleSheet.create({
   updateButtonText: {
     color: palette.surface,
     fontFamily: fonts.bodySemi,
-        fontSize: 20,
+        fontSize: 15,
 
         letterSpacing: 0.5,
   },

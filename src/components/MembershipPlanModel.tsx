@@ -9,7 +9,7 @@ import {
     StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { palette, fonts, shadows } from '../styles/common.styles';
+import { palette, fonts, shadows, withAlpha } from '../styles/common.styles';
 import { useTranslation } from 'react-i18next';
 
 export type ModalActionType =  'disabled' | 'locked' | 'hidden';
@@ -70,7 +70,7 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
     const icon = ICON_BY_ACTION[actionType];
 
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+        <Modal statusBarTranslucent visible={visible} transparent animationType="fade" onRequestClose={onClose}>
             <TouchableWithoutFeedback onPress={onClose}>
                 <View style={styles.backdrop}>
                     <TouchableWithoutFeedback onPress={() => {}}>
@@ -85,7 +85,7 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
                             </TouchableOpacity>
 
                             <View style={[styles.iconWrapper, { backgroundColor: icon.bg }]}>
-                                <Ionicons name={icon.name} size={34} color={icon.color} />
+                                <Ionicons name={icon.name} size={56} color={icon.color} />
                             </View>
 
                             <Text style={styles.title}>{title}</Text>
@@ -116,7 +116,7 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
 const styles = StyleSheet.create({
     backdrop: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: withAlpha(palette.ink, 0.6),
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 24,
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     ...shadows.overlay,
 
         width: '100%',
-        maxWidth: 360,
+        maxWidth: 400,
         backgroundColor: palette.surface,
         borderRadius: 16,
         paddingTop: 28,
@@ -146,9 +146,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     iconWrapper: {
-        width: 68,
-        height: 68,
-        borderRadius: 34,
+        width: 90,
+        height: 90,
+        borderRadius: 45,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     description: {
         fontFamily: fonts.body,
         fontSize: 13,
-        color: palette.textMuted,
+        color: palette.textBody,
         textAlign: 'center',
         lineHeight: 20,
         marginBottom: 24,

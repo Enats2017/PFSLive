@@ -9,7 +9,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { commonStyles, palette, fonts, shadows } from '../styles/common.styles';
+import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
+import { dialogTone } from './ui';
 import { useTranslation } from 'react-i18next';
 
 interface SuccessCelebrationModalProps {
@@ -127,8 +128,8 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
           </TouchableOpacity>
 
           {/* Success Icon */}
-          <View style={styles.iconWrapper}>
-            <Ionicons name="checkmark-circle" size={80} color={palette.navy} />
+          <View style={[styles.iconWrapper, { backgroundColor: dialogTone.success.ring }]}>
+            <Ionicons name="checkmark-circle" size={56} color={dialogTone.success.icon} />
           </View>
 
           {/* Title */}
@@ -156,7 +157,7 @@ export default SuccessCelebrationModal;
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
   },
   wrapper: {
     flex: 1,
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    ...shadows.raised,
+    ...shadows.overlay,
 
     backgroundColor: palette.surface,
     borderRadius: 16,
@@ -188,19 +189,24 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   iconWrapper: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
   },
   title: {
     fontFamily: fonts.display,
-        fontSize: 26,
+        fontSize: 20,
     color: palette.ink,
     textAlign: 'center',
     marginBottom: 12,
   },
   message: {
     fontFamily: fonts.body,
-        fontSize: 15,
-    color: palette.textMuted,
+        fontSize: 13,
+    color: palette.textBody,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 28,

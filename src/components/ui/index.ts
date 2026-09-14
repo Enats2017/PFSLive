@@ -10,3 +10,5 @@ export { ListRow, RankBadge } from './ListRow';
 export { SegmentedFilter } from './SegmentedFilter';
 export type { SegmentOption } from './SegmentedFilter';
 export { EmptyState } from './EmptyState';
+export { Dialog, dialogStyles, dialogTone } from './Dialog';
+export type { DialogTone } from './Dialog';

@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
-import { palette, fonts, shadows, radii, space } from '../styles/common.styles';
+import { palette, fonts, shadows, radii, space, withAlpha } from '../styles/common.styles';
 
 // ─── Types ───────────────────────────────────────────────────────
 export interface Country {
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
     justifyContent: 'flex-end',
   },
   modalContainer: {

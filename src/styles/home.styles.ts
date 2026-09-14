@@ -184,7 +184,7 @@ export const homeStyles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.display,
-    fontSize: 26,
+    fontSize: 20,
     lineHeight: 32,
     color: palette.ink,
   },
@@ -352,7 +352,7 @@ export const homeStyles = StyleSheet.create({
   // ✅ Notification popup — consistent with SuccessCelebrationModal & UndoConfirmModal
   notifBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: withAlpha(palette.ink, 0.6),
   },
   notifWrapper: {
     flex: 1,
@@ -368,12 +368,12 @@ export const homeStyles = StyleSheet.create({
     width: "100%",
     maxWidth: 400,
     alignItems: "center",
-    ...shadows.card,
+    ...shadows.overlay,
   },
   notifIconWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     backgroundColor: withAlpha(palette.navy, 0.08),
     justifyContent: "center",
     alignItems: "center",
@@ -390,7 +390,7 @@ export const homeStyles = StyleSheet.create({
   notifBody: {
     fontFamily: fonts.body,
     fontSize: 13,
-    color: palette.textMuted,
+    color: palette.textBody,
     textAlign: "center",
     lineHeight: 22,
     marginBottom: spacing.xxl,

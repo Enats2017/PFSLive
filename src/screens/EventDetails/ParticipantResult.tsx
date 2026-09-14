@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { commonStyles, spacing, space, palette, fonts } from '../../styles/common.styles';
+import { commonStyles, spacing, space, palette, fonts, shadows, withAlpha } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import NoticeCard from '../../components/NoticeCard';
@@ -531,7 +531,7 @@ const ParticipantResult = () => {
 const mailStyles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -542,6 +542,7 @@ const mailStyles = StyleSheet.create({
     padding: 32,
     alignItems: 'center',
     width: '100%',
+    ...shadows.overlay,
   },
   iconWrapper: {
     width: 72,

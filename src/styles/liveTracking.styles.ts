@@ -1,5 +1,5 @@
 import { StyleSheet, Dimensions } from 'react-native';
-import { spacing, typography, type, palette, radii, fonts, shadows, space } from './common.styles';
+import { spacing, typography, type, palette, radii, fonts, shadows, space, withAlpha } from './common.styles';
 
 const { width, height } = Dimensions.get('window');
 
@@ -80,7 +80,7 @@ export const liveTrackingStyles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: withAlpha(palette.ink, 0.6),
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1000,
@@ -352,7 +352,7 @@ export const liveTrackingStyles = StyleSheet.create({
     },
     dropdownModalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: withAlpha(palette.ink, 0.6),
         justifyContent: 'center',
         alignItems: 'center',
     },

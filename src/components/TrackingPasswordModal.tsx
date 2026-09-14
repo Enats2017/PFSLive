@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import FloatingLabelInput from './FloatingLabelInput';
-import { commonStyles, palette, fonts, space } from '../styles/common.styles';
+import { commonStyles, palette, fonts, space, shadows, withAlpha } from '../styles/common.styles';
 
 interface Props {
     visible: boolean;
@@ -107,7 +107,7 @@ export const TrackingPasswordModal: React.FC<Props> = ({
     };
 
     return (
-        <Modal
+        <Modal statusBarTranslucent
             transparent
             visible={visible}
             animationType="none"
@@ -192,8 +192,8 @@ export const TrackingPasswordModal: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
     overlay:      { flex: 1, justifyContent: 'flex-end' },
-    backdrop:     { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
-    sheet:        { backgroundColor: palette.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 24, paddingTop: 16 },
+    backdrop:     { ...StyleSheet.absoluteFillObject, backgroundColor: withAlpha(palette.ink, 0.6) },
+    sheet:        { backgroundColor: palette.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 24, paddingTop: 16, ...shadows.overlay },
     handle:       { width: 40, height: 4, backgroundColor: palette.border, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
     closeBtn:     { position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: 15, backgroundColor: palette.navy, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
     closeBtnText: { fontFamily: fonts.bodySemi,

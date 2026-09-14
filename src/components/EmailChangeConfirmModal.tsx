@@ -1,15 +1,7 @@
 import React from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Modal, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, palette, fonts, shadows, radii } from '../styles/common.styles';
+import { Dialog, dialogStyles } from './ui';
 
 interface EmailChangeConfirmModalProps {
   visible: boolean;
@@ -29,8 +21,8 @@ interface EmailChangeConfirmModalProps {
  * which almost nobody opens; users hit Save and landed on an OTP screen with
  * no idea why.
  *
- * Structure mirrors DeviceTransferModal — same "we're about to email you a
- * 6-digit code, confirm first" moment, so it should look the same.
+ * Tone is `warning`, not `info`: the current address keeps working but the
+ * account is about to depend on an inbox the user has not proved they own.
  */
 const EmailChangeConfirmModal: React.FC<EmailChangeConfirmModalProps> = ({
   visible,
@@ -49,8 +41,7 @@ const EmailChangeConfirmModal: React.FC<EmailChangeConfirmModalProps> = ({
       statusBarTranslucent
       onRequestClose={loading ? undefined : onClose}
     >
-      {/* Backdrop */}
-      <View style={styles.backdrop}>
+      <View style={dialogStyles.backdrop}>
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -59,118 +50,22 @@ const EmailChangeConfirmModal: React.FC<EmailChangeConfirmModalProps> = ({
         />
       </View>
 
-      {/* Card */}
-      <View style={styles.wrapper}>
-        <View style={styles.card}>
-          <View style={styles.iconWrapper}>
-            <Ionicons name="mail-outline" size={56} color={palette.warning} />
-          </View>
-
-          <Text style={styles.title}>{t('profile:emailChange.title')}</Text>
-
-          <Text style={styles.message}>
-            {t('profile:emailChange.body', { email: newEmail })}
-          </Text>
-
-          <Text style={styles.note}>{t('profile:emailChange.note')}</Text>
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                commonStyles.primaryButton,
-                styles.confirmButton,
-                loading && { opacity: 0.7 },
-              ]}
-              onPress={onConfirm}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              {loading ? (
-                <ActivityIndicator color={palette.surface} size="small" />
-              ) : (
-                <Text style={commonStyles.primaryButtonText}>
-                  {t('profile:emailChange.confirm')}
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={commonStyles.secondaryButton}
-              onPress={onClose}
-              disabled={loading}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.secondaryButtonText}>
-                {t('profile:emailChange.cancel')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+      <View style={dialogStyles.wrapper}>
+        <Dialog
+          tone="warning"
+          icon="mail-outline"
+          title={t('profile:emailChange.title')}
+          message={t('profile:emailChange.body', { email: newEmail })}
+          note={t('profile:emailChange.note')}
+          confirmLabel={t('profile:emailChange.confirm')}
+          onConfirm={onConfirm}
+          cancelLabel={t('profile:emailChange.cancel')}
+          onCancel={onClose}
+          loading={loading}
+        />
       </View>
     </Modal>
   );
 };
 
 export default EmailChangeConfirmModal;
-
-const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  wrapper: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  card: {
-    backgroundColor: palette.surface,
-    borderRadius: radii.lg,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    ...shadows.card,
-  },
-  iconWrapper: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: palette.warningBg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontFamily: fonts.display,
-    fontSize: 20,
-    color: palette.ink,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  message: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    lineHeight: 21,
-    color: palette.textBody,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  note: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 18,
-    color: palette.textMuted,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  buttonContainer: {
-    width: '100%',
-    gap: 10,
-  },
-  confirmButton: {
-    width: '100%',
-  },
-});

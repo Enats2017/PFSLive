@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     },
     card: {
         width: '100%',
-        maxWidth: 360,
+        maxWidth: 400,
         backgroundColor: palette.surface,
         borderRadius: radii.lg,
         overflow: 'hidden',
@@ -150,9 +150,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     iconHalo: {
-        width: 84,
-        height: 84,
-        borderRadius: 16,
+        width: 90,
+        height: 90,
+        borderRadius: 45,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: space.md,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     },
     description: {
         ...type.body,
-        color: palette.textMuted,
+        color: palette.textBody,
         textAlign: 'center',
     },
     closeButton: {

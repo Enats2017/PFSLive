@@ -117,7 +117,7 @@ export const styles = StyleSheet.create({
 
     // Modal — the one place radius 16 (overlay) applies.
     modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-    modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: withAlpha(palette.ink, 0.45) },
+    modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: withAlpha(palette.ink, 0.6) },
     bottomSheet: {
         backgroundColor: palette.surface,
         borderTopLeftRadius: radii.lg,

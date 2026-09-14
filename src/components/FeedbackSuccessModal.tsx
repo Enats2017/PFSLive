@@ -21,7 +21,8 @@ interface FeedbackSuccessModalProps {
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = Math.min(SCREEN_WIDTH - 48, 340);
+// 400 is the shared modal cap; the -48 keeps the gutter on narrow phones.
+const CARD_WIDTH = Math.min(SCREEN_WIDTH - 48, 400);
 
 const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
     visible,
@@ -137,25 +138,25 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
 const styles = StyleSheet.create({
     backdrop: {
         flex: 1,
-        backgroundColor: withAlpha(palette.ink, 0.55),
+        backgroundColor: withAlpha(palette.ink, 0.6),
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 24,
     },
     card: {
-    ...shadows.raised,
+    ...shadows.overlay,
 
         width: CARD_WIDTH,
         backgroundColor: palette.surface,
         borderRadius: 16,
         paddingTop: 36,
         paddingBottom: 24,
-        paddingHorizontal: 28,
+        paddingHorizontal: 24,
         alignItems: 'center',
   },
     iconWrapper: {
-        width: 84,
-        height: 84,
+        width: 90,
+        height: 90,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 20,
@@ -181,13 +182,13 @@ const styles = StyleSheet.create({
         fontFamily: fonts.body,
         fontSize: 13,
         lineHeight: 20,
-        color: palette.placeholder,
+        color: palette.textBody,
         textAlign: 'center',
         marginBottom: 24,
     },
     button: {
         width: '100%',
-        height: 52,
+        height: 48,
         borderRadius: 14,
         backgroundColor: palette.navy,
         alignItems: 'center',
