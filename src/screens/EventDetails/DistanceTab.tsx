@@ -72,6 +72,9 @@ const DistanceTab = ({
   const [showResults, setShowResults] = useState(false);
   const [showResultsStats, setShowResultsStats] = useState(false);
   const [rrUrl, setRrUrl] = useState<string>('');
+  // Organiser's per-event Download GPX switch. Undefined on an older payload
+  // means on — the column defaults to 1 for every existing event.
+  const [showGpx, setShowGpx] = useState<boolean>(true);
   const [eventRegisterUrl, setEventRegisterUrl] = useState<string>('');
 
 
@@ -97,6 +100,7 @@ const DistanceTab = ({
 
         setRrUrl(result.event?.rr_url ?? '');
         setFetchedImage(result.event?.image?.trim() ? result.event.image : null);
+        setShowGpx(result.event?.show_gpx !== 0);
       setEventRegisterUrl(result.event?.event_register_url ?? '');
 
         // Results button/tab only when RR results are published (status 1) AND a URL exists.
@@ -323,7 +327,10 @@ const handleExternalRegister = useCallback((url: string) => {
     async (item: Distance) => {
       analyticsService.logInteraction(
         ANALYTICS_SCREENS.EVENT_DETAILS,     // correct as is — participant side
-        ANALYTICS_BUTTONS.MAP,
+        // 'route' is the shared name for "opened the live map" across app and
+        // web (one GA4 property). The button's LABEL is MAP; the element name
+        // deliberately does not track the label.
+        ANALYTICS_BUTTONS.ROUTE,
         'tap',
         { [ANALYTICS_PARAMS.EVENT_NAME]: event_name },
       );
@@ -516,7 +523,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
             {/* Visibility rule lives in useGpxDownload.canShowGpxButton so this
                 tab and the follower one cannot drift apart. */}
-            {canShowGpxButton(item) && (
+            {canShowGpxButton(item, undefined, showGpx) && (
               <TouchableOpacity
                 style={detailsStyles.routeButton}
                 //onPress={() => handleGpxClick(item)}
@@ -543,7 +550,7 @@ const handleExternalRegister = useCallback((url: string) => {
         </View>
       </View>
     );
-  }, [navigation, product_app_id, event_name, event_image, CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading,registeringItemId, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode]);
+  }, [navigation, product_app_id, event_name, event_image, CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, registeringItemId, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode, showGpx]);
 
   if (loading) {
     return (

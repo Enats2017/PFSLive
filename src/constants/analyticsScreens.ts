@@ -44,7 +44,6 @@ export const ANALYTICS_BUTTONS = {
   // Event Details screen
   CONNECT: 'connect',
   DOWNLOAD_GPX: 'download_gpx',
-  MAP: 'map',
 
   // Follower actions
   FOLLOW: 'follow',

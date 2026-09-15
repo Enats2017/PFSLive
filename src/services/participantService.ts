@@ -20,6 +20,14 @@ export interface Participant {
   product_option_value_app_id?: number | null;
   race_status?: 'not_started' | 'in_progress' | 'finished' | string;
   wave:string
+  // ✅ Duo teams. On a duo contest RR puts the TEAM name on `lastname` (with
+  // `firstname` empty) and the two members in these two fields; `category_name`
+  // is the AgeGroup, e.g. "Men Team" / "Mixed Team" / "Women Team".
+  // Optional and empty on every solo entrant — that is what the UI keys off,
+  // there is no is_duo flag. Never assume they are present.
+  name_participant_1?: string;
+  name_participant_2?: string;
+  category_name?: string;
 }
 
 export interface ParticipantPagination {
