@@ -109,6 +109,15 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                                 .filter(Boolean).join(' \u00b7 ')}
                         </Text>
                     </View>
+                    {/* Duo teams: `item.name` above is the TEAM name; these are the two
+                        members. A SIBLING of the flag row above, never a child of it —
+                        that row is flexDirection:'row', so nesting would put the member
+                        names on the same line as the flag. Empty for solo entrants. */}
+                    {item.name_participant_1 ? (
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
+                            {[item.name_participant_1, item.name_participant_2].filter(Boolean).join(' & ')}
+                        </Text>
+                    ) : null}
                 </View>
                 <TouchableOpacity
                     onPress={handleStarPress}

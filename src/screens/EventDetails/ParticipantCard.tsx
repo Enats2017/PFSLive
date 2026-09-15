@@ -77,6 +77,15 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
   const bib = item.bib || item.bib_number || '';
   const wave = item.wave;
 
+
+  // ✅ Duo teams. There is no is_duo flag anywhere — a team is simply an entrant
+  // RR sent member names for. Solo entrants get '', so this is false and nothing
+  // below renders, leaving their card byte-identical to before.
+  const isDuo = !!item.name_participant_1;
+  const teamMembers = isDuo
+    ? [item.name_participant_1, item.name_participant_2].filter(Boolean).join(' & ')
+    : '';
+
   // Navigate to ResultDetails (race_result participants)
   const goToResults = () => {
      analyticsService.logInteraction(
@@ -167,6 +176,16 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
               wave ? `${t('details:wave')} ${item.wave}` : null,
             ].filter(Boolean).join(' \u00b7 ')}
           </Text>
+          {/* Duo teams only. `fullName` above is already the TEAM name (RR puts
+              it on lastname), so this is who is actually in the team plus the
+              category. One line joined with the same separator as the rows above,
+              and unlabelled: the deck compacts related values rather than stacking
+              labelled rows, and under a team name these read unambiguously. */}
+          {isDuo && (
+            <Text style={detailsStyles.rowMeta} numberOfLines={2}>
+              {[teamMembers, item.category_name].filter(Boolean).join(' \u00b7 ')}
+            </Text>
+          )}
         </View>
       </View>
 

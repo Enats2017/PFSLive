@@ -74,6 +74,7 @@ export interface EventInfo {
   status: string;
   race_result_status?: number;
   show_results?: number;
+  show_gpx?: number;        // event-level Download GPX toggle, set in eventpanel
   rr_url?: string;
   event_register_url?: string;
 }

@@ -29,6 +29,11 @@ export interface RaceResult {
   checkpointRanking?: string;
   checkpointDiff?: string;
   wave:string
+  // ✅ Duo teams — `name` already carries the team name; these are the two
+  // members. Empty for every solo entrant. `category_name` above already
+  // carries the AgeGroup ("Men Team"), so it needs nothing new here.
+  name_participant_1?: string;
+  name_participant_2?: string;
 }
 
 export interface Checkpoint {

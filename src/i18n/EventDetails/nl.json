@@ -131,7 +131,8 @@
     "noFileTitle": "Geen GPX-bestand",
     "noFileMessage": "Geen GPX-bestand beschikbaar."
   },
-  "iosnotnow": "Not Now",  "map": "Kaart",
+  "iosnotnow": "Not Now",
+  "map": "Kaart",
   "wave": "Golf",
   "chart": {
     "elevationProfile": "Hoogteprofiel",

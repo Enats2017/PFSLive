@@ -134,6 +134,15 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                             {[item.club, item.nation].filter(Boolean).join(' \u00b7 ')}
                         </Text>
                     )}
+                    {/* Duo teams: `item.name` above is the TEAM name; these are
+                        the two members. Empty on every solo entrant, so nothing
+                        renders for them. Sits in rowHead with the other identity
+                        lines, where the redesign moved bib/wave/club. */}
+                    {item.name_participant_1 ? (
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
+                            {[item.name_participant_1, item.name_participant_2].filter(Boolean).join(' & ')}
+                        </Text>
+                    ) : null}
                 </View>
                 <TouchableOpacity
                     onPress={handleStarPress}
