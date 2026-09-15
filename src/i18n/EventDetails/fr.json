@@ -132,5 +132,9 @@
   },
   "iosnotnow":"Not Now",
   "map": "CARTE",
-  "wave": "Vague"
+  "wave": "Vague",
+  "duo": {
+    "members": "Équipe",
+    "category": "Catégorie"
+  }
 }

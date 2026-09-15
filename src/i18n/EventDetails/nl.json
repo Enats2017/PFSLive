@@ -132,5 +132,9 @@
   },
   "iosnotnow":"Not Now",
   "map": "KAART",
-  "wave": "Golf"
+  "wave": "Golf",
+  "duo": {
+    "members": "Team",
+    "category": "Categorie"
+  }
 }
