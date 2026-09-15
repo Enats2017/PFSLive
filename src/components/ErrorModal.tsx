@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: palette.dangerBg,
+   backgroundColor: withAlpha(palette.navy, 0.08),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,

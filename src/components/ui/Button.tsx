@@ -61,7 +61,7 @@ export const Button: React.FC<ButtonProps> = ({
         ui.btn,
         VARIANT_STYLE[variant],
         fullWidth && ui.btnFullWidth,
-        inert && ui.btnDisabled,
+        disabled && ui.btnDisabled,
         style,
       ]}
       onPress={onPress}

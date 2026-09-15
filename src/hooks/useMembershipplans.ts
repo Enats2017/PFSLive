@@ -40,6 +40,7 @@ interface UseMembershipPlansResult {
   restoreResult: RestoreResult;
   restoreError: string | null;
   resetRestore: () => void;
+  purchaseButtonLoading: boolean;
 }
 
 export function useMembershipPlans(): UseMembershipPlansResult {
@@ -55,6 +56,8 @@ export function useMembershipPlans(): UseMembershipPlansResult {
   const [restoreLoading, setRestoreLoading] = useState<boolean>(false);
   const [restoreResult, setRestoreResult] = useState<RestoreResult>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+
+  const [purchaseButtonLoading, setPurchaseButtonLoading] = useState(false);
 
   const {
     connected,
@@ -156,10 +159,12 @@ export function useMembershipPlans(): UseMembershipPlansResult {
   const requestPurchase = useCallback(
     async (params: Parameters<typeof rawRequestPurchase>[0]) => {
       awaitingPurchaseRef.current = true; // arm it — a real purchase attempt is starting
+      setPurchaseButtonLoading(true);
       try {
         return await rawRequestPurchase(params);
       } catch (err) {
         awaitingPurchaseRef.current = false; // disarm if the call itself throws
+        setPurchaseButtonLoading(false);
         throw err;
       }
     },
@@ -254,6 +259,7 @@ export function useMembershipPlans(): UseMembershipPlansResult {
         setPurchaseLoading(true);
         setPurchaseError(null);
         setPurchaseResult(null);
+        setPurchaseButtonLoading(false);
       }
 
       try {
@@ -333,5 +339,6 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     restoreResult,
     restoreError,
     resetRestore,
+    purchaseButtonLoading,
   };
 }

@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, spacing, palette, fonts, shadows, space, withAlpha } from '../styles/common.styles';
+import { commonStyles, spacing, palette, fonts, shadows, space, withAlpha, colors } from '../styles/common.styles';
 import { useNavigation } from '@react-navigation/native';
 
 type RegistrationStatus =
@@ -52,6 +52,8 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   onConfirm,
 }) => {
   const { t } = useTranslation(['details']);
+  console.log("register modal");
+  
   const navigation = useNavigation<any>();
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const cardTranslateY = useRef(new Animated.Value(80)).current;
@@ -301,10 +303,10 @@ const styles = StyleSheet.create({
   },
   // The deck's modal action is the lime button with ink text.
   modalPrimary: {
-    backgroundColor: palette.lime,
+    backgroundColor: colors.primary,
   },
   modalPrimaryText: {
-    color: palette.ink,
+    color: colors.white,
   },
   closeBtn: {
     position: 'absolute',

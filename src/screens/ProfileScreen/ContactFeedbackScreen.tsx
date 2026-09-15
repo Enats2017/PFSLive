@@ -161,7 +161,7 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
             {/* header.title now reads from the shared band, so the local
                 back-arrow row is gone. */}
             <AppHeader title={t('common:band.contactFeedback')} showBack />
-            <Animated.View style={[contactStyles.flex, { paddingBottom: keyboardOffset }]}>
+           
                 <ScrollView
                     ref={scrollViewRef}
                     contentContainerStyle={contactStyles.scrollContent}
@@ -259,7 +259,7 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                         <Text style={contactStyles.reachNote}>{t('reachUs.replyTime')}</Text>
                     </View>
                 </ScrollView>
-            </Animated.View>
+          
             <FeedbackSuccessModal
                 visible={showSuccess}
                 title={t('success.title')}

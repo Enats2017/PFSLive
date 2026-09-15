@@ -73,34 +73,34 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
                     ]}
                 >
                     <View style={styles.iconWrap}>
-                        <Ionicons name="trash-outline" size={56} color={palette.danger} />
+                        <Ionicons name="trash-outline" size={46} color={palette.danger} />
                     </View>
 
-                    <Text style={commonStyles.title}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
+                    <Text style={styles.title}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
                     <Text style={styles.message}>
                         {t('ownProfile:deleteEvent.confirmMessage', { name: event?.name ?? '' })}
                     </Text>
 
                     <View style={styles.actions}>
                         <TouchableOpacity
-                            style={[styles.btn, styles.cancelBtn]}
-                            onPress={onCancel}
-                            activeOpacity={0.85}
-                            disabled={isDeleting}
-                        >
-                            <Text style={styles.cancelText}>{t('ownProfile:deleteEvent.cancel')}</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.btn, styles.deleteBtn, isDeleting && { opacity: 0.7 }]}
+                            style={[commonStyles.primaryButton, isDeleting && { opacity: 0.7 }]}
                             onPress={onConfirm}
                             activeOpacity={0.85}
                             disabled={isDeleting}
                         >
                             {isDeleting
                                 ? <ActivityIndicator size="small" color={palette.surface} />
-                                : <Text style={styles.deleteText}>{t('ownProfile:deleteEvent.confirm')}</Text>}
+                                : <Text style={commonStyles.primaryButtonText}>{t('ownProfile:deleteEvent.confirm')}</Text>}
                         </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[commonStyles.secondaryButton]}
+                            onPress={onCancel}
+                            activeOpacity={0.85}
+                            disabled={isDeleting}
+                        >
+                            <Text style={commonStyles.secondaryButtonText}>{t('ownProfile:deleteEvent.cancel')}</Text>
+                        </TouchableOpacity>
+
                     </View>
                 </Animated.View>
             </View>
@@ -130,15 +130,15 @@ const styles = StyleSheet.create({
         ...shadows.overlay,
     },
     iconWrap: {
-        width: 90, height: 90, borderRadius: 45,
-        backgroundColor: palette.dangerBg, alignItems: 'center', justifyContent: 'center',
+        width: 72, height: 72, borderRadius: 36,
+        backgroundColor: withAlpha(palette.navy, 0.08), alignItems: 'center', justifyContent: 'center',
         marginBottom: spacing.md,
     },
-    title: { fontFamily: fonts.display,
-        fontSize: 20, color: palette.ink, marginBottom: space.md, textAlign: 'center' },
+    title: { fontFamily: fonts.bodySemi,
+        fontSize: 20, color: palette.ink, marginBottom: space.sm, textAlign: 'center' },
     message: { fontFamily: fonts.body,
         fontSize: 13, color: palette.textBody, textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
-    actions: { flexDirection: 'row', width: '100%', gap: 12 },
+    actions: { width: '100%', gap: 12 },
     btn: { flex: 1, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
     cancelBtn: { backgroundColor: palette.fill },
     cancelText: { color: palette.ink, fontFamily: fonts.display,

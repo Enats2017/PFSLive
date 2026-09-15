@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
         width: 68,
         height: 68,
         borderRadius: 34,
-        backgroundColor: palette.lime,
+        backgroundColor: withAlpha(palette.navy, 0.08),
         alignItems: 'center',
         justifyContent: 'center',
   },

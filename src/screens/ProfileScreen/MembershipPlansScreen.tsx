@@ -71,6 +71,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         restoreResult,
         restoreError,
         resetRestore,
+        purchaseButtonLoading,
     } = useMembershipPlans();
 
     useEffect(() => {
@@ -415,7 +416,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                     label={t('membership:cta.continueWith', { planName: getPlan(selected).name })}
                     onPress={handleContinue}
                     disabled={isContinueDisabled}
-                    loading={purchaseLoading}
+                    loading={purchaseButtonLoading}
                     icon="chevron-forward"
                     iconPosition="trailing"
                 />

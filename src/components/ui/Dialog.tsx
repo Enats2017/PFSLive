@@ -148,7 +148,7 @@ export const Dialog: React.FC<DialogProps> = ({
 
   return (
     <View style={dialogStyles.card}>
-      <View style={[dialogStyles.iconWrapper, { backgroundColor: ring }]}>
+      <View style={[dialogStyles.iconWrapper, { backgroundColor: withAlpha(palette.navy, 0.08), }]}>
         <Ionicons name={icon} size={56} color={iconColor} />
       </View>
 

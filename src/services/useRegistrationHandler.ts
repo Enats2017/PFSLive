@@ -39,6 +39,7 @@ interface UseRegistrationHandlerReturn {
   handleConnectClick: (item: Distance) => void;
   handleLiveTrackingConfirm: () => void;
   handleLiveTrackingClose: () => void;
+  registeringItemId: number | null; // NEW
 }
 
 const SUCCESS_ACTIONS = ['registered', 'confirm_race_result'];
@@ -73,7 +74,8 @@ const useRegistrationHandler = (
     undefined
   );
   const [liveTrackingModalVisible, setLiveTrackingModalVisible] = useState(false);
-const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
+  const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
+  const [registeringItemId, setRegisteringItemId] = useState<number | null>(null);
 
   const isTokenValid = async (): Promise<boolean> => {
     try {
@@ -138,6 +140,7 @@ const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
 
       try {
         setRegisterLoading(true);
+        setRegisteringItemId(item.product_option_value_app_id);
         setRegisterError(null);
 
         if (API_CONFIG.DEBUG) {
@@ -316,6 +319,7 @@ const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
         );
       } finally {
         setRegisterLoading(false);
+        setRegisteringItemId(null); 
       }
     },
     [
@@ -663,7 +667,7 @@ const [liveTrackingItem, setLiveTrackingItem] = useState<Distance | null>(null);
     handleConnectClick,
     handleLiveTrackingConfirm,
     handleLiveTrackingClose,
-    
+    registeringItemId, 
   };
 };
 

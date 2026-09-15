@@ -128,7 +128,7 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
           </TouchableOpacity>
 
           {/* Success Icon */}
-          <View style={[styles.iconWrapper, { backgroundColor: dialogTone.success.ring }]}>
+          <View style={[styles.iconWrapper, { backgroundColor: withAlpha(palette.navy, 0.08) }]}>
             <Ionicons name="checkmark-circle" size={56} color={dialogTone.success.icon} />
           </View>
 
@@ -140,11 +140,13 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
 
           {/* ✅ GOT IT BUTTON */}
           <TouchableOpacity
-            style={[commonStyles.primaryButton, styles.button]}
+            style={[commonStyles.secondaryButton]}
             onPress={handleClose}
             activeOpacity={0.8}
           >
-            <Text style={commonStyles.primaryButtonText}>{t('common:buttons.gotIt')}</Text>
+            <Text style={commonStyles.secondaryButtonText}>
+              {t('common:buttons.gotIt')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

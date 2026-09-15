@@ -27,7 +27,7 @@ interface MembershipActionModalProps {
 
 const ICON_BY_ACTION: Record<ModalActionType, { name: any; color: string; bg: string }> = {
     disabled: { name: 'lock-closed', color: palette.textMuted, bg: palette.fill },
-    locked: { name: 'time-outline', color: palette.warning, bg: palette.warningBg },
+    locked: { name: 'time-outline', color: palette.warning, bg: withAlpha(palette.navy, 0.08),},
     hidden: { name: 'information-circle', color: palette.noticeText, bg: palette.noticeBg },
 };
 
@@ -151,6 +151,7 @@ const styles = StyleSheet.create({
         borderRadius: 45,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: withAlpha(palette.navy, 0.08),
         marginBottom: 16,
     },
     title: {

@@ -461,7 +461,8 @@ const ParticipantResult = () => {
             // 16pt one here made a 36pt inset - every other list in the app is
             // on 20. `marginTop` on a content container alongside flexGrow is
             // unreliable; paddingTop is the predictable form.
-            paddingTop: space.lg,
+            paddingHorizontal: spacing.lg,
+            paddingTop: space.sm,
             paddingBottom: spacing.xxxl,
             flexGrow: 1,
           }}

@@ -209,12 +209,12 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
             <View>
                 {showMapButton && (
                     <TouchableOpacity
-                        style={resultInfoStyles.mapButton}
+                        style={[commonStyles.primaryButton,{gap: 10, justifyContent: 'center', alignItems: 'center'}]}
                         onPress={onMapPress}
                         activeOpacity={0.8}
                     >
-                        <Ionicons name="map-outline" size={18} color={palette.ink} />
-                        <Text style={resultInfoStyles.mapButtonText}>
+                        <Ionicons name="map-outline" size={18} color={palette.fill} />
+                        <Text style={commonStyles.primaryButtonText}>
                             {t('runnerInfo.viewOnMap')}
                         </Text>
                     </TouchableOpacity>

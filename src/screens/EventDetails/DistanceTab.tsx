@@ -233,6 +233,7 @@ const DistanceTab = ({
     handleConnectClick,
     handleLiveTrackingConfirm,
     handleLiveTrackingClose,
+    registeringItemId,
   } = useRegistrationHandler(
     product_app_id,
     event_name,
@@ -419,9 +420,10 @@ const handleExternalRegister = useCallback((url: string) => {
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isRegistering =
-      registerLoading &&
-      (confirmItem?.product_option_value_app_id === item.product_option_value_app_id ||
-        selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
+    registerLoading &&
+    (registeringItemId === item.product_option_value_app_id ||
+      confirmItem?.product_option_value_app_id === item.product_option_value_app_id ||
+      selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
 
     return (
       <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.md, marginHorizontal: spacing.md }]}>
@@ -541,7 +543,7 @@ const handleExternalRegister = useCallback((url: string) => {
         </View>
       </View>
     );
-  }, [navigation, product_app_id, event_name, event_image, CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode]);
+  }, [navigation, product_app_id, event_name, event_image, CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading,registeringItemId, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode]);
 
   if (loading) {
     return (
