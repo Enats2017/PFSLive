@@ -210,6 +210,16 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             {[item.club, item.nation, item.age].filter(Boolean).join(' · ')}
                         </Text>
                     </View>
+
+                    {/* Duo teams: `item.name` above is the TEAM name; these are the two
+                        members. A sibling of the flag row, NOT inside it — that row is
+                        flexDirection:'row', so nesting this put the members on the same
+                        line as the flag and country. Empty on every solo entrant. */}
+                    {item.name_participant_1 ? (
+                        <Text style={resultListStyle.teamText} numberOfLines={2}>
+                            {[item.name_participant_1, item.name_participant_2].filter(Boolean).join(' & ')}
+                        </Text>
+                    ) : null}
                     {item.wave ? (
                         <Text style={resultListStyle.waveText} numberOfLines={1}>
                             {t('allrace:race.wavelabel')}: {item.wave}

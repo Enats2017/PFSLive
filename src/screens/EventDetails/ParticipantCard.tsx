@@ -70,6 +70,16 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
   const bib = item.bib || item.bib_number || '';
   const wave = item.wave;
 
+  const location = [item.city, item.country].filter(Boolean).join(' | ');
+
+  // ✅ Duo teams. There is no is_duo flag anywhere — a team is simply an entrant
+  // RR sent member names for. Solo entrants get '', so this is false and nothing
+  // below renders, leaving their card byte-identical to before.
+  const isDuo = !!item.name_participant_1;
+  const teamMembers = isDuo
+    ? [item.name_participant_1, item.name_participant_2].filter(Boolean).join(' & ')
+    : '';
+
   // Navigate to ResultDetails (race_result participants)
   const goToResults = () => {
      analyticsService.logInteraction(
@@ -150,9 +160,10 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
 
         <View style={detailsStyles.info}>
           <Text style={commonStyles.title}>{fullName}</Text>
-          <Text style={commonStyles.text}>
-            {item.city} | {item.country}
-          </Text>
+          {/* Joined rather than interpolated with a literal " | ": duo entrants
+              carry a country but no city, which rendered a leading " | France".
+              A solo row has both, so its output is unchanged. */}
+          {!!location && <Text style={commonStyles.text}>{location}</Text>}
           <Text style={commonStyles.subtitle}>{item.race_distance}</Text>
           {hasBibNumber && (
             <Text
@@ -168,6 +179,20 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
               <Text style={commonStyles.subtitle}>{t('details:wave')}: {item.wave}</Text>
             )
           }
+          {/* ✅ Duo teams only. `fullName` above is already the TEAM name (RR puts
+              it on lastname), so these are the two members and their category. */}
+          {isDuo && (
+            <>
+              <Text style={commonStyles.subtitle}>
+                {t('details:duo.members')}: {teamMembers}
+              </Text>
+              {!!item.category_name && (
+                <Text style={commonStyles.subtitle}>
+                  {t('details:duo.category')}: {item.category_name}
+                </Text>
+              )}
+            </>
+          )}
         </View>
       </View>
 

@@ -109,6 +109,13 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                     <Text style={resultListStyle.teamText} numberOfLines={1}>
                         {[item.club, item.nation].filter(Boolean).join(' · ')}
                     </Text>
+                    {/* Duo teams: `item.name` above is the TEAM name; these are the two
+                        members. Empty on every solo entrant, so nothing renders for them. */}
+                    {item.name_participant_1 ? (
+                        <Text style={resultListStyle.teamText} numberOfLines={2}>
+                            {[item.name_participant_1, item.name_participant_2].filter(Boolean).join(' & ')}
+                        </Text>
+                    ) : null}
                     {item.wave ? (
                         <Text style={resultListStyle.waveText} numberOfLines={1}>
                             {t('allrace:race.wavelabel')}: {item.wave}
