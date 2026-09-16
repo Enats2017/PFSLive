@@ -253,12 +253,21 @@ divider: {
   },
 
   // ── Card Content ──────────────────────────────────────────
+  // ✅ flexShrink is REQUIRED here. React Native defaults it to 0 (web defaults
+  // to 1), so without it this column never yields width: a long team name or a
+  // "Name & Name" duo members line makes the column claim its full intrinsic
+  // width and pushes the follow star out past the card's padding, outside the
+  // rounded border. flexGrow alone does not help - that only distributes SPARE
+  // space. minWidth:0 lets it shrink below the text's intrinsic width so the
+  // numberOfLines clamps can ellipsize instead.
   cardTop: {
     flexGrow: 1,
+    flexShrink: 1,
     minWidth: 0,
   },
   cardTopLeft: {
     flexGrow: 1,
+    flexShrink: 1,
     minWidth: 0,
   },
   cardName: {

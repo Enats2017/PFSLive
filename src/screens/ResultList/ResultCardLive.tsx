@@ -5,6 +5,7 @@ import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { resultListStyle } from '../../styles/ResultList.styles';
+import { formatWave } from '../../utils/waveLabel';
 import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { palette, categoryColors, fonts, space } from '../../styles/common.styles';
@@ -176,10 +177,17 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         off on every row that had them. Line 1 is the race entry
                         (always visible), line 2 is who the athlete is. */}
                     <Text style={resultListStyle.bibText} numberOfLines={1}>
-                        {[`${t('allrace:race.bibNumber')} ${item.bib}`,
-                          item.wave ? `${t('allrace:race.wavelabel')} ${item.wave}` : null]
-                            .filter(Boolean).join(' \u00b7 ')}
+                        {`${t('allrace:race.bibNumber')} ${item.bib}`}
                     </Text>
+                    {/* Wave gets its own row. Joined onto the bib line it ran to
+                        41-54 characters ("Bib number 201 - Start Wave 1: Start @ 9h",
+                        longer in fr) and numberOfLines={1} truncated it mid-word in
+                        this column. Empty on the many events with no wave column. */}
+                    {item.wave ? (
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
+                            {formatWave(t('allrace:race.wavelabel'), item.wave)}
+                        </Text>
+                    ) : null}
                     <View style={resultListStyle.metaLineTight}>
                         {!!item.nation_flag && (
                             <SvgUri uri={item.nation_flag} width={18} height={13} />

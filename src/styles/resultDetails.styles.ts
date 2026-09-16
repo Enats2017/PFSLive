@@ -147,6 +147,17 @@ export const resultInfoStyles = StyleSheet.create({
     color: palette.ink,
     textAlign: "center",
   },
+  // Duo teams: the two member names under the team name. Unlabelled, matching
+  // ParticipantCard on this branch - the deck compacts related values rather
+  // than stacking labelled rows, and under a team name these read unambiguously.
+  // Muted body text so the team name above stays the heading; centred to sit in
+  // the identityBlock column.
+  identityTeam: {
+    ...type.body,
+    color: palette.textMuted,
+    textAlign: "center",
+    marginTop: space.xs,
+  },
   identityRow: {
     flexDirection: "row",
     alignItems: "center",

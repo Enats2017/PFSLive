@@ -133,7 +133,11 @@
   },
   "iosnotnow": "Not Now",
   "map": "Kaart",
-  "wave": "Golf",
+  "wave": "Startwave",
+  "duo": {
+    "members": "Team",
+    "category": "Categorie"
+  },
   "chart": {
     "elevationProfile": "Hoogteprofiel",
     "distance": "Afstand",

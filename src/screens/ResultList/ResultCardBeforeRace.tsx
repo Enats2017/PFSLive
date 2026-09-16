@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { resultListStyle } from '../../styles/ResultList.styles';
+import { formatWave } from '../../utils/waveLabel';
 import { RaceResult } from '../../services/resultList';
 import { useNavigation } from '@react-navigation/native';
 import { categoryColors, palette } from '../../styles/common.styles';
@@ -95,10 +96,17 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                         off on every row that had them. Line 1 is the race entry
                         (always visible), line 2 is who the athlete is. */}
                     <Text style={resultListStyle.bibText} numberOfLines={1}>
-                        {[`${t('allrace:race.bibNumber')} ${item.bib}`,
-                          item.wave ? `${t('allrace:race.wavelabel')} ${item.wave}` : null]
-                            .filter(Boolean).join(' \u00b7 ')}
+                        {`${t('allrace:race.bibNumber')} ${item.bib}`}
                     </Text>
+                    {/* Wave gets its own row. Joined onto the bib line it ran to
+                        41-54 characters ("Bib number 201 - Start Wave 1: Start @ 9h",
+                        longer in fr) and numberOfLines={1} truncated it mid-word in
+                        this column. Empty on the many events with no wave column. */}
+                    {item.wave ? (
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
+                            {formatWave(t('allrace:race.wavelabel'), item.wave)}
+                        </Text>
+                    ) : null}
                     <View style={resultListStyle.metaLineTight}>
                         {!!item.nation_flag && (
                             <SvgUri uri={item.nation_flag} width={18} height={13} />
@@ -136,25 +144,22 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
             </View>
 
             <View>
-                <View style={resultListStyle.metaBlock}>
-                    {item.wave ? (
-                        <Text style={resultListStyle.waveText} numberOfLines={1}>
-                            {t('allrace:race.wavelabel')}: {item.wave}
-                        </Text>
-                    ) : null}
-                </View>
-
                 {isLive && (
                     <View style={{ marginTop: 8 }}>
                         <LiveTrackingBar />
                     </View>
                 )}
 
-                <View style={[
-                    resultListStyle.statsRow,
-                    isWomen && { borderTopColor: categoryColors.womenDivider },
-                ]}>
-                    {showUtmbIndex && (
+                {/* UTMB is the only stat this card has left. The flag + country
+                    column that sat beside it repeated the flag and country already
+                    shown on the identity line above, so it is gone. The whole row
+                    is gated now: without the flag column, an event with no UTMB
+                    index would draw an empty block with a stray top border. */}
+                {showUtmbIndex && (
+                    <View style={[
+                        resultListStyle.statsRow,
+                        isWomen && { borderTopColor: categoryColors.womenDivider },
+                    ]}>
                         <View style={resultListStyle.statCol}>
                             {hasUtmbIndex ? (
                                 <View style={resultListStyle.beforeRaceLeftHalf}>
@@ -182,22 +187,8 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                                 </View>
                             )}
                         </View>
-                    )}
-
-                    <View style={[
-                        resultListStyle.statCol,
-                        showUtmbIndex ? resultListStyle.statFlagMid : resultListStyle.statFlagFullNoBorder,
-                    ]}>
-                        <View style={resultListStyle.flagRow}>
-                            {!!item.nation_flag && (
-                                <SvgUri width={28} height={20} uri={item.nation_flag} />
-                            )}
-                            <Text style={resultListStyle.statVal} numberOfLines={2}>
-                                {item.nation || '—'}
-                            </Text>
-                        </View>
                     </View>
-                </View>
+                )}
             </View>
         </TouchableOpacity>
     );
