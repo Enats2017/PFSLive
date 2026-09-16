@@ -1,5 +1,11 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useIAP, purchaseUpdatedListener, finishTransaction } from "expo-iap";
+import {
+  useIAP,
+  purchaseUpdatedListener,
+  purchaseErrorListener,
+  finishTransaction,
+  ErrorCode,
+} from "expo-iap";
 import {
   membershipPlanService,
   PlanItem,
@@ -74,6 +80,10 @@ export function useMembershipPlans(): UseMembershipPlansResult {
   const processedTransactions = useRef<Set<string>>(new Set());
   const processingRef = useRef<Set<string>>(new Set());
   const awaitingPurchaseRef = useRef(false);
+  // Armed ONLY by requestPurchase, never by restorePurchases, so the error
+  // listener can tell a failed purchase (owns purchaseError) from a failed
+  // restore (owns restoreError) — awaitingPurchaseRef is armed by both.
+  const purchaseIntentRef = useRef(false);
 
   console.log("🚀 useMembershipPlans mounted");
 
@@ -159,11 +169,13 @@ export function useMembershipPlans(): UseMembershipPlansResult {
   const requestPurchase = useCallback(
     async (params: Parameters<typeof rawRequestPurchase>[0]) => {
       awaitingPurchaseRef.current = true; // arm it — a real purchase attempt is starting
+      purchaseIntentRef.current = true;
       setPurchaseButtonLoading(true);
       try {
         return await rawRequestPurchase(params);
       } catch (err) {
         awaitingPurchaseRef.current = false; // disarm if the call itself throws
+        purchaseIntentRef.current = false;
         setPurchaseButtonLoading(false);
         throw err;
       }
@@ -286,7 +298,39 @@ export function useMembershipPlans(): UseMembershipPlansResult {
         processingRef.current.delete(transactionId);
         if (isUserInitiatedThisSession) setPurchaseLoading(false);
         awaitingPurchaseRef.current = false;
+        purchaseIntentRef.current = false;
       }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  // ── Purchase ERROR listener — the other half of the purchase lifecycle ──
+  // expo-iap does NOT reject requestPurchase when the user dismisses the Apple
+  // sheet: cancellations and StoreKit failures arrive here instead, never as a
+  // throw. Without this listener the Continue button's spinner is armed by
+  // requestPurchase and nothing ever disarms it, so a cancelled purchase leaves
+  // the button spinning until MembershipPlansScreen is remounted. A real
+  // failure was also silent — purchaseError only ever came from the verify step.
+  useEffect(() => {
+    const subscription = purchaseErrorListener((error) => {
+      // Always disarm the button, whatever the cause — this is the stuck-spinner fix.
+      setPurchaseButtonLoading(false);
+
+      // A restore that fails reports through restoreError; don't double-report,
+      // and don't disarm awaitingPurchaseRef out from under an in-flight
+      // restore — restorePurchases owns that flag for the length of its run.
+      if (!purchaseIntentRef.current) return;
+      purchaseIntentRef.current = false;
+      awaitingPurchaseRef.current = false;
+
+      if (error?.code === ErrorCode.UserCancelled) {
+        console.log("ℹ️ User cancelled purchase - no action needed");
+        return;
+      }
+
+      console.error("❌ Purchase failed:", error?.code, error?.message);
+      setPurchaseError(error?.message || "Purchase failed");
     });
 
     return () => subscription.remove();
