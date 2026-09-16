@@ -164,7 +164,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                     </TouchableOpacity>
                 </View>
                 <View style={particpant.dividerRow}>
-                    <View style={particpant.dividerLine} />
+                    {/* <View style={particpant.dividerLine} /> */}
 
                 </View>
                 <View style={{paddingHorizontal: space.xl}}>

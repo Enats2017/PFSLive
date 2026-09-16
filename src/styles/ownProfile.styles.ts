@@ -169,7 +169,6 @@ export const ownProfile = StyleSheet.create({
     },
     iosbold: {
         fontFamily: fonts.bodySemi,
-        fontSize: 13,
         },
     iosbutton: {
         backgroundColor: palette.lime,
