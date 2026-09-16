@@ -24,7 +24,7 @@
     "categoryRank": "Catégorie",
     "in": "dans",
     "minutes": "minutes",
-    "wavelabel": "Vague"
+    "wavelabel": "Vague de départ"
   },
   "timingPoint": {
     "checkpoint": "CHECKPOINT",
@@ -45,6 +45,7 @@
     "category": "CATÉGORIE",
     "utmbIndex": "INDEX",
     "utmbSeries": "WORLD SERIES",
+    "teamMembers": "Équipe",
     "noClub": "—",
     "viewOnMap": "Voir sur la carte"
   },

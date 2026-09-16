@@ -29,6 +29,13 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
     const { t } = useTranslation('resultdetails');
     const initials = getInitials(runnerInfo?.name);
 
+    // ✅ Duo teams. There is no is_duo flag — a team is simply an entrant RR sent
+    // member names for. Solo entrants get '', so teamMembers stays empty and the
+    // line below never renders, leaving their card exactly as before.
+    const teamMembers = runnerInfo?.name_participant_1
+        ? [runnerInfo.name_participant_1, runnerInfo.name_participant_2].filter(Boolean).join(' & ')
+        : '';
+
     // ✅ Check if UTMB index exists, is not empty, and is not 0
     const hasUtmbIndex = runnerInfo?.utmb_index &&
         runnerInfo.utmb_index.trim() !== '' &&
@@ -64,6 +71,14 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
 
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={commonStyles.title}>{runnerInfo?.name ?? '—'}</Text>
+                    {/* Sibling of the flag row, not a child — that row is
+                        flexDirection:'row' and would put the members on the
+                        same line as the flag and country. */}
+                    {teamMembers ? (
+                        <Text style={[commonStyles.subtitle, { marginTop: 4, textAlign: 'center' }]} numberOfLines={2}>
+                            {t('runnerInfo.teamMembers')}: {teamMembers}
+                        </Text>
+                    ) : null}
                     <View style={[resultListStyle.flagRow, { marginTop: 10, marginBottom: 8 }]}>
                         {runnerInfo?.nation_flag ? (
                             <SvgUri

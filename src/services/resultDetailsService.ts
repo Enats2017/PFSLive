@@ -98,6 +98,12 @@ export interface RunnerInfo {
     age: string;
     gender: string;
     profile_picture: string;
+    // ✅ Duo teams. `name` above is the TEAM name; these are the two members.
+    // Optional so a cached or older API response cannot break the screen, and
+    // the API returns '' (never null) for solo entrants — so the block that
+    // reads them fails closed and solo runners render exactly as before.
+    name_participant_1?: string;
+    name_participant_2?: string;
 }
 
 export interface ResultDetailResponse {

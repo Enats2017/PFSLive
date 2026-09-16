@@ -24,7 +24,7 @@
     "categoryRank": "Categorie",
     "in": "over",
     "minutes": "minuten",
-    "wavelabel": "Golf"
+    "wavelabel": "Startwave"
   },
   "timingPoint": {
     "checkpoint": "CHECKPOINT",
@@ -45,6 +45,7 @@
     "category": "CATEGORIE",
     "utmbIndex": "INDEX",
     "utmbSeries": "WORLD SERIES",
+    "teamMembers": "Team",
     "noClub": "—",
     "viewOnMap": "Bekijk op de kaart"
   },
