@@ -128,7 +128,7 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
           </TouchableOpacity>
 
           {/* Success Icon */}
-          <View style={[styles.iconWrapper, { backgroundColor: withAlpha(palette.navy, 0.08) }]}>
+          <View style={[styles.iconWrapper, { backgroundColor: dialogTone.success.ring }]}>
             <Ionicons name="checkmark-circle" size={56} color={dialogTone.success.icon} />
           </View>
 
@@ -139,12 +139,16 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
           <Text style={styles.message}>{message}</Text>
 
           {/* ✅ GOT IT BUTTON */}
+          {/* Primary, not secondary: across this app secondary means "the OTHER
+              choice" (cancel/close next to a primary). A lone acknowledge button
+              has no other choice to sit beside, so it is the primary — which is
+              what FeedbackSuccessModal and MembershipPlanModel already do. */}
           <TouchableOpacity
-            style={[commonStyles.secondaryButton]}
+            style={[commonStyles.primaryButton, styles.button]}
             onPress={handleClose}
             activeOpacity={0.8}
           >
-            <Text style={commonStyles.secondaryButtonText}>
+            <Text style={commonStyles.primaryButtonText}>
               {t('common:buttons.gotIt')}
             </Text>
           </TouchableOpacity>
@@ -216,7 +220,6 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    backgroundColor: palette.navy,
   },
   confetti: {
     position: 'absolute',

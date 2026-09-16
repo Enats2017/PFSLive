@@ -213,7 +213,9 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
                         onPress={onMapPress}
                         activeOpacity={0.8}
                     >
-                        <Ionicons name="map-outline" size={18} color={palette.fill} />
+                        {/* surface, not fill — fill is a background token and
+                            read a shade off against primaryButtonText's white. */}
+                        <Ionicons name="map-outline" size={18} color={palette.surface} />
                         <Text style={commonStyles.primaryButtonText}>
                             {t('runnerInfo.viewOnMap')}
                         </Text>

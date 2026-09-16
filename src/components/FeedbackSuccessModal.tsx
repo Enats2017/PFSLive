@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, spacing, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
+import { RING_TINT } from './ui';
 
 interface FeedbackSuccessModalProps {
     visible: boolean;
@@ -101,23 +102,21 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
                         { opacity: cardOpacity, transform: [{ scale: cardScale }] },
                     ]}
                 >
-                    <View style={styles.iconWrapper}>
+                    <Animated.View
+                        style={[
+                            styles.iconCircle,
+                            { transform: [{ scale: iconScale }] },
+                        ]}
+                    >
                         <Animated.View
-                            style={[
-                                styles.iconCircle,
-                                { transform: [{ scale: iconScale }] },
-                            ]}
+                            style={{
+                                opacity: checkOpacity,
+                                transform: [{ scale: checkScale }],
+                            }}
                         >
-                            <Animated.View
-                                style={{
-                                    opacity: checkOpacity,
-                                    transform: [{ scale: checkScale }],
-                                }}
-                            >
-                                <Ionicons name="checkmark" size={38} color={palette.ink} />
-                            </Animated.View>
+                            <Ionicons name="checkmark" size={56} color={palette.ink} />
                         </Animated.View>
-                    </View>
+                    </Animated.View>
 
                     <Text style={[commonStyles.title, { textAlign: 'center' }]}>{title}</Text>
                     <Text style={styles.subtitle}>{subtitle}</Text>
@@ -154,23 +153,20 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         alignItems: 'center',
   },
-    iconWrapper: {
+    // 90/45 and no shadow, same as every other modal halo. It was a shadowed 68
+    // inside a 90 iconWrapper, so it read a size smaller than the rest. The
+    // wrapper is gone rather than kept at 90: it only supplied the marginBottom,
+    // and the circle springs past scale 1 on open, so an identically sized
+    // parent box is something to clip against for nothing.
+    iconCircle: {
         width: 90,
         height: 90,
+        borderRadius: 45,
+        backgroundColor: RING_TINT,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 20,
     },
-    iconCircle: {
-    ...shadows.card,
-
-        width: 68,
-        height: 68,
-        borderRadius: 34,
-        backgroundColor: withAlpha(palette.navy, 0.08),
-        alignItems: 'center',
-        justifyContent: 'center',
-  },
     title: {
         fontFamily: fonts.display,
         fontSize: 20,

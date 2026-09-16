@@ -9,7 +9,8 @@ import {
     StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { palette, fonts, shadows, withAlpha } from '../styles/common.styles';
+import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
+import { RING_TINT } from './ui';
 import { useTranslation } from 'react-i18next';
 
 export type ModalActionType =  'disabled' | 'locked' | 'hidden';
@@ -25,10 +26,12 @@ interface MembershipActionModalProps {
     onConfirm?: () => void;
 }
 
-const ICON_BY_ACTION: Record<ModalActionType, { name: any; color: string; bg: string }> = {
-    disabled: { name: 'lock-closed', color: palette.textMuted, bg: palette.fill },
-    locked: { name: 'time-outline', color: palette.warning, bg: withAlpha(palette.navy, 0.08),},
-    hidden: { name: 'information-circle', color: palette.noticeText, bg: palette.noticeBg },
+// No `bg` here on purpose — the halo is RING_TINT for every action, like every
+// other modal. Only the glyph and its colour carry the action.
+const ICON_BY_ACTION: Record<ModalActionType, { name: any; color: string }> = {
+    disabled: { name: 'lock-closed', color: palette.textMuted },
+    locked: { name: 'time-outline', color: palette.warning },
+    hidden: { name: 'information-circle', color: palette.noticeText },
 };
 
 const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
@@ -84,27 +87,34 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
                                 <Ionicons name="close" size={20} color={palette.textMuted} />
                             </TouchableOpacity>
 
-                            <View style={[styles.iconWrapper, { backgroundColor: icon.bg }]}>
+                            <View style={styles.iconWrapper}>
                                 <Ionicons name={icon.name} size={56} color={icon.color} />
                             </View>
 
                             <Text style={styles.title}>{title}</Text>
                             <Text style={styles.description}>{description}</Text>
 
-                            {showConfirm ? (
-                                <View style={styles.buttonRow}>
-                                    <TouchableOpacity style={styles.secondaryButton} onPress={onClose}>
-                                        <Text style={styles.secondaryButtonText}>{t('common:buttons.cancel')}</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.primaryButton} onPress={onConfirm}>
-                                        <Text style={styles.primaryButtonText}>{confirmLabel}</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            ) : (
-                                <TouchableOpacity style={styles.primaryButtonFull} onPress={onClose}>
-                                    <Text style={styles.primaryButtonText}>{confirmLabel}</Text>
+                            {/* Stacked, primary on top — the shape ErrorModal,
+                                UndoConfirmModal and DeleteEventModal all use. */}
+                            <View style={styles.buttons}>
+                                <TouchableOpacity
+                                    style={[commonStyles.primaryButton, styles.fullWidth]}
+                                    onPress={showConfirm ? onConfirm : onClose}
+                                    activeOpacity={0.85}
+                                >
+                                    <Text style={commonStyles.primaryButtonText}>{confirmLabel}</Text>
                                 </TouchableOpacity>
-                            )}
+
+                                {showConfirm && (
+                                    <TouchableOpacity
+                                        style={[commonStyles.secondaryButton, styles.fullWidth]}
+                                        onPress={onClose}
+                                        activeOpacity={0.85}
+                                    >
+                                        <Text style={commonStyles.secondaryButtonText}>{t('common:buttons.cancel')}</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
                         </Animated.View>
                     </TouchableWithoutFeedback>
                 </View>
@@ -151,7 +161,7 @@ const styles = StyleSheet.create({
         borderRadius: 45,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: withAlpha(palette.navy, 0.08),
+        backgroundColor: RING_TINT,
         marginBottom: 16,
     },
     title: {
@@ -169,41 +179,15 @@ const styles = StyleSheet.create({
         lineHeight: 20,
         marginBottom: 24,
     },
-    buttonRow: {
-        flexDirection: 'row',
+    // Buttons come from commonStyles now; the local copies were a filled-grey
+    // secondary at paddingVertical 12 against the shared outlined navy at
+    // height 48, which is the drift Dialog.tsx's header warns about.
+    buttons: {
         width: '100%',
-        gap: 10,
+        gap: 12,
     },
-    secondaryButton: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 14,
-        backgroundColor: palette.fill,
-        alignItems: 'center',
-    },
-    secondaryButtonText: {
-        fontFamily: fonts.display,
-        fontSize: 15,
-        color: palette.textBody,
-    },
-    primaryButton: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 14,
-        backgroundColor: palette.navy,
-        alignItems: 'center',
-    },
-    primaryButtonFull: {
+    fullWidth: {
         width: '100%',
-        paddingVertical: 12,
-        borderRadius: 14,
-       backgroundColor: palette.navy,
-        alignItems: 'center',
-    },
-    primaryButtonText: {
-        fontFamily: fonts.display,
-        fontSize: 15,
-        color: palette.surface,
     },
 });
 

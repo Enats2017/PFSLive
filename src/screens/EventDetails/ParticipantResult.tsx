@@ -457,10 +457,12 @@ const ParticipantResult = () => {
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           contentContainerStyle={{
-            // The card carries its own 20pt gutter (ParticipantCard.tsx), so a
-            // 16pt one here made a 36pt inset - every other list in the app is
-            // on 20. `marginTop` on a content container alongside flexGrow is
-            // unreliable; paddingTop is the predictable form.
+            // The gutter lives HERE, not on the card: renderParticipant's card
+            // (above) carries no marginHorizontal, unlike ParticipantCard.tsx,
+            // which is a different component used by the Participants tab and
+            // brings its own 20pt. Matches the search header's inset at the top
+            // of this screen. `marginTop` on a content container alongside
+            // flexGrow is unreliable; paddingTop is the predictable form.
             paddingHorizontal: spacing.lg,
             paddingTop: space.sm,
             paddingBottom: spacing.xxxl,

@@ -48,7 +48,7 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
       <View style={dialogStyles.wrapper}>
         <View style={dialogStyles.card}>
           {/* Icon */}
-          <View style={[dialogStyles.iconWrapper, { backgroundColor: withAlpha(palette.navy, 0.08)}]}>
+          <View style={[dialogStyles.iconWrapper, { backgroundColor: dialogTone.warning.ring }]}>
             <Ionicons name="alert-circle-outline" size={56} color={dialogTone.warning.icon} />
           </View>
 

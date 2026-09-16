@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, palette, fonts, space, shadows, withAlpha } from '../styles/common.styles';
+import { dialogTone, RING_TINT } from './ui';
 import { AthleteEvent } from '../services/athleteProfileService';
 
 interface Props {
@@ -73,7 +74,7 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
                     ]}
                 >
                     <View style={styles.iconWrap}>
-                        <Ionicons name="trash-outline" size={46} color={palette.danger} />
+                        <Ionicons name="trash-outline" size={56} color={dialogTone.danger.icon} />
                     </View>
 
                     <Text style={styles.title}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
@@ -130,20 +131,16 @@ const styles = StyleSheet.create({
         ...shadows.overlay,
     },
     iconWrap: {
-        width: 72, height: 72, borderRadius: 36,
-        backgroundColor: withAlpha(palette.navy, 0.08), alignItems: 'center', justifyContent: 'center',
+        width: 90, height: 90, borderRadius: 45,
+        backgroundColor: RING_TINT, alignItems: 'center', justifyContent: 'center',
         marginBottom: spacing.md,
     },
-    title: { fontFamily: fonts.bodySemi,
+    // fonts.display at 20, same as ErrorModal / Dialog / MembershipPlanModel
+    // and commonStyles.title. bodySemi here was the last thing making this
+    // modal read as a different component.
+    title: { fontFamily: fonts.display,
         fontSize: 20, color: palette.ink, marginBottom: space.sm, textAlign: 'center' },
     message: { fontFamily: fonts.body,
         fontSize: 13, color: palette.textBody, textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
     actions: { width: '100%', gap: 12 },
-    btn: { flex: 1, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-    cancelBtn: { backgroundColor: palette.fill },
-    cancelText: { color: palette.ink, fontFamily: fonts.display,
-        fontSize: 15 },
-    deleteBtn: { backgroundColor: palette.navy },
-    deleteText: { color: palette.surface, fontFamily: fonts.display,
-        fontSize: 15 },
 });
