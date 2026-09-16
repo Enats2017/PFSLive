@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { formatWave } from '../../utils/waveLabel';
 
 
 interface ParticipantCardProps {
@@ -68,7 +69,10 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     const shouldShowResults = showResults;
 
   const bib = item.bib || item.bib_number || '';
-  const wave = item.wave;
+  // formatWave returns '' when RR's Wave column merely echoes the distance
+  // (this event's 21km/48km rows do exactly that), so guard on the FORMATTED
+  // value, never on item.wave - the raw value is non-empty in that case.
+  const waveLabel = formatWave(t('details:wave'), item.wave, item.race_distance);
 
   const location = [item.city, item.country].filter(Boolean).join(' | ');
 
@@ -175,8 +179,8 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
               {t('details:tracking.bib')}: {item.bib_number}
             </Text>
           )}
-          {wave && (
-              <Text style={commonStyles.subtitle}>{t('details:wave')}: {item.wave}</Text>
+          {!!waveLabel && (
+              <Text style={commonStyles.subtitle}>{waveLabel}</Text>
             )
           }
           {/* ✅ Duo teams only. `fullName` above is already the TEAM name (RR puts

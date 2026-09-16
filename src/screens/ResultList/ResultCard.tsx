@@ -10,6 +10,7 @@ import { colors } from '../../styles/common.styles';
 import { FilterOption } from '../../components/FilterDropdown';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { formatWave } from '../../utils/waveLabel';
 
 interface ResultCardProps {
     item: RaceResult;
@@ -144,9 +145,15 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                 </Text>
 
                 <View style={resultListStyle.metaBlock}>
-                    <Text style={resultListStyle.teamText} numberOfLines={1}>
-                        {[item.club, item.nation].filter(Boolean).join(' · ')}
-                    </Text>
+                    {/* Country is rendered beside the flag in the column below,
+                        so listing it here printed it twice on every row. Club
+                        only now — and the whole line is dropped for an entrant
+                        with no club, rather than left as a blank row. */}
+                    {!!item.club && (
+                        <Text style={resultListStyle.teamText} numberOfLines={1}>
+                            {item.club}
+                        </Text>
+                    )}
                     {/* Duo teams: `item.name` above is the TEAM name; these are the two
                         members. Empty on every solo entrant, so nothing renders for them. */}
                     {item.name_participant_1 ? (
@@ -156,7 +163,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                     ) : null}
                     {item.wave ? (
                         <Text style={resultListStyle.waveText} numberOfLines={1}>
-                            {t('allrace:race.wavelabel')}: {item.wave}
+                            {formatWave(t('allrace:race.wavelabel'), item.wave)}
                         </Text>
                     ) : null}
                 </View>

@@ -9,6 +9,7 @@ import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/re
 import ElevationChart from '../../components/ElevationChart';
 import { useGpxElevation } from '../../hooks/useGpxElevation';
 import { formatClockTime } from '../../utils/timeFormat';
+import { formatWave } from '../../utils/waveLabel';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 
@@ -115,7 +116,7 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                 </View>
                  {raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
-                        <Text style={commonStyles.title}>{t('raceInfo.wavelabel')}: {raceInfo?.wave}</Text>
+                        <Text style={commonStyles.title}>{formatWave(t('raceInfo.wavelabel'), raceInfo?.wave)}</Text>
                     </View>
                 )}
 

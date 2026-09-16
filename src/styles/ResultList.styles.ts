@@ -299,6 +299,11 @@ divider: {
   // margin off waveText silently dropped the gap on every non-wave event.
   metaBlock: {
     marginBottom: 10,
+    // ✅ The lines inside are 12px captions with no lineHeight set, so they
+    // stacked on the font's line box alone — club, the duo members and the
+    // wave sat almost touching once we started rendering all three. A 2px gap
+    // separates them without changing the block's own 10px outer rhythm.
+    gap: 2,
   },
 
   // ── Stats Row ─────────────────────────────────────────────

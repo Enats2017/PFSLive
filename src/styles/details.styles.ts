@@ -165,6 +165,11 @@ export const detailsStyles = StyleSheet.create({
   },
   info: {
     flex: 1,
+    // ✅ Up to seven lines stack here — name, location, distance, bib, wave,
+    // duo members, category — and commonStyles.subtitle sets no margin or
+    // lineHeight, so they ran together. 3px suits the 16px type; the 12px
+    // captions in ResultList.styles.ts use 2.
+    gap: 3,
   },
   actions: {
     flexDirection: "row",

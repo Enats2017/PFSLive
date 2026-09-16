@@ -10,6 +10,7 @@ import { colors } from '../../styles/common.styles';
 import { formatClockTime } from '../../utils/timeFormat';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { formatWave } from '../../utils/waveLabel';
 
 interface ResultCardLiveProps {
     item: RaceResult;
@@ -222,7 +223,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     ) : null}
                     {item.wave ? (
                         <Text style={resultListStyle.waveText} numberOfLines={1}>
-                            {t('allrace:race.wavelabel')}: {item.wave}
+                            {formatWave(t('allrace:race.wavelabel'), item.wave)}
                         </Text>
                     ) : null}
                 </View>
