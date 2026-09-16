@@ -133,7 +133,11 @@
   },
   "iosnotnow": "Not now",
   "map": "Map",
-  "wave": "Wave",
+  "wave": "Start Wave",
+  "duo": {
+    "members": "Team",
+    "category": "Category"
+  },
   "chart": {
     "elevationProfile": "Elevation profile",
     "distance": "Distance",

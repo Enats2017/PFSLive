@@ -23,25 +23,26 @@ import {
  * The chrome here is fixed and matches the deck: radius 16 with `shadows.overlay`,
  * the token the design system assigns to "modals, floating panels".
  *
- * What varies is TONE, and only tone: the icon and the ring behind it. A
- * destructive confirm must not look like a success, and a success must not look
- * like a neutral notice. Each tone below is the treatment the redesign had
- * already settled on in at least one modal — this only makes it the rule:
+ * What varies is TONE, and as of the Sep 2026 consistency pass tone lives in
+ * the ICON ALONE — the ring behind it is one neutral navy tint on every modal.
+ * It used to vary too (danger on dangerBg, warning on warningBg, success on
+ * solid lime); that pass replaced each of those with this tint, modal by modal.
  *
- *   danger   ErrorModal            palette.danger  on dangerBg
- *   warning  DeviceTransferModal   palette.warning on warningBg
- *   success  FeedbackSuccessModal  palette.ink     on solid lime (the deck's check-mark lime)
- *   info     UpdateRequiredModal   palette.navy    on a navy tint
+ * Change the tint HERE, never at a call site. The first attempt at this pass
+ * hardcoded withAlpha(palette.navy, 0.08) into each modal and left these tokens
+ * still holding the old colours, so `ring` became a live trap: any modal that
+ * read it silently got the pre-pass look back.
  */
 export type DialogTone = 'danger' | 'warning' | 'success' | 'info';
 
+/** The one halo colour behind every modal icon, whatever the tone. */
+export const RING_TINT = withAlpha(palette.navy, 0.08);
+
 export const dialogTone: Record<DialogTone, { icon: string; ring: string }> = {
-  danger: { icon: palette.danger, ring: palette.dangerBg },
-  warning: { icon: palette.warning, ring: palette.warningBg },
-  // Solid lime, not a tint — lime on a lime tint is too low-contrast to read as
-  // a status, and the deck names lime as the check-mark colour.
-  success: { icon: palette.ink, ring: palette.lime },
-  info: { icon: palette.navy, ring: withAlpha(palette.navy, 0.08) },
+  danger: { icon: palette.danger, ring: RING_TINT },
+  warning: { icon: palette.warning, ring: RING_TINT },
+  success: { icon: palette.ink, ring: RING_TINT },
+  info: { icon: palette.navy, ring: RING_TINT },
 };
 
 /**
@@ -148,7 +149,7 @@ export const Dialog: React.FC<DialogProps> = ({
 
   return (
     <View style={dialogStyles.card}>
-      <View style={[dialogStyles.iconWrapper, { backgroundColor: withAlpha(palette.navy, 0.08), }]}>
+      <View style={[dialogStyles.iconWrapper, { backgroundColor: ring }]}>
         <Ionicons name={icon} size={56} color={iconColor} />
       </View>
 

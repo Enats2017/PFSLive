@@ -133,7 +133,11 @@
   },
   "iosnotnow": "Not Now",
   "map": "Carte",
-  "wave": "Vague",
+  "wave": "Vague de départ",
+  "duo": {
+    "members": "Équipe",
+    "category": "Catégorie"
+  },
   "chart": {
     "elevationProfile": "Profil altimétrique",
     "distance": "Distance",

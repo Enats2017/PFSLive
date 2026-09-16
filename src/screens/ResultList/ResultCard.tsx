@@ -5,6 +5,7 @@ import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { resultListStyle } from '../../styles/ResultList.styles';
+import { formatWave } from '../../utils/waveLabel';
 import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { palette, categoryColors } from '../../styles/common.styles';
@@ -125,14 +126,31 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                         column, so the club and country were cut off on every row
                         that had a club. */}
                     <Text style={resultListStyle.bibText} numberOfLines={1}>
-                        {[`${t('allrace:race.bibNumber')} ${item.bib}`,
-                          item.wave ? `${t('allrace:race.wavelabel')} ${item.wave}` : null]
-                            .filter(Boolean).join(' \u00b7 ')}
+                        {`${t('allrace:race.bibNumber')} ${item.bib}`}
                     </Text>
-                    {!!(item.club || item.nation) && (
+                    {/* Wave gets its own row. Joined onto the bib line it ran to
+                        41-54 characters ("Bib number 201 - Start Wave 1: Start @ 9h",
+                        longer in fr) and numberOfLines={1} truncated it mid-word in
+                        this column. Empty on the many events with no wave column. */}
+                    {item.wave ? (
                         <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
-                            {[item.club, item.nation].filter(Boolean).join(' \u00b7 ')}
+                            {formatWave(t('allrace:race.wavelabel'), item.wave)}
                         </Text>
+                    ) : null}
+                    {/* Flag + club + country on the identity line, matching the live
+                        and before-race cards. The 28x20 flag that used to sit in the
+                        stats row is gone - it repeated the country shown here - so
+                        this is now the card's ONLY flag and must render even when
+                        club and country are both empty. */}
+                    {(!!item.nation_flag || !!item.club || !!item.nation) && (
+                        <View style={resultListStyle.metaLineTight}>
+                            {!!item.nation_flag && (
+                                <SvgUri uri={item.nation_flag} width={18} height={13} />
+                            )}
+                            <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
+                                {[item.club, item.nation].filter(Boolean).join(' \u00b7 ')}
+                            </Text>
+                        </View>
                     )}
                     {/* Duo teams: `item.name` above is the TEAM name; these are
                         the two members. Empty on every solo entrant, so nothing
@@ -200,16 +218,10 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                         </>
                     ) : (
                         <>
-                            <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
-                                <View style={resultListStyle.flagRow}>
-                                    {!!item.nation_flag && (
-                                        <SvgUri width={28} height={20} uri={item.nation_flag} />
-                                    )}
-                                    <Text style={resultListStyle.statVal} numberOfLines={2}>
-                                        {item.nation || '—'}
-                                    </Text>
-                                </View>
-                            </View>
+                            {/* The flag + country column that stood here repeated the
+                                country already shown on the identity line above, so it
+                                is gone. RACE TIME still holds this row open, so unlike
+                                the upcoming card the row needs no gating. */}
                             {showUtmbIndex && (
                                 <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
                                     {hasUtmbIndex ? (

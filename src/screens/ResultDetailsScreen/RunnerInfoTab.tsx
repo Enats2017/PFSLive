@@ -30,6 +30,13 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
     const { t } = useTranslation('resultdetails');
     const initials = getInitials(runnerInfo?.name);
 
+    // ✅ Duo teams. There is no is_duo flag — a team is simply an entrant RR sent
+    // member names for. Solo entrants get '', so teamMembers stays empty and the
+    // line below never renders, leaving their card exactly as before.
+    const teamMembers = runnerInfo?.name_participant_1
+        ? [runnerInfo.name_participant_1, runnerInfo.name_participant_2].filter(Boolean).join(' & ')
+        : '';
+
     // ✅ Check if UTMB index exists, is not empty, and is not 0
     const hasUtmbIndex = runnerInfo?.utmb_index &&
         runnerInfo.utmb_index.trim() !== '' &&
@@ -67,6 +74,17 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
                     <Text style={resultInfoStyles.identityName} numberOfLines={2}>
                         {runnerInfo?.name ?? '—'}
                     </Text>
+
+                    {/* Duo teams: identityName above is the TEAM name, these are
+                        the two members. Unlabelled, matching ParticipantCard on
+                        this branch. Above identityRow, not inside it - that row
+                        is flexDirection:'row' and would put the names on the
+                        same line as the flag and country. */}
+                    {teamMembers ? (
+                        <Text style={resultInfoStyles.identityTeam} numberOfLines={2}>
+                            {teamMembers}
+                        </Text>
+                    ) : null}
 
                     <View style={resultInfoStyles.identityRow}>
                         {runnerInfo?.nation_flag ? (
@@ -213,7 +231,9 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
                         onPress={onMapPress}
                         activeOpacity={0.8}
                     >
-                        <Ionicons name="map-outline" size={18} color={palette.fill} />
+                        {/* surface, not fill — fill is a background token and
+                            read a shade off against primaryButtonText's white. */}
+                        <Ionicons name="map-outline" size={18} color={palette.surface} />
                         <Text style={commonStyles.primaryButtonText}>
                             {t('runnerInfo.viewOnMap')}
                         </Text>

@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, spacing, palette, fonts, shadows, space, withAlpha, colors } from '../styles/common.styles';
+import { commonStyles, spacing, palette, fonts, shadows, space, withAlpha } from '../styles/common.styles';
 import { useNavigation } from '@react-navigation/native';
 
 type RegistrationStatus =
@@ -52,8 +52,6 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   onConfirm,
 }) => {
   const { t } = useTranslation(['details']);
-  console.log("register modal");
-  
   const navigation = useNavigation<any>();
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const cardTranslateY = useRef(new Animated.Value(80)).current;
@@ -301,12 +299,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...shadows.overlay,
   },
-  // The deck's modal action is the lime button with ink text.
+  // palette.navy (#0F2447), not colors.primary (#0f2a3f): those are two
+  // different navies, and commonStyles.primaryButton — which every other modal
+  // action in the app uses — is on the former.
   modalPrimary: {
-    backgroundColor: colors.primary,
+    backgroundColor: palette.navy,
   },
   modalPrimaryText: {
-    color: colors.white,
+    color: palette.surface,
   },
   closeBtn: {
     position: 'absolute',

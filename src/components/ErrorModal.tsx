@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
+import { RING_TINT } from './ui';
 
 interface ErrorModalProps {
   visible: boolean;
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-   backgroundColor: withAlpha(palette.navy, 0.08),
+    backgroundColor: RING_TINT,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,

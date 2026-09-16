@@ -9,7 +9,8 @@ import {
     StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { palette, radii, shadows, space, fonts, type, withAlpha } from '../styles/common.styles';
+import { commonStyles, palette, radii, shadows, space, type, withAlpha } from '../styles/common.styles';
+import { dialogTone, RING_TINT } from './ui';
 import { useTranslation } from 'react-i18next';
 
 type PurchaseStatus = 'processing' | 'success' | 'error';
@@ -55,7 +56,7 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
         if (status === 'processing') {
             return (
                 <>
-                    <View style={[styles.iconHalo, { backgroundColor: palette.fill }]}>
+                    <View style={styles.iconHalo}>
                         <ActivityIndicator size="large" color={palette.navy} />
                     </View>
                     <Text style={styles.title}>{t('membership:purchase.processingTitle')}</Text>
@@ -69,10 +70,8 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
         if (status === 'success') {
             return (
                 <>
-                    <View style={[styles.iconHalo, { backgroundColor: palette.noticeBg }]}>
-                        <View style={[styles.iconCore, { backgroundColor: palette.lime }]}>
-                            <Ionicons name="checkmark-circle" size={34} color={palette.ink} />
-                        </View>
+                    <View style={styles.iconHalo}>
+                        <Ionicons name="checkmark-circle" size={56} color={dialogTone.success.icon} />
                     </View>
                     <Text style={styles.title}>{t('membership:purchase.successTitle')}</Text>
                     <Text style={styles.description}>
@@ -84,17 +83,19 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
 
         return (
             <>
-                <View style={[styles.iconHalo, { backgroundColor: palette.dangerBg }]}>
-                    <View style={[styles.iconCore, { backgroundColor: palette.dangerBg }]}>
-                        <Ionicons name="close-circle" size={34} color={palette.danger} />
-                    </View>
+                <View style={styles.iconHalo}>
+                    <Ionicons name="close-circle" size={56} color={dialogTone.danger.icon} />
                 </View>
                 <Text style={styles.title}>{t('membership:purchase.errorTitle')}</Text>
                 <Text style={styles.description}>
                     {errorMessage || t('membership:purchase.errorBody')}
                 </Text>
-                <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.85}>
-                    <Text style={styles.closeButtonText}>{t('common:buttons.close')}</Text>
+                <TouchableOpacity
+                    style={[commonStyles.primaryButton, styles.closeButton]}
+                    onPress={onClose}
+                    activeOpacity={0.85}
+                >
+                    <Text style={commonStyles.primaryButtonText}>{t('common:buttons.close')}</Text>
                 </TouchableOpacity>
             </>
         );
@@ -149,20 +150,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         alignItems: 'center',
     },
+    // One 90/45 RING_TINT halo for all three states, like every other modal.
+    // It used to be a coloured halo wrapping a second coloured core — a lime
+    // disc inside a pink one on success, danger-on-danger on error.
     iconHalo: {
         width: 90,
         height: 90,
         borderRadius: 45,
+        backgroundColor: RING_TINT,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: space.md,
-    },
-    iconCore: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     title: {
         ...type.h2,
@@ -177,15 +175,6 @@ const styles = StyleSheet.create({
     closeButton: {
         marginTop: 24,
         width: '100%',
-        paddingVertical: 16,
-        borderRadius: radii.md,
-        backgroundColor: palette.navy,
-        alignItems: 'center',
-    },
-    closeButtonText: {
-        fontFamily: fonts.display,
-        fontSize: 15,
-        color: palette.surface,
     },
     iconclose:{
           position: 'absolute',

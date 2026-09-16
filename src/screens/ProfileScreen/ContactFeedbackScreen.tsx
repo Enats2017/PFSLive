@@ -1,18 +1,13 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
     ScrollView,
-    KeyboardAvoidingView,
-    Platform,
-    Keyboard,
-    KeyboardEvent,
-    Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/common/AppHeader';
 import { Button, Card } from '../../components/ui';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
@@ -39,7 +34,6 @@ type FieldErrors = {
 
 const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigation, route }) => {
     const { t } = useTranslation('contact');
-    const insets = useSafeAreaInsets();
     const incomingProfile = route.params?.profile;
     const [name, setName] = useState(incomingProfile ? `${incomingProfile.firstname ?? ''} ${incomingProfile.lastname ?? ''}`.trim() : '');
     const [email, setEmail] = useState(incomingProfile?.email ?? '');
@@ -54,41 +48,13 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
         value: index,
     }));
 
-    const keyboardOffset = useRef(new Animated.Value(0)).current;
-    const scrollViewRef = useRef<ScrollView>(null);
-
-    useEffect(() => {
-        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-        const onShow = (e: KeyboardEvent) => {
-            Animated.timing(keyboardOffset, {
-                toValue: Math.max(e.endCoordinates.height - insets.bottom, 0),
-                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
-                useNativeDriver: false, // paddingBottom is layout, not transform — must be false
-            }).start();
-
-            // scroll the last field above the keyboard once it's mostly open
-            setTimeout(() => {
-                scrollViewRef.current?.scrollToEnd({ animated: true });
-            }, Platform.OS === 'ios' ? (e.duration ?? 250) : 100);
-        };
-
-        const onHide = (e: KeyboardEvent) => {
-            Animated.timing(keyboardOffset, {
-                toValue: 0,
-                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
-                useNativeDriver: false,
-            }).start();
-        };
-
-        const showSub = Keyboard.addListener(showEvent, onShow);
-        const hideSub = Keyboard.addListener(hideEvent, onHide);
-        return () => {
-            showSub.remove();
-            hideSub.remove();
-        };
-    }, [keyboardOffset, insets.bottom]);
+    // Keyboard handling is the ScrollView's own job here — see the
+    // `automaticallyAdjustKeyboardInsets` prop below. The hand-rolled version
+    // this replaces animated a paddingBottom onto a wrapper AND called
+    // scrollToEnd() on every keyboardWillShow, which is what made the screen
+    // jump upward and park the reachUs block under the Description field. It
+    // also double-inset on Android, where Expo's default adjustResize already
+    // shrinks the window by the keyboard height.
 
     const handleMessageChange = useCallback((text: string) => {
         setMessage(text);
@@ -161,12 +127,20 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
             {/* header.title now reads from the shared band, so the local
                 back-arrow row is gone. */}
             <AppHeader title={t('common:band.contactFeedback')} showBack />
-           
+
+            {/* contactStyles.flex bounds the ScrollView to the space left under
+                the header — without it the ScrollView sizes to its content and
+                the reachUs card falls off the bottom with nothing to scroll. */}
+            <View style={contactStyles.flex}>
                 <ScrollView
-                    ref={scrollViewRef}
                     contentContainerStyle={contactStyles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
+                    // iOS: insets the content by the keyboard and scrolls the
+                    // focused field MINIMALLY into view, instead of jumping to
+                    // the end of the list. No-op on Android, where adjustResize
+                    // already resizes the window.
+                    automaticallyAdjustKeyboardInsets
                 >
                     <View style={contactStyles.banner}>
                         <View style={contactStyles.bannerText}>
@@ -259,7 +233,8 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                         <Text style={contactStyles.reachNote}>{t('reachUs.replyTime')}</Text>
                     </View>
                 </ScrollView>
-          
+            </View>
+
             <FeedbackSuccessModal
                 visible={showSuccess}
                 title={t('success.title')}

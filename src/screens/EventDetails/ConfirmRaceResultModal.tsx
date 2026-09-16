@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { RaceResultData } from '../../services/eventDetailService';
 import { commonStyles, palette, fonts, shadows, radii, space, withAlpha } from '../../styles/common.styles';
+import { RING_TINT } from '../../components/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 interface ConfirmRaceResultModalProps {
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: withAlpha(palette.navy, 0.08),
+    backgroundColor: RING_TINT,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: space.md,

@@ -6,6 +6,7 @@ import { commonStyles, typography, fonts } from '../../styles/common.styles';
 import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/resultDetailsService';
 import { formatClockTime } from '../../utils/timeFormat';
 import { Button } from '../../components/ui';
+import { stripWavePrefix } from '../../utils/waveLabel';
 
 // participant_status is open-ended: the API passes through whatever non-numeric
 // text the timing feed puts in `pos`, uppercased, alongside its own
@@ -126,7 +127,9 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                 {!!raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
                         <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.wavelabel')}</Text>
-                        <Text style={resultInfoStyles.rowValue}>{raceInfo.wave}</Text>
+                        {/* Value only — the label above already says "wave", so the
+                            raw RR value ("Wave 1: Start @ 9h") said it twice, stacked. */}
+                        <Text style={resultInfoStyles.rowValue}>{stripWavePrefix(raceInfo.wave)}</Text>
                     </View>
                 )}
 
