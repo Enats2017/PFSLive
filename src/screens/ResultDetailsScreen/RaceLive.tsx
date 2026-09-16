@@ -9,6 +9,7 @@ import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/re
 import ElevationChart from '../../components/ElevationChart';
 import { useGpxElevation } from '../../hooks/useGpxElevation';
 import { formatClockTime } from '../../utils/timeFormat';
+import { stripWavePrefix } from '../../utils/waveLabel';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 
@@ -123,7 +124,9 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                  {!!raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
                         <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.wavelabel')}</Text>
-                        <Text style={resultInfoStyles.rowValue}>{raceInfo?.wave}</Text>
+                        {/* Value only — the label above already says "wave", so the
+                            raw RR value ("Wave 1: Start @ 9h") said it twice, stacked. */}
+                        <Text style={resultInfoStyles.rowValue}>{stripWavePrefix(raceInfo?.wave)}</Text>
                     </View>
                 )}
 

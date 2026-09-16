@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
 import { commonStyles } from '../../styles/common.styles';
 import { RaceInfo, ResultDetailEvent } from '../../services/resultDetailsService';
+import { formatWave } from '../../utils/waveLabel';
 
 interface Props {
     raceInfo?: RaceInfo;
@@ -44,7 +45,7 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                 </View>
                 {!!raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
-                        <Text style={resultInfoStyles.rowValue}>{t('raceInfo.wavelabel')}: {raceInfo?.wave}</Text>
+                        <Text style={resultInfoStyles.rowValue}>{formatWave(t('raceInfo.wavelabel'), raceInfo?.wave)}</Text>
                     </View>
                 )}
                 <View style={resultInfoStyles.bibCard}>
