@@ -464,7 +464,7 @@ const ParticipantResult = () => {
             // of this screen. `marginTop` on a content container alongside
             // flexGrow is unreliable; paddingTop is the predictable form.
             paddingHorizontal: spacing.lg,
-            paddingTop: space.sm,
+            paddingTop: spacing.md,
             paddingBottom: spacing.xxxl,
             flexGrow: 1,
           }}

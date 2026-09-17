@@ -145,7 +145,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
         // The page gutter is 20 everywhere else in the app (result list,
         // favourites, distances); at 12 these cards sat 8pt wider than
         // their neighbours on every other list.
-        { marginBottom: spacing.md, marginHorizontal: space.xl },
+        { marginBottom: spacing.sm, marginHorizontal: space.md , marginTop: spacing.md},
       ]}
     >
       <View style={detailsStyles.topRow}>

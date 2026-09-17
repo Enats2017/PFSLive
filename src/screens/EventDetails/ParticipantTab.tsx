@@ -320,22 +320,16 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
 
   return (
     <>
-      <View
-        style={{
-          paddingHorizontal: space.xl,
-          paddingTop: spacing.md,
-         
-        }}
-      >
+    
         <SearchInput
-                        framed={false}
+          
           ref={searchInputRef}
           placeholder={t('details:participant.search')}
           value={searchText}
           onChangeText={setSearchText}
           icon="search"
         />
-      </View>
+     
 
       {loading && searchText.length > 0 && (
         <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
@@ -368,7 +362,8 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
           contentContainerStyle={{
             paddingBottom: spacing.xxxl,
             flexGrow: 1,
-            paddingTop:spacing.sm,
+           
+            
           }}
           keyboardShouldPersistTaps="handled"
           removeClippedSubviews={false}
