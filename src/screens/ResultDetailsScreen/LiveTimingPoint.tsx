@@ -21,7 +21,7 @@ const AmenityIcons = (({ features, t }: { features?: string[]; t: any }) => {
             <Text style={resultInfoStyles.rowLabel}>
                 {t('timingPoint.availableServices')}
             </Text>
-            <View style={{ flexDirection: 'row',  gap: 6, flexWrap: 'wrap' }}>
+            <View style={{ flexDirection: 'row',  gap: space.sm, flexWrap: 'wrap' }}>
                 {features.map(feature => (
                     <View key={feature} style={{
                         alignItems: 'center',

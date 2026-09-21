@@ -164,7 +164,7 @@ export const favstyle = StyleSheet.create({
   nationRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: space.sm,
     marginTop: 2,
   },
 

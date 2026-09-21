@@ -185,7 +185,7 @@ export const detailsStyles = StyleSheet.create({
    metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: space.sm,
     marginTop: spacing.sm,
   },
 
@@ -258,7 +258,7 @@ export const detailsStyles = StyleSheet.create({
     // duo members, category — and commonStyles.subtitle sets no margin or
     // lineHeight, so they ran together. 3px suits the 16px type; the 12px
     // captions in ResultList.styles.ts use 2.
-    gap: 3,
+    gap: space.xs,
   },
 
   // Card row: name plus muted meta lines (25_ParticipantList.png).
@@ -292,7 +292,7 @@ export const detailsStyles = StyleSheet.create({
     paddingHorizontal: space.xl,
     
     
-    gap: 6,
+    gap: space.sm,
   },
   
   liveTrackingText: {

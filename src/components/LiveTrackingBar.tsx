@@ -1,6 +1,6 @@
 import { View, Text } from "react-native";
 import { PulsingDot } from "./PullingDot";
-import { palette, fonts } from '../styles/common.styles';
+import { palette, fonts, space } from '../styles/common.styles';
 import { useTranslation } from 'react-i18next';
 
  export const LiveTrackingBar: React.FC = () => {
@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
         borderRadius: 10,
         alignItems:"center", 
         flexDirection: 'row', 
-        gap: 6,
+        gap: space.sm,
     }}>
         <PulsingDot/>
       

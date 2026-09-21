@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { AidStationMapMarker } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
-import { palette, fonts } from '../../styles/common.styles';
+import { palette, fonts, space } from '../../styles/common.styles';
 import { getFeatureIcon } from '../../utils/featureIcons';
 
 // GPX <wpt> descriptions arrive as HTML (RouteYou exports use <br/>, <p>, <ul>/<li>,
@@ -181,7 +181,7 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                             }}>
                                 {t('livetracking:availableServices')}
                             </Text>
-                            <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                            <View style={{ flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' }}>
                                 {features.map(feature => (
                                     <View key={feature}>
                                         <Ionicons

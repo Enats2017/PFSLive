@@ -227,7 +227,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
             <TouchableOpacity onPress={handleCardPress} activeOpacity={0.7}>
 
                 {hasUtmbIndex && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: space.md }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.md }}>
                         <View style={resultListStyle.utmbBadge}>
                         <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
                         <Text style={resultListStyle.utmbBadgeTextBottom}>Index</Text>

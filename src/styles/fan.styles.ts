@@ -123,7 +123,7 @@ export const fanstyle = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 5,
+    gap: space.sm,
   },
   eventDate: {
     fontFamily: fonts.body,

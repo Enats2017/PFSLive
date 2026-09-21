@@ -101,7 +101,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
 
                 {hasFinished ? null : participant.connection_status === 'offline' ? (
                     <View style={{
-                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        flexDirection: 'row', alignItems: 'center', gap: space.sm,
                         backgroundColor: palette.fill, borderColor: palette.border, borderWidth: 1,
                         borderRadius: 10, paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: 12,
                     }}>
@@ -115,7 +115,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                     </View>
                 ) : participant.is_estimated ? (
                     <View style={{
-                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        flexDirection: 'row', alignItems: 'center', gap: space.sm,
                         backgroundColor: palette.warningBg, borderRadius: 10,
                         paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: space.md,
                     }}>
@@ -129,7 +129,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
 
                 {showLowBattery && (
                     <View style={{
-                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        flexDirection: 'row', alignItems: 'center', gap: space.sm,
                         backgroundColor: palette.dangerBg, borderColor: palette.danger, borderWidth: 1,
                         borderRadius: 10, paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: 12,
                     }}>

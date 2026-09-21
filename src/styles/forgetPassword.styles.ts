@@ -62,7 +62,7 @@ export const forgotStyles = StyleSheet.create({
     paddingHorizontal: space.xl,
     paddingTop: space.md,
     paddingBottom: space.sm,
-    gap: 6,
+    gap: space.sm,
   },
   progressSegment: {
     flex: 1,
@@ -120,7 +120,7 @@ export const forgotStyles = StyleSheet.create({
     paddingVertical: space.md,
     minHeight: 44,
     marginTop: space.xl,
-    gap: 6,
+    gap: space.sm,
   },
 
   backButtonText: {
@@ -180,7 +180,7 @@ export const forgotStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: space.md,
-    gap: 6,
+    gap: space.sm,
   },
   errorText: {
     ...type.smallMedium,

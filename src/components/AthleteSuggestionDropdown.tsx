@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: space.xl,
         paddingVertical: 8,
-        gap: 10,
+        gap: space.md,
     },
     avatar: {
         width: 36,

@@ -183,7 +183,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={{
-                        gap: 10,
+                        gap: space.md,
                         paddingRight: 4,
                         paddingBottom: 4,
                     }}

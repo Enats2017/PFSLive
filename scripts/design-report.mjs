@@ -7,6 +7,7 @@
 //
 // Reports the five things the deck actually specifies, per screen file:
 //   PAD   padding/margin on the 4pt grid
+//   GAP   flex gap on the same grid
 //   SPACE page gutter 20, card gap 12
 //   FONT  a family is set, and the size is on the ramp
 //   TEXT  no ALL-CAPS sentences, no raw i18n keys rendered
@@ -22,13 +23,30 @@ const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '
 const RAMP = ['10', '11', '12', '13', '15', '20', '26', '40'];
 const RADII = [10, 14, 16];
 
-const entriesOf = (src) =>
-  src.match(/[A-Za-z_$][\w$]*:\s*\{(?:[^{}]|\{[^{}]*\})*\}/gs) ?? [];
+// Style objects come in two shapes. A StyleSheet entry is keyed (`card: { … }`),
+// but an animated or memoised style is not: `const labelStyle = { … }`,
+// `useMemo(() => ({ … }))`, inline `style={{ … }}`. Only the first was ever
+// scanned, which is how both surviving raw `fontWeight`s — the floating labels
+// in FloatingLabelInput and CountrySelector — sat unseen for a whole branch.
+const entriesOf = (src) => [
+  ...(src.match(/[A-Za-z_$][\w$]*:\s*\{(?:[^{}]|\{[^{}]*\})*\}/gs) ?? []),
+  ...(src.match(/(?:=>|=)\s*\(?\s*\{(?:[^{}]|\{[^{}]*\})*\}/gs) ?? []),
+];
 
 const RULES = {
   PAD: (src) => {
     const bad = [];
     for (const m of src.matchAll(/\b(?:padding|margin)(?:Top|Bottom|Left|Right|Horizontal|Vertical)?:\s*(-?\d+(?:\.\d+)?)\b/g)) {
+      const v = Math.abs(Number(m[1]));
+      if (v > 2 && v % 4 !== 0) bad.push(m[0].trim());
+    }
+    return bad;
+  },
+  // `gap` spaces a row exactly as padding does, but was held to no grid at all:
+  // 33 sites had drifted to 2/3/5/6/10 before anything looked at them.
+  GAP: (src) => {
+    const bad = [];
+    for (const m of src.matchAll(/\b(?:gap|rowGap|columnGap):\s*(-?\d+(?:\.\d+)?)\b/g)) {
       const v = Math.abs(Number(m[1]));
       if (v > 2 && v % 4 !== 0) bad.push(m[0].trim());
     }
@@ -104,7 +122,11 @@ if (process.argv.includes('--selftest')) {
   const cases = [
     ['PAD', 'a: { padding: 7 }'],
     ['SPACE', 'a: { paddingHorizontal: 12 }'],
+    ['GAP', 'a: { gap: 6 }'],
     ['FONT', 'a: { fontFamily: fonts.body, fontSize: 17 }'],
+    // The unkeyed forms — these are the ones the old entriesOf could not see.
+    ['FONT', "const labelStyle = { fontFamily: fonts.body, fontWeight: '500' };"],
+    ['FONT', 'const s = useMemo(() => ({ fontFamily: fonts.body, fontSize: 17 }), []);'],
     ['DESIGN', "a: { backgroundColor: '#ff0000' }"],
     ['DESIGN', 'a: { borderTopLeftRadius: 28 }'],
     ['DESIGN', 'a: { color: "black" }'],
@@ -117,7 +139,7 @@ if (process.argv.includes('--selftest')) {
     console.log(`  ${fired ? 'PASS' : 'FAIL'}  ${rule} catches ${JSON.stringify(sample)}`);
     ok &&= fired;
   }
-  const clean = 'a: { padding: 16, paddingHorizontal: 20, marginBottom: 12, fontFamily: fonts.body, fontSize: 13, borderRadius: 14, backgroundColor: palette.surface }';
+  const clean = 'a: { padding: 16, paddingHorizontal: 20, marginBottom: 12, gap: 8, fontFamily: fonts.body, fontSize: 13, borderRadius: 14, backgroundColor: palette.surface }';
   for (const rule of Object.keys(RULES)) {
     const quiet = RULES[rule](clean).length === 0;
     console.log(`  ${quiet ? 'PASS' : 'FAIL'}  ${rule} stays quiet on conforming code`);
@@ -138,7 +160,7 @@ const files = [];
 
 const detail = process.argv.includes('--detail');
 const rows = [];
-let totals = { PAD: 0, SPACE: 0, FONT: 0, DESIGN: 0 };
+let totals = Object.fromEntries(Object.keys(RULES).map((k) => [k, 0]));
 
 for (const file of files) {
   const rel = relative(ROOT, file);

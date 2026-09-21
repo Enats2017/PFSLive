@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { FollowerItem } from '../../services/followerListService';
-import { commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, space } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -75,7 +75,7 @@ const FollowerListCard: React.FC<FollowerCardProps> = ({
 
                 <View style={detailsStyles.info}>
                     <Text style={commonStyles.title}>{fullName}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
                         {/* City + country is one phrase: it wraps rather than being cut. */}
                         <Text style={commonStyles.text} numberOfLines={2}>
                             {[item.city, item.country].filter(Boolean).join(' · ')}

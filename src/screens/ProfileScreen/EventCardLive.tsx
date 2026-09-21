@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { AthleteEvent } from '../../services/athleteProfileService';
-import { commonStyles, spacing, palette, radii } from '../../styles/common.styles';
+import { commonStyles, spacing, palette, radii, space } from '../../styles/common.styles';
 import { profileStyles } from '../../styles/Profile.styles';
 import { Feather, MaterialCommunityIcons,Ionicons} from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
@@ -85,7 +85,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
             </View>
 
             {isOwnProfile ? (
-                <View style = {{flexDirection:'row', alignItems:'center', gap:6}}>
+                <View style = {{flexDirection:'row', alignItems:'center', gap: space.sm}}>
                     {canDelete && (
                         <TouchableOpacity
                             style={[styles.iconBtn, styles.iconBtnDanger]}

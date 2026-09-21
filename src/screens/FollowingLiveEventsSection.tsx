@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { FollowingLiveEvent } from './HomeScreen';
-import { commonStyles, spacing, palette } from '../styles/common.styles';
+import { commonStyles, spacing, palette, space } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
 import { formatClockTime } from '../utils/timeFormat';
 import { useTranslation } from 'react-i18next';
@@ -142,7 +142,7 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                         )}
 
                         <TouchableOpacity
-                            style={[homeStyles.followerBtn, { flexDirection: 'row', gap: 6 }]}
+                            style={[homeStyles.followerBtn, { flexDirection: 'row', gap: space.sm }]}
                             onPress={() => onRoutePress(event)}
                             
                         >

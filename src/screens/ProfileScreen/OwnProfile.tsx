@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { commonStyles, spacing } from '../../styles/common.styles'
+import { commonStyles, spacing, space } from '../../styles/common.styles'
 import { Ionicons, FontAwesome5, FontAwesome6, FontAwesome, Feather } from '@expo/vector-icons'
 import { eventService, AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { FlatList } from 'react-native-gesture-handler'
@@ -62,7 +62,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                         <TouchableOpacity
                             onPress={onRefresh}
                             activeOpacity={0.8}
-                            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 6 }}
+                            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: space.sm }}
                         >
                             {refreshLoading ? (
                                 <ActivityIndicator

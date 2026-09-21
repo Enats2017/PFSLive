@@ -201,7 +201,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     backgroundColor: COLORS.WHITE,
     paddingHorizontal: 4,
     zIndex: 1,
-    fontWeight: '500' as const,
+    fontFamily: fonts.bodyMedium,
     letterSpacing: 0.3,
   }), [animatedValue, labelLeft, error]);
 

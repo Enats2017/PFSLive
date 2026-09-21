@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { commonStyles, palette, fonts } from '../../styles/common.styles';
+import { commonStyles, palette, fonts, space } from '../../styles/common.styles';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
 import { RunnerInfo, RaceInfo } from '../../services/resultDetailsService';
 import { resultListStyle } from '../../styles/ResultList.styles';
@@ -147,7 +147,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
                     <View
                         style={[
                             resultInfoStyles.col,
-                            { gap: 5 },
+                            { gap: space.sm },
                             !showUtmbIndex && resultInfoStyles.singleColumn,
                         ]}
                     >
@@ -227,7 +227,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
             <View>
                 {showMapButton && (
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton,{gap: 10, justifyContent: 'center', alignItems: 'center'}]}
+                        style={[commonStyles.primaryButton,{gap: space.md, justifyContent: 'center', alignItems: 'center'}]}
                         onPress={onMapPress}
                         activeOpacity={0.8}
                     >

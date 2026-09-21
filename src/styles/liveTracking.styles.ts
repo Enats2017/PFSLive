@@ -180,7 +180,7 @@ export const liveTrackingStyles = StyleSheet.create({
     popupFooter: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: space.sm,
         marginTop: spacing.sm,
     },
     lastUpdateText: {

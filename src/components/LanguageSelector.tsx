@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.xl,
     borderRadius: 10,
     backgroundColor: palette.fill,
-    gap: 6,
+    gap: space.sm,
   },
   activeButton: {
     backgroundColor: palette.danger,

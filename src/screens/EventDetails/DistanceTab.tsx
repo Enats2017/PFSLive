@@ -11,7 +11,7 @@ import {
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, spacing, palette, fonts } from '../../styles/common.styles';
+import { commonStyles, spacing, space, palette, fonts } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
 import RegistrationModal from '../../components/RegistrationModal';
@@ -433,7 +433,7 @@ const handleExternalRegister = useCallback((url: string) => {
       selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
 
     return (
-      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.md, marginHorizontal: spacing.md }]}>
+      <View style={[commonStyles.card, { minHeight: 110, marginBottom: space.md, marginHorizontal: space.xl }]}>
         <View style={detailsStyles.distance}>
           <View style={detailsStyles.distanceInfo}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>

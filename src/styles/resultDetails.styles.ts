@@ -530,7 +530,7 @@ export const resultInfoStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: space.md,
     marginHorizontal: space.md,
     marginBottom: space.md,
   },

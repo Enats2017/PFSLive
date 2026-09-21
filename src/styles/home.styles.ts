@@ -435,7 +435,7 @@ export const homeStyles = StyleSheet.create({
   logosRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: space.md,
   },
 
   section: { paddingBottom: 8 },
@@ -472,7 +472,7 @@ export const homeStyles = StyleSheet.create({
   liveBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: space.sm,
     backgroundColor: palette.dangerBg,
     borderRadius: 10,
     paddingHorizontal: 8,

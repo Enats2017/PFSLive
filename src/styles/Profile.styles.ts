@@ -23,7 +23,7 @@ export const profileStyles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     marginBottom: space.md,
-    gap: 5,
+    gap: space.sm,
   },
   badgeDot: { 
     width: 7, 
@@ -124,7 +124,7 @@ export const profileStyles = StyleSheet.create({
   errorRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: space.sm,
     marginBottom: spacing.sm,
   },
   content: {  
