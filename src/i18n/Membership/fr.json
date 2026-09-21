@@ -5,7 +5,7 @@
     "subtitle": "Blijf je atleten live volgen."
   },
   "infoBanner": {
-    "text": "Vous avez utilisé votre session gratuite. Choisissez un abonnement pour vous inscrire et suivre votre course le jour de l'événement.",
+    "text": "Un abonnement est nécessaire pour vous inscrire et suivre votre course en direct le jour J. Choisissez une formule pour commencer.",
     "hasSessionsLeft": "Il vous reste {{count}} sessions. Passez à un abonnement à tout moment pour en obtenir davantage.",
     "noSessionsLeft": "Vous avez utilisé toutes vos sessions. Passez à un abonnement pour continuer le suivi.",
     "webMembership": "Vous avez un abonnement Web actif. Gérez-le depuis le site web.",
@@ -18,12 +18,12 @@
   "plans": {
     "lite": {
       "name": "LITE",
-      "badge": "2 sessies / jaar",
+      "badge": "1 session / an",
       "price": "€ 14,99",
-      "period": "/ jaar",
+      "period": "/ an",
       "features": [
-        "2 live trackingsessies",
-        "Live GPS-kaart en resultaten",
+        "1 session de suivi en direct",
+        "Carte GPS en direct et résultats",
         "Le suivi de votre activité est toujours gratuit pour vos fans"
       ]
     },

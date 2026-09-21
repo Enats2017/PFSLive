@@ -5,7 +5,7 @@
     "subtitle": "Keep tracking your athletes live."
   },
   "infoBanner": {
-    "text": "You've used your free session. Pick a plan to register and track on race day.",
+    "text": "A membership is required to register and track live on race day. Pick a plan to get started.",
     "hasSessionsLeft": "You have {{count}} sessions remaining. Upgrade anytime to get more.",
     "noSessionsLeft": "You've used all your sessions. Upgrade your plan to continue tracking.",
     "webMembership": "You have an active web membership. Manage it from the website.",
@@ -18,11 +18,11 @@
   "plans": {
     "lite": {
       "name": "LITE",
-      "badge": "{{count}} sessions / year",
+      "badge": "1 session / year",
       "price": "€14.99",
       "period": "/ year",
       "features": [
-        "2 live tracking sessions",
+        "1 live tracking session",
         "Live GPS map & results",
         "Following your activity is always free for your fans"
       ]

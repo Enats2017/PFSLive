@@ -79,17 +79,17 @@
     },
     "membership_required": {
       "icon": "◆",
-      "title": "Live tracking niet beschikbaar",
-      "description": "Uw huidige trackingsessies zijn niet actief. Live tracking is momenteel niet beschikbaar.",
-      "iosDescription": "Je hebt al je live trackingsessies gebruikt. Koop er meer om je voor dit evenement in te schrijven.",
-       "button": "Meer sessies kopen"
+      "title": "Abonnement vereist",
+      "description": "Je hebt een actief abonnement nodig om je in te schrijven en dit evenement live te volgen.",
+      "iosDescription": "Je hebt een actief abonnement nodig om je in te schrijven en dit evenement live te volgen. Kies een abonnement om verder te gaan.",
+       "button": "Abonnementen bekijken"
     },
     "limit_reached": {
       "icon": "↑",
       "title": "Geen trackingsessies meer",
       "description": "U heeft alle momenteel beschikbare live trackingsessies gebruikt.",
-      "iosDescription": "Je abonnement is momenteel niet actief. Verleng het om weer live te kunnen volgen.",
-      "button": "Abonnement verlengen"
+      "iosDescription": "Je hebt al je live trackingsessies gebruikt. Upgrade je abonnement om je voor dit evenement in te schrijven.",
+      "button": "Meer sessies kopen"
     },
     "membership_upcoming": {
       "icon": "⏳",
@@ -114,7 +114,7 @@
     "connect_confirm": {
       "icon": "🔗",
       "title": "Live Tracking",
-      "description": "Live Tracking is optioneel en vereist een abonnement — maar je eerste sessie is GRATIS! Wil je het niet gebruiken? Geen probleem. Je hoeft Livio niet aan je startnummer te koppelen. Je volgers blijven de officiële RFID-updates ontvangen wanneer je een checkpoint of de finish passeert.",
+      "description": "Live Tracking is optioneel en vereist een actief abonnement. Wil je het niet gebruiken? Geen probleem. Je hoeft Livio niet aan je startnummer te koppelen. Je volgers blijven de officiële RFID-updates ontvangen wanneer je een checkpoint of de finish passeert.",
       "button": "Ja",
       
       "notNowButton": "Niet nu"

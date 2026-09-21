@@ -79,17 +79,17 @@
     },
     "membership_required": {
       "icon": "◆",
-      "title": "Suivi en direct indisponible",
-      "description": "Vos sessions de suivi actuelles ne sont pas actives. Le suivi en direct n'est pas disponible pour le moment.",
-      "iosDescription": "Vous avez utilisé toutes vos sessions de suivi en direct. Obtenez-en plus pour vous inscrire à cet événement.",
-       "button": "Obtenir plus de sessions"
+      "title": "Abonnement requis",
+      "description": "Vous avez besoin d'un abonnement actif pour vous inscrire et suivre cet événement en direct.",
+      "iosDescription": "Vous avez besoin d'un abonnement actif pour vous inscrire et suivre cet événement en direct. Choisissez une formule pour continuer.",
+       "button": "Voir les formules"
     },
     "limit_reached": {
       "icon": "↑",
       "title": "Plus de sessions de suivi",
       "description": "Vous avez utilisé toutes les sessions de suivi en direct actuellement disponibles.",
-       "iosDescription": "Votre abonnement n'est pas actif actuellement. Renouvelez-le pour suivre à nouveau en direct.",
-       "button": "Renouveler l'abonnement"
+       "iosDescription": "Vous avez utilisé toutes vos sessions de suivi en direct. Améliorez votre formule pour vous inscrire à cet événement.",
+       "button": "Obtenir plus de sessions"
     },
     "membership_upcoming": {
       "icon": "⏳",
@@ -114,7 +114,7 @@
     "connect_confirm": {
       "icon": "🔗",
       "title": "Suivi en direct",
-      "description": "Le Live Tracking est facultatif et nécessite un abonnement — mais votre première session est GRATUITE ! Vous ne souhaitez pas l’utiliser ? Aucun problème. Vous n’avez pas besoin de connecter Livio à votre dossard. Vos proches continueront à recevoir les mises à jour officielles RFID lors de votre passage aux points de contrôle et à la ligne d’arrivée.",
+      "description": "Le Live Tracking est facultatif et nécessite un abonnement actif. Vous ne souhaitez pas l’utiliser ? Aucun problème. Vous n’avez pas besoin de connecter Livio à votre dossard. Vos proches continueront à recevoir les mises à jour officielles RFID lors de votre passage aux points de contrôle et à la ligne d’arrivée.",
       "button": "Oui",
       
       "notNowButton": "Pas maintenant"
