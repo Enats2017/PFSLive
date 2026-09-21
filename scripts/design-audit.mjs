@@ -3,6 +3,11 @@
 //
 //   node scripts/design-audit.mjs          # summary
 //   node scripts/design-audit.mjs --list   # every offending line
+//   node scripts/design-audit.mjs --selftest
+//
+// --selftest asserts each check fires on a known-bad line and stays quiet on a
+// token-conforming one — including the CRLF case, where a trailing \r used to
+// defeat the comment strip and turn every documented old value into a "finding".
 //
 // Reports where src/ still bypasses the token layer in src/styles/common.styles.ts.
 // This is a progress meter for the redesign migration, not a gate — it exits 0
@@ -76,6 +81,41 @@ const CHECKS = [
   { name: 'rainbow gradient', re: /#e8341a/gi },
 ];
 
+// A line with its comments removed. The \r strip is load-bearing: see the note
+// on the split below.
+const stripComments = (line) =>
+  line.replace(/\r$/, '').replace(/\/\/.*$/, '').replace(/\/\*.*?\*\//g, '');
+
+if (process.argv.includes('--selftest')) {
+  const fires = (line) => {
+    const code = stripComments(line);
+    return CHECKS.some((c) => code.match(c.re));
+  };
+  const cases = [
+    ['fires on a raw hex',              () => fires("  backgroundColor: '#ff0000',"), true],
+    ['fires on a raw hex under CRLF',   () => fires("  backgroundColor: '#ff0000',\r"), true],
+    ['fires on colors.accent',          () => fires('  tint: colors.accent,'), true],
+    ['fires on code with a comment after', () => fires("  c: '#ff0000', // keep\r"), true],
+    ['quiet on a hex in a trailing comment', () => fires('  c: palette.navy, // #0f2a3f\r'), false],
+    ['quiet on a hex in a whole-line comment', () => fires('  // was #0f2a3f before\r'), false],
+    ['quiet on colors.accent in a comment', () => fires('  // colors.accent was the old blue\r'), false],
+    ['quiet on a token reference',      () => fires('  backgroundColor: palette.surface,\r'), false],
+    ['block: fires on a size with no family', () =>
+      BLOCK_CHECKS[0].test('a: { fontSize: 13 }'), true],
+    ['block: quiet when the family is set', () =>
+      BLOCK_CHECKS[0].test('a: { fontFamily: fonts.body, fontSize: 13 }'), false],
+  ];
+  let ok = true;
+  for (const [name, run, expected] of cases) {
+    const got = run();
+    const pass = got === expected;
+    ok &&= pass;
+    console.log(`  ${pass ? 'PASS' : 'FAIL'}  ${name}`);
+  }
+  console.log(ok ? '\nself-test passed' : '\nSELF-TEST FAILED');
+  process.exit(ok ? 0 : 1);
+}
+
 const files = [];
 (function walk(dir) {
   for (const entry of readdirSync(dir)) {
@@ -92,13 +132,17 @@ const perFile = [];
 for (const file of files) {
   const rel = relative(ROOT, file);
   if (EXEMPT.has(rel)) continue;
-  const lines = readFileSync(file, 'utf8').split('\n');
+  // Split on \r?\n, not \n: this repo checks out CRLF, and a trailing \r left on
+  // each line silently defeated the comment strip below — `.` does not cross \r
+  // and `$` (no /m) sits after it, so `//...$` never matched. Every hex in a
+  // comment was being counted as a live token bypass.
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/);
   let fileCount = 0;
 
   lines.forEach((line, i) => {
     // Strip comments first: a hex value quoted in a comment documents the token,
     // it does not bypass it, and counting those inflates the number.
-    const code = line.replace(/\/\/.*$/, '').replace(/\/\*.*?\*\//g, '');
+    const code = stripComments(line);
     if (!code.trim()) return;
 
     // An explicit, greppable opt-out for the handful of values that genuinely
