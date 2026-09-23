@@ -17,7 +17,7 @@ interface LiveTimingPointProps {
 const AmenityIcons = (({ features, t }: { features?: string[]; t: any }) => {
     if (!features || features.length === 0) return null;
     return (
-        <View style={{ paddingBottom: 4,justifyContent:"center", alignItems:"center"}}>
+        <View style={{ paddingBottom: 4, paddingTop: space.sm, justifyContent:"center", alignItems:"center"}}>
             <Text style={resultInfoStyles.rowLabel}>
                 {t('timingPoint.availableServices')}
             </Text>
