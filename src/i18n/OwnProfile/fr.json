@@ -1,9 +1,10 @@
 {
     "tracking": {
-    "unlimited": "Vous avez des sessions de suivi en direct illimitées.",
-    "remaining": "Il vous reste {{count}} session(s) de suivi en direct.",
-    "exhausted": "Vous n'avez plus de sessions de suivi en direct.",
-    "subtitle": "Suivez vos athlètes favoris en direct."
+        "unlimited": "Vous avez des sessions de suivi en direct illimitées.",
+        "remaining": "Il vous reste {{count}} session(s) de suivi en direct.",
+        "exhausted": "Vous n'avez plus de sessions de suivi en direct.",
+        "subtitle": "Suivez vos athlètes favoris en direct.",
+        "eventOnly": "Votre activation Livio est valable pour {{event}}."
     },
     "menu": {
         "events": {
@@ -38,18 +39,19 @@
         "noMembershipTitle": "Aucun abonnement actif",
         "noMembershipSubtitle": "Abonnez-vous à un forfait pour commencer le suivi en direct de vos sessions.",
         "paymentProcessing": "Le paiement est en cours de traitement. Veuillez patienter environ 1 minute, puis appuyez sur Actualiser pour voir votre abonnement mis à jour.",
-         "refresh": "Actualiser"
+        "refresh": "Actualiser",
+        "eventOnly": "Valable uniquement pour {{event}}."
     },
     "training": {
         "create": "CRÉER UN ÉVÉNEMENT PERSONNEL"
     },
     "deleteEvent": {
-    "deleteSuccess": "Événement supprimé avec succès",
-     "deleteFailed": "Échec de la suppression de l'événement",
-    "confirmTitle": "Supprimer cet événement ?",
-    "confirmMessage": "\"{{name}}\" sera supprimé définitivement. Cette action est irréversible.",
-    "cancel": "Annuler",
-    "confirm": "Supprimer",
-    "trackingStartedError": "Cet événement ne peut plus être supprimé, car le suivi a déjà commencé."
-}
+        "deleteSuccess": "Événement supprimé avec succès",
+        "deleteFailed": "Échec de la suppression de l'événement",
+        "confirmTitle": "Supprimer cet événement ?",
+        "confirmMessage": "\"{{name}}\" sera supprimé définitivement. Cette action est irréversible.",
+        "cancel": "Annuler",
+        "confirm": "Supprimer",
+        "trackingStartedError": "Cet événement ne peut plus être supprimé, car le suivi a déjà commencé."
+    }
 }

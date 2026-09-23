@@ -48,6 +48,16 @@ const TABS: Tab[] = ['Past', 'Live'];
 
 const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile, onRefresh, refreshLoading }) => {
     const { t } = useTranslation('ownProfile');
+
+    // The EUR 5.95 single activation is valid at ONE event, so the card names
+    // that event instead of counting sessions. Only when it is ALL the cover they
+    // have (event_only) - somebody who also holds a real membership should still
+    // see their session count. Once it has been used, remaining is 0 and this
+    // falls through to the normal "no sessions left" copy, which is then accurate.
+    const eventActivation =
+        profile?.membership_info?.event_only === 1
+            ? profile?.membership_info?.event_activations?.find(a => a.remaining > 0)
+            : undefined;
     const renderIosCard = () => {
         if (profile?.in_process_payment === 1) {
             return (
@@ -99,7 +109,11 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                 </View>
 
                 {profile?.membership_info?.has_membership ? (
-                    profile?.membership_info?.unlimited ? (
+                    eventActivation ? (
+                        <Text style={ownProfile.iossubtitle}>
+                            {t('ownProfile:membershipCard.eventOnly', { event: eventActivation.event_name })}
+                        </Text>
+                    ) : profile?.membership_info?.unlimited ? (
                         <Text style={ownProfile.iossubtitle}>
                             {t('ownProfile:tracking.unlimited')}
                         </Text>
@@ -140,7 +154,14 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                     <TouchableOpacity style={ownProfile.trackingBanner} activeOpacity={0.85}>
                         <Ionicons name="navigate-circle-outline" size={30} color="black" />
                         <View style={ownProfile.trackingTextWrapper}>
-                            {profile?.membership_info?.unlimited ? (
+                            {eventActivation ? (
+                                <>
+                                    <Text style={ownProfile.title}>
+                                        {t('ownProfile:tracking.eventOnly', { event: eventActivation.event_name })}
+                                    </Text>
+                                    <Text style={ownProfile.subtitle}>{t('ownProfile:tracking.subtitle')}</Text>
+                                </>
+                            ) : profile?.membership_info?.unlimited ? (
                                 <>
                                     <Text style={ownProfile.title}>{t('ownProfile:tracking.unlimited')}</Text>
                                     <Text style={ownProfile.subtitle}>{t('ownProfile:tracking.subtitle')}</Text>

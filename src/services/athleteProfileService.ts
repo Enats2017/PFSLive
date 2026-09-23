@@ -11,6 +11,22 @@ export interface MembershipInfo {
     total_used: number | null;
     memberships_count: number;
     membership_name: string;
+    /** 1 when an event-bound activation is ALL the cover they have. */
+    event_only?: number;
+    /** The EUR 5.95 single activations - each valid at ONE event only. */
+    event_activations?: EventActivation[];
+}
+
+export interface EventActivation {
+    membership_id: number;
+    membership_name: string;
+    event_id: number;
+    event_name: string;
+    race_date: string;
+    end_date: string;
+    total: number;
+    used: number;
+    remaining: number;
 }
 
 export interface AthleteProfile {

@@ -3,7 +3,8 @@
         "unlimited": "You have unlimited live tracking sessions.",
         "remaining": "You have {{count}} live tracking session(s) left.",
         "exhausted": "You have no live tracking sessions left.",
-         "subtitle": "Track your favourite athletes live."
+        "subtitle": "Track your favourite athletes live.",
+        "eventOnly": "Your Livio activation is valid for {{event}}."
     },
     "menu": {
         "events": {
@@ -18,7 +19,7 @@
             "title": "Account",
             "subtitle": "Manage Your Account Settings"
         },
-        "contact":{
+        "contact": {
             "title": "Contact and Feedback",
             "subtitle": "Question, Bugs, or ideas"
         }
@@ -27,8 +28,8 @@
         "followers": "Followers",
         "following": "Following"
     },
-    "backbtn":{
-        "events":"Your Events",
+    "backbtn": {
+        "events": "Your Events",
         "training": "Training Sessions"
     },
     "membershipCard": {
@@ -38,14 +39,15 @@
         "noMembershipTitle": "No Active Membership",
         "noMembershipSubtitle": "Subscribe to a plan to start live tracking your sessions.",
         "paymentProcessing": "Payment is being processed. Please wait about 1 minute, then tap Refresh to view your updated membership.",
-        "refresh": "Refresh"
+        "refresh": "Refresh",
+        "eventOnly": "Valid for {{event}} only."
     },
     "training": {
         "create": "CREATE PERSONAL EVENT"
     },
     "deleteEvent": {
         "deleteSuccess": "Event deleted successfully",
-         "deleteFailed": "Failed to delete event",
+        "deleteFailed": "Failed to delete event",
         "confirmTitle": "Delete this event?",
         "confirmMessage": "\"{{name}}\" will be permanently removed. This can't be undone.",
         "cancel": "Cancel",
