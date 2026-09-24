@@ -242,7 +242,6 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
             aspectRatio: 612 / 428,
             justifyContent: 'center',
             alignItems: 'center',
-            marginBottom: space.md,
           }}
         >
           {imageLoading && (
@@ -358,7 +357,6 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           contentContainerStyle={{
-            
             paddingBottom: space.xxxl,
             flexGrow: 1,
           }}

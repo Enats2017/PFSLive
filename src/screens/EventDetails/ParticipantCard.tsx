@@ -145,7 +145,14 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
         // The page gutter is 20 everywhere else in the app (result list,
         // favourites, distances); at 12 these cards sat 8pt wider than
         // their neighbours on every other list.
-        { marginBottom: space.md, marginHorizontal: space.xl },
+        //
+        // The 12 is a marginTOP, not a bottom: it has to be the gap under the
+        // search frame as well as the gap between cards. The list itself cannot
+        // carry it as paddingTop — SearchInput's frame already pays 16 of its
+        // own, which stacked to 24 above the event image — and the image header
+        // cannot carry it either, since events without an image skip that header
+        // entirely and the first card then sat flush against the hairline.
+        { marginTop: space.md, marginHorizontal: space.xl },
       ]}
     >
       <View style={detailsStyles.topRow}>
