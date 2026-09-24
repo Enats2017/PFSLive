@@ -33,7 +33,10 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
     const [events, setEvents] = useState<EventItem[]>([]);
     const [visibleCount, setVisibleCount] = useState(3);
 
-    const liveUpcoming = useSearchSuggestions('filter_name', ['live', 'upcoming', 'past']);
+    const liveUpcoming = useSearchSuggestions(
+        ['filter_name', 'filter_name_past_suggestion'],
+        ['live', 'upcoming', 'past'],
+    );
 
     useEffect(() => {
         const load = async () => {
