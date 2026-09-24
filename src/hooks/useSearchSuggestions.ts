@@ -20,7 +20,7 @@ export interface UseSearchSuggestionsReturn {
 const DEBOUNCE_MS = 350;
 
 const useSearchSuggestions = (
-  apiKey: SuggestionKey,
+  _apiKey: SuggestionKey,
   tabFilters: TabFilter[] = [],
 ): UseSearchSuggestionsReturn => {
   const [query, setQuery] = useState("");
@@ -51,9 +51,11 @@ const useSearchSuggestions = (
 
       timer.current = setTimeout(async () => {
         try {
-          const results = await suggestionService.getSuggestions({
-            [apiKey]: text.trim(),
-          }); 
+          const [liveUpcoming, past] = await Promise.all([
+            suggestionService.getSuggestions({ filter_name: text.trim() }),
+            suggestionService.getSuggestions({ filter_name_past_suggestion: text.trim() }),
+          ]);
+          const results = [...liveUpcoming, ...past];
           const filtered =
             tabFilters.length > 0
               ? results.filter((r) => r.tab && tabFilters.includes(r.tab))
@@ -79,7 +81,7 @@ const useSearchSuggestions = (
         }
       }, DEBOUNCE_MS);
     },
-    [apiKey, tabFilters],
+    [tabFilters],
   );
 
   return {

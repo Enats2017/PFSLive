@@ -59,7 +59,7 @@ export const suggestionService = {
         { headers },
       );
 
-      console.log('RAW RESPONSE:', JSON.stringify(response.data));
+      
 
       if (response.success && response.data) {
         const results = response.data.suggestions ?? [];
