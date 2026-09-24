@@ -56,7 +56,7 @@ export const EventListCard: React.FC<EventListCardProps> = React.memo(({
           <Image
             source={{ uri }}
             style={StyleSheet.absoluteFill}
-            contentFit="contain"
+            contentFit="cover"
             cachePolicy="memory-disk"
             recyclingKey={uri}
             transition={150}
@@ -100,6 +100,7 @@ EventListCard.displayName = 'EventListCard';
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
+    alignItems: 'stretch',
     backgroundColor: palette.surface,
     borderRadius: radii.md,
     overflow: 'hidden',
@@ -113,6 +114,7 @@ const styles = StyleSheet.create({
   // elevation, so its clip holds.
   thumb: {
     width: 104,
+    alignSelf: 'stretch',
     backgroundColor: palette.surface,
     alignItems: 'center',
     justifyContent: 'center',

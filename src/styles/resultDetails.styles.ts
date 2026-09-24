@@ -139,13 +139,19 @@ export const resultInfoStyles = StyleSheet.create({
   // 2026-09-04: "name below the profile image, country and flag alongside").
   identityBlock: {
     alignItems: "center",
+    width: "100%",
+    gap: space.md,
     marginTop: space.md,
+    paddingHorizontal: space.md,
   },
   identityName: {
     fontFamily: fonts.display,
     fontSize: 20,
     color: palette.ink,
     textAlign: "center",
+    width: "100%",
+    maxWidth: "100%",
+    flexShrink: 1,
   },
   // Duo teams: the two member names under the team name. Unlabelled, matching
   // ParticipantCard on this branch - the deck compacts related values rather
@@ -156,7 +162,9 @@ export const resultInfoStyles = StyleSheet.create({
     ...type.body,
     color: palette.textMuted,
     textAlign: "center",
-    marginTop: space.xs,
+    width: "100%",
+    maxWidth: "100%",
+    flexShrink: 1,
   },
   identityRow: {
     flexDirection: "row",
@@ -164,7 +172,8 @@ export const resultInfoStyles = StyleSheet.create({
     justifyContent: "center",
     flexWrap: "wrap",
     gap: space.sm,
-    marginTop: space.xs,
+    maxWidth: "100%",
+    paddingHorizontal: space.sm,
   },
   // Small-caps section label at the head of a card (29_RaceInfo.png).
   sectionLabel: {

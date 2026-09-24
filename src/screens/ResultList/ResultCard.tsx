@@ -163,6 +163,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                     ) : null}
                 </View>
                 <TouchableOpacity
+                    style={resultListStyle.starButton}
                     onPress={handleStarPress}
                     disabled={isLoading}
                     activeOpacity={0.7}

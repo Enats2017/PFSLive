@@ -1,5 +1,7 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
+    KeyboardAvoidingView,
+    Platform,
     View,
     Text,
     ScrollView,
@@ -42,19 +44,16 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
     const [errors, setErrors] = useState<FieldErrors>({});
     const [submitting, setSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const scrollRef = useRef<ScrollView>(null);
     const topicLabels = t('topics', { returnObjects: true }) as Record<TopicKey, string>;
     const topicOptions = ALLOWED_TOPICS.map((key, index) => ({
         label: topicLabels[key],
         value: index,
     }));
 
-    // Keyboard handling is the ScrollView's own job here — see the
-    // `automaticallyAdjustKeyboardInsets` prop below. The hand-rolled version
-    // this replaces animated a paddingBottom onto a wrapper AND called
-    // scrollToEnd() on every keyboardWillShow, which is what made the screen
-    // jump upward and park the reachUs block under the Description field. It
-    // also double-inset on Android, where Expo's default adjustResize already
-    // shrinks the window by the keyboard height.
+    // Use the app's standard keyboard behavior: `KeyboardAvoidingView` handles
+    // the insets and scroll placement for the focused field, while the ScrollView
+    // keeps the form content reachable without manually translating it.
 
     const handleMessageChange = useCallback((text: string) => {
         setMessage(text);
@@ -122,6 +121,15 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
         navigation.goBack();
     }, [navigation]);
 
+    const handleDescriptionFocus = useCallback(() => {
+        requestAnimationFrame(() => {
+            scrollRef.current?.scrollTo({
+                y: 260,
+                animated: true,
+            });
+        });
+    }, []);
+
     return (
         <SafeAreaView style={commonStyles.container} edges={['bottom']}>
             {/* header.title now reads from the shared band, so the local
@@ -131,16 +139,16 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
             {/* contactStyles.flex bounds the ScrollView to the space left under
                 the header — without it the ScrollView sizes to its content and
                 the reachUs card falls off the bottom with nothing to scroll. */}
-            <View style={contactStyles.flex}>
+            <KeyboardAvoidingView
+                style={contactStyles.flex}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+            >
                 <ScrollView
+                    ref={scrollRef}
                     contentContainerStyle={contactStyles.scrollContent}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
-                    // iOS: insets the content by the keyboard and scrolls the
-                    // focused field MINIMALLY into view, instead of jumping to
-                    // the end of the list. No-op on Android, where adjustResize
-                    // already resizes the window.
-                    automaticallyAdjustKeyboardInsets
                 >
                     <View style={contactStyles.banner}>
                         <View style={contactStyles.bannerText}>
@@ -207,6 +215,7 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                             editable={!submitting}
                             error={!!errors.message}
                             errorMessage={errors.message}
+                            onFocus={handleDescriptionFocus}
                         />
                         <Text style={contactStyles.charCount}>{message.length}/500</Text>
                     </Card>
@@ -233,7 +242,7 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                         <Text style={contactStyles.reachNote}>{t('reachUs.replyTime')}</Text>
                     </View>
                 </ScrollView>
-            </View>
+            </KeyboardAvoidingView>
 
             <FeedbackSuccessModal
                 visible={showSuccess}

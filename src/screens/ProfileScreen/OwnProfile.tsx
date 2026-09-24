@@ -200,14 +200,16 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                 <Ionicons name="chevron-forward" size={22} color={palette.textMuted} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={commonStyles.menuCard} activeOpacity={0.7} onPress={() => onNavigate('MembershipPlansScreen')}>
-                <View style={commonStyles.menuIconPlate}><Ionicons name="card-outline" size={25} color={palette.ink} /></View>
-                <View style={commonStyles.menuText}>
-                    <Text style={commonStyles.menuTitle}>{t('menu.membership.title')}</Text>
-                    <Text style={commonStyles.menuSub}>{t('menu.membership.subtitle')}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={22} color={palette.textMuted} />
-            </TouchableOpacity>
+            {Platform.OS  === 'ios' && (
+                <TouchableOpacity style={commonStyles.menuCard} activeOpacity={0.7} onPress={() => onNavigate('MembershipPlansScreen')}>
+                    <View style={commonStyles.menuIconPlate}><Ionicons name="card-outline" size={25} color={palette.ink} /></View>
+                    <View style={commonStyles.menuText}>
+                        <Text style={commonStyles.menuTitle}>{t('menu.membership.title')}</Text>
+                        <Text style={commonStyles.menuSub}>{t('menu.membership.subtitle')}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={22} color={palette.textMuted} />
+                </TouchableOpacity>
+            )}
 
             <TouchableOpacity style={commonStyles.menuCard} activeOpacity={0.7} onPress={() => onNavigate('LiveTrackingSettings')}>
                 <View style={commonStyles.menuIconPlate}><Ionicons name="settings-outline" size={25} color={palette.ink} /></View>

@@ -96,7 +96,10 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
                         ) : (
                             <Text>🏳️</Text>
                         )}
-                        <Text style={resultListStyle.statVal} numberOfLines={1}>
+                        <Text
+                            style={[resultListStyle.statVal, { flexShrink: 1, maxWidth: '100%' }]}
+                            numberOfLines={1}
+                        >
                             {runnerInfo?.nation || '—'}
                         </Text>
                     </View>

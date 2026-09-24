@@ -161,6 +161,7 @@ divider: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: space.md,
+    width: '100%',
   },
   rankCircle: {
     width: 34,
@@ -261,6 +262,7 @@ divider: {
   // space. minWidth:0 lets it shrink below the text's intrinsic width so the
   // numberOfLines clamps can ellipsize instead.
   cardTop: {
+    flex: 1,
     flexGrow: 1,
     flexShrink: 1,
     minWidth: 0,
@@ -274,6 +276,8 @@ divider: {
     fontFamily: fonts.display,
     fontSize: 15,
     color: palette.ink,
+    flexShrink: 1,
+    minWidth: 0,
   },
 
   bibText: {
@@ -282,6 +286,8 @@ divider: {
     lineHeight: 17,
     color: palette.textMuted,
     marginTop: space.xs,
+    flexShrink: 1,
+    minWidth: 0,
   },
   // The SECOND meta line (club · country · age). `bibText`'s 4pt top margin is
   // the gap to the NAME; between two meta lines a hairline is enough.
@@ -292,6 +298,11 @@ divider: {
     color: palette.textMuted,
     marginTop: 2,
     flexShrink: 1,
+    minWidth: 0,
+  },
+
+  starButton: {
+    flexShrink: 0,
   },
 
   metaLine: {
@@ -299,6 +310,8 @@ divider: {
     alignItems: 'center',
     gap: space.sm,
     marginTop: space.xs,
+    flexShrink: 1,
+    minWidth: 0,
   },
   // Same row, as the second meta line.
   metaLineTight: {
@@ -306,6 +319,8 @@ divider: {
     alignItems: 'center',
     gap: space.sm,
     marginTop: 2,
+    flexShrink: 1,
+    minWidth: 0,
   },
 
   teamText: {
@@ -343,6 +358,7 @@ divider: {
   statCol: {
     flexGrow: 1,
     flex: 1,
+    minWidth: 0,
   },
 
   // Separators between the stat columns. These carried borders with NO
