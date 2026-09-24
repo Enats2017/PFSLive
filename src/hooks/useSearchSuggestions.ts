@@ -28,7 +28,7 @@ const DEBOUNCE_MS = 350;
  *   of every response was then thrown away by `tabFilters` anyway.
  */
 const useSearchSuggestions = (
-  apiKey: SuggestionKey | SuggestionKey[],
+  apiKey: SuggestionKey | readonly SuggestionKey[],
   tabFilters: TabFilter[] = [],
 ): UseSearchSuggestionsReturn => {
   const [query, setQuery] = useState("");
