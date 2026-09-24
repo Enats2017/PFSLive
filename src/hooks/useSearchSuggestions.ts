@@ -19,8 +19,16 @@ export interface UseSearchSuggestionsReturn {
 
 const DEBOUNCE_MS = 350;
 
+/**
+ * @param apiKey Which suggestion endpoint(s) to query. Pass an ARRAY only when a
+ *   screen genuinely needs both — ParticipantScreen lists past events alongside
+ *   live/upcoming, so it needs the pair. FollowerScreen mounts this hook twice,
+ *   one key each, and must stay on one key per call: querying both from both
+ *   hooks fired four requests per settled search where two were needed, and half
+ *   of every response was then thrown away by `tabFilters` anyway.
+ */
 const useSearchSuggestions = (
-  _apiKey: SuggestionKey,
+  apiKey: SuggestionKey | SuggestionKey[],
   tabFilters: TabFilter[] = [],
 ): UseSearchSuggestionsReturn => {
   const [query, setQuery] = useState("");
@@ -28,6 +36,12 @@ const useSearchSuggestions = (
   const [loading, setLoading] = useState(false);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Both call sites pass array literals, which are a fresh reference on every
+  // render — as a useCallback dep they would rebuild handleSearch each time.
+  // Comparing the joined string instead keeps it stable until the values change.
+  const keySig = (Array.isArray(apiKey) ? apiKey : [apiKey]).join(",");
+  const tabSig = tabFilters.join(",");
 
   const clearSuggestions = useCallback(() => {
     setSuggestions([]);
@@ -51,14 +65,16 @@ const useSearchSuggestions = (
 
       timer.current = setTimeout(async () => {
         try {
-          const [liveUpcoming, past] = await Promise.all([
-            suggestionService.getSuggestions({ filter_name: text.trim() }),
-            suggestionService.getSuggestions({ filter_name_past_suggestion: text.trim() }),
-          ]);
-          const results = [...liveUpcoming, ...past];
+          // One request per requested key, not one per key that exists.
+          const keys = keySig.split(",") as SuggestionKey[];
+          const tabs = (tabSig ? tabSig.split(",") : []) as TabFilter[];
+          const responses = await Promise.all(
+            keys.map((key) => suggestionService.getSuggestions({ [key]: text.trim() })),
+          );
+          const results = responses.flat();
           const filtered =
-            tabFilters.length > 0
-              ? results.filter((r) => r.tab && tabFilters.includes(r.tab))
+            tabs.length > 0
+              ? results.filter((r) => r.tab && tabs.includes(r.tab))
               : results;
           setSuggestions(filtered);
 
@@ -81,7 +97,7 @@ const useSearchSuggestions = (
         }
       }, DEBOUNCE_MS);
     },
-    [tabFilters],
+    [keySig, tabSig],
   );
 
   return {
