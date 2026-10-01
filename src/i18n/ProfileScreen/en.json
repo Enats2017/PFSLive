@@ -42,14 +42,15 @@
     "passwords_do_not_match": "Passwords do not match",
     "email_invalid": "Please enter a valid email address",
     "email_too_long": "Email is too long",
-    "email_already_taken": "This email is already in use"
+    "email_already_taken": "This email is already in use",
+    "parent_consent_required": "A parent or guardian must give consent for someone under 18"
   },
   "status": {
     "live": "LIVE",
     "soon": "SOON",
     "finished": "FINISHED"
   },
- "empty": {
+  "empty": {
     "no_live_events": "No live events right now",
     "no_live_events_msg": "There are no ongoing events at the moment.\nPlease check back later."
   },
@@ -68,7 +69,8 @@
     "country": "Country",
     "new_password": "New Password",
     "confirm_password": "Confirm Password",
-    "language": "Language"
+    "language": "Language",
+    "parent_consent": "I am the parent or legal guardian of this person, and I consent to live tracking for them."
   },
   "gender": {
     "male": "Male",

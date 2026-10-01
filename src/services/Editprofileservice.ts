@@ -16,6 +16,10 @@ export interface EditProfilePayload {
     language_id?: number;
     password?: string;
     remove_profile_picture?: '1' | '';
+    // Parent/guardian consent, required by the API when the dob being saved puts
+    // the person at 13 to 17. Sent as '1'/'0' because this payload goes out as
+    // multipart, where everything is a string anyway.
+    parent_consent?: '1' | '0';
     // profile_picture is handled as FormData (multipart)
 }
 
@@ -38,6 +42,11 @@ export type FieldError =
     | 'dob_invalid_format'
     | 'dob_underage'
     | 'dob_invalid'
+    // Saving a dob that puts the person at 13 to 17 without a parent's consent.
+    // This is the route round the sign-up rule — register as an adult, where
+    // nothing is asked, then edit the date down afterwards — so the API asks for
+    // the same consent here unless the account already carries it.
+    | 'parent_consent_required'
     | 'gender_invalid'
     | 'password_too_short'
     | 'password_too_long'

@@ -22,7 +22,7 @@ import { commonStyles, colors } from '../../styles/common.styles';
 import { registerStyles } from '../../styles/Register.styles';
 import { RegisterProps } from '../../types/navigation';
 import { authService } from '../../services/authService';
-import { validateRegisterForm } from '../../services/validation/authValidation';
+import { validateRegisterForm, needsParentConsent } from '../../services/validation/authValidation';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { useAuthForm } from '../../hooks/useAuthForm';
 import { API_CONFIG } from '../../constants/config';
@@ -43,6 +43,7 @@ const INITIAL_FORM_DATA = {
   genderLabel: '',   // ✅ Display value — translated label shown in the input
   profileImage: '',
   acceptedTerms: false,
+  parentConsent: false,   // ✅ Only ever asked for when dob puts them at 13 to 17
 };
 
 // ✅ STABLE GENDER KEYS — sent to API regardless of language
@@ -66,6 +67,10 @@ const FIELD_ERROR_MAP: Record<string, { field: string; i18nKey: string }> = {
   password_too_short:  { field: 'password',  i18nKey: 'register:errors.passwordShort' },
   password_too_long:   { field: 'password',  i18nKey: 'register:errors.passwordLong' },
   agree_required:      { field: 'terms',     i18nKey: 'register:errors.termsRequired' },
+  // ✅ 13 to 17 signing themselves up. Without this entry the server's refusal
+  // falls through to hasUnmapped below and shows only a generic "something went
+  // wrong" toast, with nothing to tick and no way forward.
+  parent_consent_required: { field: 'parentConsent', i18nKey: 'register:errors.parentConsentRequired' },
 };
 
 const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
@@ -80,6 +85,15 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
     useAuthForm(INITIAL_FORM_DATA);
 
   const [loading, setLoading] = useState(false);
+
+  // ✅ Parent/guardian consent is only relevant at 13 to 17, so the box only
+  // exists then. An adult never sees it, and neither does anyone who left the
+  // date of birth blank — which is allowed, because Apple does not require one
+  // and the backend applies no age rule without one.
+  const showParentConsent = useMemo(
+    () => needsParentConsent(formData.dob),
+    [formData.dob]
+  );
 
   // ✅ GENDER OPTIONS — labels in user's language, values are stable English keys
   const GENDER_OPTIONS = useMemo(
@@ -256,6 +270,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
         dob: formData.dob,
         gender: formData.gender,
         acceptedTerms: formData.acceptedTerms,
+        parentConsent: formData.parentConsent,
       },
       t
     );
@@ -278,6 +293,11 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
         dob: formData.dob,
         gender: formData.gender,  // ✅ always English key: 'male'/'female'/'other'
         profileImage: formData.profileImage || undefined,
+        // ✅ Only sent as consent when it was actually ASKED for. If someone
+        // ticks the box at 15 and then changes the date to an adult one, the
+        // box disappears but the flag would still be set — sending it then would
+        // record consent on an adult account that nobody ever gave.
+        parent_consent: showParentConsent && formData.parentConsent,
       });
 
       if (response.success && response.data?.verification_token) {
@@ -514,6 +534,45 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               error={!!errors.gender}
               errorMessage={errors.gender}
             />
+
+            {/* ✅ Parent / guardian consent — ONLY at 13 to 17.
+                Hidden for an adult and for a blank date of birth, which is
+                allowed: Apple does not require a date and the backend applies no
+                age rule without one. Reuses the terms checkbox styles so it
+                reads as part of the same group. */}
+            {showParentConsent && (
+              <>
+                <View style={registerStyles.termsContainer}>
+                  <TouchableOpacity
+                    style={[
+                      registerStyles.checkbox,
+                      formData.parentConsent && registerStyles.checkboxActive,
+                    ]}
+                    onPress={() => setField('parentConsent', !formData.parentConsent)}
+                    activeOpacity={0.8}
+                    disabled={loading}
+                  >
+                    {formData.parentConsent && (
+                      <Ionicons name="checkmark" size={16} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setField('parentConsent', !formData.parentConsent)}
+                    activeOpacity={0.8}
+                    disabled={loading}
+                    style={{ flex: 1 }}
+                  >
+                    <Text style={registerStyles.termsText}>
+                      {t('register:parentConsent.label')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {errors.parentConsent && (
+                  <Text style={registerStyles.errorText}>{errors.parentConsent}</Text>
+                )}
+              </>
+            )}
 
             {/* Terms & Conditions */}
             <View style={registerStyles.termsContainer}>

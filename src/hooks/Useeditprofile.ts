@@ -9,6 +9,7 @@ import {
 } from '../services/Editprofileservice'
 import { getCurrentLanguageId } from '../i18n'
 import { Country } from '../components/CountrySelector'
+import { ageFromDob, needsParentConsent } from '../services/validation/authValidation'
 
 export interface EditProfileForm {
     firstname: string
@@ -23,6 +24,8 @@ export interface EditProfileForm {
     password: string
     confirmPassword: string
     language_id: number  // ✅ 1=English, 2=Dutch, 3=French
+    // ✅ Only ever shown and sent when the dob being saved lands at 13 to 17
+    parentConsent: boolean
 }
 
 export type FormErrors = Partial<Record<keyof EditProfileForm, string>>
@@ -35,6 +38,10 @@ const fieldErrorMap: Partial<Record<FieldError, keyof EditProfileForm>> = {
     dob_invalid_format: 'dob',
     dob_underage: 'dob',
     dob_invalid: 'dob',
+    // ✅ Lands on the checkbox, not on the date field — the date is fine, it is
+    // the consent that is missing, and the message belongs next to the thing
+    // they have to tick.
+    parent_consent_required: 'parentConsent',
     gender_invalid: 'gender',
     country_invalid: 'countryName',
     country_not_found: 'countryName',
@@ -55,6 +62,7 @@ const initialFormState: EditProfileForm = {
     password: '',
     confirmPassword: '',
     language_id: getCurrentLanguageId() ?? 1,  // ✅ Default from current app language
+    parentConsent: false,
 }
 
 export const useEditProfile = (initialProfile: Profile | null) => {
@@ -91,6 +99,10 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             confirmPassword: '',
             // ✅ Use profile language_id if available, fall back to current app language
             language_id: initialProfile.language_id ?? getCurrentLanguageId() ?? 1,
+            // ✅ Always starts unticked. The API does not return whether consent is
+            // already on file, so this is never pre-ticked — which is why the rule
+            // below only fires when the date is actually CHANGED into the band.
+            parentConsent: false,
         })
     }, [initialProfile])
 
@@ -129,13 +141,43 @@ export const useEditProfile = (initialProfile: Profile | null) => {
 
             if (isNaN(dobDate.getTime())) {
                 newErrors.dob = t('profile:validation.dob_invalid_format')
+            } else if (dobDate > new Date()) {
+                // ✅ A date in the FUTURE is not an age. The old calculation here
+                // produced a NEGATIVE one, which then tripped the age < 13 branch
+                // and told them they were too young — the wrong reason entirely.
+                newErrors.dob = t('profile:validation.dob_invalid')
             } else {
-                const age = Math.floor(
-                    (Date.now() - dobDate.getTime()) /
-                    (365.25 * 24 * 60 * 60 * 1000)
-                )
-                if (age < 13) newErrors.dob = t('profile:validation.dob_underage')
-                if (age > 120) newErrors.dob = t('profile:validation.dob_invalid')
+                // ✅ Shared with the register form so the two cannot drift. It
+                // also counts real calendar years rather than dividing by 365.25,
+                // which was a day or so out around a birthday.
+                const age = ageFromDob(form.dob)
+
+                if (age === null) {
+                    newErrors.dob = t('profile:validation.dob_invalid')
+                } else {
+                    if (age < 13) newErrors.dob = t('profile:validation.dob_underage')
+                    if (age > 120) newErrors.dob = t('profile:validation.dob_invalid')
+
+                    // ✅ 13 to 17 needs a parent's consent, exactly as a sign-up
+                    // does. Checked here too so they are told before the request,
+                    // not by a refusal afterwards.
+                    //
+                    // ONLY when the date is actually being CHANGED into that band.
+                    // An account already sitting on a 13-to-17 date has had its
+                    // consent decided once, and the API does not hand back whether
+                    // it is on file — so demanding the tick on every save would
+                    // lock those members out of editing anything at all. The API
+                    // is still the authority: if it has no consent recorded it
+                    // answers parent_consent_required, which maps to this same
+                    // field and shows the same message.
+                    const savedDob = normalizeDob(initialProfile?.dob)
+
+                    if (form.dob !== savedDob
+                        && needsParentConsent(form.dob)
+                        && !form.parentConsent) {
+                        newErrors.parentConsent = t('profile:validation.parent_consent_required')
+                    }
+                }
             }
         }
 
@@ -166,6 +208,12 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             language_id: form.language_id,
             ...(form.password && { password: form.password }),
             ...(removePicture && { remove_profile_picture: '1' as '1' }),
+            // ✅ Only sent when the date being saved actually asks for it. Ticking
+            // the box at 15 and then changing the date to an adult one would
+            // otherwise record consent nobody was ever asked for.
+            ...(needsParentConsent(form.dob) && form.parentConsent
+                ? { parent_consent: '1' as '1' }
+                : {}),
         }
 
         try {

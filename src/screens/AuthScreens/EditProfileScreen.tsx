@@ -20,6 +20,7 @@ import CountrySelector from '../../components/CountrySelector'
 import { commonStyles } from '../../styles/common.styles'
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens'
 import { useEditProfile } from '../../hooks/Useeditprofile'
+import { needsParentConsent } from '../../services/validation/authValidation'
 import { fetchProfileApi } from '../../services/profileServices'
 import { tokenService } from '../../services/tokenService'
 import { AppHeader } from '../../components/common/AppHeader'
@@ -354,6 +355,49 @@ const EditProfileScreen = () => {
                         error={!!errors.dob}
                         errorMessage={errors.dob}
                     />
+
+                    {/* ✅ Parent / guardian consent — only when the date of birth
+                        now in the form puts the person at 13 to 17. Hidden for an
+                        adult and for a blank date, which is allowed: Apple does
+                        not require one and the API applies no age rule without
+                        one. The hook only REQUIRES the tick when the date is
+                        actually being changed into that band, so a member already
+                        on one is not locked out of editing anything else. */}
+                    {needsParentConsent(form.dob) && (
+                        <>
+                            <View style={profileStyles.consentContainer}>
+                                <TouchableOpacity
+                                    style={[
+                                        profileStyles.consentCheckbox,
+                                        form.parentConsent && profileStyles.consentCheckboxActive,
+                                    ]}
+                                    onPress={() => setField('parentConsent', !form.parentConsent)}
+                                    activeOpacity={0.8}
+                                    disabled={loading}
+                                >
+                                    {form.parentConsent && (
+                                        <Ionicons name="checkmark" size={16} color="#fff" />
+                                    )}
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    onPress={() => setField('parentConsent', !form.parentConsent)}
+                                    activeOpacity={0.8}
+                                    disabled={loading}
+                                    style={{ flex: 1 }}
+                                >
+                                    <Text style={profileStyles.consentText}>
+                                        {t('profile:labels.parent_consent')}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                            {errors.parentConsent && (
+                                <Text style={profileStyles.consentError}>
+                                    {errors.parentConsent}
+                                </Text>
+                            )}
+                        </>
+                    )}
 
                     <FloatingLabelInput
                         label={t('profile:labels.gender')}

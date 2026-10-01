@@ -2,6 +2,45 @@ import { StyleSheet } from "react-native";
 import { colors, spacing } from "./common.styles";
 
 export const profileStyles = StyleSheet.create({
+  // ✅ PARENT / GUARDIAN CONSENT — only rendered when the date of birth being
+  // saved puts the person at 13 to 17. Deliberately the same shape as the terms
+  // checkbox in Register.styles.ts so the two read alike; kept here rather than
+  // imported from there because styles are per-screen in this repo.
+  consentContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
+  consentCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.gray300,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.white,
+    marginTop: 2,
+  },
+  consentCheckboxActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  consentText: {
+    fontSize: 14,
+    color: colors.gray700,
+    flex: 1,
+  },
+  consentError: {
+    fontSize: 12,
+    color: colors.error,
+    marginTop: 2,
+    paddingHorizontal: spacing.xs,
+  },
+
   textsection: {
     alignItems: "center",
     paddingBottom: spacing.sm,

@@ -37,7 +37,8 @@
     "registrationFailed": "Registratie mislukt. Probeer het opnieuw.",
     "profilePictureTooLarge": "Profielfoto moet kleiner zijn dan 5MB",
     "profilePictureInvalid": "Selecteer een geldige afbeelding (JPG, PNG of WebP)",
-    "profilePictureFailed": "Profielfoto uploaden mislukt. Probeer het opnieuw."
+    "profilePictureFailed": "Profielfoto uploaden mislukt. Probeer het opnieuw.",
+    "parentConsentRequired": "Een ouder of voogd moet toestemming geven voor iemand jonger dan 18"
   },
   "imageSource": {
     "title": "Fotobron kiezen",
@@ -56,5 +57,8 @@
     "genericError": "Fout",
     "genericErrorMessage": "Er is iets misgegaan. Probeer het opnieuw.",
     "email_exists": "Dit e-mailadres is al geregistreerd"
+  },
+  "parentConsent": {
+    "label": "Ik ben de ouder of wettelijke voogd van deze persoon en ik geef toestemming voor live tracking."
   }
 }
