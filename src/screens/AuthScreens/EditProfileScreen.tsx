@@ -348,7 +348,12 @@ const EditProfileScreen = () => {
                         onChangeText={(v) => setField('dob', v)}
                         iconName="calendar-outline"
                         isDatePicker
-                                        // ← block future DOBs
+                        // ✅ A date of birth cannot be in the future. This is the
+                        // prop the dangling comment here was waiting for - without
+                        // it the picker allowed one, and the old age calculation
+                        // turned it into a NEGATIVE age that tripped the under-13
+                        // branch and told them they were too young.
+                        maximumDate={new Date()}
                         pickerDoneLabel={t('common:buttons.done')}
                         pickerCancelLabel={t('common:buttons.cancel')}
                         editable={!loading}

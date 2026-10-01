@@ -111,6 +111,18 @@ export const validateRegisterForm = (
   //   errors.dob = t('register:errors.dobRequired');
   // }
 
+  // ✅ A date that cannot be an age is rejected here too, so they are told before
+  // submitting rather than by the backend's dob_invalid afterwards. ageFromDob()
+  // returns null for an unparseable date AND for one in the FUTURE; the picker
+  // now carries maximumDate so a future one should not get this far, but typed
+  // input and restored form state can still produce one.
+  //
+  // A BLANK date is deliberately not an error - it stays optional, because Apple
+  // does not require one and the backend applies no age rule without one.
+  if (data.dob && data.dob.trim() && ageFromDob(data.dob) === null) {
+    errors.dob = t('register:errors.dobInvalid');
+  }
+
   // ✅ 13 to 17 needs a parent's consent. Checked here as well as on the server
   // so the person is told before they submit — the backend answers
   // parent_consent_required, and finding out only after a round trip on a form

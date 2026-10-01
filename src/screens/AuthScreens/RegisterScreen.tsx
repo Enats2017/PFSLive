@@ -513,7 +513,12 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               onChangeText={(value) => setField('dob', value)}
               iconName="calendar-outline"
               isDatePicker
-              datePickerPlaceholder={t('common:datePicker.placeholder')}    
+              // ✅ A date of birth cannot be in the future. Blocked in the picker
+              // so it never reaches the age rules, which the backend also refuses
+              // (dob_invalid) - DateTime::diff() is unsigned there, so a future
+              // date used to come back as a large positive age.
+              maximumDate={new Date()}
+              datePickerPlaceholder={t('common:datePicker.placeholder')}
               pickerDoneLabel={t('common:buttons.done')}
               pickerCancelLabel={t('common:buttons.cancel')}
               editable={!loading}
