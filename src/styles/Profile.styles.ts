@@ -29,6 +29,13 @@ export const profileStyles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
+  // Consent already on file. It cannot be withdrawn from here - edit_profile_api
+  // has no branch that writes parent_consent back to 0 for a 13-to-17 date, so a
+  // tappable box would untick, save, and come back ticked. Dimmed so it reads as
+  // settled rather than broken.
+  consentCheckboxLocked: {
+    opacity: 0.6,
+  },
   consentText: {
     fontSize: 14,
     color: colors.gray700,

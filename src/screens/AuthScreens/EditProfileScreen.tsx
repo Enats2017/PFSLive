@@ -369,7 +369,16 @@ const EditProfileScreen = () => {
                         not require one and the API applies no age rule without
                         one. The hook only REQUIRES the tick when the date is
                         actually being changed into that band, so a member already
-                        on one is not locked out of editing anything else. */}
+                        on one is not locked out of editing anything else.
+
+                        Once consent IS on file the box is read-only. Unticking it
+                        used to be possible and did nothing: the hook only ever
+                        sends parent_consent='1', and edit_profile_api has no
+                        branch that writes a 13-to-17 account back to 0 - it only
+                        clears consent when the date becomes adult. So the save
+                        succeeded, the box came back ticked, and it looked broken.
+                        consentLocked was added for this but was wired to the
+                        label only, leaving the box itself tappable. */}
                     {needsParentConsent(form.dob) && (
                         <>
                             <View style={profileStyles.consentContainer}>
@@ -377,10 +386,11 @@ const EditProfileScreen = () => {
                                     style={[
                                         profileStyles.consentCheckbox,
                                         form.parentConsent && profileStyles.consentCheckboxActive,
+                                        consentLocked && profileStyles.consentCheckboxLocked,
                                     ]}
                                     onPress={() => setField('parentConsent', !form.parentConsent)}
                                     activeOpacity={0.8}
-                                    disabled={loading}
+                                    disabled={loading || consentLocked}
                                 >
                                     {form.parentConsent && (
                                         <Ionicons name="checkmark" size={16} color="#fff" />
@@ -393,7 +403,12 @@ const EditProfileScreen = () => {
                                     disabled={loading || consentLocked}
                                     style={{ flex: 1 }}
                                 >
-                                    <Text style={profileStyles.consentText}>
+                                    <Text
+                                        style={[
+                                            profileStyles.consentText,
+                                            consentLocked && profileStyles.consentCheckboxLocked,
+                                        ]}
+                                    >
                                         {t('profile:labels.parent_consent')}
                                     </Text>
                                 </TouchableOpacity>
