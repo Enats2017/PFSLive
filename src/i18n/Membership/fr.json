@@ -1,8 +1,8 @@
 {
   "header": {
-    "label": "LIDMAATSCHAP",
-    "title": "Kies je abonnement",
-    "subtitle": "Blijf je atleten live volgen."
+    "label": "ABONNEMENT",
+    "title": "Choisissez votre formule",
+    "subtitle": "Suivez vos athlètes en direct."
   },
   "infoBanner": {
     "text": "Un abonnement est nécessaire pour vous inscrire et suivre votre course en direct le jour J. Choisissez une formule pour commencer.",
@@ -29,25 +29,25 @@
     },
     "basic": {
       "name": "BASIC",
-      "badge": "5 sessies / jaar",
+      "badge": "5 sessions / an",
       "price": "€ 29,99",
-      "period": "/ jaar",
+      "period": "/ an",
       "features": [
-        "5 live trackingsessies",
-        "Live GPS-kaart en resultaten",
-        "Voorrang bij populaire evenementen",
+        "5 sessions de suivi en direct",
+        "Carte GPS en direct et résultats",
+        "Accès prioritaire aux événements populaires",
         "Le suivi de votre activité est toujours gratuit pour vos fans"
       ],
-      "popularLabel": "MEEST GEKOZEN"
+      "popularLabel": "LE PLUS POPULAIRE"
     },
     "pro": {
       "name": "PRO",
-      "badge": "Onbeperkt",
+      "badge": "Illimité",
       "price": "€ 59,99",
-      "period": "/ jaar",
+      "period": "/ an",
       "features": [
-        "Onbeperkt aantal trackingsessies",
-        "Live GPS-kaart en resultaten",
+        "Sessions de suivi illimitées",
+        "Carte GPS en direct et résultats",
         "Le suivi de votre activité est toujours gratuit pour vos fans"
       ]
     }
@@ -59,7 +59,7 @@
     "note": "Achat unique — sans renouvellement. Rachetez-en une dès que vous en avez besoin.",
     "buy": "Acheter"
   },
-  "footerNote": "Jaarlijks abonnement, wordt automatisch verlengd.\nOp elk moment opzegbaar. Prijs weergegeven door de App Store.",
+  "footerNote": "Abonnement annuel, renouvelé automatiquement.\nAnnulable à tout moment. Prix affiché par l'App Store.",
   "legal": {
     "privacy": "Politique de confidentialité",
     "terms": "Conditions d'utilisation (CLUF)"
