@@ -134,6 +134,26 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     return plansData.plans.map((plan) => plan.product_id);
   }, [plansData]);
 
+  // The one-off activation is a CONSUMABLE, not a subscription, so StoreKit
+  // will not return it from a 'subs' query - it would come back priceless and
+  // unbuyable. Split the catalog by what each plan actually is. 'single' is the
+  // tier the backend sends for it (apple_get_plans_api planCatalog).
+  const { subSkus, inAppSkus } = useMemo(() => {
+    const subs: string[] = [];
+    const inApp: string[] = [];
+    (plansData?.plans ?? []).forEach((plan) => {
+      (plan.tier === "single" ? inApp : subs).push(plan.product_id);
+    });
+    return { subSkus: subs, inAppSkus: inApp };
+  }, [plansData]);
+
+  // The purchase listener below is registered once (deps []), so it cannot read
+  // plansData directly. A ref keeps the consumable set current for it.
+  const consumableSkusRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    consumableSkusRef.current = new Set(inAppSkus);
+  }, [inAppSkus]);
+
   // ── Fetch StoreKit prices once connected + SKUs ready ──
   useEffect(() => {
     if (!connected || productSkus.length === 0) return;
@@ -142,7 +162,12 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       try {
         setLoadingPrices(true);
         console.log("📡 Fetching StoreKit prices for:", productSkus);
-        await fetchProducts({ skus: productSkus, type: "subs" });
+        if (subSkus.length > 0) {
+          await fetchProducts({ skus: subSkus, type: "subs" });
+        }
+        if (inAppSkus.length > 0) {
+          await fetchProducts({ skus: inAppSkus, type: "in-app" });
+        }
       } catch (error) {
         console.error("❌ Error fetching store prices:", error);
       } finally {
@@ -151,7 +176,7 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     };
 
     loadPrices();
-  }, [connected, productSkus, fetchProducts]);
+  }, [connected, productSkus, subSkus, inAppSkus, fetchProducts]);
 
   const requestPurchase = useCallback(
     async (params: Parameters<typeof rawRequestPurchase>[0]) => {
@@ -258,7 +283,15 @@ export function useMembershipPlans(): UseMembershipPlansResult {
 
       try {
         const result = await appleVerifyService.verifyPurchase(transactionId);
-        await finishTransaction({ purchase, isConsumable: false }).catch(
+        // A consumable MUST be finished as one. StoreKit keeps an unfinished
+        // consumable in the queue, redelivers it on every launch, and will not
+        // sell the same product again - which is exactly what a second EUR 5.95
+        // activation needs to do. Subscriptions must NOT be finished that way,
+        // so it is decided per product rather than hardcoded.
+        const purchasedSku =
+          purchase.productId ?? purchase.id ?? purchase.product_id ?? "";
+        const isConsumable = consumableSkusRef.current.has(purchasedSku);
+        await finishTransaction({ purchase, isConsumable }).catch(
           (err) => {
             console.warn("⚠️ finishTransaction warning:", err?.message);
           },
