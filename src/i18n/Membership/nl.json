@@ -52,6 +52,13 @@
       ]
     }
   },
+  "activation": {
+    "dividerLabel": "Maar één wedstrijd?",
+    "name": "Eenmalige activatie",
+    "description": "Eén trackingsessie, een jaar geldig.",
+    "note": "Eenmalige aankoop — wordt niet verlengd. Koop er een nieuwe wanneer je er een nodig hebt.",
+    "buy": "Kopen"
+  },
   "footerNote": "Jaarlijks abonnement, wordt automatisch verlengd.\nOp elk moment opzegbaar. Prijs weergegeven door de App Store.",
   "legal": {
     "privacy": "Privacybeleid",

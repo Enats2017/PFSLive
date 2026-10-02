@@ -56,6 +56,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         loadingPlans,
         plansError,
         planByTier,
+        singlePlan,
         storeProducts,
         loadingPrices,
         defaultSelectedTier,
@@ -194,6 +195,8 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 request: {
                     apple: { sku: apiPlan.product_id },
                 },
+                // 'subs' is right for the three tiers this button sells. The
+                // activation never comes through here - it has its own button.
                 type: 'subs',
             });
 
@@ -223,6 +226,39 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         });
         resetPurchase();
     }, [purchaseResult]);
+
+    // The activation is a CONSUMABLE: bought on its own button, with
+    // type 'in-app' rather than 'subs', and never joined to `selected` - the
+    // bottom CTA reads "Continue with <plan>", which would be wrong for a
+    // one-off. It stays buyable however many are already held, which is what
+    // the backend returns (action is always 'subscribe' for tier 'single').
+    const getActivationPrice = (): string => {
+        if (!singlePlan) return '';
+        const storePrice = storeProducts[singlePlan.product_id];
+        if (loadingPrices && !storePrice) return '...';
+        if (!storePrice) return '';
+        const currentLang = i18n.language?.split('-')[0];
+        return currentLang === 'fr' ? storePrice : formatPriceSymbolFirst(storePrice);
+    };
+
+    const handleBuyActivation = async () => {
+        if (!singlePlan) return;
+        try {
+            pendingProductIdRef.current = singlePlan.product_id ?? null;
+            await requestPurchase({
+                request: {
+                    apple: { sku: singlePlan.product_id },
+                },
+                type: 'in-app',
+            });
+        } catch (error: any) {
+            const message = error?.message ?? '';
+            if (message.includes('cancelled') || message.includes('canceled')) {
+                return;
+            }
+            console.error('Activation purchase failed:', error);
+        }
+    };
 
     const handleConfirmUpgrade = () => {
         if (modalPlanId) setSelected(modalPlanId);
@@ -373,6 +409,47 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 </View>
 
                 {PLAN_IDS.map(renderPlanCard)}
+
+                {singlePlan && (
+                    <>
+                        <View style={styles.activationDivider}>
+                            <View style={styles.activationDividerLine} />
+                            <Text style={styles.activationDividerText}>
+                                {t('membership:activation.dividerLabel')}
+                            </Text>
+                            <View style={styles.activationDividerLine} />
+                        </View>
+
+                        <View style={styles.activationCard}>
+                            <View style={styles.activationTopRow}>
+                                <Text style={styles.activationName}>
+                                    {t('membership:activation.name')}
+                                </Text>
+                                <Text style={styles.activationPrice}>
+                                    {getActivationPrice()}
+                                </Text>
+                            </View>
+
+                            <Text style={styles.activationDescription}>
+                                {t('membership:activation.description')}
+                            </Text>
+                            <Text style={styles.activationNote}>
+                                {t('membership:activation.note')}
+                            </Text>
+
+                            <TouchableOpacity
+                                style={styles.activationBuyButton}
+                                activeOpacity={0.85}
+                                onPress={handleBuyActivation}
+                                disabled={purchaseLoading}
+                            >
+                                <Text style={styles.activationBuyText}>
+                                    {t('membership:activation.buy')}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </>
+                )}
 
                 <Text style={styles.footerNote}>
                     {t('membership:footerNote')}

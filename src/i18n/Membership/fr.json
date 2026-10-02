@@ -52,6 +52,13 @@
       ]
     }
   },
+  "activation": {
+    "dividerLabel": "Juste une course ?",
+    "name": "Activation unique",
+    "description": "Une session de suivi, valable un an.",
+    "note": "Achat unique — sans renouvellement. Rachetez-en une dès que vous en avez besoin.",
+    "buy": "Acheter"
+  },
   "footerNote": "Jaarlijks abonnement, wordt automatisch verlengd.\nOp elk moment opzegbaar. Prijs weergegeven door de App Store.",
   "legal": {
     "privacy": "Politique de confidentialité",

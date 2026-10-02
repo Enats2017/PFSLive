@@ -23,6 +23,9 @@ interface UseMembershipPlansResult {
   loadingPlans: boolean;
   plansError: string | null;
   planByTier: Partial<Record<PlanId, PlanItem>>;
+  // The one-off activation, when the backend sells one. Kept OUT of PlanId:
+  // it is not a subscription tier and must not join the plan radio group.
+  singlePlan: PlanItem | null;
   storeProducts: Record<string, string>;
   loadingPrices: boolean;
   defaultSelectedTier: PlanId | null;
@@ -319,6 +322,11 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     return () => subscription.remove();
   }, []);
 
+  const singlePlan = useMemo<PlanItem | null>(
+    () => plansData?.plans.find((plan) => plan.tier === "single") ?? null,
+    [plansData],
+  );
+
   // ── planByTier map ──
   const planByTier = useMemo(() => {
     const map: Partial<Record<PlanId, PlanItem>> = {};
@@ -349,6 +357,7 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     loadingPlans,
     plansError,
     planByTier,
+    singlePlan,
     storeProducts,
     loadingPrices,
     defaultSelectedTier,
