@@ -190,6 +190,76 @@ export const membershipPlansStyle = StyleSheet.create({
     featureTextLight: {
         color: colors.primaryDark,
     },
+    // ── the one-off activation, below the subscription cards ──
+    // Deliberately NOT a plan card: it is a consumable, it has no period, and it
+    // is bought on its own button rather than through "Continue with <plan>".
+    activationDivider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 18,
+        marginBottom: 10,
+    },
+    activationDividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: COLORS.border,
+    },
+    activationDividerText: {
+        marginHorizontal: 10,
+        fontSize: 12,
+        fontWeight: '600',
+        color: COLORS.grayText,
+    },
+    activationCard: {
+        backgroundColor: COLORS.white,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        padding: 16,
+    },
+    activationTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    activationName: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: COLORS.darkText,
+        flexShrink: 1,
+        paddingRight: 10,
+    },
+    activationPrice: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: COLORS.darkText,
+    },
+    activationDescription: {
+        marginTop: 6,
+        fontSize: 13,
+        lineHeight: 18,
+        color: COLORS.darkText,
+    },
+    activationNote: {
+        marginTop: 6,
+        fontSize: 11.5,
+        lineHeight: 16,
+        color: COLORS.grayText,
+    },
+    activationBuyButton: {
+        marginTop: 12,
+        minHeight: 44,
+        borderRadius: 10,
+        backgroundColor: COLORS.lime,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 18,
+    },
+    activationBuyText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: COLORS.darkText,
+    },
     footerNote: {
         textAlign: 'center',
         color: COLORS.grayText,

@@ -19,7 +19,6 @@
     "lite": {
       "name": "LITE",
       "badge": "1 session / year",
-      "price": "€14.99",
       "period": "/ year",
       "features": [
         "1 live tracking session",
@@ -30,7 +29,6 @@
     "basic": {
       "name": "BASIC",
       "badge": "5 sessions / year",
-      "price": "€29.99",
       "period": "/ year",
       "features": [
         "5 live tracking sessions",
@@ -43,7 +41,6 @@
     "pro": {
       "name": "PRO",
       "badge": "Unlimited",
-      "price": "€59.99",
       "period": "/ year",
       "features": [
         "Unlimited tracking sessions",
@@ -51,6 +48,13 @@
         "Following your activity is always free for your fans"
       ]
     }
+  },
+  "activation": {
+    "dividerLabel": "Just one race?",
+    "name": "Single activation",
+    "description": "One tracking session, valid for a year.",
+    "note": "One-off purchase — it does not renew. Buy another whenever you need one.",
+    "buy": "Buy"
   },
   "footerNote": "Yearly subscription, renews automatically.\nCancel anytime. Price shown by the App Store.",
   "legal": {

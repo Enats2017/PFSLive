@@ -26,7 +26,10 @@ import { analyticsService } from '../../services/analyticsService';
 interface PlanData {
     name: string;
     badge: string;
-    price: string;
+    // No `price`. A hardcoded figure here was shown whenever StoreKit had not
+    // answered, and it had drifted: the app quoted EUR 59,99 for a plan selling
+    // at EUR 39. StoreKit is the only source of a price now - if it has not
+    // answered, the card shows a spinner rather than a number that may be wrong.
     period: string;
     features: string[];
     popularLabel?: string;
@@ -56,6 +59,8 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         loadingPlans,
         plansError,
         planByTier,
+        singlePlan,
+        visibleTiers,
         storeProducts,
         loadingPrices,
         defaultSelectedTier,
@@ -103,6 +108,16 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         if (defaultSelectedTier) setSelected(defaultSelectedTier);
     }, [defaultSelectedTier]);
 
+    // `selected` is seeded with 'basic' and defaultSelectedTier only fires for
+    // an active member, so without this a tier the backend no longer returns
+    // could stay selected - the card would be gone from the list while the
+    // bottom CTA still said "Continue with" it and tried to buy it.
+    useEffect(() => {
+        if (visibleTiers.length > 0 && !visibleTiers.includes(selected)) {
+            setSelected(visibleTiers[visibleTiers.length - 1]);
+        }
+    }, [visibleTiers, selected]);
+
     useEffect(() => {
         const loadCustomerId = async () => {
             const id = await tokenService.getCustomerId();
@@ -141,12 +156,12 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         return price;
     };
 
-    const getPriceLabel = (id: PlanId): string => {
+    // null = we do not have a price from StoreKit. The caller shows a spinner.
+    const getPriceLabel = (id: PlanId): string | null => {
         const apiPlan = planByTier[id];
-        if (!apiPlan) return getPlan(id).price;
+        if (!apiPlan) return null;
         const storePrice = storeProducts[apiPlan.product_id];
-        if (loadingPrices && !storePrice) return '...';
-        if (!storePrice) return getPlan(id).price;
+        if (!storePrice) return null;
 
         const currentLang = i18n.language?.split('-')[0]; // handles 'fr-FR' -> 'fr'
         if (currentLang === 'fr') {
@@ -194,6 +209,8 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 request: {
                     apple: { sku: apiPlan.product_id },
                 },
+                // 'subs' is right for the three tiers this button sells. The
+                // activation never comes through here - it has its own button.
                 type: 'subs',
             });
 
@@ -223,6 +240,38 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         });
         resetPurchase();
     }, [purchaseResult]);
+
+    // The activation is a CONSUMABLE: bought on its own button, with
+    // type 'in-app' rather than 'subs', and never joined to `selected` - the
+    // bottom CTA reads "Continue with <plan>", which would be wrong for a
+    // one-off. It stays buyable however many are already held, which is what
+    // the backend returns (action is always 'subscribe' for tier 'single').
+    const getActivationPrice = (): string | null => {
+        if (!singlePlan) return null;
+        const storePrice = storeProducts[singlePlan.product_id];
+        if (!storePrice) return null;
+        const currentLang = i18n.language?.split('-')[0];
+        return currentLang === 'fr' ? storePrice : formatPriceSymbolFirst(storePrice);
+    };
+
+    const handleBuyActivation = async () => {
+        if (!singlePlan) return;
+        try {
+            pendingProductIdRef.current = singlePlan.product_id ?? null;
+            await requestPurchase({
+                request: {
+                    apple: { sku: singlePlan.product_id },
+                },
+                type: 'in-app',
+            });
+        } catch (error: any) {
+            const message = error?.message ?? '';
+            if (message.includes('cancelled') || message.includes('canceled')) {
+                return;
+            }
+            console.error('Activation purchase failed:', error);
+        }
+    };
 
     const handleConfirmUpgrade = () => {
         if (modalPlanId) setSelected(modalPlanId);
@@ -291,9 +340,16 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 </View>
 
                 <View style={styles.priceRow}>
-                    <Text style={[styles.price, isSelected && styles.textLight]}>
-                        {getPriceLabel(id)}
-                    </Text>
+                    {getPriceLabel(id) !== null ? (
+                        <Text style={[styles.price, isSelected && styles.textLight]}>
+                            {getPriceLabel(id)}
+                        </Text>
+                    ) : (
+                        <ActivityIndicator
+                            size="small"
+                            color={isSelected ? COLORS.navy : COLORS.darkText}
+                        />
+                    )}
                     <Text style={[styles.period, isSelected && styles.periodLight]}>
                         {' '}
                         {plan.period}
@@ -372,7 +428,52 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                     </Text>
                 </View>
 
-                {PLAN_IDS.map(renderPlanCard)}
+                {visibleTiers.map(renderPlanCard)}
+
+                {singlePlan && (
+                    <>
+                        <View style={styles.activationDivider}>
+                            <View style={styles.activationDividerLine} />
+                            <Text style={styles.activationDividerText}>
+                                {t('membership:activation.dividerLabel')}
+                            </Text>
+                            <View style={styles.activationDividerLine} />
+                        </View>
+
+                        <View style={styles.activationCard}>
+                            <View style={styles.activationTopRow}>
+                                <Text style={styles.activationName}>
+                                    {t('membership:activation.name')}
+                                </Text>
+                                {getActivationPrice() !== null ? (
+                                    <Text style={styles.activationPrice}>
+                                        {getActivationPrice()}
+                                    </Text>
+                                ) : (
+                                    <ActivityIndicator size="small" color={COLORS.darkText} />
+                                )}
+                            </View>
+
+                            <Text style={styles.activationDescription}>
+                                {t('membership:activation.description')}
+                            </Text>
+                            <Text style={styles.activationNote}>
+                                {t('membership:activation.note')}
+                            </Text>
+
+                            <TouchableOpacity
+                                style={styles.activationBuyButton}
+                                activeOpacity={0.85}
+                                onPress={handleBuyActivation}
+                                disabled={purchaseLoading}
+                            >
+                                <Text style={styles.activationBuyText}>
+                                    {t('membership:activation.buy')}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </>
+                )}
 
                 <Text style={styles.footerNote}>
                     {t('membership:footerNote')}

@@ -19,7 +19,6 @@
     "lite": {
       "name": "LITE",
       "badge": "1 sessie / jaar",
-      "price": "€ 14,99",
       "period": "/ jaar",
       "features": [
         "1 live trackingsessie",
@@ -30,7 +29,6 @@
     "basic": {
       "name": "BASIC",
       "badge": "5 sessies / jaar",
-      "price": "€ 29,99",
       "period": "/ jaar",
       "features": [
         "5 live trackingsessies",
@@ -43,7 +41,6 @@
     "pro": {
       "name": "PRO",
       "badge": "Onbeperkt",
-      "price": "€ 59,99",
       "period": "/ jaar",
       "features": [
         "Onbeperkt aantal trackingsessies",
@@ -51,6 +48,13 @@
         "Het volgen van jouw activiteit is altijd gratis voor je fans"
       ]
     }
+  },
+  "activation": {
+    "dividerLabel": "Maar één wedstrijd?",
+    "name": "Eenmalige activatie",
+    "description": "Eén trackingsessie, een jaar geldig.",
+    "note": "Eenmalige aankoop — wordt niet verlengd. Koop er een nieuwe wanneer je er een nodig hebt.",
+    "buy": "Kopen"
   },
   "footerNote": "Jaarlijks abonnement, wordt automatisch verlengd.\nOp elk moment opzegbaar. Prijs weergegeven door de App Store.",
   "legal": {
