@@ -30,7 +30,7 @@
     "basic": {
       "name": "BASIC",
       "badge": "5 sessions / an",
-      "price": "€ 29,99",
+      "price": "€ 19,95",
       "period": "/ an",
       "features": [
         "5 sessions de suivi en direct",
@@ -43,7 +43,7 @@
     "pro": {
       "name": "PRO",
       "badge": "Illimité",
-      "price": "€ 59,99",
+      "price": "€ 24,95",
       "period": "/ an",
       "features": [
         "Sessions de suivi illimitées",

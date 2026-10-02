@@ -30,7 +30,7 @@
     "basic": {
       "name": "BASIC",
       "badge": "5 sessions / year",
-      "price": "€29.99",
+      "price": "€19.95",
       "period": "/ year",
       "features": [
         "5 live tracking sessions",
@@ -43,7 +43,7 @@
     "pro": {
       "name": "PRO",
       "badge": "Unlimited",
-      "price": "€59.99",
+      "price": "€24.95",
       "period": "/ year",
       "features": [
         "Unlimited tracking sessions",

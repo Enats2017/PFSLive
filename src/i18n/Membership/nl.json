@@ -30,7 +30,7 @@
     "basic": {
       "name": "BASIC",
       "badge": "5 sessies / jaar",
-      "price": "€ 29,99",
+      "price": "€ 19,95",
       "period": "/ jaar",
       "features": [
         "5 live trackingsessies",
@@ -43,7 +43,7 @@
     "pro": {
       "name": "PRO",
       "badge": "Onbeperkt",
-      "price": "€ 59,99",
+      "price": "€ 24,95",
       "period": "/ jaar",
       "features": [
         "Onbeperkt aantal trackingsessies",
