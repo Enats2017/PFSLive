@@ -19,6 +19,7 @@ export interface Profile {
     profile_picture: string;
     language_id: number;
     email_verified: number;
+    parent_consent?: number;
 }
 
 interface ProfileResponseData {

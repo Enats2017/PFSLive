@@ -65,6 +65,8 @@ const initialFormState: EditProfileForm = {
     parentConsent: false,
 }
 
+const toBool = (v: unknown) => v === true || Number(v) === 1
+
 export const useEditProfile = (initialProfile: Profile | null) => {
     const { t } = useTranslation(['profile'])
 
@@ -102,7 +104,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             // ✅ Always starts unticked. The API does not return whether consent is
             // already on file, so this is never pre-ticked — which is why the rule
             // below only fires when the date is actually CHANGED into the band.
-            parentConsent: false,
+            parentConsent: toBool(initialProfile.parent_consent),
         })
     }, [initialProfile])
 

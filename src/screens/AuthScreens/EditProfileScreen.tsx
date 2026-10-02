@@ -240,6 +240,8 @@ const EditProfileScreen = () => {
         )
     }
 
+    const consentLocked = Number(profile?.parent_consent) === 1
+
     return (
         <SafeAreaView style={commonStyles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" />
@@ -388,7 +390,7 @@ const EditProfileScreen = () => {
                                 <TouchableOpacity
                                     onPress={() => setField('parentConsent', !form.parentConsent)}
                                     activeOpacity={0.8}
-                                    disabled={loading}
+                                    disabled={loading || consentLocked}
                                     style={{ flex: 1 }}
                                 >
                                     <Text style={profileStyles.consentText}>
