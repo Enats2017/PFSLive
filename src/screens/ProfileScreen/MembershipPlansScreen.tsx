@@ -57,6 +57,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         plansError,
         planByTier,
         singlePlan,
+        visibleTiers,
         storeProducts,
         loadingPrices,
         defaultSelectedTier,
@@ -103,6 +104,16 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     useEffect(() => {
         if (defaultSelectedTier) setSelected(defaultSelectedTier);
     }, [defaultSelectedTier]);
+
+    // `selected` is seeded with 'basic' and defaultSelectedTier only fires for
+    // an active member, so without this a tier the backend no longer returns
+    // could stay selected - the card would be gone from the list while the
+    // bottom CTA still said "Continue with" it and tried to buy it.
+    useEffect(() => {
+        if (visibleTiers.length > 0 && !visibleTiers.includes(selected)) {
+            setSelected(visibleTiers[visibleTiers.length - 1]);
+        }
+    }, [visibleTiers, selected]);
 
     useEffect(() => {
         const loadCustomerId = async () => {
@@ -408,7 +419,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                     </Text>
                 </View>
 
-                {PLAN_IDS.map(renderPlanCard)}
+                {visibleTiers.map(renderPlanCard)}
 
                 {singlePlan && (
                     <>

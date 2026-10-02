@@ -26,6 +26,11 @@ interface UseMembershipPlansResult {
   // The one-off activation, when the backend sells one. Kept OUT of PlanId:
   // it is not a subscription tier and must not join the plan radio group.
   singlePlan: PlanItem | null;
+  // The subscription tiers the backend ACTUALLY returned, in rank order.
+  // Render from this, never from PLAN_IDS: a retired plan (Livio Lite) is
+  // dropped from the catalog server-side, and a hardcoded list would keep
+  // drawing a card for it with its stale fallback price and no way to buy it.
+  visibleTiers: PlanId[];
   storeProducts: Record<string, string>;
   loadingPrices: boolean;
   defaultSelectedTier: PlanId | null;
@@ -322,6 +327,17 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     return () => subscription.remove();
   }, []);
 
+  const visibleTiers = useMemo<PlanId[]>(() => {
+    if (!plansData) return [];
+    const returned = plansData.plans
+      .filter((plan) => PLAN_IDS.includes(plan.tier as PlanId))
+      .sort((a, b) => a.rank - b.rank)
+      .map((plan) => plan.tier as PlanId);
+    // Only fall back to the full list if the API gave us nothing usable at
+    // all - an empty plan screen is worse than a stale one.
+    return returned.length > 0 ? returned : PLAN_IDS;
+  }, [plansData]);
+
   const singlePlan = useMemo<PlanItem | null>(
     () => plansData?.plans.find((plan) => plan.tier === "single") ?? null,
     [plansData],
@@ -358,6 +374,7 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     plansError,
     planByTier,
     singlePlan,
+    visibleTiers,
     storeProducts,
     loadingPrices,
     defaultSelectedTier,
