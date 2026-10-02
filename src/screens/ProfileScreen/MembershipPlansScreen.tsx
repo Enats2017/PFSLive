@@ -26,7 +26,10 @@ import { analyticsService } from '../../services/analyticsService';
 interface PlanData {
     name: string;
     badge: string;
-    price: string;
+    // No `price`. A hardcoded figure here was shown whenever StoreKit had not
+    // answered, and it had drifted: the app quoted EUR 59,99 for a plan selling
+    // at EUR 39. StoreKit is the only source of a price now - if it has not
+    // answered, the card shows a spinner rather than a number that may be wrong.
     period: string;
     features: string[];
     popularLabel?: string;
@@ -153,12 +156,12 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         return price;
     };
 
-    const getPriceLabel = (id: PlanId): string => {
+    // null = we do not have a price from StoreKit. The caller shows a spinner.
+    const getPriceLabel = (id: PlanId): string | null => {
         const apiPlan = planByTier[id];
-        if (!apiPlan) return getPlan(id).price;
+        if (!apiPlan) return null;
         const storePrice = storeProducts[apiPlan.product_id];
-        if (loadingPrices && !storePrice) return '...';
-        if (!storePrice) return getPlan(id).price;
+        if (!storePrice) return null;
 
         const currentLang = i18n.language?.split('-')[0]; // handles 'fr-FR' -> 'fr'
         if (currentLang === 'fr') {
@@ -243,11 +246,10 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     // bottom CTA reads "Continue with <plan>", which would be wrong for a
     // one-off. It stays buyable however many are already held, which is what
     // the backend returns (action is always 'subscribe' for tier 'single').
-    const getActivationPrice = (): string => {
-        if (!singlePlan) return '';
+    const getActivationPrice = (): string | null => {
+        if (!singlePlan) return null;
         const storePrice = storeProducts[singlePlan.product_id];
-        if (loadingPrices && !storePrice) return '...';
-        if (!storePrice) return '';
+        if (!storePrice) return null;
         const currentLang = i18n.language?.split('-')[0];
         return currentLang === 'fr' ? storePrice : formatPriceSymbolFirst(storePrice);
     };
@@ -338,9 +340,16 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 </View>
 
                 <View style={styles.priceRow}>
-                    <Text style={[styles.price, isSelected && styles.textLight]}>
-                        {getPriceLabel(id)}
-                    </Text>
+                    {getPriceLabel(id) !== null ? (
+                        <Text style={[styles.price, isSelected && styles.textLight]}>
+                            {getPriceLabel(id)}
+                        </Text>
+                    ) : (
+                        <ActivityIndicator
+                            size="small"
+                            color={isSelected ? COLORS.navy : COLORS.darkText}
+                        />
+                    )}
                     <Text style={[styles.period, isSelected && styles.periodLight]}>
                         {' '}
                         {plan.period}
@@ -436,9 +445,13 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                                 <Text style={styles.activationName}>
                                     {t('membership:activation.name')}
                                 </Text>
-                                <Text style={styles.activationPrice}>
-                                    {getActivationPrice()}
-                                </Text>
+                                {getActivationPrice() !== null ? (
+                                    <Text style={styles.activationPrice}>
+                                        {getActivationPrice()}
+                                    </Text>
+                                ) : (
+                                    <ActivityIndicator size="small" color={COLORS.darkText} />
+                                )}
                             </View>
 
                             <Text style={styles.activationDescription}>
