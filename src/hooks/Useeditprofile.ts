@@ -101,9 +101,13 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             confirmPassword: '',
             // ✅ Use profile language_id if available, fall back to current app language
             language_id: initialProfile.language_id ?? getCurrentLanguageId() ?? 1,
-            // ✅ Always starts unticked. The API does not return whether consent is
-            // already on file, so this is never pre-ticked — which is why the rule
-            // below only fires when the date is actually CHANGED into the band.
+            // ✅ Seeded from the profile, because get_profile_api DOES return
+            // parent_consent and EditProfileScreen locks the box read-only when it
+            // is already 1 - a tick that cannot be pre-set cannot be locked. An
+            // earlier note here said it always starts unticked; that stopped being
+            // true when the lock was added. The rule below still only REQUIRES a
+            // tick when the date is actually changed into the 13-to-17 band, so a
+            // member already in it is not blocked from editing anything else.
             parentConsent: toBool(initialProfile.parent_consent),
         })
     }, [initialProfile])

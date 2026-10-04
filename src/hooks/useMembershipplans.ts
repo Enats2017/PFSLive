@@ -162,6 +162,45 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     consumableSkusRef.current = new Set(inAppSkus);
   }, [inAppSkus]);
 
+  const subSkusRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    subSkusRef.current = new Set(subSkus);
+  }, [subSkus]);
+
+  // StoreKit's own answer, which does NOT depend on our API having replied:
+  // fetchProducts({ type: "in-app" }) lands in `products`, { type: "subs" } in
+  // `subscriptions`. Preferred over the backend catalog for exactly that
+  // reason - StoreKit replays an unfinished transaction at launch, and that can
+  // arrive before the plans request comes back.
+  const storeConsumableIdsRef = useRef<Set<string>>(new Set());
+  const storeSubIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const idsOf = (list: any[]) =>
+      new Set(
+        (list || [])
+          .map((item: any) => item?.id ?? item?.productId)
+          .filter((id: any): id is string => typeof id === "string" && id !== ""),
+      );
+    storeConsumableIdsRef.current = idsOf(products as any[]);
+    storeSubIdsRef.current = idsOf(subscriptions as any[]);
+  }, [products, subscriptions]);
+
+  /**
+   * true = consumable, false = subscription, null = nothing knows this product
+   * yet. StoreKit is asked first because it is authoritative and independent of
+   * our API; the backend catalog is the fallback for the window before StoreKit
+   * has returned. null is NOT "subscription" - see the deferral in the purchase
+   * listener. Stable (deps []), so the listener can close over it.
+   */
+  const resolveConsumable = useCallback((sku: string): boolean | null => {
+    if (!sku) return null;
+    if (storeConsumableIdsRef.current.has(sku)) return true;
+    if (storeSubIdsRef.current.has(sku)) return false;
+    if (consumableSkusRef.current.has(sku)) return true;
+    if (subSkusRef.current.has(sku)) return false;
+    return null;
+  }, []);
+
   // ── Fetch StoreKit prices once connected + SKUs ready ──
   useEffect(() => {
     if (!connected || productSkus.length === 0) return;
@@ -289,6 +328,31 @@ export function useMembershipPlans(): UseMembershipPlansResult {
         setPurchaseResult(null);
       }
 
+      // Decide what this product IS before anything else. Deciding after
+      // verification would mean a deferral had already granted the entitlement
+      // and would verify the same transaction again on the replay.
+      const purchasedSku =
+        purchase.productId ?? purchase.id ?? purchase.product_id ?? "";
+      const consumable = resolveConsumable(purchasedSku);
+
+      if (consumable === null) {
+        // Neither StoreKit nor the backend catalog knows this product yet.
+        // That is the launch case: StoreKit replays an unfinished transaction
+        // before either list has arrived. Leave it in the queue, untouched and
+        // unverified - StoreKit replays it, and by then one of the two sources
+        // will answer. Guessing "subscription" here is what strands a
+        // consumable in the queue and stops the member ever buying a second
+        // EUR 5.95 activation.
+        console.log(
+          "⏸ Deferring transaction - product not known yet:",
+          purchasedSku || "(no sku on purchase)",
+        );
+        processingRef.current.delete(transactionId);
+        if (isUserInitiatedThisSession) setPurchaseLoading(false);
+        awaitingPurchaseRef.current = false;
+        return;
+      }
+
       try {
         const result = await appleVerifyService.verifyPurchase(transactionId);
         // A consumable MUST be finished as one. StoreKit keeps an unfinished
@@ -296,10 +360,7 @@ export function useMembershipPlans(): UseMembershipPlansResult {
         // sell the same product again - which is exactly what a second EUR 5.95
         // activation needs to do. Subscriptions must NOT be finished that way,
         // so it is decided per product rather than hardcoded.
-        const purchasedSku =
-          purchase.productId ?? purchase.id ?? purchase.product_id ?? "";
-        const isConsumable = consumableSkusRef.current.has(purchasedSku);
-        await finishTransaction({ purchase, isConsumable }).catch(
+        await finishTransaction({ purchase, isConsumable: consumable }).catch(
           (err) => {
             console.warn("⚠️ finishTransaction warning:", err?.message);
           },
