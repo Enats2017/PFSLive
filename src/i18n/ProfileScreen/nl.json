@@ -42,7 +42,8 @@
     "passwords_do_not_match": "Wachtwoorden komen niet overeen",
     "email_invalid": "Voer een geldig e-mailadres in",
     "email_too_long": "E-mail is te lang",
-    "email_already_taken": "Dit e-mailadres is al in gebruik"
+    "email_already_taken": "Dit e-mailadres is al in gebruik",
+    "parent_consent_required": "Een ouder of voogd moet toestemming geven voor iemand jonger dan 18"
   },
   "status": {
     "live": "LIVE",
@@ -68,7 +69,8 @@
     "country": "Land",
     "new_password": "Nieuw wachtwoord",
     "confirm_password": "Bevestig wachtwoord",
-    "language": "Taal"
+    "language": "Taal",
+    "parent_consent": "Ik ben de ouder of wettelijke voogd van deze persoon en ik geef toestemming voor live tracking."
   },
   "gender": {
     "male": "Man",
@@ -121,5 +123,4 @@
     "resend_failed_title": "Kan geen nieuwe code versturen",
     "resend_failed_message": "Probeer je e-mailadres opnieuw te wijzigen."
   }
-  
 }

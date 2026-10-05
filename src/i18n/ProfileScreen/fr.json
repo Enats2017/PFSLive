@@ -42,7 +42,8 @@
     "passwords_do_not_match": "Les mots de passe ne correspondent pas",
     "email_invalid": "Veuillez entrer une adresse e-mail valide",
     "email_too_long": "L'e-mail est trop long",
-    "email_already_taken": "Cet e-mail est déjà utilisé"
+    "email_already_taken": "Cet e-mail est déjà utilisé",
+    "parent_consent_required": "Un parent ou tuteur doit donner son consentement pour une personne de moins de 18 ans"
   },
   "status": {
     "live": "En direct",
@@ -68,7 +69,8 @@
     "country": "Pays",
     "new_password": "Nouveau mot de passe",
     "confirm_password": "Confirmer le mot de passe",
-    "language": "Langue"
+    "language": "Langue",
+    "parent_consent": "Je suis le parent ou le tuteur légal de cette personne et je consens au suivi en direct pour elle."
   },
   "gender": {
     "male": "Homme",

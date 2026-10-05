@@ -2,6 +2,59 @@ import { StyleSheet } from "react-native";
 import { spacing, palette, fonts, shadows, space, withAlpha } from "./common.styles";
 
 export const profileStyles = StyleSheet.create({
+  // ✅ PARENT / GUARDIAN CONSENT — only rendered when the date of birth being
+  // saved puts the person at 13 to 17. Deliberately the same shape as the terms
+  // checkbox in Register.styles.ts so the two read alike; kept here rather than
+  // imported from there because styles are per-screen in this repo.
+  consentContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
+  // Same shape as the terms checkbox the comment above refers to — that is
+  // `registerStyles.checkbox`, which the redesign draws round (radius 11 on a
+  // 22pt box) rather than the 6pt square this arrived from master with.
+  consentCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: palette.inputBorder,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: palette.surface,
+    marginTop: 2,
+  },
+  consentCheckboxActive: {
+    backgroundColor: palette.navy,
+    borderColor: palette.navy,
+  },
+  // Consent already on file. It cannot be withdrawn from here - edit_profile_api
+  // has no branch that writes parent_consent back to 0 for a 13-to-17 date, so a
+  // tappable box would untick, save, and come back ticked. Dimmed so it reads as
+  // settled rather than broken.
+  consentCheckboxLocked: {
+    opacity: 0.6,
+  },
+  // Matches registerStyles.termsText / errorText, so consent reads as the same
+  // kind of control as the terms tick it sits beside.
+  consentText: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: palette.textBody,
+    flex: 1,
+  },
+  consentError: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: palette.danger,
+    marginTop: 2,
+    paddingHorizontal: spacing.xs,
+  },
+
   textsection: {
     alignItems: "center",
     paddingBottom: spacing.sm,

@@ -29,6 +29,14 @@ interface UseMembershipPlansResult {
   loadingPlans: boolean;
   plansError: string | null;
   planByTier: Partial<Record<PlanId, PlanItem>>;
+  // The one-off activation, when the backend sells one. Kept OUT of PlanId:
+  // it is not a subscription tier and must not join the plan radio group.
+  singlePlan: PlanItem | null;
+  // The subscription tiers the backend ACTUALLY returned, in rank order.
+  // Render from this, never from PLAN_IDS: a retired plan (Livio Lite) is
+  // dropped from the catalog server-side, and a hardcoded list would keep
+  // drawing a card for it with its stale fallback price and no way to buy it.
+  visibleTiers: PlanId[];
   storeProducts: Record<string, string>;
   loadingPrices: boolean;
   defaultSelectedTier: PlanId | null;
@@ -147,6 +155,65 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     return plansData.plans.map((plan) => plan.product_id);
   }, [plansData]);
 
+  // The one-off activation is a CONSUMABLE, not a subscription, so StoreKit
+  // will not return it from a 'subs' query - it would come back priceless and
+  // unbuyable. Split the catalog by what each plan actually is. 'single' is the
+  // tier the backend sends for it (apple_get_plans_api planCatalog).
+  const { subSkus, inAppSkus } = useMemo(() => {
+    const subs: string[] = [];
+    const inApp: string[] = [];
+    (plansData?.plans ?? []).forEach((plan) => {
+      (plan.tier === "single" ? inApp : subs).push(plan.product_id);
+    });
+    return { subSkus: subs, inAppSkus: inApp };
+  }, [plansData]);
+
+  // The purchase listener below is registered once (deps []), so it cannot read
+  // plansData directly. A ref keeps the consumable set current for it.
+  const consumableSkusRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    consumableSkusRef.current = new Set(inAppSkus);
+  }, [inAppSkus]);
+
+  const subSkusRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    subSkusRef.current = new Set(subSkus);
+  }, [subSkus]);
+
+  // StoreKit's own answer, which does NOT depend on our API having replied:
+  // fetchProducts({ type: "in-app" }) lands in `products`, { type: "subs" } in
+  // `subscriptions`. Preferred over the backend catalog for exactly that
+  // reason - StoreKit replays an unfinished transaction at launch, and that can
+  // arrive before the plans request comes back.
+  const storeConsumableIdsRef = useRef<Set<string>>(new Set());
+  const storeSubIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const idsOf = (list: any[]) =>
+      new Set(
+        (list || [])
+          .map((item: any) => item?.id ?? item?.productId)
+          .filter((id: any): id is string => typeof id === "string" && id !== ""),
+      );
+    storeConsumableIdsRef.current = idsOf(products as any[]);
+    storeSubIdsRef.current = idsOf(subscriptions as any[]);
+  }, [products, subscriptions]);
+
+  /**
+   * true = consumable, false = subscription, null = nothing knows this product
+   * yet. StoreKit is asked first because it is authoritative and independent of
+   * our API; the backend catalog is the fallback for the window before StoreKit
+   * has returned. null is NOT "subscription" - see the deferral in the purchase
+   * listener. Stable (deps []), so the listener can close over it.
+   */
+  const resolveConsumable = useCallback((sku: string): boolean | null => {
+    if (!sku) return null;
+    if (storeConsumableIdsRef.current.has(sku)) return true;
+    if (storeSubIdsRef.current.has(sku)) return false;
+    if (consumableSkusRef.current.has(sku)) return true;
+    if (subSkusRef.current.has(sku)) return false;
+    return null;
+  }, []);
+
   // ── Fetch StoreKit prices once connected + SKUs ready ──
   useEffect(() => {
     if (!connected || productSkus.length === 0) return;
@@ -155,7 +222,12 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       try {
         setLoadingPrices(true);
         console.log("📡 Fetching StoreKit prices for:", productSkus);
-        await fetchProducts({ skus: productSkus, type: "subs" });
+        if (subSkus.length > 0) {
+          await fetchProducts({ skus: subSkus, type: "subs" });
+        }
+        if (inAppSkus.length > 0) {
+          await fetchProducts({ skus: inAppSkus, type: "in-app" });
+        }
       } catch (error) {
         console.error("❌ Error fetching store prices:", error);
       } finally {
@@ -164,7 +236,7 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     };
 
     loadPrices();
-  }, [connected, productSkus, fetchProducts]);
+  }, [connected, productSkus, subSkus, inAppSkus, fetchProducts]);
 
   const requestPurchase = useCallback(
     async (params: Parameters<typeof rawRequestPurchase>[0]) => {
@@ -274,9 +346,39 @@ export function useMembershipPlans(): UseMembershipPlansResult {
         setPurchaseButtonLoading(false);
       }
 
+      // Decide what this product IS before anything else. Deciding after
+      // verification would mean a deferral had already granted the entitlement
+      // and would verify the same transaction again on the replay.
+      const purchasedSku =
+        purchase.productId ?? purchase.id ?? purchase.product_id ?? "";
+      const consumable = resolveConsumable(purchasedSku);
+
+      if (consumable === null) {
+        // Neither StoreKit nor the backend catalog knows this product yet.
+        // That is the launch case: StoreKit replays an unfinished transaction
+        // before either list has arrived. Leave it in the queue, untouched and
+        // unverified - StoreKit replays it, and by then one of the two sources
+        // will answer. Guessing "subscription" here is what strands a
+        // consumable in the queue and stops the member ever buying a second
+        // EUR 5.95 activation.
+        console.log(
+          "⏸ Deferring transaction - product not known yet:",
+          purchasedSku || "(no sku on purchase)",
+        );
+        processingRef.current.delete(transactionId);
+        if (isUserInitiatedThisSession) setPurchaseLoading(false);
+        awaitingPurchaseRef.current = false;
+        return;
+      }
+
       try {
         const result = await appleVerifyService.verifyPurchase(transactionId);
-        await finishTransaction({ purchase, isConsumable: false }).catch(
+        // A consumable MUST be finished as one. StoreKit keeps an unfinished
+        // consumable in the queue, redelivers it on every launch, and will not
+        // sell the same product again - which is exactly what a second EUR 5.95
+        // activation needs to do. Subscriptions must NOT be finished that way,
+        // so it is decided per product rather than hardcoded.
+        await finishTransaction({ purchase, isConsumable: consumable }).catch(
           (err) => {
             console.warn("⚠️ finishTransaction warning:", err?.message);
           },
@@ -336,6 +438,22 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     return () => subscription.remove();
   }, []);
 
+  const visibleTiers = useMemo<PlanId[]>(() => {
+    if (!plansData) return [];
+    const returned = plansData.plans
+      .filter((plan) => PLAN_IDS.includes(plan.tier as PlanId))
+      .sort((a, b) => a.rank - b.rank)
+      .map((plan) => plan.tier as PlanId);
+    // Only fall back to the full list if the API gave us nothing usable at
+    // all - an empty plan screen is worse than a stale one.
+    return returned.length > 0 ? returned : PLAN_IDS;
+  }, [plansData]);
+
+  const singlePlan = useMemo<PlanItem | null>(
+    () => plansData?.plans.find((plan) => plan.tier === "single") ?? null,
+    [plansData],
+  );
+
   // ── planByTier map ──
   const planByTier = useMemo(() => {
     const map: Partial<Record<PlanId, PlanItem>> = {};
@@ -366,6 +484,8 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     loadingPlans,
     plansError,
     planByTier,
+    singlePlan,
+    visibleTiers,
     storeProducts,
     loadingPrices,
     defaultSelectedTier,

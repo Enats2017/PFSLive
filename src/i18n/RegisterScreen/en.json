@@ -40,7 +40,8 @@
     "registrationFailed": "Registration failed. Please try again.",
     "profilePictureTooLarge": "Profile photo must be smaller than 5MB",
     "profilePictureInvalid": "Please select a valid image (JPG, PNG or WebP)",
-    "profilePictureFailed": "Failed to upload profile photo. Please try again."
+    "profilePictureFailed": "Failed to upload profile photo. Please try again.",
+    "parentConsentRequired": "A parent or guardian must give consent for someone under 18"
   },
   "imageSource": {
     "title": "Choose photo source",
@@ -59,5 +60,8 @@
     "genericError": "Error",
     "genericErrorMessage": "Something went wrong. Please try again.",
     "email_exists": "This email is already registered"
+  },
+  "parentConsent": {
+    "label": "I am the parent or legal guardian of this person, and I consent to live tracking for them."
   }
 }

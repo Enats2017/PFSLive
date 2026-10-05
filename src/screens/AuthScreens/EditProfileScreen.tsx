@@ -20,6 +20,7 @@ import { commonStyles, palette } from '../../styles/common.styles'
 import NoticeCard from '../../components/NoticeCard'
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens'
 import { EMAIL_REGEX, useEditProfile } from '../../hooks/Useeditprofile'
+import { needsParentConsent } from '../../services/validation/authValidation'
 import { fetchProfileApi } from '../../services/profileServices'
 import { tokenService } from '../../services/tokenService'
 import { AppHeader } from '../../components/common/AppHeader'
@@ -349,6 +350,8 @@ const EditProfileScreen = () => {
         )
     }
 
+    const consentLocked = Number(profile?.parent_consent) === 1
+
     return (
         <SafeAreaView style={commonStyles.container} edges={['bottom']}>
             <AppHeader title={t('common:band.account')} showLogo={true} showBack />
@@ -524,13 +527,76 @@ const EditProfileScreen = () => {
                         onChangeText={(v) => setField('dob', v)}
                         iconName="calendar-outline"
                         isDatePicker
-                                        // ← block future DOBs
+                        // ✅ A date of birth cannot be in the future. This is the
+                        // prop the dangling comment here was waiting for - without
+                        // it the picker allowed one, and the old age calculation
+                        // turned it into a NEGATIVE age that tripped the under-13
+                        // branch and told them they were too young.
+                        maximumDate={new Date()}
                         pickerDoneLabel={t('common:buttons.done')}
                         pickerCancelLabel={t('common:buttons.cancel')}
                         editable={!loading}
                         error={!!errors.dob}
                         errorMessage={errors.dob}
                     />
+
+                    {/* ✅ Parent / guardian consent — only when the date of birth
+                        now in the form puts the person at 13 to 17. Hidden for an
+                        adult and for a blank date, which is allowed: Apple does
+                        not require one and the API applies no age rule without
+                        one. The hook only REQUIRES the tick when the date is
+                        actually being changed into that band, so a member already
+                        on one is not locked out of editing anything else.
+
+                        Once consent IS on file the box is read-only. Unticking it
+                        used to be possible and did nothing: the hook only ever
+                        sends parent_consent='1', and edit_profile_api has no
+                        branch that writes a 13-to-17 account back to 0 - it only
+                        clears consent when the date becomes adult. So the save
+                        succeeded, the box came back ticked, and it looked broken.
+                        consentLocked was added for this but was wired to the
+                        label only, leaving the box itself tappable. */}
+                    {needsParentConsent(form.dob) && (
+                        <>
+                            <View style={profileStyles.consentContainer}>
+                                <TouchableOpacity
+                                    style={[
+                                        profileStyles.consentCheckbox,
+                                        form.parentConsent && profileStyles.consentCheckboxActive,
+                                        consentLocked && profileStyles.consentCheckboxLocked,
+                                    ]}
+                                    onPress={() => setField('parentConsent', !form.parentConsent)}
+                                    activeOpacity={0.8}
+                                    disabled={loading || consentLocked}
+                                >
+                                    {form.parentConsent && (
+                                        <Ionicons name="checkmark" size={16} color={palette.surface} />
+                                    )}
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    onPress={() => setField('parentConsent', !form.parentConsent)}
+                                    activeOpacity={0.8}
+                                    disabled={loading || consentLocked}
+                                    style={{ flex: 1 }}
+                                >
+                                    <Text
+                                        style={[
+                                            profileStyles.consentText,
+                                            consentLocked && profileStyles.consentCheckboxLocked,
+                                        ]}
+                                    >
+                                        {t('profile:labels.parent_consent')}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                            {errors.parentConsent && (
+                                <Text style={profileStyles.consentError}>
+                                    {errors.parentConsent}
+                                </Text>
+                            )}
+                        </>
+                    )}
 
                     <FloatingLabelInput
                         label={t('profile:labels.gender')}

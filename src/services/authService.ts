@@ -20,6 +20,11 @@ export interface RegisterRequest {
   dob: string;
   gender: string;
   profileImage?: string;
+  // ✅ Parent/guardian consent, required by the backend when dob puts the person
+  // at 13 to 17. Optional here because it is irrelevant for an adult and for
+  // anyone who left the date blank, which is allowed.
+  parent_consent?: boolean;
+  parent_email?: string;
 }
 
 export interface Customer {
@@ -104,6 +109,14 @@ const buildRegisterFormData = async (
   formData.append("language_id", String(languageId));
   formData.append("gender", data.gender.toLowerCase());
   formData.append("i_agree", I_AGREE_VALUE);
+  // ✅ Parent/guardian consent. Sent as an explicit "1" or "0" rather than being
+  // omitted when false, so the backend logs a deliberate "no" instead of an
+  // absent field. It treats "0" as NOT consent, so an unticked box is honest
+  // either way — but explicit is easier to reason about from the API log.
+  formData.append("parent_consent", data.parent_consent ? "1" : "0");
+  if (data.parent_email && data.parent_email.trim()) {
+    formData.append("parent_email", data.parent_email.trim());
+  }
   formData.append("device_id", deviceId);
   // OS the account was created on. Platform.OS is 'ios' | 'android' in RN;
   // on web it can be 'web' — the backend clamps to an allowed set and defaults
@@ -250,6 +263,7 @@ export const authService = {
           city: data.city,
           dob: data.dob,
           gender: data.gender,
+          parent_consent: data.parent_consent ? "1" : "0",
           hasProfileImage: !!data.profileImage,
         });
       }

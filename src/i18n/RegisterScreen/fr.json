@@ -40,7 +40,8 @@
     "registrationFailed": "Inscription échouée. Veuillez réessayer.",
     "profilePictureTooLarge": "La photo de profil doit être inférieure à 5 Mo",
     "profilePictureInvalid": "Veuillez sélectionner une image valide (JPG, PNG ou WebP)",
-    "profilePictureFailed": "Échec du téléchargement de la photo de profil. Veuillez réessayer."
+    "profilePictureFailed": "Échec du téléchargement de la photo de profil. Veuillez réessayer.",
+    "parentConsentRequired": "Un parent ou tuteur doit donner son consentement pour une personne de moins de 18 ans"
   },
   "imageSource": {
     "title": "Choisir la source de la photo",
@@ -59,5 +60,8 @@
     "genericError": "Erreur",
     "genericErrorMessage": "Une erreur s'est produite. Veuillez réessayer.",
     "email_exists": "Cette adresse e-mail est déjà enregistrée"
+  },
+  "parentConsent": {
+    "label": "Je suis le parent ou le tuteur légal de cette personne et je consens au suivi en direct pour elle."
   }
 }

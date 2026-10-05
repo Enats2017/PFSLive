@@ -4,8 +4,8 @@
     "title": "Kies je abonnement",
     "subtitle": "Blijf je atleten live volgen."
   },
-  "infoBanner": {
-    "text": "Je gratis sessie is gebruikt. Kies een abonnement om je te registreren en je race op de wedstrijddag te volgen.",
+ "infoBanner": {
+    "text": "Een abonnement is nodig om je in te schrijven en je race op de wedstrijddag live te volgen. Kies een abonnement om te starten.",
     "hasSessionsLeft": "Je hebt nog {{count}} sessies over. Upgrade op elk moment om meer sessies te krijgen.",
     "noSessionsLeft": "Je hebt al je sessies gebruikt. Upgrade je abonnement om je races te blijven volgen.",
     "webMembership": "Je hebt een actief webabonnement. Beheer dit via de website.",
@@ -17,20 +17,18 @@
   },
   "plans": {
     "lite": {
-      "name": "Lite",
-      "badge": "{{count}} sessies / jaar",
-      "price": "€ 14,99",
+      "name": "LITE",
+      "badge": "1 sessie / jaar",
       "period": "/ jaar",
       "features": [
-        "2 live trackingsessies",
+        "1 live trackingsessie",
         "Live GPS-kaart en resultaten",
         "Het volgen van jouw activiteit is altijd gratis voor je fans"
       ]
     },
     "basic": {
-      "name": "Basic",
+      "name": "PRO",
       "badge": "5 sessies / jaar",
-      "price": "€ 29,99",
       "period": "/ jaar",
       "features": [
         "5 live trackingsessies",
@@ -41,9 +39,8 @@
       "popularLabel": "Meest gekozen"
     },
     "pro": {
-      "name": "Pro",
-      "badge": "Onbeperkt",
-      "price": "€ 59,99",
+      "name": "UNLIMITED",
+      "badge": "Onbeperkte sessies / jaar",
       "period": "/ jaar",
       "features": [
         "Onbeperkt aantal trackingsessies",
@@ -51,6 +48,13 @@
         "Het volgen van jouw activiteit is altijd gratis voor je fans"
       ]
     }
+  },
+  "activation": {
+    "dividerLabel": "Maar één wedstrijd?",
+    "name": "Eenmalige activatie",
+    "description": "Eén trackingsessie, een jaar geldig.",
+    "note": "Eenmalige aankoop — wordt niet verlengd. Koop er een nieuwe wanneer je er een nodig hebt.",
+    "buy": "Kopen"
   },
   "footerNote": "Jaarlijks abonnement, wordt automatisch verlengd.\nOp elk moment opzegbaar. Prijs weergegeven door de App Store.",
   "legal": {

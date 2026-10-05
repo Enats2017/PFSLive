@@ -167,6 +167,77 @@ export const membershipPlansStyle = StyleSheet.create({
         color: palette.textOnNavy,
     },
 
+    // ── the one-off activation, below the subscription cards ──
+    // Deliberately NOT a plan card: it is a consumable, it has no period, and it
+    // is bought on its own button rather than through "Continue with <plan>".
+    // Drawn with the same tokens as the plan cards above — name on type.h3 and
+    // price on display/20 — so the two read as one family despite the different
+    // product. It arrived from master on the pre-redesign fontSize/fontWeight
+    // pairs; those are what the design audit rejects, so they were mapped onto
+    // the ramp rather than carried over.
+    activationDivider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: space.lg,
+        marginBottom: space.sm,
+    },
+    activationDividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: COLORS.border,
+    },
+    activationDividerText: {
+        ...type.smallSemi,
+        color: palette.textMuted,
+        marginHorizontal: space.md,
+    },
+    activationCard: {
+        backgroundColor: COLORS.white,
+        borderRadius: radii.md,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        padding: space.lg,
+    },
+    activationTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    activationName: {
+        ...type.h3,
+        flexShrink: 1,
+        paddingRight: space.sm,
+    },
+    // Same treatment as `price` above — a consumable is still a price.
+    activationPrice: {
+        flexShrink: 0,
+        fontFamily: fonts.display,
+        fontSize: 20,
+        color: palette.ink,
+    },
+    activationDescription: {
+        ...type.body,
+        marginTop: space.sm,
+    },
+    activationNote: {
+        ...type.caption,
+        marginTop: space.xs,
+    },
+    activationBuyButton: {
+        marginTop: space.md,
+        minHeight: 48,
+        borderRadius: radii.md,
+        backgroundColor: COLORS.lime,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: space.xl,
+    },
+    activationBuyText: {
+        fontFamily: fonts.display,
+        fontSize: 15,
+        color: palette.ink,
+    },
+
     // ── Purchase disclosures ───────────────────────────────────────────
     // ⚠️ App Review 3.1.2. footerNote, subscriptionInfo, Restore Purchases and
     // both legal links must stay on this screen and stay legible. Do not shrink

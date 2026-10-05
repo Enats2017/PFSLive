@@ -42,7 +42,8 @@
     "passwords_do_not_match": "Passwords do not match",
     "email_invalid": "Please enter a valid email address",
     "email_too_long": "Email is too long",
-    "email_already_taken": "This email is already in use"
+    "email_already_taken": "This email is already in use",
+    "parent_consent_required": "A parent or guardian must give consent for someone under 18"
   },
   "status": {
     "live": "LIVE",
@@ -68,7 +69,8 @@
     "country": "Country",
     "new_password": "New password",
     "confirm_password": "Confirm password",
-    "language": "Language"
+    "language": "Language",
+    "parent_consent": "I am the parent or legal guardian of this person, and I consent to live tracking for them."
   },
   "gender": {
     "male": "Male",
