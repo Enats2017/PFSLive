@@ -58,7 +58,17 @@ export const membershipPlansStyle = StyleSheet.create({
     // ── Plan card ──────────────────────────────────────────────────────
     card: {
         borderRadius: radii.md,
-        paddingVertical: space.md,
+        // Asymmetric on purpose. `popularBadge` and `checkCircle` are absolute at
+        // top: -8 and hang half outside the card, so the first flow child — planRow
+        // — has to start below where they end. At the old paddingVertical of 12 the
+        // badge's lower edge (-8 + 20 = 12) landed exactly on the plan name's row,
+        // which is why "Most popular" and the sessions badge read as one glued lump
+        // on the popular card. 20 leaves 8pt of air under the badge and 10 under the
+        // tick. Applied to EVERY card, not just the badged one: the tick appears on
+        // whichever card is selected, and making the padding conditional would
+        // resize cards as the selection moved.
+        paddingTop: space.xl,
+        paddingBottom: space.md,
         paddingHorizontal: space.xl,
         marginTop: space.lg,
         position: 'relative',
@@ -85,6 +95,9 @@ export const membershipPlansStyle = StyleSheet.create({
     popularBadgeText: {
         fontFamily: fonts.bodySemi,
         fontSize: 10,
+        // Pinned so the badge's height does not drift with the platform's default
+        // line height — the card's paddingTop above is calculated against it.
+        lineHeight: 12,
         letterSpacing: 0.4,
         // The string stays sentence case; the CAPS are a display choice, so
         // French and Dutch capitalise by their own rules.
@@ -114,6 +127,11 @@ export const membershipPlansStyle = StyleSheet.create({
     },
     sessionsBadge: {
         flexShrink: 1,
+        // Without minWidth a flex child will not shrink below its own content, so a
+        // long badge ("Unlimited sessions / year" is the API-less fallback) pushed
+        // the price off the row instead of ellipsizing. The badge is the only thing
+        // on this row that may give way — name and price are both flexShrink: 0.
+        minWidth: 0,
         backgroundColor: palette.fill,
         borderRadius: radii.sm,
         paddingVertical: space.xs,
@@ -142,6 +160,9 @@ export const membershipPlansStyle = StyleSheet.create({
     },
     period: {
         ...type.small,
+        // "/ year" must not wrap onto a second line — that would double the row's
+        // height and drop the price out of line with the name beside it.
+        flexShrink: 0,
     },
 
     featuresWrapper: {
@@ -206,6 +227,7 @@ export const membershipPlansStyle = StyleSheet.create({
     activationName: {
         ...type.h3,
         flexShrink: 1,
+        minWidth: 0,
         paddingRight: space.sm,
     },
     // Same treatment as `price` above — a consumable is still a price.

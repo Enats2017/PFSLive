@@ -314,7 +314,12 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 style={[styles.card, isSelected ? styles.cardSelected : styles.cardUnselected]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSelected }}
-                accessibilityLabel={`${plan.name}, ${getPriceLabel(id)} ${plan.period}`}
+                // getPriceLabel is null until StoreKit answers, and interpolating it
+                // straight in made the card announce "PRO, null / year". Dropping the
+                // empty part reads correctly in both states.
+                accessibilityLabel={[plan.name, getPriceLabel(id), plan.period]
+                    .filter(Boolean)
+                    .join(', ')}
             >
                 {!!plan.popularLabel && (
                     <View style={styles.popularBadge}>
@@ -363,7 +368,10 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                             color={isSelected ? COLORS.white : COLORS.darkText}
                         />
                     )}
-                    <Text style={[styles.period, isSelected && styles.mutedLight]}>
+                    <Text
+                        style={[styles.period, isSelected && styles.mutedLight]}
+                        numberOfLines={1}
+                    >
                         {plan.period}
                     </Text>
                 </View>
