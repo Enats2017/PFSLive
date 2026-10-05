@@ -8,7 +8,8 @@
     "ios": "expo run:ios",
     "clean": "rm -rf node_modules android ios .expo && rm -f package-lock.json",
     "generate-assets": "node generate-assets.js",
-    "prebuild": "npm run generate-assets && npx expo prebuild --clean"
+    "prebuild": "npm run generate-assets && npx expo prebuild --clean",
+    "test:card": "tsc src/screens/ProfileScreen/profileCard.ts src/screens/ProfileScreen/profileCard.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/screens/ProfileScreen/profileCard.test.js"
   },
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.1",

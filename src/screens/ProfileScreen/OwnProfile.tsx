@@ -20,6 +20,7 @@ import { DeleteEventModal } from '../../components/DeleteEventModal';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { appleVerifyService } from '../../services/appleverifyservice';
 import PurchaseStatusModal from '../../components/PurchaseStatusModal';
+import { resolveProfileCard } from './profileCard';
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -54,53 +55,33 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
     // have (event_only) - somebody who also holds a real membership should still
     // see their session count. Once it has been used, remaining is 0 and this
     // falls through to the normal "no sessions left" copy, which is then accurate.
+    // Which card to show, and whether the "it won't use a session" line belongs
+    // beside it. The decision lives in profileCard.ts so the six states of the
+    // display matrix can be asserted - see profileCard.test.ts. Only the copy
+    // is chosen here.
+    const card = resolveProfileCard(profile);
+
     const eventActivation =
         profile?.membership_info?.event_only === 1
             ? profile?.membership_info?.event_activations?.find(a => a.remaining > 0)
             : undefined;
 
-    // ── "Livio tracking included" ───────────────────────────────────────────
-    // Races where tracking comes free with the event. There is no membership
-    // row behind these - that is the client's requirement - so membership_info
-    // is null when a free race is all the cover somebody has, and without the
-    // copy below this screen would tell them "No Active Membership / Subscribe
-    // to a plan". It works, but it reads wrong and invites a purchase they do
-    // not need.
-    const freeEvents = profile?.free_events ?? [];
-    const hasFreeEvents = freeEvents.length > 0;
-
     // Name the race when there is one; count them when there are several, so
     // the line cannot grow unbounded as somebody enters a season of them.
     const freeLabel =
-        freeEvents.length === 1
-            ? freeEvents[0].event_name
-            : t('ownProfile:membershipCard.freeRacesCount', { count: freeEvents.length });
-
-    const hasMembership = profile?.membership_info?.has_membership === true;
-    const isUnlimited = profile?.membership_info?.unlimited === true;
-    const remaining = profile?.membership_info?.remaining ?? 0;
+        card.freeEventName !== null
+            ? card.freeEventName
+            : t('ownProfile:membershipCard.freeRacesCount', { count: card.freeEventCount });
 
     // The free race IS the card: no membership of any kind to report.
-    const freeOnly = hasFreeEvents && !hasMembership;
+    const freeOnly = card.state === 'free_only';
 
-    // An extra line beside a real membership.
-    //
-    // This deliberately departs from the precedent set by eventActivation
-    // above, which is HIDDEN when the user also holds a membership. That is
-    // right for the EUR 5.95 activation - they bought it, it is just cover -
-    // and wrong here, because the client's requirement is precisely that a free
-    // race does NOT consume a session, and saying nothing about it is what
-    // generates "did my free race use one of mine?" tickets.
-    //
-    // Not shown for unlimited (no session to save, so it is only noise), and
-    // not beside the activation copy (two event names in one card reads as a
-    // contradiction).
     const freeExtraLine =
-        hasFreeEvents && hasMembership && !isUnlimited && !eventActivation
-            ? remaining > 0
-                ? t('ownProfile:membershipCard.freeAlsoIncluded', { event: freeLabel })
-                : t('ownProfile:membershipCard.freeStillAvailable', { event: freeLabel })
-            : null;
+        card.extraLine === 'alsoIncluded'
+            ? t('ownProfile:membershipCard.freeAlsoIncluded', { event: freeLabel })
+            : card.extraLine === 'stillAvailable'
+                ? t('ownProfile:membershipCard.freeStillAvailable', { event: freeLabel })
+                : null;
 
     const renderIosCard = () => {
         if (profile?.in_process_payment === 1) {
