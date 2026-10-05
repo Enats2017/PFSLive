@@ -27,7 +27,7 @@
       ]
     },
     "basic": {
-      "name": "BASIC",
+      "name": "PRO",
       "badge": "5 sessies / jaar",
       "period": "/ jaar",
       "features": [
@@ -39,7 +39,7 @@
       "popularLabel": "MEEST GEKOZEN"
     },
     "pro": {
-      "name": "PRO",
+      "name": "UNLIMITED",
       "badge": "Onbeperkt",
       "period": "/ jaar",
       "features": [

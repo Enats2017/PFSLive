@@ -27,7 +27,7 @@
       ]
     },
     "basic": {
-      "name": "BASIC",
+      "name": "PRO",
       "badge": "5 sessions / year",
       "period": "/ year",
       "features": [
@@ -39,7 +39,7 @@
       "popularLabel": "MOST POPULAR"
     },
     "pro": {
-      "name": "PRO",
+      "name": "UNLIMITED",
       "badge": "Unlimited",
       "period": "/ year",
       "features": [
