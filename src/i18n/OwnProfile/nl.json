@@ -4,7 +4,8 @@
         "remaining": "U heeft nog {{count}} live trackingsessie(s) over.",
         "exhausted": "U heeft geen live trackingsessies meer over.",
         "subtitle": "Volg je favoriete atleten live.",
-        "eventOnly": "Je Livio-activatie geldt voor {{event}}."
+        "eventOnly": "Je Livio-activatie geldt voor {{event}}.",
+        "freeIncluded": "Tracking inbegrepen voor {{event}}."
     },
     "menu": {
         "events": {
@@ -40,7 +41,12 @@
         "noMembershipSubtitle": "Neem een abonnement om te starten met live tracking van uw sessies.",
         "paymentProcessing": "Betaling wordt verwerkt. Wacht ongeveer 1 minuut en tik dan op Vernieuwen om uw bijgewerkt lidmaatschap te bekijken.",
         "refresh": "Vernieuwen",
-        "eventOnly": "Alleen geldig voor {{event}}."
+        "eventOnly": "Alleen geldig voor {{event}}.",
+        "freeIncludedTitle": "Tracking inbegrepen",
+        "freeIncludedSubtitle": "voor {{event}}",
+        "freeAlsoIncluded": "{{event}} is inbegrepen — dit gebruikt geen sessie.",
+        "freeStillAvailable": "Je kunt {{event}} nog steeds volgen — het is inbegrepen.",
+        "freeRacesCount": "{{count}} wedstrijd(en)"
     },
     "training": {
         "create": "PERSOONLIJK EVENEMENT MAKEN"

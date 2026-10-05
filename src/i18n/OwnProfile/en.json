@@ -4,7 +4,8 @@
         "remaining": "You have {{count}} live tracking session(s) left.",
         "exhausted": "You have no live tracking sessions left.",
         "subtitle": "Track your favourite athletes live.",
-        "eventOnly": "Your Livio activation is valid for {{event}}."
+        "eventOnly": "Your Livio activation is valid for {{event}}.",
+        "freeIncluded": "Tracking included for {{event}}."
     },
     "menu": {
         "events": {
@@ -40,7 +41,12 @@
         "noMembershipSubtitle": "Subscribe to a plan to start live tracking your sessions.",
         "paymentProcessing": "Payment is being processed. Please wait about 1 minute, then tap Refresh to view your updated membership.",
         "refresh": "Refresh",
-        "eventOnly": "Valid for {{event}} only."
+        "eventOnly": "Valid for {{event}} only.",
+        "freeIncludedTitle": "Tracking included",
+        "freeIncludedSubtitle": "for {{event}}",
+        "freeAlsoIncluded": "{{event}} is included — it won't use a session.",
+        "freeStillAvailable": "You can still track {{event}} — it's included.",
+        "freeRacesCount": "{{count}} race(s)"
     },
     "training": {
         "create": "CREATE PERSONAL EVENT"

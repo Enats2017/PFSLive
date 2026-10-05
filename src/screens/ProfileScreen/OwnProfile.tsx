@@ -58,6 +58,50 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
         profile?.membership_info?.event_only === 1
             ? profile?.membership_info?.event_activations?.find(a => a.remaining > 0)
             : undefined;
+
+    // ── "Livio tracking included" ───────────────────────────────────────────
+    // Races where tracking comes free with the event. There is no membership
+    // row behind these - that is the client's requirement - so membership_info
+    // is null when a free race is all the cover somebody has, and without the
+    // copy below this screen would tell them "No Active Membership / Subscribe
+    // to a plan". It works, but it reads wrong and invites a purchase they do
+    // not need.
+    const freeEvents = profile?.free_events ?? [];
+    const hasFreeEvents = freeEvents.length > 0;
+
+    // Name the race when there is one; count them when there are several, so
+    // the line cannot grow unbounded as somebody enters a season of them.
+    const freeLabel =
+        freeEvents.length === 1
+            ? freeEvents[0].event_name
+            : t('ownProfile:membershipCard.freeRacesCount', { count: freeEvents.length });
+
+    const hasMembership = profile?.membership_info?.has_membership === true;
+    const isUnlimited = profile?.membership_info?.unlimited === true;
+    const remaining = profile?.membership_info?.remaining ?? 0;
+
+    // The free race IS the card: no membership of any kind to report.
+    const freeOnly = hasFreeEvents && !hasMembership;
+
+    // An extra line beside a real membership.
+    //
+    // This deliberately departs from the precedent set by eventActivation
+    // above, which is HIDDEN when the user also holds a membership. That is
+    // right for the EUR 5.95 activation - they bought it, it is just cover -
+    // and wrong here, because the client's requirement is precisely that a free
+    // race does NOT consume a session, and saying nothing about it is what
+    // generates "did my free race use one of mine?" tickets.
+    //
+    // Not shown for unlimited (no session to save, so it is only noise), and
+    // not beside the activation copy (two event names in one card reads as a
+    // contradiction).
+    const freeExtraLine =
+        hasFreeEvents && hasMembership && !isUnlimited && !eventActivation
+            ? remaining > 0
+                ? t('ownProfile:membershipCard.freeAlsoIncluded', { event: freeLabel })
+                : t('ownProfile:membershipCard.freeStillAvailable', { event: freeLabel })
+            : null;
+
     const renderIosCard = () => {
         if (profile?.in_process_payment === 1) {
             return (
@@ -104,7 +148,14 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                     <Text style={ownProfile.iostitle}>
                         {profile?.membership_info?.has_membership && profile?.membership_info?.membership_name
                             ? `${profile?.membership_info?.membership_name} ${t('ownProfile:membershipCard.liteTitle')}`
-                            : t('ownProfile:membershipCard.noMembershipTitle')}
+                            : freeOnly
+                                // No membership, but a race is included. The title must not
+                                // read "No Active Membership" - and it must not get
+                                // "MEMBERSHIP" appended either, which is what the
+                                // membership_name branch above would have done had the API
+                                // faked a membership shape for this.
+                                ? t('ownProfile:membershipCard.freeIncludedTitle')
+                                : t('ownProfile:membershipCard.noMembershipTitle')}
                     </Text>
                 </View>
 
@@ -127,10 +178,18 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                             {t('ownProfile:tracking.exhausted')}
                         </Text>
                     )
+                ) : freeOnly ? (
+                    <Text style={ownProfile.iossubtitle}>
+                        {t('ownProfile:membershipCard.freeIncludedSubtitle', { event: freeLabel })}
+                    </Text>
                 ) : (
                     <Text style={ownProfile.iossubtitle}>
                         {t('ownProfile:membershipCard.noMembershipSubtitle')}
                     </Text>
+                )}
+
+                {freeExtraLine && (
+                    <Text style={ownProfile.iosfreeline}>{freeExtraLine}</Text>
                 )}
 
                 <TouchableOpacity
@@ -161,6 +220,18 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                                     </Text>
                                     <Text style={ownProfile.subtitle}>{t('ownProfile:tracking.subtitle')}</Text>
                                 </>
+                            ) : freeOnly ? (
+                                // Ahead of the branches below because the last of them is
+                                // reached by a 0 remaining AND by no membership at all, so
+                                // somebody whose race is included would otherwise be told
+                                // "You have no live tracking sessions left" on the very
+                                // screen that should be reassuring them.
+                                <>
+                                    <Text style={ownProfile.title}>
+                                        {t('ownProfile:tracking.freeIncluded', { event: freeLabel })}
+                                    </Text>
+                                    <Text style={ownProfile.subtitle}>{t('ownProfile:tracking.subtitle')}</Text>
+                                </>
                             ) : profile?.membership_info?.unlimited ? (
                                 <>
                                     <Text style={ownProfile.title}>{t('ownProfile:tracking.unlimited')}</Text>
@@ -178,6 +249,10 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                                     <Text style={ownProfile.title}>{t('ownProfile:tracking.exhausted')}</Text>
                                     <Text style={ownProfile.subtitle}>{t('ownProfile:tracking.subtitle')}</Text>
                                 </>
+                            )}
+
+                            {freeExtraLine && (
+                                <Text style={ownProfile.freeline}>{freeExtraLine}</Text>
                             )}
                         </View>
                     </TouchableOpacity>

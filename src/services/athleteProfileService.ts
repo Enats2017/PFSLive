@@ -17,6 +17,26 @@ export interface MembershipInfo {
     event_activations?: EventActivation[];
 }
 
+/**
+ * A race where Livio tracking comes free with the event - the organiser ticked
+ * "Livio tracking included" on that distance.
+ *
+ * Deliberately NOT part of MembershipInfo. No membership row exists for these,
+ * which is the client's whole point, so membership_info is null for somebody
+ * whose only cover is a free race. The API keeps it at the profile root for
+ * that reason, and so do we.
+ *
+ * Upcoming races only, soonest first. Optional, so a build that predates the
+ * backend change keeps compiling and simply renders nothing.
+ */
+export interface FreeEvent {
+    event_id: number;
+    event_name: string;
+    distance_id: number;
+    distance_name: string;
+    race_date: string;
+}
+
 export interface EventActivation {
     membership_id: number;
     membership_name: string;
@@ -40,6 +60,8 @@ export interface AthleteProfile {
   following_count: number;
    membership_info: MembershipInfo | null;
    in_process_payment: number | null;
+   /** Upcoming races where tracking is included with the event. [] when none. */
+   free_events?: FreeEvent[];
 }
 
 
@@ -227,7 +249,8 @@ export const eventService = {
               followers_count: 0, // ← add
               following_count: 0,
               membership_info: null,
-              in_process_payment: 0
+              in_process_payment: 0,
+              free_events: []
             },
             tabs: {
               past: eventsData.past || [],

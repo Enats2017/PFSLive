@@ -104,6 +104,16 @@ export const ownProfile = StyleSheet.create({
     color: colors.gray600,
     lineHeight: 16,
   },
+  // "this race is included - it won't use a session", on the Android banner.
+  // gray700 rather than gray600: it has to carry over the yellow banner fill
+  // without competing with the title above it.
+  freeline: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.gray700,
+    lineHeight: 17,
+    marginTop: 6,
+  },
   menuRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -167,6 +177,17 @@ export const ownProfile = StyleSheet.create({
     },
     iosbold: {
         fontWeight: '700',
+    },
+    // The same "included" line on the dark iOS card. iossubtitle already
+    // carries a 14pt bottom margin, so this sits in that gap with a negative
+    // offset rather than pushing the button further down the card.
+    iosfreeline: {
+        color: colors.themeiColor,
+        fontSize: 13,
+        fontWeight: '600',
+        lineHeight: 17,
+        marginTop: -6,
+        marginBottom: 14,
     },
     iosbutton: {
         backgroundColor: colors.themeiColor,

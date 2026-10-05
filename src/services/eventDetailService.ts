@@ -23,6 +23,14 @@ export interface Distance {
   participant_started_count: number;
   dnf_count: number;
   gpx_url: string | null;
+  /**
+   * 1 when Livio tracking is included with the event on this distance, so
+   * registering it costs nothing and uses no session. Nothing renders it yet -
+   * registration_status already reads 'available' for these, which is what the
+   * screen acts on. Typed so the field the API now returns is not invisible to
+   * whoever adds an "included" badge here later.
+   */
+  free_tracking_included?: number;
 }
 
 export interface RaceResultData {
