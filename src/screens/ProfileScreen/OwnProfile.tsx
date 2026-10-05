@@ -58,6 +58,14 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
         profile?.membership_info?.event_only === 1
             ? profile?.membership_info?.event_activations?.find(a => a.remaining > 0)
             : undefined;
+
+            // Fall back to the old single name so older API responses still render.
+    const membershipNames: string[] =
+        profile?.membership_info?.membership_names?.length
+            ? profile.membership_info.membership_names
+            : profile?.membership_info?.membership_name
+                ? [profile.membership_info.membership_name]
+                : [];
     const renderIosCard = () => {
         if (profile?.in_process_payment === 1) {
             return (
@@ -101,11 +109,11 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
             <View style={ownProfile.ioscard}>
                 <View style={ownProfile.iosheader}>
                     <Ionicons name="navigate-circle-outline" size={24} color={colors.themeiColor} />
-                    <Text style={ownProfile.iostitle}>
-                        {profile?.membership_info?.has_membership && profile?.membership_info?.membership_name
-                            ? `${profile?.membership_info?.membership_name} ${t('ownProfile:membershipCard.liteTitle')}`
-                            : t('ownProfile:membershipCard.noMembershipTitle')}
-                    </Text>
+                     <Text style={[ownProfile.iostitle, { flex: 1 }]}>
+                            {profile?.membership_info?.has_membership && membershipNames.length > 0
+                                ? membershipNames.join(' & ')
+                                : t('ownProfile:membershipCard.noMembershipTitle')}
+                        </Text>
                 </View>
 
                 {profile?.membership_info?.has_membership ? (
