@@ -5,7 +5,7 @@
   },
   "button": "Suivi en direct",
   "undo": "ANNULER L'INSCRIPTION",
-   "register": "S'inscrire",
+  "register": "S'inscrire",
   "gpx": "TÉLÉCHARGER GPX",
   "live": "EN DIRECT",
   "countdown": {
@@ -16,10 +16,11 @@
     "days": "J",
     "hours": "H",
     "minutes": "M",
-    "seconds": "S" 
+    "seconds": "S"
   },
   "athletes": "Athlètes au départ",
   "finished": "Athlètes à l'arrivée",
+  "freeTrackingIncluded": "Suivi en direct inclus",
   "dnf": "DNF",
   "distance": {
     "empty": "Aucune distance disponible"
@@ -82,14 +83,14 @@
       "title": "Abonnement requis",
       "description": "Vous avez besoin d'un abonnement actif pour vous inscrire et suivre cet événement en direct.",
       "iosDescription": "Vous avez besoin d'un abonnement actif pour vous inscrire et suivre cet événement en direct. Choisissez une formule pour continuer.",
-       "button": "Voir les formules"
+      "button": "Voir les formules"
     },
     "limit_reached": {
       "icon": "↑",
       "title": "Plus de sessions de suivi",
       "description": "Vous avez utilisé toutes les sessions de suivi en direct actuellement disponibles.",
-       "iosDescription": "Vous avez utilisé toutes vos sessions de suivi en direct. Améliorez votre formule pour vous inscrire à cet événement.",
-       "button": "Obtenir plus de sessions"
+      "iosDescription": "Vous avez utilisé toutes vos sessions de suivi en direct. Améliorez votre formule pour vous inscrire à cet événement.",
+      "button": "Obtenir plus de sessions"
     },
     "membership_upcoming": {
       "icon": "⏳",
@@ -116,7 +117,6 @@
       "title": "Suivi en direct",
       "description": "Le Live Tracking est facultatif et nécessite un abonnement actif. Vous ne souhaitez pas l’utiliser ? Aucun problème. Vous n’avez pas besoin de connecter Livio à votre dossard. Vos proches continueront à recevoir les mises à jour officielles RFID lors de votre passage aux points de contrôle et à la ligne d’arrivée.",
       "button": "Oui",
-      
       "notNowButton": "Pas maintenant"
     }
   },
@@ -130,7 +130,7 @@
     "noFileTitle": "Aucun fichier GPX",
     "noFileMessage": "Aucun fichier GPX disponible."
   },
-  "iosnotnow":"Not Now",
+  "iosnotnow": "Not Now",
   "map": "CARTE",
   "wave": "Vague de départ",
   "duo": {

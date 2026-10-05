@@ -445,6 +445,20 @@ const handleExternalRegister = useCallback((url: string) => {
               </Text>
             </View>
 
+            {/* Tracking that comes free with the entry, because the organiser
+                ticked this distance on the website event. Said here, on the
+                distance itself, because this is where someone decides whether
+                to track it — the profile card only tells them afterwards.
+                Published to signed-out callers too, so it reads before login. */}
+            {item.free_tracking_included === 1 && (
+              <View style={detailsStyles.metaRow}>
+                <Ionicons name="navigate-circle-outline" size={15} color={colors.themeiColor} />
+                <Text style={[detailsStyles.metaText, { color: colors.themeiColor, fontWeight: '600' }]} numberOfLines={1}>
+                  {t('details:freeTrackingIncluded')}
+                </Text>
+              </View>
+            )}
+
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Feather name="users" size={16} color={colors.gray500} />

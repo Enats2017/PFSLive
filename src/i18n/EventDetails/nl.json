@@ -16,10 +16,11 @@
     "days": "D",
     "hours": "U",
     "minutes": "M",
-    "seconds": "S" 
+    "seconds": "S"
   },
   "athletes": "Gestarte atleten",
   "finished": "Gefinishte atleten",
+  "freeTrackingIncluded": "Live tracking inbegrepen",
   "dnf": "DNF",
   "distance": {
     "empty": "Geen afstanden beschikbaar"
@@ -82,7 +83,7 @@
       "title": "Abonnement vereist",
       "description": "Je hebt een actief abonnement nodig om je in te schrijven en dit evenement live te volgen.",
       "iosDescription": "Je hebt een actief abonnement nodig om je in te schrijven en dit evenement live te volgen. Kies een abonnement om verder te gaan.",
-       "button": "Abonnementen bekijken"
+      "button": "Abonnementen bekijken"
     },
     "limit_reached": {
       "icon": "↑",
@@ -116,7 +117,6 @@
       "title": "Live Tracking",
       "description": "Live Tracking is optioneel en vereist een actief abonnement. Wil je het niet gebruiken? Geen probleem. Je hoeft Livio niet aan je startnummer te koppelen. Je volgers blijven de officiële RFID-updates ontvangen wanneer je een checkpoint of de finish passeert.",
       "button": "Ja",
-      
       "notNowButton": "Niet nu"
     }
   },
@@ -130,7 +130,7 @@
     "noFileTitle": "Geen GPX-bestand",
     "noFileMessage": "Geen GPX-bestand beschikbaar."
   },
-  "iosnotnow":"Not Now",
+  "iosnotnow": "Not Now",
   "map": "KAART",
   "wave": "Startwave",
   "duo": {
