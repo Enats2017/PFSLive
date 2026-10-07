@@ -22,6 +22,9 @@ import * as Notifications from 'expo-notifications';
 import axios from 'axios';
 import * as IntentLauncher from 'expo-intent-launcher';
 import * as Battery from 'expo-battery';
+import * as Location from 'expo-location';
+import * as Application from 'expo-application';
+import * as Updates from 'expo-updates';
 import { analyticsService } from '../services/analyticsService';
 import { HomeScreenProps } from '../types/navigation';
 import { AppHeader } from '../components/common/AppHeader';
@@ -33,7 +36,7 @@ import {
   startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive,
   isTracking, getTrackingParams, stopWatching, attachUi, detachUi, rehydrateTracking,
   LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY, FINAL_SENT_COUNT_KEY,
-  GPS_HEALTH_KEY,
+  GPS_HEALTH_KEY, maybeUploadInterimLog,
 } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -706,6 +709,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (queueProcessorRef.current || !participantId || !eventId) return;
 
     queueProcessorRef.current = setInterval(async () => {
+      // Foreground twin of the heartbeat's interim-log check: a session that is
+      // past the gun and has sent nothing ships its device log (one-shot).
+      void maybeUploadInterimLog();
+
       // ✅ Check queue count key first — cheap single string read,
       // avoids parsing full queue JSON when nothing is queued.
       const queueSize = await locationQueueService.getQueueSize();
@@ -901,18 +908,61 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // coordinates, so Home detects a restart-after-stop even if the network
       // drops and no coordinates flow for a while. Fire-and-forget: it must never
       // block or fail the start of tracking.
+      //
+      // ✅ RETRIED. It used to be a single attempt, and at the Dinant start line
+      // (2026-10-04, ~4,000 runners on one cell) 4 runners tracked normally —
+      // 176-348 fixes each — with no oc_tracking_starts_app row at all, so they
+      // were missing from every "started tracking" count. Backoff 3s/10s/30s keeps
+      // all attempts inside the server's 60s start-dedupe window, so a retry after
+      // a request that did land (but timed out client-side) cannot double-count.
+      //
+      // ✅ Carries `diag` — platform, versions, OTA update id, permission level.
+      // 23 sessions in Sep-Oct sent this ping and then not one location; the
+      // device log only uploads on Stop, so nothing told us why. The server logs
+      // these fields on the TRACKING_START line.
       (async () => {
+        if (!startParticipantId || !startEventId) return;
+        let diag: Record<string, string | boolean> = {};
         try {
-          if (!startParticipantId || !startEventId) return;
-          const headers = await API_CONFIG.getHeaders();
-          await axios.post(
-            getApiEndpoint(API_CONFIG.ENDPOINTS.SAVE_TRACKING_START),
-            { participantId: startParticipantId, eventId: startEventId },
-            { headers, timeout: API_CONFIG.TIMEOUT },
-          );
-          if (API_CONFIG.DEBUG) console.log('✅ start ping sent', startParticipantId, startEventId);
-        } catch (e) {
-          if (API_CONFIG.DEBUG) console.log('⚠️ start ping failed (non-blocking)', e);
+          const perm = await gpsService.getPermissionState();
+          const fg: any = await Location.getForegroundPermissionsAsync();
+          diag = {
+            platform: Platform.OS,
+            os: String(Platform.Version),
+            app: Application.nativeApplicationVersion ?? 'unknown',
+            update: Updates.updateId ?? 'embedded',
+            perm: perm.level,
+            bg_perm: perm.background,
+            precise: fg?.ios?.accuracy ?? fg?.android?.accuracy ?? 'unknown',
+            started_after_gun: raceAlreadyStarted,
+          };
+        } catch { /* diagnostics must never block the ping */ }
+
+        const delaysMs = [0, 3000, 10000, 30000];
+        for (let attempt = 0; attempt < delaysMs.length; attempt++) {
+          if (delaysMs[attempt] > 0) {
+            await new Promise((r) => setTimeout(r, delaysMs[attempt]));
+          }
+          // Runner already pressed Stop — a late start row would only mislead.
+          if (!isGPSActiveRef.current) return;
+          try {
+            const headers = await API_CONFIG.getHeaders();
+            await axios.post(
+              getApiEndpoint(API_CONFIG.ENDPOINTS.SAVE_TRACKING_START),
+              { participantId: startParticipantId, eventId: startEventId, diag },
+              { headers, timeout: API_CONFIG.TIMEOUT },
+            );
+            if (API_CONFIG.DEBUG) console.log('✅ start ping sent', startParticipantId, startEventId);
+            return;
+          } catch (e: any) {
+            // A 4xx (other than 429) is a definitive answer — retrying can't change it.
+            const status = e?.response?.status;
+            if (status && status >= 400 && status < 500 && status !== 429) {
+              if (API_CONFIG.DEBUG) console.log('⚠️ start ping rejected', status);
+              return;
+            }
+            if (API_CONFIG.DEBUG) console.log(`⚠️ start ping failed (attempt ${attempt + 1}, non-blocking)`, e?.message);
+          }
         }
       })();
 
@@ -1156,13 +1206,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // only tears down once the queue is actually empty, so this is safe to run.
     const queuedBeforeStop = await locationQueueService.getQueueSize();
     if (participantId && eventId && (!raceAlreadyFinished || queuedBeforeStop > 0)) {
+      // ✅ Keep draining until empty, a pass makes no progress, or ~30s pass.
+      // This was ONE processQueue() call = at most 50 fixes, and whatever was
+      // left was then deleted by the next Start (p1652 stopped with 173 queued,
+      // p1896 with 133). -1 means another drain holds the mutex: wait and retry.
+      const drainStart = Date.now();
       try {
-        const drained = await locationService.processQueue(participantId, eventId);
-        // processQueue bumps BACKGROUND_SENT_COUNT_KEY per drained fix now, so we
-        // re-read the live counter below instead of adding `drained` (that would
-        // double-count). Keep the log for visibility.
-        if (drained > 0 && API_CONFIG.DEBUG) {
-          console.log(`✅ Drained ${drained} queued locations on stop`);
+        while (Date.now() - drainStart < 30000) {
+          const drained = await locationService.processQueue(participantId, eventId);
+          // processQueue bumps BACKGROUND_SENT_COUNT_KEY per drained fix now, so we
+          // re-read the live counter below instead of adding `drained` (that would
+          // double-count). Keep the log for visibility.
+          if (drained > 0 && API_CONFIG.DEBUG) {
+            console.log(`✅ Drained ${drained} queued locations on stop`);
+          }
+          if (drained < 0) { await new Promise((r) => setTimeout(r, 1000)); continue; }
+          if (drained === 0) break;
+          if ((await locationQueueService.getQueueSize()) === 0) break;
         }
       } catch { /* silent */ }
     }
@@ -1252,7 +1312,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => { });
     AsyncStorage.removeItem(FINAL_SENT_COUNT_KEY).catch(() => { });
     setLocationUpdateCount(0);
+
+    // ✅ Anything the stop-drain could not send is handed to the leftover drain
+    // (it parks the queue now that the session is over, and keeps retrying on
+    // later launches/foregrounds) instead of sitting until the next Start
+    // deleted it.
+    if (remaining > 0) void locationService.drainOrphans();
   }, [locationUpdateCount, participantId, eventId, t]);
+
+  // ✅ Stop pressed BEFORE the gun → confirm first. Sep-Oct 2026: 13 runners
+  // started early, stopped before the start (nothing is sent pre-gun, so it
+  // looked like nothing was happening), never restarted — and then finished the
+  // race per RaceResult with no live track at all. After the gun (or with
+  // manual_start) Stop works immediately, exactly as before.
+  const confirmStopTracking = useCallback(() => {
+    if (hasRaceStarted()) {
+      void stopGPSTracking();
+      return;
+    }
+    Alert.alert(
+      t('home:alerts.stopBeforeStartTitle'),
+      t('home:alerts.stopBeforeStartMessage'),
+      [
+        { text: t('home:alerts.keepTracking'), style: 'cancel' },
+        { text: t('home:alerts.stopAnyway'), style: 'destructive', onPress: () => { void stopGPSTracking(); } },
+      ],
+    );
+  }, [hasRaceStarted, stopGPSTracking, t]);
 
   const manualStartSending = useCallback(() => {
     Alert.alert(
@@ -1711,6 +1797,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       if (s === 'active') drainPendingFinish();
     });
     return () => { cancelled = true; sub.remove(); };
+  }, []);
+
+  // ✅ Upload leftover fixes from ended sessions on mount and every foreground.
+  // drainOrphans() is a no-op when there is nothing parked, checks the network
+  // itself, and never touches the live session's own fixes.
+  useEffect(() => {
+    void locationService.drainOrphans();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') void locationService.drainOrphans();
+    });
+    return () => sub.remove();
   }, []);
 
   const PARTNER_LOGOS = [
@@ -2275,7 +2372,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       opacity: 0.6,
                     },
                   ]}
-                  onPress={isGPSActive ? () => { void stopGPSTracking(); } : confirmStartTracking}
+                  onPress={isGPSActive ? confirmStopTracking : confirmStartTracking}
                   disabled={!isGPSActive && (!participantId || !eventId)}
                 >
                   <Text style={homeStyles.buttonText}>

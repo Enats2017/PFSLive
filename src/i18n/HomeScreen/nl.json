@@ -68,7 +68,11 @@
     "overrideTitle": "Handmatige overschrijving",
     "overrideMessage": "Locatiegegevens nu verzenden, waarbij de starttijd van de race wordt omzeild?",
     "cancel": "Annuleren",
-    "startNow": "Nu starten"
+    "startNow": "Nu starten",
+    "stopBeforeStartTitle": "De race is nog niet gestart",
+    "stopBeforeStartMessage": "Tracking staat klaar en verstuurt je positie automatisch vanaf de start. Als je nu stopt, kan niemand je volgen, tenzij je opnieuw op Start tikt voordat je vertrekt.",
+    "keepTracking": "Blijven tracken",
+    "stopAnyway": "Toch stoppen"
   },
   "errors": {
     "missingInfo": "Informatie ontbreekt",
