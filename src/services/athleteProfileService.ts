@@ -15,6 +15,7 @@ export interface MembershipInfo {
     event_only?: number;
     /** The EUR 5.95 single activations - each valid at ONE event only. */
     event_activations?: EventActivation[];
+    membership_names?: string[];
 }
 
 export interface EventActivation {
