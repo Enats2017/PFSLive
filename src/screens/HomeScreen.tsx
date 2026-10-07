@@ -1150,23 +1150,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // only tears down once the queue is actually empty, so this is safe to run.
     const queuedBeforeStop = await locationQueueService.getQueueSize();
     if (participantId && eventId && (!raceAlreadyFinished || queuedBeforeStop > 0)) {
-      // ✅ Keep draining until empty, a pass makes no progress, or ~30s pass.
-      // This was ONE processQueue() call = at most 50 fixes, and whatever was
-      // left was then deleted by the next Start (p1652 stopped with 173 queued,
-      // p1896 with 133). -1 means another drain holds the mutex: wait and retry.
-      const drainStart = Date.now();
+      // ✅ Keep draining until empty, a pass makes no progress, or ~30s pass —
+      // see locationService.drainForStop (one processQueue() call used to leave
+      // everything past 50 fixes behind: p1652 stopped with 173 queued).
+      // processQueue bumps BACKGROUND_SENT_COUNT_KEY per drained fix, so the
+      // live counter is re-read below instead of adding the return value.
       try {
-        while (Date.now() - drainStart < 30000) {
-          const drained = await locationService.processQueue(participantId, eventId);
-          // processQueue bumps BACKGROUND_SENT_COUNT_KEY per drained fix now, so we
-          // re-read the live counter below instead of adding `drained` (that would
-          // double-count). Keep the log for visibility.
-          if (drained > 0 && API_CONFIG.DEBUG) {
-            console.log(`✅ Drained ${drained} queued locations on stop`);
-          }
-          if (drained < 0) { await new Promise((r) => setTimeout(r, 1000)); continue; }
-          if (drained === 0) break;
-          if ((await locationQueueService.getQueueSize()) === 0) break;
+        const drained = await locationService.drainForStop(participantId, eventId);
+        if (drained > 0 && API_CONFIG.DEBUG) {
+          console.log(`✅ Drained ${drained} queued locations on stop`);
         }
       } catch { /* silent */ }
     }
@@ -1264,7 +1256,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (remaining > 0) void locationService.drainOrphans();
   }, [locationUpdateCount, participantId, eventId, t]);
 
-  // ✅ Stop pressed BEFORE the gun → confirm first. Sep-Oct 2026: 13 runners
+  // ✅ Stop pressed BEFORE the gun → confirm first. Sep-Oct 2026: 12 runners
   // started early, stopped before the start (nothing is sent pre-gun, so it
   // looked like nothing was happening), never restarted — and then finished the
   // race per RaceResult with no live track at all. After the gun (or with

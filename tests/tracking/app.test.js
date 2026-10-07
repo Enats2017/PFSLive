@@ -398,7 +398,7 @@ const L = () => load('services/locationService').locationService;
     assert.ok(/s === 'active'\) void locationService\.drainOrphans\(\)/.test(s));
     assert.ok(/void maybeUploadInterimLog\(\)/.test(s));
     assert.ok(s.indexOf('const confirmStopTracking') > s.indexOf('const stopGPSTracking'), 'declared after stopGPSTracking (no TDZ)');
-    assert.ok(/while \(Date\.now\(\) - drainStart < 30000\)/.test(s), 'stop drain loops');
+    assert.ok(/await locationService\.drainForStop\(participantId, eventId\)/.test(s), 'Stop uses the looping drainForStop');
   });
   test('gpsService no longer wipes the queue on a fresh start', async () => {
     const s = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8');
@@ -406,6 +406,137 @@ const L = () => load('services/locationService').locationService;
     assert.ok(!/if \(!_hadPriorSession\) \{\s*try \{\s*const \{ locationQueueService \}[^}]*clearQueue/.test(s));
   });
   results.push(await run('7. version, translations, wiring (issues 5, 7)'));
+
+  // ════════════ 8. drainForStop — the Stop button's drain (issue 2) ════════════
+  const FAST = 5; // busy-wait ms in tests
+  test('173 queued (p1652) → all sent on Stop, queue empty', async () => {
+    setQ(Array.from({ length: 173 }, (_, i) => fix(2, 12, 200 - i)));
+    assert.strictEqual(await L().drainForStop('2', '12', 30000, FAST), 173);
+    assert.strictEqual(getQ().length, 0); assert.strictEqual(M.api.posted.length, 173);
+  });
+  test('sent strictly oldest → newest', async () => {
+    setQ(Array.from({ length: 120 }, (_, i) => fix(2, 12, 200 - i)));
+    await L().drainForStop('2', '12', 30000, FAST);
+    const ts = M.api.posted.map((p) => new Date(p.body.timestamp).getTime());
+    assert.ok(ts.every((t, i) => i === 0 || ts[i - 1] < t));
+  });
+  test('network fails mid-way → stops, rest kept (not lost)', async () => {
+    setQ(Array.from({ length: 120 }, (_, i) => fix(2, 12, 200 - i)));
+    let n = 0; M.api.handler = (u, b) => (++n <= 70 ? (M.api.posted.push({ u, body: b }), Promise.resolve({ success: true, data: {} })) : Promise.reject(Object.assign(new Error('x'), { type: 'network' })));
+    assert.strictEqual(await L().drainForStop('2', '12', 30000, FAST), 70);
+    assert.strictEqual(getQ().length, 50);
+  });
+  test('offline at Stop → 0 sent, all kept', async () => {
+    setQ([fix(2, 12, 3), fix(2, 12, 2)]); M.net = { isConnected: false, isInternetReachable: false };
+    assert.strictEqual(await L().drainForStop('2', '12', 30000, FAST), 0); assert.strictEqual(getQ().length, 2);
+  });
+  test('time budget respected', async () => {
+    setQ(Array.from({ length: 150 }, (_, i) => fix(2, 12, 200 - i)));
+    M.api.handler = async (u, b) => { M.clock += 400; M.api.posted.push({ u, body: b }); return { success: true, data: {} }; };
+    const n = await L().drainForStop('2', '12', 30000, FAST);
+    assert.ok(n >= 50 && n < 150, `stopped by budget (sent ${n})`); assert.strictEqual(getQ().length, 150 - n);
+  });
+  test('mutex busy (-1) → waits and retries, then drains', async () => {
+    setQ([fix(2, 12, 3), fix(2, 12, 2)]);
+    const svc = L(); const real = svc.processQueue.bind(svc); let calls = 0;
+    svc.processQueue = async (...a) => (++calls === 1 ? -1 : real(...a));
+    assert.strictEqual(await svc.drainForStop('2', '12', 30000, FAST), 2); assert.ok(calls >= 2);
+  });
+  test('empty queue → returns 0 immediately', async () => {
+    assert.strictEqual(await L().drainForStop('2', '12', 30000, FAST), 0); assert.strictEqual(M.api.posted.length, 0);
+  });
+  results.push(await run('8. drainForStop — Stop drains everything (issue 2)'));
+
+  // ════════════ 9. gpsService wiring, exercised for real (issues 2, 4) ════════════
+  const startSession = async (pid = '2', eid = '12', raceStartIso = new Date(M.clock - 60 * 60000).toISOString()) => {
+    const { gpsService } = load('services/gpsService');
+    return gpsService.startWatchingPosition(() => {}, () => {}, 30, pid, eid, 't', 'b', 59, raceStartIso, 0, 'Test race');
+  };
+  test('fresh Start keeps THIS race\'s queued fixes, parks other races\' (no wipe)', async () => {
+    setQ([fix(1, 9, 90), fix(2, 12, 30), fix(3, 5, 20)]);
+    await startSession('2', '12');
+    assert.deepStrictEqual(getQ().map((f) => f.participantId), ['2']);
+    assert.deepStrictEqual(getO().map((f) => f.participantId).sort(), ['1', '3']);
+  });
+  test('fresh Start pulls this race\'s parked fixes back into the queue', async () => {
+    M.store.set(OK_, JSON.stringify([fix(2, 12, 50), fix(2, 12, 40)]));
+    await startSession('2', '12');
+    assert.strictEqual(getQ().length, 2); assert.strictEqual(getO().length, 0);
+  });
+  test('fresh Start arms the interim-log check (session start stamped, flag cleared)', async () => {
+    M.store.set('@PFSLive:interimLogUploaded', '1');
+    await startSession();
+    assert.ok(!M.store.has('@PFSLive:interimLogUploaded'));
+    assert.strictEqual(M.store.get('@PFSLive:sessionStartedAt'), String(M.clock));
+  });
+  test('heartbeat after the gun with 0 sent → interim log uploaded', async () => {
+    await startSession();
+    assert.ok(typeof M.bg.heartbeat === 'function', 'heartbeat listener registered');
+    M.clock += 6 * 60000;
+    await M.bg.heartbeat({});
+    assert.strictEqual(M.api.posted.filter((p) => p.url.includes('save_tracking_log')).length, 1);
+  });
+  test('heartbeat BEFORE the gun → no interim upload', async () => {
+    await startSession('2', '12', new Date(M.clock + 60 * 60000).toISOString());
+    M.clock += 6 * 60000;
+    await M.bg.heartbeat({});
+    assert.strictEqual(M.api.posted.filter((p) => p.url.includes('save_tracking_log')).length, 0);
+  });
+  results.push(await run('9. gpsService wiring — real start + heartbeat (issues 2, 4)'));
+
+  // ════════════ 10. incident replays (from the 2026-10-07 audit) ════════════
+  test('p2699 (Dinant): 173 queued, Stop while offline → nothing lost; uploaded on next app open', async () => {
+    setQ(Array.from({ length: 173 }, (_, i) => fix(2699, 12, 120 - i * 0.5)));
+    M.net = { isConnected: false, isInternetReachable: false };
+    assert.strictEqual(await L().drainForStop('2699', '12', 30000, FAST), 0);
+    // session ends (params cleared by the real stop) → leftovers parked, still offline
+    assert.strictEqual(await L().drainOrphans(), 0); assert.strictEqual(getO().length + getQ().length, 173);
+    // later: app opened with network
+    M.net = { isConnected: true, isInternetReachable: true }; M.clock += 3600000;
+    let sent = 0; for (let i = 0; i < 10 && (getO().length || getQ().length); i++) sent += await L().drainOrphans(45000);
+    assert.strictEqual(sent, 173); assert.strictEqual(M.api.posted.length, 173);
+    assert.ok(M.api.posted.every((p) => p.body.participantId === '2699' && p.body.is_queued === 1));
+  });
+  test('p1652 (Kemmelberg): Stop with 173 queued, then Start again same race → leftovers sent FIRST', async () => {
+    setQ(Array.from({ length: 173 }, (_, i) => fix(2, 9, 200 - i)));
+    M.net = { isConnected: false, isInternetReachable: false };
+    await L().drainForStop('2', '9', 30000, FAST);
+    await L().drainOrphans();                     // parks them (no session)
+    M.net = { isConnected: true, isInternetReachable: true };
+    await startSession('2', '9');                 // runner restarts the same race
+    assert.strictEqual(getQ().length, 173, 'back in the live queue, ahead of new fixes');
+    assert.strictEqual(await L().drainForStop('2', '9', 30000, FAST), 173);
+  });
+  test('p2595 (Dinant): NetInfo stuck "unreachable" 2.5h while API works → fixes still go out ≤30s', async () => {
+    M.net = { isConnected: true, isInternetReachable: false };
+    const svc = L(); let maxLagMs = 0;
+    for (let t = 0; t < 20 * 60; t += 10) {            // 20 minutes, 10s queue-processor ticks
+      setQ(getQ().concat([fix(2595, 12, 0)]));          // one new fix per tick
+      await svc.processQueue('2595', '12');
+      const oldest = getQ()[0]; if (oldest) maxLagMs = Math.max(maxLagMs, M.clock - new Date(oldest.timestamp).getTime());
+      M.clock += 10000;
+    }
+    assert.ok(M.api.posted.length >= 100, `sent ${M.api.posted.length} of 120`);
+    assert.ok(maxLagMs <= 30000, `oldest unsent fix never older than 30s (was ${maxLagMs / 1000}s)`);
+  });
+  test('Dinant DB outage: API down 47s mid-race → fixes held, all delivered after, none lost', async () => {
+    const svc = L(); const outageFrom = 6, outageTo = 11; // ticks (10s) → ~50s
+    for (let tick = 0; tick < 20; tick++) {
+      M.api.mode = (tick >= outageFrom && tick < outageTo) ? 'down' : 'ok';
+      setQ(getQ().concat([fix(2600, 12, 0)]));
+      await svc.processQueue('2600', '12');
+      M.clock += 10000;
+    }
+    assert.strictEqual(getQ().length, 0); assert.strictEqual(M.api.posted.length, 20);
+  });
+  test('Silent session (start ping, nothing else): device log reaches the server 5 min after the gun', async () => {
+    await startSession('2142', '13', new Date(M.clock - 1 * 60000).toISOString()); // started 1 min after gun
+    for (let m = 0; m < 10; m++) { M.clock += 60000; await M.bg.heartbeat({}); }
+    const ups = M.api.posted.filter((p) => p.url.includes('save_tracking_log'));
+    assert.strictEqual(ups.length, 1); assert.strictEqual(ups[0].body.participantId, '2142');
+    assert.ok(ups[0].body.logs.some((e) => /No fix sent \d+min after start — perm:/.test(e.msg)));
+  });
+  results.push(await run('10. incident replays (p2699, p1652, p2595, Dinant outage, silent session)'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);

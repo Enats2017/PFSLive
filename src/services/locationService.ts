@@ -583,6 +583,35 @@ export const locationService = {
   },
 
   /**
+   * Stop-path drain: call processQueue() until the queue is empty, a pass makes
+   * no progress (network failed again), or the time budget is spent. -1 from
+   * processQueue means another drain holds the mutex — wait and try again.
+   * Returns the total number of fixes drained.
+   *
+   * Stop used to make ONE processQueue() call = at most 50 fixes; the rest sat
+   * in the queue until the next Start deleted them (p1652: 173, p1896: 133,
+   * p2425: 61, p2699: 173 — 540 fixes, Sep-Oct 2026). Whatever this cannot
+   * send is picked up by drainOrphans() once the session is over.
+   */
+  async drainForStop(
+    participantId: string,
+    eventId: string,
+    timeBudgetMs: number = 30000,
+    busyWaitMs: number = 1000,
+  ): Promise<number> {
+    const startedAt = Date.now();
+    let total = 0;
+    while (Date.now() - startedAt < timeBudgetMs) {
+      const drained = await this.processQueue(participantId, eventId);
+      if (drained < 0) { await new Promise((r) => setTimeout(r, busyWaitMs)); continue; }
+      if (drained === 0) break;
+      total += drained;
+      if ((await locationQueueService.getQueueSize()) === 0) break;
+    }
+    return total;
+  },
+
+  /**
    * Upload leftover fixes from ended sessions (see locationQueueService's
    * ORPHAN_STORAGE_KEY). Callers must only run this while NO session is live:
    * the server snaps each fix against the participant's LATEST stored fix, so

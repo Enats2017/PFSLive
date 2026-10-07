@@ -23,6 +23,7 @@ const M = {
   provider: { enabled: true, gps: true, network: true, status: 3 },
   appVersion: '1.0.9',
   updateId: 'abcdef1234567890',
+  bg: {},
 };
 const realNow = Date.now.bind(Date);
 Date.now = () => M.clock;
@@ -77,6 +78,12 @@ const overrides = {
   },
   'react-native-background-geolocation': { __esModule: true, default: new Proxy({
     getProviderState: async () => ({ ...M.provider }),
+    getState: async () => ({ enabled: true, isMoving: true }),
+    // Capture the listeners gpsService registers so tests can fire them.
+    onHeartbeat: (cb) => { M.bg.heartbeat = cb; return { remove() {} }; },
+    onLocation: (cb) => { M.bg.location = cb; return { remove() {} }; },
+    onMotionChange: (cb) => { M.bg.motion = cb; return { remove() {} }; },
+    onProviderChange: (cb) => { M.bg.provider = cb; return { remove() {} }; },
   }, { get(t, p) { return p in t ? t[p] : anyStub('BG.' + String(p)); } }) },
   axios: { __esModule: true, default: {
     post: async (url, body, cfg) => {
@@ -141,6 +148,7 @@ function reset() {
   M.api = { mode: 'ok', posted: [], handler: null }; M.axios = { calls: [], script: [] }; M.logs = [];
   M.perm = { fg: 'granted', bg: 'granted', iosAccuracy: 'full' };
   M.provider = { enabled: true, gps: true, network: true, status: 3 };
+  M.bg = {};
   M.clock = realNow();
   // Fresh module instances per test: the services keep module-level state
   // (probe window, trust window, drain mutexes) that must not leak between tests.

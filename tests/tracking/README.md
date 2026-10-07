@@ -23,6 +23,12 @@ What each group guards:
 | 5. start ping | no `oc_tracking_starts_app` row when the first request fails; missing diagnostics |
 | 6. interim log | "silent" sessions (start ping, then nothing) leaving no device log at all |
 | 7. version / i18n / wiring | hard-coded app version; missing translations; HomeScreen not calling the above |
+| 8. drainForStop | Stop sending only the first 50 queued fixes (p1652 stopped with 173 queued) |
+| 9. gpsService wiring | the REAL startWatchingPosition still wiping the queue, or the heartbeat not triggering the interim log |
+| 10. incident replays | end-to-end replays of p2699, p1652, p2595 (stuck "offline"), the Dinant DB outage and a silent session |
+
+Groups 8-10 fail on the pre-fix commit `ebfec46` (except the DB-outage replay,
+which the app already survived — that fix was server-side).
 
 To prove a test really catches its bug, run it against an older checkout:
 
