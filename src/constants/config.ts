@@ -245,7 +245,11 @@ export const API_CONFIG = {
 // App Configuration
 export const APP_CONFIG = {
   APP_NAME: "PFSLive",
-  VERSION: "1.0.2",
+  // ✅ The installed binary's real version. Was the literal "1.0.2", never
+  // bumped, so oc_follower_app.app_version said 1.0.2 for 5,000+ devices
+  // running 1.0.9 and no failure could ever be tied to a build (2026-10-07
+  // tracking audit). Same source as versionService.getCurrentVersion().
+  VERSION: Application.nativeApplicationVersion ?? "unknown",
 };
 
 // Map Configuration

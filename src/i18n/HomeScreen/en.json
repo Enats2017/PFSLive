@@ -68,7 +68,11 @@
     "overrideTitle": "Manual Override",
     "overrideMessage": "Start sending location data immediately, bypassing the race start time?",
     "cancel": "Cancel",
-    "startNow": "Start Now"
+    "startNow": "Start Now",
+    "stopBeforeStartTitle": "The race hasn't started yet",
+    "stopBeforeStartMessage": "Tracking is ready and will start sending your position automatically at the start. If you stop now, nobody can follow you unless you tap Start again before you run.",
+    "keepTracking": "Keep tracking",
+    "stopAnyway": "Stop anyway"
   },
   "errors": {
     "missingInfo": "Missing Information",

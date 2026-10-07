@@ -11,6 +11,7 @@ export interface MembershipInfo {
     total_used: number | null;
     memberships_count: number;
     membership_name: string;
+     membership_names: string[];
     /** 1 when an event-bound activation is ALL the cover they have. */
     event_only?: number;
     /** The EUR 5.95 single activations - each valid at ONE event only. */
@@ -58,7 +59,7 @@ export interface AthleteProfile {
   password_protected: 0 | 1;
   followers_count: number;
   following_count: number;
-   membership_info: MembershipInfo | null;
+  membership_info: MembershipInfo | null;
    in_process_payment: number | null;
    /** Upcoming races where tracking is included with the event. [] when none. */
    free_events?: FreeEvent[];

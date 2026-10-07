@@ -68,7 +68,11 @@
     "overrideTitle": "Dérogation manuelle",
     "overrideMessage": "Commencer à envoyer les données de localisation immédiatement, en contournant l'heure de départ de la course ?",
     "cancel": "Annuler",
-    "startNow": "Démarrer maintenant"
+    "startNow": "Démarrer maintenant",
+    "stopBeforeStartTitle": "La course n'a pas encore commencé",
+    "stopBeforeStartMessage": "Le suivi est prêt et enverra automatiquement votre position au départ. Si vous l'arrêtez maintenant, personne ne pourra vous suivre, sauf si vous appuyez à nouveau sur Démarrer avant de courir.",
+    "keepTracking": "Continuer le suivi",
+    "stopAnyway": "Arrêter quand même"
   },
   "errors": {
     "missingInfo": "Informations manquantes",

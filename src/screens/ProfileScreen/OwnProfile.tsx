@@ -83,6 +83,13 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                 ? t('ownProfile:membershipCard.freeStillAvailable', { event: freeLabel })
                 : null;
 
+            // Fall back to the old single name so older API responses still render.
+    const membershipNames: string[] =
+        profile?.membership_info?.membership_names?.length
+            ? profile.membership_info.membership_names
+            : profile?.membership_info?.membership_name
+                ? [profile.membership_info.membership_name]
+                : [];
     const renderIosCard = () => {
         if (profile?.in_process_payment === 1) {
             return (
@@ -126,9 +133,9 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
             <View style={ownProfile.ioscard}>
                 <View style={ownProfile.iosheader}>
                     <Ionicons name="navigate-circle-outline" size={24} color={colors.themeiColor} />
-                    <Text style={ownProfile.iostitle}>
-                        {profile?.membership_info?.has_membership && profile?.membership_info?.membership_name
-                            ? `${profile?.membership_info?.membership_name} ${t('ownProfile:membershipCard.liteTitle')}`
+                    <Text style={[ownProfile.iostitle, { flex: 1 }]}>
+                        {profile?.membership_info?.has_membership && membershipNames.length > 0
+                            ? membershipNames.join(' & ')
                             : freeOnly
                                 // No membership, but a race is included. The title must not
                                 // read "No Active Membership" - and it must not get
