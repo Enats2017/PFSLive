@@ -51,20 +51,16 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
     const { t } = useTranslation('ownProfile');
 
     // The EUR 5.95 single activation is valid at ONE event, so the card names
-    // that event instead of counting sessions. Only when it is ALL the cover they
-    // have (event_only) - somebody who also holds a real membership should still
-    // see their session count. Once it has been used, remaining is 0 and this
-    // falls through to the normal "no sessions left" copy, which is then accurate.
-    // Which card to show, and whether the "it won't use a session" line belongs
-    // beside it. The decision lives in profileCard.ts so the six states of the
-    // display matrix can be asserted - see profileCard.test.ts. Only the copy
-    // is chosen here.
+    // that event instead of counting sessions - or, beside a capped plan, gets
+    // its own "Also valid" line. Which card to show, and which extra lines
+    // belong beside it, is decided in profileCard.ts (activation part in
+    // activationCard.ts) so the states of the display matrix can be asserted -
+    // see profileCard.test.ts / activationCard.test.ts. Only the copy is
+    // chosen here.
     const card = resolveProfileCard(profile);
 
-    const eventActivation =
-        profile?.membership_info?.event_only === 1
-            ? profile?.membership_info?.event_activations?.find(a => a.remaining > 0)
-            : undefined;
+    const eventActivation = card.activationEventName;
+    const activationExtra = card.activationExtra;
 
     // Name the race when there is one; count them when there are several, so
     // the line cannot grow unbounded as somebody enters a season of them.
@@ -150,7 +146,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                 {profile?.membership_info?.has_membership ? (
                     eventActivation ? (
                         <Text style={ownProfile.iossubtitle}>
-                            {t('ownProfile:membershipCard.eventOnly', { event: eventActivation.event_name })}
+                            {t('ownProfile:membershipCard.eventOnly', { event: eventActivation })}
                         </Text>
                     ) : profile?.membership_info?.unlimited ? (
                         <Text style={ownProfile.iossubtitle}>
@@ -180,6 +176,12 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                     <Text style={ownProfile.iosfreeline}>{freeExtraLine}</Text>
                 )}
 
+                {activationExtra && (
+                    <Text style={ownProfile.iosfreeline}>
+                        {t('ownProfile:membershipCard.alsoActivation', { event: activationExtra })}
+                    </Text>
+                )}
+
                 <TouchableOpacity
                     style={ownProfile.iosbutton}
                     activeOpacity={0.8}
@@ -204,7 +206,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                             {eventActivation ? (
                                 <>
                                     <Text style={ownProfile.title}>
-                                        {t('ownProfile:tracking.eventOnly', { event: eventActivation.event_name })}
+                                        {t('ownProfile:tracking.eventOnly', { event: eventActivation })}
                                     </Text>
                                     <Text style={ownProfile.subtitle}>{t('ownProfile:tracking.subtitle')}</Text>
                                 </>
@@ -241,6 +243,11 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
 
                             {freeExtraLine && (
                                 <Text style={ownProfile.freeline}>{freeExtraLine}</Text>
+                            )}
+                            {activationExtra && (
+                                <Text style={ownProfile.freeline}>
+                                    {t('ownProfile:membershipCard.alsoActivation', { event: activationExtra })}
+                                </Text>
                             )}
                         </View>
                     </TouchableOpacity>

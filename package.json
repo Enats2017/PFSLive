@@ -10,7 +10,8 @@
     "generate-assets": "node generate-assets.js",
     "prebuild": "npm run generate-assets && npx expo prebuild --clean",
     "test:card": "tsc src/screens/ProfileScreen/profileCard.ts src/screens/ProfileScreen/profileCard.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/screens/ProfileScreen/profileCard.test.js",
-    "test:tracking": "node tests/tracking/app.test.js"
+    "test:tracking": "node tests/tracking/app.test.js",
+    "test:activation": "tsc src/screens/ProfileScreen/activationCard.ts src/screens/ProfileScreen/activationCard.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/screens/ProfileScreen/activationCard.test.js"
   },
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.1",

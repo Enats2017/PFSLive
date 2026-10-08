@@ -113,7 +113,12 @@ function render(lang: string, profile: CardProfileInput) {
       androidTitle = t(lang, 'tracking.exhausted');
   }
 
-  return { state: card.state, extra, iosTitle, androidTitle, freeLabel };
+  const activationLine =
+    card.activationExtra !== null
+      ? t(lang, 'membershipCard.alsoActivation', { event: card.activationExtra })
+      : null;
+
+  return { state: card.state, extra, iosTitle, androidTitle, freeLabel, activationLine };
 }
 
 // ── fixtures ────────────────────────────────────────────────────────────────
@@ -169,6 +174,42 @@ console.log('\nThe six display states (§6.1 of the plan)\n');
   ck('   no extra line (two event names contradict)', r.extra, null);
 }
 
+// 4b-4e. the activation beside other cover (live-DB check, 2026-10-08)
+{
+  const two = render('en', {
+    membership_info: {
+      has_membership: true, unlimited: false, remaining: 2, event_only: 1,
+      event_activations: [
+        { event_name: 'Trail de Bruxelles', remaining: 1 },
+        { event_name: 'GTLC Winter', remaining: 1 },
+      ],
+    },
+  });
+  ck('4b. two activations -> BOTH events named', two.androidTitle,
+     'Your Livio activation is valid for Trail de Bruxelles & GTLC Winter.');
+
+  const act = [{ event_name: 'Chouffe Trail', remaining: 1 }];
+  const pro = render('en', { membership_info: { ...member(5), event_only: 0, event_activations: act } });
+  ck('4c. Pro + activation -> still the count', pro.androidTitle, 'You have 5 live tracking session(s) left.');
+  ck('    plus the activation line', pro.activationLine, 'Also valid: your Livio activation for Chouffe Trail.');
+
+  const spent = render('en', { membership_info: { ...member(0), event_only: 0, event_activations: act } });
+  ck('4d. Pro USED UP + activation -> exhausted', spent.state, 'exhausted');
+  ck('    but the activation is not hidden', spent.activationLine,
+     'Also valid: your Livio activation for Chouffe Trail.');
+
+  const unl = render('en', { membership_info: { ...member(null, true), event_only: 0, event_activations: act } });
+  ck('4e. unlimited + activation -> no line (noise)', unl.activationLine, null);
+
+  const both = render('en', {
+    membership_info: { ...member(3), event_only: 0, event_activations: act }, free_events: [BRUSSELS],
+  });
+  ck('4f. Pro + activation + free race -> both lines', [both.extra, both.activationLine], [
+    "Trail de Bruxelles is included — it won't use a session.",
+    'Also valid: your Livio activation for Chouffe Trail.',
+  ]);
+}
+
 // 5. a free race and nothing else: the free race IS the card
 {
   const r = render('en', { membership_info: null, free_events: [BRUSSELS] });
@@ -222,13 +263,15 @@ for (const lang of ['en', 'fr', 'nl']) {
     ['free_only',     { membership_info: null, free_events: [BRUSSELS] }],
     ['no_membership', { membership_info: null, free_events: [] }],
     ['two_free',      { membership_info: member(2), free_events: [BRUSSELS, EPIC] }],
+    ['activation_extra', { membership_info: { ...member(0), event_only: 0,
+                           event_activations: [{ event_name: 'Chouffe Trail', remaining: 1 }] } }],
   ];
   let raw: string[] = [];
   for (const [name, profile] of states) {
     const r = render(lang, profile);
     for (const [what, value] of Object.entries({
       iosTitle: r.iosTitle, androidTitle: r.androidTitle,
-      extra: r.extra ?? '', freeLabel: r.freeLabel,
+      extra: r.extra ?? '', freeLabel: r.freeLabel, activationLine: r.activationLine ?? '',
     })) {
       const v = String(value);
       // An unresolved key still looks like one: dotted, no spaces.

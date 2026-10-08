@@ -9,8 +9,11 @@
  * Deliberately pure and RN-free: no imports that run at require time, so a
  * plain node script can exercise it without a test framework (there is none in
  * this repo). The AthleteProfile import is type-only and erased at compile
- * time. Keep it that way.
+ * time; activationCard.ts is the one runtime import, and it is pure in the same
+ * way. Keep it that way.
  */
+
+import { resolveActivation } from './activationCard';
 
 /** Shapes this module needs. Structural, so the real AthleteProfile satisfies
  *  them without this file importing anything that executes. */
@@ -63,7 +66,12 @@ export type CardDecision = {
    *  season of included races. */
   freeEventName: string | null;
   extraLine: CardExtraLine;
+  /** Every unused activation's event ("A & B") when the activation IS the
+   *  card (state 'event_activation'), else null. */
   activationEventName: string | null;
+  /** The same, when the activation sits BESIDE a capped plan - its own
+   *  "Also valid" line, also when the plan is used up. Null beside unlimited. */
+  activationExtra: string | null;
 };
 
 export function resolveProfileCard(profile?: CardProfileInput | null): CardDecision {
@@ -77,24 +85,21 @@ export function resolveProfileCard(profile?: CardProfileInput | null): CardDecis
   const isUnlimited = mi?.unlimited === true;
   const remaining = mi?.remaining ?? 0;
 
-  // The EUR 5.95 activation names its event instead of counting sessions, but
-  // only when it is all the cover they have (event_only): somebody who also
-  // holds a real membership should still see their session count. Spent
-  // activations (remaining 0) fall through to the normal copy, which is then
-  // accurate.
-  const activation =
-    mi?.event_only === 1
-      ? (mi?.event_activations ?? []).find((a) => a.remaining > 0)
-      : undefined;
+  // The EUR 5.95 activation names its event(s) instead of counting sessions
+  // when it is all the cover they have (event_only); beside a capped plan it
+  // gets its own line instead - see activationCard.ts. Spent activations
+  // (remaining 0) say nothing.
+  const act = resolveActivation(mi);
+  const activation = act.placement === 'primary';
 
   // Not shown for unlimited (no session to save, so it is only noise), and not
   // beside the activation copy (two event names in one card reads as a
   // contradiction).
   //
-  // This departs from how the activation is treated, on purpose: the client's
-  // requirement is precisely that a free race does NOT consume a session, and
-  // saying nothing about that is what generates "did my free race use one of
-  // mine?" tickets.
+  // Same rule as the activation's own extra line (activationExtra): beside a
+  // capped plan, say it. The client's requirement is precisely that a free race
+  // does NOT consume a session, and saying nothing about that is what generates
+  // "did my free race use one of mine?" tickets.
   const extraLine: CardExtraLine =
     hasFreeEvents && hasMembership && !isUnlimited && !activation
       ? remaining > 0
@@ -128,6 +133,7 @@ export function resolveProfileCard(profile?: CardProfileInput | null): CardDecis
     freeEventCount,
     freeEventName: freeEventCount === 1 ? freeEvents[0].event_name : null,
     extraLine,
-    activationEventName: activation ? activation.event_name : null,
+    activationEventName: act.placement === 'primary' ? act.eventNames : null,
+    activationExtra: act.placement === 'extra' ? act.eventNames : null,
   };
 }
