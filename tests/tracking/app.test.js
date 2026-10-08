@@ -538,6 +538,95 @@ const L = () => load('services/locationService').locationService;
   });
   results.push(await run('10. incident replays (p2699, p1652, p2595, Dinant outage, silent session)'));
 
+  // ════════════ 11. the device test plan, automated ════════════
+  // The demo-server checklist (2026-10-08), one row each, against the REAL code.
+  // Rows already covered above: #3 → p2699 replay + group 8, #4 → p1652 replay +
+  // group 9, #5 → group 5, #6 → group 6 + silent replay. Rows 7 and 9 are
+  // server-side (tests/tracking_api sections 3 and 7), row 8 is
+  // activationCard.test.ts + server section 9.
+  test('#1 normal Stop log upload → deviceInfo "ios 26.6 app:1.0.9 upd:abcdef12"', async () => {
+    const ok = await L().saveTrackingLog('2443', '12', [{ ts: M.clock, icon: '🛑', msg: 'Stop' }], 42, 0);
+    assert.strictEqual(ok, true);
+    const b = M.api.posted.find((p) => p.url.includes('save_tracking_log')).body;
+    assert.strictEqual(b.deviceInfo, 'ios 26.6 app:1.0.9 upd:abcdef12');
+    assert.strictEqual(b.totalSent, 42);
+  });
+  test('#1 build with no OTA update yet → "upd:embedded", never undefined', async () => {
+    M.updateId = null;
+    try {
+      await L().saveTrackingLog('2443', '12', [], 0, 0);
+      assert.strictEqual(M.api.posted[0].body.deviceInfo, 'ios 26.6 app:1.0.9 upd:embedded');
+    } finally { M.updateId = 'abcdef1234567890'; }
+  });
+  test('#1 log upload failure → returns false (caller retries), never throws', async () => {
+    M.api.mode = 'down';
+    assert.strictEqual(await L().saveTrackingLog('2443', '12', [], 0, 0), false);
+  });
+
+  // #2 runs HomeScreen's own confirmStopTracking / hasRaceStarted bodies, lifted
+  // out of the source, so a change to the real code is what gets tested.
+  const home = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
+  const bodyOf = (re) => { const m = home.match(re); assert.ok(m, 'function found in HomeScreen.tsx: ' + re); return m[1]; };
+  // Looked up inside each test (not here), so code without the function fails
+  // those tests instead of crashing the whole run.
+  const confirmBody = () => bodyOf(/const confirmStopTracking = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[hasRaceStarted, stopGPSTracking, t\]\);/);
+  const startedBody = () => bodyOf(/const hasRaceStarted = useCallback\(\(\): boolean => \{([\s\S]*?)\n  \}, \[homeData\?\.manual_start\]\);/);
+  const confirmStop = (started) => {
+    const calls = { stop: 0, alerts: [] };
+    new Function('hasRaceStarted', 'stopGPSTracking', 'Alert', 't', confirmBody())(
+      () => started, () => { calls.stop++; return Promise.resolve(); },
+      { alert: (title, msg, buttons) => calls.alerts.push({ title, msg, buttons }) }, (k) => k);
+    return calls;
+  };
+  const raceStarted = (homeData, start) =>
+    new Function('homeData', 'raceStartTimeRef', startedBody())(homeData, { current: start });
+
+  test('#2 Stop BEFORE the gun → confirmation, tracking keeps running', async () => {
+    const c = confirmStop(false);
+    assert.strictEqual(c.stop, 0, 'not stopped yet');
+    assert.strictEqual(c.alerts.length, 1);
+    assert.strictEqual(c.alerts[0].title, 'home:alerts.stopBeforeStartTitle');
+    assert.strictEqual(c.alerts[0].msg, 'home:alerts.stopBeforeStartMessage');
+  });
+  test('#2 "Keep tracking" → nothing happens; "Stop anyway" → stops once', async () => {
+    const c = confirmStop(false);
+    const [keep, stop] = c.alerts[0].buttons;
+    assert.strictEqual(keep.text, 'home:alerts.keepTracking'); assert.strictEqual(keep.style, 'cancel');
+    assert.strictEqual(keep.onPress, undefined, 'keep has no action');
+    assert.strictEqual(stop.text, 'home:alerts.stopAnyway'); assert.strictEqual(stop.style, 'destructive');
+    stop.onPress();
+    assert.strictEqual(c.stop, 1);
+  });
+  test('#2 Stop AFTER the gun → stops immediately, no dialog', async () => {
+    const c = confirmStop(true);
+    assert.strictEqual(c.stop, 1); assert.strictEqual(c.alerts.length, 0);
+  });
+  test('#2 "has the race started": before/after gun, unknown start, manual start', async () => {
+    const now = Date.now();
+    assert.strictEqual(raceStarted({ manual_start: 0 }, new Date(now + 10 * 60000)), false, '10 min before gun');
+    assert.strictEqual(raceStarted({ manual_start: 0 }, new Date(now - 1000)), true, 'after gun');
+    assert.strictEqual(raceStarted({ manual_start: 0 }, null), false, 'start time unknown → ask');
+    assert.strictEqual(raceStarted({ manual_start: 1 }, new Date(now + 10 * 60000)), true, 'manual start → no dialog');
+  });
+
+  test('#6 location OFF + permission denied → 🩺 line carries both, uploaded without Stop', async () => {
+    M.perm = { fg: 'denied', bg: 'denied', iosAccuracy: 'full' };
+    M.provider = { enabled: false, gps: false, network: false, status: 0 };
+    arm(); await G().maybeUploadInterimLog();
+    const ups = logUploads(); assert.strictEqual(ups.length, 1);
+    const line = ups[0].body.logs.find((e) => e.icon === '🩺');
+    assert.ok(line, '🩺 line present');
+    assert.ok(/perm:denied/.test(line.msg), line.msg);
+    assert.ok(/enabled:false gps:false/.test(line.msg), line.msg);
+    assert.ok(!M.store.has('@PFSLive:logUploaded'), 'the normal Stop upload still happens later');
+  });
+  test('#6 "when in use" only (no background permission) → perm:when_in_use reported', async () => {
+    M.perm = { fg: 'granted', bg: 'denied', iosAccuracy: 'full' };
+    arm(); await G().maybeUploadInterimLog();
+    assert.ok(/perm:when_in_use/.test(logUploads()[0].body.logs.find((e) => e.icon === '🩺').msg));
+  });
+  results.push(await run('11. the device test plan, automated (rows 1, 2, 6)'));
+
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);
   process.exit(tot.fail ? 1 : 0);
