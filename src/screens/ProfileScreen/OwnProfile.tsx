@@ -15,6 +15,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ownProfile } from '../../styles/ownProfile.styles';
 import EventsContent from './EventsContent';
 import TrainingContent from './TrainingContent';
+import { resolveActivation } from './activationCard';
 import { useDimensions } from '../../hooks/useDimensions';
 import { DeleteEventModal } from '../../components/DeleteEventModal';
 import { toastError, toastSuccess } from '../../../utils/toast';
@@ -50,14 +51,13 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
     const { t } = useTranslation('ownProfile');
 
     // The EUR 5.95 single activation is valid at ONE event, so the card names
-    // that event instead of counting sessions. Only when it is ALL the cover they
-    // have (event_only) - somebody who also holds a real membership should still
-    // see their session count. Once it has been used, remaining is 0 and this
-    // falls through to the normal "no sessions left" copy, which is then accurate.
-    const eventActivation =
-        profile?.membership_info?.event_only === 1
-            ? profile?.membership_info?.event_activations?.find(a => a.remaining > 0)
-            : undefined;
+    // that event instead of counting sessions. 'primary' when it is ALL the
+    // cover they have (event_only); 'extra' - its own line under the count -
+    // when they also hold a capped plan, including a used-up one. Every unused
+    // activation is named. See activationCard.ts / activationCard.test.ts.
+    const activation = resolveActivation(profile?.membership_info);
+    const eventActivation = activation.placement === 'primary' ? activation.eventNames : null;
+    const activationExtra = activation.placement === 'extra' ? activation.eventNames : null;
 
             // Fall back to the old single name so older API responses still render.
     const membershipNames: string[] =
@@ -119,7 +119,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                 {profile?.membership_info?.has_membership ? (
                     eventActivation ? (
                         <Text style={ownProfile.iossubtitle}>
-                            {t('ownProfile:membershipCard.eventOnly', { event: eventActivation.event_name })}
+                            {t('ownProfile:membershipCard.eventOnly', { event: eventActivation })}
                         </Text>
                     ) : profile?.membership_info?.unlimited ? (
                         <Text style={ownProfile.iossubtitle}>
@@ -138,6 +138,12 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                 ) : (
                     <Text style={ownProfile.iossubtitle}>
                         {t('ownProfile:membershipCard.noMembershipSubtitle')}
+                    </Text>
+                )}
+
+                {activationExtra && (
+                    <Text style={ownProfile.iossubtitle}>
+                        {t('ownProfile:membershipCard.alsoActivation', { event: activationExtra })}
                     </Text>
                 )}
 
@@ -165,7 +171,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                             {eventActivation ? (
                                 <>
                                     <Text style={ownProfile.title}>
-                                        {t('ownProfile:tracking.eventOnly', { event: eventActivation.event_name })}
+                                        {t('ownProfile:tracking.eventOnly', { event: eventActivation })}
                                     </Text>
                                     <Text style={ownProfile.subtitle}>{t('ownProfile:tracking.subtitle')}</Text>
                                 </>
@@ -186,6 +192,11 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                                     <Text style={ownProfile.title}>{t('ownProfile:tracking.exhausted')}</Text>
                                     <Text style={ownProfile.subtitle}>{t('ownProfile:tracking.subtitle')}</Text>
                                 </>
+                            )}
+                            {activationExtra && (
+                                <Text style={ownProfile.subtitle}>
+                                    {t('ownProfile:membershipCard.alsoActivation', { event: activationExtra })}
+                                </Text>
                             )}
                         </View>
                     </TouchableOpacity>

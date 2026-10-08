@@ -40,7 +40,8 @@
         "noMembershipSubtitle": "Neem een abonnement om te starten met live tracking van uw sessies.",
         "paymentProcessing": "Betaling wordt verwerkt. Wacht ongeveer 1 minuut en tik dan op Vernieuwen om uw bijgewerkt lidmaatschap te bekijken.",
         "refresh": "Vernieuwen",
-        "eventOnly": "Alleen geldig voor {{event}}."
+        "eventOnly": "Alleen geldig voor {{event}}.",
+        "alsoActivation": "Ook geldig: je Livio-activatie voor {{event}}."
     },
     "training": {
         "create": "PERSOONLIJK EVENEMENT MAKEN"
