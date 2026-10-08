@@ -40,8 +40,9 @@ export const BACKGROUND_LOCATION_TASK = 'background-location-task';
 const TRACKING_PARAMS_KEY = '@PFSLive:trackingParams';
 const LAST_SENT_KEY = '@PFSLive:lastSentAt';
 // ✅ When THIS tracking session began, for the elapsed timer on the home screen
-// (02_Home-Tracking-Active.png). Set only for a genuinely new race — a
-// mid-race relaunch must keep the original start or the timer resets to zero.
+// (02_Home-Tracking-Active.png) and the 5-minute check in maybeUploadInterimLog.
+// Set only for a genuinely new race — a mid-race relaunch must keep the
+// original start or the timer resets to zero.
 const SESSION_START_KEY = '@PFSLive:sessionStartedAt';
 export const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
 const LAST_POSITION_KEY = '@PFSLive:lastPosition';
@@ -1874,7 +1875,6 @@ export const flushTrackingLog   = async (): Promise<void> => _flushLogsNow();
 // the normal Stop/finish upload still happens. Called from the heartbeat
 // (background) and HomeScreen's queue timer (foreground); idempotent per session.
 const INTERIM_LOG_KEY = '@PFSLive:interimLogUploaded';
-const SESSION_STARTED_AT_KEY = '@PFSLive:sessionStartedAt';
 const INTERIM_LOG_AFTER_MS = 5 * 60 * 1000;
 
 export const maybeUploadInterimLog = async (): Promise<void> => {
@@ -1886,7 +1886,7 @@ export const maybeUploadInterimLog = async (): Promise<void> => {
     if (!p?.participantId || !p?.eventId) return;
     if ((await AsyncStorage.getItem(RACE_FINISHED_KEY)) === '1') return;
 
-    const sessionStart = parseInt((await AsyncStorage.getItem(SESSION_STARTED_AT_KEY)) || '0', 10) || 0;
+    const sessionStart = parseInt((await AsyncStorage.getItem(SESSION_START_KEY)) || '0', 10) || 0;
     if (!sessionStart) return;
     const gun = p.manualStart === 1 ? 0 : (p.raceStartTime ? new Date(p.raceStartTime).getTime() : NaN);
     if (isNaN(gun)) return;                     // unknown start time — can't judge "late"
@@ -2401,8 +2401,8 @@ export const gpsService = {
         await AsyncStorage.removeItem(TRACKING_LOG_KEY);
         await _resetLogBuffer();
         // New session → arm the one-shot interim log upload (maybeUploadInterimLog).
+        // Its 5-minute clock reads SESSION_START_KEY, set above.
         await AsyncStorage.removeItem(INTERIM_LOG_KEY);
-        await AsyncStorage.setItem(SESSION_STARTED_AT_KEY, String(Date.now()));
       }
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
       await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
