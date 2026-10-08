@@ -45,9 +45,48 @@ const _resolveQueueIntervalSec = async (): Promise<number> => {
   return DEFAULT_INTERVAL_SEC;
 };
 
+// ✅ Leftover ("orphan") fixes — queued fixes that outlived their session.
+//
+// A manual Stop drains what it can, but anything still queued after that sat in
+// QUEUE_STORAGE_KEY with nothing left to send it, and the next fresh Start then
+// wiped it. 2026-09-05 → 10-04: 540 real fixes lost this way across 4 runners
+// (p1652, p1896, p2425, p2699 — 61 to 173 each, tracks ending 5-15 km early).
+// Fixes are parked here instead and sent by locationService.drainOrphans() when
+// no session is live, each with its OWN participantId/eventId and is_queued=1.
+const ORPHAN_STORAGE_KEY = '@PFSLive:orphanQueue';
+const MAX_ORPHANS = 2000;
+// The server trusts a queued fix's timestamp for up to 48h, then clamps it to
+// "now" — which would plant a stale position at the wrong time. Drop before that.
+export const ORPHAN_MAX_AGE_MS = 47 * 60 * 60 * 1000;
+
+// ✅ "Offline" probe state (module-level: one JS context = one engine).
+//
+// isInternetReachable comes from NetInfo's own HTTP probe, which can stick at
+// false — notably while backgrounded. Treating that as gospel meant the app never
+// even TRIED the API: on 2026-10-04 p2595 logged "Offline (no network)" from
+// 10:06 to ~12:40 and p2664's entire 3.5h race arrived in one burst at 13:35,
+// while ~200 runners around them sent normally. So "unreachable" (with the radio
+// still connected) now allows a real attempt every PROBE_EVERY_MS, and a real
+// send success overrides NetInfo for TRUST_AFTER_SUCCESS_MS. A truly dead network
+// costs one timed-out request per 30s, and gpsService's wedge guard (2 dry drains
+// → 60s cooldown) still caps the waste.
+const PROBE_EVERY_MS = 30000;
+const PROBE_WINDOW_MS = 15000;          // a probe covers the drain's several hasNetwork() calls
+const TRUST_AFTER_SUCCESS_MS = 60000;
+let _probeWindowUntil = 0;
+let _lastProbeOpenedAt = 0;
+let _trustedOnlineUntil = 0;
+
 export const locationQueueService = {
+  /** Called by locationService after the API ACCEPTED a fix — proof of network. */
+  markSendSucceeded(): void {
+    _trustedOnlineUntil = Date.now() + TRUST_AFTER_SUCCESS_MS;
+  },
+
   async hasNetwork(): Promise<boolean> {
     try {
+      const now = Date.now();
+
       // NetInfo.fetch() runs an active reachability probe that can itself stall
       // for seconds in a dead-zone. Race it against a short timer so a hung probe
       // can't hold the send mutex — fall back to optimistic (attempt the send).
@@ -57,10 +96,30 @@ export const locationQueueService = {
           setTimeout(() => reject(new Error('NetInfo timeout')), 3000)
         ),
       ]);
+      // No radio link at all (airplane mode, no signal) — that one is reliable.
+      if (state.isConnected === false) return false;
+
+      // A real request just went through — believe that over NetInfo's
+      // reachability guess (but never over "no radio" above).
+      if (now < _trustedOnlineUntil) return true;
+
       // ✅ isInternetReachable can be null on Android while still determining.
       // Treat null as true (optimistic) — better to attempt a send and fail
       // than to queue unnecessarily when connectivity is likely fine.
-      return state.isConnected === true && state.isInternetReachable !== false;
+      if (state.isInternetReachable !== false) return true;
+
+      // Connected but NetInfo says "unreachable": allow a periodic real attempt.
+      if (now < _probeWindowUntil) return true;
+      if (now - _lastProbeOpenedAt >= PROBE_EVERY_MS) {
+        _lastProbeOpenedAt = now;
+        _probeWindowUntil = now + PROBE_WINDOW_MS;
+        try {
+          const { addLog } = require('./gpsService');
+          await addLog('🔎', 'NetInfo says unreachable — trying the API anyway (probe)');
+        } catch { /* silent */ }
+        return true;
+      }
+      return false;
     } catch (error) {
       if (API_CONFIG.DEBUG) {
         console.error('❌ Error checking network:', error);
@@ -231,5 +290,79 @@ export const locationQueueService = {
   async getQueueSize(): Promise<number> {
     const queue = await this.getQueue();
     return queue.length;
+  },
+
+  // ── Orphans (see ORPHAN_STORAGE_KEY) ───────────────────────────────────
+
+  async getOrphans(): Promise<QueuedLocation[]> {
+    try {
+      const raw = await AsyncStorage.getItem(ORPHAN_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  async setOrphans(list: QueuedLocation[]): Promise<void> {
+    try {
+      if (list.length === 0) await AsyncStorage.removeItem(ORPHAN_STORAGE_KEY);
+      else await AsyncStorage.setItem(ORPHAN_STORAGE_KEY, JSON.stringify(list));
+    } catch { /* silent */ }
+  },
+
+  /**
+   * Fresh-start split: fixes belonging to the session being started stay in the
+   * live queue (they are older than anything the new session will send, so the
+   * order guard drains them first, in order); fixes from any OTHER
+   * participant/event are parked as orphans. Replaces the old fresh-start
+   * clearQueue(), which deleted both. Returns how many were parked.
+   */
+  async parkOtherSessions(participantId: string, eventId: string): Promise<number> {
+    try {
+      const isMine = (f: QueuedLocation) =>
+        String(f.participantId) === String(participantId) && String(f.eventId) === String(eventId);
+      const queue = await this.getQueue();
+      const orphans = await this.getOrphans();
+      // Orphans of THIS session (a Stop, then Start again on the same race) come
+      // back into the live queue so they drain BEFORE any new live fix.
+      const myOrphans = orphans.filter(isMine);
+      if (queue.length === 0 && myOrphans.length === 0) {
+        await this.clearQueue();   // keeps the old "reset throttle on fresh start"
+        return 0;
+      }
+      const mine = queue.filter(isMine).concat(myOrphans);
+      mine.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      const others = queue.filter((f) => !isMine(f));
+      await this.setOrphans(orphans.filter((f) => !isMine(f)).concat(others).slice(-MAX_ORPHANS));
+      const kept = mine.slice(-MAX_QUEUE_SIZE);
+      await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(kept));
+      await AsyncStorage.setItem(QUEUE_COUNT_KEY, String(kept.length));
+      return others.length;
+    } catch {
+      return 0;
+    }
+  },
+
+  /**
+   * Move every fix in the live queue onto the orphan list, then clear the live
+   * queue (which also resets the throttle keys). Oldest orphans are dropped
+   * first if the list would exceed MAX_ORPHANS. Returns how many were parked.
+   */
+  async parkQueueAsOrphans(): Promise<number> {
+    try {
+      const queue = await this.getQueue();
+      if (queue.length > 0) {
+        const merged = (await this.getOrphans()).concat(queue);
+        await this.setOrphans(merged.slice(-MAX_ORPHANS));
+        try {
+          const { addLog } = require('./gpsService');
+          await addLog('📦', `Parked ${queue.length} unsent fix(es) from the previous session — they will upload later`);
+        } catch { /* silent */ }
+      }
+      await this.clearQueue();
+      return queue.length;
+    } catch {
+      return 0;
+    }
   },
 };

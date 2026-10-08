@@ -26,13 +26,14 @@ import { HomeScreenProps } from '../types/navigation';
 import { AppHeader } from '../components/common/AppHeader';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
+import { sendTrackingStartPing } from '../services/trackingStartService';
 import {
   gpsService, BACKGROUND_SENT_COUNT_KEY, RACE_FINISHED_KEY,
   ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry,
   startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive,
   isTracking, getTrackingParams, stopWatching, attachUi, detachUi, rehydrateTracking,
   LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY, FINAL_SENT_COUNT_KEY,
-  GPS_HEALTH_KEY,
+  GPS_HEALTH_KEY, maybeUploadInterimLog,
 } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -739,6 +740,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (queueProcessorRef.current || !participantId || !eventId) return;
 
     queueProcessorRef.current = setInterval(async () => {
+      // Foreground twin of the heartbeat's interim-log check: a session that is
+      // past the gun and has sent nothing ships its device log (one-shot).
+      void maybeUploadInterimLog();
+
       // ✅ Check queue count key first — cheap single string read,
       // avoids parsing full queue JSON when nothing is queued.
       const queueSize = await locationQueueService.getQueueSize();
@@ -929,25 +934,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const startParticipantId = raceData?.next_race_participant_app_id ?? participantId;
       const startEventId = raceData?.next_race_id ?? eventId;
 
-      // ✅ START PING — notify the backend that tracking started, the instant the
-      // user taps start. Written to oc_tracking_starts_app independently of
-      // coordinates, so Home detects a restart-after-stop even if the network
-      // drops and no coordinates flow for a while. Fire-and-forget: it must never
-      // block or fail the start of tracking.
-      (async () => {
-        try {
-          if (!startParticipantId || !startEventId) return;
-          const headers = await API_CONFIG.getHeaders();
-          await axios.post(
-            getApiEndpoint(API_CONFIG.ENDPOINTS.SAVE_TRACKING_START),
-            { participantId: startParticipantId, eventId: startEventId },
-            { headers, timeout: API_CONFIG.TIMEOUT },
-          );
-          if (API_CONFIG.DEBUG) console.log('✅ start ping sent', startParticipantId, startEventId);
-        } catch (e) {
-          if (API_CONFIG.DEBUG) console.log('⚠️ start ping failed (non-blocking)', e);
-        }
-      })();
+      // ✅ START PING — fire-and-forget, retried, carries diagnostics.
+      // See trackingStartService for the rules and the incident behind them.
+      void sendTrackingStartPing({
+        participantId: startParticipantId,
+        eventId: startEventId,
+        startedAfterGun: raceAlreadyStarted,
+        isStillTracking: () => isGPSActiveRef.current,
+      });
 
       const gpsWatch = await gpsService.startWatchingPosition(
         async (gpsPosition) => {
@@ -1189,11 +1183,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // only tears down once the queue is actually empty, so this is safe to run.
     const queuedBeforeStop = await locationQueueService.getQueueSize();
     if (participantId && eventId && (!raceAlreadyFinished || queuedBeforeStop > 0)) {
+      // ✅ Keep draining until empty, a pass makes no progress, or ~30s pass —
+      // see locationService.drainForStop (one processQueue() call used to leave
+      // everything past 50 fixes behind: p1652 stopped with 173 queued).
+      // processQueue bumps BACKGROUND_SENT_COUNT_KEY per drained fix, so the
+      // live counter is re-read below instead of adding the return value.
       try {
-        const drained = await locationService.processQueue(participantId, eventId);
-        // processQueue bumps BACKGROUND_SENT_COUNT_KEY per drained fix now, so we
-        // re-read the live counter below instead of adding `drained` (that would
-        // double-count). Keep the log for visibility.
+        const drained = await locationService.drainForStop(participantId, eventId);
         if (drained > 0 && API_CONFIG.DEBUG) {
           console.log(`✅ Drained ${drained} queued locations on stop`);
         }
@@ -1285,7 +1281,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => { });
     AsyncStorage.removeItem(FINAL_SENT_COUNT_KEY).catch(() => { });
     setLocationUpdateCount(0);
+
+    // ✅ Anything the stop-drain could not send is handed to the leftover drain
+    // (it parks the queue now that the session is over, and keeps retrying on
+    // later launches/foregrounds) instead of sitting until the next Start
+    // deleted it.
+    if (remaining > 0) void locationService.drainOrphans();
   }, [locationUpdateCount, participantId, eventId, t]);
+
+  // ✅ Stop pressed BEFORE the gun → confirm first. Sep-Oct 2026: 12 runners
+  // started early, stopped before the start (nothing is sent pre-gun, so it
+  // looked like nothing was happening), never restarted — and then finished the
+  // race per RaceResult with no live track at all. After the gun (or with
+  // manual_start) Stop works immediately, exactly as before.
+  const confirmStopTracking = useCallback(() => {
+    if (hasRaceStarted()) {
+      void stopGPSTracking();
+      return;
+    }
+    Alert.alert(
+      t('home:alerts.stopBeforeStartTitle'),
+      t('home:alerts.stopBeforeStartMessage'),
+      [
+        { text: t('home:alerts.keepTracking'), style: 'cancel' },
+        { text: t('home:alerts.stopAnyway'), style: 'destructive', onPress: () => { void stopGPSTracking(); } },
+      ],
+    );
+  }, [hasRaceStarted, stopGPSTracking, t]);
 
   const manualStartSending = useCallback(() => {
     Alert.alert(
@@ -1744,6 +1766,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       if (s === 'active') drainPendingFinish();
     });
     return () => { cancelled = true; sub.remove(); };
+  }, []);
+
+  // ✅ Upload leftover fixes from ended sessions on mount and every foreground.
+  // drainOrphans() is a no-op when there is nothing parked, checks the network
+  // itself, and never touches the live session's own fixes.
+  useEffect(() => {
+    void locationService.drainOrphans();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') void locationService.drainOrphans();
+    });
+    return () => sub.remove();
   }, []);
 
   const PARTNER_LOGOS = [
@@ -2366,7 +2399,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       opacity: 0.6,
                     },
                   ]}
-                  onPress={isGPSActive ? () => { void stopGPSTracking(); } : confirmStartTracking}
+                  onPress={isGPSActive ? confirmStopTracking : confirmStartTracking}
                   disabled={!isGPSActive && (!participantId || !eventId)}
                   accessibilityRole="button"
                 >

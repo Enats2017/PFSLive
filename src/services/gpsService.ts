@@ -1654,6 +1654,9 @@ const _registerTransistorListeners = (): void => {
         return;
       }
 
+      // Race is on: if this session still has not sent anything, ship the log.
+      await maybeUploadInterimLog();
+
       const hbState = await BackgroundGeolocation.getState();
 
       // ✅ Re-assert MOVING on every beat (unless finished) so the dense
@@ -1858,6 +1861,64 @@ export const finishBackgroundStop = async (
 // current segment, so a raw read would miss the archived ones.
 export const getFullTrackingLog = async (): Promise<TrackingLogEntry[]> => _readFullLog();
 export const flushTrackingLog   = async (): Promise<void> => _flushLogsNow();
+
+// ✅ INTERIM LOG UPLOAD — "started but nothing ever sent".
+//
+// The device log reaches the server only on Stop or finish. Sep-Oct 2026 had 23
+// sessions whose start ping arrived and then not ONE location request followed;
+// none of them ever pressed Stop, so there was no log and no way to tell a denied
+// permission from a dead engine from a stuck gate. Runners at Barrage who did this
+// all finished their race. So: once, if the session has been live for 5 minutes
+// past max(gun, session start) and has still sent nothing, upload the log as it
+// stands, prefixed with the permission state. Does NOT touch LOG_UPLOADED_KEY, so
+// the normal Stop/finish upload still happens. Called from the heartbeat
+// (background) and HomeScreen's queue timer (foreground); idempotent per session.
+const INTERIM_LOG_KEY = '@PFSLive:interimLogUploaded';
+const SESSION_STARTED_AT_KEY = '@PFSLive:sessionStartedAt';
+const INTERIM_LOG_AFTER_MS = 5 * 60 * 1000;
+
+export const maybeUploadInterimLog = async (): Promise<void> => {
+  try {
+    if ((await AsyncStorage.getItem(INTERIM_LOG_KEY)) === '1') return;
+    const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!raw) return;
+    const p = JSON.parse(raw);
+    if (!p?.participantId || !p?.eventId) return;
+    if ((await AsyncStorage.getItem(RACE_FINISHED_KEY)) === '1') return;
+
+    const sessionStart = parseInt((await AsyncStorage.getItem(SESSION_STARTED_AT_KEY)) || '0', 10) || 0;
+    if (!sessionStart) return;
+    const gun = p.manualStart === 1 ? 0 : (p.raceStartTime ? new Date(p.raceStartTime).getTime() : NaN);
+    if (isNaN(gun)) return;                     // unknown start time — can't judge "late"
+    const anchor = Math.max(gun, sessionStart);
+    if (Date.now() - anchor < INTERIM_LOG_AFTER_MS) return;
+
+    const sent = parseInt((await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY)) || '0', 10) || 0;
+    if (sent > 0) {
+      await AsyncStorage.setItem(INTERIM_LOG_KEY, '1');   // healthy session — never check again
+      return;
+    }
+
+    // Claim first so the heartbeat and the foreground timer cannot both upload.
+    await AsyncStorage.setItem(INTERIM_LOG_KEY, '1');
+    const perm = await gpsService.getPermissionState();
+    let provider = 'unknown';
+    try {
+      const ps: any = await BackgroundGeolocation.getProviderState();
+      provider = `enabled:${!!ps?.enabled} gps:${!!ps?.gps} network:${!!ps?.network} status:${ps?.status}`;
+    } catch { /* silent */ }
+    await addLog('🩺', `No fix sent ${Math.round((Date.now() - anchor) / 60000)}min after start — perm:${perm.level} ${provider} transistorActive:${await AsyncStorage.getItem(TRANSISTOR_ACTIVE_KEY)}`);
+    await _flushLogsNow();
+
+    const { locationService } = require('./locationService');
+    const { locationQueueService } = require('./locationQueueService');
+    const ok = await locationService.saveTrackingLog(
+      String(p.participantId), String(p.eventId),
+      await _readFullLog(), 0, await locationQueueService.getQueueSize(),
+    );
+    if (!ok) await AsyncStorage.removeItem(INTERIM_LOG_KEY);   // retry on a later call
+  } catch { /* diagnostics must never affect tracking */ }
+};
 
 // ✅ PUBLIC: check whether a tracking session is currently active.
 // Returns true if TRACKING_PARAMS_KEY exists in AsyncStorage. Used by
@@ -2339,6 +2400,9 @@ export const gpsService = {
         }
         await AsyncStorage.removeItem(TRACKING_LOG_KEY);
         await _resetLogBuffer();
+        // New session → arm the one-shot interim log upload (maybeUploadInterimLog).
+        await AsyncStorage.removeItem(INTERIM_LOG_KEY);
+        await AsyncStorage.setItem(SESSION_STARTED_AT_KEY, String(Date.now()));
       }
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
       await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
@@ -2353,17 +2417,18 @@ export const gpsService = {
       await AsyncStorage.removeItem(FINISH_COORDS_KEY);
       await AsyncStorage.removeItem(REMAINING_KEY);
       await AsyncStorage.removeItem(TEST_PHASE_KEY);
-      // Clear stale queue ONLY on a fresh start. On a fresh start any queued
-      // fixes are post-finish stragglers from a prior offline finish — safe to
-      // wipe. On a relaunch onto an existing session the queue may hold a real
-      // mid-race offline backlog the user recorded in a tunnel, so we must NOT
-      // delete it — it has to drain into this race.
-      if (!_hadPriorSession) {
-        try {
-          const { locationQueueService } = require('./locationQueueService');
-          await locationQueueService.clearQueue();
-        } catch { /* silent */ }
-      }
+      // ✅ Never wipe queued fixes on start. This used to clearQueue() on every
+      // fresh start, assuming anything left was a post-finish straggler. It was
+      // not: after a manual Stop the leftovers are the runner's real, unsent race
+      // — 540 fixes from 4 runners were deleted this way in Sep-Oct 2026.
+      // Now: fixes for THIS participant+event stay queued and drain first, in
+      // order (same as a mid-race relaunch backlog, which must drain into this
+      // race); fixes for any other session are parked as orphans and uploaded by
+      // locationService.drainOrphans() once no session is live.
+      try {
+        const { locationQueueService } = require('./locationQueueService');
+        await locationQueueService.parkOtherSessions(String(participantId), String(eventId));
+      } catch { /* silent */ }
       // ✅ Critical: clear stale flag so this session's task path acts as
       // fallback until Transistor.start() succeeds.
       await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);

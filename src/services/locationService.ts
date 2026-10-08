@@ -2,6 +2,8 @@ import { apiClient } from './api';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { locationQueueService, QueuedLocation } from './locationQueueService';
 import { Platform } from 'react-native';
+import * as Application from 'expo-application';
+import * as Updates from 'expo-updates';
 import { TrackingLogEntry, RACE_FINISHED_KEY } from './gpsService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -147,6 +149,8 @@ interface StandardApiResponse<T = any> {
 // Without this lock each queued item is read by both calls → double send.
 // Module-level so it persists across all calls within the same JS context.
 let _isProcessingQueue = false;
+// Separate lock for drainOrphans() — it never runs alongside a live session.
+let _isDrainingOrphans = false;
 
 export const locationService = {
   /**
@@ -263,6 +267,9 @@ export const locationService = {
         // absent (older API) so guards are applied conservatively.
         finish_source: (data.finish_source === 'rr') ? 'rr' : 'distance',
       };
+
+      // A real accepted send proves the network works, whatever NetInfo says.
+      if (normalizedResponse.success) locationQueueService.markSendSucceeded();
 
       if (API_CONFIG.DEBUG) {
         if (normalizedResponse.success) {
@@ -575,6 +582,144 @@ export const locationService = {
     return sentCount;
   },
 
+  /**
+   * Stop-path drain: call processQueue() until the queue is empty, a pass makes
+   * no progress (network failed again), or the time budget is spent. -1 from
+   * processQueue means another drain holds the mutex — wait and try again.
+   * Returns the total number of fixes drained.
+   *
+   * Stop used to make ONE processQueue() call = at most 50 fixes; the rest sat
+   * in the queue until the next Start deleted them (p1652: 173, p1896: 133,
+   * p2425: 61, p2699: 173 — 540 fixes, Sep-Oct 2026). Whatever this cannot
+   * send is picked up by drainOrphans() once the session is over.
+   */
+  async drainForStop(
+    participantId: string,
+    eventId: string,
+    timeBudgetMs: number = 30000,
+    busyWaitMs: number = 1000,
+  ): Promise<number> {
+    const startedAt = Date.now();
+    let total = 0;
+    while (Date.now() - startedAt < timeBudgetMs) {
+      const drained = await this.processQueue(participantId, eventId);
+      if (drained < 0) { await new Promise((r) => setTimeout(r, busyWaitMs)); continue; }
+      if (drained === 0) break;
+      total += drained;
+      if ((await locationQueueService.getQueueSize()) === 0) break;
+    }
+    return total;
+  },
+
+  /**
+   * Upload leftover fixes from ended sessions (see locationQueueService's
+   * ORPHAN_STORAGE_KEY). Callers must only run this while NO session is live:
+   * the server snaps each fix against the participant's LATEST stored fix, so
+   * an old fix landing after newer live ones would mis-snap.
+   *
+   * Deliberately simpler than processQueue: these sessions are over, so there
+   * is no finish detection, no teardown and no session counters — each fix is
+   * sent with its own participantId/eventId and is_queued=1 (the server then
+   * keeps its recorded timestamp and skips the finished-state overrides).
+   * Stops at the first transient failure; the rest wait for the next call.
+   * Returns the number of fixes accepted.
+   */
+  async drainOrphans(timeBudgetMs: number = 45000): Promise<number> {
+    if (_isDrainingOrphans) return 0;
+    _isDrainingOrphans = true;
+    let sent = 0;
+    try {
+      // Mirror of gpsService's TRACKING_PARAMS_KEY (local literal: no circular import).
+      let live: { participantId?: string; eventId?: string } | null = null;
+      try {
+        const raw = await AsyncStorage.getItem('@PFSLive:trackingParams');
+        live = raw ? JSON.parse(raw) : null;
+      } catch { /* treat as no session */ }
+
+      // No session live → whatever is still in the live queue belongs to an
+      // ended session (a Stop that could not drain everything). Park it so it is
+      // sent below instead of waiting for — and formerly being wiped by — the
+      // next Start.
+      if (!live && (await locationQueueService.getQueueSize()) > 0) {
+        await locationQueueService.parkQueueAsOrphans();
+      }
+
+      let list = await locationQueueService.getOrphans();
+      if (list.length === 0) return 0;
+
+      // Too old for the server to keep the real timestamp — drop.
+      const { ORPHAN_MAX_AGE_MS } = require('./locationQueueService');
+      const cutoff = Date.now() - ORPHAN_MAX_AGE_MS;
+      const fresh = list.filter((f) => {
+        const t = new Date(f.timestamp).getTime();
+        return !isNaN(t) && t >= cutoff;
+      });
+      if (fresh.length !== list.length) {
+        list = fresh;
+        await locationQueueService.setOrphans(list);
+      }
+      if (list.length === 0) return 0;
+      if (!(await locationQueueService.hasNetwork())) return 0;
+
+      const startedAt = Date.now();
+      let consumed = 0;
+      for (const f of list) {
+        if (Date.now() - startedAt >= timeBudgetMs) break;
+        // Never interleave old fixes with the live session's own fixes — those
+        // belong in the live queue (parkOtherSessions moves them there at Start).
+        if (live && String(f.participantId) === String(live.participantId)
+            && String(f.eventId) === String(live.eventId)) break;
+        try {
+          const r = await this.sendLocation(
+            f.participantId,
+            f.eventId,
+            {
+              latitude: f.latitude,
+              longitude: f.longitude,
+              altitude: f.altitude || f.elevation,
+              accuracy: f.accuracy,
+              timestamp: f.timestamp,
+              speed: f.speed,
+              heading: f.heading,
+              elevationGain: f.elevationGain,
+              batteryLevel: f.batteryLevel,
+              batteryCharging: f.batteryCharging,
+              isMoving: f.isMoving,
+            },
+            false,   // never re-queue into the LIVE queue
+            true,    // is_queued
+          );
+          if (!r || r.success !== true) break;
+          sent++;
+          consumed++;
+        } catch (error: any) {
+          const codeStr = String(error?.code ?? '').toLowerCase();
+          if (error?.type === 'empty' && PERMANENT_REJECT_CODES.has(codeStr)) {
+            consumed++;      // the server will never take this one — drop it
+            continue;
+          }
+          break;             // transient — keep the rest for next time
+        }
+      }
+      // Re-read before writing: parkQueueAsOrphans may have appended meanwhile.
+      if (consumed > 0) {
+        const latest = await locationQueueService.getOrphans();
+        await locationQueueService.setOrphans(latest.slice(consumed));
+      }
+      if (sent > 0) {
+        try {
+          const { addLog } = require('./gpsService');
+          await addLog('📤', `Uploaded ${sent} leftover fix(es) from a previous session`);
+        } catch { /* silent */ }
+      }
+    } catch {
+      /* silent — never surface to the UI */
+    } finally {
+      _isDrainingOrphans = false;
+    }
+    return sent;
+  },
+
   async saveTrackingLog(
     participantId: string,
     eventId: string,
@@ -596,7 +741,9 @@ export const locationService = {
           logs,
           totalSent,
           totalQueued,
-          deviceInfo: `${Platform.OS} ${Platform.Version}`,
+          // App version + OTA update id appended: "ios 26.6" alone could never tie
+          // a failing session to the build (or eas update) it was running.
+          deviceInfo: `${Platform.OS} ${Platform.Version} app:${Application.nativeApplicationVersion ?? '?'} upd:${(Updates.updateId ?? 'embedded').slice(0, 8)}`,
         }, { headers, timeout: 10000 }),
         12000,
         'saveTrackingLog'
