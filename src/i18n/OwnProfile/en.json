@@ -49,7 +49,8 @@
     "noMembershipSubtitle": "Subscribe to a plan to start live tracking your sessions.",
     "paymentProcessing": "Payment is being processed. Please wait about 1 minute, then tap Refresh to view your updated membership.",
     "refresh": "Refresh",
-    "eventOnly": "Valid for {{event}} only."
+    "eventOnly": "Valid for {{event}} only.",
+    "alsoActivation": "Also valid: your Livio activation for {{event}}."
   },
   "training": {
     "create": "Create personal event"

@@ -15,7 +15,8 @@
     "design-check": "node scripts/design-report.mjs --selftest && node scripts/i18n-check.mjs --selftest && node scripts/data-loss-check.mjs --selftest && node scripts/design-audit.mjs --selftest && node scripts/design-report.mjs --strict && node scripts/design-audit.mjs --strict && node scripts/i18n-check.mjs --strict && tsc --noEmit",
     "i18n-check": "node scripts/i18n-check.mjs",
     "data-check": "node scripts/data-loss-check.mjs",
-    "test:tracking": "node tests/tracking/app.test.js"
+    "test:tracking": "node tests/tracking/app.test.js",
+    "test:activation": "tsc src/screens/ProfileScreen/activationCard.ts src/screens/ProfileScreen/activationCard.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/screens/ProfileScreen/activationCard.test.js"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
