@@ -97,5 +97,64 @@ test('older API without event_only / event_activations → nothing', () => {
   assert.deepStrictEqual(resolveActivation({ unlimited: false }), { placement: null, eventNames: null });
 });
 
+// ── The copy the card renders (row 8 of the device test plan) ──────────────
+// Read from the real en/fr/nl files with i18next's {{placeholder}} rule, so a
+// missing key or an unsubstituted placeholder fails here, not on a phone. Paths
+// from the project root: `npm run` sets cwd there and the compiled copy of this
+// file runs from .cardtest/.
+console.log('\n== activation card copy (en / fr / nl) ==');
+/* eslint-disable @typescript-eslint/no-var-requires */
+const fs = require('fs');
+const path = require('path');
+const dict = (l: string) =>
+  JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src', 'i18n', 'OwnProfile', `${l}.json`), 'utf8'));
+const tr = (l: string, key: string, vars: Record<string, string> = {}): string => {
+  let node: any = dict(l);
+  for (const seg of key.split('.')) node = node?.[seg];
+  if (typeof node !== 'string') return key;
+  return node.replace(/\{\{(\w+)\}\}/g, (m: string, n: string) => (n in vars ? vars[n] : m));
+};
+// What OwnProfile.tsx renders for a decision: iOS card line, Android banner line.
+const copy = (l: string, mi: ActivationMembershipInfo) => {
+  const d = resolveActivation(mi);
+  if (d.placement === 'primary') {
+    return { ios: tr(l, 'membershipCard.eventOnly', { event: d.eventNames! }),
+             android: tr(l, 'tracking.eventOnly', { event: d.eventNames! }) };
+  }
+  if (d.placement === 'extra') {
+    const line = tr(l, 'membershipCard.alsoActivation', { event: d.eventNames! });
+    return { ios: line, android: line };
+  }
+  return { ios: null, android: null };
+};
+const ONE = { event_only: 1, event_activations: [act('Limburg Wine Trail', 2)] };
+const TWO = { event_only: 1, event_activations: [act('Trail de Bruxelles', 1), act('GTLC Winter', 1)] };
+const PRO = capped({ event_activations: [act('Limburg Wine Trail', 1)] });
+
+test('plan row "activation only" → "Valid for Limburg Wine Trail only."', () => {
+  assert.deepStrictEqual(copy('en', ONE), {
+    ios: 'Valid for Limburg Wine Trail only.',
+    android: 'Your Livio activation is valid for Limburg Wine Trail.' });
+});
+test('plan row "two activations" → both events in the line', () => {
+  assert.strictEqual(copy('en', TWO).ios, 'Valid for Trail de Bruxelles & GTLC Winter only.');
+});
+test('plan row "Pro (+ used up) + activation" → "Also valid: …" line', () => {
+  assert.strictEqual(copy('en', PRO).ios, 'Also valid: your Livio activation for Limburg Wine Trail.');
+});
+for (const l of ['en', 'fr', 'nl']) {
+  test(`${l}: every activation line resolves (no raw key, no {{placeholder}})`, () => {
+    for (const mi of [ONE, TWO, PRO]) {
+      for (const v of Object.values(copy(l, mi))) {
+        assert.ok(v && !/^[a-zA-Z]+\.[a-zA-Z.]+$/.test(v) && !v.includes('{{'), `${l}: ${v}`);
+      }
+    }
+  });
+}
+test('fr and nl are translated, not copies of en', () => {
+  const en = copy('en', PRO).ios, fr = copy('fr', PRO).ios, nl = copy('nl', PRO).ios;
+  assert.ok(fr !== en && nl !== en && fr !== nl, `${fr} | ${nl}`);
+});
+
 console.log(`\nACTIVATION TOTAL: ${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
