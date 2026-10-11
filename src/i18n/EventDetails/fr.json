@@ -116,11 +116,12 @@
       "icon": "🔗",
       "title": "Suivi en direct",
       "description": "Le Live Tracking est facultatif et nécessite un abonnement actif. Vous ne souhaitez pas l’utiliser ? Aucun problème. Vous n’avez pas besoin de connecter Livio à votre dossard. Vos proches continueront à recevoir les mises à jour officielles RFID lors de votre passage aux points de contrôle et à la ligne d’arrivée.",
+      "description_free": "Le Live Tracking est inclus avec votre inscription à cette course : il n’y a rien à acheter et cela n’utilise aucune de vos sessions Livio. Cela reste facultatif : si vous préférez ne pas l’utiliser, vous n’avez pas besoin de connecter Livio à votre dossard, et vos proches continueront à recevoir les mises à jour officielles RFID lors de votre passage aux points de contrôle et à la ligne d’arrivée.",
       "button": "Oui",
       "notNowButton": "Pas maintenant"
     }
   },
-  "connectInfo": "Le chronométrage officiel est automatiquement activé pour tous les participants.\nVous souhaitez utiliser le Live Tracking ? Associez votre compte Livio à votre dossard pour cet événement.\nAppuyez sur « Associer » pour continuer.",
+  "connectInfo": "Le chronométrage officiel est automatiquement activé pour tous les participants.\nVous souhaitez utiliser le Live Tracking ? Associez votre compte Livio à votre dossard pour cet événement.\nAppuyez sur « Suivi en direct » pour continuer.",
   "gpxDownload": {
     "permissionDeniedTitle": "Permission refusée",
     "permissionDeniedMessage": "L'accès au dossier est requis pour enregistrer le fichier GPX.",

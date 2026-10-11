@@ -27,6 +27,9 @@ interface RegistrationModalProps {
   distanceName: string;
   membershipLimit?: number;
   membershipStartDate?: string;  // ✅ NEW
+  /* This distance includes Livio tracking with the entry, so the connect
+     modal must not tell the participant they need a membership. */
+  isFreeTracking?: boolean;
   onClose: () => void;
    onConfirm?: () => void;
 }
@@ -48,6 +51,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   distanceName,
   membershipLimit,
   membershipStartDate,  // ✅ NEW
+  isFreeTracking,
   onClose,
   onConfirm,
 }) => {
@@ -65,7 +69,14 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
       return {
         icon: t('details:registrationModal.connect_confirm.icon'),
         title: t('details:registrationModal.connect_confirm.title'),
-        description: t('details:registrationModal.connect_confirm.description'),
+        /* The free wording when the entry already covers it. defaultValue
+           keeps a language whose file has not been updated yet on the
+           original sentence rather than printing a raw key. */
+        description: isFreeTracking
+          ? t('details:registrationModal.connect_confirm.description_free', {
+              defaultValue: t('details:registrationModal.connect_confirm.description'),
+            })
+          : t('details:registrationModal.connect_confirm.description'),
         accentColor: colors.primary,
         buttonLabel: t('details:registrationModal.connect_confirm.button'),
         notNowLabel: t('details:registrationModal.connect_confirm.notNowButton'),

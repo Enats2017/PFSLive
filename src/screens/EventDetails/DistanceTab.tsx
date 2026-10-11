@@ -645,6 +645,7 @@ const handleExternalRegister = useCallback((url: string) => {
         visible={liveTrackingModalVisible}
         status="connect_confirm"
         distanceName={liveTrackingItem?.distance_name ?? ''}
+        isFreeTracking={(liveTrackingItem?.free_tracking_included ?? 0) === 1}
         onClose={handleLiveTrackingClose}
         onConfirm={handleLiveTrackingConfirm}
       />
