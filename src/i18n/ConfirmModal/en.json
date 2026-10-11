@@ -1,6 +1,7 @@
 {
   "title": "Confirm Registration",
-  "subtitle": "If this is you, please hit the Confirm button. Then you will receive an email, and after clicking the link in that email, you are all good to go!",
+  "subtitle": "If this is you, tap Confirm & Register and you are signed up for live tracking straight away.",
+  "subtitle_verify": "If this is you, please hit the Confirm button. Then you will receive an email, and after clicking the link in that email, you are all good to go!",
   "fields": {
     "bibNumber": "Bib Number",
     "firstName": "First Name",
