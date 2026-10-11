@@ -1,6 +1,7 @@
 {
   "title": "Confirmer l'Inscription",
-  "subtitle": "Si c'est bien vous, veuillez appuyer sur le bouton Confirmer. Vous recevrez ensuite un e-mail et, après avoir cliqué sur le lien contenu dans cet e-mail, tout sera prêt !",
+  "subtitle": "Si c’est bien vous, appuyez sur Confirmer et s’inscrire : vous êtes aussitôt inscrit au suivi en direct.",
+  "subtitle_verify": "Si c'est bien vous, veuillez appuyer sur le bouton Confirmer. Vous recevrez ensuite un e-mail et, après avoir cliqué sur le lien contenu dans cet e-mail, tout sera prêt !",
   "fields": {
     "bibNumber": "Numéro de Dossard",
     "firstName": "Prénom",

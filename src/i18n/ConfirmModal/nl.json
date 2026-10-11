@@ -1,6 +1,7 @@
 {
   "title": "Registratie Bevestigen",
-  "subtitle": "Als jij dit bent, klik dan op de knop Bevestigen. Je ontvangt vervolgens een e-mail en nadat je op de link in die e-mail hebt geklikt, ben je helemaal klaar!",
+  "subtitle": "Ben jij dit? Tik op Bevestigen en registreren en je bent direct aangemeld voor live tracking.",
+  "subtitle_verify": "Als jij dit bent, klik dan op de knop Bevestigen. Je ontvangt vervolgens een e-mail en nadat je op de link in die e-mail hebt geklikt, ben je helemaal klaar!",
   "fields": {
     "bibNumber": "Startnummer",
     "firstName": "Voornaam",
