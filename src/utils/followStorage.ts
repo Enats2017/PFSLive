@@ -22,6 +22,13 @@ const REMOVED_BEFORE_ADOPT_KEY = '@PFSLive:followRemovedBeforeAdopt';
 // a local change must not overwrite it when it lands (see syncFollowDataFromAPI).
 let followWriteSeq = 0;
 export function getFollowWriteSeq(): number { return followWriteSeq; }
+// The newest local change that has REACHED the server. While it lags behind
+// followWriteSeq an upload is still in flight (or failed): the phone is ahead
+// of the server, so a download must push instead of overwriting. (The pending
+// flag alone only covered FAILED uploads — a slow one in flight let a download
+// wipe the follow on the phone, and the next follow then removed it upstream.)
+let lastPushedSeq = 0;
+function phoneAheadOfServer(): boolean { return lastPushedSeq !== followWriteSeq; }
 
 /** The server said this device has no follower row — a real answer, unlike a
  *  timeout / 5xx / 429, which must never be read as "nothing to merge". */
@@ -274,6 +281,8 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
       return;
     }
 
+    // The newest local change this upload will carry.
+    const seqAtPush = followWriteSeq;
     // Get current follow data
     const customerSet = await loadCache();
     const bibMap = await loadBibCache();
@@ -328,11 +337,16 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
     //    redisplay the old number and read as a second bug.
     useFollowStore.getState().bump();
 
-    // Local and server agree again.
-    try {
-      await AsyncStorage.removeItem(SYNC_PENDING_KEY);
-    } catch {
-      // A failure here only risks one redundant re-upload later. Harmless.
+    if (seqAtPush > lastPushedSeq) lastPushedSeq = seqAtPush;
+    // Local and server agree again — but only if nothing changed while this
+    // upload was in flight (an older upload finishing late must not clear the
+    // flag a newer, failed one set).
+    if (seqAtPush === followWriteSeq) {
+      try {
+        await AsyncStorage.removeItem(SYNC_PENDING_KEY);
+      } catch {
+        // A failure here only risks one redundant re-upload later. Harmless.
+      }
     }
   } catch (error: any) {
     if (API_CONFIG.DEBUG) {
@@ -754,7 +768,7 @@ export async function syncFollowDataFromAPI(
     // to disappear a moment later. Push local up instead; if that succeeds the
     // flag clears and the next call proceeds normally, and if it fails local
     // stays authoritative until it can be delivered.
-    if (await hasPendingFollowSync()) {
+    if (phoneAheadOfServer() || (await hasPendingFollowSync())) {
       if (API_CONFIG.DEBUG) {
         console.log('⏭️ Local follow data not yet synced — pushing instead of overwriting');
       }
@@ -780,9 +794,10 @@ export async function syncFollowDataFromAPI(
         }
       }
     });
-    // Re-check after the awaits above: a follow that landed meanwhile wins.
-    // Both caches are swapped in the same tick, before any further await.
-    if (startedAtSeq !== undefined && startedAtSeq !== followWriteSeq) {
+    // Re-check after the awaits above: a follow that landed meanwhile — or one
+    // whose upload hasn't reached the server yet — wins. Both caches are
+    // swapped in the same tick, before any further await.
+    if ((startedAtSeq !== undefined && startedAtSeq !== followWriteSeq) || phoneAheadOfServer()) {
       await syncFollowDataToAPI();
       return;
     }

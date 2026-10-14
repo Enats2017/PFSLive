@@ -49,6 +49,7 @@ import { ReadinessCard } from '../components/Home/ReadinessCard';
 import { ShareTrackingLink } from '../components/Home/ShareTrackingLink';
 import { IdleHome } from '../components/Home/IdleHome';
 import { raceReadyService } from '../services/raceReadyService';
+import { locationPopupCopy } from '../utils/locationPopupCopy';
 import {
   openLocationSettingsFor,
   requestBatteryOptimizationExemption,
@@ -208,6 +209,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Location-permission gate (blocks Start) and the mid-race GPS health banner.
   const [showLocationPermissionModal, setShowLocationPermissionModal] = useState(false);
   const [permissionBlockReason, setPermissionBlockReason] = useState<PermissionBlockReason>('denied');
+  // Which situation opened the location popup: the Start flow (a pitch — why
+  // to allow) or the mid-race warning banner (a problem report — what broke).
+  const [permissionModalMidRace, setPermissionModalMidRace] = useState(false);
+  // Mid-race "GPS returns no position" (indoors, tunnel): location is ON and
+  // allowed — the permission/location-off copy would be wrong there.
+  const [permissionModalNoFix, setPermissionModalNoFix] = useState(false);
+  const popupCopy = locationPopupCopy({
+    midRace: permissionModalMidRace,
+    noFix: permissionModalNoFix,
+    reason: permissionBlockReason,
+    platform: Platform.OS,
+  });
   // Whether the OS will still show its own Location permission page. Decides
   // BOTH what the popup's button can achieve and what its text may promise;
   // false means the button can only reach App info, so the text must say so.
@@ -829,6 +842,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       if (!perms.foreground || !perms.background) {
         setPermissionBlockReason(perms.foreground ? 'no_background_perm' : 'denied');
+        setPermissionModalMidRace(false);
+        setPermissionModalNoFix(false);
         // Funnel only (Firebase) — never a server tracking row. See logStartStep.
         void analyticsService.logStartStep(
           'blocked',
@@ -848,6 +863,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // what makes the 'location_off' deep-link reachable at start time.
       if (!(await gpsService.isLocationServiceEnabled())) {
         setPermissionBlockReason('location_off');
+        setPermissionModalMidRace(false);
+        setPermissionModalNoFix(false);
         void analyticsService.logStartStep('blocked', 'location_off', eventId);
         pendingStartRef.current = true;
         setShowLocationPermissionModal(true);
@@ -1977,24 +1994,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <View style={homeStyles.notifIconWrapper}>
                 <Ionicons name="location-outline" size={36} color={palette.navy} />
               </View>
-              <Text style={homeStyles.notifTitle}>{t('home:gpsHealth.title')}</Text>
+              <Text style={homeStyles.notifTitle}>
+                {t(popupCopy.titleKey)}
+              </Text>
               <Text style={homeStyles.notifBody}>
                 {/* Three distinct problems, three distinct instructions: turn the
                     phone's Location on, grant the permission at all, or upgrade
                     While-Using to Always. Collapsing them tells most runners to
                     do the wrong thing. */}
-                {permissionBlockReason === 'location_off'
-                  ? t('home:gpsHealth.blockedBodyLocationOff')
-                  : permissionBlockReason === 'denied'
-                    ? t('home:gpsHealth.blockedBodyDenied')
-                    : t('home:gpsHealth.blockedBody')}
+                {/* Start flow vs mid-race vs "no GPS position": see locationPopupCopy. */}
+                {t(popupCopy.bodyKey)}
               </Text>
               {/* Shown wherever the button cannot land on the exact page — which
                   on Android's permission route is still the case, since the one
                   intent that targets the Location page needs a Parcelable extra
                   JS cannot send. Android's location_off deep-link IS exact, so
                   that combination alone gets no extra line. */}
-              {!(Platform.OS === 'android' && permissionBlockReason === 'location_off') && (
+              {popupCopy.showSettingsSteps && (
                 <Text style={homeStyles.notifBody}>
                   {Platform.OS === 'ios'
                     ? (permissionBlockReason === 'location_off'
@@ -2418,6 +2434,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       setPermissionBlockReason(
                         gpsHealth === 'no_background_perm' ? 'no_background_perm' : 'location_off'
                       );
+                      setPermissionModalMidRace(true);
+                      setPermissionModalNoFix(gpsHealth === 'no_fix');
                       void gpsService.getPermissionState()
                         .then((ps) => setPermissionCanAskAgain(ps.canAskAgain))
                         .catch(() => setPermissionCanAskAgain(false));

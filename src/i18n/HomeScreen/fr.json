@@ -124,6 +124,10 @@
   },
   "gpsHealth": {
     "title": "Laissez vos proches vous suivre en direct",
+    "titleMidRace": "Accès à la localisation limité",
+    "titleNoFix": "Pas de position GPS pour le moment",
+    "blockedBodyNoFix": "Votre téléphone ne reçoit pas de position GPS en ce moment — cela arrive à l'intérieur, dans un tunnel ou sous un couvert épais. Le suivi continue : rejoignez un endroit dégagé et votre position sera de nouveau envoyée dès que le GPS vous retrouve.",
+    "blockedBodyLocationOffMidRace": "La localisation est désactivée sur ce téléphone, votre position n'est donc pas envoyée. Réactivez la localisation — le suivi reprend tout seul, inutile de l'arrêter ou de le relancer.",
     "blockedBody": "Livio a besoin de l'accès à la localisation « Toujours » pour enregistrer votre course lorsque votre téléphone est dans votre poche. Avec « Lorsque l'app est active », votre position n'est plus enregistrée dès que l'écran s'éteint.",
     "blockedBodyDenied": "Livio a besoin d'accéder à votre position pour enregistrer votre course. L'autorisation de localisation est actuellement désactivée pour cette application.",
     "openSettings": "Ouvrir les réglages",

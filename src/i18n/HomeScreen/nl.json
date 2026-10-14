@@ -124,6 +124,10 @@
   },
   "gpsHealth": {
     "title": "Laat familie en vrienden je live volgen",
+    "titleMidRace": "Locatietoegang is beperkt",
+    "titleNoFix": "Op dit moment geen GPS-positie",
+    "blockedBodyNoFix": "Je telefoon krijgt op dit moment geen GPS-positie — dat gebeurt binnen, in tunnels of onder dichte begroeiing. De tracking loopt door: ga naar open lucht en je positie wordt weer verzonden zodra de GPS je vindt.",
+    "blockedBodyLocationOffMidRace": "Locatie staat uit op deze telefoon, dus je positie wordt niet verzonden. Zet Locatie weer aan — de tracking gaat vanzelf verder, je hoeft niet te stoppen of opnieuw te starten.",
     "blockedBody": "Livio heeft locatietoegang \"Altijd\" nodig om je wedstrijd op te nemen terwijl je telefoon in je zak zit. Met \"Tijdens gebruik van de app\" stopt de registratie zodra het scherm uitgaat.",
     "blockedBodyDenied": "Livio heeft toegang tot je locatie nodig om je wedstrijd op te nemen. Locatietoegang staat nu uit voor deze app.",
     "openSettings": "Instellingen openen",

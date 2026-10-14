@@ -173,6 +173,12 @@ const relOverrides = {
   },
   [rel('services/api')]: { apiClient: {
     post: async (url, body) => {
+      // Per-call script for the follow sync endpoint: [{ delay, fail }, …]
+      if (url.endsWith('/update_follower_favourites_api.php') && M.api.syncScript && M.api.syncScript.length) {
+        const step = M.api.syncScript.shift();
+        if (step.delay) await new Promise((r) => setTimeout(r, step.delay));
+        if (step.fail) { const e = new Error('Network Error'); e.type = 'network'; throw e; }
+      }
       if (M.api.fail) { const e = new Error('Network Error'); e.type = 'network'; throw e; }
       if (M.api.failWith) { M.api.posted.push({ url, body, rejected: true }); throw Object.assign(new Error(M.api.failWith.code), M.api.failWith); }
       M.api.posted.push({ url, body });
