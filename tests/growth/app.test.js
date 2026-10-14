@@ -34,14 +34,22 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
       assert.strictEqual(ShareTrackingLink({ ...base, ...over }), null, 'hidden for ' + JSON.stringify(over));
     }
   });
-  test('tap → share sheet gets message + URL, logs "shared"', async () => {
+  test('tap (iPhone) → share sheet gets the message with the link ONCE, logs "shared"', async () => {
     const { ShareTrackingLink } = load('components/Home/ShareTrackingLink');
     const el = ShareTrackingLink({ productAppId: 9, povId: 3, bib: '21', raceName: 'Ghent 10K' });
     await findPressable(el).props.onPress();
     assert.strictEqual(M.shares.length, 1);
-    assert.ok(M.shares[0].url.includes('product_app_id=9') && M.shares[0].url.includes('bib=21'));
-    assert.ok(M.shares[0].message.startsWith('readiness:share.message') && M.shares[0].message.includes('Ghent 10K'));
+    assert.strictEqual(M.shares[0].url, undefined, 'no separate url on iOS (it would be appended twice)');
+    const m = M.shares[0].message;
+    assert.ok(m.startsWith('readiness:share.message') && m.includes('Ghent 10K'));
+    assert.ok(m.includes('product_app_id=9') && m.includes('bib=21'), 'link inside the message');
     assert.deepStrictEqual(M.analytics.find((a) => a[0] === 'logShareLiveLink'), ['logShareLiveLink', 'shared']);
+  });
+  test('tap (Android) → message + url (Android ignores url, harmless)', async () => {
+    M.os = 'android';
+    const { ShareTrackingLink } = load('components/Home/ShareTrackingLink');
+    await findPressable(ShareTrackingLink({ productAppId: 9, povId: 3, bib: '21', raceName: 'R' })).props.onPress();
+    assert.ok(M.shares[0].url.includes('bib=21') && M.shares[0].message.includes('bib=21'));
   });
   test('tap → dismissed sheet logs "dismissed"; no race name uses short copy', async () => {
     M.shareAction = 'dismissedAction';
@@ -480,6 +488,7 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   require('./audit.cases')({ M, load, test, SRC });
   require('./audit2.cases')({ M, load, test, SRC });
   require('./audit3.cases')({ M, load, test, SRC });
+  require('./audit4.cases')({ M, load, test, SRC });
 
   results.push(await run('growth — app'));
   const pass = results.reduce((a, r) => a + r.pass, 0), fail = results.reduce((a, r) => a + r.fail, 0);

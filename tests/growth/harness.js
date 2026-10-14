@@ -42,6 +42,8 @@ function freshState() {
     nav: { ready: true, route: 'HomeScreen', navigations: [] },
     tracking: false,
     loggedIn: true,        // getHeaders() sends a login token
+    authToken: 'x',        // which login (changes on re-login / another account)
+    deviceId: 'dev-1',     // getDeviceId() (changes after a backup restore)
     analytics: [],
     appStateListeners: [],
     shares: [], shareAction: 'sharedAction',
@@ -163,15 +165,16 @@ const rel = (p) => path.resolve(SRC, p);
 const relOverrides = {
   [rel('constants/config')]: {
     API_CONFIG: { DEBUG: false, TIMEOUT: 10000,
-      getHeaders: async () => (M.loggedIn ? { Authorization: 'Bearer x' } : { 'Content-Type': 'application/json' }),
+      getHeaders: async () => (M.loggedIn ? { Authorization: 'Bearer ' + M.authToken } : { 'Content-Type': 'application/json' }),
       ENDPOINTS: { SYNC_FOLLOW_DATA: '/update_follower_favourites_api.php', UPDATE_DEVICE_READINESS: '/update_device_readiness_api.php' } },
     APP_CONFIG: { VERSION: '1.1.0', WEB_BASE_URL: 'https://my.liviolive.com/livio_website' },
     getApiEndpoint: (x) => 'https://api.test' + x,
-    getDeviceId: async () => 'dev-1',
+    getDeviceId: async () => M.deviceId,
   },
   [rel('services/api')]: { apiClient: {
     post: async (url, body) => {
       if (M.api.fail) { const e = new Error('Network Error'); e.type = 'network'; throw e; }
+      if (M.api.failWith) { M.api.posted.push({ url, body, rejected: true }); throw Object.assign(new Error(M.api.failWith.code), M.api.failWith); }
       M.api.posted.push({ url, body });
       return { success: true };
     },

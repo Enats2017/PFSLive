@@ -76,6 +76,13 @@ const LAST_REPORTED_KEY = '@PFSLive:readinessReported';
 // read-then-write signature check alone would let both POST.
 let reportInFlight: string | null = null;
 
+/** Short, non-reversible fingerprint of the login header (djb2). */
+function loginFingerprint(authorization: string): string {
+  let h = 5381;
+  for (let i = 0; i < authorization.length; i++) h = ((h << 5) + h + authorization.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
 export const readinessService = {
   async getState(): Promise<ReadinessState> {
     const [perm, servicesOn, notif, batteryExempt, powerSaving] = await Promise.all([
@@ -137,38 +144,53 @@ export const readinessService = {
    * fails silently and is retried on the next change.
    */
   async reportToServer(state: ReadinessState): Promise<void> {
-    const signature = `${state.location}|${state.notifications}|${state.trackingReady ? 1 : 0}`;
+    const stateSig = `${state.location}|${state.notifications}|${state.trackingReady ? 1 : 0}`;
     // Claimed synchronously, before any await — a second caller in the same
     // tick sees it. Only the claimer releases it (finally, below).
-    if (reportInFlight === signature) return;
-    reportInFlight = signature;
+    if (reportInFlight === stateSig) return;
+    reportInFlight = stateSig;
     try {
-      const previous = await AsyncStorage.getItem(LAST_REPORTED_KEY);
-      if (previous === signature) return;
-
       const headers = await API_CONFIG.getHeaders();
       // Runners only: the endpoint requires the runner's login token and only
       // accepts that account's own device (readiness feeds the runner's T-48h
       // reminder). Logged out = fan → nothing to report; nothing is stored
       // either, so it reports as soon as they log in.
       if (!headers.Authorization) return;
-      await apiClient.post(
-        getApiEndpoint(API_CONFIG.ENDPOINTS.UPDATE_DEVICE_READINESS),
-        {
-          device_id: await getDeviceId(),
-          location_permission: state.location,
-          notifications_enabled: state.notifications === 'granted' ? 1 : 0,
-          tracking_ready: state.trackingReady ? 1 : 0,
-          platform: Platform.OS,
-          app_version: APP_CONFIG.VERSION,
-        },
-        { headers, timeout: API_CONFIG.TIMEOUT },
-      );
+
+      // What was last reported is per DEVICE + LOGIN + state: a backup
+      // restored onto a new phone (new device id) reports again, and so does
+      // a fresh login after the server rejected an expired one.
+      const deviceId = await getDeviceId();
+      const signature = `${deviceId}|${loginFingerprint(headers.Authorization)}|${stateSig}`;
+      const previous = await AsyncStorage.getItem(LAST_REPORTED_KEY);
+      if (previous === signature) return;
+
+      try {
+        await apiClient.post(
+          getApiEndpoint(API_CONFIG.ENDPOINTS.UPDATE_DEVICE_READINESS),
+          {
+            device_id: deviceId,
+            location_permission: state.location,
+            notifications_enabled: state.notifications === 'granted' ? 1 : 0,
+            tracking_ready: state.trackingReady ? 1 : 0,
+            platform: Platform.OS,
+            app_version: APP_CONFIG.VERSION,
+          },
+          { headers, timeout: API_CONFIG.TIMEOUT },
+        );
+      } catch (error: any) {
+        // Offline / server down → temporary: retried on the next getState().
+        // Rejected (expired login, device not this account's, bad request) →
+        // the same request would be rejected again on every refresh; remember
+        // it, it is retried once the login or the device changes.
+        const rejected = error?.type === 'empty' || error?.code === 'session_expired';
+        if (!rejected) return;
+      }
       await AsyncStorage.setItem(LAST_REPORTED_KEY, signature);
     } catch {
       // Silent — retried on the next state change / next getState().
     } finally {
-      if (reportInFlight === signature) reportInFlight = null;
+      if (reportInFlight === stateSig) reportInFlight = null;
     }
   },
 };

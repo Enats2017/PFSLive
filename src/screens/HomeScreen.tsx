@@ -1592,7 +1592,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             (await gpsService.isLocationServiceEnabled());
 
           if (satisfied) {
-            void analyticsService.logStartStep('permission_result', 'granted_on_return');
+            void analyticsService.logStartStep('permission_result', 'granted_on_return', eventId);
             // Clear FIRST — the inline-grant path can resolve for the same
             // grant, and whichever runs second must find nothing pending.
             pendingStartRef.current = false;
@@ -1604,7 +1604,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // Came back without granting. The button already dismissed the modal,
           // so without this the runner faces a bare screen and no explanation
           // of why tracking still is not running. Put it back and stay armed.
-          void analyticsService.logStartStep('permission_result', 'still_blocked_on_return');
+          void analyticsService.logStartStep('permission_result', 'still_blocked_on_return', eventId);
           setShowLocationPermissionModal(true);
         } catch { /* silent — a later foreground retries */ }
       })();
@@ -2528,8 +2528,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
           ) : (
             <>
-              {/* No upcoming race — most users, most of the time. */}
-              {homeData && <IdleHome />}
+              {/* No upcoming race: IdleHome is rendered BELOW the existing
+                  "following live" section further down, so that entry point
+                  keeps its place under the hero. */}
               {/*homeData?.following_live_events && homeData.following_live_events.length > 0 && (
                 <FollowingLiveEventsSection
                   events={homeData.following_live_events}
@@ -2577,6 +2578,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               }}
             />
           )}
+
+          {/* No upcoming race — most users, most of the time. After the live
+              section on purpose (it was right under the hero before). */}
+          {homeData && homeData.show_start_track !== 1 && <IdleHome />}
         </View>
         {/* Bottom Buttons */}
         <View style={homeStyles.buttonContainer}>

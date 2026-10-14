@@ -76,7 +76,25 @@ function toValidBib(bib: any): string | null {
   return str.length > 0 ? str : null;
 }
 
-async function loadCache(): Promise<Set<number>> {
+// ✅ One read at a time: two follows right after launch (cold cache) each
+// read storage and built their OWN set — the second save then overwrote the
+// first and one follow was lost. Concurrent callers now share one load.
+let cacheLoading: Promise<Set<number>> | null = null;
+let bibCacheLoading: Promise<Map<number, Set<string>>> | null = null;
+
+function loadCache(): Promise<Set<number>> {
+  if (cache) return Promise.resolve(cache);
+  if (!cacheLoading) cacheLoading = readCacheFromStorage().finally(() => { cacheLoading = null; });
+  return cacheLoading;
+}
+
+function loadBibCache(): Promise<Map<number, Set<string>>> {
+  if (bibCache) return Promise.resolve(bibCache);
+  if (!bibCacheLoading) bibCacheLoading = readBibCacheFromStorage().finally(() => { bibCacheLoading = null; });
+  return bibCacheLoading;
+}
+
+async function readCacheFromStorage(): Promise<Set<number>> {
   if (cache) return cache;
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -94,7 +112,7 @@ async function loadCache(): Promise<Set<number>> {
   return cache;
 }
 
-async function loadBibCache(): Promise<Map<number, Set<string>>> {
+async function readBibCacheFromStorage(): Promise<Map<number, Set<string>>> {
   if (bibCache) return bibCache;
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY_BIBS);
@@ -564,7 +582,17 @@ type ServerFollowData = {
   followed_bibs?: Record<string, string[]>;
 };
 
-export async function adoptServerFollowData(prefetched?: ServerFollowData): Promise<void> {
+// One merge at a time: two quick follows with the merge owed would otherwise
+// both download + push, and the second could re-add an unfollow made between.
+let adoptInFlight: Promise<void> | null = null;
+
+export function adoptServerFollowData(prefetched?: ServerFollowData): Promise<void> {
+  if (adoptInFlight) return adoptInFlight;
+  adoptInFlight = runAdopt(prefetched).finally(() => { adoptInFlight = null; });
+  return adoptInFlight;
+}
+
+async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
   try {
     let server: ServerFollowData = prefetched ?? {};
     if (!prefetched) {

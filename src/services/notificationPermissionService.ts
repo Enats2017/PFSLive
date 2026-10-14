@@ -121,7 +121,7 @@ async function sendTokenToBackend(token: string): Promise<boolean> {
     // follows — e.g. a 1.0.9 user who refused notifications) still owes the
     // merge with the server row. Literal key on purpose: followStorage owns
     // it, and importing it here would create a cycle.
-    const hadId = Number(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) > 0;
+    const previousId = await AsyncStorage.getItem(FOLLOWER_ID_KEY);
 
     const result = await followerApi.registerFollower(token);
 
@@ -132,7 +132,11 @@ async function sendTokenToBackend(token: string): Promise<boolean> {
       });
     }
 
-    if (!hadId) await AsyncStorage.setItem("@PFSLive:followAdoptPending", "1");
+    // First id, or a DIFFERENT one (e.g. a backup restored onto a new phone):
+    // the phone's follows were never merged with this server row.
+    if (!(Number(previousId) > 0) || String(previousId) !== String(result.follower_id)) {
+      await AsyncStorage.setItem("@PFSLive:followAdoptPending", "1");
+    }
     await Promise.all([
       AsyncStorage.setItem(EXPO_TOKEN_STORAGE_KEY, token),
       AsyncStorage.setItem(FOLLOWER_ID_KEY, String(result.follower_id)),
@@ -158,11 +162,13 @@ function fetchAndRegisterToken(): Promise<string | null> {
   if (fetchInFlight) return fetchInFlight;
   fetchInFlight = (async () => {
     try {
+      let timer: ReturnType<typeof setTimeout> | undefined;
       const tokenData: { data: string } = await Promise.race([
         Notifications.getExpoPushTokenAsync({ projectId: EXPO_PROJECT_ID }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("push token fetch timed out")), TOKEN_FETCH_TIMEOUT_MS)),
-      ]);
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("push token fetch timed out")), TOKEN_FETCH_TIMEOUT_MS);
+        }),
+      ]).finally(() => clearTimeout(timer));
       const token: string = tokenData.data;
       if (API_CONFIG.DEBUG) console.log(`✅ ${Platform.OS} Expo push token obtained:`, token);
       // Only remember the token once the server has it — otherwise

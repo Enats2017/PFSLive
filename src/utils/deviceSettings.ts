@@ -12,7 +12,7 @@ export const ANDROID_PACKAGE = 'eu.passionforsports.livio';
 /**
  * Open system dialog to exempt app from battery optimization.
  * HomeScreen provides the visual background behind the system dialog.
- * Called once on first install â€” permanent, zero cost on non-event days.
+ * Called once on first install — permanent, zero cost on non-event days.
  */
 export const requestBatteryOptimizationExemption = async (): Promise<void> => {
   if (Platform.OS !== 'android') return;
@@ -22,7 +22,7 @@ export const requestBatteryOptimizationExemption = async (): Promise<void> => {
       { data: `package:${ANDROID_PACKAGE}` }
     );
   } catch {
-    // Fallback â€” open battery optimization list directly
+    // Fallback — open battery optimization list directly
     await IntentLauncher.startActivityAsync(
       'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS'
     );
@@ -33,7 +33,7 @@ export type PermissionBlockReason = 'denied' | 'no_background_perm' | 'location_
 
 /**
  * Take the runner to the page that fixes THEIR problem, and actually land on
- * it â€” not on App info with a list of instructions to follow.
+ * it — not on App info with a list of instructions to follow.
  *
  * Android publishes an intent for the device Location toggle, so 'location_off'
  * is exact. The per-app permission page has no public intent, so:
@@ -43,8 +43,8 @@ export type PermissionBlockReason = 'denied' | 'no_background_perm' | 'location_
  * DELIBERATELY NOT USED: MANAGE_APP_PERMISSION (singular), which targets the
  * Location page itself. It requires Intent.EXTRA_USER, a Parcelable UserHandle,
  * and expo-intent-launcher can only carry plain JS values in `extra`. Without it
- * the activity still RESOLVES â€” so no exception is thrown and the ladder never
- * falls through â€” then finishes immediately. The runner sees a flash and lands
+ * the activity still RESOLVES — so no exception is thrown and the ladder never
+ * falls through — then finishes immediately. The runner sees a flash and lands
  * nowhere, which is worse than App info. It cannot be fixed from JS; reaching
  * that page needs a native module.
  *
@@ -71,7 +71,7 @@ export const openLocationSettingsFor = async (reason: PermissionBlockReason): Pr
       );
       return;
     } catch {
-      // OEM without the activity â€” fall through to App info.
+      // OEM without the activity — fall through to App info.
     }
   } else {
     try {

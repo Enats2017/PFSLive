@@ -4,8 +4,8 @@
 // the OS dialog only if they say yes. Mounted once in AppNavigator; driven by
 // useFollowPromptStore. Button copy avoids "Allow" (Apple 5.1.1).
 
-import React, { useCallback } from 'react';
-import { Modal, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Modal, Platform, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,11 +15,25 @@ import { useFollowPromptStore, markFollowPromptDismissed } from '../store/useFol
 import { notificationPermissionService } from '../services/notificationPermissionService';
 import { analyticsService } from '../services/analyticsService';
 
+/** iOS: wait for a closing modal (password modal ~300 ms animation) first. */
+export const FOLLOW_SHEET_IOS_DELAY_MS = 600;
+
 export const FollowNotificationPrompt: React.FC = () => {
   const { t } = useTranslation(['readiness']);
   const insets = useSafeAreaInsets();
   const visible = useFollowPromptStore((st) => st.visible);
   const hide = useFollowPromptStore((st) => st.hide);
+
+  // iOS presents one modal at a time from the root: when the follow came from
+  // another modal (e.g. the tracking-password modal, which closes right after
+  // the follow), presenting now is refused by UIKit and the sheet never shows
+  // — with the store stuck on visible. Present after that modal has gone.
+  const [presented, setPresented] = useState(false);
+  useEffect(() => {
+    if (!visible) { setPresented(false); return; }
+    const timer = setTimeout(() => setPresented(true), Platform.OS === 'ios' ? FOLLOW_SHEET_IOS_DELAY_MS : 0);
+    return () => clearTimeout(timer);
+  }, [visible]);
 
   const onDismiss = useCallback(() => {
     void analyticsService.logNotificationAsk('follow', 'dismissed');
@@ -32,10 +46,13 @@ export const FollowNotificationPrompt: React.FC = () => {
     hide();
     const res = await notificationPermissionService.request();
     void analyticsService.logNotificationAsk('follow', res.status === 'granted' ? 'granted' : 'denied');
+    // Said no to the OS prompt: pause like "Not now" — on Android 13+ the OS
+    // still allows asking once more, and the next follow must not spend it.
+    if (res.status !== 'granted') void markFollowPromptDismissed();
   }, [hide]);
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onDismiss} statusBarTranslucent>
+    <Modal visible={presented} transparent animationType="slide" onRequestClose={onDismiss} statusBarTranslucent>
       <Pressable style={s.sheetBackdrop} onPress={onDismiss}>
         <Pressable style={[s.sheet, { paddingBottom: space.xl + insets.bottom }]} onPress={() => { /* swallow */ }}>
           <View style={s.stepIconPlate}>

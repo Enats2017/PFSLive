@@ -13,7 +13,7 @@
 // are skipped for the same reason.
 
 import React, { useCallback } from 'react';
-import { Share, Text, TouchableOpacity } from 'react-native';
+import { Platform, Share, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { palette } from '../../styles/common.styles';
@@ -52,7 +52,9 @@ export const ShareTrackingLink: React.FC<Props> = ({ productAppId, povId, bib, r
       ? t('readiness:share.message', { race: raceName, url })
       : t('readiness:share.messageNoRace', { url });
     try {
-      const res = await Share.share({ message, url });
+      // The URL is already in `message`; iOS would append `url` again (the
+      // link showed twice in Messages/WhatsApp). Android ignores `url`.
+      const res = await Share.share(Platform.OS === 'ios' ? { message } : { message, url });
       void analyticsService.logShareLiveLink(res.action === Share.sharedAction ? 'shared' : 'dismissed');
     } catch {
       void analyticsService.logShareLiveLink('error');
