@@ -221,6 +221,7 @@ const DistanceTab = ({
           raceKey: product_app_id,
           raceName: event_name,
           source: 'connect',
+          onlyFromRoute: 'EventDetails',
         });
       }, 400);
     }
@@ -278,13 +279,20 @@ const DistanceTab = ({
   // ✅ PRESELECT (deep link) — scroll to the distance once, never register.
   const listRef = useRef<FlatList<Distance>>(null);
   const preselectDoneRef = useRef(false);
+  const distancesRef = useRef<Distance[]>(distances);
+  distancesRef.current = distances;
   useEffect(() => {
     if (!preselect_pov_id || preselectDoneRef.current || loading || distances.length === 0) return;
     const index = distances.findIndex((d) => d.product_option_value_app_id === preselect_pov_id);
     preselectDoneRef.current = true;
     if (index < 0) return;
     setTimeout(() => {
-      listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.2 });
+      // Re-check: a focus refetch may have changed the list in the 300 ms.
+      const now = distancesRef.current.findIndex((d) => d.product_option_value_app_id === preselect_pov_id);
+      if (now < 0) return;
+      try {
+        listRef.current?.scrollToIndex({ index: now, animated: true, viewPosition: 0.2 });
+      } catch { /* out of range — the highlight alone is enough */ }
     }, 300);
   }, [preselect_pov_id, distances, loading]);
 

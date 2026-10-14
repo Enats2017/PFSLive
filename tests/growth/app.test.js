@@ -136,7 +136,8 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
     M.os = 'android'; M.gps.background = false; M.gps.level = 'when_in_use';
     M.gps.servicesOn = false; M.battery.exempt = false; M.battery.lowPower = true;
     const s = await load('services/readinessService').readinessService.getState();
-    assert.deepStrictEqual(s.missing, ['notifications', 'background', 'locationServices', 'battery', 'powerSaving']);
+    // phone-wide location switch first (iOS: app permission unusable while it is off)
+    assert.deepStrictEqual(s.missing, ['locationServices', 'notifications', 'background', 'battery', 'powerSaving']);
   });
   test('report to server: correct payload, sent once per change', async () => {
     const { readinessService } = load('services/readinessService');
@@ -297,7 +298,7 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
     const np = NP();
     M.notif.status = 'granted';
     M.appStateListeners.forEach((cb) => cb('active'));
-    await flush(); await flush();
+    await new Promise((r) => setTimeout(r, 30));
     assert.strictEqual(np.getCurrentToken(), 'ExponentPushToken[abc]');
   });
   test('ask: OS still allows → prompt once, grant → registered', async () => {
@@ -472,6 +473,9 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
       assert.ok(fs.existsSync(api + f), f);
     }
   });
+
+  // Cases added by the 2026-10-14 code audit (one per finding + gaps).
+  require('./audit.cases')({ M, load, test, SRC });
 
   results.push(await run('growth — app'));
   const pass = results.reduce((a, r) => a + r.pass, 0), fail = results.reduce((a, r) => a + r.fail, 0);

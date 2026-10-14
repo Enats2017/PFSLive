@@ -28,6 +28,8 @@ function freshState() {
     // followerApi (registerFollowerServices)
     fapi: { guestCalls: 0, guestResult: { follower_id: 501 }, guestFail: false, guestDelay: 0,
             byDevice: null /* null → throws follower_not_found */, byDeviceCalls: 0,
+            byDeviceTransient: false /* true → network error (not a 'no row' answer) */,
+            byDeviceDelay: 0, registerFail: false,
             registerCalls: [], registerResult: { follower_id: 501 } },
     // apiClient.post
     api: { posted: [], fail: false },
@@ -35,6 +37,7 @@ function freshState() {
     gps: { foreground: true, background: true, level: 'always', canAskAgain: true, servicesOn: true },
     battery: { exempt: true, exemptThrows: false, lowPower: false },
     nav: { ready: true, route: 'HomeScreen', navigations: [] },
+    tracking: false,
     analytics: [],
     appStateListeners: [],
     shares: [], shareAction: 'sharedAction',
@@ -118,11 +121,16 @@ const overrides = {
     getPermissionsAsync: async () => ({ status: M.notif.status, canAskAgain: M.notif.canAskAgain }),
     requestPermissionsAsync: async () => {
       M.notif.requests++;
+      if (M.notif.onRequest) M.notif.onRequest();
       M.notif.status = M.notif.requestResult.status;
       M.notif.canAskAgain = M.notif.requestResult.canAskAgain;
       return { ...M.notif.requestResult };
     },
-    getExpoPushTokenAsync: async () => { M.notif.tokenFetches++; return { data: M.notif.token }; },
+    getExpoPushTokenAsync: async () => {
+      M.notif.tokenFetches++;
+      await new Promise((r) => setTimeout(r, 5)); // a real fetch takes time — lets overlaps show
+      return { data: M.notif.token };
+    },
   }, { get(tg, p) { return p in tg ? tg[p] : anyStub('Notifications.' + String(p)); } }),
   'expo-device': { get isDevice() { return M.notif.isDevice; } },
   'expo-battery': {
@@ -168,10 +176,16 @@ const relOverrides = {
     },
     getFollowerDataByDevice: async () => {
       M.fapi.byDeviceCalls++;
+      if (M.fapi.byDeviceDelay) await new Promise((r) => setTimeout(r, M.fapi.byDeviceDelay));
+      if (M.fapi.byDeviceTransient) throw Object.assign(new Error('Network Error'), { type: 'network', code: 'network_error' });
       if (!M.fapi.byDevice) throw Object.assign(new Error('follower_not_found'), { type: 'empty', code: 'follower_not_found' });
       return JSON.parse(JSON.stringify(M.fapi.byDevice));
     },
-    registerFollower: async (token) => { M.fapi.registerCalls.push(token); return { ...M.fapi.registerResult }; },
+    registerFollower: async (token) => {
+      M.fapi.registerCalls.push(token);
+      if (M.fapi.registerFail) throw Object.assign(new Error('Network Error'), { type: 'network' });
+      return { ...M.fapi.registerResult };
+    },
   } },
   [rel('services/analyticsService')]: { analyticsService: new Proxy({}, {
     get: (tg, p) => (...args) => { M.analytics.push([String(p), ...args]); return Promise.resolve(); },
@@ -185,7 +199,8 @@ const relOverrides = {
     getPermissionState: async () => ({ foreground: M.gps.foreground, background: M.gps.background,
       level: M.gps.level, canAskAgain: M.gps.canAskAgain }),
     isLocationServiceEnabled: async () => M.gps.servicesOn,
-  } },
+  },
+  isTracking: async () => M.tracking },
   [rel('i18n')]: { __esModule: true, default: { t, language: 'en' } },
 };
 

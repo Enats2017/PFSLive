@@ -23,7 +23,7 @@ import { commonStyles, palette } from '../styles/common.styles';
 import { readinessStyles as s } from '../styles/readiness.styles';
 import { RootStackParamList } from '../types/navigation';
 import { readinessService, ReadinessItem, ReadinessState } from '../services/readinessService';
-import { RACE_READY_ITEMS } from '../services/raceReadyService';
+import { RACE_READY_ITEMS, stepProgress } from '../services/raceReadyService';
 import { notificationPermissionService } from '../services/notificationPermissionService';
 import { gpsService } from '../services/gpsService';
 import { analyticsService } from '../services/analyticsService';
@@ -50,15 +50,15 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
   const [state, setState] = useState<ReadinessState | null>(null);
   const [skipped, setSkipped] = useState<Set<ReadinessItem>>(new Set());
   const [busy, setBusy] = useState(false);
-  const initialTotal = useRef<number | null>(null);
+  const seenSteps = useRef<Set<string>>(new Set());
+  // Android 11+: the background request went to Settings because the OS
+  // showed nothing. Next press goes straight back there, labelled as such.
+  const backgroundSentToSettings = useRef(false);
   const finishedLogged = useRef(false);
 
   const refresh = useCallback(async () => {
     const next = await readinessService.getState();
     setState(next);
-    if (initialTotal.current === null) {
-      initialTotal.current = next.missing.filter((m) => RACE_READY_ITEMS.includes(m)).length;
-    }
   }, []);
 
   useEffect(() => {
@@ -76,8 +76,8 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
     [state, skipped],
   );
   const current = (remaining[0] ?? null) as StepName | null;
-  const total = Math.max(initialTotal.current ?? 0, 1);
-  const stepIndex = Math.min(total - remaining.length + 1, total);
+  if (current) seenSteps.current.add(current);
+  const { index: stepIndex, total } = stepProgress(seenSteps.current, remaining);
 
   const skip = useCallback((item: ReadinessItem) => {
     setSkipped((prev) => new Set(prev).add(item));
@@ -121,12 +121,18 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
         case 'background': {
           // Same request + same <700ms "the OS showed nothing" test as the
           // start-time modal in HomeScreen.
+          if (backgroundSentToSettings.current) {
+            void analyticsService.logRaceReadyStep('background', 'settings', source);
+            await openLocationSettingsFor('no_background_perm');
+            break;
+          }
           const t0 = Date.now();
           const perms = await gpsService.requestPermissionsDetailed();
           if (perms.background) {
             void analyticsService.logRaceReadyStep('background', 'granted', source);
           } else if (Date.now() - t0 < 700) {
             void analyticsService.logRaceReadyStep('background', 'settings', source);
+            backgroundSentToSettings.current = true;
             await openLocationSettingsFor('no_background_perm');
           } else {
             void analyticsService.logRaceReadyStep('background', 'denied', source);
@@ -168,6 +174,7 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
   const needsSettings =
     (current === 'notifications' && state?.notifications !== 'granted' && state?.notificationsCanAskAgain === false) ||
     (current === 'location' && state?.locationCanAskAgain === false) ||
+    (current === 'background' && backgroundSentToSettings.current) ||
     current === 'locationServices';
 
   return (

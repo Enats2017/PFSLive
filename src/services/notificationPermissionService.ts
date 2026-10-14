@@ -104,14 +104,14 @@ async function setupiOSNotificationCategories(): Promise<void> {
   }
 }
 
-// ✅ Send token to backend
-async function sendTokenToBackend(token: string): Promise<void> {
+// ✅ Send token to backend. true = the server has this token for this device.
+async function sendTokenToBackend(token: string): Promise<boolean> {
   try {
     const savedToken = await AsyncStorage.getItem(EXPO_TOKEN_STORAGE_KEY);
 
     if (savedToken === token) {
       if (API_CONFIG.DEBUG) console.log("ℹ️ Expo token unchanged — skipping backend registration");
-      return;
+      return true;
     }
 
     // UPSERT on device_id server-side: a device that was registered as a
@@ -132,23 +132,39 @@ async function sendTokenToBackend(token: string): Promise<void> {
     ]);
 
     if (API_CONFIG.DEBUG) console.log("💾 Token and follower_id saved to storage");
+    return true;
   } catch (error) {
     if (API_CONFIG.DEBUG) console.error("❌ Failed to register token with backend:", error);
+    return false;
   }
 }
 
-async function fetchAndRegisterToken(): Promise<string | null> {
-  try {
-    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId: EXPO_PROJECT_ID });
-    const token: string = tokenData.data;
-    if (API_CONFIG.DEBUG) console.log(`✅ ${Platform.OS} Expo push token obtained:`, token);
-    await sendTokenToBackend(token);
-    emitToken(token);
-    return token;
-  } catch (error) {
-    if (API_CONFIG.DEBUG) console.error(`❌ Failed to get push token on ${Platform.OS}:`, error);
-    return null;
-  }
+// One fetch at a time: the OS permission dialog pauses the app, so the
+// AppState "active" listener fires registerIfGranted() while request() is
+// still registering — without this, two token fetches and two POSTs.
+let fetchInFlight: Promise<string | null> | null = null;
+
+function fetchAndRegisterToken(): Promise<string | null> {
+  if (fetchInFlight) return fetchInFlight;
+  fetchInFlight = (async () => {
+    try {
+      const tokenData = await Notifications.getExpoPushTokenAsync({ projectId: EXPO_PROJECT_ID });
+      const token: string = tokenData.data;
+      if (API_CONFIG.DEBUG) console.log(`✅ ${Platform.OS} Expo push token obtained:`, token);
+      // Only remember the token once the server has it — otherwise
+      // registerIfGranted()'s "already registered" shortcut would stop the
+      // next foreground from retrying a failed registration.
+      if (!(await sendTokenToBackend(token))) return null;
+      emitToken(token);
+      return token;
+    } catch (error) {
+      if (API_CONFIG.DEBUG) console.error(`❌ Failed to get push token on ${Platform.OS}:`, error);
+      return null;
+    } finally {
+      fetchInFlight = null;
+    }
+  })();
+  return fetchInFlight;
 }
 
 let setupDone = false;

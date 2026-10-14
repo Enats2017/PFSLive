@@ -43,7 +43,7 @@ import { useAuth } from '../context/AuthContext';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { useNotifications, NotificationData } from '../hooks/useNotifications';
 import { followerApi } from '../services/registerFollowerServices';
-import { syncFollowDataFromAPI, restoreFollowsWithoutToken } from '../utils/followStorage';
+import { syncFollowDataFromAPI, restoreFollowsWithoutToken, getFollowWriteSeq } from '../utils/followStorage';
 import { PreRaceCountdown, computeRaceStartMs } from '../components/Home/PreRaceCountdown';
 import { ReadinessCard } from '../components/Home/ReadinessCard';
 import { ShareTrackingLink } from '../components/Home/ShareTrackingLink';
@@ -118,6 +118,8 @@ interface HomeData {
   // until the server change ships; the share button hides itself until then.
   next_race_bib_number?: string | null;
   next_race_product_option_value_app_id?: number | string | null;
+  /** 'partner' | 'custom' — home_api has always sent it; typed for the race-ready key. */
+  event_source?: string;
 }
 
 // ==================== CONSTANTS ====================
@@ -377,12 +379,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const syncFromServer = async () => {
       try {
         if (expoPushToken) {
-          const data = await followerApi.getFollowerData(expoPushToken);
-          await syncFollowDataFromAPI(
-            data.followed_customers ?? [],
-            data.followed_bibs ?? {},
-          );
-          return;
+          const seq = getFollowWriteSeq();
+          try {
+            const data = await followerApi.getFollowerData(expoPushToken);
+            await syncFollowDataFromAPI(
+              data.followed_customers ?? [],
+              data.followed_bibs ?? {},
+              seq,
+            );
+            return;
+          } catch {
+            // Token not known server-side (registration failed / reinstall):
+            // fall back to the device_id restore below.
+          }
         }
 
         // No push token (notifications off or not yet asked). Restore used to
@@ -417,6 +426,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   //    the point is never to ask at the start line.
   //  - start_step 'screen_ready': Start was visible for this race (once a day)
   //    — the denominator that separates "never pressed" from "pressed and blocked".
+  // Boolean, not the hours value: next_race_in_hours changes every ~36 s
+  // (2-decimal rounding), which would re-run this effect on every refetch.
+  const raceMoreThan3hAway = (homeData?.next_race_in_hours ?? 0) > 3;
   useEffect(() => {
     if (homeData?.show_start_track !== 1 || !eventId || isGPSActive) return;
 
@@ -431,15 +443,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       } catch { /* analytics only */ }
     })();
 
-    if ((homeData?.next_race_in_hours ?? 0) > 3 && navigation.isFocused()) {
+    if (raceMoreThan3hAway && navigation.isFocused()) {
       void raceReadyService.maybeOpen({
-        raceKey: eventId,
+        // Custom-event ids come from another table — prefix so they can't
+        // collide with a partner event id (matches CreatePersonalEvent).
+        raceKey: homeData?.event_source === 'custom' ? `custom_${eventId}` : eventId,
         raceName: homeData?.next_race_name,
         source: 'home',
         onlyFromRoute: 'HomeScreen',
       });
     }
-  }, [homeData?.show_start_track, eventId, isGPSActive, homeData?.next_race_in_hours, homeData?.next_race_name, navigation]);
+  }, [homeData?.show_start_track, eventId, isGPSActive, raceMoreThan3hAway, homeData?.next_race_name, homeData?.event_source, navigation]);
 
   // ==================== UTILITIES ====================
 

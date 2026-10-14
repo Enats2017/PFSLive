@@ -72,6 +72,10 @@ async function readPowerSaving(): Promise<boolean> {
 
 const LAST_REPORTED_KEY = '@PFSLive:readinessReported';
 
+// The card and Get race-ready can call getState() at the same moment; the
+// read-then-write signature check alone would let both POST.
+let reportInFlight: string | null = null;
+
 export const readinessService = {
   async getState(): Promise<ReadinessState> {
     const [perm, servicesOn, notif, batteryExempt, powerSaving] = await Promise.all([
@@ -83,10 +87,13 @@ export const readinessService = {
     ]);
 
     const missing: ReadinessItem[] = [];
+    // Phone-wide location switch FIRST: with it off, iOS reports the app's
+    // permission as unusable, and sending the runner to Livio's own settings
+    // page (the location step) can't fix that — the switch has to come first.
+    if (!servicesOn) missing.push('locationServices');
     if (notif.status !== 'granted') missing.push('notifications');
     if (!perm.foreground) missing.push('location');
     else if (!perm.background) missing.push('background');
-    if (!servicesOn) missing.push('locationServices');
     if (batteryExempt === false) missing.push('battery');
     if (powerSaving) missing.push('powerSaving');
 
@@ -130,8 +137,12 @@ export const readinessService = {
    * fails silently and is retried on the next change.
    */
   async reportToServer(state: ReadinessState): Promise<void> {
+    const signature = `${state.location}|${state.notifications}|${state.trackingReady ? 1 : 0}`;
+    // Claimed synchronously, before any await — a second caller in the same
+    // tick sees it. Only the claimer releases it (finally, below).
+    if (reportInFlight === signature) return;
+    reportInFlight = signature;
     try {
-      const signature = `${state.location}|${state.notifications}|${state.trackingReady ? 1 : 0}`;
       const previous = await AsyncStorage.getItem(LAST_REPORTED_KEY);
       if (previous === signature) return;
 
@@ -151,6 +162,8 @@ export const readinessService = {
       await AsyncStorage.setItem(LAST_REPORTED_KEY, signature);
     } catch {
       // Silent — retried on the next state change / next getState().
+    } finally {
+      if (reportInFlight === signature) reportInFlight = null;
     }
   },
 };

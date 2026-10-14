@@ -245,7 +245,10 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
         toastSuccess(t('personal:success.title'), response.message || t('personal:success.message'));
         // Captured before resetForm() clears it — used by Get race-ready below.
         const createdName = formData.name.trim();
-        const createdKey = `custom_${response.event?.product_app_id ?? response.data?.product_app_id ?? createdName}`;
+        // Same key Home uses for this race: custom_<product_custom_app_id>
+        // (create_custom_event_api returns it as event.product_custom_app_id).
+        const createdId = Number(response.event?.product_custom_app_id) || 0;
+        const createdKey = createdId > 0 ? `custom_${createdId}` : null;
         resetForm();
         clearFile();
         await analyticsService.markAsParticipant('create_event'); 
@@ -258,7 +261,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
         // A custom event is a "just connected" moment too — open Get
         // race-ready on top of the profile if anything is missing.
         setTimeout(() => {
-          void raceReadyService.maybeOpen({ raceKey: createdKey, raceName: createdName, source: 'custom_event' });
+          void raceReadyService.maybeOpen({ raceKey: createdKey, raceName: createdName, source: 'custom_event', onlyFromRoute: 'OwnProfile' });
         }, 600);
       } else {
         throw new Error(response.message || 'API_ERROR');

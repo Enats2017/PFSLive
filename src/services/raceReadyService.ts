@@ -21,10 +21,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { readinessService, ReadinessItem } from './readinessService';
 import { navigationRef } from '../navigation/navigationRef';
 import { analyticsService } from './analyticsService';
+import { isTracking } from './gpsService';
 
 const SHOWN_KEY = '@PFSLive:raceReadyShown';
 // Keep the map small — races older than this can never trigger again anyway.
 const MAX_AGE_MS = 120 * 24 * 60 * 60 * 1000;
+
+// Keys with a maybeOpen() still running. Two triggers close together (Home
+// refetch + connect, focus + poll) must not push the screen twice.
+const inFlight = new Set<string>();
 
 /** Steps the flow can fix. Power saving is excluded: it's a race-morning toggle, not a setup step. */
 export const RACE_READY_ITEMS: ReadinessItem[] = [
@@ -34,6 +39,18 @@ export const RACE_READY_ITEMS: ReadinessItem[] = [
   'locationServices',
   'battery',
 ];
+
+/**
+ * "Step x of y" for the flow. Counted from the steps actually SEEN, not a
+ * snapshot at open: location and background are never missing together
+ * (background only appears once location is granted), so a fixed total
+ * showed "Step 2 of 2" twice. `seen` = every step that has been current.
+ */
+export function stepProgress(seen: ReadonlySet<string>, remaining: readonly string[]): { index: number; total: number } {
+  let done = 0;
+  seen.forEach((s) => { if (!remaining.includes(s)) done++; });
+  return { index: done + 1, total: Math.max(done + remaining.length, 1) };
+}
 
 export type RaceReadySource = 'connect' | 'email_confirm' | 'custom_event' | 'home' | 'card';
 
@@ -71,7 +88,8 @@ export const raceReadyService = {
 
   /**
    * Opens the flow if this race hasn't had it and something is missing.
-   * `raceKey` is the product_app_id (custom events: 'custom'). Safe to call
+   * `raceKey` is the product_app_id; custom events use `custom_<id>` (their
+   * ids come from another table and can collide). Safe to call
    * from anywhere — it waits for the navigator like App.tsx's GPX handler.
    */
   async maybeOpen(params: {
@@ -88,35 +106,53 @@ export const raceReadyService = {
   }): Promise<boolean> {
     try {
       const key = params.raceKey != null && params.raceKey !== '' ? String(params.raceKey) : null;
-      if (!key) return false;
-      if (await this.wasShown(key)) return false;
-
-      const pending = await this.pendingItems();
-      if (pending.length === 0) {
-        // Already ready — remember it, so a later revoke isn't popped up at
-        // them; the readiness card covers that case.
-        await this.markShown(key);
-        return false;
+      if (!key || inFlight.has(key)) return false;
+      inFlight.add(key);
+      try {
+        return await this.openIfNeeded(key, params);
+      } finally {
+        inFlight.delete(key);
       }
-
-      // Wait up to 5s for the navigator (deep-link cold starts).
-      for (let i = 0; i < 50 && !navigationRef.isReady(); i++) {
-        await new Promise((r) => setTimeout(r, 100));
-      }
-      if (!navigationRef.isReady()) return false;
-      if (params.onlyFromRoute && navigationRef.getCurrentRoute()?.name !== params.onlyFromRoute) {
-        return false;
-      }
-
-      await this.markShown(key);
-      void analyticsService.logRaceReadyStep('shown', undefined, params.source);
-      navigationRef.navigate('RaceReady', {
-        race_name: params.raceName ?? undefined,
-        source: params.source,
-      });
-      return true;
     } catch {
       return false;
     }
+  },
+
+  async openIfNeeded(key: string, params: {
+    raceName?: string | null;
+    source: RaceReadySource;
+    onlyFromRoute?: string;
+  }): Promise<boolean> {
+    if (await this.wasShown(key)) return false;
+    // Never over a running session (manual/early start, or Home remounting
+    // before it has restored isGPSActive).
+    if (await isTracking()) return false;
+
+    const pending = await this.pendingItems();
+    if (pending.length === 0) {
+      // Already ready — remember it, so a later revoke isn't popped up at
+      // them; the readiness card covers that case.
+      await this.markShown(key);
+      return false;
+    }
+
+    // Wait up to 5s for the navigator (deep-link cold starts).
+    for (let i = 0; i < 50 && !navigationRef.isReady(); i++) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    if (!navigationRef.isReady()) return false;
+    const routeNow = navigationRef.getCurrentRoute()?.name;
+    if (routeNow === 'RaceReady') return false;
+    if (params.onlyFromRoute && routeNow !== params.onlyFromRoute) {
+      return false;
+    }
+
+    await this.markShown(key);
+    void analyticsService.logRaceReadyStep('shown', undefined, params.source);
+    navigationRef.navigate('RaceReady', {
+      race_name: params.raceName ?? undefined,
+      source: params.source,
+    });
+    return true;
   },
 };
