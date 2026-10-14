@@ -24,13 +24,13 @@ module.exports = function register({ M, load, test, SRC }) {
   test('mid-race banner: "Location access is limited"; Location-off body never says "press Start"', () => {
     const c = COPY();
     const off = c({ midRace: true, noFix: false, reason: 'location_off', platform: 'ios' });
-    assert.strictEqual(off.titleKey, 'home:gpsHealth.titleMidRace');
+    assert.strictEqual(off.titleKey, 'home:gpsHealth.titleLocationOffMidRace', 'title agrees with the body (Location is off)');
     assert.strictEqual(off.bodyKey, 'home:gpsHealth.blockedBodyLocationOffMidRace');
     assert.strictEqual(c({ midRace: true, noFix: false, reason: 'no_background_perm', platform: 'ios' }).titleKey, 'home:gpsHealth.titleMidRace');
   });
   test('mid-race "no GPS position" (indoors/tunnel): own title + body, no settings steps', () => {
     const r = COPY()({ midRace: true, noFix: true, reason: 'location_off', platform: 'android' });
-    assert.deepStrictEqual(r, { titleKey: 'home:gpsHealth.titleNoFix', bodyKey: 'home:gpsHealth.blockedBodyNoFix', showSettingsSteps: false });
+    assert.deepStrictEqual(r, { titleKey: 'home:gpsHealth.titleNoFix', bodyKey: 'home:gpsHealth.blockedBodyNoFix', showSettingsSteps: false, showSettingsButton: false });
   });
   test('settings steps: hidden only where Android lands exactly on the Location switch', () => {
     const c = COPY();

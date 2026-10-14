@@ -281,73 +281,9 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
       return;
     }
 
-    // The newest local change this upload will carry.
-    const seqAtPush = followWriteSeq;
-    // Get current follow data
-    const customerSet = await loadCache();
-    const bibMap = await loadBibCache();
-
-    // Build customer_app_id_string
-    const customer_app_id_string = [...customerSet].join(',');
-
-    // Build bib_number_string object
-    const bib_number_string: Record<string, string> = {};
-    bibMap.forEach((bibSet, productId) => {
-      if (bibSet.size > 0) {
-        bib_number_string[productId] = [...bibSet].join(',');
-      }
-    });
-
-    const requestBody = {
-      follower_id: followerId,
-      device_id: deviceId,
-      customer_app_id_string,
-      bib_number_string,
-    };
-
-    if (API_CONFIG.DEBUG) {
-      console.log('📡 Syncing follow data to API:', {
-        follower_id: followerId,
-        device_id: deviceId,
-        customers: customer_app_id_string,
-        bibs: bib_number_string,
-      });
-    }
-
-    const headers = await API_CONFIG.getHeaders();
-
-    await apiClient.post(
-      getApiEndpoint(API_CONFIG.ENDPOINTS.SYNC_FOLLOW_DATA),
-      requestBody,
-      {
-        headers,
-        timeout: API_CONFIG.TIMEOUT,
-      }
-    );
-
-    if (API_CONFIG.DEBUG) {
-      console.log('✅ Follow data synced to API');
-    }
-
-    // ✅ Tell the screens that show SERVER-derived counts to refetch.
-    //    Bumped here, after the POST resolves, so all four callers
-    //    (followUser / unfollowUser / followBib / unfollowBib) are covered by
-    //    one line. Deliberately NOT bumped in the catch below: when the sync
-    //    failed the server state genuinely did not change, so a refetch would
-    //    redisplay the old number and read as a second bug.
-    useFollowStore.getState().bump();
-
-    if (seqAtPush > lastPushedSeq) lastPushedSeq = seqAtPush;
-    // Local and server agree again — but only if nothing changed while this
-    // upload was in flight (an older upload finishing late must not clear the
-    // flag a newer, failed one set).
-    if (seqAtPush === followWriteSeq) {
-      try {
-        await AsyncStorage.removeItem(SYNC_PENDING_KEY);
-      } catch {
-        // A failure here only risks one redundant re-upload later. Harmless.
-      }
-    }
+    // One upload at a time, each built from the newest lists when its turn
+    // comes (see enqueueUpload). Errors propagate to the catch below.
+    await enqueueUpload(() => uploadCurrent(followerId, deviceId));
   } catch (error: any) {
     if (API_CONFIG.DEBUG) {
       console.error('❌ Failed to sync follow data to API:', error);
@@ -363,6 +299,92 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
       await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
     } catch {
       // If even the flag cannot be written we are no worse off than before.
+    }
+  }
+}
+
+// ✅ Uploads run ONE AT A TIME. Each sends the whole list, so two concurrent
+// uploads could reach the server out of order — the older list landing last
+// silently removed the newer follow upstream (and the next download then took
+// it off the phone). Queued, each upload reads the lists when its turn comes,
+// so the last one to land is always the newest.
+let uploadChain: Promise<void> = Promise.resolve();
+function enqueueUpload(job: () => Promise<void>): Promise<void> {
+  const run = uploadChain.then(job, job);
+  uploadChain = run.catch(() => { /* the caller handles it */ });
+  return run;
+}
+
+async function uploadCurrent(followerId: number, deviceId: string): Promise<void> {
+  // Mark "not synced" BEFORE sending: if the app is killed while the upload
+  // hangs (half-open sockets on race-day networks), the relaunch must still
+  // know the phone is ahead — the in-memory counters start from zero again.
+  try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
+  // The newest local change this upload will carry.
+  const seqAtPush = followWriteSeq;
+  // Get current follow data
+  const customerSet = await loadCache();
+  const bibMap = await loadBibCache();
+
+  // Build customer_app_id_string
+  const customer_app_id_string = [...customerSet].join(',');
+
+  // Build bib_number_string object
+  const bib_number_string: Record<string, string> = {};
+  bibMap.forEach((bibSet, productId) => {
+    if (bibSet.size > 0) {
+      bib_number_string[productId] = [...bibSet].join(',');
+    }
+  });
+
+  const requestBody = {
+    follower_id: followerId,
+    device_id: deviceId,
+    customer_app_id_string,
+    bib_number_string,
+  };
+
+  if (API_CONFIG.DEBUG) {
+    console.log('📡 Syncing follow data to API:', {
+      follower_id: followerId,
+      device_id: deviceId,
+      customers: customer_app_id_string,
+      bibs: bib_number_string,
+    });
+  }
+
+  const headers = await API_CONFIG.getHeaders();
+
+  await apiClient.post(
+    getApiEndpoint(API_CONFIG.ENDPOINTS.SYNC_FOLLOW_DATA),
+    requestBody,
+    {
+      headers,
+      timeout: API_CONFIG.TIMEOUT,
+    }
+  );
+
+  if (API_CONFIG.DEBUG) {
+    console.log('✅ Follow data synced to API');
+  }
+
+  // ✅ Tell the screens that show SERVER-derived counts to refetch.
+  //    Bumped here, after the POST resolves, so all four callers
+  //    (followUser / unfollowUser / followBib / unfollowBib) are covered by
+  //    one line. Deliberately NOT bumped in the catch below: when the sync
+  //    failed the server state genuinely did not change, so a refetch would
+  //    redisplay the old number and read as a second bug.
+  useFollowStore.getState().bump();
+
+  if (seqAtPush > lastPushedSeq) lastPushedSeq = seqAtPush;
+  // Local and server agree again — but only if nothing changed while this
+  // upload was in flight (an older upload finishing late must not clear the
+  // flag a newer, failed one set).
+  if (seqAtPush === followWriteSeq) {
+    try {
+      await AsyncStorage.removeItem(SYNC_PENDING_KEY);
+    } catch {
+      // A failure here only risks one redundant re-upload later. Harmless.
     }
   }
 }

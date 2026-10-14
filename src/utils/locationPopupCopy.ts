@@ -18,6 +18,8 @@ export interface LocationPopupCopy {
   bodyKey: string;
   /** Show the platform "how to fix in Settings" line. */
   showSettingsSteps: boolean;
+  /** Show "Open settings" (nothing to change there for "no GPS position"). */
+  showSettingsButton: boolean;
 }
 
 export function locationPopupCopy(opts: {
@@ -28,9 +30,13 @@ export function locationPopupCopy(opts: {
 }): LocationPopupCopy {
   const { midRace, noFix, reason, platform } = opts;
   if (midRace && noFix) {
-    return { titleKey: 'home:gpsHealth.titleNoFix', bodyKey: 'home:gpsHealth.blockedBodyNoFix', showSettingsSteps: false };
+    return { titleKey: 'home:gpsHealth.titleNoFix', bodyKey: 'home:gpsHealth.blockedBodyNoFix', showSettingsSteps: false, showSettingsButton: false };
   }
-  const titleKey = midRace ? 'home:gpsHealth.titleMidRace' : 'home:gpsHealth.title';
+  // Mid-race: the title names the actual problem (Location switched off vs
+  // permission limited) — it must agree with the body and the banner.
+  const titleKey = midRace
+    ? (reason === 'location_off' ? 'home:gpsHealth.titleLocationOffMidRace' : 'home:gpsHealth.titleMidRace')
+    : 'home:gpsHealth.title';
   const bodyKey =
     reason === 'location_off'
       ? (midRace ? 'home:gpsHealth.blockedBodyLocationOffMidRace' : 'home:gpsHealth.blockedBodyLocationOff')
@@ -39,5 +45,5 @@ export function locationPopupCopy(opts: {
         : 'home:gpsHealth.blockedBody';
   // Android's Location-off deep link lands exactly on the switch — no steps needed.
   const showSettingsSteps = !(platform === 'android' && reason === 'location_off');
-  return { titleKey, bodyKey, showSettingsSteps };
+  return { titleKey, bodyKey, showSettingsSteps, showSettingsButton: true };
 }

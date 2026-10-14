@@ -125,6 +125,7 @@
   "gpsHealth": {
     "title": "Laat familie en vrienden je live volgen",
     "titleMidRace": "Locatietoegang is beperkt",
+    "titleLocationOffMidRace": "Locatie staat uit",
     "titleNoFix": "Op dit moment geen GPS-positie",
     "blockedBodyNoFix": "Je telefoon krijgt op dit moment geen GPS-positie — dat gebeurt binnen, in tunnels of onder dichte begroeiing. De tracking loopt door: ga naar open lucht en je positie wordt weer verzonden zodra de GPS je vindt.",
     "blockedBodyLocationOffMidRace": "Locatie staat uit op deze telefoon, dus je positie wordt niet verzonden. Zet Locatie weer aan — de tracking gaat vanzelf verder, je hoeft niet te stoppen of opnieuw te starten.",

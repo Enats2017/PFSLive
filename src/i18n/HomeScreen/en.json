@@ -125,6 +125,7 @@
   "gpsHealth": {
     "title": "Let your family and friends follow you live",
     "titleMidRace": "Location access is limited",
+    "titleLocationOffMidRace": "Location is switched off",
     "titleNoFix": "No GPS position right now",
     "blockedBodyNoFix": "Your phone is not getting a GPS position at the moment — this happens indoors, in tunnels or under thick cover. Tracking keeps running: move to open sky and your position is sent again as soon as GPS finds you.",
     "blockedBodyLocationOffMidRace": "Location is switched off on this phone, so your position is not being sent. Turn Location back on — tracking carries on by itself, there is no need to stop or restart it.",

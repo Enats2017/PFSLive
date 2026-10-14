@@ -2022,6 +2022,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </Text>
               )}
               <View style={homeStyles.notifButtonContainer}>
+                {popupCopy.showSettingsButton && (
                 <TouchableOpacity
                   style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
                   onPress={() => {
@@ -2041,11 +2042,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           const t0 = Date.now();
                           const perms = await gpsService.requestPermissionsDetailed();
                           setHasPermission(perms.foreground);
-                          void analyticsService.logStartStep(
-                            'permission_result',
-                            perms.background ? 'granted' : (Date.now() - t0 > 700 ? 'denied' : 'no_prompt'),
-                            eventId,
-                          );
+                          // Start-funnel step only when the popup came from Start
+                          // (the mid-race banner reuses this popup).
+                          if (!permissionModalMidRace) {
+                            void analyticsService.logStartStep(
+                              'permission_result',
+                              perms.background ? 'granted' : (Date.now() - t0 > 700 ? 'denied' : 'no_prompt'),
+                              eventId,
+                            );
+                          }
                           if (perms.background) {
                             // Granted outright, without ever leaving the app —
                             // on Android 11+ the OS opens Livio's Location page
@@ -2072,7 +2077,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           // fall through to settings
                         }
                       }
-                      void analyticsService.logStartStep('permission_result', 'sent_to_settings', eventId);
+                      if (!permissionModalMidRace) {
+                        void analyticsService.logStartStep('permission_result', 'sent_to_settings', eventId);
+                      }
                       await openLocationSettingsFor(permissionBlockReason);
                     })();
                   }}
@@ -2080,12 +2087,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('home:gpsHealth.openSettings')}</Text>
                 </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={commonStyles.secondaryButton}
                   onPress={() => {
                     // Backing out cancels the start — disarm, or a later
                     // foreground would fire a start the runner declined.
-                    void analyticsService.logStartStep('permission_result', 'dismissed', eventId);
+                    if (!permissionModalMidRace) {
+                      void analyticsService.logStartStep('permission_result', 'dismissed', eventId);
+                    }
                     pendingStartRef.current = false;
                     setShowLocationPermissionModal(false);
                   }}
