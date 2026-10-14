@@ -60,6 +60,7 @@
   "countdown": {
     "startsIn": "Départ dans {{time}}",
     "startingSoon": "Départ imminent",
+    "started": "Course commencée",
     "days": "{{count}} j",
     "hours": "{{count}} h",
     "minutes": "{{count}} min"

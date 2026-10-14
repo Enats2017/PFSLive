@@ -38,11 +38,16 @@ export const PreRaceCountdown: React.FC<Props> = ({ startAtMs }) => {
   if (startAtMs == null || !isFinite(startAtMs)) return null;
 
   const ms = startAtMs - now;
-  // Past the gun: the in-tracking countdown and status take over.
+  // Past the gun: once tracking runs, the in-tracking status takes over (this
+  // pill is only shown while NOT tracking). Gone 30 min after the gun.
   if (ms <= -30 * MIN) return null;
 
   let label: string;
-  if (ms <= MIN) {
+  if (ms < 0) {
+    // The race is under way and this runner hasn't pressed Start — say so,
+    // not "starting soon".
+    label = t('readiness:countdown.started');
+  } else if (ms <= MIN) {
     label = t('readiness:countdown.startingSoon');
   } else {
     const days = Math.floor(ms / (24 * 60 * MIN));

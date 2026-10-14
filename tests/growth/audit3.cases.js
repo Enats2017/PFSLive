@@ -38,7 +38,7 @@ module.exports = function register({ M, load, test, SRC }) {
       'showLocationPermissionModal', 'showPowerSavingModal', 'notificationPopup.visible', 'showFanEmailModal']) {
       assert.ok(s.slice(s.indexOf('const homeModalOpen ='), s.indexOf('const homeModalOpen =') + 400).includes(m), m);
     }
-    assert.ok(/raceMoreThan3hAway && !homeModalOpen && navigation\.isFocused\(\)/.test(s));
+    assert.ok(/raceMoreThan3hAway && !homeModalOpen && homeIsFocused/.test(s));
     assert.ok(/raceMoreThan3hAway, homeModalOpen,/.test(s), 'in deps → opens after the popup closes');
   });
   test('every <Modal> on Home is covered by the gate', () => {

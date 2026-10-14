@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -437,6 +437,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     showFanEmailModal;
   // Read at the last moment by maybeOpen (its checks are async — a popup can
   // open, or Start be pressed, while they run).
+  // Focus is a dep of the race-ready trigger: when Home wasn't on screen as
+  // its data arrived (cold start from a push tap), returning to Home retries.
+  const homeIsFocused = useIsFocused();
   const homeModalOpenRef = useRef(homeModalOpen);
   homeModalOpenRef.current = homeModalOpen;
   // Same key as CreatePersonalEvent for custom events (their ids come from
@@ -456,7 +459,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       } catch { /* analytics only */ }
     })();
 
-    if (raceMoreThan3hAway && !homeModalOpen && navigation.isFocused()) {
+    if (raceMoreThan3hAway && !homeModalOpen && homeIsFocused) {
       void raceReadyService.maybeOpen({
         raceKey: raceReadyKey,
         raceName: homeData?.next_race_name,
@@ -465,7 +468,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         stillAllowed: () => !homeModalOpenRef.current && navigation.isFocused(),
       });
     }
-  }, [homeData?.show_start_track, eventId, isGPSActive, raceMoreThan3hAway, homeModalOpen, raceReadyKey, homeData?.next_race_name, navigation]);
+  }, [homeData?.show_start_track, eventId, isGPSActive, raceMoreThan3hAway, homeModalOpen, homeIsFocused, raceReadyKey, homeData?.next_race_name, navigation]);
 
   // ==================== UTILITIES ====================
 

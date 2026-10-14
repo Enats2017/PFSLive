@@ -219,7 +219,7 @@ export async function ensureFollowerId(): Promise<{ id: number | null; adopted: 
 // ✅ NEW: Sync follow data to API
 // `fromAdopt`: called by adoptServerFollowData itself. Never re-enter the merge
 // from there — if storage can't clear the pending flag, that would loop.
-async function syncFollowDataToAPI(fromAdopt = false): Promise<void> {
+async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null = null): Promise<void> {
   try {
     // Get follower_id and device_id from storage
     // toValidId, not a truthy check: an old install may hold the string "null".
@@ -245,6 +245,15 @@ async function syncFollowDataToAPI(fromAdopt = false): Promise<void> {
         return;
       }
       followerIdRaw = String(storedId);
+      // A merge's push is only valid for the row it merged with. If the id
+      // changed in the meantime, that row's merge is owed instead.
+      if (fromAdopt && expectedId !== null && String(expectedId) !== String(storedId)) {
+        try {
+          await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
+          await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
+        } catch { /* silent */ }
+        return;
+      }
     }
 
     if (!followerIdRaw || !deviceId) {
@@ -661,7 +670,12 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
       await AsyncStorage.multiRemove([ADOPT_PENDING_KEY, REMOVED_BEFORE_ADOPT_KEY]);
       await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
     } catch { /* silent */ }
-    await syncFollowDataToAPI(true);
+    // If a new id landed while the flag was being cleared, put its flag back.
+    if ((await AsyncStorage.getItem(FOLLOWER_ID_KEY)) !== idAtStart) {
+      try { await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1'); } catch { /* silent */ }
+      return;
+    }
+    await syncFollowDataToAPI(true, idAtStart);
   } catch (error) {
     if (API_CONFIG.DEBUG) console.warn('⚠️ adoptServerFollowData failed:', error);
   }
@@ -774,8 +788,14 @@ export async function syncFollowDataFromAPI(
     }
     cache = customerSet;
     bibCache = bibMap;
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([...customerSet]));
-    await persistBibCache(bibMap);
+    // Both writes start NOW, in the same tick as the swap: AsyncStorage runs
+    // operations in order, so any read issued after this (e.g. a follow screen
+    // mounting → clearCache() → reload) queues behind BOTH writes. Writing the
+    // bibs only after the users write left a gap where a read got the old bibs.
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([...customerSet])),
+      persistBibCache(bibMap),
+    ]);
 
     if (API_CONFIG.DEBUG) {
       console.log('✅ Follow data synced from API:', {

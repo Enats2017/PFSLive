@@ -60,6 +60,7 @@
   "countdown": {
     "startsIn": "Start over {{time}}",
     "startingSoon": "Start binnenkort",
+    "started": "Wedstrijd gestart",
     "days": "{{count}} d",
     "hours": "{{count}} u",
     "minutes": "{{count}} min"

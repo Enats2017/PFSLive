@@ -60,6 +60,7 @@
   "countdown": {
     "startsIn": "Starts in {{time}}",
     "startingSoon": "Starting soon",
+    "started": "Race started",
     "days": "{{count}} d",
     "hours": "{{count}} h",
     "minutes": "{{count}} min"

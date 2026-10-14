@@ -86,7 +86,7 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
     assert.ok(label(2 * DAY + 4 * 3600000 + 60000).includes('"time":"readiness:countdown.days{\\"count\\":2} readiness:countdown.hours{\\"count\\":4}"'), label(2 * DAY + 4 * 3600000 + 60000));
     assert.ok(label(3 * 3600000 + 25 * 60000 + 1000).includes('countdown.hours{\\"count\\":3} readiness:countdown.minutes{\\"count\\":25}'));
     assert.strictEqual(label(30000), 'readiness:countdown.startingSoon');
-    assert.strictEqual(label(-10 * 60000), 'readiness:countdown.startingSoon', 'just after gun still "starting"');
+    assert.strictEqual(label(-10 * 60000), 'readiness:countdown.started', 'after the gun: "race started", not "starting soon"');
     assert.strictEqual(PreRaceCountdown({ startAtMs: now - 31 * 60000 }), null, 'gone 30 min after the gun');
     assert.strictEqual(PreRaceCountdown({ startAtMs: null }), null);
   });
@@ -490,6 +490,7 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   require('./audit3.cases')({ M, load, test, SRC });
   require('./audit4.cases')({ M, load, test, SRC });
   require('./audit5.cases')({ M, load, test, SRC });
+  require('./audit6.cases')({ M, load, test, SRC });
 
   results.push(await run('growth — app'));
   const pass = results.reduce((a, r) => a + r.pass, 0), fail = results.reduce((a, r) => a + r.fail, 0);
