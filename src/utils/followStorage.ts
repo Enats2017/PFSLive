@@ -174,9 +174,11 @@ export async function ensureFollowerId(): Promise<{ id: number | null; adopted: 
         const res = await followerApi.registerGuestFollower();
         const id = toValidId(res?.follower_id);
         if (id === null) return { id: null, adopted: false };
-        await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(id));
         // Merge still owed — whoever called us (follow, fan email, language).
+        // Flag FIRST: an id without the flag would let the next sync push
+        // local over the server row (crash, or an unfollow in between).
         await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
+        await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(id));
         if (API_CONFIG.DEBUG) console.log('🆔 Token-less follower registered:', id);
         return { id, adopted: true };
       } catch (error) {
@@ -191,7 +193,9 @@ export async function ensureFollowerId(): Promise<{ id: number | null; adopted: 
 }
 
 // ✅ NEW: Sync follow data to API
-async function syncFollowDataToAPI(): Promise<void> {
+// `fromAdopt`: called by adoptServerFollowData itself. Never re-enter the merge
+// from there — if storage can't clear the pending flag, that would loop.
+async function syncFollowDataToAPI(fromAdopt = false): Promise<void> {
   try {
     // Get follower_id and device_id from storage
     // toValidId, not a truthy check: an old install may hold the string "null".
@@ -200,8 +204,10 @@ async function syncFollowDataToAPI(): Promise<void> {
     const deviceId = await getDeviceId();
 
     if (storedId === null && deviceId) {
-      const { id, adopted } = await ensureFollowerId();
-      if (id !== null && adopted) {
+      const { id } = await ensureFollowerId();
+      // On the flag, not on `adopted`: if another caller (fan email) won the
+      // ensure race we get adopted=false, but the merge is still owed.
+      if (id !== null && !fromAdopt && (await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1') {
         // First id for this phone: the server row may already hold follows
         // (same device_id used on the web). Merge both sides, then push.
         await adoptServerFollowData();
@@ -209,7 +215,7 @@ async function syncFollowDataToAPI(): Promise<void> {
       }
       followerIdRaw = id !== null ? String(id) : null;
     } else if (storedId !== null) {
-      if ((await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1') {
+      if (!fromAdopt && (await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1') {
         // Id learned elsewhere without the merge — do it before any push.
         await adoptServerFollowData();
         return;
@@ -366,8 +372,8 @@ export async function followUser(id: any): Promise<void> {
     
     set.add(validId);
     cache = set;
+    followWriteSeq++; // before any await — see syncFollowDataFromAPI
     await persistCache(set);
-    followWriteSeq++;
     
     // ✅ Sync to API after successful local save
     await syncFollowDataToAPI();
@@ -400,8 +406,8 @@ export async function followBib(productAppId: number, bib: string): Promise<void
 
     bibSet.add(validBib);
     bibCache = map;
+    followWriteSeq++; // before any await — see syncFollowDataFromAPI
     await persistBibCache(map);
-    followWriteSeq++;
     
     // ✅ Sync to API after successful local save
     await syncFollowDataToAPI();
@@ -426,8 +432,8 @@ export async function unfollowUser(id: any): Promise<void> {
     
     set.delete(validId);
     cache = set;
+    followWriteSeq++; // before any await — see syncFollowDataFromAPI
     await persistCache(set);
-    followWriteSeq++;
     await rememberRemovalIfUnadopted(validId);
     
     // ✅ Sync to API after successful local save
@@ -461,8 +467,8 @@ export async function unfollowBib(productAppId: number, bib: string): Promise<vo
     }
 
     bibCache = map;
+    followWriteSeq++; // before any await — see syncFollowDataFromAPI
     await persistBibCache(map);
-    followWriteSeq++;
     await rememberRemovalIfUnadopted(null, validProductId, validBib);
     
     // ✅ Sync to API after successful local save
@@ -603,7 +609,7 @@ export async function adoptServerFollowData(prefetched?: ServerFollowData): Prom
       await AsyncStorage.multiRemove([ADOPT_PENDING_KEY, REMOVED_BEFORE_ADOPT_KEY]);
       await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
     } catch { /* silent */ }
-    await syncFollowDataToAPI();
+    await syncFollowDataToAPI(true);
   } catch (error) {
     if (API_CONFIG.DEBUG) console.warn('⚠️ adoptServerFollowData failed:', error);
   }
@@ -644,6 +650,7 @@ export async function restoreFollowsWithoutToken(): Promise<void> {
 
   const serverId = toValidId(server?.follower_id);
   if (server && serverId !== null) {
+    await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
     await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(serverId));
     await adoptServerFollowData(server);
     return;
@@ -666,6 +673,12 @@ export async function syncFollowDataFromAPI(
   startedAtSeq?: number,
 ): Promise<void> {
   try {
+    // The id was learned without a merge (e.g. by registering a push token on
+    // a phone that only had local follows) — merge, never overwrite.
+    if ((await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1') {
+      await adoptServerFollowData({ followed_customers, followed_bibs });
+      return;
+    }
     if (startedAtSeq !== undefined && startedAtSeq !== followWriteSeq) {
       await syncFollowDataToAPI();
       return;
@@ -688,8 +701,6 @@ export async function syncFollowDataFromAPI(
         .map(toValidId)
         .filter((id): id is number => id !== null)
     );
-    cache = customerSet;
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([...customerSet]));
 
     const bibMap = new Map<number, Set<string>>();
     Object.entries(followed_bibs).forEach(([productId, bibs]) => {
@@ -703,7 +714,15 @@ export async function syncFollowDataFromAPI(
         }
       }
     });
+    // Re-check after the awaits above: a follow that landed meanwhile wins.
+    // Both caches are swapped in the same tick, before any further await.
+    if (startedAtSeq !== undefined && startedAtSeq !== followWriteSeq) {
+      await syncFollowDataToAPI();
+      return;
+    }
+    cache = customerSet;
     bibCache = bibMap;
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([...customerSet]));
     await persistBibCache(bibMap);
 
     if (API_CONFIG.DEBUG) {

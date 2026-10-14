@@ -41,6 +41,16 @@ export function parseEventLink(url: string): { product_app_id: number; event_nam
   return { product_app_id, event_name: p.event_name ?? '', preselect_pov_id: positiveInt(p.pov) };
 }
 
+let lastLink: { url: string; at: number } | null = null;
+
+/** True when the same URL was already handled within the last `windowMs`. */
+export function isRepeatLink(url: string, windowMs = 2000): boolean {
+  const now = Date.now();
+  const repeat = !!lastLink && lastLink.url === url && now - lastLink.at < windowMs;
+  lastLink = { url, at: now };
+  return repeat;
+}
+
 /**
  * Run `fn` once the navigator is mounted. On a cold start from a link,
  * getInitialURL() resolves while App still shows its loader and AppNavigator

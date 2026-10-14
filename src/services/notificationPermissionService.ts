@@ -117,6 +117,12 @@ async function sendTokenToBackend(token: string): Promise<boolean> {
     // UPSERT on device_id server-side: a device that was registered as a
     // token-less follower (see followerIdentity) keeps the SAME follower_id —
     // its follows stay attached and simply start receiving pushes.
+    // A phone learning its FIRST follower_id here (it had only local
+    // follows — e.g. a 1.0.9 user who refused notifications) still owes the
+    // merge with the server row. Literal key on purpose: followStorage owns
+    // it, and importing it here would create a cycle.
+    const hadId = Number(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) > 0;
+
     const result = await followerApi.registerFollower(token);
 
     if (API_CONFIG.DEBUG) {
@@ -126,6 +132,7 @@ async function sendTokenToBackend(token: string): Promise<boolean> {
       });
     }
 
+    if (!hadId) await AsyncStorage.setItem("@PFSLive:followAdoptPending", "1");
     await Promise.all([
       AsyncStorage.setItem(EXPO_TOKEN_STORAGE_KEY, token),
       AsyncStorage.setItem(FOLLOWER_ID_KEY, String(result.follower_id)),
@@ -143,12 +150,19 @@ async function sendTokenToBackend(token: string): Promise<boolean> {
 // AppState "active" listener fires registerIfGranted() while request() is
 // still registering — without this, two token fetches and two POSTs.
 let fetchInFlight: Promise<string | null> | null = null;
+// getExpoPushTokenAsync can hang (iOS offline). Without a cap every later
+// registerIfGranted() would join the hung promise for the whole session.
+const TOKEN_FETCH_TIMEOUT_MS = 20000;
 
 function fetchAndRegisterToken(): Promise<string | null> {
   if (fetchInFlight) return fetchInFlight;
   fetchInFlight = (async () => {
     try {
-      const tokenData = await Notifications.getExpoPushTokenAsync({ projectId: EXPO_PROJECT_ID });
+      const tokenData: { data: string } = await Promise.race([
+        Notifications.getExpoPushTokenAsync({ projectId: EXPO_PROJECT_ID }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("push token fetch timed out")), TOKEN_FETCH_TIMEOUT_MS)),
+      ]);
       const token: string = tokenData.data;
       if (API_CONFIG.DEBUG) console.log(`✅ ${Platform.OS} Expo push token obtained:`, token);
       // Only remember the token once the server has it — otherwise

@@ -21,6 +21,9 @@ function freshState() {
     clock: realNow(),
     os: 'ios',
     store: new Map(),
+    storeDelay: 0,          // ms per AsyncStorage call — exposes interleavings
+    writes: [],             // order of keys written
+    multiRemoveFail: false,
     // expo-notifications
     notif: { available: true, isDevice: true, status: 'undetermined', canAskAgain: true,
              requestResult: { status: 'granted', canAskAgain: true }, token: 'ExponentPushToken[abc]',
@@ -87,11 +90,16 @@ function findPressable(node) {
   return null;
 }
 
+const storeWait = () => (M.storeDelay ? new Promise((r) => setTimeout(r, M.storeDelay)) : Promise.resolve());
 const AsyncStorage = {
-  getItem: async (k) => (M.store.has(k) ? M.store.get(k) : null),
-  setItem: async (k, v) => { M.store.set(k, String(v)); },
-  removeItem: async (k) => { M.store.delete(k); },
-  multiRemove: async (ks) => ks.forEach((k) => M.store.delete(k)),
+  getItem: async (k) => { await storeWait(); return M.store.has(k) ? M.store.get(k) : null; },
+  setItem: async (k, v) => { await storeWait(); M.writes.push(k); M.store.set(k, String(v)); },
+  removeItem: async (k) => { await storeWait(); M.store.delete(k); },
+  multiRemove: async (ks) => {
+    await storeWait();
+    if (M.multiRemoveFail) throw new Error('storage full');
+    ks.forEach((k) => M.store.delete(k));
+  },
   getAllKeys: async () => [...M.store.keys()],
 };
 
@@ -198,7 +206,10 @@ const relOverrides = {
   [rel('services/gpsService')]: { gpsService: {
     getPermissionState: async () => ({ foreground: M.gps.foreground, background: M.gps.background,
       level: M.gps.level, canAskAgain: M.gps.canAskAgain }),
-    isLocationServiceEnabled: async () => M.gps.servicesOn,
+    isLocationServiceEnabled: async () => {
+      if (M.gps.servicesThrows) throw new Error('provider state unavailable');
+      return M.gps.servicesOn;
+    },
   },
   isTracking: async () => M.tracking },
   [rel('i18n')]: { __esModule: true, default: { t, language: 'en' } },
@@ -244,8 +255,12 @@ async function run(title) {
   console.log(`\n== ${title} ==`);
   for (const tc of tests) {
     reset();
-    try { await tc.fn(); pass++; console.log('  PASS ', tc.name); }
+    // 20 s cap: a hang (e.g. an endless merge/sync loop) is a FAIL, not a stuck run.
+    let timer;
+    const cap = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timed out after 20 s (hang / endless loop)')), 20000); });
+    try { await Promise.race([tc.fn(), cap]); pass++; console.log('  PASS ', tc.name); }
     catch (e) { fail++; console.log('  FAIL ', tc.name, '\n        ', String((e && e.message) || e).split('\n').join('\n         ')); }
+    finally { clearTimeout(timer); }
   }
   tests.length = 0;
   return { pass, fail };

@@ -30,6 +30,7 @@ const MAX_AGE_MS = 120 * 24 * 60 * 60 * 1000;
 // Keys with a maybeOpen() still running. Two triggers close together (Home
 // refetch + connect, focus + poll) must not push the screen twice.
 const inFlight = new Set<string>();
+let markChain: Promise<void> = Promise.resolve();
 
 /** Steps the flow can fix. Power saving is excluded: it's a race-morning toggle, not a setup step. */
 export const RACE_READY_ITEMS: ReadinessItem[] = [
@@ -52,6 +53,26 @@ export function stepProgress(seen: ReadonlySet<string>, remaining: readonly stri
   return { index: done + 1, total: Math.max(done + remaining.length, 1) };
 }
 
+/**
+ * Finish-screen outcome. Only a skipped step that is STILL missing counts:
+ * a step skipped and then fixed in Settings (AppState refresh) is done.
+ */
+export function raceReadyOutcome(skipped: Iterable<string>, missing: readonly string[]): 'done' | 'skipped' {
+  for (const s of skipped) if (missing.includes(s)) return 'skipped';
+  return 'done';
+}
+
+/**
+ * Background step: does the button open Settings instead of asking?
+ * After a "the OS showed nothing" round trip, or on Android when the OS has
+ * already said it won't ask again (runner once chose "While using" on the
+ * system page). Not on iOS: canAskAgain can be false there before the
+ * "Change to Always Allow" upgrade prompt was ever shown.
+ */
+export function backgroundOpensSettings(os: string, locationCanAskAgain: boolean | undefined, sentBefore: boolean): boolean {
+  return sentBefore || (os === 'android' && locationCanAskAgain === false);
+}
+
 export type RaceReadySource = 'connect' | 'email_confirm' | 'custom_event' | 'home' | 'card';
 
 async function readShown(): Promise<Record<string, number>> {
@@ -72,12 +93,17 @@ export const raceReadyService = {
     return !!map[raceKey];
   },
 
-  async markShown(raceKey: string): Promise<void> {
-    try {
-      const map = await readShown();
-      map[raceKey] = Date.now();
-      await AsyncStorage.setItem(SHOWN_KEY, JSON.stringify(map));
-    } catch { /* silent — worst case it shows once more */ }
+  markShown(raceKey: string): Promise<void> {
+    // Serialised: two races marked at the same moment (Home all-set for one,
+    // a connect for another) each read-modify-write the same map.
+    markChain = markChain.then(async () => {
+      try {
+        const map = await readShown();
+        map[raceKey] = Date.now();
+        await AsyncStorage.setItem(SHOWN_KEY, JSON.stringify(map));
+      } catch { /* silent — worst case it shows once more */ }
+    });
+    return markChain;
   },
 
   /** What the flow would ask for right now, in order. Empty = nothing to do. */
@@ -105,7 +131,9 @@ export const raceReadyService = {
     onlyFromRoute?: string;
   }): Promise<boolean> {
     try {
-      const key = params.raceKey != null && params.raceKey !== '' ? String(params.raceKey) : null;
+      // 0 / '0' / '' are "no race" (server defaults), never a key.
+      const key = params.raceKey != null && params.raceKey !== '' && String(params.raceKey) !== '0'
+        ? String(params.raceKey) : null;
       if (!key || inFlight.has(key)) return false;
       inFlight.add(key);
       try {

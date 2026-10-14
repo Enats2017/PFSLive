@@ -13,7 +13,7 @@
 // Nothing here starts the tracking engine — see readinessService.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { AppState, Platform, ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,7 +23,7 @@ import { commonStyles, palette } from '../styles/common.styles';
 import { readinessStyles as s } from '../styles/readiness.styles';
 import { RootStackParamList } from '../types/navigation';
 import { readinessService, ReadinessItem, ReadinessState } from '../services/readinessService';
-import { RACE_READY_ITEMS, stepProgress } from '../services/raceReadyService';
+import { RACE_READY_ITEMS, stepProgress, raceReadyOutcome, backgroundOpensSettings } from '../services/raceReadyService';
 import { notificationPermissionService } from '../services/notificationPermissionService';
 import { gpsService } from '../services/gpsService';
 import { analyticsService } from '../services/analyticsService';
@@ -43,7 +43,7 @@ const ICONS: Record<ReadinessItem, keyof typeof Ionicons.glyphMap> = {
 type StepName = 'notifications' | 'location' | 'background' | 'locationServices' | 'battery';
 
 const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { t } = useTranslation(['readiness', 'common']);
+  const { t } = useTranslation(['readiness', 'common', 'home']);
   const raceName = route.params?.race_name;
   const source = route.params?.source;
 
@@ -87,7 +87,7 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
   useEffect(() => {
     if (!state || current || finishedLogged.current) return;
     finishedLogged.current = true;
-    void analyticsService.logRaceReadyStep(skipped.size > 0 ? 'skipped' : 'done', undefined, source);
+    void analyticsService.logRaceReadyStep(raceReadyOutcome(skipped, state.missing), undefined, source);
   }, [state, current, skipped, source]);
 
   const onContinue = useCallback(async () => {
@@ -121,7 +121,7 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
         case 'background': {
           // Same request + same <700ms "the OS showed nothing" test as the
           // start-time modal in HomeScreen.
-          if (backgroundSentToSettings.current) {
+          if (backgroundOpensSettings(Platform.OS, state.locationCanAskAgain, backgroundSentToSettings.current)) {
             void analyticsService.logRaceReadyStep('background', 'settings', source);
             await openLocationSettingsFor('no_background_perm');
             break;
@@ -171,10 +171,13 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
     else navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' }] });
   }, [navigation]);
 
+  // Skipped AND still missing — a skip fixed in Settings meanwhile is done.
+  const notDone = state ? raceReadyOutcome(skipped, state.missing) === 'skipped' : false;
+
   const needsSettings =
     (current === 'notifications' && state?.notifications !== 'granted' && state?.notificationsCanAskAgain === false) ||
     (current === 'location' && state?.locationCanAskAgain === false) ||
-    (current === 'background' && backgroundSentToSettings.current) ||
+    (current === 'background' && backgroundOpensSettings(Platform.OS, state?.locationCanAskAgain, backgroundSentToSettings.current)) ||
     current === 'locationServices';
 
   return (
@@ -201,6 +204,11 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
               </View>
               <Text style={s.stepTitle}>{t(`readiness:raceReady.steps.${current}.title`)}</Text>
               <Text style={s.stepBody}>{t(`readiness:raceReady.steps.${current}.body`)}</Text>
+              {/* iOS has no deep link to the phone-wide switch — Settings opens
+                  Livio's own page, so say where it is (same text as Start). */}
+              {Platform.OS === 'ios' && current === 'locationServices' && (
+                <Text style={s.stepBody}>{t('home:gpsHealth.stepsLocationOffIos')}</Text>
+              )}
             </View>
             <View style={s.actions}>
               <TouchableOpacity
@@ -224,20 +232,20 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
             <View style={s.stepCard}>
               <View style={s.stepIconPlate}>
                 <Ionicons
-                  name={skipped.size > 0 ? 'time-outline' : 'checkmark-circle'}
+                  name={notDone ? 'time-outline' : 'checkmark-circle'}
                   size={34}
                   color={palette.navy}
                 />
               </View>
               <Text style={s.stepTitle}>
-                {skipped.size > 0
+                {notDone
                   ? t('readiness:raceReady.notDoneTitle')
                   : raceName
                     ? t('readiness:raceReady.doneTitle', { race: raceName })
                     : t('readiness:raceReady.doneTitleNoRace')}
               </Text>
               <Text style={s.stepBody}>
-                {skipped.size > 0 ? t('readiness:raceReady.doneLater') : t('readiness:raceReady.doneBody')}
+                {notDone ? t('readiness:raceReady.doneLater') : t('readiness:raceReady.doneBody')}
               </Text>
             </View>
             <TouchableOpacity

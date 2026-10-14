@@ -19,7 +19,7 @@ import { versionService } from './src/services/versionService';
 import { UpdateRequiredModal } from './src/components/UpdateRequiredModal';
 import { analyticsService } from './src/services/analyticsService';
 import { raceReadyService } from './src/services/raceReadyService';
-import { parseQuery, parseEventLink, positiveInt, whenNavigatorReady } from './src/utils/deepLink';
+import { parseQuery, parseEventLink, positiveInt, whenNavigatorReady, isRepeatLink } from './src/utils/deepLink';
 import { useFonts } from 'expo-font';
 import { Poppins_500Medium, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
@@ -171,6 +171,11 @@ export default function App() {
         return;
       }
       
+      // Some iOS builds deliver a cold-start link through BOTH getInitialURL
+      // and the 'url' event; both now wait for the navigator, so drop the
+      // repeat or the event screen is pushed twice.
+      if (url && isRepeatLink(url)) return;
+
       if (url?.startsWith('livio://registration-confirmed')) {
         if (API_CONFIG.DEBUG) console.log('✅ Deep link: registration confirmed', url);
         // Parse query params from deep link URL ('+' → space, see deepLink.ts)
