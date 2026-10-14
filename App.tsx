@@ -193,6 +193,7 @@ export default function App() {
               raceKey: product_app_id,
               raceName: event_name,
               source: 'email_confirm',
+              onlyFromRoute: 'EventDetails',
             });
           }, 800);
         } else {

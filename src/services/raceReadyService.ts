@@ -78,6 +78,13 @@ export const raceReadyService = {
     raceKey: string | number | null | undefined;
     raceName?: string | null;
     source: RaceReadySource;
+    /**
+     * Navigate only if the user is still on this route when the checks finish.
+     * The checks are async, and in the meantime a push-notification tap or a
+     * deep link may have taken them elsewhere — never yank them off it. Not
+     * marked shown when skipped, so a later visit can still trigger it.
+     */
+    onlyFromRoute?: string;
   }): Promise<boolean> {
     try {
       const key = params.raceKey != null && params.raceKey !== '' ? String(params.raceKey) : null;
@@ -97,6 +104,9 @@ export const raceReadyService = {
         await new Promise((r) => setTimeout(r, 100));
       }
       if (!navigationRef.isReady()) return false;
+      if (params.onlyFromRoute && navigationRef.getCurrentRoute()?.name !== params.onlyFromRoute) {
+        return false;
+      }
 
       await this.markShown(key);
       void analyticsService.logRaceReadyStep('shown', undefined, params.source);

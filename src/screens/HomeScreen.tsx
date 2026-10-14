@@ -436,6 +436,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         raceKey: eventId,
         raceName: homeData?.next_race_name,
         source: 'home',
+        onlyFromRoute: 'HomeScreen',
       });
     }
   }, [homeData?.show_start_track, eventId, isGPSActive, homeData?.next_race_in_hours, homeData?.next_race_name, navigation]);
