@@ -1576,6 +1576,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // subscribe once and never churn.
   const doStartGPSTrackingRef = useRef(doStartGPSTracking);
   doStartGPSTrackingRef.current = doStartGPSTracking;
+  // The return-from-Settings listener below is set up once ([] deps), when
+  // homeData — and so eventId — is still null; read the race id through a ref.
+  const eventIdRef = useRef(eventId);
+  eventIdRef.current = eventId;
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
@@ -1592,7 +1596,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             (await gpsService.isLocationServiceEnabled());
 
           if (satisfied) {
-            void analyticsService.logStartStep('permission_result', 'granted_on_return', eventId);
+            void analyticsService.logStartStep('permission_result', 'granted_on_return', eventIdRef.current);
             // Clear FIRST — the inline-grant path can resolve for the same
             // grant, and whichever runs second must find nothing pending.
             pendingStartRef.current = false;
@@ -1604,7 +1608,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // Came back without granting. The button already dismissed the modal,
           // so without this the runner faces a bare screen and no explanation
           // of why tracking still is not running. Put it back and stay armed.
-          void analyticsService.logStartStep('permission_result', 'still_blocked_on_return', eventId);
+          void analyticsService.logStartStep('permission_result', 'still_blocked_on_return', eventIdRef.current);
           setShowLocationPermissionModal(true);
         } catch { /* silent — a later foreground retries */ }
       })();

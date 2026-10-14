@@ -76,6 +76,12 @@ const LAST_REPORTED_KEY = '@PFSLive:readinessReported';
 // read-then-write signature check alone would let both POST.
 let reportInFlight: string | null = null;
 
+/** Server answers that mean "this exact request will never be accepted". */
+const REJECTED_FOR_GOOD = new Set([
+  'session_expired', 'unauthorized',
+  'device_mismatch', 'device_id_invalid', 'location_permission_invalid',
+]);
+
 /** Short, non-reversible fingerprint of the login header (djb2). */
 function loginFingerprint(authorization: string): string {
   let h = 5381;
@@ -179,11 +185,13 @@ export const readinessService = {
           { headers, timeout: API_CONFIG.TIMEOUT },
         );
       } catch (error: any) {
-        // Offline / server down → temporary: retried on the next getState().
-        // Rejected (expired login, device not this account's, bad request) →
-        // the same request would be rejected again on every refresh; remember
-        // it, it is retried once the login or the device changes.
-        const rejected = error?.type === 'empty' || error?.code === 'session_expired';
+        // Rejected for a reason that the SAME request will hit again (expired
+        // login, device not this account's, invalid values) → remember it; it
+        // is retried once the login, device or state changes. Everything else
+        // — offline, 5xx, 429 rate limit, 404 not deployed yet, maintenance —
+        // is temporary: retried on the next getState(). (api.ts maps every
+        // 4xx to type 'empty', so the type alone can't tell them apart.)
+        const rejected = REJECTED_FOR_GOOD.has(String(error?.code ?? ''));
         if (!rejected) return;
       }
       await AsyncStorage.setItem(LAST_REPORTED_KEY, signature);

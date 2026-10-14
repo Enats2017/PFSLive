@@ -94,36 +94,41 @@ function loadBibCache(): Promise<Map<number, Set<string>>> {
   return bibCacheLoading;
 }
 
+// A read from storage is only kept if NOTHING newer arrived while it was in
+// flight: a download (syncFollowDataFromAPI) may have swapped in the server
+// list, or clearCache() may have dropped everything. Putting the older
+// storage contents back would make the next follow push them over the
+// server's list. cacheGen changes on every clearCache().
+let cacheGen = 0;
+
 async function readCacheFromStorage(): Promise<Set<number>> {
   if (cache) return cache;
+  const gen = cacheGen;
+  let loaded: Set<number>;
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     const parsed = raw ? (JSON.parse(raw) as any[]) : [];
-
-    cache = new Set(
+    loaded = new Set(
       parsed
         .map(toValidId)
         .filter((id): id is number => id !== null)
     );
   } catch (error) {
     console.warn('Failed to load customer cache:', error);
-    cache = new Set();
+    loaded = new Set();
   }
+  if (gen !== cacheGen) return loadCache();   // cleared meanwhile → read again
+  if (!cache) cache = loaded;                 // else a newer list won — keep it
   return cache;
 }
 
 async function readBibCacheFromStorage(): Promise<Map<number, Set<string>>> {
   if (bibCache) return bibCache;
+  const gen = cacheGen;
+  const loaded = new Map<number, Set<string>>();
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY_BIBS);
-    if (!raw) {
-      bibCache = new Map();
-      return bibCache;
-    }
-
-    const parsed = JSON.parse(raw) as Record<string, string[]>;
-    bibCache = new Map();
-
+    const parsed = raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
     Object.entries(parsed).forEach(([productId, bibs]) => {
       const validProductId = toValidId(productId);
       if (validProductId !== null && Array.isArray(bibs)) {
@@ -133,14 +138,15 @@ async function readBibCacheFromStorage(): Promise<Map<number, Set<string>>> {
             .filter((bib): bib is string => bib !== null)
         );
         if (bibSet.size > 0) {
-          bibCache!.set(validProductId, bibSet);
+          loaded.set(validProductId, bibSet);
         }
       }
     });
   } catch (error) {
     console.warn('Failed to load BIB cache:', error);
-    bibCache = new Map();
   }
+  if (gen !== cacheGen) return loadBibCache();
+  if (!bibCache) bibCache = loaded;
   return bibCache;
 }
 
@@ -341,6 +347,10 @@ async function syncFollowDataToAPI(fromAdopt = false): Promise<void> {
 export function clearCache(): void {
   cache = null;
   bibCache = null;
+  // Any read already in flight started before this — don't let it land.
+  cacheGen++;
+  cacheLoading = null;
+  bibCacheLoading = null;
 }
 
 export async function getFollowedUsers(): Promise<number[]> {
@@ -593,6 +603,9 @@ export function adoptServerFollowData(prefetched?: ServerFollowData): Promise<vo
 }
 
 async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
+  // The id this merge is for. If a push-token registration hands the phone a
+  // DIFFERENT id while we run, that id's merge is still owed — keep its flag.
+  const idAtStart = await AsyncStorage.getItem(FOLLOWER_ID_KEY);
   try {
     let server: ServerFollowData = prefetched ?? {};
     if (!prefetched) {
@@ -636,6 +649,14 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
     bibCache = bibs;
     await persistBibCache(bibs);
 
+    const idNow = await AsyncStorage.getItem(FOLLOWER_ID_KEY);
+    if (idNow !== idAtStart) {
+      // Id changed mid-merge: this merge was with the OLD row. Keep the flag
+      // (and the remembered unfollows) so the next sync merges with the new
+      // row instead of pushing this list over it.
+      try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
+      return;
+    }
     try {
       await AsyncStorage.multiRemove([ADOPT_PENDING_KEY, REMOVED_BEFORE_ADOPT_KEY]);
       await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
