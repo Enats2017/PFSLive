@@ -147,6 +147,11 @@ export const readinessService = {
       if (previous === signature) return;
 
       const headers = await API_CONFIG.getHeaders();
+      // Runners only: the endpoint requires the runner's login token and only
+      // accepts that account's own device (readiness feeds the runner's T-48h
+      // reminder). Logged out = fan → nothing to report; nothing is stored
+      // either, so it reports as soon as they log in.
+      if (!headers.Authorization) return;
       await apiClient.post(
         getApiEndpoint(API_CONFIG.ENDPOINTS.UPDATE_DEVICE_READINESS),
         {

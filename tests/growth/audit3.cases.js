@@ -134,4 +134,17 @@ module.exports = function register({ M, load, test, SRC }) {
     const sent = posts('/update_device_readiness_api.php').map((p) => p.body.notifications_enabled);
     assert.ok(sent.includes(0) && sent.includes(1), JSON.stringify(sent));
   });
+  // ── runners-only readiness ───────────────────────────────────────────
+  test('readiness: logged out (fan) → nothing sent; after login → reported', async () => {
+    const { readinessService } = load('services/readinessService');
+    M.loggedIn = false;
+    await readinessService.getState();
+    await new Promise((r) => setTimeout(r, 10));
+    assert.strictEqual(posts('/update_device_readiness_api.php').length, 0, 'no call without a login');
+    assert.strictEqual(M.store.has('@PFSLive:readinessReported'), false, 'nothing remembered');
+    M.loggedIn = true;
+    await readinessService.getState();
+    await new Promise((r) => setTimeout(r, 10));
+    assert.strictEqual(posts('/update_device_readiness_api.php').length, 1, 'reported once logged in');
+  });
 };
