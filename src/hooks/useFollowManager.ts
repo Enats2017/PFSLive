@@ -14,6 +14,7 @@ import { toastSuccess, toastError } from "../../utils/toast";
 import { followService } from "../services/followService";
 import { analyticsService } from "../services/analyticsService";
 import { ANALYTICS_PARAMS } from "../constants/analyticsScreens";
+import { maybePromptNotificationsAfterFollow } from "../store/useFollowPromptStore";
 
 interface UseFollowManagerResult {
   followedUsers: Set<number>;
@@ -289,6 +290,8 @@ export function useFollowManager(
             // tagging it would overstate how much a given race drove permanent
             // follows. Matches lib/analytics.ts on the web.
             void analyticsService.logFollowToggle('follow', 'athlete', followParams());
+            // The fan's notification moment — after a follow, not on launch.
+            void maybePromptNotificationsAfterFollow();
             // Was missing here while the unfollow branch below had it, so a
             // screen wired to this callback (UserFavouriteList) reloaded after
             // an unfollow but not after a follow. The bib branch calls it on
@@ -410,6 +413,7 @@ export function useFollowManager(
             'event',
             followParams(),
           );
+          void maybePromptNotificationsAfterFollow();
           toastSuccess(
             t("follower:success.followTitle"),
             t("follower:success.followMessage"),

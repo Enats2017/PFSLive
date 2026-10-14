@@ -97,6 +97,35 @@ export const followerApi = {
     }
   },
 
+  /**
+   * Token-less follower row for this device (expo_token = ''). Returns the
+   * existing follower_id if the device already has a row. A later
+   * registerFollower() UPSERTs on device_id, so the id — and every follow
+   * attached to it — survives the user switching notifications on.
+   */
+  registerGuestFollower: async (): Promise<RegisterFollowerResponse> => {
+    const headers = await API_CONFIG.getHeaders();
+    const device_id = await getDeviceId();
+    const response = await apiClient.post<RegisterFollowerResponse>(
+      getApiEndpoint(API_CONFIG.ENDPOINTS.REGISTER_GUEST_FOLLOWER),
+      { device_id, platform: getDevicePlatform(), app_version: APP_CONFIG.VERSION },
+      { headers, timeout: API_CONFIG.TIMEOUT }
+    );
+    return response.data;
+  },
+
+  /** Same shape as getFollowerData, keyed on device_id — no token needed. */
+  getFollowerDataByDevice: async (): Promise<GetFollowerDataResponse> => {
+    const headers = await API_CONFIG.getHeaders();
+    const device_id = await getDeviceId();
+    const response = await apiClient.post<GetFollowerDataResponse>(
+      getApiEndpoint(API_CONFIG.ENDPOINTS.GET_FOLLOW_DATA_BY_DEVICE),
+      { device_id },
+      { headers, timeout: API_CONFIG.TIMEOUT }
+    );
+    return response.data;
+  },
+
   getFollowerData: async (
     expoToken: string,
   ): Promise<GetFollowerDataResponse> => {

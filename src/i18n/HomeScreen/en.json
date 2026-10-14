@@ -123,7 +123,7 @@
     "savedMessage": "We'll keep you posted on race updates."
   },
   "gpsHealth": {
-    "title": "Location access is limited",
+    "title": "Let your family and friends follow you live",
     "blockedBody": "Livio needs \"Always\" location access to record your race while your phone is in your pocket. With \"While Using the App\" your position stops being recorded as soon as the screen turns off.",
     "blockedBodyDenied": "Livio needs access to your location to record your race. Location permission is currently turned off for this app.",
     "openSettings": "Open settings",

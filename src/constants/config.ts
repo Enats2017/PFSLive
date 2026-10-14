@@ -184,6 +184,15 @@ export const API_CONFIG = {
     update_customer_setting: '/update_customer_setting_api.php',
     VERIFY_TRACKING_PASSWORD: '/verify_tracking_password_api.php',
     GET_FOLLOWER_DATA: '/get_follower_data_api.php',
+    // Token-less follower identity. Both already exist server-side (livio_web
+    // uses them); the app now calls them so a user who denied notifications
+    // still gets a follower_id and their follows reach the server.
+    REGISTER_GUEST_FOLLOWER: '/register_guest_follower.php',
+    GET_FOLLOW_DATA_BY_DEVICE: '/get_follow_data_by_device.php',
+    // Per-device permission state (location / notifications) — feeds the
+    // T-48h reminder's "finish your setup" variant. Server endpoint is part of
+    // the growth_v0.1 API work; until it exists the call fails silently.
+    UPDATE_DEVICE_READINESS: '/update_device_readiness_api.php',
     SAVE_TRACKING_LOG: '/save_tracking_log_api.php',
     SAVE_TRACKING_START: '/save_tracking_start_api.php',
     HEARTBEAT_PING: '/heartbeat_ping_api.php',
@@ -250,6 +259,10 @@ export const APP_CONFIG = {
   // running 1.0.9 and no failure could ever be tied to a build (2026-10-07
   // tracking audit). Same source as versionService.getCurrentVersion().
   VERSION: Application.nativeApplicationVersion ?? "unknown",
+  // ✅ Public follower webapp (livio_web). The app lives under /livio_website —
+  // liviolive.com itself is marketing-only and 404s these routes.
+  // Overridable per environment (demo server) without a code change.
+  WEB_BASE_URL: process.env.EXPO_PUBLIC_WEB_URL || "https://my.liviolive.com/livio_website",
 };
 
 // Map Configuration

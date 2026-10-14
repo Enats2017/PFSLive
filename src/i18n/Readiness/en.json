@@ -1,0 +1,96 @@
+{
+  "card": {
+    "title": "Ready to race?",
+    "subtitle": "Sort these out before race day. It takes a minute.",
+    "allSet": "You're all set for race day",
+    "fix": "Fix",
+    "openSettings": "Open settings"
+  },
+  "items": {
+    "notifications": "Notifications",
+    "notificationsWhy": "Your reminder before the race",
+    "location": "Location",
+    "locationWhy": "So family and friends can follow you live",
+    "background": "Location while the phone is locked",
+    "backgroundWhy": "Choose \"Always\" / \"Allow all the time\"",
+    "locationServices": "Location is switched off",
+    "locationServicesWhy": "Turn on your phone's location",
+    "battery": "Battery optimisation",
+    "batteryWhy": "So your phone doesn't stop the tracking",
+    "powerSaving": "Power saving is on",
+    "powerSavingWhy": "Turn it off before you start"
+  },
+  "raceReady": {
+    "band": "Get race-ready",
+    "introBody": "A minute now means nothing to fix at the start line of {{race}}.",
+    "introBodyNoRace": "A minute now means nothing to fix at the start line.",
+    "stepOf": "Step {{current}} of {{total}}",
+    "continue": "Continue",
+    "later": "Later",
+    "openSettings": "Open settings",
+    "steps": {
+      "notifications": {
+        "title": "Get your race reminders",
+        "body": "We'll remind you before the race and tell you when it's time to start tracking."
+      },
+      "location": {
+        "title": "Let your family and friends follow you live",
+        "body": "Livio uses your location only while you track a race, to show you on the live map."
+      },
+      "background": {
+        "title": "Keep tracking with your phone in your pocket",
+        "body": "Choose \"Always\" (iPhone) or \"Allow all the time\" (Android). Without it, tracking stops when the screen locks."
+      },
+      "locationServices": {
+        "title": "Switch on your phone's location",
+        "body": "Your phone's location is off, so nothing can be tracked. Turn it on in settings."
+      },
+      "battery": {
+        "title": "Don't let your phone stop the tracking",
+        "body": "Allow Livio to run without battery optimisation, so a long race isn't cut short."
+      }
+    },
+    "doneTitle": "You're ready for {{race}}",
+    "doneTitleNoRace": "You're ready to race",
+    "notDoneTitle": "Almost ready",
+    "doneBody": "On race day, open Livio and press Start. Your family can follow you live.",
+    "doneLater": "You can finish this any time from the home screen.",
+    "close": "Done"
+  },
+  "countdown": {
+    "startsIn": "Starts in {{time}}",
+    "startingSoon": "Starting soon",
+    "days": "{{count}} d",
+    "hours": "{{count}} h",
+    "minutes": "{{count}} min"
+  },
+  "share": {
+    "button": "Share my live link",
+    "message": "Follow me live at {{race}}: {{url}}",
+    "messageNoRace": "Follow me live: {{url}}"
+  },
+  "notifications": {
+    "band": "Notifications",
+    "statusOn": "Notifications are on",
+    "statusOff": "Notifications are off",
+    "statusNotAsked": "Notifications are not set up yet",
+    "bodyOn": "You'll get race reminders and checkpoint alerts for the athletes you follow.",
+    "bodyOff": "You won't get race reminders or checkpoint alerts. Your phone only lets an app ask once, so switch them on in your phone's settings.",
+    "bodyNotAsked": "Get race reminders and checkpoint alerts for the athletes you follow.",
+    "turnOn": "Turn on notifications",
+    "openSettings": "Open phone settings",
+    "menuSub": "Race reminders and checkpoint alerts"
+  },
+  "followPrompt": {
+    "title": "Know when they pass each checkpoint?",
+    "body": "We'll send you an alert at every checkpoint and at the finish.",
+    "accept": "Turn on notifications",
+    "dismiss": "Not now"
+  },
+  "idle": {
+    "noRaceTitle": "No race coming up",
+    "noRaceBody": "Connect your next race to track it live and let your family follow you.",
+    "findRace": "Find a race",
+    "upcomingEvents": "Upcoming events"
+  }
+}

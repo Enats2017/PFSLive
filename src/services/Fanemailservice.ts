@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
+import { ensureFollowerId } from '../utils/followStorage';
 
 // ==================== TYPES ====================
 
@@ -34,6 +35,12 @@ export const fanEmailApi = {
     async updateEmail(email: string): Promise<UpdateFollowerEmailResult> {
         try {
             const deviceId = await getDeviceId();
+
+            // The endpoint updates an EXISTING follower row and deliberately
+            // won't create one. That row used to exist only for users who
+            // granted notifications, so everyone else's email was refused with
+            // follower_not_found. Make sure this device has one.
+            await ensureFollowerId();
 
             const requestBody = {
                 device_id: deviceId,

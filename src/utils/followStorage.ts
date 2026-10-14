@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { apiClient } from '../services/api';
 import { useFollowStore } from '../store/useFollowStore';
+import { followerApi } from '../services/registerFollowerServices';
 
 const STORAGE_KEY = 'followed_users';
 // Set when an upload fails, cleared when one succeeds. Its only job is to say
@@ -100,17 +101,69 @@ async function persistBibCache(map: Map<number, Set<string>>): Promise<void> {
   }
 }
 
+// ✅ A follower_id for this device, with or without a push token.
+//
+// follower_id used to be minted ONLY by registering an Expo push token, so a
+// user who denied notifications never had one and every follow returned early
+// below — silently, with no pending flag, so it was never retried. Following
+// looked fine on the phone and never reached the server (no follower counts,
+// no restore after reinstall, nothing for the web). A token-less row fixes
+// that; registerFollower() later UPSERTs the token onto the SAME row.
+//
+// `adopted` = this call is the first time the phone learned its id. The caller
+// must then MERGE rather than let either side overwrite the other — see
+// adoptServerFollowData.
+let ensureInFlight: Promise<{ id: number | null; adopted: boolean }> | null = null;
+
+export async function ensureFollowerId(): Promise<{ id: number | null; adopted: boolean }> {
+  const existing = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY));
+  if (existing !== null) return { id: existing, adopted: false };
+
+  if (!ensureInFlight) {
+    ensureInFlight = (async () => {
+      try {
+        const res = await followerApi.registerGuestFollower();
+        const id = toValidId(res?.follower_id);
+        if (id === null) return { id: null, adopted: false };
+        await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(id));
+        if (API_CONFIG.DEBUG) console.log('🆔 Token-less follower registered:', id);
+        return { id, adopted: true };
+      } catch (error) {
+        if (API_CONFIG.DEBUG) console.warn('⚠️ Guest follower registration failed:', error);
+        return { id: null, adopted: false };
+      } finally {
+        ensureInFlight = null;
+      }
+    })();
+  }
+  return ensureInFlight;
+}
+
 // ✅ NEW: Sync follow data to API
 async function syncFollowDataToAPI(): Promise<void> {
   try {
     // Get follower_id and device_id from storage
-    const followerIdRaw = await AsyncStorage.getItem(FOLLOWER_ID_KEY);
+    let followerIdRaw = await AsyncStorage.getItem(FOLLOWER_ID_KEY);
     const deviceId = await getDeviceId();
+
+    if (!followerIdRaw && deviceId) {
+      const { id, adopted } = await ensureFollowerId();
+      if (id !== null && adopted) {
+        // First id for this phone: the server row may already hold follows
+        // (same device_id used on the web). Merge both sides, then push.
+        await adoptServerFollowData();
+        return;
+      }
+      followerIdRaw = id !== null ? String(id) : null;
+    }
 
     if (!followerIdRaw || !deviceId) {
       if (API_CONFIG.DEBUG) {
         console.log('⏭️ Skipping API sync: follower_id or device_id not found');
       }
+      // Local is now ahead of the server — record it, so the next sync pushes
+      // instead of the next download overwriting the follow.
+      try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
       return;
     }
 
@@ -425,6 +478,92 @@ export async function hasPendingFollowSync(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * First-adoption merge: UNION of what the phone has and what the server row
+ * has, saved locally and pushed back. Used only when the phone has just learned
+ * its follower_id — neither side is authoritative at that moment, and a plain
+ * download would wipe follows made while the phone had no id.
+ */
+type ServerFollowData = {
+  follower_id?: number;
+  followed_customers?: number[];
+  followed_bibs?: Record<string, string[]>;
+};
+
+export async function adoptServerFollowData(prefetched?: ServerFollowData): Promise<void> {
+  try {
+    let server: ServerFollowData = prefetched ?? {};
+    if (!prefetched) {
+      try {
+        server = await followerApi.getFollowerDataByDevice();
+      } catch {
+        // follower_not_found / offline — nothing to merge in; push local.
+      }
+    }
+
+    const customers = await loadCache();
+    (server.followed_customers ?? [])
+      .map(toValidId)
+      .forEach((id) => { if (id !== null) customers.add(id); });
+    await persistCache(customers);
+
+    const bibs = await loadBibCache();
+    Object.entries(server.followed_bibs ?? {}).forEach(([productId, list]) => {
+      const pid = toValidId(productId);
+      if (pid === null || !Array.isArray(list)) return;
+      const set = bibs.get(pid) ?? new Set<string>();
+      list.map(toValidBib).forEach((b) => { if (b !== null) set.add(b); });
+      if (set.size > 0) bibs.set(pid, set);
+    });
+    await persistBibCache(bibs);
+
+    try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
+    await syncFollowDataToAPI();
+  } catch (error) {
+    if (API_CONFIG.DEBUG) console.warn('⚠️ adoptServerFollowData failed:', error);
+  }
+}
+
+/**
+ * Follow restore for a phone WITHOUT a push token (HomeScreen mount).
+ * Deliberately does not create a follower row just because the app opened:
+ * a row is only created when there is something to keep (local follows).
+ *  - phone knows its id      → normal download (pending-aware)
+ *  - server knows the device → learn the id, then merge (reinstall / web)
+ *  - neither, but local follows exist → create the row, then push
+ */
+export async function restoreFollowsWithoutToken(): Promise<void> {
+  const knownId = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY));
+
+  let server: ServerFollowData | null = null;
+  try {
+    server = await followerApi.getFollowerDataByDevice();
+  } catch {
+    server = null; // follower_not_found or offline
+  }
+
+  if (knownId !== null) {
+    if (server) {
+      await syncFollowDataFromAPI(server.followed_customers ?? [], server.followed_bibs ?? {});
+    }
+    return;
+  }
+
+  const serverId = toValidId(server?.follower_id);
+  if (server && serverId !== null) {
+    await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(serverId));
+    await adoptServerFollowData(server);
+    return;
+  }
+
+  const local = await loadCache();
+  const localBibs = await loadBibCache();
+  if (local.size === 0 && localBibs.size === 0) return;
+
+  const { id } = await ensureFollowerId();
+  if (id !== null) await adoptServerFollowData({});
 }
 
 export async function syncFollowDataFromAPI(

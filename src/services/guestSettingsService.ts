@@ -1,4 +1,5 @@
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
+import { ensureFollowerId } from '../utils/followStorage';
 
 interface GetFollowerLanguageResponse {
     success: boolean;
@@ -44,6 +45,9 @@ class GuestSettingsService {
 
     async updateLanguage(languageId: number): Promise<{ languageId: number }> {
         const deviceId = await getDeviceId();
+        // 'update' needs an existing follower row (follower_not_found
+        // otherwise) — previously only devices with push permission had one.
+        await ensureFollowerId();
         const json = await this.request<UpdateFollowerLanguageResponse>({
             action: 'update',
             device_id: deviceId,

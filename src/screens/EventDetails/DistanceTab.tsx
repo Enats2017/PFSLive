@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, space, palette, fonts } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
+import { raceReadyService } from '../../services/raceReadyService';
 import RegistrationModal from '../../components/RegistrationModal';
 import ConfirmRaceResultModal from './ConfirmRaceResultModal';
 import SuccessCelebrationModal from '../../components/SuccessCelebrationModal';
@@ -39,6 +40,8 @@ interface DistanceTabProps {
   event_name: string;
   event_image?: string | null;
   auto_register_id?: number | null;
+  /** Highlight + scroll to this distance; never registers. See navigation types. */
+  preselect_pov_id?: number | null;
   onRefresh?: () => void;
   onResultsAvailability?: (show: boolean) => void;
   onRaceDateAvailable?: (date: string | null) => void; 
@@ -49,6 +52,7 @@ const DistanceTab = ({
   event_name,
   event_image,
   auto_register_id,
+  preselect_pov_id,
   onRefresh,
   onResultsAvailability,
   onRaceDateAvailable,
@@ -159,6 +163,10 @@ const DistanceTab = ({
     []
   );
 
+  // Set on a successful connect, consumed when the celebration closes — that
+  // is when the Get race-ready flow opens (raceReadyService).
+  const justConnectedRef = useRef(false);
+
   // ✅ SUCCESS CALLBACK
   const handleSuccess = useCallback(
     async (product_option_value_app_id: number, participant_app_id?: number) => {
@@ -169,6 +177,7 @@ const DistanceTab = ({
       updateDistanceStatus(product_option_value_app_id, 'registered', participant_app_id);
       setSuccessVisible(true);
       setPendingRefresh(true);
+      justConnectedRef.current = true;
     },
     [updateDistanceStatus]
   );
@@ -202,6 +211,20 @@ const DistanceTab = ({
   const handleSuccessModalClose = useCallback(() => {
     setSuccessVisible(false);
 
+    // The runner just connected — days before the race, relaxed: the moment
+    // to sort out permissions, not the start line. Opens only if something
+    // is actually missing, once per race.
+    if (justConnectedRef.current) {
+      justConnectedRef.current = false;
+      setTimeout(() => {
+        void raceReadyService.maybeOpen({
+          raceKey: product_app_id,
+          raceName: event_name,
+          source: 'connect',
+        });
+      }, 400);
+    }
+
     if (pendingRefresh) {
       if (API_CONFIG.DEBUG) {
         console.log('🔄 Refreshing after modal close');
@@ -213,7 +236,7 @@ const DistanceTab = ({
         setPendingRefresh(false);
       }, 300);
     }
-  }, [pendingRefresh, fetchDistances, onRefresh]);
+  }, [pendingRefresh, fetchDistances, onRefresh, product_app_id, event_name]);
 
   const {
     modalVisible,
@@ -251,6 +274,19 @@ const DistanceTab = ({
       fetchDistances(false);
     }, [fetchDistances])
   );
+
+  // ✅ PRESELECT (deep link) — scroll to the distance once, never register.
+  const listRef = useRef<FlatList<Distance>>(null);
+  const preselectDoneRef = useRef(false);
+  useEffect(() => {
+    if (!preselect_pov_id || preselectDoneRef.current || loading || distances.length === 0) return;
+    const index = distances.findIndex((d) => d.product_option_value_app_id === preselect_pov_id);
+    preselectDoneRef.current = true;
+    if (index < 0) return;
+    setTimeout(() => {
+      listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.2 });
+    }, 300);
+  }, [preselect_pov_id, distances, loading]);
 
   // ✅ AUTO-REGISTER LOGIC
   useEffect(() => {
@@ -433,7 +469,17 @@ const handleExternalRegister = useCallback((url: string) => {
       selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
 
     return (
-      <View style={[commonStyles.card, { minHeight: 110, marginBottom: space.md, marginHorizontal: space.xl }]}>
+      <View
+        style={[
+          commonStyles.card,
+          { minHeight: 110, marginBottom: space.md, marginHorizontal: space.xl },
+          // Deep-linked distance (email/campaign) — highlighted only.
+          preselect_pov_id === item.product_option_value_app_id && {
+            borderWidth: 2,
+            borderColor: palette.lime,
+          },
+        ]}
+      >
         <View style={detailsStyles.distance}>
           <View style={detailsStyles.distanceInfo}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
@@ -550,7 +596,7 @@ const handleExternalRegister = useCallback((url: string) => {
         </View>
       </View>
     );
-  }, [navigation, product_app_id, event_name, event_image, CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, registeringItemId, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode, showGpx]);
+  }, [navigation, product_app_id, event_name, event_image, CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, registeringItemId, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode, showGpx, preselect_pov_id]);
 
   if (loading) {
     return (
@@ -585,8 +631,13 @@ const handleExternalRegister = useCallback((url: string) => {
   return (
     <>
       <FlatList
+        ref={listRef}
         data={distances}
         extraData={showResults}
+        onScrollToIndexFailed={(info) => {
+          // Rows have variable height — fall back to an estimate, then retry.
+          listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+        }}
         keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}

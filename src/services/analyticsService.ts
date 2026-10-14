@@ -694,4 +694,77 @@ export const analyticsService = {
       ...omitEmptyParams({ [ANALYTICS_PARAMS.RACE_ID]: raceId != null ? String(raceId) : undefined }),
     });
   },
+
+  // ─────────────────────────────────────────────────────────────
+  // ACTIVATION funnel — connect → ready → start → positions
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * The Start-tracking funnel BEFORE a session exists. `tracking_started` and the
+   * server's TRACKING_START row both fire only once a session is under way, so
+   * a runner who pressed Start and was stopped by a permission prompt, the
+   * power-saving modal or the early-start modal was indistinguishable from one
+   * who never pressed it. Those need opposite fixes — this tells them apart.
+   *
+   * Firebase only, on purpose: oc_tracking_starts_app / oc_tracking_logs_app
+   * drive the "started" counts, session counting and home_api's Start-button
+   * hiding, so an attempt must NEVER be written to either.
+   */
+  async logStartStep(
+    step:
+      | "screen_ready"      // Start visible for an upcoming race (once per race per day)
+      | "tap"               // pressed Start (confirm modal opened)
+      | "blocked"           // a gate stopped it — see reason
+      | "permission_result" // answer to the permission modal — see reason
+      | "failed",           // threw after the gates
+    reason?: string,
+    raceId?: string | number | null,
+  ) {
+    await logEvent(analytics, "start_step", {
+      start_step: step,
+      // Fixed reason codes only (e.g. 'denied_can_ask', 'location_off').
+      ...omitEmptyParams({
+        start_reason: reason,
+        [ANALYTICS_PARAMS.RACE_ID]: raceId != null ? String(raceId) : undefined,
+      }),
+    });
+    console.log("📊 [Analytics] start_step:", step, reason ?? "");
+  },
+
+  /**
+   * The "Get race-ready" flow, one event per step outcome. `race_ready_step`
+   * = the step, `ready_result` = what happened. Read together with start_step
+   * this shows whether asking days before the race beats asking at the line.
+   */
+  async logRaceReadyStep(
+    step: "shown" | "notifications" | "location" | "background" | "locationServices" | "battery" | "done" | "skipped",
+    result?: "granted" | "denied" | "later" | "settings" | "already",
+    source?: string,
+  ) {
+    await logEvent(analytics, "race_ready_step", {
+      race_ready_step: step,
+      ...omitEmptyParams({ ready_result: result, ready_source: source }),
+    });
+    console.log("📊 [Analytics] race_ready_step:", step, result ?? "", source ?? "");
+  },
+
+  /**
+   * Our own pre-prompt for notifications (fan follow sheet, notifications
+   * screen). `shown` vs `accepted` is the pre-prompt's conversion; `os_result`
+   * is the OS dialog's answer after it.
+   */
+  /** "Share my live link" — how many runners bring their own audience. */
+  async logShareLiveLink(outcome: "shared" | "dismissed" | "error") {
+    await logEvent(analytics, "share_live_link", { share_outcome: outcome });
+  },
+
+  async logNotificationAsk(
+    source: "follow" | "race_ready" | "settings_screen",
+    outcome: "shown" | "accepted" | "dismissed" | "granted" | "denied" | "settings",
+  ) {
+    await logEvent(analytics, "notification_ask", {
+      ask_source: source,
+      ask_outcome: outcome,
+    });
+  },
 };

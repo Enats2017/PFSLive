@@ -43,7 +43,17 @@ import { useAuth } from '../context/AuthContext';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { useNotifications, NotificationData } from '../hooks/useNotifications';
 import { followerApi } from '../services/registerFollowerServices';
-import { syncFollowDataFromAPI } from '../utils/followStorage';
+import { syncFollowDataFromAPI, restoreFollowsWithoutToken } from '../utils/followStorage';
+import { PreRaceCountdown, computeRaceStartMs } from '../components/Home/PreRaceCountdown';
+import { ReadinessCard } from '../components/Home/ReadinessCard';
+import { ShareTrackingLink } from '../components/Home/ShareTrackingLink';
+import { IdleHome } from '../components/Home/IdleHome';
+import { raceReadyService } from '../services/raceReadyService';
+import {
+  openLocationSettingsFor,
+  requestBatteryOptimizationExemption,
+  PermissionBlockReason,
+} from '../utils/deviceSettings';
 
 // Styles
 import { spacing, typography, commonStyles, palette, fonts } from '../styles/common.styles';
@@ -103,6 +113,11 @@ interface HomeData {
   timezone?: string;
   next_race_in_hours?: number;
   following_live_events?: FollowingLiveEvent[];
+  // Growth API: the runner's own bib + distance for the next race, so the app
+  // can build their share link. Strings — bibs can be alphanumeric. Absent
+  // until the server change ships; the share button hides itself until then.
+  next_race_bib_number?: string | null;
+  next_race_product_option_value_app_id?: number | string | null;
 }
 
 // ==================== CONSTANTS ====================
@@ -112,94 +127,9 @@ const BATTERY_PROMPTED_KEY = '@PFSLive:batteryOptimizationPrompted';
 
 // ✅ Hours threshold — show early tracking warning if race is more than this far away
 
-// ==================== BATTERY OPTIMIZATION ====================
-
-const ANDROID_PACKAGE = 'eu.passionforsports.livio';
-
-/**
- * Open system dialog to exempt app from battery optimization.
- * HomeScreen provides the visual background behind the system dialog.
- * Called once on first install — permanent, zero cost on non-event days.
- */
-const requestBatteryOptimizationExemption = async (): Promise<void> => {
-  if (Platform.OS !== 'android') return;
-  try {
-    await IntentLauncher.startActivityAsync(
-      IntentLauncher.ActivityAction.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-      { data: `package:${ANDROID_PACKAGE}` }
-    );
-  } catch {
-    // Fallback — open battery optimization list directly
-    await IntentLauncher.startActivityAsync(
-      'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS'
-    );
-  }
-};
-
-type PermissionBlockReason = 'denied' | 'no_background_perm' | 'location_off';
-
-/**
- * Take the runner to the page that fixes THEIR problem, and actually land on
- * it — not on App info with a list of instructions to follow.
- *
- * Android publishes an intent for the device Location toggle, so 'location_off'
- * is exact. The per-app permission page has no public intent, so:
- *   1. MANAGE_APP_PERMISSIONS -> Livio's permission list, one tap from Location.
- *   2. APPLICATION_DETAILS_SETTINGS -> App info. The old behaviour; always resolves.
- *
- * DELIBERATELY NOT USED: MANAGE_APP_PERMISSION (singular), which targets the
- * Location page itself. It requires Intent.EXTRA_USER, a Parcelable UserHandle,
- * and expo-intent-launcher can only carry plain JS values in `extra`. Without it
- * the activity still RESOLVES — so no exception is thrown and the ladder never
- * falls through — then finishes immediately. The runner sees a flash and lands
- * nowhere, which is worse than App info. It cannot be fixed from JS; reaching
- * that page needs a native module.
- *
- * Falling through is otherwise safe: IntentLauncherModule.kt wraps
- * startActivityForResult in try/catch(Throwable) -> promise.reject, so an OEM
- * that does not export a tier rejects rather than crashing. That promise only
- * settles when the user RETURNS, so a tier that does launch cannot fall through
- * and open a second screen behind it.
- *
- * iOS has no per-page deep link at all (the App-Prefs: schemes are private API
- * and get apps rejected), so openSettings() lands on Livio's own page, where
- * Location is a single row.
- */
-const openLocationSettingsFor = async (reason: PermissionBlockReason): Promise<void> => {
-  if (Platform.OS !== 'android') {
-    Linking.openSettings().catch(() => { /* silent */ });
-    return;
-  }
-
-  if (reason === 'location_off') {
-    try {
-      await IntentLauncher.startActivityAsync(
-        IntentLauncher.ActivityAction.LOCATION_SOURCE_SETTINGS
-      );
-      return;
-    } catch {
-      // OEM without the activity — fall through to App info.
-    }
-  } else {
-    try {
-      await IntentLauncher.startActivityAsync('android.intent.action.MANAGE_APP_PERMISSIONS', {
-        extra: { 'android.intent.extra.PACKAGE_NAME': ANDROID_PACKAGE },
-      });
-      return;
-    } catch {
-      // Fall through to App info.
-    }
-  }
-
-  try {
-    await IntentLauncher.startActivityAsync(
-      IntentLauncher.ActivityAction.APPLICATION_DETAILS_SETTINGS,
-      { data: `package:${ANDROID_PACKAGE}` }
-    );
-  } catch {
-    Linking.openSettings().catch(() => { /* silent */ });
-  }
-};
+// Battery-exemption intent and the settings-page ladder moved to
+// utils/deviceSettings so the readiness card and the Get race-ready screen
+// reuse exactly the same routes as the start-time modal.
 
 // ==================== COMPONENT ====================
 
@@ -440,26 +370,75 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, [isRegistering]);
 
   useEffect(() => {
-    if (!expoPushToken) return;
+    // Wait for the silent token registration to settle, so a user who HAS
+    // notifications doesn't run the token-less path first.
+    if (isRegistering) return;
 
     const syncFromServer = async () => {
       try {
-        const data = await followerApi.getFollowerData(expoPushToken);
+        if (expoPushToken) {
+          const data = await followerApi.getFollowerData(expoPushToken);
+          await syncFollowDataFromAPI(
+            data.followed_customers ?? [],
+            data.followed_bibs ?? {},
+          );
+          return;
+        }
 
-        console.log('data');
-        console.log(data);
-
-        await syncFollowDataFromAPI(
-          data.followed_customers ?? [],
-          data.followed_bibs ?? {},
-        );
+        // No push token (notifications off or not yet asked). Restore used to
+        // be skipped entirely here, so a reinstall without notifications lost
+        // every follow. Keyed on device_id instead — see followStorage.
+        await restoreFollowsWithoutToken();
       } catch {
         // Silent — local data stays as fallback if server unreachable
       }
     };
 
     syncFromServer();
-  }, [expoPushToken]);
+  }, [expoPushToken, isRegistering]);
+
+  // ✅ Pre-start countdown — same maths as doStartGPSTracking, anchored to when
+  // this homeData arrived. Display only; Start recomputes from a fresh fetch.
+  const raceStartMs = useMemo(
+    () =>
+      computeRaceStartMs(
+        homeData?.next_race_date,
+        homeData?.next_race_time,
+        homeData?.server_datetime,
+        Date.now(),
+      ),
+    [homeData],
+  );
+
+  // ✅ Get race-ready fallback + activation funnel, once per race.
+  //  - Opens the flow for runners who connected before it existed, or whose
+  //    email link never opened the app. Only while the race is still > 3h
+  //    away: on race morning the readiness card and the Start gate handle it —
+  //    the point is never to ask at the start line.
+  //  - start_step 'screen_ready': Start was visible for this race (once a day)
+  //    — the denominator that separates "never pressed" from "pressed and blocked".
+  useEffect(() => {
+    if (homeData?.show_start_track !== 1 || !eventId || isGPSActive) return;
+
+    void (async () => {
+      try {
+        const day = new Date().toISOString().slice(0, 10);
+        const key = `@PFSLive:startReadyLogged:${eventId}`;
+        if ((await AsyncStorage.getItem(key)) !== day) {
+          await AsyncStorage.setItem(key, day);
+          void analyticsService.logStartStep('screen_ready', undefined, eventId);
+        }
+      } catch { /* analytics only */ }
+    })();
+
+    if ((homeData?.next_race_in_hours ?? 0) > 3 && navigation.isFocused()) {
+      void raceReadyService.maybeOpen({
+        raceKey: eventId,
+        raceName: homeData?.next_race_name,
+        source: 'home',
+      });
+    }
+  }, [homeData?.show_start_track, eventId, isGPSActive, homeData?.next_race_in_hours, homeData?.next_race_name, navigation]);
 
   // ==================== UTILITIES ====================
 
@@ -820,6 +799,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       if (!perms.foreground || !perms.background) {
         setPermissionBlockReason(perms.foreground ? 'no_background_perm' : 'denied');
+        // Funnel only (Firebase) — never a server tracking row. See logStartStep.
+        void analyticsService.logStartStep(
+          'blocked',
+          `${perms.foreground ? 'no_background' : 'denied'}_${perms.canAskAgain ? 'can_ask' : 'settings'}`,
+          eventId,
+        );
         // Arm the resume — see pendingStartRef. Without this the runner grants
         // Always and comes back to a stopped tracker.
         pendingStartRef.current = true;
@@ -833,6 +818,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // what makes the 'location_off' deep-link reachable at start time.
       if (!(await gpsService.isLocationServiceEnabled())) {
         setPermissionBlockReason('location_off');
+        void analyticsService.logStartStep('blocked', 'location_off', eventId);
         pendingStartRef.current = true;
         setShowLocationPermissionModal(true);
         return;
@@ -1022,6 +1008,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         intervalSeconds: trackingParamsRef.current?.intervalSeconds,
       });
     } catch (error) {
+      void analyticsService.logStartStep('failed', 'exception', eventId);
       Alert.alert(
         t('common:errors.generic'),
         error instanceof Error ? error.message : t('home:errors.trackingFailed')
@@ -1044,6 +1031,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const startGPSTracking = useCallback(async () => {
     if (!participantId || !eventId) {
+      void analyticsService.logStartStep('blocked', 'missing_ids', eventId);
       toastError(t('home:errors.missingInfo'), t('home:errors.missingInfoDescription'));
       return;
     }
@@ -1051,6 +1039,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const isPowerSaving = await checkPowerSavingMode();
     console.log('Power Saving Mode:', isPowerSaving);
     if (isPowerSaving) {
+      void analyticsService.logStartStep('blocked', 'power_saving', eventId);
       setShowPowerSavingModal(true);
       return;
 
@@ -1066,6 +1055,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // was 4.4 minutes from the gun.
     const hoursUntilRace = homeData?.next_race_in_hours ?? 0;
     if (homeData?.manual_start !== 1 && hoursUntilRace > 0) {
+      void analyticsService.logStartStep('blocked', 'early_modal', eventId);
       setShowEarlyTrackingModal(true);
       return;
     }
@@ -1075,6 +1065,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // Opens the confirm popup (button now calls this instead of startGPSTracking)
   const confirmStartTracking = useCallback(() => {
+    void analyticsService.logStartStep('tap', undefined, eventId);
     if (!participantId || !eventId) {
       toastError(t('home:errors.missingInfo'), t('home:errors.missingInfoDescription'));
       return;
@@ -1334,11 +1325,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     initializeScreen();
   }, [initializeScreen]);
 
-  // ✅ Battery optimization — prompt once on first install when HomeScreen is visible
-  // HomeScreen provides the background behind the system dialog — better UX than App.tsx
-  useEffect(() => {
-    checkAndPromptBatteryOptimization();
-  }, [checkAndPromptBatteryOptimization]);
+  // Battery optimization used to be prompted here on FIRST LAUNCH — before the
+  // user had done anything, the same cold ask that cost us notifications. It
+  // now lives in Get race-ready (after connecting to a race) and in the home
+  // readiness card, both of which read the real exemption state instead of a
+  // one-shot flag. checkAndPromptBatteryOptimization / the modal stay defined
+  // but are no longer triggered on mount.
 
   // Countdown timer + background sent count sync + queue count sync
   useEffect(() => {
@@ -1570,6 +1562,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             (await gpsService.isLocationServiceEnabled());
 
           if (satisfied) {
+            void analyticsService.logStartStep('permission_result', 'granted_on_return');
             // Clear FIRST — the inline-grant path can resolve for the same
             // grant, and whichever runs second must find nothing pending.
             pendingStartRef.current = false;
@@ -1581,6 +1574,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // Came back without granting. The button already dismissed the modal,
           // so without this the runner faces a bare screen and no explanation
           // of why tracking still is not running. Put it back and stay armed.
+          void analyticsService.logStartStep('permission_result', 'still_blocked_on_return');
           setShowLocationPermissionModal(true);
         } catch { /* silent — a later foreground retries */ }
       })();
@@ -1944,7 +1938,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={homeStyles.notifWrapper}>
             <View style={homeStyles.notifCard}>
               <View style={homeStyles.notifIconWrapper}>
-                <Ionicons name="location-outline" size={36} color={palette.danger} />
+                <Ionicons name="location-outline" size={36} color={palette.navy} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:gpsHealth.title')}</Text>
               <Text style={homeStyles.notifBody}>
@@ -1994,6 +1988,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           const t0 = Date.now();
                           const perms = await gpsService.requestPermissionsDetailed();
                           setHasPermission(perms.foreground);
+                          void analyticsService.logStartStep(
+                            'permission_result',
+                            perms.background ? 'granted' : (Date.now() - t0 > 700 ? 'denied' : 'no_prompt'),
+                            eventId,
+                          );
                           if (perms.background) {
                             // Granted outright, without ever leaving the app —
                             // on Android 11+ the OS opens Livio's Location page
@@ -2020,6 +2019,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           // fall through to settings
                         }
                       }
+                      void analyticsService.logStartStep('permission_result', 'sent_to_settings', eventId);
                       await openLocationSettingsFor(permissionBlockReason);
                     })();
                   }}
@@ -2032,6 +2032,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   onPress={() => {
                     // Backing out cancels the start — disarm, or a later
                     // foreground would fire a start the runner declined.
+                    void analyticsService.logStartStep('permission_result', 'dismissed', eventId);
                     pendingStartRef.current = false;
                     setShowLocationPermissionModal(false);
                   }}
@@ -2214,6 +2215,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     </>
                   )}
                 </View>
+
+                {/* Countdown BEFORE Start — it used to exist only once tracking
+                    was running. Manual-start races have no fixed gun. */}
+                {!isGPSActive && homeData?.manual_start !== 1 && (
+                  <PreRaceCountdown startAtMs={raceStartMs} />
+                )}
+
+                {/* Each runner brings their own audience. Hidden until the
+                    server sends this race's bib + distance. */}
+                <ShareTrackingLink
+                  productAppId={homeData.next_race_id}
+                  povId={homeData.next_race_product_option_value_app_id}
+                  bib={homeData.next_race_bib_number}
+                  raceName={homeData.next_race_name}
+                />
 
                 <View style={homeStyles.cardDivider} />
                 {/* Manual Start Indicator */}
@@ -2412,6 +2428,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </Text>
                 </TouchableOpacity>
               </View>
+              {/* Ready to race? — days ahead, not at the start line. */}
+              {!isGPSActive && (
+                <ReadinessCard
+                  raceName={homeData?.next_race_name}
+                  onOpenPowerSaving={openPowerSavingSettings}
+                />
+              )}
+
               {/* ✅ Queue retry button — shown after tracking stops if locations remain queued */}
               {!isGPSActive && queuedCount > 0 && participantId && eventId && (
                 <TouchableOpacity
@@ -2474,6 +2498,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
           ) : (
             <>
+              {/* No upcoming race — most users, most of the time. */}
+              {homeData && <IdleHome />}
               {/*homeData?.following_live_events && homeData.following_live_events.length > 0 && (
                 <FollowingLiveEventsSection
                   events={homeData.following_live_events}

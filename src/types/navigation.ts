@@ -22,6 +22,13 @@ export type RootStackParamList = {
     event_name: string;
     event_image?: string; 
     auto_register_id: number | null;
+    /**
+     * Highlight + scroll to this distance, NEVER register. auto_register_id
+     * registers immediately (post-login resume) — an email/deep link must use
+     * this instead, so the runner still makes the final "connect me" tap
+     * (connecting is what uses up a tracking session).
+     */
+    preselect_pov_id?: number | null;
   };
   ParticipantResult: {
     product_app_id: string | number;
@@ -123,6 +130,13 @@ export type RootStackParamList = {
   FollowersList: {
     customer_app_id?: number;
   };
+
+  // Get race-ready — see raceReadyService for when it opens.
+  RaceReady: {
+    race_name?: string;
+    source?: string;
+  };
+  NotificationSettings: undefined;
 
 };
 

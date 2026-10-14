@@ -1,0 +1,78 @@
+// src/components/Home/PreRaceCountdown.tsx
+//
+// ✅ "Starts in 2 d 4 h" on the next-race card, BEFORE Start is pressed.
+//
+// HomeScreen already computed the time to the gun — but only inside
+// doStartGPSTracking, i.e. after the runner pressed Start. This shows it on
+// the idle card days ahead. Read-only: it does not feed the race-start gate,
+// which keeps its own fresh computation at Start time.
+//
+// startAtMs is real UTC ms, built by the caller with the same fake-UTC diff
+// HomeScreen uses (race_datetime − server_datetime, both event-tz, anchored
+// to Date.now() at fetch) — NOT getServerTime(), see HomeScreen ~474.
+
+import React, { useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import { palette } from '../../styles/common.styles';
+import { readinessStyles as s } from '../../styles/readiness.styles';
+
+interface Props {
+  startAtMs: number | null;
+}
+
+const MIN = 60_000;
+
+export const PreRaceCountdown: React.FC<Props> = ({ startAtMs }) => {
+  const { t } = useTranslation(['readiness']);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (startAtMs == null) return;
+    // Minute resolution is all the label shows; 15s keeps it within a minute.
+    const id = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(id);
+  }, [startAtMs]);
+
+  if (startAtMs == null || !isFinite(startAtMs)) return null;
+
+  const ms = startAtMs - now;
+  // Past the gun: the in-tracking countdown and status take over.
+  if (ms <= -30 * MIN) return null;
+
+  let label: string;
+  if (ms <= MIN) {
+    label = t('readiness:countdown.startingSoon');
+  } else {
+    const days = Math.floor(ms / (24 * 60 * MIN));
+    const hours = Math.floor((ms % (24 * 60 * MIN)) / (60 * MIN));
+    const minutes = Math.floor((ms % (60 * MIN)) / MIN);
+    const parts: string[] = [];
+    if (days > 0) parts.push(t('readiness:countdown.days', { count: days }));
+    if (hours > 0 || days > 0) parts.push(t('readiness:countdown.hours', { count: hours }));
+    if (days === 0) parts.push(t('readiness:countdown.minutes', { count: minutes }));
+    label = t('readiness:countdown.startsIn', { time: parts.join(' ') });
+  }
+
+  return (
+    <View style={s.countdownPill} accessibilityRole="text">
+      <Ionicons name="hourglass-outline" size={14} color={palette.noticeText} />
+      <Text style={s.countdownText}>{label}</Text>
+    </View>
+  );
+};
+
+/** Same maths as HomeScreen's Start path, anchored to when the data arrived. */
+export const computeRaceStartMs = (
+  raceDate?: string,
+  raceTime?: string,
+  serverDatetime?: string,
+  fetchedAtMs?: number,
+): number | null => {
+  if (!raceDate || !raceTime || !serverDatetime || !fetchedAtMs) return null;
+  const serverFakeMs = new Date(serverDatetime.replace(' ', 'T') + 'Z').getTime();
+  const raceFakeMs = new Date(`${raceDate}T${raceTime}Z`).getTime();
+  const diff = raceFakeMs - serverFakeMs;
+  return isNaN(diff) ? null : fetchedAtMs + diff;
+};

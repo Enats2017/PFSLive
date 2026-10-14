@@ -123,7 +123,7 @@
     "savedMessage": "We houden je op de hoogte van race-updates."
   },
   "gpsHealth": {
-    "title": "Locatietoegang is beperkt",
+    "title": "Laat familie en vrienden je live volgen",
     "blockedBody": "Livio heeft locatietoegang \"Altijd\" nodig om je wedstrijd op te nemen terwijl je telefoon in je zak zit. Met \"Tijdens gebruik van de app\" stopt de registratie zodra het scherm uitgaat.",
     "blockedBodyDenied": "Livio heeft toegang tot je locatie nodig om je wedstrijd op te nemen. Locatietoegang staat nu uit voor deze app.",
     "openSettings": "Instellingen openen",

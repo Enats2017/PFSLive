@@ -32,6 +32,7 @@ import { useFileUpload } from '../../hooks/useFileUpload';
 import { useDimensions } from '../../hooks/useDimensions';
 import { tokenService } from '../../services/tokenService';
 import { analyticsService } from '../../services/analyticsService';
+import { raceReadyService } from '../../services/raceReadyService';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -242,6 +243,9 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
       }
       if (response.success) {
         toastSuccess(t('personal:success.title'), response.message || t('personal:success.message'));
+        // Captured before resetForm() clears it — used by Get race-ready below.
+        const createdName = formData.name.trim();
+        const createdKey = `custom_${response.event?.product_app_id ?? response.data?.product_app_id ?? createdName}`;
         resetForm();
         clearFile();
         await analyticsService.markAsParticipant('create_event'); 
@@ -251,6 +255,11 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
             customer_app_id: customerId,
             fromEdit: true,
         } as never);
+        // A custom event is a "just connected" moment too — open Get
+        // race-ready on top of the profile if anything is missing.
+        setTimeout(() => {
+          void raceReadyService.maybeOpen({ raceKey: createdKey, raceName: createdName, source: 'custom_event' });
+        }, 600);
       } else {
         throw new Error(response.message || 'API_ERROR');
       }

@@ -1,0 +1,96 @@
+{
+  "card": {
+    "title": "Prêt pour la course ?",
+    "subtitle": "Réglez ceci avant le jour de la course. Cela prend une minute.",
+    "allSet": "Tout est prêt pour le jour de la course",
+    "fix": "Régler",
+    "openSettings": "Ouvrir les réglages"
+  },
+  "items": {
+    "notifications": "Notifications",
+    "notificationsWhy": "Votre rappel avant la course",
+    "location": "Localisation",
+    "locationWhy": "Pour que vos proches vous suivent en direct",
+    "background": "Localisation écran verrouillé",
+    "backgroundWhy": "Choisissez « Toujours » / « Toujours autoriser »",
+    "locationServices": "La localisation est désactivée",
+    "locationServicesWhy": "Activez la localisation de votre téléphone",
+    "battery": "Optimisation de la batterie",
+    "batteryWhy": "Pour que votre téléphone n'arrête pas le suivi",
+    "powerSaving": "Le mode économie d'énergie est activé",
+    "powerSavingWhy": "Désactivez-le avant de démarrer"
+  },
+  "raceReady": {
+    "band": "Préparez votre course",
+    "introBody": "Une minute maintenant, et rien à régler sur la ligne de départ de {{race}}.",
+    "introBodyNoRace": "Une minute maintenant, et rien à régler sur la ligne de départ.",
+    "stepOf": "Étape {{current}} sur {{total}}",
+    "continue": "Continuer",
+    "later": "Plus tard",
+    "openSettings": "Ouvrir les réglages",
+    "steps": {
+      "notifications": {
+        "title": "Recevez vos rappels de course",
+        "body": "Nous vous rappelons la course et vous prévenons quand il est temps de lancer le suivi."
+      },
+      "location": {
+        "title": "Laissez vos proches vous suivre en direct",
+        "body": "Livio utilise votre position uniquement pendant le suivi d'une course, pour vous afficher sur la carte en direct."
+      },
+      "background": {
+        "title": "Continuez le suivi, téléphone en poche",
+        "body": "Choisissez « Toujours » (iPhone) ou « Toujours autoriser » (Android). Sinon, le suivi s'arrête quand l'écran se verrouille."
+      },
+      "locationServices": {
+        "title": "Activez la localisation de votre téléphone",
+        "body": "La localisation de votre téléphone est désactivée : rien ne peut être suivi. Activez-la dans les réglages."
+      },
+      "battery": {
+        "title": "Empêchez votre téléphone d'arrêter le suivi",
+        "body": "Autorisez Livio à fonctionner sans optimisation de la batterie, pour qu'une longue course ne soit pas interrompue."
+      }
+    },
+    "doneTitle": "Vous êtes prêt pour {{race}}",
+    "doneTitleNoRace": "Vous êtes prêt à courir",
+    "notDoneTitle": "Presque prêt",
+    "doneBody": "Le jour de la course, ouvrez Livio et appuyez sur Démarrer. Vos proches pourront vous suivre en direct.",
+    "doneLater": "Vous pouvez terminer cela à tout moment depuis l'écran d'accueil.",
+    "close": "Terminé"
+  },
+  "countdown": {
+    "startsIn": "Départ dans {{time}}",
+    "startingSoon": "Départ imminent",
+    "days": "{{count}} j",
+    "hours": "{{count}} h",
+    "minutes": "{{count}} min"
+  },
+  "share": {
+    "button": "Partager mon lien en direct",
+    "message": "Suivez-moi en direct à {{race}} : {{url}}",
+    "messageNoRace": "Suivez-moi en direct : {{url}}"
+  },
+  "notifications": {
+    "band": "Notifications",
+    "statusOn": "Les notifications sont activées",
+    "statusOff": "Les notifications sont désactivées",
+    "statusNotAsked": "Les notifications ne sont pas encore configurées",
+    "bodyOn": "Vous recevrez les rappels de course et les alertes de passage pour les athlètes que vous suivez.",
+    "bodyOff": "Vous ne recevrez ni rappels de course ni alertes de passage. Votre téléphone ne permet à une app de demander qu'une seule fois : activez-les dans les réglages de votre téléphone.",
+    "bodyNotAsked": "Recevez les rappels de course et les alertes de passage pour les athlètes que vous suivez.",
+    "turnOn": "Activer les notifications",
+    "openSettings": "Ouvrir les réglages du téléphone",
+    "menuSub": "Rappels de course et alertes de passage"
+  },
+  "followPrompt": {
+    "title": "Savoir quand ils passent chaque point de contrôle ?",
+    "body": "Nous vous envoyons une alerte à chaque point de contrôle et à l'arrivée.",
+    "accept": "Activer les notifications",
+    "dismiss": "Pas maintenant"
+  },
+  "idle": {
+    "noRaceTitle": "Aucune course à venir",
+    "noRaceBody": "Connectez votre prochaine course pour la suivre en direct et laisser vos proches vous suivre.",
+    "findRace": "Trouver une course",
+    "upcomingEvents": "Événements à venir"
+  }
+}

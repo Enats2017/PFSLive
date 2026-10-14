@@ -123,7 +123,7 @@
     "savedMessage": "Nous vous tiendrons informé des mises à jour des courses."
   },
   "gpsHealth": {
-    "title": "Accès à la localisation limité",
+    "title": "Laissez vos proches vous suivre en direct",
     "blockedBody": "Livio a besoin de l'accès à la localisation « Toujours » pour enregistrer votre course lorsque votre téléphone est dans votre poche. Avec « Lorsque l'app est active », votre position n'est plus enregistrée dès que l'écran s'éteint.",
     "blockedBodyDenied": "Livio a besoin d'accéder à votre position pour enregistrer votre course. L'autorisation de localisation est actuellement désactivée pour cette application.",
     "openSettings": "Ouvrir les réglages",

@@ -25,6 +25,7 @@ import ErrorScreen from '../components/ErrorScreen';
 import { useScreenError } from '../hooks/useApiError';
 import { tokenService } from '../services/tokenService';
 import * as Location from 'expo-location';
+import { isTracking } from '../services/gpsService';
 import { useDimensions } from '../hooks/useDimensions';
 import { analyticsService } from '../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../constants/analyticsScreens';
@@ -225,13 +226,26 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
     // ✅ Follower's own position — watched on mount, never written to DB.
     // Uses Balanced accuracy (battery friendly) since precision isn't critical.
+    //
+    // CHECK, never REQUEST. This used to cold-prompt every map viewer for
+    // location just to draw their own "YOU" dot — most viewers are fans, and a
+    // fan who said no was later blocked when they raced themselves (the OS asks
+    // only once; recovery then needs Settings). The dot still shows for anyone
+    // who has already granted location.
+    //
+    // Also skipped while this phone is tracking a race: Option B (gpsService
+    // header) — a second location stream next to Transistor's is exactly what
+    // destabilised Hermes under the New Architecture.
     useEffect(() => {
         let watcher: Location.LocationSubscription | null = null;
+        let cancelled = false;
 
         const startFollowerLocation = async () => {
             try {
-                const { status } = await Location.requestForegroundPermissionsAsync();
+                const { status } = await Location.getForegroundPermissionsAsync();
                 if (status !== 'granted') return;
+                if (await isTracking()) return;
+                if (cancelled) return;
                 watcher = await Location.watchPositionAsync(
                     {
                         accuracy: Location.Accuracy.Balanced,
@@ -245,13 +259,15 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         });
                     }
                 );
+                // Unmounted while the watcher was being created.
+                if (cancelled) watcher.remove();
             } catch (err) {
                 console.log('📍 Follower location error (non-fatal):', err);
             }
         };
 
         startFollowerLocation();
-        return () => { watcher?.remove(); };
+        return () => { cancelled = true; watcher?.remove(); };
     }, []);
 
     // ✅ Initial load with followed users check

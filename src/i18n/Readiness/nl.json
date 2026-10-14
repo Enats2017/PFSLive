@@ -1,0 +1,96 @@
+{
+  "card": {
+    "title": "Klaar om te racen?",
+    "subtitle": "Regel dit vóór de wedstrijddag. Het duurt een minuut.",
+    "allSet": "Alles klaar voor de wedstrijddag",
+    "fix": "Regelen",
+    "openSettings": "Instellingen openen"
+  },
+  "items": {
+    "notifications": "Meldingen",
+    "notificationsWhy": "Je herinnering vóór de wedstrijd",
+    "location": "Locatie",
+    "locationWhy": "Zodat familie en vrienden je live kunnen volgen",
+    "background": "Locatie bij vergrendeld scherm",
+    "backgroundWhy": "Kies \"Altijd\" / \"Altijd toestaan\"",
+    "locationServices": "Locatie staat uit",
+    "locationServicesWhy": "Zet de locatie van je telefoon aan",
+    "battery": "Batterijoptimalisatie",
+    "batteryWhy": "Zodat je telefoon de tracking niet stopt",
+    "powerSaving": "Energiebesparing staat aan",
+    "powerSavingWhy": "Zet het uit voordat je start"
+  },
+  "raceReady": {
+    "band": "Klaar voor de race",
+    "introBody": "Eén minuut nu, en niets meer te regelen aan de start van {{race}}.",
+    "introBodyNoRace": "Eén minuut nu, en niets meer te regelen aan de start.",
+    "stepOf": "Stap {{current}} van {{total}}",
+    "continue": "Doorgaan",
+    "later": "Later",
+    "openSettings": "Instellingen openen",
+    "steps": {
+      "notifications": {
+        "title": "Ontvang je wedstrijdherinneringen",
+        "body": "We herinneren je aan de wedstrijd en laten je weten wanneer je de tracking moet starten."
+      },
+      "location": {
+        "title": "Laat familie en vrienden je live volgen",
+        "body": "Livio gebruikt je locatie alleen terwijl je een wedstrijd trackt, om je op de live kaart te tonen."
+      },
+      "background": {
+        "title": "Blijf tracken met je telefoon in je zak",
+        "body": "Kies \"Altijd\" (iPhone) of \"Altijd toestaan\" (Android). Anders stopt de tracking zodra het scherm vergrendelt."
+      },
+      "locationServices": {
+        "title": "Zet de locatie van je telefoon aan",
+        "body": "De locatie van je telefoon staat uit, dus er kan niets getrackt worden. Zet ze aan in de instellingen."
+      },
+      "battery": {
+        "title": "Laat je telefoon de tracking niet stoppen",
+        "body": "Laat Livio werken zonder batterijoptimalisatie, zodat een lange wedstrijd niet wordt afgebroken."
+      }
+    },
+    "doneTitle": "Je bent klaar voor {{race}}",
+    "doneTitleNoRace": "Je bent klaar om te racen",
+    "notDoneTitle": "Bijna klaar",
+    "doneBody": "Open Livio op de wedstrijddag en druk op Start. Je familie kan je live volgen.",
+    "doneLater": "Je kunt dit altijd afwerken vanaf het startscherm.",
+    "close": "Klaar"
+  },
+  "countdown": {
+    "startsIn": "Start over {{time}}",
+    "startingSoon": "Start binnenkort",
+    "days": "{{count}} d",
+    "hours": "{{count}} u",
+    "minutes": "{{count}} min"
+  },
+  "share": {
+    "button": "Deel mijn live link",
+    "message": "Volg me live tijdens {{race}}: {{url}}",
+    "messageNoRace": "Volg me live: {{url}}"
+  },
+  "notifications": {
+    "band": "Meldingen",
+    "statusOn": "Meldingen staan aan",
+    "statusOff": "Meldingen staan uit",
+    "statusNotAsked": "Meldingen zijn nog niet ingesteld",
+    "bodyOn": "Je krijgt wedstrijdherinneringen en checkpointmeldingen voor de atleten die je volgt.",
+    "bodyOff": "Je krijgt geen wedstrijdherinneringen of checkpointmeldingen. Je telefoon laat een app maar één keer vragen, dus zet ze aan in de instellingen van je telefoon.",
+    "bodyNotAsked": "Ontvang wedstrijdherinneringen en checkpointmeldingen voor de atleten die je volgt.",
+    "turnOn": "Meldingen aanzetten",
+    "openSettings": "Telefooninstellingen openen",
+    "menuSub": "Wedstrijdherinneringen en checkpointmeldingen"
+  },
+  "followPrompt": {
+    "title": "Weten wanneer ze elk checkpoint passeren?",
+    "body": "We sturen je een melding bij elk checkpoint en aan de finish.",
+    "accept": "Meldingen aanzetten",
+    "dismiss": "Niet nu"
+  },
+  "idle": {
+    "noRaceTitle": "Geen wedstrijd gepland",
+    "noRaceBody": "Koppel je volgende wedstrijd om ze live te tracken en je familie je te laten volgen.",
+    "findRace": "Zoek een wedstrijd",
+    "upcomingEvents": "Komende evenementen"
+  }
+}

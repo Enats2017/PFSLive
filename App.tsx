@@ -18,6 +18,7 @@ import { useVersionCheck } from './src/hooks/useVersionCheck';
 import { versionService } from './src/services/versionService';
 import { UpdateRequiredModal } from './src/components/UpdateRequiredModal';
 import { analyticsService } from './src/services/analyticsService';
+import { raceReadyService } from './src/services/raceReadyService';
 import { useFonts } from 'expo-font';
 import { Poppins_500Medium, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
@@ -183,6 +184,45 @@ export default function App() {
         const event_name = params.event_name ?? '';
         if (product_app_id && event_name) {
           navigationRef.current?.navigate('EventDetails', { product_app_id, event_name, auto_register_id: null });
+          // The email-verified connect completes HERE, not in-app (the
+          // ParticipantResult path ends in a verification email), so this is
+          // the runner's "just connected" moment — open Get race-ready on top
+          // of the event, if anything is missing. Once per race.
+          setTimeout(() => {
+            void raceReadyService.maybeOpen({
+              raceKey: product_app_id,
+              raceName: event_name,
+              source: 'email_confirm',
+            });
+          }, 800);
+        } else {
+          navigationRef.current?.navigate('ParticipantEvent');
+        }
+        return;
+      }
+
+      // ✅ livio://event?product_app_id=..&event_name=..&pov=..
+      // Opens an event with a distance PRESELECTED for emails/campaign links.
+      // Never registers: preselect_pov_id only highlights, so the runner still
+      // makes the final "connect me" tap — connecting is what uses up a
+      // tracking session. (auto_register_id would register on arrival.)
+      if (url?.startsWith('livio://event')) {
+        const queryString = url.split('?')[1] ?? '';
+        const params = Object.fromEntries(
+          queryString.split('&').filter(Boolean).map(p => {
+            const [key, value] = p.split('=');
+            return [key, decodeURIComponent(value ?? '')];
+          })
+        );
+        const product_app_id = params.product_app_id ? Number(params.product_app_id) : null;
+        const pov = params.pov ? Number(params.pov) : null;
+        if (product_app_id) {
+          navigationRef.current?.navigate('EventDetails', {
+            product_app_id,
+            event_name: params.event_name ?? '',
+            auto_register_id: null,
+            preselect_pov_id: pov && pov > 0 ? pov : null,
+          });
         } else {
           navigationRef.current?.navigate('ParticipantEvent');
         }

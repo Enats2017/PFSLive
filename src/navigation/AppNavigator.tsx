@@ -42,6 +42,9 @@ import ProfileScreen from '../screens/ProfileScreen/ProfileScreen';
 import EditProfileScreen from '../screens/AuthScreens/EditProfileScreen';
 import EditPersonalEvent from '../screens/PersonalEventScreen/EditPersonalEvent';
 import LiveTrackingSettings from '../screens/SettingScreen/LiveTrackingSettingsScreen';
+import NotificationSettingsScreen from '../screens/SettingScreen/NotificationSettingsScreen';
+import RaceReadyScreen from '../screens/RaceReadyScreen';
+import { FollowNotificationPrompt } from '../components/FollowNotificationPrompt';
 import ContactFeedbackScreen from '../screens/ProfileScreen/ContactFeedbackScreen';
 
 // ✅ SERVICES & CONTEXT
@@ -178,6 +181,8 @@ export const AppNavigator: React.FC = () => {
           <Stack.Screen name="FanScreen" component={FanScreen} options={noGesture} />
           <Stack.Screen name="MembershipPlansScreen" component={MembershipPlansScreen} options={noGesture} />
           <Stack.Screen name="LiveTrackingSettings" component={LiveTrackingSettings} options={noGesture} />
+          <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={noGesture} />
+          <Stack.Screen name="RaceReady" component={RaceReadyScreen} options={noGesture} />
 
            <Stack.Screen
             name="LiveTracking"
@@ -212,6 +217,8 @@ export const AppNavigator: React.FC = () => {
             </>
           )}
         </Stack.Navigator>
+        {/* Fan notification pre-prompt — one instance for every follow screen. */}
+        <FollowNotificationPrompt />
       </NavigationContainer>
     </AuthContext.Provider>
   );
