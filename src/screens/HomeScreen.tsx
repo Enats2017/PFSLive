@@ -429,6 +429,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Boolean, not the hours value: next_race_in_hours changes every ~36 s
   // (2-decimal rounding), which would re-run this effect on every refetch.
   const raceMoreThan3hAway = (homeData?.next_race_in_hours ?? 0) > 3;
+  // Any of Home's own popups up → don't push Get race-ready (it would open
+  // UNDER the modal). In the deps, so it opens once the popup closes.
+  const homeModalOpen =
+    showBatteryModal || showStartConfirmModal || showEarlyTrackingModal ||
+    showLocationPermissionModal || showPowerSavingModal || notificationPopup.visible ||
+    showFanEmailModal;
+  // Read at the last moment by maybeOpen (its checks are async — a popup can
+  // open, or Start be pressed, while they run).
+  const homeModalOpenRef = useRef(homeModalOpen);
+  homeModalOpenRef.current = homeModalOpen;
+  // Same key as CreatePersonalEvent for custom events (their ids come from
+  // another table and can collide with partner ids).
+  const raceReadyKey = eventId ? (homeData?.event_source === 'custom' ? `custom_${eventId}` : String(eventId)) : null;
   useEffect(() => {
     if (homeData?.show_start_track !== 1 || !eventId || isGPSActive) return;
 
@@ -443,17 +456,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       } catch { /* analytics only */ }
     })();
 
-    if (raceMoreThan3hAway && navigation.isFocused()) {
+    if (raceMoreThan3hAway && !homeModalOpen && navigation.isFocused()) {
       void raceReadyService.maybeOpen({
-        // Custom-event ids come from another table — prefix so they can't
-        // collide with a partner event id (matches CreatePersonalEvent).
-        raceKey: homeData?.event_source === 'custom' ? `custom_${eventId}` : eventId,
+        raceKey: raceReadyKey,
         raceName: homeData?.next_race_name,
         source: 'home',
         onlyFromRoute: 'HomeScreen',
+        stillAllowed: () => !homeModalOpenRef.current && navigation.isFocused(),
       });
     }
-  }, [homeData?.show_start_track, eventId, isGPSActive, raceMoreThan3hAway, homeData?.next_race_name, homeData?.event_source, navigation]);
+  }, [homeData?.show_start_track, eventId, isGPSActive, raceMoreThan3hAway, homeModalOpen, raceReadyKey, homeData?.next_race_name, navigation]);
 
   // ==================== UTILITIES ====================
 
@@ -1081,12 +1093,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Opens the confirm popup (button now calls this instead of startGPSTracking)
   const confirmStartTracking = useCallback(() => {
     void analyticsService.logStartStep('tap', undefined, eventId);
+    // From here the Start gate owns permissions for this race: Get race-ready
+    // must not pop up in the middle of the Start sequence (start line!).
+    if (raceReadyKey) void raceReadyService.markShown(raceReadyKey);
     if (!participantId || !eventId) {
       toastError(t('home:errors.missingInfo'), t('home:errors.missingInfoDescription'));
       return;
     }
     setShowStartConfirmModal(true);
-  }, [participantId, eventId, t]);
+  }, [participantId, eventId, t, raceReadyKey]);
 
   // User taps "Yes" → close popup, run the real start flow
   const handleStartConfirmYes = useCallback(async () => {

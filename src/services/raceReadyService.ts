@@ -129,6 +129,12 @@ export const raceReadyService = {
      * marked shown when skipped, so a later visit can still trigger it.
      */
     onlyFromRoute?: string;
+    /**
+     * Last-moment veto, checked right before navigating (the checks before it
+     * are async): e.g. Home returns false once one of its popups opened or
+     * the runner started the Start sequence. Not marked shown when vetoed.
+     */
+    stillAllowed?: () => boolean;
   }): Promise<boolean> {
     try {
       // 0 / '0' / '' are "no race" (server defaults), never a key.
@@ -150,6 +156,7 @@ export const raceReadyService = {
     raceName?: string | null;
     source: RaceReadySource;
     onlyFromRoute?: string;
+    stillAllowed?: () => boolean;
   }): Promise<boolean> {
     if (await this.wasShown(key)) return false;
     // Never over a running session (manual/early start, or Home remounting
@@ -174,6 +181,7 @@ export const raceReadyService = {
     if (params.onlyFromRoute && routeNow !== params.onlyFromRoute) {
       return false;
     }
+    if (params.stillAllowed && !params.stillAllowed()) return false;
 
     await this.markShown(key);
     void analyticsService.logRaceReadyStep('shown', undefined, params.source);

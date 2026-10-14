@@ -586,6 +586,9 @@ export async function adoptServerFollowData(prefetched?: ServerFollowData): Prom
 
     const removed = await readRemovedBeforeAdopt();
 
+    // A merge is a local change too: a download that started before it must
+    // not overwrite it when it lands (see syncFollowDataFromAPI).
+    followWriteSeq++;
     const customers = await loadCache();
     (server.followed_customers ?? [])
       .map(toValidId)

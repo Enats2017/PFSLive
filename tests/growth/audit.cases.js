@@ -92,7 +92,7 @@ module.exports = function register({ M, load, test, SRC }) {
     const create = read('screens/PersonalEventScreen/CreatePersonalEvent.tsx');
     const home = read('screens/HomeScreen.tsx');
     assert.ok(/product_custom_app_id/.test(create) && /`custom_\$\{createdId\}`/.test(create));
-    assert.ok(/event_source === 'custom' \? `custom_\$\{eventId\}` : eventId/.test(home));
+    assert.ok(/event_source === 'custom' \? `custom_\$\{eventId\}` : String\(eventId\)/.test(home));
     assert.ok(!/createdName\}`/.test(create), 'no longer keyed on the event name');
   });
   test('every race-ready trigger is screen-guarded', () => {

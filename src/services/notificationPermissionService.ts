@@ -169,6 +169,13 @@ function fetchAndRegisterToken(): Promise<string | null> {
       // registerIfGranted()'s "already registered" shortcut would stop the
       // next foreground from retrying a failed registration.
       if (!(await sendTokenToBackend(token))) return null;
+      // Switched off in Settings while this was in flight? Then don't
+      // announce a token the user just revoked (the next foreground would
+      // only clear it again).
+      try {
+        const now = await Notifications.getPermissionsAsync();
+        if (now?.status !== "granted") return null;
+      } catch { /* can't tell — keep the token */ }
       emitToken(token);
       return token;
     } catch (error) {

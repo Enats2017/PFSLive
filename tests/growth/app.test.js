@@ -432,7 +432,9 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   });
   test('email link never registers (auto_register_id null, preselect only)', () => {
     const s = read('../App.tsx');
-    const block = s.slice(s.indexOf("livio://event'"), s.indexOf("livio://event'") + 1500);
+    const at = s.indexOf('Exactly livio://event');
+    assert.ok(at > -1, 'event-link handler found');
+    const block = s.slice(at, at + 1500);
     assert.ok(/auto_register_id: null/.test(block) && /preselect_pov_id/.test(block));
   });
   test('screens registered in navigator + typed', () => {
@@ -477,6 +479,7 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   // Cases added by the 2026-10-14 code audit (one per finding + gaps).
   require('./audit.cases')({ M, load, test, SRC });
   require('./audit2.cases')({ M, load, test, SRC });
+  require('./audit3.cases')({ M, load, test, SRC });
 
   results.push(await run('growth — app'));
   const pass = results.reduce((a, r) => a + r.pass, 0), fail = results.reduce((a, r) => a + r.fail, 0);

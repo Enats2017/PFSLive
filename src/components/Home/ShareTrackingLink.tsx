@@ -42,7 +42,8 @@ export const ShareTrackingLink: React.FC<Props> = ({ productAppId, povId, bib, r
 
   const bibStr = bib != null ? String(bib).trim() : '';
   // '0' is what an (int)-cast empty bib looks like — never a real bib.
-  const usable = !!productAppId && !!povId && bibStr !== '' && bibStr !== '0';
+  // Number() > 0: ids may arrive as strings, and "0" is the server default.
+  const usable = Number(productAppId) > 0 && Number(povId) > 0 && bibStr !== '' && bibStr !== '0';
 
   const onShare = useCallback(async () => {
     if (!usable) return;

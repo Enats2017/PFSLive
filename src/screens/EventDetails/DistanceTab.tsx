@@ -283,12 +283,13 @@ const DistanceTab = ({
   distancesRef.current = distances;
   useEffect(() => {
     if (!preselect_pov_id || preselectDoneRef.current || loading || distances.length === 0) return;
-    const index = distances.findIndex((d) => d.product_option_value_app_id === preselect_pov_id);
+    // Number(): the API may send the id as a string.
+    const index = distances.findIndex((d) => Number(d.product_option_value_app_id) === preselect_pov_id);
     preselectDoneRef.current = true;
     if (index < 0) return;
     setTimeout(() => {
       // Re-check: a focus refetch may have changed the list in the 300 ms.
-      const now = distancesRef.current.findIndex((d) => d.product_option_value_app_id === preselect_pov_id);
+      const now = distancesRef.current.findIndex((d) => Number(d.product_option_value_app_id) === preselect_pov_id);
       if (now < 0) return;
       try {
         listRef.current?.scrollToIndex({ index: now, animated: true, viewPosition: 0.2 });
@@ -482,7 +483,7 @@ const handleExternalRegister = useCallback((url: string) => {
           commonStyles.card,
           { minHeight: 110, marginBottom: space.md, marginHorizontal: space.xl },
           // Deep-linked distance (email/campaign) — highlighted only.
-          preselect_pov_id === item.product_option_value_app_id && {
+          !!preselect_pov_id && preselect_pov_id === Number(item.product_option_value_app_id) && {
             borderWidth: 2,
             borderColor: palette.lime,
           },

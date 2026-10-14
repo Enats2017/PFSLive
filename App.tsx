@@ -211,7 +211,8 @@ export default function App() {
       // Never registers: preselect_pov_id only highlights, so the runner still
       // makes the final "connect me" tap — connecting is what uses up a
       // tracking session. (auto_register_id would register on arrival.)
-      if (url?.startsWith('livio://event')) {
+      // Exactly livio://event (not livio://events…, a different future link).
+      if (url && /^livio:\/\/event(\?|$)/.test(url)) {
         const link = parseEventLink(url);
         whenNavigatorReady(() => {
           if (link) {
