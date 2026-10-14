@@ -300,6 +300,13 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
     } catch {
       // If even the flag cannot be written we are no worse off than before.
     }
+    // The server no longer knows this follower id for this device (row gone or
+    // re-assigned): retrying it would fail forever and the phone would never
+    // take a download again. Forget the id — the next sync registers the
+    // device again (same row if it still exists) and merges first.
+    if (error?.code === 'follower_not_found') {
+      try { await AsyncStorage.removeItem(FOLLOWER_ID_KEY); } catch { /* silent */ }
+    }
   }
 }
 
@@ -309,10 +316,39 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
 // it off the phone). Queued, each upload reads the lists when its turn comes,
 // so the last one to land is always the newest.
 let uploadChain: Promise<void> = Promise.resolve();
+// The run that is queued but has NOT started yet. It reads the lists when its
+// turn comes, so later taps simply join it — N taps behind a slow upload send
+// one more upload, not N identical ones.
+let queuedRun: Promise<void> | null = null;
+
 function enqueueUpload(job: () => Promise<void>): Promise<void> {
-  const run = uploadChain.then(job, job);
+  if (queuedRun) return queuedRun;
+  let run: Promise<void>;
+  const start = () => {
+    if (queuedRun === run) queuedRun = null;   // started: later taps queue anew
+    return withJobTimeout(job());
+  };
+  run = uploadChain.then(start, start);
+  queuedRun = run;
   uploadChain = run.catch(() => { /* the caller handles it */ });
   return run;
+}
+
+// A queued upload must never hold the queue forever: axios's own timeout does
+// not reliably fire on a half-open socket (race-day networks — see CLAUDE.md
+// and gpsService's withTimeout), and one hung upload would otherwise freeze
+// every later follow, download and merge for the session. On timeout the job
+// rejects like any failed upload: the "not synced" mark stays and it is
+// re-sent on the next sync.
+function withJobTimeout(p: Promise<void>): Promise<void> {
+  const ms = (API_CONFIG.TIMEOUT || 15000) + 5000;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    p,
+    new Promise<void>((_, reject) => {
+      timer = setTimeout(() => reject(Object.assign(new Error('follow upload timed out'), { type: 'network' })), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
 }
 
 async function uploadCurrent(followerId: number, deviceId: string): Promise<void> {

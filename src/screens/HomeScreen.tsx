@@ -1600,6 +1600,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // homeData — and so eventId — is still null; read the race id through a ref.
   const eventIdRef = useRef(eventId);
   eventIdRef.current = eventId;
+  // True while the popup's own button is waiting on the OS permission request.
+  // The OS dialog / Android 11+ Location page sends the app to the background
+  // and back, so the listener below would log the SAME answer a second time.
+  const inlineRequestRef = useRef(false);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
@@ -1616,7 +1620,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             (await gpsService.isLocationServiceEnabled());
 
           if (satisfied) {
-            void analyticsService.logStartStep('permission_result', 'granted_on_return', eventIdRef.current);
+            if (!inlineRequestRef.current) {
+              void analyticsService.logStartStep('permission_result', 'granted_on_return', eventIdRef.current);
+            }
             // Clear FIRST — the inline-grant path can resolve for the same
             // grant, and whichever runs second must find nothing pending.
             pendingStartRef.current = false;
@@ -1628,7 +1634,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // Came back without granting. The button already dismissed the modal,
           // so without this the runner faces a bare screen and no explanation
           // of why tracking still is not running. Put it back and stay armed.
-          void analyticsService.logStartStep('permission_result', 'still_blocked_on_return', eventIdRef.current);
+          if (!inlineRequestRef.current) {
+            void analyticsService.logStartStep('permission_result', 'still_blocked_on_return', eventIdRef.current);
+          }
+          // Re-show with the CURRENT problem: e.g. "denied" → granted only
+          // "While using" now needs the "Always" text and route, not "denied".
+          const servicesOn = await gpsService.isLocationServiceEnabled();
+          setPermissionBlockReason(!servicesOn ? 'location_off' : perms.foreground ? 'no_background_perm' : 'denied');
+          setPermissionCanAskAgain(perms.canAskAgain);
           setShowLocationPermissionModal(true);
         } catch { /* silent — a later foreground retries */ }
       })();
@@ -2040,7 +2053,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       if (permissionBlockReason !== 'location_off') {
                         try {
                           const t0 = Date.now();
-                          const perms = await gpsService.requestPermissionsDetailed();
+                          inlineRequestRef.current = true;
+                          let perms;
+                          try {
+                            perms = await gpsService.requestPermissionsDetailed();
+                          } finally {
+                            inlineRequestRef.current = false;
+                          }
                           setHasPermission(perms.foreground);
                           // Start-funnel step only when the popup came from Start
                           // (the mid-race banner reuses this popup).

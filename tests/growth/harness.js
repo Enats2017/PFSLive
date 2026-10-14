@@ -277,4 +277,6 @@ async function run(title) {
   return { pass, fail };
 }
 
-module.exports = { M, load, test, run, textOf, findPressable, SRC };
+// CONFIG: the constants/config stub the app modules see (tests may tune TIMEOUT).
+const CONFIG = relOverrides[rel('constants/config')];
+module.exports = { M, load, test, run, textOf, findPressable, SRC, CONFIG };
