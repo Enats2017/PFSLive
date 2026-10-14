@@ -202,7 +202,8 @@ export async function ensureFollowerId(): Promise<{ id: number | null; adopted: 
   if (!ensureInFlight) {
     ensureInFlight = (async () => {
       try {
-        const res = await followerApi.registerGuestFollower();
+        // Time-limited: a hung registration would hold every follow behind it.
+        const res = await withJobTimeout(followerApi.registerGuestFollower());
         const id = toValidId(res?.follower_id);
         if (id === null) return { id: null, adopted: false };
         // Merge still owed — whoever called us (follow, fan email, language).
@@ -227,6 +228,8 @@ export async function ensureFollowerId(): Promise<{ id: number | null; adopted: 
 // `fromAdopt`: called by adoptServerFollowData itself. Never re-enter the merge
 // from there — if storage can't clear the pending flag, that would loop.
 async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null = null): Promise<void> {
+  // The id this upload was sent to (for the follower_not_found handling below).
+  let sentToId: number | null = null;
   try {
     // Get follower_id and device_id from storage
     // toValidId, not a truthy check: an old install may hold the string "null".
@@ -283,7 +286,8 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
 
     // One upload at a time, each built from the newest lists when its turn
     // comes (see enqueueUpload). Errors propagate to the catch below.
-    await enqueueUpload(() => uploadCurrent(followerId, deviceId));
+    sentToId = followerId;
+    await enqueueUpload(`${followerId}|${deviceId}`, () => uploadCurrent(followerId, deviceId));
   } catch (error: any) {
     if (API_CONFIG.DEBUG) {
       console.error('❌ Failed to sync follow data to API:', error);
@@ -304,8 +308,14 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
     // re-assigned): retrying it would fail forever and the phone would never
     // take a download again. Forget the id — the next sync registers the
     // device again (same row if it still exists) and merges first.
+    // Only if the phone still holds THAT id: a push-token registration may
+    // have stored a new, valid one while this upload was queued.
     if (error?.code === 'follower_not_found') {
-      try { await AsyncStorage.removeItem(FOLLOWER_ID_KEY); } catch { /* silent */ }
+      try {
+        if (sentToId !== null && toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) === sentToId) {
+          await AsyncStorage.removeItem(FOLLOWER_ID_KEY);
+        }
+      } catch { /* silent */ }
     }
   }
 }
@@ -319,17 +329,21 @@ let uploadChain: Promise<void> = Promise.resolve();
 // The run that is queued but has NOT started yet. It reads the lists when its
 // turn comes, so later taps simply join it — N taps behind a slow upload send
 // one more upload, not N identical ones.
+// Only joined when it uploads to the SAME row: a run queued for an old id
+// (replaced by a push-token registration) must not carry the new row's push.
 let queuedRun: Promise<void> | null = null;
+let queuedKey: string | null = null;
 
-function enqueueUpload(job: () => Promise<void>): Promise<void> {
-  if (queuedRun) return queuedRun;
+function enqueueUpload(key: string, job: () => Promise<void>): Promise<void> {
+  if (queuedRun && queuedKey === key) return queuedRun;
   let run: Promise<void>;
   const start = () => {
-    if (queuedRun === run) queuedRun = null;   // started: later taps queue anew
+    if (queuedRun === run) { queuedRun = null; queuedKey = null; }   // started: later taps queue anew
     return withJobTimeout(job());
   };
   run = uploadChain.then(start, start);
   queuedRun = run;
+  queuedKey = key;
   uploadChain = run.catch(() => { /* the caller handles it */ });
   return run;
 }
@@ -340,12 +354,15 @@ function enqueueUpload(job: () => Promise<void>): Promise<void> {
 // every later follow, download and merge for the session. On timeout the job
 // rejects like any failed upload: the "not synced" mark stays and it is
 // re-sent on the next sync.
-function withJobTimeout(p: Promise<void>): Promise<void> {
+// Also used for the merge download and guest registration, which hold the
+// same queue (adoptInFlight / ensureInFlight). A timeout is a network error,
+// never "follower_not_found".
+function withJobTimeout<T>(p: Promise<T>): Promise<T> {
   const ms = (API_CONFIG.TIMEOUT || 15000) + 5000;
   let timer: ReturnType<typeof setTimeout> | undefined;
   return Promise.race([
     p,
-    new Promise<void>((_, reject) => {
+    new Promise<T>((_, reject) => {
       timer = setTimeout(() => reject(Object.assign(new Error('follow upload timed out'), { type: 'network' })), ms);
     }),
   ]).finally(() => clearTimeout(timer));
@@ -412,6 +429,14 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
   //    redisplay the old number and read as a second bug.
   useFollowStore.getState().bump();
 
+  // Landed AFTER a newer upload (this one's job had timed out but the POST
+  // still arrived): the server now holds this OLDER list. Mark the phone ahead
+  // and send the current list again — not awaited, this may run inside the queue.
+  if (seqAtPush < lastPushedSeq) {
+    try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
+    void syncFollowDataToAPI();
+    return;
+  }
   if (seqAtPush > lastPushedSeq) lastPushedSeq = seqAtPush;
   // Local and server agree again — but only if nothing changed while this
   // upload was in flight (an older upload finishing late must not clear the
@@ -691,7 +716,8 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
     let server: ServerFollowData = prefetched ?? {};
     if (!prefetched) {
       try {
-        server = await followerApi.getFollowerDataByDevice();
+        // Time-limited: adoptInFlight holds every follow until this settles.
+        server = await withJobTimeout(followerApi.getFollowerDataByDevice());
       } catch (error) {
         if (!isFollowerNotFound(error)) {
           // Offline / 5xx / rate-limited: we do NOT know the server's list, so
@@ -739,7 +765,9 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
       return;
     }
     try {
-      await AsyncStorage.multiRemove([ADOPT_PENDING_KEY, REMOVED_BEFORE_ADOPT_KEY]);
+      // Remembered unfollows stay until the merged list has reached the row
+      // (below): if this push fails, the next merge must still honour them.
+      await AsyncStorage.removeItem(ADOPT_PENDING_KEY);
       await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
     } catch { /* silent */ }
     // If a new id landed while the flag was being cleared, put its flag back.
@@ -747,7 +775,13 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
       try { await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1'); } catch { /* silent */ }
       return;
     }
+    const mergeSeq = followWriteSeq;
     await syncFollowDataToAPI(true, idAtStart);
+    if (lastPushedSeq >= mergeSeq
+        && (await AsyncStorage.getItem(FOLLOWER_ID_KEY)) === idAtStart
+        && (await AsyncStorage.getItem(ADOPT_PENDING_KEY)) !== '1') {
+      try { await AsyncStorage.removeItem(REMOVED_BEFORE_ADOPT_KEY); } catch { /* silent */ }
+    }
   } catch (error) {
     if (API_CONFIG.DEBUG) console.warn('⚠️ adoptServerFollowData failed:', error);
   }

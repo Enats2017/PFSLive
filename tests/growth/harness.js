@@ -35,7 +35,7 @@ function freshState() {
             byDeviceDelay: 0, registerFail: false,
             registerCalls: [], registerResult: { follower_id: 501 } },
     // apiClient.post
-    api: { posted: [], fail: false },
+    api: { posted: [], fail: false, rejectIds: [] /* follower ids the sync endpoint answers follower_not_found */ },
     // gpsService
     gps: { foreground: true, background: true, level: 'always', canAskAgain: true, servicesOn: true },
     battery: { exempt: true, exemptThrows: false, lowPower: false },
@@ -178,6 +178,10 @@ const relOverrides = {
         const step = M.api.syncScript.shift();
         if (step.delay) await new Promise((r) => setTimeout(r, step.delay));
         if (step.fail) { const e = new Error('Network Error'); e.type = 'network'; throw e; }
+      }
+      if (url.endsWith('/update_follower_favourites_api.php') && (M.api.rejectIds || []).includes(Number(body.follower_id))) {
+        M.api.posted.push({ url, body, rejected: true });
+        throw Object.assign(new Error('follower_not_found'), { type: 'empty', code: 'follower_not_found' });
       }
       if (M.api.fail) { const e = new Error('Network Error'); e.type = 'network'; throw e; }
       if (M.api.failWith) { M.api.posted.push({ url, body, rejected: true }); throw Object.assign(new Error(M.api.failWith.code), M.api.failWith); }

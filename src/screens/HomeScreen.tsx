@@ -1619,6 +1619,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             perms.background &&
             (await gpsService.isLocationServiceEnabled());
 
+          // Re-check after the awaits: the popup's own button may have been
+          // answered meanwhile and already started (or the runner cancelled).
+          // Acting on the stale check started tracking a second time.
+          if (!pendingStartRef.current) return;
+
           if (satisfied) {
             if (!inlineRequestRef.current) {
               void analyticsService.logStartStep('permission_result', 'granted_on_return', eventIdRef.current);
@@ -1639,8 +1644,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           }
           // Re-show with the CURRENT problem: e.g. "denied" → granted only
           // "While using" now needs the "Always" text and route, not "denied".
-          const servicesOn = await gpsService.isLocationServiceEnabled();
-          setPermissionBlockReason(!servicesOn ? 'location_off' : perms.foreground ? 'no_background_perm' : 'denied');
+          // Same order as the Start gate: permission first, then the switch.
+          setPermissionBlockReason(!perms.foreground ? 'denied' : !perms.background ? 'no_background_perm' : 'location_off');
           setPermissionCanAskAgain(perms.canAskAgain);
           setShowLocationPermissionModal(true);
         } catch { /* silent — a later foreground retries */ }
@@ -2079,6 +2084,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                             // again. Finish what they already asked for.
                             // Clear the ref FIRST so the AppState resume below
                             // sees nothing pending and cannot start a second time.
+                            // Close the popup too — nothing is blocked any more,
+                            // and it must not sit over a running tracker.
+                            setShowLocationPermissionModal(false);
                             if (pendingStartRef.current) {
                               pendingStartRef.current = false;
                               await doStartGPSTracking();

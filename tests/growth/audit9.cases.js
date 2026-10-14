@@ -66,7 +66,7 @@ module.exports = function register({ M, load, test, SRC }) {
     const s = read('screens/HomeScreen.tsx');
     const at = s.indexOf("'still_blocked_on_return'");
     const after = s.slice(at, at + 900);
-    assert.ok(/setPermissionBlockReason\(!servicesOn \? 'location_off' : perms\.foreground \? 'no_background_perm' : 'denied'\)/.test(after));
+    assert.ok(/setPermissionBlockReason\(!perms\.foreground \? 'denied' : !perms\.background \? 'no_background_perm' : 'location_off'\)/.test(after));
     assert.ok(/setPermissionCanAskAgain\(perms\.canAskAgain\)/.test(after));
     assert.ok(after.indexOf('setPermissionBlockReason') < after.indexOf('setShowLocationPermissionModal(true)'), 'refreshed before showing');
   });
