@@ -16,6 +16,7 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import { userfavouriteService, FavouriteItem } from '../../services/userfavouriteService';
 import { UserFavouriteListpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
+import { whenFollowSyncIdle } from '../../utils/followStorage';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useSessionExpired } from '../../hooks/useSessionExpired';
@@ -130,7 +131,9 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
             skipNextRefetchRef.current = false;
             return;
         }
-        loadInitial();
+        // followUser resolves once the follow is saved on the phone; the upload
+        // runs after. Refetching straight away could miss the new follow.
+        void whenFollowSyncIdle().then(() => loadInitial());
     };
 
     useFocusEffect(

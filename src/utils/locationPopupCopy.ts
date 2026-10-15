@@ -2,7 +2,8 @@
 //
 // ✅ Which title/body the Home location popup shows. Pure so it can be tested.
 //
-// Two situations open the same popup:
+// Two situations open the same popup (plus the Start gate's "precise
+// location is off" advice, reason 'precise'):
 //  - the START flow (permission or Location missing before tracking): a pitch —
 //    why to allow — and the start resumes by itself when they come back;
 //  - the MID-RACE warning banner (tracking already running): a problem report.
@@ -34,6 +35,11 @@ export function locationPopupCopy(opts: {
   }
   // Mid-race: the title names the actual problem (Location switched off vs
   // permission limited) — it must agree with the body and the banner.
+  // Precise location off (Start gate): its own title/body and steps; the
+  // screen adds "Start anyway" — it is advice, never a wall.
+  if (reason === 'precise') {
+    return { titleKey: 'home:gpsHealth.titlePrecise', bodyKey: 'home:gpsHealth.blockedBodyPrecise', showSettingsSteps: true, showSettingsButton: true };
+  }
   const titleKey = midRace
     ? (reason === 'location_off' ? 'home:gpsHealth.titleLocationOffMidRace' : 'home:gpsHealth.titleMidRace')
     : 'home:gpsHealth.title';

@@ -281,6 +281,9 @@ const DistanceTab = ({
   const preselectDoneRef = useRef(false);
   const distancesRef = useRef<Distance[]>(distances);
   distancesRef.current = distances;
+  // A second link to this (still mounted) screen with ANOTHER distance must
+  // preselect again — the done-flag belonged to the previous one.
+  useEffect(() => { preselectDoneRef.current = false; }, [preselect_pov_id]);
   useEffect(() => {
     if (!preselect_pov_id || preselectDoneRef.current || loading || distances.length === 0) return;
     // Number(): the API may send the id as a string.

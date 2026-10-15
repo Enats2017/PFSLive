@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector, LANGUAGE_OPTIONS, LanguageOption } from './LanguageSelector';
@@ -12,6 +12,9 @@ export const GuestTrackingSettings: React.FC = () => {
     const { t } = useTranslation(['setting']);
     const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
+    // Set when the user picks a language: a slow mount load landing AFTER that
+    // must not switch the app back to the server's (older) language.
+    const userPickedRef = useRef(false);
 
     useEffect(() => { loadLanguage(); }, []);
 
@@ -20,6 +23,7 @@ export const GuestTrackingSettings: React.FC = () => {
     const loadLanguage = async () => {
         try {
             const { languageId, found } = await guestSettingsService.getLanguage();
+            if (userPickedRef.current) return;
             // Nothing stored for this device: keep the app's own language —
             // applying the server default switched FR/NL users to English.
             if (!found) return;
@@ -35,12 +39,14 @@ export const GuestTrackingSettings: React.FC = () => {
         
         } catch (e: any) {
             console.error('❌ [GuestSettings] Load error:', e?.message);
+            if (userPickedRef.current) return;
             toastError(t('setting:liveTrackingSettings.toastErrorLoad'));
 
         }
     };
 
     const handleLanguageChange = async (option: LanguageOption) => {
+        userPickedRef.current = true;
         const previous = selectedLanguage;
         setSelectedLanguage(option);
         try {

@@ -11,7 +11,6 @@ import {
   BackHandler,
   Modal,
   Platform,
-  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -50,11 +49,11 @@ import { ReadinessCard } from '../components/Home/ReadinessCard';
 import { ShareTrackingLink } from '../components/Home/ShareTrackingLink';
 import { IdleHome } from '../components/Home/IdleHome';
 import { raceReadyService } from '../services/raceReadyService';
+import { readPrecise } from '../services/readinessService';
 import { locationPopupCopy } from '../utils/locationPopupCopy';
 import { watchForOsPrompt } from '../utils/permissionPrompt';
 import {
   openLocationSettingsFor,
-  requestBatteryOptimizationExemption,
   PermissionBlockReason,
 } from '../utils/deviceSettings';
 
@@ -131,8 +130,10 @@ interface HomeData {
 
 // ==================== CONSTANTS ====================
 
-// ✅ Stored permanently — never cleared after first prompt
-const BATTERY_PROMPTED_KEY = '@PFSLive:batteryOptimizationPrompted';
+// A Start blocked at the permission gate is finished automatically when the
+// runner comes back with the problem fixed — but only this soon after (see
+// pendingStartAtRef).
+export const PENDING_START_MAX_MS = 15 * 60 * 1000;
 
 // ✅ Hours threshold — show early tracking warning if race is more than this far away
 
@@ -237,9 +238,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ✅ Tracking log — DEBUG only, shows background task events live
   const [trackingLogs, setTrackingLogs] = useState<TrackingLogEntry[]>([]);
 
-  // ✅ Battery explanation modal — shown once before system dialog
-  const [showBatteryModal, setShowBatteryModal] = useState(false);
-
   // ✅ Early tracking warning modal — shown when race is more than 24h away
   const [showEarlyTrackingModal, setShowEarlyTrackingModal] = useState(false);
 
@@ -267,6 +265,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // START and sit through the confirm popup a second time on the start line.
   // Cleared on resume, on explicit dismissal, and once a start clears the gate.
   const pendingStartRef = useRef(false);
+  // When it was armed. The return listener only finishes a start armed within
+  // PENDING_START_MAX_MS: a runner who granted the permission an hour later
+  // (or the next morning) did not ask for tracking to start right then.
+  const pendingStartAtRef = useRef(0);
+  // "Start anyway" on the precise-location popup: the next start skips that
+  // check once (an approximate track beats none — never block the runner).
+  const allowApproximateRef = useRef(false);
   // ✅ Ref so GPS callback always reads current value without stale closure
   const isSendingDataRef = useRef<boolean>(false);
   // ✅ Ref to tracking params — needed by watchdog to restart task if killed
@@ -465,7 +470,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Any of Home's own popups up → don't push Get race-ready (it would open
   // UNDER the modal). In the deps, so it opens once the popup closes.
   const homeModalOpen =
-    showBatteryModal || showStartConfirmModal || showEarlyTrackingModal ||
+    showStartConfirmModal || showEarlyTrackingModal ||
     showLocationPermissionModal || showPowerSavingModal || notificationPopup.visible ||
     showFanEmailModal;
   // Read at the last moment by maybeOpen (its checks are async — a popup can
@@ -483,11 +488,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     void (async () => {
       try {
-        const day = new Date().toISOString().slice(0, 10);
-        const key = `@PFSLive:startReadyLogged:${eventId}`;
-        if ((await AsyncStorage.getItem(key)) !== day) {
-          await AsyncStorage.setItem(key, day);
+        // The runner's LOCAL day — the UTC date flipped mid-evening (or
+        // mid-morning east of UTC) and logged the same day twice.
+        const d = new Date();
+        const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        // ONE map key ({ raceId: day }), pruned to today's entries — a key per
+        // race piled up in storage for good.
+        const KEY = '@PFSLive:startReadyLogged';
+        let map: Record<string, string> = {};
+        try {
+          const parsed = JSON.parse((await AsyncStorage.getItem(KEY)) || '{}');
+          if (parsed && typeof parsed === 'object') map = parsed;
+        } catch { /* corrupt → start over */ }
+        if (map[String(eventId)] !== day) {
+          const next: Record<string, string> = {};
+          for (const [k, v] of Object.entries(map)) if (v === day) next[k] = v;
+          next[String(eventId)] = day;
+          await AsyncStorage.setItem(KEY, JSON.stringify(next));
           void analyticsService.logStartStep('screen_ready', undefined, eventId);
+          // The old one-key-per-race entries — dropped once.
+          const legacy = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(KEY + ':'));
+          if (legacy.length) await AsyncStorage.multiRemove(legacy);
         }
       } catch { /* analytics only */ }
     })();
@@ -519,40 +540,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // numerically larger than real UTC, causing race to appear started early.
     return Date.now() >= raceStartTimeRef.current.getTime();
   }, [homeData?.manual_start]);
-
-  // ==================== BATTERY OPTIMIZATION ====================
-
-  /**
-   * Show battery explanation modal once on first install.
-   * HomeScreen is mounted so user sees the app behind the system dialog.
-   * Key is NEVER cleared — user is only asked once, ever.
-   */
-  const checkAndPromptBatteryOptimization = useCallback(async (): Promise<void> => {
-    if (Platform.OS !== 'android') return;
-    try {
-      const alreadyPrompted = await AsyncStorage.getItem(BATTERY_PROMPTED_KEY);
-      if (alreadyPrompted) return;
-      setShowBatteryModal(true);
-    } catch { /* silent */ }
-  }, []);
-
-  // ✅ User taps "Allow" — mark permanently, open system dialog
-  const handleBatteryAllow = useCallback(async (): Promise<void> => {
-    setShowBatteryModal(false);
-    try {
-      await AsyncStorage.setItem(BATTERY_PROMPTED_KEY, '1');
-    } catch { /* silent */ }
-    await requestBatteryOptimizationExemption();
-  }, []);
-
-  // ✅ User taps "Skip" — mark permanently, never ask again
-  const handleBatterySkip = useCallback(async (): Promise<void> => {
-    setShowBatteryModal(false);
-    try {
-      await AsyncStorage.setItem(BATTERY_PROMPTED_KEY, '1');
-    } catch { /* silent */ }
-  }, []);
-
 
   const checkPowerSavingMode = useCallback(async (): Promise<boolean> => {
     if (Platform.OS !== 'android') {
@@ -870,6 +857,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setPermissionModalNoFix(false);
         void analyticsService.logStartStep('blocked', 'location_off', eventId);
         pendingStartRef.current = true;
+        pendingStartAtRef.current = Date.now();
         setShowLocationPermissionModal(true);
         return;
       }
@@ -887,6 +875,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // Arm the resume — see pendingStartRef. Without this the runner grants
         // Always and comes back to a stopped tracker.
         pendingStartRef.current = true;
+        pendingStartAtRef.current = Date.now();
+        setShowLocationPermissionModal(true);
+        return;
+      }
+
+      // Precise location off ("Approximate" on Android 12+, "Precise: Off" on
+      // iOS 14+): everything above passes, the session starts and shows green,
+      // and the live track is off by kilometres. Checked AFTER the location
+      // switch and the permission (same order as the readiness card). Advice,
+      // not a wall: the popup's "Start anyway" continues the start.
+      if (allowApproximateRef.current) {
+        allowApproximateRef.current = false;
+      } else if ((await readPrecise()) === false) {
+        setPermissionBlockReason('precise');
+        setPermissionModalMidRace(false);
+        setPermissionModalNoFix(false);
+        void analyticsService.logStartStep('blocked', 'approximate', eventId);
+        // Armed: coming back from Settings finishes the start (re-checked here).
+        pendingStartRef.current = true;
+        pendingStartAtRef.current = Date.now();
         setShowLocationPermissionModal(true);
         return;
       }
@@ -1408,8 +1416,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // user had done anything, the same cold ask that cost us notifications. It
   // now lives in Get race-ready (after connecting to a race) and in the home
   // readiness card, both of which read the real exemption state instead of a
-  // one-shot flag. checkAndPromptBatteryOptimization / the modal stay defined
-  // but are no longer triggered on mount.
+  // one-shot flag. The first-launch modal and its handlers were removed (nothing
+  // triggered them any more).
 
   // Countdown timer + background sent count sync + queue count sync
   useEffect(() => {
@@ -1655,6 +1663,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           if (!pendingStartRef.current) return;
 
           if (satisfied) {
+            // Armed too long ago: not what the runner is doing now — disarm.
+            if (Date.now() - pendingStartAtRef.current > PENDING_START_MAX_MS) {
+              pendingStartRef.current = false;
+              setShowLocationPermissionModal(false);
+              return;
+            }
             if (!inlineRequestRef.current) {
               void analyticsService.logStartStep('permission_result', 'granted_on_return', eventIdRef.current);
             }
@@ -1928,37 +1942,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
       <AppHeader title={t('common:band.home')} logoimg showLogo={true} />
 
-      {Platform.OS === 'android' && (
-        <Modal
-          transparent
-          visible={showBatteryModal}
-          animationType="fade"
-          statusBarTranslucent
-        >
-          <View style={homeStyles.notifBackdrop}>
-            <View style={homeStyles.notifWrapper}>
-              <View style={homeStyles.notifCard}>
-                <View style={homeStyles.notifIconWrapper}>
-                  <Ionicons name="battery-charging" size={36} color={palette.navy} />
-                </View>
-                <Text style={homeStyles.notifTitle}>{t('home:battery.title')}</Text>
-                <Text style={homeStyles.notifBody}>{t('home:battery.message')}</Text>
-                <View style={homeStyles.notifButtonContainer}>
-                  <TouchableOpacity
-                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
-                    onPress={handleBatteryAllow}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={commonStyles.primaryButtonText}>{t('home:battery.allow')}</Text>
-                  </TouchableOpacity>
-
-                </View>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-
       {/* ✅ Start tracking confirmation */}
       <Modal
         transparent
@@ -2068,7 +2051,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   that combination alone gets no extra line. */}
               {popupCopy.showSettingsSteps && (
                 <Text style={homeStyles.notifBody}>
-                  {Platform.OS === 'ios'
+                  {permissionBlockReason === 'precise'
+                    ? (Platform.OS === 'ios'
+                        ? t('home:gpsHealth.stepsPreciseIos')
+                        : t('home:gpsHealth.stepsPreciseAndroid'))
+                    : Platform.OS === 'ios'
                     ? (permissionBlockReason === 'location_off'
                         ? t('home:gpsHealth.stepsLocationOffIos')
                         : t('home:gpsHealth.stepsIos'))
@@ -2093,7 +2080,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       // is the only route to it, and it can also return granted
                       // outright. Only once the OS refuses to ask again does a
                       // settings trip become the last resort.
-                      if (permissionBlockReason !== 'location_off') {
+                      // Precise location: no OS request can switch it on from
+                      // here — straight to the app's permission page.
+                      if (permissionBlockReason !== 'location_off' && permissionBlockReason !== 'precise') {
                         try {
                           // Did the OS show anything? (see utils/permissionPrompt)
                           const promptWatch = watchForOsPrompt();
@@ -2161,13 +2150,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       if (!permissionModalMidRace) {
                         void analyticsService.logStartStep('permission_result', 'sent_to_settings', eventId);
                       }
-                      await openLocationSettingsFor(permissionBlockReason);
+                      await openLocationSettingsFor(permissionBlockReason === 'precise' ? 'denied' : permissionBlockReason);
                     })();
                   }}
                   activeOpacity={0.8}
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('home:gpsHealth.openSettings')}</Text>
                 </TouchableOpacity>
+                )}
+                {/* Precise location is advice: a runner who won't change it
+                    still gets tracked (approximately) — never blocked. */}
+                {permissionBlockReason === 'precise' && !permissionModalMidRace && (
+                  <TouchableOpacity
+                    style={commonStyles.secondaryButton}
+                    onPress={() => {
+                      void analyticsService.logStartStep('permission_result', 'start_approximate', eventId);
+                      pendingStartRef.current = false;
+                      setShowLocationPermissionModal(false);
+                      allowApproximateRef.current = true;
+                      void doStartGPSTracking();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={commonStyles.secondaryButtonText}>{t('home:gpsHealth.startAnyway')}</Text>
+                  </TouchableOpacity>
                 )}
                 <TouchableOpacity
                   style={commonStyles.secondaryButton}

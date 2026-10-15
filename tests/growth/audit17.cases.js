@@ -16,14 +16,20 @@ module.exports = function register({ M, load, test, SRC }) {
     M.store.set('FOLLOWER_ID', '501');
     M.storeDelay = 5;                                      // b has not marked itself pending yet
     M.api.syncScript = [{ delay: 30, failCode: 'list_too_large' }, { delay: 80 }];
-    const fs_ = FS();
+    const fs_ = load('utils/followStorage', { raw: true });
     const a = fs_.followUser(1);                           // refused
     await wait(5);
     const b = fs_.followUser(2);                           // queued behind it
     await a;
+    // follow no longer waits for its upload: wait for a's refusal to be
+    // handled (b's upload, 80 ms, is still in flight).
+    while (!M.api.posted.some((p) => p.rejected)) await wait(1);
+    await wait(25);
+    assert.strictEqual(ok().length, 0, 'b not delivered yet (scenario intact)');
     await fs_.syncFollowDataFromAPI([9], {}, fs_.getFollowWriteSeq());   // download right then
     assert.ok((await fs_.getFollowedUsers()).includes(2), 'queued follow not erased by the download');
     await b;
+    if (fs_.whenFollowSyncIdle) await fs_.whenFollowSyncIdle();
     assert.ok(ok().some((p) => p.body.customer_app_id_string.split(',').includes('2')), 'queued change delivered');
   });
   test('list_too_large: remembered unfollows from before a merge are dropped (server list is the truth)', async () => {

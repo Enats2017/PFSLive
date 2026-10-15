@@ -10,7 +10,7 @@
 // back is the phone's Settings page — one tap from here. We can't re-enable
 // notifications from inside the app and this screen doesn't pretend to.
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -47,26 +47,34 @@ const NotificationSettingsScreen: React.FC = () => {
   // (canAskAgain false). Ask whenever the OS still will, otherwise Settings.
   const canAsk = !!perm && perm.status !== 'granted' && perm.canAskAgain;
 
+  // A double tap must not fire two OS requests (or request + Settings).
+  const busyRef = useRef(false);
   const onPress = useCallback(async () => {
-    if (canAsk) {
-      void analyticsService.logNotificationAsk('settings_screen', 'accepted');
-      const watch = watchForOsPrompt();
-      let res;
-      let shown = false;
-      try {
-        res = await notificationPermissionService.request();
-      } finally {
-        shown = watch.done();
+    if (busyRef.current) return;
+    busyRef.current = true;
+    try {
+      if (canAsk) {
+        void analyticsService.logNotificationAsk('settings_screen', 'accepted');
+        const watch = watchForOsPrompt();
+        let res;
+        let shown = false;
+        try {
+          res = await notificationPermissionService.request();
+        } finally {
+          shown = watch.done();
+        }
+        void analyticsService.logNotificationAsk('settings_screen', res.status === 'granted' ? 'granted' : 'denied');
+        setPerm(res);
+        // The OS showed nothing (blocked at system level): the button must
+        // still do something — open the settings page that can fix it.
+        if (res.status !== 'granted' && !shown) await notificationPermissionService.openSettings();
+        return;
       }
-      void analyticsService.logNotificationAsk('settings_screen', res.status === 'granted' ? 'granted' : 'denied');
-      setPerm(res);
-      // The OS showed nothing (blocked at system level): the button must
-      // still do something — open the settings page that can fix it.
-      if (res.status !== 'granted' && !shown) await notificationPermissionService.openSettings();
-      return;
+      void analyticsService.logNotificationAsk('settings_screen', 'settings');
+      await notificationPermissionService.openSettings();
+    } finally {
+      busyRef.current = false;
     }
-    void analyticsService.logNotificationAsk('settings_screen', 'settings');
-    await notificationPermissionService.openSettings();
   }, [canAsk]);
 
   const title = !perm
@@ -81,7 +89,9 @@ const NotificationSettingsScreen: React.FC = () => {
     ? ''
     : isOn
       ? t('readiness:notifications.bodyOn')
-      : perm.status === 'undetermined'
+      // canAsk (Android 13+ after one "no"): the button asks again, so the
+      // body must not say "only in your phone's settings".
+      : perm.status === 'undetermined' || canAsk
         ? t('readiness:notifications.bodyNotAsked')
         : t('readiness:notifications.bodyOff');
 

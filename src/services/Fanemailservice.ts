@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { ensureFollowerId } from '../utils/followStorage';
 
@@ -40,7 +41,14 @@ export const fanEmailApi = {
             // won't create one. That row used to exist only for users who
             // granted notifications, so everyone else's email was refused with
             // follower_not_found. Make sure this device has one.
-            await ensureFollowerId();
+            // Not on a skip (email ''): a fan with nothing to keep must not get
+            // a server row just for pressing "Skip" — and with no row stored
+            // there is no email to clear, so the request is skipped too.
+            if (email) {
+                await ensureFollowerId();
+            } else if (!(await AsyncStorage.getItem('FOLLOWER_ID'))) {
+                return { success: true };
+            }
 
             const requestBody = {
                 device_id: deviceId,

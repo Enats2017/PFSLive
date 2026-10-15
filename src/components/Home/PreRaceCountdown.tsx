@@ -12,7 +12,7 @@
 // to Date.now() at fetch) — NOT getServerTime(), see HomeScreen ~474.
 
 import React, { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { AppState, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { palette } from '../../styles/common.styles';
@@ -30,9 +30,16 @@ export const PreRaceCountdown: React.FC<Props> = ({ startAtMs }) => {
 
   useEffect(() => {
     if (startAtMs == null) return;
+    // Fresh NOW, not the mount-time clock: a new start time (or a remount
+    // from cache) would otherwise show a label up to 15 s — or, after the app
+    // slept in the background with timers paused, hours — out of date.
+    setNow(Date.now());
     // Minute resolution is all the label shows; 15s keeps it within a minute.
     const id = setInterval(() => setNow(Date.now()), 15_000);
-    return () => clearInterval(id);
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') setNow(Date.now());
+    });
+    return () => { clearInterval(id); sub.remove(); };
   }, [startAtMs]);
 
   if (startAtMs == null || !isFinite(startAtMs)) return null;

@@ -105,7 +105,7 @@ module.exports = function register({ M, load, test, SRC }) {
   // ── fan sheet + token timer ───────────────────────────────────────────
   test('fan accepts the sheet but refuses the OS prompt → same 30-day pause as "Not now"', () => {
     const s = read('components/FollowNotificationPrompt.tsx');
-    const fn = s.slice(s.indexOf('const onAccept'), s.indexOf('const onAccept') + 700);
+    const fn = s.slice(s.indexOf('const onAccept'), s.indexOf('const onAccept') + 1100);
     assert.ok(/if \(res\.status !== 'granted'\) void markFollowPromptDismissed\(\)/.test(fn));
   });
   test('…and the pause really suppresses the next sheet', async () => {

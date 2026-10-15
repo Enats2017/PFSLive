@@ -740,12 +740,24 @@ export const analyticsService = {
     step: "shown" | "notifications" | "location" | "background" | "locationServices" | "precise" | "battery" | "done" | "skipped",
     result?: "granted" | "denied" | "later" | "settings" | "already",
     source?: string,
+    raceId?: string | number | null,
   ) {
     await logEvent(analytics, "race_ready_step", {
       race_ready_step: step,
-      ...omitEmptyParams({ ready_result: result, ready_source: source }),
+      ...omitEmptyParams({
+        ready_result: result,
+        ready_source: source,
+        [ANALYTICS_PARAMS.RACE_ID]: raceId != null ? String(raceId) : undefined,
+      }),
     });
     console.log("📊 [Analytics] race_ready_step:", step, result ?? "", source ?? "");
+  },
+
+  /** "Share my live link" — how many runners bring their own audience.
+   *  'opened' = Android: the share sheet opened (Android never reports
+   *  whether something was actually shared). */
+  async logShareLiveLink(outcome: "shared" | "opened" | "dismissed" | "error") {
+    await logEvent(analytics, "share_live_link", { share_outcome: outcome });
   },
 
   /**
@@ -753,11 +765,6 @@ export const analyticsService = {
    * screen). `shown` vs `accepted` is the pre-prompt's conversion; `os_result`
    * is the OS dialog's answer after it.
    */
-  /** "Share my live link" — how many runners bring their own audience. */
-  async logShareLiveLink(outcome: "shared" | "dismissed" | "error") {
-    await logEvent(analytics, "share_live_link", { share_outcome: outcome });
-  },
-
   async logNotificationAsk(
     source: "follow" | "race_ready" | "settings_screen",
     outcome: "shown" | "accepted" | "dismissed" | "granted" | "denied" | "settings",

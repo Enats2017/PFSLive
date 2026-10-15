@@ -177,7 +177,7 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   test('race-ready: something missing → opens once, with race name + source', async () => {
     M.gps.background = false;
     assert.strictEqual(await RR().maybeOpen({ raceKey: 13, raceName: 'Trail', source: 'connect' }), true);
-    assert.deepStrictEqual(M.nav.navigations, [{ name: 'RaceReady', params: { race_name: 'Trail', source: 'connect' } }]);
+    assert.deepStrictEqual(M.nav.navigations, [{ name: 'RaceReady', params: { race_name: 'Trail', source: 'connect', product_app_id: 13 } }]);
     assert.ok(M.analytics.some((a) => a[0] === 'logRaceReadyStep' && a[1] === 'shown' && a[3] === 'connect'));
   });
   test('race-ready: same race again → never twice', async () => {
@@ -505,6 +505,7 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   require('./audit19.cases')({ M, load, test, SRC });
   require('./audit20.cases')({ M, load, test, SRC });
   require('./audit21.cases')({ M, load, test, SRC });
+  require('./audit22.cases')({ M, load, test, SRC });
 
   results.push(await run('growth — app'));
   const pass = results.reduce((a, r) => a + r.pass, 0), fail = results.reduce((a, r) => a + r.fail, 0);

@@ -30,6 +30,10 @@ const MAX_AGE_MS = 120 * 24 * 60 * 60 * 1000;
 // Keys with a maybeOpen() still running. Two triggers close together (Home
 // refetch + connect, focus + poll) must not push the screen twice.
 const inFlight = new Set<string>();
+// Keys marked shown in THIS session, noted synchronously (the stored map is
+// written later): a Start tap — which marks the race — while maybeOpen was
+// waiting on its checks must win; re-checked right before navigating.
+const markedNow = new Set<string>();
 let markChain: Promise<void> = Promise.resolve();
 
 /** Steps the flow can fix. Power saving is excluded: it's a race-morning toggle, not a setup step. */
@@ -95,6 +99,7 @@ export const raceReadyService = {
   },
 
   markShown(raceKey: string): Promise<void> {
+    markedNow.add(raceKey);
     // Serialised: two races marked at the same moment (Home all-set for one,
     // a connect for another) each read-modify-write the same map.
     markChain = markChain.then(async () => {
@@ -183,15 +188,21 @@ export const raceReadyService = {
       return false;
     }
     if (params.stillAllowed && !params.stillAllowed()) return false;
+    // Marked meanwhile (Start tapped / another trigger opened it): not again.
+    if (markedNow.has(key)) return false;
 
     // Navigate in the SAME tick as the checks above: awaiting the storage
     // write first let a Start tap in between put this screen behind the
     // Start confirmation.
+    // Partner races are keyed by their numeric product_app_id; custom events
+    // (`custom_<id>`) are not a product, so they carry none.
+    const productAppId = /^\d+$/.test(key) ? Number(key) : undefined;
     const marking = this.markShown(key);
-    void analyticsService.logRaceReadyStep('shown', undefined, params.source);
+    void analyticsService.logRaceReadyStep('shown', undefined, params.source, productAppId);
     navigationRef.navigate('RaceReady', {
       race_name: params.raceName ?? undefined,
       source: params.source,
+      ...(productAppId !== undefined ? { product_app_id: productAppId } : {}),
     });
     await marking;
     return true;

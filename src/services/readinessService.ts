@@ -36,7 +36,7 @@ export type ReadinessItem = 'notifications' | 'location' | 'background' | 'locat
  * (iOS 14+): the track would be off by kilometres while everything else
  * looks fine. null = can't tell (no permission yet, older OS, API missing).
  */
-async function readPrecise(): Promise<boolean | null> {
+export async function readPrecise(): Promise<boolean | null> {
   try {
     if (Platform.OS === 'android') {
       const fg: any = await Location.getForegroundPermissionsAsync();

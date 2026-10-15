@@ -7,6 +7,7 @@
 // that way) stayed a "+", and a value containing "=" was cut at it.
 
 import { navigationRef } from '../navigation/navigationRef';
+import { API_CONFIG } from '../constants/config';
 
 /** Query params of a URL. '+' → space, split on the FIRST '=', bad escapes kept raw. */
 export function parseQuery(url: string): Record<string, string> {
@@ -56,8 +57,9 @@ export function isRepeatLink(url: string, windowMs = 2000): boolean {
  * Run `fn` once the navigator is mounted. On a cold start from a link,
  * getInitialURL() resolves while App still shows its loader and AppNavigator
  * is still reading the token — a navigate() then does nothing at all.
+ * 20 s: a slow cold start (old phone, token read + fonts) took longer than 10.
  */
-export function whenNavigatorReady(fn: () => void, timeoutMs = 10000): void {
+export function whenNavigatorReady(fn: () => void, timeoutMs = 20000): void {
   if (navigationRef.isReady()) { fn(); return; }
   // Counted in polls, not wall-clock: immune to clock changes mid-wait.
   let polls = Math.ceil(timeoutMs / 100);
@@ -67,6 +69,8 @@ export function whenNavigatorReady(fn: () => void, timeoutMs = 10000): void {
       fn();
     } else if (--polls <= 0) {
       clearInterval(timer);
+      // Dropped link — otherwise silent (see App.tsx's ErrorUtils note).
+      if (API_CONFIG.DEBUG) console.log('⏱️ Deep link dropped: navigator not ready after', timeoutMs, 'ms');
     }
   }, 100);
 }

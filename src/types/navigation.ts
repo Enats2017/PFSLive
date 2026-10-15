@@ -135,6 +135,8 @@ export type RootStackParamList = {
   RaceReady: {
     race_name?: string;
     source?: string;
+    /** Partner races only (numeric): race_ready_step events carry the race. */
+    product_app_id?: number;
   };
   NotificationSettings: undefined;
 

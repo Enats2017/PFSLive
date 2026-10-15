@@ -21,9 +21,23 @@ import { formatEventDate } from '../../utils/timeFormat';
 import { analyticsService } from '../../services/analyticsService';
 
 const MAX_EVENTS = 5;
+/** One retry after a failed fetch (a race-day network blip hid the section). */
+export const IDLE_RETRY_MS = 3000;
+
+/** The next few upcoming events; retried once on failure. */
+export async function loadUpcomingEvents(retryMs = IDLE_RETRY_MS): Promise<EventItem[]> {
+  const once = async () =>
+    ((await eventService.getEvents({ page_past: 1, page_live: 1, page_upcoming: 1 })).tabs?.upcoming ?? []).slice(0, MAX_EVENTS);
+  try {
+    return await once();
+  } catch {
+    await new Promise((r) => setTimeout(r, retryMs));
+    return once();
+  }
+}
 
 export const IdleHome: React.FC = () => {
-  const { t } = useTranslation(['readiness', 'common']);
+  const { t, i18n } = useTranslation(['readiness', 'common']);
   const navigation = useNavigation<any>();
   const [events, setEvents] = useState<EventItem[]>([]);
 
@@ -32,16 +46,17 @@ export const IdleHome: React.FC = () => {
     [t],
   );
 
+  // Refetched when the language changes: event names/dates come back in the
+  // language_id the request carries.
   useEffect(() => {
     let cancelled = false;
-    eventService
-      .getEvents({ page_past: 1, page_live: 1, page_upcoming: 1 })
-      .then((res) => {
-        if (!cancelled) setEvents((res.tabs?.upcoming ?? []).slice(0, MAX_EVENTS));
+    loadUpcomingEvents()
+      .then((list) => {
+        if (!cancelled) setEvents(list);
       })
       .catch(() => { /* section simply stays hidden */ });
     return () => { cancelled = true; };
-  }, []);
+  }, [i18n.language]);
 
   const openEvent = useCallback((item: EventItem) => {
     void analyticsService.logInteraction('home', 'idle_upcoming_event', 'tap');

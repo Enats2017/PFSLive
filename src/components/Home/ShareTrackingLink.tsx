@@ -55,7 +55,11 @@ export const ShareTrackingLink: React.FC<Props> = ({ productAppId, povId, bib, r
       // The URL is already in `message`; iOS would append `url` again (the
       // link showed twice in Messages/WhatsApp). Android ignores `url`.
       const res = await Share.share(Platform.OS === 'ios' ? { message } : { message, url });
-      void analyticsService.logShareLiveLink(res.action === Share.sharedAction ? 'shared' : 'dismissed');
+      // Android always answers sharedAction — it only knows the sheet opened,
+      // not whether anything was sent: log 'opened' there, never 'shared'.
+      void analyticsService.logShareLiveLink(
+        Platform.OS === 'android' ? 'opened' : res.action === Share.sharedAction ? 'shared' : 'dismissed',
+      );
     } catch {
       void analyticsService.logShareLiveLink('error');
     }

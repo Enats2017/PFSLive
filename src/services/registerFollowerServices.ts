@@ -108,7 +108,8 @@ export const followerApi = {
     const device_id = await getDeviceId();
     const response = await apiClient.post<RegisterFollowerResponse>(
       getApiEndpoint(API_CONFIG.ENDPOINTS.REGISTER_GUEST_FOLLOWER),
-      { device_id, platform: getDevicePlatform(), app_version: APP_CONFIG.VERSION },
+      // language_id: the server stores it on the row (push copy language).
+      { device_id, platform: getDevicePlatform(), app_version: APP_CONFIG.VERSION, language_id: getCurrentLanguageId() },
       { headers, timeout: API_CONFIG.TIMEOUT }
     );
     return response.data;

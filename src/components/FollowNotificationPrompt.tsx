@@ -4,7 +4,7 @@
 // the OS dialog only if they say yes. Mounted once in AppNavigator; driven by
 // useFollowPromptStore. Button copy avoids "Allow" (Apple 5.1.1).
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Platform, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -14,9 +14,13 @@ import { readinessStyles as s } from '../styles/readiness.styles';
 import { useFollowPromptStore, markFollowPromptDismissed, setFollowPromptAsking } from '../store/useFollowPromptStore';
 import { notificationPermissionService } from '../services/notificationPermissionService';
 import { analyticsService } from '../services/analyticsService';
+import { watchForOsPrompt } from '../utils/permissionPrompt';
 
 /** iOS: wait for a closing modal (password modal ~300 ms animation) first. */
 export const FOLLOW_SHEET_IOS_DELAY_MS = 600;
+/** Presented but onShow never fired by then (UIKit refused it — another modal
+ *  was still up): release the store so a later follow can prompt again. */
+export const FOLLOW_SHEET_SHOW_TIMEOUT_MS = 2000;
 
 export const FollowNotificationPrompt: React.FC = () => {
   const { t } = useTranslation(['readiness']);
@@ -29,11 +33,17 @@ export const FollowNotificationPrompt: React.FC = () => {
   // the follow), presenting now is refused by UIKit and the sheet never shows
   // — with the store stuck on visible. Present after that modal has gone.
   const [presented, setPresented] = useState(false);
+  const shownRef = useRef(false);
   useEffect(() => {
     if (!visible) { setPresented(false); return; }
-    const timer = setTimeout(() => setPresented(true), Platform.OS === 'ios' ? FOLLOW_SHEET_IOS_DELAY_MS : 0);
-    return () => clearTimeout(timer);
-  }, [visible]);
+    shownRef.current = false;
+    const delay = Platform.OS === 'ios' ? FOLLOW_SHEET_IOS_DELAY_MS : 0;
+    const timer = setTimeout(() => setPresented(true), delay);
+    // Still not on screen: the store would stay `visible` for the session and
+    // maybePromptNotificationsAfterFollow would never show the sheet again.
+    const giveUp = setTimeout(() => { if (!shownRef.current) hide(); }, delay + FOLLOW_SHEET_SHOW_TIMEOUT_MS);
+    return () => { clearTimeout(timer); clearTimeout(giveUp); };
+  }, [visible, hide]);
 
   const onDismiss = useCallback(() => {
     void analyticsService.logNotificationAsk('follow', 'dismissed');
@@ -46,19 +56,25 @@ export const FollowNotificationPrompt: React.FC = () => {
     hide();
     setFollowPromptAsking(true);
     let res;
+    let shown = false;
+    const watch = watchForOsPrompt();
     try {
       res = await notificationPermissionService.request();
     } finally {
+      shown = watch.done();
       setFollowPromptAsking(false);
     }
     void analyticsService.logNotificationAsk('follow', res.status === 'granted' ? 'granted' : 'denied');
     // Said no to the OS prompt: pause like "Not now" — on Android 13+ the OS
     // still allows asking once more, and the next follow must not spend it.
     if (res.status !== 'granted') void markFollowPromptDismissed();
+    // The OS showed nothing (blocked at system level): "Turn on" must still
+    // do something — open the settings page that can fix it.
+    if (res.status !== 'granted' && !shown) await notificationPermissionService.openSettings();
   }, [hide]);
 
   return (
-    <Modal visible={presented} transparent animationType="slide" onRequestClose={onDismiss} statusBarTranslucent>
+    <Modal visible={presented} transparent animationType="slide" onRequestClose={onDismiss} onShow={() => { shownRef.current = true; }} statusBarTranslucent>
       <Pressable style={s.sheetBackdrop} onPress={onDismiss}>
         <Pressable style={[s.sheet, { paddingBottom: space.xl + insets.bottom }]} onPress={() => { /* swallow */ }}>
           <View style={s.stepIconPlate}>

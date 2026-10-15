@@ -200,6 +200,11 @@ const relOverrides = {
       if (M.api.fail) { const e = new Error('Network Error'); e.type = 'network'; throw e; }
       // Server-side order check (update_follower_favourites_api client_seq).
       if (url.endsWith('/update_follower_favourites_api.php') && !M.api.ignoreSeq && body && body.client_seq !== undefined) {
+        if (M.api.staleWith) {               // scripted once: stale, naming follow_seq = staleWith(body)
+          const f = M.api.staleWith; M.api.staleWith = null;
+          M.api.posted.push({ url, body, rejected: true, stale: true });
+          return { success: true, data: { stale: true, follow_seq: f(body) } };
+        }
         if (M.api.staleEcho) {               // e.g. a duplicate delivery: stale, naming the phone's OWN number
           M.api.staleEcho = false;
           M.api.posted.push({ url, body, rejected: true, stale: true });
@@ -282,7 +287,19 @@ Module._extensions['.ts'] = function (module, filename) {
 };
 Module._extensions['.tsx'] = Module._extensions['.ts'];
 
-function load(p) { return require(path.resolve(SRC, p)); }
+// follow/unfollow resolve after the LOCAL save; their upload runs on its own
+// (followStorage: fire-and-forget). Tests that inspect what reached the server
+// get the follow functions wrapped to also wait for whenFollowSyncIdle().
+// `load('utils/followStorage', { raw: true })` gives the real functions.
+const SETTLE_FNS = ['followUser', 'followBib', 'unfollowUser', 'unfollowBib', 'smartFollow', 'smartUnfollow'];
+function load(p, opts) {
+  const mod = require(path.resolve(SRC, p));
+  if (p !== 'utils/followStorage' || (opts && opts.raw)) return mod;
+  const idle = typeof mod.whenFollowSyncIdle === 'function' ? mod.whenFollowSyncIdle : async () => {};
+  const out = Object.create(mod);
+  for (const n of SETTLE_FNS) out[n] = async (...a) => { try { return await mod[n](...a); } finally { await idle(); } };
+  return out;
+}
 
 function reset() {
   freshState();

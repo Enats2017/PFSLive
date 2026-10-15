@@ -32,7 +32,8 @@ export const requestBatteryOptimizationExemption = async (): Promise<void> => {
   }
 };
 
-export type PermissionBlockReason = 'denied' | 'no_background_perm' | 'location_off';
+// 'precise': allowed, but only an approximate position (Start gate only).
+export type PermissionBlockReason = 'denied' | 'no_background_perm' | 'location_off' | 'precise';
 
 /**
  * Take the runner to the page that fixes THEIR problem, and actually land on

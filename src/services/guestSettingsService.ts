@@ -16,14 +16,24 @@ interface UpdateFollowerLanguageResponse {
 class GuestSettingsService {
 
     private async request<T>(body: object): Promise<T> {
-        const response = await fetch(
-            getApiEndpoint(API_CONFIG.ENDPOINTS.follower_language), // adjust key to your config
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            }
-        );
+        // fetch has no timeout of its own: a hung request left the settings
+        // screen loading (and the language picker's save spinning) for good.
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+        let response: Response;
+        try {
+            response = await fetch(
+                getApiEndpoint(API_CONFIG.ENDPOINTS.follower_language), // adjust key to your config
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                    signal: controller.signal,
+                }
+            );
+        } finally {
+            clearTimeout(timer);
+        }
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }

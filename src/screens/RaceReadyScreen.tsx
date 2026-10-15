@@ -48,6 +48,8 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
   const { t } = useTranslation(['readiness', 'common', 'home']);
   const raceName = route.params?.race_name;
   const source = route.params?.source;
+  // Partner races only (numeric product_app_id): which race the steps were for.
+  const productAppId = route.params?.product_app_id;
 
   const [state, setState] = useState<ReadinessState | null>(null);
   const [skipped, setSkipped] = useState<Set<ReadinessItem>>(new Set());
@@ -89,8 +91,8 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
   useEffect(() => {
     if (!state || current || finishedLogged.current) return;
     finishedLogged.current = true;
-    void analyticsService.logRaceReadyStep(raceReadyOutcome(skipped, state.missing), undefined, source);
-  }, [state, current, skipped, source]);
+    void analyticsService.logRaceReadyStep(raceReadyOutcome(skipped, state.missing), undefined, source, productAppId);
+  }, [state, current, skipped, source, productAppId]);
 
   const onContinue = useCallback(async () => {
     if (!current || !state || busy) return;
@@ -99,7 +101,7 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
       switch (current) {
         case 'notifications': {
           if (state.notifications !== 'granted' && !state.notificationsCanAskAgain) {
-            void analyticsService.logRaceReadyStep('notifications', 'settings', source);
+            void analyticsService.logRaceReadyStep('notifications', 'settings', source, productAppId);
             await notificationPermissionService.openSettings();
             skip('notifications'); // can't confirm from here; card keeps it visible
             break;
@@ -112,7 +114,7 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
           } finally {
             notifShown = notifWatch.done();
           }
-          void analyticsService.logRaceReadyStep('notifications', res.status === 'granted' ? 'granted' : 'denied', source);
+          void analyticsService.logRaceReadyStep('notifications', res.status === 'granted' ? 'granted' : 'denied', source, productAppId);
           if (res.status !== 'granted' && !notifShown) {
             // Blocked at system level: no dialog — Settings is the only route.
             await notificationPermissionService.openSettings();
@@ -122,12 +124,26 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
         }
         case 'location': {
           if (!state.locationCanAskAgain) {
-            void analyticsService.logRaceReadyStep('location', 'settings', source);
+            void analyticsService.logRaceReadyStep('location', 'settings', source, productAppId);
             await openLocationSettingsFor('denied');
             break; // AppState resume re-reads
           }
-          const res = await readinessService.requestForegroundLocation();
-          void analyticsService.logRaceReadyStep('location', res.granted ? 'granted' : 'denied', source);
+          // Same "did the OS show anything" test as the other steps: a silent
+          // refusal (blocked at system level) must not just skip the step.
+          const locWatch = watchForOsPrompt();
+          let locShown = false;
+          let res;
+          try {
+            res = await readinessService.requestForegroundLocation();
+          } finally {
+            locShown = locWatch.done();
+          }
+          if (!res.granted && !locShown) {
+            void analyticsService.logRaceReadyStep('location', 'settings', source, productAppId);
+            await openLocationSettingsFor('denied');
+            break; // AppState resume re-reads
+          }
+          void analyticsService.logRaceReadyStep('location', res.granted ? 'granted' : 'denied', source, productAppId);
           if (!res.granted) skip('location');
           break;
         }
@@ -135,7 +151,7 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
           // Same request + same "did the OS show anything" test as the
           // start-time popup in HomeScreen (utils/permissionPrompt).
           if (backgroundOpensSettings(Platform.OS, state.locationCanAskAgain, backgroundSentToSettings.current)) {
-            void analyticsService.logRaceReadyStep('background', 'settings', source);
+            void analyticsService.logRaceReadyStep('background', 'settings', source, productAppId);
             await openLocationSettingsFor('no_background_perm');
             break;
           }
@@ -148,19 +164,19 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
             osShowed = promptWatch.done();
           }
           if (perms.background) {
-            void analyticsService.logRaceReadyStep('background', 'granted', source);
+            void analyticsService.logRaceReadyStep('background', 'granted', source, productAppId);
           } else if (!osShowed) {
-            void analyticsService.logRaceReadyStep('background', 'settings', source);
+            void analyticsService.logRaceReadyStep('background', 'settings', source, productAppId);
             backgroundSentToSettings.current = true;
             await openLocationSettingsFor('no_background_perm');
           } else {
-            void analyticsService.logRaceReadyStep('background', 'denied', source);
+            void analyticsService.logRaceReadyStep('background', 'denied', source, productAppId);
             skip('background');
           }
           break;
         }
         case 'locationServices': {
-          void analyticsService.logRaceReadyStep('locationServices', 'settings', source);
+          void analyticsService.logRaceReadyStep('locationServices', 'settings', source, productAppId);
           await openLocationSettingsFor('location_off');
           break;
         }
@@ -168,13 +184,13 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
           // No OS dialog can switch precise location back on: only the app's
           // location settings page can (Android "Use precise location",
           // iOS "Precise Location").
-          void analyticsService.logRaceReadyStep('precise', 'settings', source);
+          void analyticsService.logRaceReadyStep('precise', 'settings', source, productAppId);
           await openLocationSettingsFor('denied');
           skip('precise'); // re-read on return; the card keeps it visible if still off
           break;
         }
         case 'battery': {
-          void analyticsService.logRaceReadyStep('battery', 'settings', source);
+          void analyticsService.logRaceReadyStep('battery', 'settings', source, productAppId);
           await requestBatteryOptimizationExemption();
           // If the runner backs out of the system dialog, don't loop on it.
           const exempt = (await readinessService.getState()).batteryExempt;
@@ -186,13 +202,13 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
       await refresh();
       setBusy(false);
     }
-  }, [current, state, busy, skip, refresh, source]);
+  }, [current, state, busy, skip, refresh, source, productAppId]);
 
   const onLater = useCallback(() => {
     if (!current) return;
-    void analyticsService.logRaceReadyStep(current, 'later', source);
+    void analyticsService.logRaceReadyStep(current, 'later', source, productAppId);
     skip(current);
-  }, [current, skip, source]);
+  }, [current, skip, source, productAppId]);
 
   const close = useCallback(() => {
     if (navigation.canGoBack()) navigation.goBack();

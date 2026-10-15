@@ -39,21 +39,26 @@ const FOLLOW_SEQ_KEY = '@PFSLive:followSeqIssued';
 let seqIssued = 0;
 let seqLoaded = false;
 
-// A usable upload number: a safe integer, not absurdly far in the future.
+// A usable upload number: a safe integer, not absurdly far in the future —
+// the server's own bound (update_follower_favourites_api: now + 1 year); a
+// looser app bound let the stale re-send chase a number the server ignores.
 // Anything else (corrupt storage, a hostile/buggy writer of the row) would make
 // `+ 1` a no-op above 2^53 and the stale/re-send below loop for good.
 function isSaneSeq(n: number): boolean {
-  return Number.isSafeInteger(n) && n > 0 && n < Date.now() + 10 * 365 * 864e5;
+  return Number.isSafeInteger(n) && n > 0 && n < Date.now() + 365 * 864e5;
+}
+
+async function loadStoredSeq(): Promise<void> {
+  if (seqLoaded) return;
+  try {
+    const stored = Number(await AsyncStorage.getItem(FOLLOW_SEQ_KEY));
+    if (isSaneSeq(stored)) seqIssued = Math.max(seqIssued, stored);
+  } catch { /* floor below */ }
+  seqLoaded = true;
 }
 
 async function nextClientSeq(): Promise<number> {
-  if (!seqLoaded) {
-    try {
-      const stored = Number(await AsyncStorage.getItem(FOLLOW_SEQ_KEY));
-      if (isSaneSeq(stored)) seqIssued = Math.max(seqIssued, stored);
-    } catch { /* floor below */ }
-    seqLoaded = true;
-  }
+  await loadStoredSeq();
   seqIssued = Math.max(Date.now(), seqIssued + 1);
   try { await AsyncStorage.setItem(FOLLOW_SEQ_KEY, String(seqIssued)); } catch { /* Date.now() still rises */ }
   return seqIssued;
@@ -269,6 +274,7 @@ export async function ensureFollowerId(): Promise<{ id: number | null; adopted: 
 async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null = null): Promise<void> {
   // The id this upload was sent to (for the follower_not_found handling below).
   let sentToId: number | null = null;
+  syncsRunning++;   // see whenFollowSyncIdle
   try {
     // Get follower_id and device_id from storage
     // toValidId, not a truthy check: an old install may hold the string "null".
@@ -382,6 +388,22 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
         }
       } catch { /* silent */ }
     }
+  } finally {
+    syncsRunning--;
+  }
+}
+
+// Syncs started and not finished yet — follow/unfollow no longer await them
+// (fire-and-forget, see followUser), so tests need a way to wait.
+let syncsRunning = 0;
+
+/** Resolves once no follow sync, merge, guest registration or queued upload
+ *  is running. For tests (the UI never waits on the network). */
+export async function whenFollowSyncIdle(): Promise<void> {
+  for (;;) {
+    await Promise.allSettled([uploadChain, adoptInFlight, ensureInFlight].filter(Boolean));
+    await new Promise((r) => setTimeout(r, 0));
+    if (syncsRunning === 0 && !adoptInFlight && !ensureInFlight && !queuedRun) return;
   }
 }
 
@@ -438,6 +460,10 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
   // hangs (half-open sockets on race-day networks), the relaunch must still
   // know the phone is ahead — the in-memory counters start from zero again.
   try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
+  // The stored number is read BEFORE the lists: a storage stall here must not
+  // sit between reading the lists and numbering them (a newer upload could be
+  // numbered meanwhile and this older list would then carry the higher number).
+  await loadStoredSeq();
   // The newest local change this upload will carry.
   const seqAtPush = followWriteSeq;
   // Get current follow data
@@ -511,6 +537,14 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
     if (seqAtPush === followWriteSeq && isSaneSeq(applied) && applied > seqIssued) {
       seqIssued = Math.max(seqIssued, applied);
       try { await AsyncStorage.setItem(FOLLOW_SEQ_KEY, String(seqIssued)); } catch { /* in memory still */ }
+      void syncFollowDataToAPI();
+    } else if (seqAtPush === followWriteSeq && seqAtPush > lastPushedSeq && applied <= seqIssued) {
+      // The winning number IS ours, but it carried an OLDER list (an upload
+      // numbered late — e.g. its storage stalled past the job timeout — landed
+      // above this newer one): the server holds a list older than the phone's
+      // newest and nothing newer is on its way. Send again; the next number is
+      // above everything this phone issued, so this cannot loop.
+      try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
       void syncFollowDataToAPI();
     }
     return;
@@ -611,6 +645,7 @@ export async function followUser(id: any): Promise<void> {
   if (validId === null) {
     throw new Error(`Invalid customer ID: ${id}`);
   }
+  const wasUnfollowedNow = unfollowedNow.customers.has(validId);
   unfollowedNow.customers.delete(validId);
 
   try {
@@ -623,10 +658,20 @@ export async function followUser(id: any): Promise<void> {
     set.add(validId);
     cache = set;
     followWriteSeq++; // before any await — see syncFollowDataFromAPI
-    await persistCache(set);
+    try {
+      await persistCache(set);
+    } catch (e) {
+      // Not saved: undo it in memory too — the caller rolls the button back,
+      // and a later upload must not deliver a follow the user saw fail.
+      set.delete(validId);
+      if (wasUnfollowedNow) unfollowedNow.customers.add(validId);
+      throw e;
+    }
     
-    // ✅ Sync to API after successful local save
-    await syncFollowDataToAPI();
+    // ✅ Sync to API after successful local save — NOT awaited: the button,
+    // toast and notification ask must not wait for register + merge + upload
+    // (seconds on a race-day network). It never throws; failures stay pending.
+    void syncFollowDataToAPI();
   } catch (error) {
     console.error('Follow user error:', error);
     throw error;
@@ -640,6 +685,7 @@ export async function followBib(productAppId: number, bib: string): Promise<void
   if (validProductId === null || validBib === null) {
     throw new Error(`Invalid productAppId (${productAppId}) or bib (${bib})`);
   }
+  const wasUnfollowedNow = unfollowedNow.bibs.has(`${validProductId}|${validBib}`);
   unfollowedNow.bibs.delete(`${validProductId}|${validBib}`);
 
   try {
@@ -658,10 +704,18 @@ export async function followBib(productAppId: number, bib: string): Promise<void
     bibSet.add(validBib);
     bibCache = map;
     followWriteSeq++; // before any await — see syncFollowDataFromAPI
-    await persistBibCache(map);
+    try {
+      await persistBibCache(map);
+    } catch (e) {
+      // Not saved: undo in memory too (see followUser).
+      bibSet.delete(validBib);
+      if (bibSet.size === 0 && map.get(validProductId) === bibSet) map.delete(validProductId);
+      if (wasUnfollowedNow) unfollowedNow.bibs.add(`${validProductId}|${validBib}`);
+      throw e;
+    }
     
-    // ✅ Sync to API after successful local save
-    await syncFollowDataToAPI();
+    // ✅ Sync to API after successful local save — not awaited (see followUser).
+    void syncFollowDataToAPI();
   } catch (error) {
     console.error('Follow BIB error:', error);
     throw error;
@@ -673,6 +727,7 @@ export async function unfollowUser(id: any): Promise<void> {
   if (validId === null) {
     throw new Error(`Invalid customer ID: ${id}`);
   }
+  const wasUnfollowedNow = unfollowedNow.customers.has(validId);
   unfollowedNow.customers.add(validId);
 
   try {
@@ -685,11 +740,18 @@ export async function unfollowUser(id: any): Promise<void> {
     set.delete(validId);
     cache = set;
     followWriteSeq++; // before any await — see syncFollowDataFromAPI
-    await persistCache(set);
+    try {
+      await persistCache(set);
+    } catch (e) {
+      // Not saved: undo in memory too (see followUser).
+      set.add(validId);
+      if (!wasUnfollowedNow) unfollowedNow.customers.delete(validId);
+      throw e;
+    }
     await rememberRemovalIfUnadopted(validId);
     
-    // ✅ Sync to API after successful local save
-    await syncFollowDataToAPI();
+    // ✅ Sync to API after successful local save — not awaited (see followUser).
+    void syncFollowDataToAPI();
   } catch (error) {
     console.error('Unfollow user error:', error);
     throw error;
@@ -703,6 +765,7 @@ export async function unfollowBib(productAppId: number, bib: string): Promise<vo
   if (validProductId === null || validBib === null) {
     throw new Error(`Invalid productAppId (${productAppId}) or bib (${bib})`);
   }
+  const wasUnfollowedNow = unfollowedNow.bibs.has(`${validProductId}|${validBib}`);
   unfollowedNow.bibs.add(`${validProductId}|${validBib}`);
 
   try {
@@ -721,11 +784,19 @@ export async function unfollowBib(productAppId: number, bib: string): Promise<vo
 
     bibCache = map;
     followWriteSeq++; // before any await — see syncFollowDataFromAPI
-    await persistBibCache(map);
+    try {
+      await persistBibCache(map);
+    } catch (e) {
+      // Not saved: undo in memory too (see followUser).
+      bibSet.add(validBib);
+      if (!map.has(validProductId)) map.set(validProductId, bibSet);
+      if (!wasUnfollowedNow) unfollowedNow.bibs.delete(`${validProductId}|${validBib}`);
+      throw e;
+    }
     await rememberRemovalIfUnadopted(null, validProductId, validBib);
     
-    // ✅ Sync to API after successful local save
-    await syncFollowDataToAPI();
+    // ✅ Sync to API after successful local save — not awaited (see followUser).
+    void syncFollowDataToAPI();
   } catch (error) {
     console.error('Unfollow BIB error:', error);
     throw error;
@@ -929,7 +1000,15 @@ export async function adoptIfOtherRow(server: ServerFollowData | null | undefine
   const sid = toValidId(server?.follower_id);
   if (!server || sid === null) return false;
   const known = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY));
-  if (known === null || known === sid) return false;
+  if (known === sid) return false;
+  // No stored id (e.g. dropped after follower_not_found) but the server row
+  // HAS follows: same as a different row — merge, never let the caller
+  // overwrite the phone's list with it (follows made meanwhile would be lost).
+  if (known === null) {
+    const hasFollows = (server.followed_customers ?? []).length > 0
+      || Object.values(server.followed_bibs ?? {}).some((l) => Array.isArray(l) && l.length > 0);
+    if (!hasFollows) return false;
+  }
   await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
   await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(sid));
   await adoptServerFollowData(server);

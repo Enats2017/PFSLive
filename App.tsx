@@ -218,7 +218,9 @@ export default function App() {
       if (url && /^livio:\/\/event(\?|$)/.test(url)) {
         const link = parseEventLink(url);
         whenNavigatorReady(() => {
-          if (link) {
+          // Same rule as registration-confirmed: no event_name → the events
+          // list (EventDetails' header would be blank).
+          if (link && link.event_name) {
             navigationRef.current?.navigate('EventDetails', {
               product_app_id: link.product_app_id,
               event_name: link.event_name,

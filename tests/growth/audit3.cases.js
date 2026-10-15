@@ -34,7 +34,7 @@ module.exports = function register({ M, load, test, SRC }) {
   test('Home: Get race-ready never opens while one of Home\'s own popups is up', () => {
     const s = read('screens/HomeScreen.tsx');
     assert.ok(/const homeModalOpen =/.test(s));
-    for (const m of ['showBatteryModal', 'showStartConfirmModal', 'showEarlyTrackingModal',
+    for (const m of ['showStartConfirmModal', 'showEarlyTrackingModal',
       'showLocationPermissionModal', 'showPowerSavingModal', 'notificationPopup.visible', 'showFanEmailModal']) {
       assert.ok(s.slice(s.indexOf('const homeModalOpen ='), s.indexOf('const homeModalOpen =') + 400).includes(m), m);
     }
