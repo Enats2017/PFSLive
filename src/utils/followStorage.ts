@@ -240,6 +240,9 @@ export async function ensureFollowerId(): Promise<{ id: number | null; adopted: 
         // local over the server row (crash, or an unfollow in between).
         await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
         await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(id));
+        // A (re)registered row holds no push token: let the next launch send
+        // it again instead of skipping it as "already sent".
+        await AsyncStorage.removeItem('expo_push_token');
         if (API_CONFIG.DEBUG) console.log('🆔 Token-less follower registered:', id);
         return { id, adopted: true };
       } catch (error) {
@@ -322,6 +325,18 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
       console.error('❌ Failed to sync follow data to API:', error);
     }
 
+    // The server refuses lists over its cap (update_follower_favourites_api,
+    // 1000 items) — no retry can succeed, and staying "not synced" would make
+    // every download push this list again instead of pulling (web changes
+    // would never arrive). Accept the server's list as the truth: the next
+    // download replaces the local one.
+    if (error?.code === 'list_too_large') {
+      if (API_CONFIG.DEBUG) console.warn('⚠️ Follow list over the server limit — keeping the server list');
+      lastPushedSeq = followWriteSeq;
+      try { await AsyncStorage.removeItem(SYNC_PENDING_KEY); } catch { /* silent */ }
+      return;
+    }
+
     // Still don't throw — following has to keep working with no signal, which
     // at a race is exactly when people use it. But record that local is now
     // AHEAD of the server, so syncFollowDataFromAPI does not overwrite this
@@ -343,6 +358,11 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
       try {
         if (sentToId !== null && toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) === sentToId) {
           await AsyncStorage.removeItem(FOLLOWER_ID_KEY);
+          // The row was gone or deactivated — and with it this phone's push
+          // token (a DeviceNotRegistered push sets status 0). Forget the
+          // "already sent" token so the next launch registers it again
+          // (literal key: notificationPermissionService owns it; no cycle).
+          await AsyncStorage.removeItem('expo_push_token');
         }
       } catch { /* silent */ }
     }
