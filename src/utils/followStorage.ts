@@ -3,6 +3,7 @@ import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { apiClient } from '../services/api';
 import { useFollowStore } from '../store/useFollowStore';
 import { followerApi } from '../services/registerFollowerServices';
+import { forgetSentPushToken } from '../services/notificationPermissionService';
 
 const STORAGE_KEY = 'followed_users';
 // Set when an upload fails, cleared when one succeeds. Its only job is to say
@@ -240,9 +241,10 @@ export async function ensureFollowerId(): Promise<{ id: number | null; adopted: 
         // local over the server row (crash, or an unfollow in between).
         await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
         await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(id));
-        // A (re)registered row holds no push token: let the next launch send
-        // it again instead of skipping it as "already sent".
+        // A (re)registered row holds no push token: send it again (next
+        // foreground or launch) instead of skipping it as "already sent".
         await AsyncStorage.removeItem('expo_push_token');
+        forgetSentPushToken();
         if (API_CONFIG.DEBUG) console.log('🆔 Token-less follower registered:', id);
         return { id, adopted: true };
       } catch (error) {
@@ -332,8 +334,16 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
     // download replaces the local one.
     if (error?.code === 'list_too_large') {
       if (API_CONFIG.DEBUG) console.warn('⚠️ Follow list over the server limit — keeping the server list');
-      lastPushedSeq = followWriteSeq;
-      try { await AsyncStorage.removeItem(SYNC_PENDING_KEY); } catch { /* silent */ }
+      // Only up to THIS upload's change: one queued behind it (e.g. an
+      // unfollow that brings the list under the cap) is still owed.
+      const s = Number(error?.seqAtPush) || 0;
+      if (s > lastPushedSeq) lastPushedSeq = s;
+      try {
+        if (s === followWriteSeq) await AsyncStorage.removeItem(SYNC_PENDING_KEY);
+        // The server list is the truth now: remembered unfollows from before
+        // a merge must not filter a later merge (they can't be honoured here).
+        await AsyncStorage.removeItem(REMOVED_BEFORE_ADOPT_KEY);
+      } catch { /* silent */ }
       return;
     }
 
@@ -363,6 +373,7 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
           // "already sent" token so the next launch registers it again
           // (literal key: notificationPermissionService owns it; no cycle).
           await AsyncStorage.removeItem('expo_push_token');
+          forgetSentPushToken();
         }
       } catch { /* silent */ }
     }
@@ -462,14 +473,22 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
 
   const headers = await API_CONFIG.getHeaders();
 
-  const res: any = await apiClient.post(
-    getApiEndpoint(API_CONFIG.ENDPOINTS.SYNC_FOLLOW_DATA),
-    requestBody,
-    {
-      headers,
-      timeout: API_CONFIG.TIMEOUT,
-    }
-  );
+  let res: any;
+  try {
+    res = await apiClient.post(
+      getApiEndpoint(API_CONFIG.ENDPOINTS.SYNC_FOLLOW_DATA),
+      requestBody,
+      {
+        headers,
+        timeout: API_CONFIG.TIMEOUT,
+      }
+    );
+  } catch (e: any) {
+    // Which local change this upload carried — the caller's handling of a
+    // refusal must not count a NEWER change (queued behind it) as delivered.
+    if (e && typeof e === 'object') e.seqAtPush = seqAtPush;
+    throw e;
+  }
 
   // The server already applied a NEWER upload of this row and ignored this
   // one: nothing reached it, so this is not "synced" (the pending mark stays).

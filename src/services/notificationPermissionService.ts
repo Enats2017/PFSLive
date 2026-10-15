@@ -48,6 +48,16 @@ type TokenListener = (token: string | null) => void;
 const tokenListeners = new Set<TokenListener>();
 let currentToken: string | null = null;
 
+/**
+ * The server row lost this phone's push token (row gone / deactivated and
+ * re-registered without it): forget that it was sent, so the next
+ * registerIfGranted (foreground or launch) sends it again — also in this
+ * session. No listener event: nothing changed for the UI.
+ */
+export function forgetSentPushToken(): void {
+  currentToken = null;
+}
+
 const emitToken = (token: string | null) => {
   currentToken = token;
   tokenListeners.forEach((l) => {

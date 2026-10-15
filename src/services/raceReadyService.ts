@@ -183,12 +183,16 @@ export const raceReadyService = {
     }
     if (params.stillAllowed && !params.stillAllowed()) return false;
 
-    await this.markShown(key);
+    // Navigate in the SAME tick as the checks above: awaiting the storage
+    // write first let a Start tap in between put this screen behind the
+    // Start confirmation.
+    const marking = this.markShown(key);
     void analyticsService.logRaceReadyStep('shown', undefined, params.source);
     navigationRef.navigate('RaceReady', {
       race_name: params.raceName ?? undefined,
       source: params.source,
     });
+    await marking;
     return true;
   },
 };

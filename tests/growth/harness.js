@@ -191,6 +191,7 @@ const relOverrides = {
           const e = new Error('timeout of 15000ms exceeded'); e.type = 'network'; throw e;
         }
         if (step.fail) { const e = new Error('Network Error'); e.type = 'network'; throw e; }
+        if (step.failCode) { M.api.posted.push({ url, body, rejected: true }); throw Object.assign(new Error(step.failCode), { type: 'empty', code: step.failCode }); }
       }
       if (url.endsWith('/update_follower_favourites_api.php') && (M.api.rejectIds || []).includes(Number(body.follower_id))) {
         M.api.posted.push({ url, body, rejected: true });
