@@ -79,8 +79,14 @@ export const startMsFromServer = (
   fetchedAtMs?: number,
 ): number | null => {
   const s = Number(startTs), n = Number(serverNowTs);
-  if (!(s > 0) || !(n > 0) || !fetchedAtMs) return null;
-  return fetchedAtMs + (s - n) * 1000;
+  if (!(s > 0) || !fetchedAtMs) return null;
+  // home_api's answer can be up to ~45 s old (cache), so its "now" is stale:
+  // use the absolute instant with the phone's clock — unless the phone's
+  // clock is clearly wrong (> 10 min off the server), then the server's.
+  if (n > 0 && Math.abs(n * 1000 - fetchedAtMs) > 10 * 60 * 1000) {
+    return fetchedAtMs + (s - n) * 1000;
+  }
+  return s * 1000;
 };
 
 /** Same maths as HomeScreen's Start path, anchored to when the data arrived. */

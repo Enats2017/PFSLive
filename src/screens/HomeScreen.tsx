@@ -435,6 +435,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // this homeData arrived. Display only; Start recomputes from a fresh fetch.
   const raceStartMs = useMemo(
     () =>
+      // Placeholder start (00:00 / 00:01 — the real gun time isn't known):
+      // no countdown; it would count down to midnight.
+      /^00:0[01](:00)?$/.test(String(homeData?.next_race_time ?? '').trim()) ? null :
       // The server's start instant (event timezone, DST-correct) when it
       // sends one; the wall-clock maths is off by an hour across a DST change.
       startMsFromServer(homeData?.next_race_start_ts, homeData?.server_now_ts, Date.now()) ??

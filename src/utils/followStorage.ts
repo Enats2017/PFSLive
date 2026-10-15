@@ -553,6 +553,13 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
     } catch {
       // A failure here only risks one redundant re-upload later. Harmless.
     }
+    // Every local change (incl. unfollows) has reached the row: the
+    // in-session unfollow guard is no longer needed — unless a merge is
+    // running right now (its download may predate the unfollow).
+    if (!adoptInFlight) {
+      unfollowedNow.customers.clear();
+      unfollowedNow.bibs.clear();
+    }
   }
 }
 
@@ -892,6 +899,12 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
     await syncFollowDataToAPI(true, idAtStart);
   } catch (error) {
     if (API_CONFIG.DEBUG) console.warn('⚠️ adoptServerFollowData failed:', error);
+  } finally {
+    // The in-session unfollow list only guards THIS merge's union; kept
+    // longer, it would stop a later merge from adopting a follow the user
+    // made again elsewhere (web) for the rest of the session.
+    unfollowedNow.customers.clear();
+    unfollowedNow.bibs.clear();
   }
 }
 

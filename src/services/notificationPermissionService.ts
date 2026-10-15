@@ -187,13 +187,25 @@ function fetchAndRegisterToken(): Promise<string | null> {
       // Bounded too: a hung POST (half-open socket) would hold fetchInFlight —
       // and every later request()/registerIfGranted() — for the session.
       let postTimer: ReturnType<typeof setTimeout> | undefined;
+      const post = sendTokenToBackend(token);
       const sent = await Promise.race([
-        sendTokenToBackend(token),
+        post,
         new Promise<boolean>((resolve) => {
           postTimer = setTimeout(() => resolve(false), (API_CONFIG.TIMEOUT || 15000) + 5000);
         }),
       ]).finally(() => clearTimeout(postTimer));
-      if (!sent) return null;
+      if (!sent) {
+        // Timed out here but the POST may still land: if it does, remember
+        // the token so the next foreground doesn't post it again.
+        void post.then(async (landed) => {
+          if (!landed) return;
+          try {
+            const now = await Notifications.getPermissionsAsync();
+            if (now?.status === "granted") emitToken(token);
+          } catch { /* can't tell — the next foreground re-registers */ }
+        }).catch(() => { /* failed — the next foreground retries */ });
+        return null;
+      }
       // Switched off in Settings while this was in flight? Then don't
       // announce a token the user just revoked (the next foreground would
       // only clear it again).
