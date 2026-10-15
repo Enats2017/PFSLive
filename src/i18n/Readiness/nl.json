@@ -15,6 +15,8 @@
     "backgroundWhy": "Kies \"Altijd\" / \"Altijd toestaan\"",
     "locationServices": "Locatie staat uit",
     "locationServicesWhy": "Zet de locatie van je telefoon aan",
+    "precise": "Precieze locatie",
+    "preciseWhy": "Met een geschatte locatie kan je stip kilometers ernaast liggen. Zet \"Precieze locatie\" aan voor Livio.",
     "battery": "Batterijoptimalisatie",
     "batteryWhy": "Zodat je telefoon de tracking niet stopt",
     "powerSaving": "Energiebesparing staat aan",
@@ -44,6 +46,10 @@
       "locationServices": {
         "title": "Zet de locatie van je telefoon aan",
         "body": "De locatie van je telefoon staat uit, dus er kan niets getrackt worden. Zet ze aan in de instellingen."
+      },
+      "precise": {
+        "title": "Zet precieze locatie aan",
+        "body": "Livio heeft alleen je geschatte locatie, dus je familie zou je kilometers naast het parcours zien. Zet in de locatie-instellingen van Livio \"Precieze locatie\" aan."
       },
       "battery": {
         "title": "Laat je telefoon de tracking niet stoppen",

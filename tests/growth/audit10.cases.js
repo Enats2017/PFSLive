@@ -109,7 +109,7 @@ module.exports = function register({ M, load, test, SRC }) {
   // ── Start / location popup ────────────────────────────────────────────
   test('return-from-Settings re-checks "start pending" AFTER its awaits (no second start)', () => {
     const s = read('screens/HomeScreen.tsx');
-    const at = s.indexOf('(await gpsService.isLocationServiceEnabled());');
+    const at = s.indexOf('const satisfied = perms.foreground && perms.background && servicesOn;');
     assert.ok(at > 0);
     const after = s.slice(at, at + 600);
     const recheck = after.indexOf('if (!pendingStartRef.current) return;');

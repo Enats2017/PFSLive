@@ -98,6 +98,11 @@ async function rememberRemovalIfUnadopted(customerId: number | null, productId?:
   } catch { /* best effort */ }
 }
 
+// Unfollowed in THIS session, noted synchronously (before any await) — a
+// merge landing in the same moment must not add them back while the stored
+// "remembered unfollows" write is still on its way. Re-follow removes them.
+const unfollowedNow = { customers: new Set<number>(), bibs: new Set<string>() };
+
 let cache: Set<number> | null = null;
 let bibCache: Map<number, Set<string>> | null = null;
 
@@ -597,6 +602,7 @@ export async function followUser(id: any): Promise<void> {
   if (validId === null) {
     throw new Error(`Invalid customer ID: ${id}`);
   }
+  unfollowedNow.customers.delete(validId);
 
   try {
     const set = await loadCache();
@@ -625,10 +631,11 @@ export async function followBib(productAppId: number, bib: string): Promise<void
   if (validProductId === null || validBib === null) {
     throw new Error(`Invalid productAppId (${productAppId}) or bib (${bib})`);
   }
+  unfollowedNow.bibs.delete(`${validProductId}|${validBib}`);
 
   try {
     const map = await loadBibCache();
-    
+
     let bibSet = map.get(validProductId);
     if (!bibSet) {
       bibSet = new Set();
@@ -657,6 +664,7 @@ export async function unfollowUser(id: any): Promise<void> {
   if (validId === null) {
     throw new Error(`Invalid customer ID: ${id}`);
   }
+  unfollowedNow.customers.add(validId);
 
   try {
     const set = await loadCache();
@@ -686,6 +694,7 @@ export async function unfollowBib(productAppId: number, bib: string): Promise<vo
   if (validProductId === null || validBib === null) {
     throw new Error(`Invalid productAppId (${productAppId}) or bib (${bib})`);
   }
+  unfollowedNow.bibs.add(`${validProductId}|${validBib}`);
 
   try {
     const map = await loadBibCache();
@@ -841,7 +850,7 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
     const customers = await loadCache();
     (server.followed_customers ?? [])
       .map(toValidId)
-      .forEach((id) => { if (id !== null && !removed.customers.includes(id)) customers.add(id); });
+      .forEach((id) => { if (id !== null && !removed.customers.includes(id) && !unfollowedNow.customers.has(id)) customers.add(id); });
     cache = customers;
     await persistCache(customers);
 
@@ -849,7 +858,7 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
     Object.entries(server.followed_bibs ?? {}).forEach(([productId, list]) => {
       const pid = toValidId(productId);
       if (pid === null || !Array.isArray(list)) return;
-      const gone = removed.bibs[String(pid)] ?? [];
+      const gone = [...(removed.bibs[String(pid)] ?? []), ...[...unfollowedNow.bibs].filter((k) => k.startsWith(pid + '|')).map((k) => k.slice(String(pid).length + 1))];
       const set = bibs.get(pid) ?? new Set<string>();
       list.map(toValidBib).forEach((b) => { if (b !== null && !gone.includes(b)) set.add(b); });
       if (set.size > 0) bibs.set(pid, set);
@@ -868,8 +877,10 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
     try {
       // Remembered unfollows stay until the merged list has reached the row
       // (below): if this push fails, the next merge must still honour them.
-      await AsyncStorage.removeItem(ADOPT_PENDING_KEY);
+      // "Not synced" FIRST: killed between the two writes, the relaunch must
+      // still push the merged list, never let a download overwrite it.
       await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
+      await AsyncStorage.removeItem(ADOPT_PENDING_KEY);
     } catch { /* silent */ }
     // If a new id landed while the flag was being cleared, put its flag back.
     if ((await AsyncStorage.getItem(FOLLOWER_ID_KEY)) !== idAtStart) {
@@ -913,8 +924,19 @@ export async function restoreFollowsWithoutToken(): Promise<void> {
     }
     if (server) {
       await syncFollowDataFromAPI(server.followed_customers ?? [], server.followed_bibs ?? {}, seq);
+      return;
     }
-    return;
+    // The server has NO row for this device although the phone holds an id:
+    // the id came from another device (Android backup restored onto a new
+    // phone). Forget it and carry on as a phone without an id (below) —
+    // otherwise follows, fan email and language keep failing.
+    try {
+      if (toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) === knownId) {
+        await AsyncStorage.removeItem(FOLLOWER_ID_KEY);
+        await AsyncStorage.removeItem('expo_push_token');
+        forgetSentPushToken();
+      }
+    } catch { /* silent */ }
   }
 
   const serverId = toValidId(server?.follower_id);

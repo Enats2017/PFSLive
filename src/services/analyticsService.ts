@@ -737,7 +737,7 @@ export const analyticsService = {
    * this shows whether asking days before the race beats asking at the line.
    */
   async logRaceReadyStep(
-    step: "shown" | "notifications" | "location" | "background" | "locationServices" | "battery" | "done" | "skipped",
+    step: "shown" | "notifications" | "location" | "background" | "locationServices" | "precise" | "battery" | "done" | "skipped",
     result?: "granted" | "denied" | "later" | "settings" | "already",
     source?: string,
   ) {

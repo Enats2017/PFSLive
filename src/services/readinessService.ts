@@ -29,7 +29,28 @@ import {
 import { apiClient } from './api';
 import { API_CONFIG, APP_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 
-export type ReadinessItem = 'notifications' | 'location' | 'background' | 'locationServices' | 'battery' | 'powerSaving';
+export type ReadinessItem = 'notifications' | 'location' | 'background' | 'locationServices' | 'precise' | 'battery' | 'powerSaving';
+
+/**
+ * Precise location on? false = "Approximate" (Android 12+) / "Precise: Off"
+ * (iOS 14+): the track would be off by kilometres while everything else
+ * looks fine. null = can't tell (no permission yet, older OS, API missing).
+ */
+async function readPrecise(): Promise<boolean | null> {
+  try {
+    if (Platform.OS === 'android') {
+      const fg: any = await Location.getForegroundPermissionsAsync();
+      if (fg?.status !== 'granted') return null;
+      const acc = fg?.android?.accuracy;
+      return acc === 'coarse' ? false : acc === 'fine' ? true : null;
+    }
+    const ps: any = await BackgroundGeolocation.getProviderState();
+    // iOS 14+: 0 = full accuracy, 1 = reduced.
+    return typeof ps?.accuracyAuthorization === 'number' ? ps.accuracyAuthorization === 0 : null;
+  } catch {
+    return null;
+  }
+}
 
 export interface ReadinessState {
   /** 'always' is the only level that tracks with the phone in a pocket. */
@@ -91,12 +112,13 @@ function loginFingerprint(authorization: string): string {
 
 export const readinessService = {
   async getState(): Promise<ReadinessState> {
-    const [perm, servicesOn, notif, batteryExempt, powerSaving] = await Promise.all([
+    const [perm, servicesOn, notif, batteryExempt, powerSaving, precise] = await Promise.all([
       gpsService.getPermissionState(),
       gpsService.isLocationServiceEnabled().catch(() => true),
       notificationPermissionService.getState(),
       readBatteryExempt(),
       readPowerSaving(),
+      readPrecise(),
     ]);
 
     const missing: ReadinessItem[] = [];
@@ -107,6 +129,7 @@ export const readinessService = {
     if (notif.status !== 'granted') missing.push('notifications');
     if (!perm.foreground) missing.push('location');
     else if (!perm.background) missing.push('background');
+    if (perm.foreground && precise === false) missing.push('precise');
     if (batteryExempt === false) missing.push('battery');
     if (powerSaving) missing.push('powerSaving');
 
@@ -119,7 +142,7 @@ export const readinessService = {
       batteryExempt,
       powerSaving,
       missing,
-      trackingReady: perm.foreground && perm.background && servicesOn,
+      trackingReady: perm.foreground && perm.background && servicesOn && precise !== false,
     };
 
     void this.reportToServer(state);

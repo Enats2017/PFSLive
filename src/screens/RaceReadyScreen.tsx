@@ -37,11 +37,12 @@ const ICONS: Record<ReadinessItem, keyof typeof Ionicons.glyphMap> = {
   location: 'location-outline',
   background: 'phone-portrait-outline',
   locationServices: 'navigate-outline',
+  precise: 'locate-outline',
   battery: 'battery-charging-outline',
   powerSaving: 'leaf-outline',
 };
 
-type StepName = 'notifications' | 'location' | 'background' | 'locationServices' | 'battery';
+type StepName = 'notifications' | 'location' | 'background' | 'locationServices' | 'precise' | 'battery';
 
 const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
   const { t } = useTranslation(['readiness', 'common', 'home']);
@@ -103,8 +104,19 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
             skip('notifications'); // can't confirm from here; card keeps it visible
             break;
           }
-          const res = await notificationPermissionService.request();
+          const notifWatch = watchForOsPrompt();
+          let res;
+          let notifShown = false;
+          try {
+            res = await notificationPermissionService.request();
+          } finally {
+            notifShown = notifWatch.done();
+          }
           void analyticsService.logRaceReadyStep('notifications', res.status === 'granted' ? 'granted' : 'denied', source);
+          if (res.status !== 'granted' && !notifShown) {
+            // Blocked at system level: no dialog — Settings is the only route.
+            await notificationPermissionService.openSettings();
+          }
           if (res.status !== 'granted') skip('notifications');
           break;
         }
@@ -152,6 +164,15 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
           await openLocationSettingsFor('location_off');
           break;
         }
+        case 'precise': {
+          // No OS dialog can switch precise location back on: only the app's
+          // location settings page can (Android "Use precise location",
+          // iOS "Precise Location").
+          void analyticsService.logRaceReadyStep('precise', 'settings', source);
+          await openLocationSettingsFor('denied');
+          skip('precise'); // re-read on return; the card keeps it visible if still off
+          break;
+        }
         case 'battery': {
           void analyticsService.logRaceReadyStep('battery', 'settings', source);
           await requestBatteryOptimizationExemption();
@@ -185,7 +206,8 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
     (current === 'notifications' && state?.notifications !== 'granted' && state?.notificationsCanAskAgain === false) ||
     (current === 'location' && state?.locationCanAskAgain === false) ||
     (current === 'background' && backgroundOpensSettings(Platform.OS, state?.locationCanAskAgain, backgroundSentToSettings.current)) ||
-    current === 'locationServices';
+    current === 'locationServices' ||
+    current === 'precise';
 
   return (
     <SafeAreaView style={commonStyles.container} edges={['bottom']}>

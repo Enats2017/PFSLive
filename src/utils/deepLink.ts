@@ -30,7 +30,7 @@ export function parseQuery(url: string): Record<string, string> {
 export function positiveInt(v: string | undefined): number | null {
   if (!v || !/^\d+$/.test(v.trim())) return null;
   const n = Number(v);
-  return n > 0 ? n : null;
+  return n > 0 && Number.isSafeInteger(n) ? n : null;
 }
 
 /** livio://event?product_app_id=..&event_name=..&pov=.. */
@@ -38,7 +38,8 @@ export function parseEventLink(url: string): { product_app_id: number; event_nam
   const p = parseQuery(url);
   const product_app_id = positiveInt(p.product_app_id);
   if (!product_app_id) return null;
-  return { product_app_id, event_name: p.event_name ?? '', preselect_pov_id: positiveInt(p.pov) };
+  // Any page can open this link: the name is display-only text, keep it short.
+  return { product_app_id, event_name: (p.event_name ?? '').slice(0, 120), preselect_pov_id: positiveInt(p.pov) };
 }
 
 let lastLink: { url: string; at: number } | null = null;

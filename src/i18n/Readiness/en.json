@@ -15,6 +15,8 @@
     "backgroundWhy": "Choose \"Always\" / \"Allow all the time\"",
     "locationServices": "Location is switched off",
     "locationServicesWhy": "Turn on your phone's location",
+    "precise": "Precise location",
+    "preciseWhy": "Approximate location puts your dot up to a few kilometres off. Switch \"Precise location\" on for Livio.",
     "battery": "Battery optimisation",
     "batteryWhy": "So your phone doesn't stop the tracking",
     "powerSaving": "Power saving is on",
@@ -44,6 +46,10 @@
       "locationServices": {
         "title": "Switch on your phone's location",
         "body": "Your phone's location is off, so nothing can be tracked. Turn it on in settings."
+      },
+      "precise": {
+        "title": "Turn on precise location",
+        "body": "Livio has only your approximate location, so your family would see you kilometres away from the course. In Livio's location settings, switch \"Precise location\" on."
       },
       "battery": {
         "title": "Don't let your phone stop the tracking",

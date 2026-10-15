@@ -19,7 +19,10 @@ export const GuestTrackingSettings: React.FC = () => {
 
     const loadLanguage = async () => {
         try {
-            const { languageId } = await guestSettingsService.getLanguage();
+            const { languageId, found } = await guestSettingsService.getLanguage();
+            // Nothing stored for this device: keep the app's own language —
+            // applying the server default switched FR/NL users to English.
+            if (!found) return;
             const match = LANGUAGE_OPTIONS.find(o => o.value === languageId);
             if (match) {
                 setSelectedLanguage(match);

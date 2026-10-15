@@ -90,12 +90,15 @@ module.exports = function register({ M, load, test, SRC }) {
       assert.strictEqual(M.store.has('@PFSLive:followAdoptPending'), false);
     }
   });
-  test('restore: phone knows its id, server says "no row" → local follows untouched, nothing pushed', async () => {
+  test('restore: phone knows its id, server says "no row" (id from another device, e.g. a backup) → stale id replaced, local follows kept and pushed to the new row', async () => {
     M.store.set('FOLLOWER_ID', '501');
     M.store.set('followed_users', JSON.stringify([5, 6]));
+    M.fapi.guestResult = { follower_id: 777 };
     await FS().restoreFollowsWithoutToken();          // byDevice null → follower_not_found
     assert.deepStrictEqual((await FS().getFollowedUsers()).sort(), [5, 6]);
-    assert.strictEqual(posts(SYNC).length, 0);
+    assert.strictEqual(M.store.get('FOLLOWER_ID'), '777', 'new row');
+    const p = posts(SYNC).pop();
+    assert.ok(p && p.body.follower_id === 777, 'pushed to the new row');
   });
 
   // ── fan sheet + token timer ───────────────────────────────────────────
@@ -124,7 +127,7 @@ module.exports = function register({ M, load, test, SRC }) {
   test('Home without a race: "following live" stays right under the hero, idle card after it', () => {
     const s = read('screens/HomeScreen.tsx');
     const live = s.indexOf('{homeData?.following_live_events && homeData.following_live_events.length > 0 && (\n            <FollowingLiveEventsSection'.replace(/\n/g, s.includes('\r\n') ? '\r\n' : '\n'));
-    const idle = s.indexOf('{homeData && homeData.show_start_track !== 1 && <IdleHome />}');
+    const idle = s.indexOf('{homeData && homeData.show_start_track !== 1 && !isGPSActive && <IdleHome />}');
     assert.ok(live > -1 && idle > -1 && idle > live, `live ${live} idle ${idle}`);
   });
   test('start funnel: every permission_result step carries the race id', () => {

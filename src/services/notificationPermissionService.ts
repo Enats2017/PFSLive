@@ -184,7 +184,16 @@ function fetchAndRegisterToken(): Promise<string | null> {
       // Only remember the token once the server has it — otherwise
       // registerIfGranted()'s "already registered" shortcut would stop the
       // next foreground from retrying a failed registration.
-      if (!(await sendTokenToBackend(token))) return null;
+      // Bounded too: a hung POST (half-open socket) would hold fetchInFlight —
+      // and every later request()/registerIfGranted() — for the session.
+      let postTimer: ReturnType<typeof setTimeout> | undefined;
+      const sent = await Promise.race([
+        sendTokenToBackend(token),
+        new Promise<boolean>((resolve) => {
+          postTimer = setTimeout(() => resolve(false), (API_CONFIG.TIMEOUT || 15000) + 5000);
+        }),
+      ]).finally(() => clearTimeout(postTimer));
+      if (!sent) return null;
       // Switched off in Settings while this was in flight? Then don't
       // announce a token the user just revoked (the next foreground would
       // only clear it again).

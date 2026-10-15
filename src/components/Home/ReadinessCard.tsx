@@ -31,6 +31,7 @@ const ICONS: Record<ReadinessItem, keyof typeof Ionicons.glyphMap> = {
   location: 'location-outline',
   background: 'phone-portrait-outline',
   locationServices: 'navigate-outline',
+  precise: 'locate-outline',
   battery: 'battery-charging-outline',
   powerSaving: 'leaf-outline',
 };

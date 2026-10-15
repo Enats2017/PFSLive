@@ -37,6 +37,7 @@ import {
 } from '../services/gpsService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { notificationPermissionService, forgetSentPushToken } from '../services/notificationPermissionService';
 import { locationQueueService } from '../services/locationQueueService';
 import { tokenService } from '../services/tokenService';
 import { useAuth } from '../context/AuthContext';
@@ -44,7 +45,7 @@ import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { useNotifications, NotificationData } from '../hooks/useNotifications';
 import { followerApi } from '../services/registerFollowerServices';
 import { syncFollowDataFromAPI, restoreFollowsWithoutToken, getFollowWriteSeq } from '../utils/followStorage';
-import { PreRaceCountdown, computeRaceStartMs } from '../components/Home/PreRaceCountdown';
+import { PreRaceCountdown, computeRaceStartMs, startMsFromServer } from '../components/Home/PreRaceCountdown';
 import { ReadinessCard } from '../components/Home/ReadinessCard';
 import { ShareTrackingLink } from '../components/Home/ShareTrackingLink';
 import { IdleHome } from '../components/Home/IdleHome';
@@ -122,6 +123,10 @@ interface HomeData {
   next_race_product_option_value_app_id?: number | string | null;
   /** 'partner' | 'custom' — home_api has always sent it; typed for the race-ready key. */
   event_source?: string;
+  /** Next race start as unix seconds (event timezone applied, DST-correct); 0/absent = unknown. */
+  next_race_start_ts?: number;
+  /** Server clock (unix seconds) when this answer was built. */
+  server_now_ts?: number;
 }
 
 // ==================== CONSTANTS ====================
@@ -402,9 +407,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               seq,
             );
             return;
-          } catch {
+          } catch (e: any) {
             // Token not known server-side (registration failed / reinstall):
-            // fall back to the device_id restore below.
+            // fall back to the device_id restore below — and make the phone
+            // send its token again (it still believes the server has it).
+            if (e?.code === 'follower_not_found') {
+              try { await AsyncStorage.removeItem('expo_push_token'); } catch { /* silent */ }
+              forgetSentPushToken();
+              void notificationPermissionService.registerIfGranted();
+            }
           }
         }
 
@@ -424,6 +435,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // this homeData arrived. Display only; Start recomputes from a fresh fetch.
   const raceStartMs = useMemo(
     () =>
+      // The server's start instant (event timezone, DST-correct) when it
+      // sends one; the wall-clock maths is off by an hour across a DST change.
+      startMsFromServer(homeData?.next_race_start_ts, homeData?.server_now_ts, Date.now()) ??
       computeRaceStartMs(
         homeData?.next_race_date,
         homeData?.next_race_time,
@@ -841,6 +855,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setHasPermission(perms.foreground);
       setPermissionCanAskAgain(perms.canAskAgain);
 
+      // Phone-wide Location switch FIRST: while it is off, iOS reports the
+      // app's permission as "denied", so the popup blamed the app permission
+      // and sent the runner to Livio's settings page, which can't fix it.
+      // Same order as the readiness card (readinessService.getState).
+      if (!(await gpsService.isLocationServiceEnabled())) {
+        setPermissionBlockReason('location_off');
+        setPermissionModalMidRace(false);
+        setPermissionModalNoFix(false);
+        void analyticsService.logStartStep('blocked', 'location_off', eventId);
+        pendingStartRef.current = true;
+        setShowLocationPermissionModal(true);
+        return;
+      }
+
       if (!perms.foreground || !perms.background) {
         setPermissionBlockReason(perms.foreground ? 'no_background_perm' : 'denied');
         setPermissionModalMidRace(false);
@@ -858,19 +886,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         return;
       }
 
-      // Permissions can ALL be granted while the phone's master Location switch
-      // is off. Nothing above catches that, so the session used to start, show
-      // "GPS Active", and record nothing — the 23 Aug failure. Blocking here is
-      // what makes the 'location_off' deep-link reachable at start time.
-      if (!(await gpsService.isLocationServiceEnabled())) {
-        setPermissionBlockReason('location_off');
-        setPermissionModalMidRace(false);
-        setPermissionModalNoFix(false);
-        void analyticsService.logStartStep('blocked', 'location_off', eventId);
-        pendingStartRef.current = true;
-        setShowLocationPermissionModal(true);
-        return;
-      }
+      // (The master Location switch is checked first, above — permissions can
+      // ALL be granted while it is off; the session used to start, show
+      // "GPS Active", and record nothing — the 23 Aug failure.)
 
       // Past the gate — disarm, so a later unrelated foreground cannot fire a
       // phantom start.
@@ -1622,11 +1640,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         try {
           const perms = await gpsService.getPermissionState();
           setHasPermission(perms.foreground);
+          const servicesOn = await gpsService.isLocationServiceEnabled();
 
-          const satisfied =
-            perms.foreground &&
-            perms.background &&
-            (await gpsService.isLocationServiceEnabled());
+          const satisfied = perms.foreground && perms.background && servicesOn;
 
           // Re-check after the awaits: the popup's own button may have been
           // answered meanwhile and already started (or the runner cancelled).
@@ -1657,8 +1673,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           void analyticsService.logStartStep('permission_result', 'still_blocked_on_return', eventIdRef.current);
           // Re-show with the CURRENT problem: e.g. "denied" → granted only
           // "While using" now needs the "Always" text and route, not "denied".
-          // Same order as the Start gate: permission first, then the switch.
-          setPermissionBlockReason(!perms.foreground ? 'denied' : !perms.background ? 'no_background_perm' : 'location_off');
+          // Same order as the Start gate: the phone-wide switch first (with it
+          // off iOS reports the permission as denied), then the permission.
+          setPermissionBlockReason(!servicesOn ? 'location_off' : !perms.foreground ? 'denied' : 'no_background_perm');
           setPermissionCanAskAgain(perms.canAskAgain);
           // This is the Start popup again — never the mid-race wording.
           setPermissionModalMidRace(false);
@@ -2675,7 +2692,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
           {/* No upcoming race — most users, most of the time. After the live
               section on purpose (it was right under the hero before). */}
-          {homeData && homeData.show_start_track !== 1 && <IdleHome />}
+          {homeData && homeData.show_start_track !== 1 && !isGPSActive && <IdleHome />}
         </View>
         {/* Bottom Buttons */}
         <View style={homeStyles.buttonContainer}>

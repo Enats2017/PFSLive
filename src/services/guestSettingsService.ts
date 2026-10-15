@@ -34,13 +34,15 @@ class GuestSettingsService {
         return json;
     }
 
-    async getLanguage(): Promise<{ languageId: number }> {
+    async getLanguage(): Promise<{ languageId: number; found: boolean }> {
         const deviceId = await getDeviceId();
         const json = await this.request<GetFollowerLanguageResponse>({
             action: 'get',
             device_id: deviceId,
         });
-        return { languageId: json.data.language_id };
+        // found:false = no row / no stored language: the id is the server's
+        // DEFAULT (English) — not the user's choice.
+        return { languageId: json.data.language_id, found: json.data.found !== false };
     }
 
     async updateLanguage(languageId: number): Promise<{ languageId: number }> {

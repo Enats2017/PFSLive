@@ -38,6 +38,7 @@ export const RACE_READY_ITEMS: ReadinessItem[] = [
   'location',
   'background',
   'locationServices',
+  'precise',
   'battery',
 ];
 

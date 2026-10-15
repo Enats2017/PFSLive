@@ -30,10 +30,14 @@ export const useFollowPromptStore = create<FollowPromptState>((set) => ({
 }));
 
 let checking = false;
+// The sheet's own OS permission dialog is up: a follow finishing meanwhile
+// must not open the sheet again (and log "shown" twice).
+let asking = false;
+export function setFollowPromptAsking(v: boolean): void { asking = v; }
 
 /** Call after a follow succeeded. Cheap and silent when nothing should show. */
 export async function maybePromptNotificationsAfterFollow(): Promise<void> {
-  if (checking || useFollowPromptStore.getState().visible) return;
+  if (checking || asking || useFollowPromptStore.getState().visible) return;
   checking = true;
   try {
     if (!notificationPermissionService.isAvailable()) return;

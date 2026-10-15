@@ -22,10 +22,13 @@ export const requestBatteryOptimizationExemption = async (): Promise<void> => {
       { data: `package:${ANDROID_PACKAGE}` }
     );
   } catch {
-    // Fallback — open battery optimization list directly
-    await IntentLauncher.startActivityAsync(
-      'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS'
-    );
+    // Fallback — open battery optimization list directly. Some OEMs have
+    // neither page: never throw (Get race-ready would get stuck on the step).
+    try {
+      await IntentLauncher.startActivityAsync(
+        'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS'
+      );
+    } catch { /* nothing to open on this phone */ }
   }
 };
 

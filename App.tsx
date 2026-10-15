@@ -165,7 +165,9 @@ export default function App() {
       // ✅ iOS document open: WhatsApp/Files deliver a file:// URL to the app Inbox.
       // Android handles GPX opens via the GpxShare native module (separate effect),
       // so restrict this to iOS to avoid double-firing navigation.
-      if (Platform.OS === 'ios' && url && /\.gpx(\?|$)/i.test(url)) {
+      // A shared FILE only — never one of our own livio:// links that merely
+      // ends in ".gpx" (e.g. an event_name), which went to PersonalEvent.
+      if (Platform.OS === 'ios' && url && !/^livio:/i.test(url) && /\.gpx(\?|$)/i.test(url)) {
         const fileName = decodeURIComponent(url.split('/').pop()?.split('?')[0] ?? 'shared.gpx');
         navigateToPersonalEvent(url, fileName);
         return;

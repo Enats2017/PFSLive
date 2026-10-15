@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { commonStyles, palette, space } from '../styles/common.styles';
 import { readinessStyles as s } from '../styles/readiness.styles';
-import { useFollowPromptStore, markFollowPromptDismissed } from '../store/useFollowPromptStore';
+import { useFollowPromptStore, markFollowPromptDismissed, setFollowPromptAsking } from '../store/useFollowPromptStore';
 import { notificationPermissionService } from '../services/notificationPermissionService';
 import { analyticsService } from '../services/analyticsService';
 
@@ -44,7 +44,13 @@ export const FollowNotificationPrompt: React.FC = () => {
   const onAccept = useCallback(async () => {
     void analyticsService.logNotificationAsk('follow', 'accepted');
     hide();
-    const res = await notificationPermissionService.request();
+    setFollowPromptAsking(true);
+    let res;
+    try {
+      res = await notificationPermissionService.request();
+    } finally {
+      setFollowPromptAsking(false);
+    }
     void analyticsService.logNotificationAsk('follow', res.status === 'granted' ? 'granted' : 'denied');
     // Said no to the OS prompt: pause like "Not now" — on Android 13+ the OS
     // still allows asking once more, and the next follow must not spend it.

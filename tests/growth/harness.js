@@ -98,7 +98,7 @@ const storeWait = () => (M.storeDelay ? new Promise((r) => setTimeout(r, M.store
 const AsyncStorage = {
   getItem: async (k) => { await storeWait(); return M.store.has(k) ? M.store.get(k) : null; },
   setItem: async (k, v) => { await storeWait(); M.writes.push(k); M.store.set(k, String(v)); },
-  removeItem: async (k) => { await storeWait(); M.store.delete(k); },
+  removeItem: async (k) => { await storeWait(); M.writes.push('-' + k); M.store.delete(k); },
   multiRemove: async (ks) => {
     await storeWait();
     if (M.multiRemoveFail) throw new Error('storage full');
@@ -234,6 +234,7 @@ const relOverrides = {
     },
     registerFollower: async (token) => {
       M.fapi.registerCalls.push(token);
+      if (M.fapi.registerDelay) await new Promise((r) => setTimeout(r, M.fapi.registerDelay));
       if (M.fapi.registerFail) throw Object.assign(new Error('Network Error'), { type: 'network' });
       return { ...M.fapi.registerResult };
     },

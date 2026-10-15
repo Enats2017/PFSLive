@@ -23,6 +23,7 @@ import {
   NotificationPermissionState,
 } from '../../services/notificationPermissionService';
 import { analyticsService } from '../../services/analyticsService';
+import { watchForOsPrompt } from '../../utils/permissionPrompt';
 
 const NotificationSettingsScreen: React.FC = () => {
   const { t } = useTranslation(['readiness']);
@@ -49,9 +50,19 @@ const NotificationSettingsScreen: React.FC = () => {
   const onPress = useCallback(async () => {
     if (canAsk) {
       void analyticsService.logNotificationAsk('settings_screen', 'accepted');
-      const res = await notificationPermissionService.request();
+      const watch = watchForOsPrompt();
+      let res;
+      let shown = false;
+      try {
+        res = await notificationPermissionService.request();
+      } finally {
+        shown = watch.done();
+      }
       void analyticsService.logNotificationAsk('settings_screen', res.status === 'granted' ? 'granted' : 'denied');
       setPerm(res);
+      // The OS showed nothing (blocked at system level): the button must
+      // still do something — open the settings page that can fix it.
+      if (res.status !== 'granted' && !shown) await notificationPermissionService.openSettings();
       return;
     }
     void analyticsService.logNotificationAsk('settings_screen', 'settings');

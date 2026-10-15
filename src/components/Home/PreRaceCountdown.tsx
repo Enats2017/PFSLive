@@ -68,6 +68,21 @@ export const PreRaceCountdown: React.FC<Props> = ({ startAtMs }) => {
   );
 };
 
+/**
+ * Start moment from the server's own epoch (home_api next_race_start_ts,
+ * computed in the event's timezone), anchored to the phone's clock via the
+ * server's "now" — so a wrong phone clock or a DST change doesn't shift it.
+ */
+export const startMsFromServer = (
+  startTs?: number,
+  serverNowTs?: number,
+  fetchedAtMs?: number,
+): number | null => {
+  const s = Number(startTs), n = Number(serverNowTs);
+  if (!(s > 0) || !(n > 0) || !fetchedAtMs) return null;
+  return fetchedAtMs + (s - n) * 1000;
+};
+
 /** Same maths as HomeScreen's Start path, anchored to when the data arrived. */
 export const computeRaceStartMs = (
   raceDate?: string,
