@@ -43,8 +43,9 @@ module.exports = function register({ M, load, test, SRC }) {
   });
 
   // ── a timed-out upload that still lands, late ─────────────────────────
-  test('an old upload landing AFTER a newer one → phone re-sends the current list', async () => {
+  test('an old upload landing AFTER a newer one → phone re-sends the current list (server before the follow_seq migration)', async () => {
     await withTimeout(50, async () => {
+      M.api.ignoreSeq = true;
       M.store.set('FOLLOWER_ID', '501');
       M.api.syncScript = [{ delay: 5300 }];              // past the 5.05 s job limit, still arrives
       const fs_ = FS();

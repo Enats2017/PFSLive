@@ -28,6 +28,35 @@ export function getFollowWriteSeq(): number { return followWriteSeq; }
 // flag alone only covered FAILED uploads — a slow one in flight let a download
 // wipe the follow on the phone, and the next follow then removed it upstream.)
 let lastPushedSeq = 0;
+
+// ✅ Upload number sent as client_seq. Always rising — also across app
+// restarts (persisted; Date.now() as the floor survives a reinstall) — so the
+// server can ignore an older upload that reaches it AFTER a newer one (a
+// timed-out upload the server still commits late). Without it the older list
+// silently undid the newer follow/unfollow and the phone never knew.
+const FOLLOW_SEQ_KEY = '@PFSLive:followSeqIssued';
+let seqIssued = 0;
+let seqLoaded = false;
+
+// A usable upload number: a safe integer, not absurdly far in the future.
+// Anything else (corrupt storage, a hostile/buggy writer of the row) would make
+// `+ 1` a no-op above 2^53 and the stale/re-send below loop for good.
+function isSaneSeq(n: number): boolean {
+  return Number.isSafeInteger(n) && n > 0 && n < Date.now() + 10 * 365 * 864e5;
+}
+
+async function nextClientSeq(): Promise<number> {
+  if (!seqLoaded) {
+    try {
+      const stored = Number(await AsyncStorage.getItem(FOLLOW_SEQ_KEY));
+      if (isSaneSeq(stored)) seqIssued = Math.max(seqIssued, stored);
+    } catch { /* floor below */ }
+    seqLoaded = true;
+  }
+  seqIssued = Math.max(Date.now(), seqIssued + 1);
+  try { await AsyncStorage.setItem(FOLLOW_SEQ_KEY, String(seqIssued)); } catch { /* Date.now() still rises */ }
+  return seqIssued;
+}
 function phoneAheadOfServer(): boolean { return lastPushedSeq !== followWriteSeq; }
 
 /** The server said this device has no follower row — a real answer, unlike a
@@ -390,11 +419,16 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
     }
   });
 
+  // Numbered AFTER the lists were read: a higher number always carries lists
+  // at least as new.
+  const clientSeq = await nextClientSeq();
+
   const requestBody = {
     follower_id: followerId,
     device_id: deviceId,
     customer_app_id_string,
     bib_number_string,
+    client_seq: clientSeq,
   };
 
   if (API_CONFIG.DEBUG) {
@@ -408,7 +442,7 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
 
   const headers = await API_CONFIG.getHeaders();
 
-  await apiClient.post(
+  const res: any = await apiClient.post(
     getApiEndpoint(API_CONFIG.ENDPOINTS.SYNC_FOLLOW_DATA),
     requestBody,
     {
@@ -416,6 +450,25 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
       timeout: API_CONFIG.TIMEOUT,
     }
   );
+
+  // The server already applied a NEWER upload of this row and ignored this
+  // one: nothing reached it, so this is not "synced" (the pending mark stays).
+  if (res?.data?.stale === true) {
+    const applied = Number(res?.data?.follow_seq) || 0;
+    if (API_CONFIG.DEBUG) console.log('⏭️ Follow upload ignored by the server (older than applied):', { clientSeq, applied });
+    // …but if this IS the phone's newest list, the phone's numbering fell
+    // behind the row's (clock set back; or the row was written by another
+    // install of this device): continue above the server's and send again.
+    // One re-send — the next number is above `applied`. Only when the row's
+    // number is NOT one this phone issued (applied > seqIssued): if it is ours,
+    // a newer upload of ours already carries lists at least as new.
+    if (seqAtPush === followWriteSeq && isSaneSeq(applied) && applied > seqIssued) {
+      seqIssued = Math.max(seqIssued, applied);
+      try { await AsyncStorage.setItem(FOLLOW_SEQ_KEY, String(seqIssued)); } catch { /* in memory still */ }
+      void syncFollowDataToAPI();
+    }
+    return;
+  }
 
   if (API_CONFIG.DEBUG) {
     console.log('✅ Follow data synced to API');

@@ -35,7 +35,8 @@ function freshState() {
             byDeviceDelay: 0, registerFail: false,
             registerCalls: [], registerResult: { follower_id: 501 } },
     // apiClient.post
-    api: { posted: [], fail: false, rejectIds: [] /* follower ids the sync endpoint answers follower_not_found */ },
+    api: { posted: [], fail: false, rejectIds: [] /* follower ids the sync endpoint answers follower_not_found */,
+           seqByFollower: {} /* server's applied client_seq per follower row */, ignoreSeq: false /* true = server before the follow_seq migration */ },
     // gpsService
     gps: { foreground: true, background: true, level: 'always', canAskAgain: true, servicesOn: true },
     battery: { exempt: true, exemptThrows: false, lowPower: false },
@@ -177,6 +178,18 @@ const relOverrides = {
       if (url.endsWith('/update_follower_favourites_api.php') && M.api.syncScript && M.api.syncScript.length) {
         const step = M.api.syncScript.shift();
         if (step.delay) await new Promise((r) => setTimeout(r, step.delay));
+        // The phone gets a timeout NOW, but the server still commits the upload later.
+        if (step.lateCommit) {
+          const b = JSON.parse(JSON.stringify(body));
+          setTimeout(() => {
+            if (!M.api.ignoreSeq && b.client_seq !== undefined) {
+              if (Number(b.client_seq) <= (M.api.seqByFollower[b.follower_id] || 0)) { M.api.posted.push({ url, body: b, rejected: true, stale: true }); return; }
+              M.api.seqByFollower[b.follower_id] = Number(b.client_seq);
+            }
+            M.api.posted.push({ url, body: b, late: true });
+          }, step.lateCommit);
+          const e = new Error('timeout of 15000ms exceeded'); e.type = 'network'; throw e;
+        }
         if (step.fail) { const e = new Error('Network Error'); e.type = 'network'; throw e; }
       }
       if (url.endsWith('/update_follower_favourites_api.php') && (M.api.rejectIds || []).includes(Number(body.follower_id))) {
@@ -184,6 +197,20 @@ const relOverrides = {
         throw Object.assign(new Error('follower_not_found'), { type: 'empty', code: 'follower_not_found' });
       }
       if (M.api.fail) { const e = new Error('Network Error'); e.type = 'network'; throw e; }
+      // Server-side order check (update_follower_favourites_api client_seq).
+      if (url.endsWith('/update_follower_favourites_api.php') && !M.api.ignoreSeq && body && body.client_seq !== undefined) {
+        if (M.api.staleEcho) {               // e.g. a duplicate delivery: stale, naming the phone's OWN number
+          M.api.staleEcho = false;
+          M.api.posted.push({ url, body, rejected: true, stale: true });
+          return { success: true, data: { stale: true, follow_seq: Number(body.client_seq) } };
+        }
+        const applied = M.api.seqByFollower[body.follower_id] || 0;
+        if (Number(body.client_seq) <= applied) {
+          M.api.posted.push({ url, body, rejected: true, stale: true });
+          return { success: true, data: { stale: true, follow_seq: applied } };
+        }
+        M.api.seqByFollower[body.follower_id] = Number(body.client_seq);
+      }
       if (M.api.failWith) { M.api.posted.push({ url, body, rejected: true }); throw Object.assign(new Error(M.api.failWith.code), M.api.failWith); }
       M.api.posted.push({ url, body });
       return { success: true };
