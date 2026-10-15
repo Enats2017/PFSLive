@@ -1112,6 +1112,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // Opens the confirm popup (button now calls this instead of startGPSTracking)
   const confirmStartTracking = useCallback(() => {
+    // A new tap is a new decision: a start left armed by an earlier blocked
+    // attempt must not fire on a later foreground if this one is declined.
+    pendingStartRef.current = false;
     void analyticsService.logStartStep('tap', undefined, eventId);
     // From here the Start gate owns permissions for this race: Get race-ready
     // must not pop up in the middle of the Start sequence (start line!).
@@ -1131,6 +1134,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // User taps "No" → just close, do nothing
   const handleStartConfirmNo = useCallback(() => {
+    pendingStartRef.current = false;
     setShowStartConfirmModal(false);
   }, []);
 
@@ -1142,6 +1146,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // ✅ User cancels early tracking — do nothing
   const handleEarlyTrackingCancel = useCallback(() => {
+    pendingStartRef.current = false;
     setShowEarlyTrackingModal(false);
   }, []);
 
@@ -1647,6 +1652,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // Same order as the Start gate: permission first, then the switch.
           setPermissionBlockReason(!perms.foreground ? 'denied' : !perms.background ? 'no_background_perm' : 'location_off');
           setPermissionCanAskAgain(perms.canAskAgain);
+          // This is the Start popup again — never the mid-race wording.
+          setPermissionModalMidRace(false);
+          setPermissionModalNoFix(false);
           setShowLocationPermissionModal(true);
         } catch { /* silent — a later foreground retries */ }
       })();

@@ -438,6 +438,15 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
     return;
   }
   if (seqAtPush > lastPushedSeq) lastPushedSeq = seqAtPush;
+  // A full list reached the merged row: the remembered unfollows (honoured by
+  // the merge, removed locally) are spent. Kept, they would wrongly filter a
+  // later web follow out of the NEXT merge, maybe weeks later.
+  try {
+    if ((await AsyncStorage.getItem(ADOPT_PENDING_KEY)) !== '1'
+        && toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) === followerId) {
+      await AsyncStorage.removeItem(REMOVED_BEFORE_ADOPT_KEY);
+    }
+  } catch { /* silent — cleared by the next upload */ }
   // Local and server agree again — but only if nothing changed while this
   // upload was in flight (an older upload finishing late must not clear the
   // flag a newer, failed one set).
@@ -775,13 +784,9 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
       try { await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1'); } catch { /* silent */ }
       return;
     }
-    const mergeSeq = followWriteSeq;
+    // Remembered unfollows are cleared by the first upload that reaches this
+    // row (uploadCurrent) — this push, or a later one if this push fails.
     await syncFollowDataToAPI(true, idAtStart);
-    if (lastPushedSeq >= mergeSeq
-        && (await AsyncStorage.getItem(FOLLOWER_ID_KEY)) === idAtStart
-        && (await AsyncStorage.getItem(ADOPT_PENDING_KEY)) !== '1') {
-      try { await AsyncStorage.removeItem(REMOVED_BEFORE_ADOPT_KEY); } catch { /* silent */ }
-    }
   } catch (error) {
     if (API_CONFIG.DEBUG) console.warn('⚠️ adoptServerFollowData failed:', error);
   }
