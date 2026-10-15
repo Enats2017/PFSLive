@@ -16,6 +16,7 @@ module.exports = function register({ M, load, test, SRC }) {
   test('1.0.9 user with phone-only follows allows notifications → follows NOT wiped by the download', async () => {
     M.store.set('followed_users', JSON.stringify([42]));          // no FOLLOWER_ID: 1.0.9 refused push
     await NP().request();                                         // grant → registerFollower → id 501
+    await new Promise((r) => setTimeout(r, 30));           // registration runs in the background now
     assert.strictEqual(M.store.get('@PFSLive:followAdoptPending'), '1', 'merge owed');
     await FS().syncFollowDataFromAPI([], {});                     // Home's token-path download (empty row)
     assert.deepStrictEqual(await FS().getFollowedUsers(), [42]);

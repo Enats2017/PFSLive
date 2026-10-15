@@ -77,6 +77,7 @@ module.exports = function register({ M, load, test, SRC }) {
     M.fapi.registerResult = { follower_id: 777 };
     M.store.set('followed_users', JSON.stringify([42]));
     await NP().request();
+    await new Promise((r) => setTimeout(r, 30));           // registration runs in the background now
     assert.strictEqual(M.store.get('@PFSLive:followAdoptPending'), '1');
     await FS().syncFollowDataFromAPI([], {});
     assert.deepStrictEqual(await FS().getFollowedUsers(), [42]);

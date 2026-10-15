@@ -44,7 +44,7 @@ import { useAuth } from '../context/AuthContext';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { useNotifications, NotificationData } from '../hooks/useNotifications';
 import { followerApi } from '../services/registerFollowerServices';
-import { syncFollowDataFromAPI, restoreFollowsWithoutToken, getFollowWriteSeq } from '../utils/followStorage';
+import { syncFollowDataFromAPI, restoreFollowsWithoutToken, getFollowWriteSeq, adoptIfOtherRow } from '../utils/followStorage';
 import { PreRaceCountdown, computeRaceStartMs, startMsFromServer } from '../components/Home/PreRaceCountdown';
 import { ReadinessCard } from '../components/Home/ReadinessCard';
 import { ShareTrackingLink } from '../components/Home/ShareTrackingLink';
@@ -401,6 +401,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           const seq = getFollowWriteSeq();
           try {
             const data = await followerApi.getFollowerData(expoPushToken);
+            // The token's row is not the one the phone holds an id for: merge.
+            if (await adoptIfOtherRow(data as any)) return;
             await syncFollowDataFromAPI(
               data.followed_customers ?? [],
               data.followed_bibs ?? {},

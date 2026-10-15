@@ -497,7 +497,9 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
 
   // The server already applied a NEWER upload of this row and ignored this
   // one: nothing reached it, so this is not "synced" (the pending mark stays).
-  if (res?.data?.stale === true) {
+  // A "stale" answer naming THIS upload's own number is a duplicate delivery
+  // of it (e.g. a transport retry): it landed — fall through as a success.
+  if (res?.data?.stale === true && Number(res?.data?.follow_seq) !== clientSeq) {
     const applied = Number(res?.data?.follow_seq) || 0;
     if (API_CONFIG.DEBUG) console.log('⏭️ Follow upload ignored by the server (older than applied):', { clientSeq, applied });
     // …but if this IS the phone's newest list, the phone's numbering fell
@@ -916,6 +918,24 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
  *  - server knows the device → learn the id, then merge (reinstall / web)
  *  - neither, but local follows exist → create the row, then push
  */
+/**
+ * The server's row for THIS device is not the row the phone holds an id for
+ * (a foreign id — backup, old shared row, web relabel): take the server's id
+ * and MERGE. Treating that row's list as the phone's truth overwrote the
+ * phone's own follows, which the next upload then removed for good.
+ * Returns true when handled.
+ */
+export async function adoptIfOtherRow(server: ServerFollowData | null | undefined): Promise<boolean> {
+  const sid = toValidId(server?.follower_id);
+  if (!server || sid === null) return false;
+  const known = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY));
+  if (known === null || known === sid) return false;
+  await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
+  await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(sid));
+  await adoptServerFollowData(server);
+  return true;
+}
+
 export async function restoreFollowsWithoutToken(): Promise<void> {
   const knownId = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY));
 
@@ -936,6 +956,7 @@ export async function restoreFollowsWithoutToken(): Promise<void> {
       return;
     }
     if (server) {
+      if (await adoptIfOtherRow(server)) return;
       await syncFollowDataFromAPI(server.followed_customers ?? [], server.followed_bibs ?? {}, seq);
       return;
     }

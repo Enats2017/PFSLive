@@ -4,7 +4,7 @@
 //
 // Two situations open the same popup:
 //  - the START flow (permission or Location missing before tracking): a pitch —
-//    why to allow — and "then press Start again";
+//    why to allow — and the start resumes by itself when they come back;
 //  - the MID-RACE warning banner (tracking already running): a problem report.
 //    Never "press Start again" there — the visible button is Stop, and stopping
 //    to restart mid-race would split the runner's session.

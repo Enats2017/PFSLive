@@ -183,7 +183,8 @@ export default function App() {
         // Parse query params from deep link URL ('+' → space, see deepLink.ts)
         const params = parseQuery(url);
         const product_app_id = positiveInt(params.product_app_id);
-        const event_name = params.event_name ?? '';
+        // Display-only text any page can put in the link: keep it short.
+        const event_name = (params.event_name ?? '').slice(0, 120);
         // Cold start from the email: wait for the navigator, or the navigate
         // below does nothing and the runner lands on Home.
         whenNavigatorReady(() => {

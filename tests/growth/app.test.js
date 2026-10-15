@@ -311,6 +311,7 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   });
   test('ask: OS still allows → prompt once, grant → registered', async () => {
     const st = await NP().request();
+    await new Promise((r) => setTimeout(r, 30));           // registration runs in the background now
     assert.strictEqual(st.status, 'granted');
     assert.strictEqual(M.notif.requests, 1);
     assert.deepStrictEqual(M.fapi.registerCalls, ['ExponentPushToken[abc]']);
@@ -319,6 +320,7 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   test('ask: user says no → no token, status denied', async () => {
     M.notif.requestResult = { status: 'denied', canAskAgain: false };
     const st = await NP().request();
+    await new Promise((r) => setTimeout(r, 30));           // registration runs in the background now
     assert.deepStrictEqual(st, { status: 'denied', canAskAgain: false });
     assert.strictEqual(M.fapi.registerCalls.length, 0);
   });
@@ -502,6 +504,7 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   require('./audit18.cases')({ M, load, test, SRC });
   require('./audit19.cases')({ M, load, test, SRC });
   require('./audit20.cases')({ M, load, test, SRC });
+  require('./audit21.cases')({ M, load, test, SRC });
 
   results.push(await run('growth — app'));
   const pass = results.reduce((a, r) => a + r.pass, 0), fail = results.reduce((a, r) => a + r.fail, 0);

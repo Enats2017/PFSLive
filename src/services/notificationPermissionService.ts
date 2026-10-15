@@ -305,7 +305,10 @@ export const notificationPermissionService = {
     // The prompt has just resolved — refresh the analytics permission
     // properties now, denied path included (the more interesting datapoint).
     void analyticsService.syncPermissionProperties();
-    if (state.status === "granted") await fetchAndRegisterToken();
+    // Not awaited: the token fetch + POST can take up to ~40 s offline, and
+    // the screens that asked (Get race-ready, Notifications, follow sheet)
+    // would sit frozen. The token reaches HomeScreen via onTokenChange.
+    if (state.status === "granted") void fetchAndRegisterToken();
     return state;
   },
 
