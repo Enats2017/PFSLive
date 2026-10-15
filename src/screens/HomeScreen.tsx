@@ -50,6 +50,7 @@ import { ShareTrackingLink } from '../components/Home/ShareTrackingLink';
 import { IdleHome } from '../components/Home/IdleHome';
 import { raceReadyService } from '../services/raceReadyService';
 import { locationPopupCopy } from '../utils/locationPopupCopy';
+import { watchForOsPrompt } from '../utils/permissionPrompt';
 import {
   openLocationSettingsFor,
   requestBatteryOptimizationExemption,
@@ -1609,6 +1610,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // The OS dialog / Android 11+ Location page sends the app to the background
   // and back, so the listener below would log the SAME answer a second time.
   const inlineRequestRef = useRef(false);
+  // When it started: a request that never settles must not mute the return
+  // listener for the rest of the session (the runner would face a bare screen).
+  const inlineRequestAtRef = useRef(0);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next) => {
@@ -1644,9 +1648,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // Came back without granting. The button already dismissed the modal,
           // so without this the runner faces a bare screen and no explanation
           // of why tracking still is not running. Put it back and stay armed.
-          if (!inlineRequestRef.current) {
-            void analyticsService.logStartStep('permission_result', 'still_blocked_on_return', eventIdRef.current);
-          }
+          // The popup's own permission request is still running (iOS asks in
+          // two steps; answering the first one brings the app back to the
+          // foreground): that request owns the outcome and puts the popup
+          // back itself if the runner says no. Re-showing it here flashed the
+          // popup between the two OS questions.
+          if (inlineRequestRef.current && Date.now() - inlineRequestAtRef.current < 60_000) return;
+          void analyticsService.logStartStep('permission_result', 'still_blocked_on_return', eventIdRef.current);
           // Re-show with the CURRENT problem: e.g. "denied" → granted only
           // "While using" now needs the "Always" text and route, not "denied".
           // Same order as the Start gate: permission first, then the switch.
@@ -2065,13 +2073,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       // settings trip become the last resort.
                       if (permissionBlockReason !== 'location_off') {
                         try {
-                          const t0 = Date.now();
+                          // Did the OS show anything? (see utils/permissionPrompt)
+                          const promptWatch = watchForOsPrompt();
+                          let osShowed = false;
+                          inlineRequestAtRef.current = Date.now();
                           inlineRequestRef.current = true;
                           let perms;
                           try {
                             perms = await gpsService.requestPermissionsDetailed();
                           } finally {
                             inlineRequestRef.current = false;
+                            osShowed = promptWatch.done();
                           }
                           setHasPermission(perms.foreground);
                           // Start-funnel step only when the popup came from Start
@@ -2079,7 +2091,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           if (!permissionModalMidRace) {
                             void analyticsService.logStartStep(
                               'permission_result',
-                              perms.background ? 'granted' : (Date.now() - t0 > 700 ? 'denied' : 'no_prompt'),
+                              perms.background ? 'granted' : (osShowed ? 'denied' : 'no_prompt'),
                               eventId,
                             );
                           }
@@ -2107,7 +2119,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           // Elapsed time separates them — a screen the runner
                           // read and dismissed cannot come back in a few ms.
                           // Without this the button silently did nothing.
-                          if (Date.now() - t0 > 700) return;
+                          if (osShowed) {
+                            // The runner answered "no". The return listener
+                            // stays quiet during this request, so put the
+                            // Start popup back here, with the current problem.
+                            if (pendingStartRef.current) {
+                              setPermissionBlockReason(!perms.foreground ? 'denied' : 'no_background_perm');
+                              setPermissionCanAskAgain(perms.canAskAgain);
+                              setPermissionModalMidRace(false);
+                              setPermissionModalNoFix(false);
+                              setShowLocationPermissionModal(true);
+                            }
+                            return;
+                          }
                         } catch {
                           // fall through to settings
                         }

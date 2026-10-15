@@ -60,7 +60,7 @@ module.exports = function register({ M, load, test, SRC }) {
     const s = read('screens/HomeScreen.tsx');
     assert.ok(/inlineRequestRef\.current = true;\s*let perms;\s*try \{\s*perms = await gpsService\.requestPermissionsDetailed\(\);\s*\} finally \{\s*inlineRequestRef\.current = false;/.test(s), 'flag around the request');
     assert.ok(/if \(!inlineRequestRef\.current\) \{\s*void analyticsService\.logStartStep\('permission_result', 'granted_on_return'/.test(s));
-    assert.ok(/if \(!inlineRequestRef\.current\) \{\s*void analyticsService\.logStartStep\('permission_result', 'still_blocked_on_return'/.test(s));
+    assert.ok(/if \(inlineRequestRef\.current && Date\.now\(\) - inlineRequestAtRef\.current < 60_000\) return;\s*void analyticsService\.logStartStep\('permission_result', 'still_blocked_on_return'/.test(s));
   });
   test('popup re-shown after Settings uses the CURRENT problem (reason + can-ask-again refreshed)', () => {
     const s = read('screens/HomeScreen.tsx');

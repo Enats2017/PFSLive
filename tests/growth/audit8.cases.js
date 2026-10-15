@@ -81,7 +81,7 @@ module.exports = function register({ M, load, test, SRC }) {
       assert.ok(at > -1, step);
       assert.ok(/if \(!permissionModalMidRace\) \{\s*$/.test(s.slice(Math.max(0, at - 200), at).split('void analyticsService')[0]), `${step} guarded`);
     }
-    const g = s.indexOf("perms.background ? 'granted' : (Date.now() - t0 > 700 ? 'denied' : 'no_prompt')");
+    const g = s.indexOf("perms.background ? 'granted' : (osShowed ? 'denied' : 'no_prompt')");
     assert.ok(/if \(!permissionModalMidRace\) \{/.test(s.slice(g - 300, g)), 'granted/denied guarded');
   });
   test('French no-fix copy uses the improved wording', () => {

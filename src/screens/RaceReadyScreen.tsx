@@ -28,6 +28,7 @@ import { notificationPermissionService } from '../services/notificationPermissio
 import { gpsService } from '../services/gpsService';
 import { analyticsService } from '../services/analyticsService';
 import { openLocationSettingsFor, requestBatteryOptimizationExemption } from '../utils/deviceSettings';
+import { watchForOsPrompt } from '../utils/permissionPrompt';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RaceReady'>;
 
@@ -119,18 +120,24 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
           break;
         }
         case 'background': {
-          // Same request + same <700ms "the OS showed nothing" test as the
-          // start-time modal in HomeScreen.
+          // Same request + same "did the OS show anything" test as the
+          // start-time popup in HomeScreen (utils/permissionPrompt).
           if (backgroundOpensSettings(Platform.OS, state.locationCanAskAgain, backgroundSentToSettings.current)) {
             void analyticsService.logRaceReadyStep('background', 'settings', source);
             await openLocationSettingsFor('no_background_perm');
             break;
           }
-          const t0 = Date.now();
-          const perms = await gpsService.requestPermissionsDetailed();
+          const promptWatch = watchForOsPrompt();
+          let osShowed = false;
+          let perms;
+          try {
+            perms = await gpsService.requestPermissionsDetailed();
+          } finally {
+            osShowed = promptWatch.done();
+          }
           if (perms.background) {
             void analyticsService.logRaceReadyStep('background', 'granted', source);
-          } else if (Date.now() - t0 < 700) {
+          } else if (!osShowed) {
             void analyticsService.logRaceReadyStep('background', 'settings', source);
             backgroundSentToSettings.current = true;
             await openLocationSettingsFor('no_background_perm');
