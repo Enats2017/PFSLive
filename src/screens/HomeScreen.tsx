@@ -135,6 +135,14 @@ interface HomeData {
 // pendingStartAtRef).
 export const PENDING_START_MAX_MS = 15 * 60 * 1000;
 
+// A start still "running" after this long is hung (an await that never
+// settles — half-open socket, stuck native call): a new Start is let through
+// instead of being ignored until the screen remounts (see startingAtRef).
+export const START_STUCK_MS = 60 * 1000;
+
+// screen_ready already logged (race key | local day) — see the effect that logs it.
+const screenReadyClaimed = new Set<string>();
+
 // ✅ Hours threshold — show early tracking warning if race is more than this far away
 
 // Battery-exemption intent and the settings-page ladder moved to
@@ -272,6 +280,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // "Start anyway" on the precise-location popup: the next start skips that
   // check once (an approximate track beats none — never block the runner).
   const allowApproximateRef = useRef(false);
+  // ✅ A start is running (gate → fresh fetch → engine start: seconds on a
+  // race-day network). A second tap / "Start anyway" / the return listener
+  // used to run a SECOND doStartGPSTracking alongside it — two engine starts.
+  const startingRef = useRef(false);
+  // When that start began: one older than START_STUCK_MS no longer blocks a
+  // new Start, and only the newest start clears startingRef in its finally.
+  const startingAtRef = useRef(0);
+  const isStarting = () => startingRef.current && Date.now() - startingAtRef.current < START_STUCK_MS;
   // ✅ Ref so GPS callback always reads current value without stale closure
   const isSendingDataRef = useRef<boolean>(false);
   // ✅ Ref to tracking params — needed by watchdog to restart task if killed
@@ -412,6 +428,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               data.followed_customers ?? [],
               data.followed_bibs ?? {},
               seq,
+              data.follow_seq,
             );
             return;
           } catch (e: any) {
@@ -481,7 +498,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const homeModalOpenRef = useRef(homeModalOpen);
   homeModalOpenRef.current = homeModalOpen;
   // Same key as CreatePersonalEvent for custom events (their ids come from
-  // another table and can collide with partner ids).
+  // another table and can collide with partner ids). Also the race_id of every
+  // start_step event: a custom event's id logged bare joined it with the
+  // partner race that happens to share the number.
   const raceReadyKey = eventId ? (homeData?.event_source === 'custom' ? `custom_${eventId}` : String(eventId)) : null;
   useEffect(() => {
     if (homeData?.show_start_track !== 1 || !eventId || isGPSActive) return;
@@ -495,17 +514,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         // ONE map key ({ raceId: day }), pruned to today's entries — a key per
         // race piled up in storage for good.
         const KEY = '@PFSLive:startReadyLogged';
+        // Claimed in memory BEFORE the storage read: this effect re-runs on
+        // every dep change, and two runs both read "not logged yet" before
+        // either write landed — screen_ready logged twice.
+        const claim = `${raceReadyKey}|${day}`;
+        if (screenReadyClaimed.has(claim)) return;
+        screenReadyClaimed.add(claim);
         let map: Record<string, string> = {};
         try {
           const parsed = JSON.parse((await AsyncStorage.getItem(KEY)) || '{}');
           if (parsed && typeof parsed === 'object') map = parsed;
         } catch { /* corrupt → start over */ }
-        if (map[String(eventId)] !== day) {
+        if (map[String(raceReadyKey)] !== day) {
           const next: Record<string, string> = {};
           for (const [k, v] of Object.entries(map)) if (v === day) next[k] = v;
-          next[String(eventId)] = day;
+          next[String(raceReadyKey)] = day;
           await AsyncStorage.setItem(KEY, JSON.stringify(next));
-          void analyticsService.logStartStep('screen_ready', undefined, eventId);
+          void analyticsService.logStartStep('screen_ready', undefined, raceReadyKey);
           // The old one-key-per-race entries — dropped once.
           const legacy = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(KEY + ':'));
           if (legacy.length) await AsyncStorage.multiRemove(legacy);
@@ -825,6 +850,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
    * Core GPS tracking logic — called after all confirmations passed.
    */
   const doStartGPSTracking = useCallback(async () => {
+    // One start at a time, and never over a running session (see startingRef).
+    if (isStarting() || isGPSActiveRef.current) return;
+    startingRef.current = true;
+    const startedAt = Date.now();
+    startingAtRef.current = startedAt;
+    // "Start anyway" covers THIS start only — consumed here whatever happens
+    // next, so a start that bails earlier in the gate (location off, no
+    // Always) cannot carry it over to a later, unrelated start.
+    const allowApproximate = allowApproximateRef.current;
+    allowApproximateRef.current = false;
     try {
       // ── PERMISSION GATE ─────────────────────────────────────────────────
       // This used to accept FOREGROUND permission alone and start tracking.
@@ -855,7 +890,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setPermissionBlockReason('location_off');
         setPermissionModalMidRace(false);
         setPermissionModalNoFix(false);
-        void analyticsService.logStartStep('blocked', 'location_off', eventId);
+        void analyticsService.logStartStep('blocked', 'location_off', raceReadyKey);
         pendingStartRef.current = true;
         pendingStartAtRef.current = Date.now();
         setShowLocationPermissionModal(true);
@@ -870,7 +905,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         void analyticsService.logStartStep(
           'blocked',
           `${perms.foreground ? 'no_background' : 'denied'}_${perms.canAskAgain ? 'can_ask' : 'settings'}`,
-          eventId,
+          raceReadyKey,
         );
         // Arm the resume — see pendingStartRef. Without this the runner grants
         // Always and comes back to a stopped tracker.
@@ -885,13 +920,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // and the live track is off by kilometres. Checked AFTER the location
       // switch and the permission (same order as the readiness card). Advice,
       // not a wall: the popup's "Start anyway" continues the start.
-      if (allowApproximateRef.current) {
-        allowApproximateRef.current = false;
-      } else if ((await readPrecise()) === false) {
+      if (!allowApproximate && (await readPrecise()) === false) {
         setPermissionBlockReason('precise');
         setPermissionModalMidRace(false);
         setPermissionModalNoFix(false);
-        void analyticsService.logStartStep('blocked', 'approximate', eventId);
+        void analyticsService.logStartStep('blocked', 'approximate', raceReadyKey);
         // Armed: coming back from Settings finishes the start (re-checked here).
         pendingStartRef.current = true;
         pendingStartAtRef.current = Date.now();
@@ -1087,13 +1120,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         intervalSeconds: trackingParamsRef.current?.intervalSeconds,
       });
     } catch (error) {
-      void analyticsService.logStartStep('failed', 'exception', eventId);
+      void analyticsService.logStartStep('failed', 'exception', raceReadyKey);
       Alert.alert(
         t('common:errors.generic'),
         error instanceof Error ? error.message : t('home:errors.trackingFailed')
       );
       setIsGPSActive(false);
       isGPSActiveRef.current = false;
+    } finally {
+      // A hung start that settles late must not clear a newer start's guard.
+      if (startingAtRef.current === startedAt) startingRef.current = false;
     }
   }, [
     hasPermission,
@@ -1105,12 +1141,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     startQueueProcessor,
     startRaceStartChecker,
     fetchHomeData,
+    raceReadyKey,
     t,
   ]);
 
   const startGPSTracking = useCallback(async () => {
     if (!participantId || !eventId) {
-      void analyticsService.logStartStep('blocked', 'missing_ids', eventId);
+      void analyticsService.logStartStep('blocked', 'missing_ids', raceReadyKey);
       toastError(t('home:errors.missingInfo'), t('home:errors.missingInfoDescription'));
       return;
     }
@@ -1118,7 +1155,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const isPowerSaving = await checkPowerSavingMode();
     console.log('Power Saving Mode:', isPowerSaving);
     if (isPowerSaving) {
-      void analyticsService.logStartStep('blocked', 'power_saving', eventId);
+      void analyticsService.logStartStep('blocked', 'power_saving', raceReadyKey);
       setShowPowerSavingModal(true);
       return;
 
@@ -1134,20 +1171,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // was 4.4 minutes from the gun.
     const hoursUntilRace = homeData?.next_race_in_hours ?? 0;
     if (homeData?.manual_start !== 1 && hoursUntilRace > 0) {
-      void analyticsService.logStartStep('blocked', 'early_modal', eventId);
+      void analyticsService.logStartStep('blocked', 'early_modal', raceReadyKey);
       setShowEarlyTrackingModal(true);
       return;
     }
 
     await doStartGPSTracking();
-  }, [participantId, eventId, homeData, doStartGPSTracking, t]);
+  }, [participantId, eventId, homeData, doStartGPSTracking, raceReadyKey, t]);
 
   // Opens the confirm popup (button now calls this instead of startGPSTracking)
   const confirmStartTracking = useCallback(() => {
+    if (isStarting()) return; // tapped mid-start
     // A new tap is a new decision: a start left armed by an earlier blocked
     // attempt must not fire on a later foreground if this one is declined.
     pendingStartRef.current = false;
-    void analyticsService.logStartStep('tap', undefined, eventId);
+    void analyticsService.logStartStep('tap', undefined, raceReadyKey);
     // From here the Start gate owns permissions for this race: Get race-ready
     // must not pop up in the middle of the Start sequence (start line!).
     if (raceReadyKey) void raceReadyService.markShown(raceReadyKey);
@@ -1635,8 +1673,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   doStartGPSTrackingRef.current = doStartGPSTracking;
   // The return-from-Settings listener below is set up once ([] deps), when
   // homeData — and so eventId — is still null; read the race id through a ref.
-  const eventIdRef = useRef(eventId);
-  eventIdRef.current = eventId;
+  // The race-ready key (custom_<id> for custom events), like every start_step.
+  const eventIdRef = useRef(raceReadyKey);
+  eventIdRef.current = raceReadyKey;
   // True while the popup's own button is waiting on the OS permission request.
   // The OS dialog / Android 11+ Location page sends the app to the background
   // and back, so the listener below would log the SAME answer a second time.
@@ -1646,16 +1685,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const inlineRequestAtRef = useRef(0);
 
   useEffect(() => {
+    // Only a REAL trip out of the app (Settings, the OS Location page) counts:
+    // inactive → active is Control Center, a notification banner pulled down,
+    // or an OS alert — the runner fixed nothing, and acting on it re-showed
+    // (or started) out of nowhere.
+    let sawBackground = false;
     const sub = AppState.addEventListener('change', (next) => {
-      if (next !== 'active' || !pendingStartRef.current) return;
+      if (next === 'background') { sawBackground = true; return; }
+      if (next !== 'active') return;
+      const cameBack = sawBackground;
+      sawBackground = false;
+      if (!cameBack || !pendingStartRef.current) return;
 
       void (async () => {
         try {
           const perms = await gpsService.getPermissionState();
           setHasPermission(perms.foreground);
           const servicesOn = await gpsService.isLocationServiceEnabled();
+          // Precise location too (same gate as doStartGPSTracking): coming back
+          // from a precise block with it still off is not "fixed".
+          const preciseOk = perms.foreground && perms.background && servicesOn
+            ? (await readPrecise()) !== false : true;
 
-          const satisfied = perms.foreground && perms.background && servicesOn;
+          const satisfied = perms.foreground && perms.background && servicesOn && preciseOk;
 
           // Re-check after the awaits: the popup's own button may have been
           // answered meanwhile and already started (or the runner cancelled).
@@ -1694,8 +1746,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // "While using" now needs the "Always" text and route, not "denied".
           // Same order as the Start gate: the phone-wide switch first (with it
           // off iOS reports the permission as denied), then the permission.
-          setPermissionBlockReason(!servicesOn ? 'location_off' : !perms.foreground ? 'denied' : 'no_background_perm');
+          setPermissionBlockReason(!servicesOn ? 'location_off' : !perms.foreground ? 'denied' : !perms.background ? 'no_background_perm' : 'precise');
           setPermissionCanAskAgain(perms.canAskAgain);
+          pendingStartAtRef.current = Date.now();   // re-armed: still at it
           // This is the Start popup again — never the mid-race wording.
           setPermissionModalMidRace(false);
           setPermissionModalNoFix(false);
@@ -2070,6 +2123,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
                   onPress={() => {
                     setShowLocationPermissionModal(false);
+                    // The runner is acting on the blocked start right now:
+                    // restart its window (see PENDING_START_MAX_MS) — a slow
+                    // trip through Settings must still finish the start.
+                    if (pendingStartRef.current) pendingStartAtRef.current = Date.now();
                     void (async () => {
                       // Ask the OS FIRST. On Android 11+ a background-location
                       // request cannot be answered by a dialog, so the system
@@ -2103,7 +2160,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                             void analyticsService.logStartStep(
                               'permission_result',
                               perms.background ? 'granted' : (osShowed ? 'denied' : 'no_prompt'),
-                              eventId,
+                              raceReadyKey,
                             );
                           }
                           if (perms.background) {
@@ -2148,7 +2205,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                         }
                       }
                       if (!permissionModalMidRace) {
-                        void analyticsService.logStartStep('permission_result', 'sent_to_settings', eventId);
+                        void analyticsService.logStartStep('permission_result', 'sent_to_settings', raceReadyKey);
                       }
                       await openLocationSettingsFor(permissionBlockReason === 'precise' ? 'denied' : permissionBlockReason);
                     })();
@@ -2164,7 +2221,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   <TouchableOpacity
                     style={commonStyles.secondaryButton}
                     onPress={() => {
-                      void analyticsService.logStartStep('permission_result', 'start_approximate', eventId);
+                      // A start is already running — ignore the tap (startingRef).
+                      if (isStarting()) return;
+                      void analyticsService.logStartStep('permission_result', 'start_approximate', raceReadyKey);
                       pendingStartRef.current = false;
                       setShowLocationPermissionModal(false);
                       allowApproximateRef.current = true;
@@ -2181,7 +2240,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     // Backing out cancels the start — disarm, or a later
                     // foreground would fire a start the runner declined.
                     if (!permissionModalMidRace) {
-                      void analyticsService.logStartStep('permission_result', 'dismissed', eventId);
+                      void analyticsService.logStartStep('permission_result', 'dismissed', raceReadyKey);
                     }
                     pendingStartRef.current = false;
                     setShowLocationPermissionModal(false);
@@ -2584,6 +2643,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               {!isGPSActive && (
                 <ReadinessCard
                   raceName={homeData?.next_race_name}
+                  raceKey={raceReadyKey}
                   onOpenPowerSaving={openPowerSavingSettings}
                 />
               )}

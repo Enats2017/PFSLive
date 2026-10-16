@@ -59,6 +59,12 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
   // showed nothing. Next press goes straight back there, labelled as such.
   const backgroundSentToSettings = useRef(false);
   const finishedLogged = useRef(false);
+  // ✅ The real double-tap guard: `busy` is state, so two fast taps both saw
+  // false in the same render and ran the step (two OS requests / two
+  // Settings trips, two events). Claimed synchronously.
+  const busyRef = useRef(false);
+  // A step was put off with "Later" — the flow ended with a decision.
+  const laterLogged = useRef(false);
 
   const refresh = useCallback(async () => {
     const next = await readinessService.getState();
@@ -95,7 +101,8 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
   }, [state, current, skipped, source, productAppId]);
 
   const onContinue = useCallback(async () => {
-    if (!current || !state || busy) return;
+    if (!current || !state || busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
     try {
       switch (current) {
@@ -199,13 +206,24 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
         }
       }
     } finally {
-      await refresh();
-      setBusy(false);
+      try { await refresh(); } finally {
+        busyRef.current = false;
+        setBusy(false);
+      }
     }
-  }, [current, state, busy, skip, refresh, source, productAppId]);
+  }, [current, state, skip, refresh, source, productAppId]);
+
+  // Left (back / swipe) before the end and without a single "Later": no
+  // outcome event fired at all, so the funnel could not tell an abandoned
+  // flow from one never opened. Logged once, on unmount.
+  useEffect(() => () => {
+    if (finishedLogged.current || laterLogged.current) return;
+    void analyticsService.logRaceReadyStep('abandoned', undefined, source, productAppId);
+  }, []);
 
   const onLater = useCallback(() => {
-    if (!current) return;
+    if (!current || busyRef.current) return;
+    laterLogged.current = true;
     void analyticsService.logRaceReadyStep(current, 'later', source, productAppId);
     skip(current);
   }, [current, skip, source, productAppId]);

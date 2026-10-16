@@ -24,6 +24,8 @@ export interface GetFollowerDataResponse {
   follower_id: number;
   followed_customers: number[];
   followed_bibs: Record<string, string[]>;
+  /** The row's follow number when read — the phone's base_seq (followStorage). Absent on old servers. */
+  follow_seq?: number;
 }
 
 // ✅ Helper functions

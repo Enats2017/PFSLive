@@ -1,4 +1,5 @@
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ensureFollowerId } from '../utils/followStorage';
 
 interface GetFollowerLanguageResponse {
@@ -34,12 +35,13 @@ class GuestSettingsService {
         } finally {
             clearTimeout(timer);
         }
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const json = await response.json();
-        if (!json.success) {
-            throw new Error(json.error ?? 'Request failed');
+        // The error code travels in the body (respondError, HTTP 400) — keep
+        // it: follower_not_found has to be told apart (updateLanguage).
+        let json: any = null;
+        try { json = await response.json(); } catch { /* no JSON body */ }
+        if (!response.ok || !json?.success) {
+            const code = json?.error ?? undefined;
+            throw Object.assign(new Error(code ?? (response.ok ? 'Request failed' : `HTTP error! status: ${response.status}`)), { code });
         }
         return json;
     }
@@ -60,11 +62,22 @@ class GuestSettingsService {
         // 'update' needs an existing follower row (follower_not_found
         // otherwise) — previously only devices with push permission had one.
         await ensureFollowerId();
-        const json = await this.request<UpdateFollowerLanguageResponse>({
-            action: 'update',
-            device_id: deviceId,
-            language_id: languageId,
-        });
+        const body = { action: 'update', device_id: deviceId, language_id: languageId };
+        // The id read BEFORE the request — only that one may be dropped.
+        const idBefore = await AsyncStorage.getItem('FOLLOWER_ID');
+        let json: UpdateFollowerLanguageResponse;
+        try {
+            json = await this.request<UpdateFollowerLanguageResponse>(body);
+        } catch (e: any) {
+            if (e?.code !== 'follower_not_found') throw e;
+            // A stored id whose row is gone: ensureFollowerId returned it without
+            // registering. Drop it (unless replaced meanwhile), register, retry once.
+            if ((await AsyncStorage.getItem('FOLLOWER_ID')) === idBefore) {
+                await AsyncStorage.removeItem('FOLLOWER_ID');
+            }
+            await ensureFollowerId();
+            json = await this.request<UpdateFollowerLanguageResponse>(body);
+        }
         return { languageId: json.data.language_id };
     }
 }

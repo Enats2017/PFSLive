@@ -166,7 +166,8 @@ module.exports = function register({ M, load, test, SRC }) {
     const acc = block(s, 'const onAccept', 1500);
     assert.ok(/watchForOsPrompt\(\)/.test(acc), 'request watched');
     assert.ok(/res\.status !== 'granted' && !shown\) await notificationPermissionService\.openSettings\(\)/.test(acc));
-    assert.ok(/onShow=\{\(\) => \{ shownRef\.current = true; \}\}/.test(s), 'onShow noted');
+    // (audit23: onShow is now a named callback that also logs 'shown' once)
+    assert.ok(/onShow=\{\(\) => \{ shownRef\.current = true; \}\}/.test(s) || (/onShow=\{onShow\}/.test(s) && /shownRef\.current = true;/.test(block(s, 'const onShow', 300))), 'onShow noted');
     assert.ok(/if \(!shownRef\.current\) hide\(\)/.test(s) && /FOLLOW_SHEET_SHOW_TIMEOUT_MS = 2000/.test(s), 'store reset when it never showed');
   });
 
@@ -274,7 +275,8 @@ module.exports = function register({ M, load, test, SRC }) {
   // ── 16. screen_ready bookkeeping ──────────────────────────────────────
   test('screen_ready: local date, one pruned map key (not one key per race)', () => {
     const s = read('screens/HomeScreen.tsx');
-    const at = s.indexOf("logStartStep('screen_ready', undefined, eventId)");
+    // audit23: logged with the race-ready key (custom_<id> for custom events).
+    const at = Math.max(s.indexOf("logStartStep('screen_ready', undefined, eventId)"), s.indexOf("logStartStep('screen_ready', undefined, raceReadyKey)"));
     assert.ok(at > -1);
     const b = s.slice(at - 1400, at + 400);
     assert.ok(!/toISOString\(\)\.slice\(0, 10\)/.test(b), 'not the UTC date');

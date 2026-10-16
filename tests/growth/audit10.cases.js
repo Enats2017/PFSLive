@@ -109,7 +109,8 @@ module.exports = function register({ M, load, test, SRC }) {
   // ── Start / location popup ────────────────────────────────────────────
   test('return-from-Settings re-checks "start pending" AFTER its awaits (no second start)', () => {
     const s = read('screens/HomeScreen.tsx');
-    const at = s.indexOf('const satisfied = perms.foreground && perms.background && servicesOn;');
+    // audit23: `&& preciseOk` (precise location) may follow servicesOn.
+    const at = s.search(/const satisfied = perms\.foreground && perms\.background && servicesOn( && preciseOk)?;/);
     assert.ok(at > 0);
     const after = s.slice(at, at + 600);
     const recheck = after.indexOf('if (!pendingStartRef.current) return;');

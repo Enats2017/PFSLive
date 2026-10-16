@@ -7,6 +7,9 @@ export class AppError extends Error {
   constructor(
     public type: ErrorType,
     public code: string,
+    // The error body's `data` (respondError's $extra) — structured detail a
+    // caller needs, e.g. follow_conflict carries the row's current lists.
+    public data?: any,
   ) {
     super(code);
     this.name = "AppError";
@@ -226,7 +229,7 @@ class ApiClient {
 
       if (status && status >= 500) return new AppError("server", code);
 
-      if (status && status >= 400) return new AppError("empty", code);
+      if (status && status >= 400) return new AppError("empty", code, error.response?.data?.data);
     }
 
     return new AppError("server", "unknown");

@@ -36,7 +36,12 @@ function freshState() {
             registerCalls: [], registerResult: { follower_id: 501 } },
     // apiClient.post
     api: { posted: [], fail: false, rejectIds: [] /* follower ids the sync endpoint answers follower_not_found */,
-           seqByFollower: {} /* server's applied client_seq per follower row */, ignoreSeq: false /* true = server before the follow_seq migration */ },
+           seqByFollower: {} /* server's applied client_seq per follower row */, ignoreSeq: false /* true = server before the follow_seq migration */,
+           // Opt-in server rows WITH lists: { [follower_id]: { follow_seq, customers: [], bibs: {} } }.
+           // A row here gets the base_seq check (follow_conflict, HTTP 409) and is
+           // updated by every accepted upload; a test can bump it like a web follow.
+           rows: {} },
+    netListeners: [],      // NetInfo.addEventListener callbacks
     // gpsService
     gps: { foreground: true, background: true, level: 'always', canAskAgain: true, servicesOn: true },
     battery: { exempt: true, exemptThrows: false, lowPower: false },
@@ -158,6 +163,10 @@ const overrides = {
       return M.battery.exempt;
     } },
   } },
+  '@react-native-community/netinfo': { __esModule: true, default: {
+    addEventListener: (cb) => { M.netListeners.push(cb); return () => {}; },
+    fetch: async () => ({ isConnected: true, isInternetReachable: true }),
+  } },
   zustand: require(path.resolve(__dirname, '../../node_modules/zustand')),
 };
 
@@ -186,6 +195,15 @@ const relOverrides = {
               if (Number(b.client_seq) <= (M.api.seqByFollower[b.follower_id] || 0)) { M.api.posted.push({ url, body: b, rejected: true, stale: true }); return; }
               M.api.seqByFollower[b.follower_id] = Number(b.client_seq);
             }
+            // A row with lists (M.api.rows) gets the same base_seq check and update.
+            const r = (M.api.rows || {})[b.follower_id];
+            if (r && !M.api.ignoreSeq) {
+              if (b.base_seq !== undefined && (r.follow_seq || 0) > Number(b.base_seq)) { M.api.posted.push({ url, body: b, rejected: true, conflict: true }); return; }
+              r.follow_seq = Number(b.client_seq);
+              r.customers = String(b.customer_app_id_string || '').split(',').filter(Boolean).map(Number);
+              r.bibs = {};
+              Object.entries(b.bib_number_string || {}).forEach(([p, l]) => { r.bibs[p] = String(l).split(',').filter(Boolean); });
+            }
             M.api.posted.push({ url, body: b, late: true });
           }, step.lateCommit);
           const e = new Error('timeout of 15000ms exceeded'); e.type = 'network'; throw e;
@@ -198,6 +216,9 @@ const relOverrides = {
         throw Object.assign(new Error('follower_not_found'), { type: 'empty', code: 'follower_not_found' });
       }
       if (M.api.fail) { const e = new Error('Network Error'); e.type = 'network'; throw e; }
+      // A row with lists (M.api.rows) keeps its follow_seq in step with the order check.
+      const row = url.endsWith('/update_follower_favourites_api.php') && !M.api.ignoreSeq ? (M.api.rows || {})[body.follower_id] : undefined;
+      if (row) M.api.seqByFollower[body.follower_id] = Math.max(M.api.seqByFollower[body.follower_id] || 0, row.follow_seq || 0);
       // Server-side order check (update_follower_favourites_api client_seq).
       if (url.endsWith('/update_follower_favourites_api.php') && !M.api.ignoreSeq && body && body.client_seq !== undefined) {
         if (M.api.staleWith) {               // scripted once: stale, naming follow_seq = staleWith(body)
@@ -215,7 +236,20 @@ const relOverrides = {
           M.api.posted.push({ url, body, rejected: true, stale: true });
           return { success: true, data: { stale: true, follow_seq: applied } };
         }
+        // base_seq contract: the row moved on since the phone's base → nothing
+        // written, 409 follow_conflict with the row's number + lists.
+        if (row && body.base_seq !== undefined && (row.follow_seq || 0) > Number(body.base_seq)) {
+          M.api.posted.push({ url, body, rejected: true, conflict: true });
+          throw Object.assign(new Error('follow_conflict'), { type: 'empty', code: 'follow_conflict',
+            data: { follow_seq: row.follow_seq, followed_customers: [...row.customers], followed_bibs: JSON.parse(JSON.stringify(row.bibs || {})) } });
+        }
         M.api.seqByFollower[body.follower_id] = Number(body.client_seq);
+        if (row) {
+          row.follow_seq = Number(body.client_seq);
+          row.customers = String(body.customer_app_id_string || '').split(',').filter(Boolean).map(Number);
+          row.bibs = {};
+          Object.entries(body.bib_number_string || {}).forEach(([p, l]) => { row.bibs[p] = String(l).split(',').filter(Boolean); });
+        }
       }
       if (M.api.failWith) { M.api.posted.push({ url, body, rejected: true }); throw Object.assign(new Error(M.api.failWith.code), M.api.failWith); }
       M.api.posted.push({ url, body });

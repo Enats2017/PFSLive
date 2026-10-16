@@ -235,7 +235,8 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
     const m = FP();
     await m.maybePromptNotificationsAfterFollow();
     assert.strictEqual(m.useFollowPromptStore.getState().visible, true);
-    assert.ok(M.analytics.some((a) => a[0] === 'logNotificationAsk' && a[1] === 'follow' && a[2] === 'shown'));
+    // 'shown' is logged when the sheet's Modal really shows (onShow — audit23), not here.
+    assert.ok(!M.analytics.some((a) => a[0] === 'logNotificationAsk' && a[2] === 'shown'));
   });
   test('fan: already allowed → no sheet', async () => {
     M.notif.status = 'granted';
@@ -264,8 +265,12 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   });
   test('fan: two follows at once → one sheet, one "shown" event', async () => {
     const m = FP();
+    let opens = 0;
+    const show = m.useFollowPromptStore.getState().show;
+    m.useFollowPromptStore.setState({ show: () => { opens++; show(); } });
     await Promise.all([m.maybePromptNotificationsAfterFollow(), m.maybePromptNotificationsAfterFollow()]);
-    assert.strictEqual(M.analytics.filter((a) => a[0] === 'logNotificationAsk' && a[2] === 'shown').length, 1);
+    assert.strictEqual(opens, 1, 'one sheet');
+    // One "shown" per opening is logged by the sheet's onShow (audit23).
   });
 
   // ═════════════ 6. Notification permission + token ═════════════
@@ -506,6 +511,7 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   require('./audit20.cases')({ M, load, test, SRC });
   require('./audit21.cases')({ M, load, test, SRC });
   require('./audit22.cases')({ M, load, test, SRC });
+  require('./audit23.cases')({ M, load, test, SRC });
 
   results.push(await run('growth — app'));
   const pass = results.reduce((a, r) => a + r.pass, 0), fail = results.reduce((a, r) => a + r.fail, 0);

@@ -45,6 +45,12 @@ export const FollowNotificationPrompt: React.FC = () => {
     return () => { clearTimeout(timer); clearTimeout(giveUp); };
   }, [visible, hide]);
 
+  // 'shown' only once the sheet is really on screen — once per opening.
+  const onShow = useCallback(() => {
+    if (!shownRef.current) void analyticsService.logNotificationAsk('follow', 'shown');
+    shownRef.current = true;
+  }, []);
+
   const onDismiss = useCallback(() => {
     void analyticsService.logNotificationAsk('follow', 'dismissed');
     void markFollowPromptDismissed();
@@ -74,7 +80,7 @@ export const FollowNotificationPrompt: React.FC = () => {
   }, [hide]);
 
   return (
-    <Modal visible={presented} transparent animationType="slide" onRequestClose={onDismiss} onShow={() => { shownRef.current = true; }} statusBarTranslucent>
+    <Modal visible={presented} transparent animationType="slide" onRequestClose={onDismiss} onShow={onShow} statusBarTranslucent>
       <Pressable style={s.sheetBackdrop} onPress={onDismiss}>
         <Pressable style={[s.sheet, { paddingBottom: space.xl + insets.bottom }]} onPress={() => { /* swallow */ }}>
           <View style={s.stepIconPlate}>

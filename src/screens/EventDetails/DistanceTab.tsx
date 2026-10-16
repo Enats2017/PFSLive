@@ -279,6 +279,9 @@ const DistanceTab = ({
   // ✅ PRESELECT (deep link) — scroll to the distance once, never register.
   const listRef = useRef<FlatList<Distance>>(null);
   const preselectDoneRef = useRef(false);
+  // onScrollToIndexFailed retries the real index ONCE per preselect scroll
+  // (a retry that fails again must not loop).
+  const scrollRetriedRef = useRef(false);
   const distancesRef = useRef<Distance[]>(distances);
   distancesRef.current = distances;
   // A second link to this (still mounted) screen with ANOTHER distance must
@@ -295,6 +298,7 @@ const DistanceTab = ({
       const now = distancesRef.current.findIndex((d) => Number(d.product_option_value_app_id) === preselect_pov_id);
       if (now < 0) return;
       try {
+        scrollRetriedRef.current = false;
         listRef.current?.scrollToIndex({ index: now, animated: true, viewPosition: 0.2 });
       } catch { /* out of range — the highlight alone is enough */ }
     }, 300);
@@ -649,6 +653,16 @@ const handleExternalRegister = useCallback((url: string) => {
         onScrollToIndexFailed={(info) => {
           // Rows have variable height — fall back to an estimate, then retry.
           listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+          // The estimate alone can land rows away from the linked distance:
+          // once the rows near it are rendered and measured, go to the real
+          // index (once — see scrollRetriedRef).
+          if (scrollRetriedRef.current) return;
+          scrollRetriedRef.current = true;
+          setTimeout(() => {
+            try {
+              listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.2 });
+            } catch { /* out of range — the highlight alone is enough */ }
+          }, 100);
         }}
         keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
         showsVerticalScrollIndicator={false}

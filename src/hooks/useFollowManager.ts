@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   getFollowedUsers,
@@ -76,6 +76,17 @@ export interface FollowAnalyticsContext {
   raceId?: number | string;
 }
 
+/**
+ * Role classifier only — NEVER part of the follow. It used to be awaited
+ * inside the follow's try: an analytics rejection showed the error toast and
+ * rolled the button back for a follow that had already been saved.
+ */
+function markFollowerActive(): void {
+  try {
+    void Promise.resolve(analyticsService.markAsFollowerActive('follow_participant')).catch(() => { /* analytics only */ });
+  } catch { /* analytics only */ }
+}
+
 export function useFollowManager(
   t: any,
   productAppId?: number,
@@ -110,6 +121,11 @@ export function useFollowManager(
   const [followingInProgress, setFollowingInProgress] = useState<Set<string>>(
     new Set(),
   );
+  // ✅ The in-flight guard itself. followingInProgress is STATE: a fast
+  // double tap runs both presses against the same render, so both saw it
+  // empty and ran two follows (two toasts, two follow_toggle events). The ref
+  // is claimed synchronously; the state only drives the spinners.
+  const inFlightRef = useRef<Set<string>>(new Set());
 
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [pendingFollow, setPendingFollow] = useState<{
@@ -257,9 +273,10 @@ export function useFollowManager(
         const numericId = Number(customerId);
         const operationKey = `customer:${numericId}`;
 
-        if (followingInProgress.has(operationKey)) {
+        if (inFlightRef.current.has(operationKey)) {
           return;
         }
+        inFlightRef.current.add(operationKey);
 
         const wasFollowed = followedUsers.has(numericId);
         const willFollow = !wasFollowed;
@@ -279,7 +296,7 @@ export function useFollowManager(
         try {
           if (willFollow) {
             await followUser(numericId);
-            await analyticsService.markAsFollowerActive('follow_participant');
+            markFollowerActive();
             // markAsFollowerActive fires only on the FIRST follow ever — it's a
             // role classifier, not a counter. Without this there is no ongoing
             // follow volume at all.
@@ -330,6 +347,7 @@ export function useFollowManager(
 
           toastError(t("follower:error.title"), t("follower:error.message"));
         } finally {
+          inFlightRef.current.delete(operationKey);
           setFollowingInProgress((prev) => {
             const next = new Set(prev);
             next.delete(operationKey);
@@ -351,11 +369,19 @@ export function useFollowManager(
         ? `customer:${customerAppId}`
         : `product:${productId}:bib:${bib}`;
 
-      if (followingInProgress.has(operationKey)) {
+      if (inFlightRef.current.has(operationKey)) {
         return;
       }
+      // Claimed BEFORE the status read below (an await) — see inFlightRef.
+      inFlightRef.current.add(operationKey);
 
-      const status = await getFollowStatus(productId, bib, customerAppId);
+      let status: Awaited<ReturnType<typeof getFollowStatus>>;
+      try {
+        status = await getFollowStatus(productId, bib, customerAppId);
+      } catch {
+        inFlightRef.current.delete(operationKey);
+        return;
+      }
       const willFollow = !status.isFollowed;
 
       setFollowingInProgress((prev) => new Set(prev).add(operationKey));
@@ -402,7 +428,7 @@ export function useFollowManager(
         if (willFollow) {
           await smartFollow(productId, bib, customerAppId);
           onFollowSuccess?.();
-          await analyticsService.markAsFollowerActive('follow_participant');
+          markFollowerActive();
           // EVENT scope: followed by bib, so it applies to this race only.
           // followParams() already carries race_name. The raw product_app_id that
           // used to ride along here was unregistered, so GA4 collected it but no
@@ -494,6 +520,7 @@ export function useFollowManager(
 
         toastError(t("follower:error.title"), t("follower:error.message"));
       } finally {
+        inFlightRef.current.delete(operationKey);
         setFollowingInProgress((prev) => {
           const next = new Set(prev);
           next.delete(operationKey);

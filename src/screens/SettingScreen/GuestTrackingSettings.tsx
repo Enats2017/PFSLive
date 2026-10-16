@@ -5,8 +5,14 @@ import { LanguageSelector, LANGUAGE_OPTIONS, LanguageOption } from './LanguageSe
 import { guestSettingsService } from '../../services/guestSettingsService';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { styles } from '../../styles/liveTrackingSettings.styles';
-import { saveLanguage, getLanguageCodeFromId } from '../../i18n';
+import { saveLanguage, getLanguageCodeFromId, getCurrentLanguageId } from '../../i18n';
 import { useLanguageStore } from '../../store/useLanguageStore';
+
+// The app's own language as a picker option. Shown when the server has no
+// language for this device (or can't be reached): the picker otherwise showed
+// nothing selected although the app clearly runs in a language.
+const appLanguageOption = (): LanguageOption | null =>
+    LANGUAGE_OPTIONS.find(o => o.value === getCurrentLanguageId()) ?? null;
 
 export const GuestTrackingSettings: React.FC = () => {
     const { t } = useTranslation(['setting']);
@@ -26,8 +32,9 @@ export const GuestTrackingSettings: React.FC = () => {
             if (userPickedRef.current) return;
             // Nothing stored for this device: keep the app's own language —
             // applying the server default switched FR/NL users to English.
+            const match = found ? LANGUAGE_OPTIONS.find(o => o.value === languageId) : undefined;
+            if (!match) setSelectedLanguage(appLanguageOption());
             if (!found) return;
-            const match = LANGUAGE_OPTIONS.find(o => o.value === languageId);
             if (match) {
                 setSelectedLanguage(match);
                 const langCode = getLanguageCodeFromId(languageId);
@@ -40,6 +47,7 @@ export const GuestTrackingSettings: React.FC = () => {
         } catch (e: any) {
             console.error('❌ [GuestSettings] Load error:', e?.message);
             if (userPickedRef.current) return;
+            setSelectedLanguage(appLanguageOption());
             toastError(t('setting:liveTrackingSettings.toastErrorLoad'));
 
         }

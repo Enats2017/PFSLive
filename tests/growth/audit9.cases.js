@@ -66,7 +66,8 @@ module.exports = function register({ M, load, test, SRC }) {
     const s = read('screens/HomeScreen.tsx');
     const at = s.indexOf("'still_blocked_on_return'");
     const after = s.slice(at, at + 900);
-    assert.ok(/setPermissionBlockReason\(!servicesOn \? 'location_off' : !perms\.foreground \? 'denied' : 'no_background_perm'\)/.test(after));
+    // audit23: + 'precise' when only precise location is still off.
+    assert.ok(/setPermissionBlockReason\(!servicesOn \? 'location_off' : !perms\.foreground \? 'denied' : ('no_background_perm'|!perms\.background \? 'no_background_perm' : 'precise')\)/.test(after));
     assert.ok(/setPermissionCanAskAgain\(perms\.canAskAgain\)/.test(after));
     assert.ok(after.indexOf('setPermissionBlockReason') < after.indexOf('setShowLocationPermissionModal(true)'), 'refreshed before showing');
   });

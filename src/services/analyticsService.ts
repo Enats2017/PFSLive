@@ -737,7 +737,8 @@ export const analyticsService = {
    * this shows whether asking days before the race beats asking at the line.
    */
   async logRaceReadyStep(
-    step: "shown" | "notifications" | "location" | "background" | "locationServices" | "precise" | "battery" | "done" | "skipped",
+    // "abandoned" = left the flow before its end without any "Later" (RaceReadyScreen unmount).
+    step: "shown" | "notifications" | "location" | "background" | "locationServices" | "precise" | "battery" | "done" | "skipped" | "abandoned",
     result?: "granted" | "denied" | "later" | "settings" | "already",
     source?: string,
     raceId?: string | number | null,

@@ -22,6 +22,9 @@ import { readinessService, ReadinessItem, ReadinessState } from '../../services/
 
 interface Props {
   raceName?: string;
+  /** Race-ready key (raceReadyService): the numeric product_app_id for a
+   *  partner race, `custom_<id>` for a custom event (which carries none). */
+  raceKey?: string | null;
   /** Android battery-saver page — HomeScreen already owns this route. */
   onOpenPowerSaving: () => void;
 }
@@ -36,7 +39,7 @@ const ICONS: Record<ReadinessItem, keyof typeof Ionicons.glyphMap> = {
   powerSaving: 'leaf-outline',
 };
 
-export const ReadinessCard: React.FC<Props> = ({ raceName, onOpenPowerSaving }) => {
+export const ReadinessCard: React.FC<Props> = ({ raceName, raceKey, onOpenPowerSaving }) => {
   const { t } = useTranslation(['readiness']);
   const navigation = useNavigation<any>();
   const [state, setState] = useState<ReadinessState | null>(null);
@@ -61,7 +64,14 @@ export const ReadinessCard: React.FC<Props> = ({ raceName, onOpenPowerSaving }) 
       onOpenPowerSaving();
       return;
     }
-    navigation.navigate('RaceReady', { race_name: raceName, source: 'card' });
+    // Same rule as raceReadyService.maybeOpen: partner races carry their
+    // product_app_id, so the card's race_ready_step events say which race.
+    const productAppId = raceKey && /^\d+$/.test(raceKey) ? Number(raceKey) : undefined;
+    navigation.navigate('RaceReady', {
+      race_name: raceName,
+      source: 'card',
+      ...(productAppId !== undefined ? { product_app_id: productAppId } : {}),
+    });
   };
 
   if (state.missing.length === 0) {

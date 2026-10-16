@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationPermissionService } from '../services/notificationPermissionService';
-import { analyticsService } from '../services/analyticsService';
 
 /**
  * The fan's notification ask — after a follow, never on launch.
@@ -47,7 +46,9 @@ export async function maybePromptNotificationsAfterFollow(): Promise<void> {
     const dismissedAt = Number(await AsyncStorage.getItem(DISMISSED_AT_KEY));
     if (dismissedAt && Date.now() - dismissedAt < COOLDOWN_MS) return;
 
-    void analyticsService.logNotificationAsk('follow', 'shown');
+    // 'shown' is logged by the sheet's Modal onShow (FollowNotificationPrompt)
+    // — opening the store is not the sheet reaching the screen (iOS can refuse
+    // to present it while another modal is closing).
     useFollowPromptStore.getState().show();
   } catch {
     /* never block a follow */

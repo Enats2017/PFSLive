@@ -3,7 +3,9 @@ import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { apiClient } from '../services/api';
 import { useFollowStore } from '../store/useFollowStore';
 import { followerApi } from '../services/registerFollowerServices';
-import { forgetSentPushToken } from '../services/notificationPermissionService';
+import { AppState } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
+import { forgetSentPushToken, notificationPermissionService } from '../services/notificationPermissionService';
 
 const STORAGE_KEY = 'followed_users';
 // Set when an upload fails, cleared when one succeeds. Its only job is to say
@@ -38,6 +40,11 @@ let lastPushedSeq = 0;
 const FOLLOW_SEQ_KEY = '@PFSLive:followSeqIssued';
 let seqIssued = 0;
 let seqLoaded = false;
+// The stored number as read at loadStoredSeq — the phone's own last issued
+// upload BEFORE this session (0 = none). A first upload after an update (no
+// stored base yet) whose follow_conflict names it hit a row that holds the
+// phone's own last upload: those lists are the base (see uploadCurrent).
+let seqIssuedAtLoad = 0;
 
 // A usable upload number: a safe integer, not absurdly far in the future —
 // the server's own bound (update_follower_favourites_api: now + 1 year); a
@@ -52,7 +59,7 @@ async function loadStoredSeq(): Promise<void> {
   if (seqLoaded) return;
   try {
     const stored = Number(await AsyncStorage.getItem(FOLLOW_SEQ_KEY));
-    if (isSaneSeq(stored)) seqIssued = Math.max(seqIssued, stored);
+    if (isSaneSeq(stored)) { seqIssuedAtLoad = stored; seqIssued = Math.max(seqIssued, stored); }
   } catch { /* floor below */ }
   seqLoaded = true;
 }
@@ -84,6 +91,60 @@ async function readRemovedBeforeAdopt(): Promise<RemovedBeforeAdopt> {
   } catch {
     return { customers: [], bibs: {} };
   }
+}
+
+// ✅ What the phone's lists are BASED ON, per follower row: the row's
+// follow_seq the phone last saw (a download it applied, a merge, or its own
+// ACCEPTED upload) plus the lists at that point. Sent as base_seq: if the row
+// moved on since (a follow made on the web — same device_id, same row), the
+// server refuses with follow_conflict instead of letting this full-list upload
+// erase it, and the phone merges (see mergeConflict). Unknown base = 0 + empty
+// lists, which makes the first conflict a plain union (like adoption).
+const FOLLOW_BASE_KEY = '@PFSLive:followBase';
+type FollowLists = { customers: number[]; bibs: Record<string, string[]> };
+type FollowBase = FollowLists & { id: number; seq: number };
+
+async function readBase(followerId: number): Promise<FollowBase> {
+  try {
+    const v = JSON.parse((await AsyncStorage.getItem(FOLLOW_BASE_KEY)) || 'null');
+    if (v && toValidId(v.id) === followerId && isSaneSeq(Number(v.seq))) {
+      return {
+        id: followerId, seq: Number(v.seq),
+        customers: Array.isArray(v.customers) ? v.customers : [],
+        bibs: v.bibs && typeof v.bibs === 'object' ? v.bibs : {},
+      };
+    }
+  } catch { /* unknown base */ }
+  return { id: followerId, seq: 0, customers: [], bibs: {} };
+}
+
+/** Never moves a row's base backwards (a late/stale answer must not undo a newer one). */
+async function writeBase(followerId: number, seq: number, lists: FollowLists): Promise<void> {
+  if (!isSaneSeq(seq)) return;
+  try {
+    const cur = await readBase(followerId);
+    if (seq < cur.seq) return;
+    await AsyncStorage.setItem(FOLLOW_BASE_KEY, JSON.stringify({ id: followerId, seq, ...lists }));
+  } catch { /* the next conflict merges as a union */ }
+}
+
+/** A download's follow_seq, or null when the server does not send one (old server). */
+function seqOf(v: any): number | null {
+  const n = Number(v);
+  return v !== undefined && v !== null && isSaneSeq(n) ? n : null;
+}
+
+function listsOf(customers: any, bibs: any): FollowLists {
+  const out: FollowLists = {
+    customers: (Array.isArray(customers) ? customers : []).map(toValidId).filter((id): id is number => id !== null),
+    bibs: {},
+  };
+  Object.entries(bibs && typeof bibs === 'object' ? bibs : {}).forEach(([pid, list]) => {
+    const p = toValidId(pid);
+    const l = (Array.isArray(list) ? list : []).map(toValidBib).filter((b): b is string => b !== null);
+    if (p !== null && l.length > 0) out.bibs[String(p)] = l;
+  });
+  return out;
 }
 
 /** Remember an unfollow while the phone has not merged with its server row. */
@@ -255,6 +316,9 @@ export async function ensureFollowerId(): Promise<{ id: number | null; adopted: 
         // foreground or launch) instead of skipping it as "already sent".
         await AsyncStorage.removeItem('expo_push_token');
         forgetSentPushToken();
+        // …and NOW if permission is granted: waiting for the next foreground
+        // left the new row without pushes for the rest of the session.
+        void notificationPermissionService.registerIfGranted();
         if (API_CONFIG.DEBUG) console.log('🆔 Token-less follower registered:', id);
         return { id, adopted: true };
       } catch (error) {
@@ -385,6 +449,9 @@ async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null 
           // (literal key: notificationPermissionService owns it; no cycle).
           await AsyncStorage.removeItem('expo_push_token');
           forgetSentPushToken();
+          // Re-register now (UPSERT on device_id → a row WITH the token), not
+          // at the next foreground — see ensureFollowerId.
+          void notificationPermissionService.registerIfGranted();
         }
       } catch { /* silent */ }
     }
@@ -455,6 +522,77 @@ function withJobTimeout<T>(p: Promise<T>): Promise<T> {
   ]).finally(() => clearTimeout(timer));
 }
 
+const MAX_CONFLICT_ROUNDS = 3;
+// The last few uploads this phone sent, by client_seq. A follow_conflict that
+// names one of them is our OWN upload that timed out here but committed late:
+// the row holds its lists, so they are the base to merge against.
+const sentSnapshots = new Map<number, FollowBase>();
+function rememberSent(seq: number, snap: FollowBase): void {
+  sentSnapshots.set(seq, snap);
+  while (sentSnapshots.size > 5) sentSnapshots.delete(sentSnapshots.keys().next().value as number);
+}
+
+/**
+ * follow_conflict: row lists ∪ what the phone ADDED since its base − what the
+ * phone REMOVED since its base (and the unfollow tombstones). A follow made on
+ * the web is kept; a web unfollow of something the phone did not touch is
+ * kept too; a phone unfollow is never resurrected. The row's lists + number
+ * become the new base, so the re-upload goes through unless the row moved again.
+ */
+async function mergeConflict(followerId: number, serverSeq: number, data: any, base: FollowLists): Promise<void> {
+  const server = listsOf(data?.followed_customers, data?.followed_bibs);
+  const removed = await readRemovedBeforeAdopt();
+  // A merge is a local change too (see runAdopt / syncFollowDataFromAPI).
+  followWriteSeq++;
+  const customers = await loadCache();
+  const bibs = await loadBibCache();
+
+  // From here to the swap: no await — a tap in between must not be lost.
+  const baseC = new Set(base.customers.map(Number));
+  const serverC = new Set(server.customers);
+  const nextC = new Set<number>();
+  customers.forEach((id) => { if (!baseC.has(id) || serverC.has(id)) nextC.add(id); });
+  serverC.forEach((id) => {
+    if (baseC.has(id) && !customers.has(id)) return;                       // the phone removed it
+    if (removed.customers.includes(id) || unfollowedNow.customers.has(id)) return;
+    nextC.add(id);
+  });
+  const flat = (b: Record<string, string[]>) => new Set(Object.entries(b).flatMap(([p, l]) => (l || []).map((x) => `${p}|${x}`)));
+  const localB = new Set<string>();
+  bibs.forEach((set, pid) => set.forEach((b) => localB.add(`${pid}|${b}`)));
+  const baseB = flat(base.bibs);
+  const serverB = flat(server.bibs);
+  const nextB = new Set<string>();
+  localB.forEach((k) => { if (!baseB.has(k) || serverB.has(k)) nextB.add(k); });
+  serverB.forEach((k) => {
+    if (baseB.has(k) && !localB.has(k)) return;
+    const [p, b] = [k.slice(0, k.indexOf('|')), k.slice(k.indexOf('|') + 1)];
+    if ((removed.bibs[p] ?? []).includes(b) || unfollowedNow.bibs.has(k)) return;
+    nextB.add(k);
+  });
+  customers.clear();
+  nextC.forEach((id) => customers.add(id));
+  cache = customers;
+  bibs.clear();
+  nextB.forEach((k) => {
+    const pid = Number(k.slice(0, k.indexOf('|')));
+    const set = bibs.get(pid) ?? new Set<string>();
+    set.add(k.slice(k.indexOf('|') + 1));
+    bibs.set(pid, set);
+  });
+  bibCache = bibs;
+  await persistCache(customers);
+  await persistBibCache(bibs);
+
+  await writeBase(followerId, serverSeq, server);
+  // The re-upload must number above the row, or the server calls it stale.
+  if (serverSeq > seqIssued) {
+    seqIssued = serverSeq;
+    try { await AsyncStorage.setItem(FOLLOW_SEQ_KEY, String(seqIssued)); } catch { /* in memory still */ }
+  }
+  if (API_CONFIG.DEBUG) console.log('🔀 Follow conflict merged with the server row:', { serverSeq, customers: nextC.size });
+}
+
 async function uploadCurrent(followerId: number, deviceId: string): Promise<void> {
   // Mark "not synced" BEFORE sending: if the app is killed while the upload
   // hangs (half-open sockets on race-day networks), the relaunch must still
@@ -464,138 +602,174 @@ async function uploadCurrent(followerId: number, deviceId: string): Promise<void
   // sit between reading the lists and numbering them (a newer upload could be
   // numbered meanwhile and this older list would then carry the higher number).
   await loadStoredSeq();
-  // The newest local change this upload will carry.
-  const seqAtPush = followWriteSeq;
-  // Get current follow data
-  const customerSet = await loadCache();
-  const bibMap = await loadBibCache();
+  // A follow_conflict (the row moved on since the phone's base) is merged and
+  // sent again — a few rounds at most (a web user tapping in step with the
+  // phone must not loop us); after that the pending mark stays for the next sync.
+  for (let round = 0; ; round++) {
+    // Base read before the lists, for the same reason as the number above: an
+    // older base with newer lists can only cause a conflict, never a lost follow.
+    const base = await readBase(followerId);
+    // The newest local change this upload will carry.
+    const seqAtPush = followWriteSeq;
+    // Get current follow data
+    const customerSet = await loadCache();
+    const bibMap = await loadBibCache();
 
-  // Build customer_app_id_string
-  const customer_app_id_string = [...customerSet].join(',');
+    // Build customer_app_id_string
+    const customer_app_id_string = [...customerSet].join(',');
 
-  // Build bib_number_string object
-  const bib_number_string: Record<string, string> = {};
-  bibMap.forEach((bibSet, productId) => {
-    if (bibSet.size > 0) {
-      bib_number_string[productId] = [...bibSet].join(',');
-    }
-  });
+    // Build bib_number_string object
+    const bib_number_string: Record<string, string> = {};
+    // What this upload carries — the base once the server accepts it.
+    const sent: FollowLists = { customers: [...customerSet], bibs: {} };
+    bibMap.forEach((bibSet, productId) => {
+      if (bibSet.size > 0) {
+        bib_number_string[productId] = [...bibSet].join(',');
+        sent.bibs[String(productId)] = [...bibSet];
+      }
+    });
 
-  // Numbered AFTER the lists were read: a higher number always carries lists
-  // at least as new.
-  const clientSeq = await nextClientSeq();
+    // Numbered AFTER the lists were read: a higher number always carries lists
+    // at least as new.
+    const clientSeq = await nextClientSeq();
+    rememberSent(clientSeq, { id: followerId, seq: clientSeq, ...sent });
 
-  const requestBody = {
-    follower_id: followerId,
-    device_id: deviceId,
-    customer_app_id_string,
-    bib_number_string,
-    client_seq: clientSeq,
-  };
-
-  if (API_CONFIG.DEBUG) {
-    console.log('📡 Syncing follow data to API:', {
+    const requestBody = {
       follower_id: followerId,
       device_id: deviceId,
-      customers: customer_app_id_string,
-      bibs: bib_number_string,
-    });
-  }
+      customer_app_id_string,
+      bib_number_string,
+      client_seq: clientSeq,
+      // The row's follow_seq these lists are based on (old servers ignore it).
+      base_seq: base.seq,
+    };
 
-  const headers = await API_CONFIG.getHeaders();
+    if (API_CONFIG.DEBUG) {
+      console.log('📡 Syncing follow data to API:', {
+        follower_id: followerId,
+        device_id: deviceId,
+        customers: customer_app_id_string,
+        bibs: bib_number_string,
+      });
+    }
 
-  let res: any;
-  try {
-    res = await apiClient.post(
-      getApiEndpoint(API_CONFIG.ENDPOINTS.SYNC_FOLLOW_DATA),
-      requestBody,
-      {
-        headers,
-        timeout: API_CONFIG.TIMEOUT,
+    const headers = await API_CONFIG.getHeaders();
+
+    let res: any;
+    try {
+      res = await apiClient.post(
+        getApiEndpoint(API_CONFIG.ENDPOINTS.SYNC_FOLLOW_DATA),
+        requestBody,
+        {
+          headers,
+          timeout: API_CONFIG.TIMEOUT,
+        }
+      );
+    } catch (e: any) {
+      // The row changed since the phone's base (e.g. a follow made on the web):
+      // nothing was written. Merge the row's lists into the phone's and send
+      // again on top of the row's number.
+      const conflictSeq = e?.code === 'follow_conflict' ? seqOf(e?.data?.follow_seq) : null;
+      if (conflictSeq !== null && round < MAX_CONFLICT_ROUNDS) {
+        // The conflicting number is one of OUR uploads that timed out here but
+        // committed late: its lists — not the older base — are what the row holds.
+        const own = sentSnapshots.get(conflictSeq);
+        // No known base (first upload after an update) but the row's number is
+        // the phone's own last upload from before this session: the row's lists
+        // ARE what the phone last sent, so they are the base — an unfollow made
+        // offline on the old version (absent here, still on the row) stays
+        // removed. A row number that is not ours keeps the plain union.
+        const rowIsOurs = base.seq === 0 && seqIssuedAtLoad > 0 && conflictSeq === seqIssuedAtLoad;
+        const conflictBase = own && own.id === followerId ? own
+          : rowIsOurs ? listsOf(e?.data?.followed_customers, e?.data?.followed_bibs) : base;
+        await mergeConflict(followerId, conflictSeq, e.data, conflictBase);
+        continue;
       }
-    );
-  } catch (e: any) {
-    // Which local change this upload carried — the caller's handling of a
-    // refusal must not count a NEWER change (queued behind it) as delivered.
-    if (e && typeof e === 'object') e.seqAtPush = seqAtPush;
-    throw e;
-  }
+      // Which local change this upload carried — the caller's handling of a
+      // refusal must not count a NEWER change (queued behind it) as delivered.
+      if (e && typeof e === 'object') e.seqAtPush = seqAtPush;
+      throw e;
+    }
 
-  // The server already applied a NEWER upload of this row and ignored this
-  // one: nothing reached it, so this is not "synced" (the pending mark stays).
-  // A "stale" answer naming THIS upload's own number is a duplicate delivery
-  // of it (e.g. a transport retry): it landed — fall through as a success.
-  if (res?.data?.stale === true && Number(res?.data?.follow_seq) !== clientSeq) {
-    const applied = Number(res?.data?.follow_seq) || 0;
-    if (API_CONFIG.DEBUG) console.log('⏭️ Follow upload ignored by the server (older than applied):', { clientSeq, applied });
-    // …but if this IS the phone's newest list, the phone's numbering fell
-    // behind the row's (clock set back; or the row was written by another
-    // install of this device): continue above the server's and send again.
-    // One re-send — the next number is above `applied`. Only when the row's
-    // number is NOT one this phone issued (applied > seqIssued): if it is ours,
-    // a newer upload of ours already carries lists at least as new.
-    if (seqAtPush === followWriteSeq && isSaneSeq(applied) && applied > seqIssued) {
-      seqIssued = Math.max(seqIssued, applied);
-      try { await AsyncStorage.setItem(FOLLOW_SEQ_KEY, String(seqIssued)); } catch { /* in memory still */ }
-      void syncFollowDataToAPI();
-    } else if (seqAtPush === followWriteSeq && seqAtPush > lastPushedSeq && applied <= seqIssued) {
-      // The winning number IS ours, but it carried an OLDER list (an upload
-      // numbered late — e.g. its storage stalled past the job timeout — landed
-      // above this newer one): the server holds a list older than the phone's
-      // newest and nothing newer is on its way. Send again; the next number is
-      // above everything this phone issued, so this cannot loop.
+    // The server already applied a NEWER upload of this row and ignored this
+    // one: nothing reached it, so this is not "synced" (the pending mark stays).
+    // A "stale" answer naming THIS upload's own number is a duplicate delivery
+    // of it (e.g. a transport retry): it landed — fall through as a success.
+    if (res?.data?.stale === true && Number(res?.data?.follow_seq) !== clientSeq) {
+      const applied = Number(res?.data?.follow_seq) || 0;
+      if (API_CONFIG.DEBUG) console.log('⏭️ Follow upload ignored by the server (older than applied):', { clientSeq, applied });
+      // …but if this IS the phone's newest list, the phone's numbering fell
+      // behind the row's (clock set back; or the row was written by another
+      // install of this device): continue above the server's and send again.
+      // One re-send — the next number is above `applied`. Only when the row's
+      // number is NOT one this phone issued (applied > seqIssued): if it is ours,
+      // a newer upload of ours already carries lists at least as new.
+      if (seqAtPush === followWriteSeq && isSaneSeq(applied) && applied > seqIssued) {
+        seqIssued = Math.max(seqIssued, applied);
+        try { await AsyncStorage.setItem(FOLLOW_SEQ_KEY, String(seqIssued)); } catch { /* in memory still */ }
+        void syncFollowDataToAPI();
+      } else if (seqAtPush === followWriteSeq && seqAtPush > lastPushedSeq && applied <= seqIssued) {
+        // The winning number IS ours, but it carried an OLDER list (an upload
+        // numbered late — e.g. its storage stalled past the job timeout — landed
+        // above this newer one): the server holds a list older than the phone's
+        // newest and nothing newer is on its way. Send again; the next number is
+        // above everything this phone issued, so this cannot loop.
+        try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
+        void syncFollowDataToAPI();
+      }
+      return;
+    }
+
+    if (API_CONFIG.DEBUG) {
+      console.log('✅ Follow data synced to API');
+    }
+
+    // ✅ Tell the screens that show SERVER-derived counts to refetch.
+    //    Bumped here, after the POST resolves, so all four callers
+    //    (followUser / unfollowUser / followBib / unfollowBib) are covered by
+    //    one line. Deliberately NOT bumped in the catch below: when the sync
+    //    failed the server state genuinely did not change, so a refetch would
+    //    redisplay the old number and read as a second bug.
+    useFollowStore.getState().bump();
+    // Accepted: the row now holds exactly these lists at this number.
+    await writeBase(followerId, clientSeq, sent);
+
+    // Landed AFTER a newer upload (this one's job had timed out but the POST
+    // still arrived): the server now holds this OLDER list. Mark the phone ahead
+    // and send the current list again — not awaited, this may run inside the queue.
+    if (seqAtPush < lastPushedSeq) {
       try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
       void syncFollowDataToAPI();
+      return;
     }
-    return;
-  }
-
-  if (API_CONFIG.DEBUG) {
-    console.log('✅ Follow data synced to API');
-  }
-
-  // ✅ Tell the screens that show SERVER-derived counts to refetch.
-  //    Bumped here, after the POST resolves, so all four callers
-  //    (followUser / unfollowUser / followBib / unfollowBib) are covered by
-  //    one line. Deliberately NOT bumped in the catch below: when the sync
-  //    failed the server state genuinely did not change, so a refetch would
-  //    redisplay the old number and read as a second bug.
-  useFollowStore.getState().bump();
-
-  // Landed AFTER a newer upload (this one's job had timed out but the POST
-  // still arrived): the server now holds this OLDER list. Mark the phone ahead
-  // and send the current list again — not awaited, this may run inside the queue.
-  if (seqAtPush < lastPushedSeq) {
-    try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
-    void syncFollowDataToAPI();
-    return;
-  }
-  if (seqAtPush > lastPushedSeq) lastPushedSeq = seqAtPush;
-  // A full list reached the merged row: the remembered unfollows (honoured by
-  // the merge, removed locally) are spent. Kept, they would wrongly filter a
-  // later web follow out of the NEXT merge, maybe weeks later.
-  try {
-    if ((await AsyncStorage.getItem(ADOPT_PENDING_KEY)) !== '1'
-        && toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) === followerId) {
-      await AsyncStorage.removeItem(REMOVED_BEFORE_ADOPT_KEY);
-    }
-  } catch { /* silent — cleared by the next upload */ }
-  // Local and server agree again — but only if nothing changed while this
-  // upload was in flight (an older upload finishing late must not clear the
-  // flag a newer, failed one set).
-  if (seqAtPush === followWriteSeq) {
+    if (seqAtPush > lastPushedSeq) lastPushedSeq = seqAtPush;
+    // A full list reached the merged row: the remembered unfollows (honoured by
+    // the merge, removed locally) are spent. Kept, they would wrongly filter a
+    // later web follow out of the NEXT merge, maybe weeks later.
     try {
-      await AsyncStorage.removeItem(SYNC_PENDING_KEY);
-    } catch {
-      // A failure here only risks one redundant re-upload later. Harmless.
+      if ((await AsyncStorage.getItem(ADOPT_PENDING_KEY)) !== '1'
+          && toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) === followerId) {
+        await AsyncStorage.removeItem(REMOVED_BEFORE_ADOPT_KEY);
+      }
+    } catch { /* silent — cleared by the next upload */ }
+    // Local and server agree again — but only if nothing changed while this
+    // upload was in flight (an older upload finishing late must not clear the
+    // flag a newer, failed one set).
+    if (seqAtPush === followWriteSeq) {
+      try {
+        await AsyncStorage.removeItem(SYNC_PENDING_KEY);
+      } catch {
+        // A failure here only risks one redundant re-upload later. Harmless.
+      }
+      // Every local change (incl. unfollows) has reached the row: the
+      // in-session unfollow guard is no longer needed — unless a merge is
+      // running right now (its download may predate the unfollow).
+      if (!adoptInFlight) {
+        unfollowedNow.customers.clear();
+        unfollowedNow.bibs.clear();
+      }
     }
-    // Every local change (incl. unfollows) has reached the row: the
-    // in-session unfollow guard is no longer needed — unless a merge is
-    // running right now (its download may predate the unfollow).
-    if (!adoptInFlight) {
-      unfollowedNow.customers.clear();
-      unfollowedNow.bibs.clear();
-    }
+    return;
   }
 }
 
@@ -876,6 +1050,34 @@ export async function hasPendingFollowSync(): Promise<boolean> {
   }
 }
 
+// ✅ A follow made offline used to wait for the NEXT follow tap or the next
+// launch's download to be retried — the web and the follower counts never
+// saw it for the whole race. Retry when the app comes back to the
+// foreground and when the network becomes reachable again. Installed once,
+// at module load (like notificationPermissionService's foreground listener).
+let followRetryInstalled = false;
+function installFollowRetry(): void {
+  if (followRetryInstalled) return;
+  followRetryInstalled = true;
+  const retry = async () => {
+    try { if (await hasPendingFollowSync()) void syncFollowDataToAPI(); } catch { /* next trigger */ }
+  };
+  try {
+    AppState.addEventListener('change', (next) => { if (next === 'active') void retry(); });
+  } catch { /* no AppState (tests / headless) */ }
+  try {
+    // Only on the not-reachable → reachable edge: NetInfo also reports
+    // every network detail change while online.
+    let wasReachable: boolean | null = null;
+    NetInfo.addEventListener((state: any) => {
+      const reachable = state?.isConnected !== false && state?.isInternetReachable !== false;
+      if (reachable && wasReachable === false) void retry();
+      wasReachable = reachable;
+    });
+  } catch { /* no NetInfo native module — foreground retry still runs */ }
+}
+installFollowRetry();
+
 /**
  * First-adoption merge: UNION of what the phone has and what the server row
  * has, saved locally and pushed back. Used only when the phone has just learned
@@ -884,6 +1086,8 @@ export async function hasPendingFollowSync(): Promise<boolean> {
  */
 type ServerFollowData = {
   follower_id?: number;
+  /** The row's number when it was read (servers with base_seq support). */
+  follow_seq?: number;
   followed_customers?: number[];
   followed_bibs?: Record<string, string[]>;
 };
@@ -967,6 +1171,11 @@ async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
       try { await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1'); } catch { /* silent */ }
       return;
     }
+    // The merged lists are based on the row as downloaded: its number is the
+    // base_seq of this push (a web change since then → follow_conflict → merge).
+    const rowId = toValidId(idAtStart);
+    const rowSeq = seqOf(server.follow_seq);
+    if (rowId !== null && rowSeq !== null) await writeBase(rowId, rowSeq, listsOf(server.followed_customers, server.followed_bibs));
     // Remembered unfollows are cleared by the first upload that reaches this
     // row (uploadCurrent) — this push, or a later one if this push fails.
     await syncFollowDataToAPI(true, idAtStart);
@@ -1031,12 +1240,14 @@ export async function restoreFollowsWithoutToken(): Promise<void> {
 
   if (knownId !== null) {
     if ((await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1') {
-      await adoptServerFollowData(server ?? {});
+      // Changed locally while downloading: merge with a fresh download (see
+      // syncFollowDataFromAPI).
+      await adoptServerFollowData(seq !== followWriteSeq ? undefined : (server ?? {}));
       return;
     }
     if (server) {
       if (await adoptIfOtherRow(server)) return;
-      await syncFollowDataFromAPI(server.followed_customers ?? [], server.followed_bibs ?? {}, seq);
+      await syncFollowDataFromAPI(server.followed_customers ?? [], server.followed_bibs ?? {}, seq, server.follow_seq);
       return;
     }
     // The server has NO row for this device although the phone holds an id:
@@ -1048,6 +1259,7 @@ export async function restoreFollowsWithoutToken(): Promise<void> {
         await AsyncStorage.removeItem(FOLLOWER_ID_KEY);
         await AsyncStorage.removeItem('expo_push_token');
         forgetSentPushToken();
+        void notificationPermissionService.registerIfGranted();   // see ensureFollowerId
       }
     } catch { /* silent */ }
   }
@@ -1075,12 +1287,22 @@ export async function syncFollowDataFromAPI(
    *  followed/unfollowed while it was in flight, the download is older than
    *  the phone — push instead of overwriting. */
   startedAtSeq?: number,
+  /** The download's follow_seq (the row's number when it was read). */
+  followSeq?: number | null,
 ): Promise<void> {
   try {
     // The id was learned without a merge (e.g. by registering a push token on
     // a phone that only had local follows) — merge, never overwrite.
     if ((await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1') {
-      await adoptServerFollowData({ followed_customers, followed_bibs });
+      // A local change landed while this download was in flight: it may be
+      // older than an unfollow whose upload has ALREADY landed (its in-session
+      // tombstone is gone), and the union would bring that follow back.
+      // Merge with a fresh download instead.
+      if (startedAtSeq !== undefined && startedAtSeq !== followWriteSeq) {
+        await adoptServerFollowData();
+        return;
+      }
+      await adoptServerFollowData({ followed_customers, followed_bibs, follow_seq: followSeq ?? undefined });
       return;
     }
     if (startedAtSeq !== undefined && startedAtSeq !== followWriteSeq) {
@@ -1096,6 +1318,17 @@ export async function syncFollowDataFromAPI(
       if (API_CONFIG.DEBUG) {
         console.log('⏭️ Local follow data not yet synced — pushing instead of overwriting');
       }
+      await syncFollowDataToAPI();
+      return;
+    }
+    // A download OLDER than what the phone already knows of this row (its own
+    // accepted upload, or a newer download) — a stale server cache. Taking it
+    // would undo the phone's newer lists; push them instead.
+    const rowId = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY));
+    const dlSeq = followSeq !== undefined && followSeq !== null && Number.isSafeInteger(Number(followSeq)) && Number(followSeq) >= 0
+      ? Number(followSeq) : null;
+    if (rowId !== null && dlSeq !== null && dlSeq < (await readBase(rowId)).seq) {
+      if (API_CONFIG.DEBUG) console.log('⏭️ Follow download older than the last accepted upload — pushing instead');
       await syncFollowDataToAPI();
       return;
     }
@@ -1135,6 +1368,8 @@ export async function syncFollowDataFromAPI(
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([...customerSet])),
       persistBibCache(bibMap),
     ]);
+    // The phone's lists are now this download: it is the base for base_seq.
+    if (rowId !== null && dlSeq !== null) await writeBase(rowId, dlSeq, listsOf(followed_customers, followed_bibs));
 
     if (API_CONFIG.DEBUG) {
       console.log('✅ Follow data synced from API:', {

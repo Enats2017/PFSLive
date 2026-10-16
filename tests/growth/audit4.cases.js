@@ -135,7 +135,8 @@ module.exports = function register({ M, load, test, SRC }) {
     const s = read('screens/HomeScreen.tsx');
     const calls = [...s.matchAll(/logStartStep\(\s*'permission_result'[^;]*;/g)].map((m) => m[0]);
     assert.ok(calls.length >= 3);
-    for (const c of calls) assert.ok(/eventId/.test(c), c);
+    // audit23: the race id is the race-ready key (custom_<id> for custom events).
+    for (const c of calls) assert.ok(/eventId|raceReadyKey/.test(c), c);
   });
   test('no garbled characters (â€) left in source', () => {
     const bad = [];

@@ -94,7 +94,8 @@ module.exports = function register({ M, load, test, SRC }) {
   // ── start funnel ──────────────────────────────────────────────────────
   test('return-from-Settings start steps read the CURRENT race id (not the first-render null)', () => {
     const s = read('screens/HomeScreen.tsx');
-    assert.ok(/const eventIdRef = useRef\(eventId\);\s*eventIdRef\.current = eventId;/.test(s));
+    // audit23: the ref holds the race-ready key (custom_<id> for custom events).
+    assert.ok(/const eventIdRef = useRef\((eventId|raceReadyKey)\);\s*eventIdRef\.current = \1;/.test(s));
     assert.ok(/'granted_on_return', eventIdRef\.current\)/.test(s));
     assert.ok(/'still_blocked_on_return', eventIdRef\.current\)/.test(s));
   });
