@@ -834,13 +834,13 @@ const L = () => load('services/locationService').locationService;
       }
     }
   });
-  test('HomeScreen wiring (2026-10-18): stale restore, offset gun, capped first fix, card while tracking, no-race abort', async () => {
+  test('HomeScreen wiring (2026-10-18): stale restore, offset gun, no pre-start fix, no home-mismatch stop, card while tracking, no-race abort', async () => {
     const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
     assert.ok(/if \(isStaleSession\(params, Date\.now\(\)\)\) \{[\s\S]{0,200}await stopWatching\(\);/.test(s), 'restore stops a >24h session');
     assert.ok(/computeRaceStartTime\(raceData\.next_race_date, raceData\.next_race_time, serverTimeOffsetRef\.current\)/.test(s), 'gun from captured offset');
     assert.ok(!/new Date\(Date\.now\(\) \+ msUntilRace\)/.test(s), 'old formula gone');
-    assert.ok(/Promise\.race\(\[\s*gpsService\.getCurrentPosition\(\)/.test(s), 'first fix capped');
-    assert.ok(/if \(!isGPSActiveRef\.current\) return;\s*\n\s*const raceAlreadyStarted/.test(s), 'Stop during the wait aborts the start');
+    assert.ok(!/gpsService\.getCurrentPosition\(\)/.test(s), 'no expo-location first fix racing Transistor at start');
+    assert.ok(!/stopGPSTrackingRef|participantId: homePid/.test(s), 'no silent "home offers another race" mid-race stop');
     assert.ok(/homeData\?\.show_start_track === 1 \|\| isGPSActive \?/.test(s), 'card rendered while tracking');
     assert.ok(/if \(fresh && \(!fresh\.next_race_participant_app_id \|\| !fresh\.next_race_id\)\)/.test(s), 'no-race home aborts start');
   });

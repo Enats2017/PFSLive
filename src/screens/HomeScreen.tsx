@@ -938,27 +938,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setIsGPSActive(true);
       isGPSActiveRef.current = true;
 
-      // ✅ First fix for the screen only — capped and non-fatal (M5, 2026-10-18).
-      // getCurrentPositionAsync can hang for a long time indoors / in a crowded
-      // start pen, and a throw here used to abort the whole start with an error.
-      // The engine below gets its own fixes, so missing this one costs nothing.
-      try {
-        const initialGPS = await Promise.race([
-          gpsService.getCurrentPosition(),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
-        ]);
-        if (initialGPS) {
-          setCurrentLocation({
-            lat: initialGPS.latitude,
-            lon: initialGPS.longitude,
-          });
-        }
-      } catch { /* no first fix — the engine's own fixes fill it in */ }
-
-      // The button already shows Stop during the wait above. If the runner
-      // pressed it, stopGPSTracking cleared isGPSActiveRef — do not start the
-      // engine behind their back.
-      if (!isGPSActiveRef.current) return;
+      // ✅ No separate "first fix" request before the engine starts (M5, 2026-10-18).
+      // It used expo-location's getCurrentPositionAsync, which can hang for a long
+      // time indoors / in a crowded start pen (and a throw aborted the whole start).
+      // Capping it with a timeout would leave that request running WHILE Transistor
+      // starts — two concurrent CLLocationManager users, exactly what "Option B"
+      // (gpsService header) removed because it destabilised Hermes. The engine's
+      // first onLocation fills the screen via attachUi/the UI callback instead.
 
       const raceAlreadyStarted = hasRaceStarted();
       if (raceAlreadyStarted) {
@@ -1607,39 +1593,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     };
   }, [hasRaceStarted, startQueueProcessor, startRaceStartChecker, t]);
 
-  // ✅ Live session vs. the race home offers (H1, 2026-10-18 audit). The restore
-  // above runs before home data arrives, so it can only judge by age. Once home
-  // has loaded, a live session for a DIFFERENT participant/race than the one
-  // home is offering a Start for is an old session that was never stopped (e.g.
-  // yesterday evening's race, gun < 24h ago) — stop it so today's Start shows.
-  // Only when home actually returned a race (offline relaunch → no home ids →
-  // keep resuming), and only when home is offering a Start (show_start_track):
-  // a home that merely lists the next race must not end a running session.
-  // stopGPSTracking is read through a ref: its identity changes every second
-  // (locationUpdateCount), which would re-run this check on every tick.
-  const stopGPSTrackingRef = useRef(stopGPSTracking);
-  stopGPSTrackingRef.current = stopGPSTracking;
-  const staleStopInFlightRef = useRef(false);
-
-  useEffect(() => {
-    if (!isGPSActive || homeData?.show_start_track !== 1) return;
-    const homePid = homeData?.next_race_participant_app_id;
-    const homeEid = homeData?.next_race_id;
-    if (!homePid || !homeEid) return;
-    (async () => {
-      if (staleStopInFlightRef.current) return;
-      try {
-        const sp = await getTrackingParams();
-        if (!sp || !isGPSActiveRef.current) return;
-        if (isStaleSession(sp, Date.now(), { participantId: homePid, eventId: homeEid })) {
-          staleStopInFlightRef.current = true;
-          if (API_CONFIG.DEBUG) console.log('🧹 Live session is not the race home offers — stopping it');
-          await stopGPSTrackingRef.current();
-        }
-      } catch { /* silent — a later home poll re-checks */ }
-      finally { staleStopInFlightRef.current = false; }
-    })();
-  }, [isGPSActive, homeData?.show_start_track, homeData?.next_race_participant_app_id, homeData?.next_race_id]);
+  // NOTE (2026-10-18 audit): there is deliberately NO "home offers a different
+  // race → stop the live session" check here. home_api drops a race once its
+  // end_time passes (and computes end_time on day 1 for overnight events), so a
+  // runner still on course late, with any other registration, would be stopped
+  // silently mid-race. Old never-stopped sessions are caught by age instead
+  // (isStaleSession, >24h after the gun) in the restore above and on cold boot.
 
   // ✅ RESUME A PENDING START WHEN THE RUNNER COMES BACK FROM SETTINGS.
   //
