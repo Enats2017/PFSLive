@@ -785,6 +785,25 @@ const L = () => load('services/locationService').locationService;
     M.provider = { ...M.provider, accuracyAuthorization: 0 };
     assert.strictEqual(await gpsService.isApproximateLocation(), false);
   });
+  test('approximate location (Android "Approximate" = coarse) → true; fine → false; probe throws → false', async () => {
+    const RN = require('react-native'); const Loc = require('expo-location');
+    const realOS = RN.Platform.OS; const realFg = Loc.getForegroundPermissionsAsync;
+    RN.Platform.OS = 'android';
+    try {
+      const { gpsService } = load('services/gpsService');
+      Loc.getForegroundPermissionsAsync = async () => ({ status: 'granted', android: { accuracy: 'coarse' } });
+      assert.strictEqual(await gpsService.isApproximateLocation(), true, 'coarse');
+      Loc.getForegroundPermissionsAsync = async () => ({ status: 'granted', android: { accuracy: 'fine' } });
+      assert.strictEqual(await gpsService.isApproximateLocation(), false, 'fine');
+      Loc.getForegroundPermissionsAsync = async () => { throw new Error('probe failed'); };
+      assert.strictEqual(await gpsService.isApproximateLocation(), false, 'failed probe never warns');
+    } finally { RN.Platform.OS = realOS; Loc.getForegroundPermissionsAsync = realFg; }
+  });
+  test('cold boot: a session 20h after the gun (overnight ultra) is resumed, not stopped', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12', intervalSeconds: 30, raceStartTime: new Date(M.clock - 20 * HOUR).toISOString(), manualStart: 0 }));
+    load('services/gpsService'); await settle(); await settle();
+    assert.ok(M.store.has(PARAMS), 'live session kept');
+  });
   test('new HomeScreen strings exist in en/fr/nl (post-gun Stop, approximate location)', async () => {
     for (const l of ['en', 'fr', 'nl']) {
       const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
