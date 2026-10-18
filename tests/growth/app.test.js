@@ -483,12 +483,25 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
     }
     assert.deepStrictEqual(missing, []);
   });
-  test('server endpoints the app calls exist in larssie/api (if checked out)', () => {
-    const api = 'C:/xampp/htdocs/larssie/api/';
-    if (!fs.existsSync(api)) return;
+  // Checked against the larssie BRANCH this app branch ships with (LARSSIE_REF,
+  // default origin/growth_api_v0.1), read from git — not whatever branch the
+  // larssie checkout happens to be on (on main, the growth-only endpoints were
+  // reported "missing"). Every endpoint in API_CONFIG, not a hand-picked few;
+  // ":param" templates (EVENT_GPX, PARTICIPANT_STATS — unused) are skipped.
+  test('server endpoints the app calls exist in larssie/api on the paired branch (if checked out)', () => {
+    const { execFileSync } = require('child_process');
+    const dir = process.env.LARSSIE_DIR || 'C:/xampp/htdocs/larssie';
+    const ref = process.env.LARSSIE_REF || 'origin/growth_api_v0.1';
+    const has = (spec) => { try { execFileSync('git', ['-C', dir, 'cat-file', '-e', spec], { stdio: 'ignore' }); return true; } catch { return false; } };
+    if (!fs.existsSync(dir) || !has(ref)) return;          // larssie (or that branch) not here
+    const eps = [...new Set((read('constants/config.ts').match(/["'`]\/[A-Za-z0-9_\/:]+\.php["'`]/g) || [])
+      .map((s) => s.slice(2, -1)).filter((p) => !p.includes(':')))];
+    assert.ok(eps.length > 30, `endpoints found in config.ts: ${eps.length}`);
     for (const f of ['update_device_readiness_api.php', 'register_guest_follower.php', 'get_follow_data_by_device.php', 'update_follower_favourites_api.php']) {
-      assert.ok(fs.existsSync(api + f), f);
+      assert.ok(eps.includes(f), `config.ts lists ${f}`);
     }
+    const missing = eps.filter((f) => !has(`${ref}:api/${f}`));
+    assert.deepStrictEqual(missing, [], `missing on ${ref}`);
   });
 
   // Cases added by the 2026-10-14 code audit (one per finding + gaps).

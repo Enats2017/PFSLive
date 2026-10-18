@@ -307,7 +307,7 @@ Module._load = function (request, parent, isMain) {
     if (abs.replace(/\\/g, '/').startsWith(SRC + '/styles/')) return anyStub('styles');
   }
   if (!request.startsWith('.') && !path.isAbsolute(request)
-      && !['assert', 'path', 'fs', 'module', 'util'].includes(request)) {
+      && !['assert', 'path', 'fs', 'module', 'util', 'child_process'].includes(request)) {
     return anyStub(request);
   }
   return origLoad.apply(this, arguments);
