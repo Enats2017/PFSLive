@@ -637,12 +637,11 @@ const L = () => load('services/locationService').locationService;
   results.push(await run('11. the device test plan, automated (rows 1, 2, 6)'));
 
   // ════════════ 12. 2026-10-18 audit ════════════
-  // After 2026-10-17: the server read RaceResult's PREDICTED finish as a crossing
-  // (finished=1, finish_source='rr') and one answer stopped runners for good.
-  // Plus the rest of the 2026-10-18 audit that the harness can reach (HomeScreen
-  // itself cannot be loaded here — its wiring is checked against the source).
+  // The parts of the 2026-10-18 audit the harness can reach (HomeScreen itself
+  // cannot be loaded here — its wiring is checked against the source). A
+  // RaceResult finish stays authoritative: one finished=1/'rr' answer stops.
   const R = () => load('services/trackingSessionRules');
-  const RACE_FIN = '@PFSLive:raceFinished', STREAK = '@PFSLive:rrFinishStreak';
+  const RACE_FIN = '@PFSLive:raceFinished';
   const HOUR = 3600000;
 
   test('isStaleSession: gun 25h ago → stale; gun 2h ago → not', async () => {
@@ -726,23 +725,14 @@ const L = () => load('services/locationService').locationService;
   };
   const RR = { finished: 1, finish_source: 'rr' }, NOT = { finished: 0 };
 
-  test('live: FIRST rr finished does NOT stop (session kept, not finished)', async () => {
+  test('live: one RaceResult finished answer stops tracking (RR is authoritative)', async () => {
     await liveStart();
     await liveSend(RR);
-    assert.ok(M.store.has(PARAMS), 'tracking params still present');
-    assert.notStrictEqual(M.store.get(RACE_FIN), '1', 'race not marked finished');
-    assert.strictEqual(M.store.get(STREAK), '1');
-  });
-  test('live: SECOND consecutive rr finished stops', async () => {
-    await liveStart();
-    await liveSend(RR); await liveSend(RR);
     assert.strictEqual(M.store.get(RACE_FIN), '1'); assert.ok(!M.store.has(PARAMS), 'params cleared');
   });
-  test('live: rr finished → not finished → rr finished does NOT stop (streak reset)', async () => {
+  test('live: not finished keeps tracking', async () => {
     await liveStart();
-    await liveSend(RR); await liveSend(NOT);
-    assert.ok(!M.store.has(STREAK), 'streak reset by the not-finished answer');
-    await liveSend(RR);
+    await liveSend(NOT);
     assert.ok(M.store.has(PARAMS)); assert.notStrictEqual(M.store.get(RACE_FIN), '1');
   });
 
@@ -756,29 +746,10 @@ const L = () => load('services/locationService').locationService;
     };
   };
   const armSession = () => M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12', intervalSeconds: 30, raceStartTime: new Date(M.clock - HOUR).toISOString(), manualStart: 0 }));
-  test('drain: ONE rr finished in the backlog does NOT finish the session', async () => {
+  test('drain: a RaceResult finished answer in the backlog finishes the session once it drains', async () => {
     armSession(); setQ([fix(2, 12, 5)]); drainAnswers([RR]);
     await L().processQueue('2', '12');
-    assert.strictEqual(getQ().length, 0, 'fix still delivered');
-    assert.notStrictEqual(M.store.get(RACE_FIN), '1'); assert.ok(M.store.has(PARAMS));
-    assert.strictEqual(M.store.get(STREAK), '1');
-    const log = await load('services/gpsService').getFullTrackingLog();
-    assert.ok(log.some((e) => /Finish held during drain — RaceResult says finished \(1\/2\)/.test(e.msg)), 'held decision is in the device log');
-  });
-  test('drain: two consecutive rr finished → finished after the backlog drains', async () => {
-    armSession(); setQ([fix(2, 12, 5), fix(2, 12, 4)]); drainAnswers([RR, RR]);
-    await L().processQueue('2', '12');
-    assert.strictEqual(M.store.get(RACE_FIN), '1');
-  });
-  test('drain: rr finished → not finished → rr finished does NOT finish', async () => {
-    armSession(); setQ([fix(2, 12, 5), fix(2, 12, 4), fix(2, 12, 3)]); drainAnswers([RR, NOT, RR]);
-    await L().processQueue('2', '12');
-    assert.strictEqual(getQ().length, 0);
-    assert.notStrictEqual(M.store.get(RACE_FIN), '1'); assert.ok(M.store.has(PARAMS));
-  });
-  test('drain + live share ONE counter: live rr answer, then a drained rr answer → finished', async () => {
-    armSession(); M.store.set(STREAK, '1'); setQ([fix(2, 12, 5)]); drainAnswers([RR]);
-    await L().processQueue('2', '12');
+    assert.strictEqual(getQ().length, 0, 'fix delivered');
     assert.strictEqual(M.store.get(RACE_FIN), '1');
   });
 
@@ -797,12 +768,11 @@ const L = () => load('services/locationService').locationService;
     assert.ok(M.store.has(PARAMS));
     assert.ok((await g.getFullTrackingLog()).some((e) => e.icon === '🔁'));
   });
-  test('session start clears last race\'s GPS health / fault / drain / offline / rr-streak state', async () => {
+  test('session start clears last race\'s GPS health / fault / drain / offline state', async () => {
     M.store.set('@PFSLive:gpsHealth', 'no_fix'); M.store.set('@PFSLive:gpsFaultStreak', '4');
     M.store.set('@PFSLive:drainFailStreak', '3'); M.store.set('@PFSLive:offlineCooldownUntil', String(M.clock + 60000));
-    M.store.set(STREAK, '1');
     await startSession();
-    for (const k of ['@PFSLive:gpsHealth', '@PFSLive:gpsFaultStreak', '@PFSLive:drainFailStreak', '@PFSLive:offlineCooldownUntil', STREAK]) {
+    for (const k of ['@PFSLive:gpsHealth', '@PFSLive:gpsFaultStreak', '@PFSLive:drainFailStreak', '@PFSLive:offlineCooldownUntil']) {
       assert.ok(!M.store.has(k), `${k} cleared`);
     }
   });
@@ -844,7 +814,7 @@ const L = () => load('services/locationService').locationService;
     assert.ok(/homeData\?\.show_start_track === 1 \|\| isGPSActive \?/.test(s), 'card rendered while tracking');
     assert.ok(/if \(fresh && \(!fresh\.next_race_participant_app_id \|\| !fresh\.next_race_id\)\)/.test(s), 'no-race home aborts start');
   });
-  results.push(await run('12. 2026-10-18 audit (rr finish streak, stale sessions, gun offset, watchdog ids)'));
+  results.push(await run('12. 2026-10-18 audit (rr finish authoritative, stale sessions, gun offset, watchdog ids)'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);

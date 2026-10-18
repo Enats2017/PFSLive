@@ -7,7 +7,7 @@ import * as Battery from 'expo-battery';
 import { LocationData } from './locationService';
 import { API_CONFIG } from '../constants/config';
 import i18n from '../i18n'; // adjust to wherever your configured i18next instance lives
-import { RR_FINISH_CONFIRMATIONS, isStaleSession } from './trackingSessionRules';
+import { isStaleSession } from './trackingSessionRules';
 
 export interface GPSPosition {
   latitude: number;
@@ -53,10 +53,6 @@ const FINISH_APPROACH_KEY      = '@PFSLive:finishApproach';
 // ✅ Race finished flag — set when distance_to_finish_km ≤ 50m.
 // Read by HomeScreen 1s timer to auto-stop tracking from React context.
 export const RACE_FINISHED_KEY = '@PFSLive:raceFinished';
-// ✅ Consecutive finished=1 / finish_source='rr' answers (see RR_FINISH_CONFIRMATIONS).
-// Shared with locationService's drain (re-declared there by its literal string to
-// avoid a circular import) so a live answer and a drained answer count together.
-export const RR_FINISH_STREAK_KEY = '@PFSLive:rrFinishStreak';
 // ✅ Near-finish flag — set when distance_to_finish_km ≤ 1km, and cleared again
 // when the server reports > 1km, so it reflects "near the finish NOW" rather
 // than "was near it once".
@@ -1361,24 +1357,8 @@ const _processLocationForSendInternal = async (
     const finishedRaw = result.distance_to_finish_km ?? null;
     const nearFinish = await AsyncStorage.getItem(NEAR_FINISH_KEY);
 
-    // ✅ RR finish needs RR_FINISH_CONFIRMATIONS answers in a row. 2026-10-17:
-    // the server read RaceResult's PREDICTED finish time as a crossing and one
-    // answer stopped most 30km runners for good. Any not-finished answer resets.
-    let rrStreak = 0;
-    try {
-      if (serverFinished && finishSource === 'rr') {
-        rrStreak = (parseInt((await AsyncStorage.getItem(RR_FINISH_STREAK_KEY)) || '0', 10) || 0) + 1;
-        await AsyncStorage.setItem(RR_FINISH_STREAK_KEY, String(rrStreak));
-        if (rrStreak < RR_FINISH_CONFIRMATIONS) {
-          await addLog('🏁', `RaceResult says finished (${rrStreak}/${RR_FINISH_CONFIRMATIONS}) — waiting for confirmation before stopping${tag}`);
-        }
-      } else {
-        await AsyncStorage.removeItem(RR_FINISH_STREAK_KEY);
-      }
-    } catch { /* storage failure: rrStreak stays 0 → no stop on this answer */ }
-
     const shouldStop = (finishSource === 'rr')
-      ? (serverFinished && rrStreak >= RR_FINISH_CONFIRMATIONS)
+      ? serverFinished
       : (
           serverFinished &&
           finishedRaw !== null &&
@@ -1770,7 +1750,6 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
   await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
   await AsyncStorage.removeItem(NEAR_FINISH_KEY);
-  await AsyncStorage.removeItem(RR_FINISH_STREAK_KEY);
   await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
   await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY);
   await AsyncStorage.removeItem(FINISH_COORDS_KEY);
@@ -2413,7 +2392,6 @@ export const gpsService = {
       await AsyncStorage.removeItem(FINAL_SENT_COUNT_KEY);
       await AsyncStorage.removeItem(FINISH_APPROACH_KEY);
       await AsyncStorage.removeItem(RACE_FINISHED_KEY);
-      await AsyncStorage.removeItem(RR_FINISH_STREAK_KEY);
       await AsyncStorage.removeItem(NEAR_FINISH_KEY);
       await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
       await AsyncStorage.removeItem(LOG_UPLOADED_KEY);

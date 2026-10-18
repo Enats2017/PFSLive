@@ -4,13 +4,6 @@
 // (RaceResult PREDICTED finish read as a crossing) stopped most runners for good,
 // and the 2026-10-18 audit of what else could end or misplace a session.
 
-// How many CONSECUTIVE finished=1 / finish_source='rr' answers stop tracking.
-// One used to be enough, so a single wrong server answer ended the race for the
-// runner with no way back (home hides Start once a stop log exists). A real RR
-// finish stays finished on every later fix, so the second answer arrives one
-// interval later (≤1 min at the usual setting) — the only cost of the guard.
-export const RR_FINISH_CONFIRMATIONS = 2;
-
 // A session whose gun is older than this is not "the race in progress" any more:
 // it was never stopped (DNF, finish missed, iOS force-quit) and must not come back
 // to life on the next app open, sending today's fixes into yesterday's race and
