@@ -393,12 +393,16 @@ const L = () => load('services/locationService').locationService;
   test('HomeScreen wiring: Stop button → confirmStopTracking; ping via service; orphan drain on foreground', async () => {
     const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
     assert.ok(/onPress=\{isGPSActive \? confirmStopTracking : confirmStartTracking\}/.test(s));
-    assert.ok(/if \(hasRaceStarted\(\)\) \{\s*void stopGPSTracking\(\);/.test(s), 'after gun → immediate stop');
+    // 2026-10-18 (M4): Stop is confirmed after the gun too — no one-tap path left.
+    assert.ok(!/if \(hasRaceStarted\(\)\) \{\s*void stopGPSTracking\(\);/.test(s), 'no immediate post-gun stop');
     assert.ok(/sendTrackingStartPing\(\{/.test(s));
-    assert.ok(/s === 'active'\) void locationService\.drainOrphans\(\)/.test(s));
+    // 2026-10-18 (L8): the foreground orphan drain goes through drainIfIdle (skipped while a session is live).
+    assert.ok(/s === 'active'\) void drainIfIdle\(\)/.test(s));
+    assert.ok(/const drainIfIdle = async \(\) => \{\s*try \{ if \(await isTracking\(\)\) return;/.test(s));
     assert.ok(/void maybeUploadInterimLog\(\)/.test(s));
     assert.ok(s.indexOf('const confirmStopTracking') > s.indexOf('const stopGPSTracking'), 'declared after stopGPSTracking (no TDZ)');
-    assert.ok(/await locationService\.drainForStop\(participantId, eventId\)/.test(s), 'Stop uses the looping drainForStop');
+    // 2026-10-18 (M2): Stop drains under the RUNNING session's ids, not home's.
+    assert.ok(/await locationService\.drainForStop\(stopParticipantId, stopEventId\)/.test(s), 'Stop uses the looping drainForStop');
   });
   test('gpsService no longer wipes the queue on a fresh start', async () => {
     const s = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8');
@@ -597,9 +601,14 @@ const L = () => load('services/locationService').locationService;
     stop.onPress();
     assert.strictEqual(c.stop, 1);
   });
-  test('#2 Stop AFTER the gun → stops immediately, no dialog', async () => {
+  // Changed 2026-10-18 (M4): post-gun Stop used to be one tap and irreversible.
+  test('#2 Stop AFTER the gun → confirmation with post-gun copy, not stopped until confirmed', async () => {
     const c = confirmStop(true);
-    assert.strictEqual(c.stop, 1); assert.strictEqual(c.alerts.length, 0);
+    assert.strictEqual(c.stop, 0, 'not stopped yet'); assert.strictEqual(c.alerts.length, 1);
+    assert.strictEqual(c.alerts[0].title, 'home:alerts.stopAfterStartTitle');
+    assert.strictEqual(c.alerts[0].msg, 'home:alerts.stopAfterStartMessage');
+    c.alerts[0].buttons[1].onPress();
+    assert.strictEqual(c.stop, 1);
   });
   test('#2 "has the race started": before/after gun, unknown start, manual start', async () => {
     const now = Date.now();
@@ -626,6 +635,209 @@ const L = () => load('services/locationService').locationService;
     assert.ok(/perm:when_in_use/.test(logUploads()[0].body.logs.find((e) => e.icon === '🩺').msg));
   });
   results.push(await run('11. the device test plan, automated (rows 1, 2, 6)'));
+
+  // ════════════ 12. 2026-10-18 audit ════════════
+  // The parts of the 2026-10-18 audit the harness can reach (HomeScreen itself
+  // cannot be loaded here — its wiring is checked against the source). A
+  // RaceResult finish stays authoritative: one finished=1/'rr' answer stops.
+  const R = () => load('services/trackingSessionRules');
+  const RACE_FIN = '@PFSLive:raceFinished';
+  const HOUR = 3600000;
+
+  test('isStaleSession: gun 25h ago → stale; gun 2h ago → not', async () => {
+    const { isStaleSession } = R();
+    assert.strictEqual(isStaleSession({ participantId: '2', eventId: '12', raceStartTime: new Date(M.clock - 25 * HOUR).toISOString() }, M.clock), true);
+    assert.strictEqual(isStaleSession({ participantId: '2', eventId: '12', raceStartTime: new Date(M.clock - 2 * HOUR).toISOString() }, M.clock), false);
+  });
+  test('isStaleSession: overnight ultra 20h after the gun → still resumes; no session → false', async () => {
+    const { isStaleSession } = R();
+    assert.strictEqual(isStaleSession({ raceStartTime: new Date(M.clock - 20 * HOUR).toISOString() }, M.clock), false);
+    assert.strictEqual(isStaleSession(null, M.clock), false);
+  });
+  test('isStaleSession: manual start without a stored gun → never stale; with an old stored gun → stale', async () => {
+    const { isStaleSession } = R();
+    assert.strictEqual(isStaleSession({ raceStartTime: null }, M.clock), false);
+    assert.strictEqual(isStaleSession({ raceStartTime: new Date(M.clock - 30 * HOUR).toISOString() }, M.clock), true);
+  });
+
+  test('computeRaceStartTime: offset captured at receipt → real gun however old the data (old formula late by the data age)', async () => {
+    const { computeRaceStartTime } = R();
+    // Event in Brussels summer time (UTC+2), gun 10:00 local = 08:00Z.
+    const realGun = Date.parse('2026-10-17T08:00:00Z');
+    const tz = 2 * HOUR;
+    const fakeLocal = (ms) => new Date(ms + tz).toISOString().slice(0, 19).replace('T', ' ');
+    // Home data received at 07:00Z (09:00 local) — offset captured then, as fetchHomeData does.
+    const receivedAt = Date.parse('2026-10-17T07:00:00Z');
+    const serverDatetime = fakeLocal(receivedAt);
+    const offset = Date.parse(serverDatetime.replace(' ', 'T') + 'Z') - receivedAt;
+    for (const ageH of [0, 0.5, 3, 7]) {
+      const now = receivedAt + ageH * HOUR;              // Start pressed now; fresh fetch failed → old data
+      const gun = computeRaceStartTime('2026-10-17', '10:00:00', offset);
+      assert.strictEqual(gun.getTime(), realGun, `new: data ${ageH}h old`);
+      // Pre-fix formula: Date.now() + (race − server_datetime), re-reading the OLD server_datetime.
+      const oldGun = now + (Date.parse('2026-10-17T10:00:00Z') - Date.parse(serverDatetime.replace(' ', 'T') + 'Z'));
+      assert.strictEqual(oldGun - realGun, ageH * HOUR, `old formula late by exactly the data age (${ageH}h)`);
+    }
+    assert.strictEqual(computeRaceStartTime(null, '10:00:00', offset), null);
+    assert.strictEqual(computeRaceStartTime('2026-10-17', 'garbage', offset), null);
+  });
+
+  // Live path: real startWatchingPosition + Transistor onLocation → processLocationForSend.
+  const liveAnswers = [];
+  const answerLocation = () => {
+    M.api.handler = (url, body) => {
+      M.api.posted.push({ url, body });
+      if (url.includes('insert_participant_location')) {
+        const a = liveAnswers.shift() || { finished: 0 };
+        return Promise.resolve({ success: true, data: { coordinate_id: M.api.posted.length, distance_to_finish_km: 3.2, ...a }, error: null });
+      }
+      return Promise.resolve({ success: true, data: {}, error: null });
+    };
+  };
+  const settle = () => new Promise((r) => setTimeout(r, 40));
+  let lat = 50;
+  const fire = async () => {
+    lat += 0.001;                                         // ~111 m — clears the movement gate
+    M.bg.location({ coords: { latitude: lat, longitude: 4, speed: 3, accuracy: 5, altitude: 10, heading: 0 }, timestamp: new Date(M.clock).toISOString(), is_moving: true });
+    await settle();
+  };
+  const locPosts = () => M.api.posted.filter((p) => p.url.includes('insert_participant_location')).length;
+  const liveStart = async () => {
+    liveAnswers.length = 0; lat = 50; answerLocation();
+    await startSession('2', '12');
+    assert.ok(typeof M.bg.location === 'function', 'onLocation registered');
+    M.clock += 1000; await fire();                        // first fix: position recorded, not sent
+  };
+  const liveSend = async (answer) => {
+    liveAnswers.push(answer); M.clock += 31000; const n = locPosts(); await fire();
+    assert.strictEqual(locPosts(), n + 1, 'a live fix was sent');
+  };
+  const RR = { finished: 1, finish_source: 'rr' }, NOT = { finished: 0 };
+
+  test('live: one RaceResult finished answer stops tracking (RR is authoritative)', async () => {
+    await liveStart();
+    await liveSend(RR);
+    assert.strictEqual(M.store.get(RACE_FIN), '1'); assert.ok(!M.store.has(PARAMS), 'params cleared');
+  });
+  test('live: not finished keeps tracking', async () => {
+    await liveStart();
+    await liveSend(NOT);
+    assert.ok(M.store.has(PARAMS)); assert.notStrictEqual(M.store.get(RACE_FIN), '1');
+  });
+
+  // Drain path: locationService.processQueue (offline backlog flushed on reconnect).
+  const drainAnswers = (answers) => {
+    let i = 0;
+    M.api.handler = (url, body) => {
+      M.api.posted.push({ url, body });
+      if (url.includes('insert_participant_location')) return Promise.resolve({ success: true, data: { coordinate_id: ++i, distance_to_finish_km: 2, ...(answers[i - 1] || NOT) }, error: null });
+      return Promise.resolve({ success: true, data: {}, error: null });
+    };
+  };
+  const armSession = () => M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12', intervalSeconds: 30, raceStartTime: new Date(M.clock - HOUR).toISOString(), manualStart: 0 }));
+  test('drain: a RaceResult finished answer in the backlog finishes the session once it drains', async () => {
+    armSession(); setQ([fix(2, 12, 5)]); drainAnswers([RR]);
+    await L().processQueue('2', '12');
+    assert.strictEqual(getQ().length, 0, 'fix delivered');
+    assert.strictEqual(M.store.get(RACE_FIN), '1');
+  });
+
+  test('cold boot with a session whose gun is >24h old → params removed, nothing resumed', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12', intervalSeconds: 30, raceStartTime: new Date(M.clock - 26 * HOUR).toISOString(), manualStart: 0 }));
+    const g = load('services/gpsService');                // module load runs the cold-boot rehydrate
+    await settle();
+    assert.ok(!M.store.has(PARAMS), 'old session stopped');
+    const log = await g.getFullTrackingLog();
+    assert.ok(log.some((e) => e.icon === '🧹'), 'stop logged');
+    assert.ok(!log.some((e) => e.icon === '🔁'), 'engine not resumed');
+  });
+  test('cold boot with a session from 2h ago → still resumed (control)', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12', intervalSeconds: 30, raceStartTime: new Date(M.clock - 2 * HOUR).toISOString(), manualStart: 0 }));
+    const g = load('services/gpsService'); await settle();
+    assert.ok(M.store.has(PARAMS));
+    assert.ok((await g.getFullTrackingLog()).some((e) => e.icon === '🔁'));
+  });
+  test('session start clears last race\'s GPS health / fault / drain / offline state', async () => {
+    M.store.set('@PFSLive:gpsHealth', 'no_fix'); M.store.set('@PFSLive:gpsFaultStreak', '4');
+    M.store.set('@PFSLive:drainFailStreak', '3'); M.store.set('@PFSLive:offlineCooldownUntil', String(M.clock + 60000));
+    await startSession();
+    for (const k of ['@PFSLive:gpsHealth', '@PFSLive:gpsFaultStreak', '@PFSLive:drainFailStreak', '@PFSLive:offlineCooldownUntil']) {
+      assert.ok(!M.store.has(k), `${k} cleared`);
+    }
+  });
+  test('watchdog restart keeps the STORED session ids (home showing another race cannot re-point it)', async () => {
+    armSession();
+    const g = load('services/gpsService'); await settle();
+    // Engine found dead → the watchdog re-stores params from what HomeScreen passed.
+    const BG = require('react-native-background-geolocation').default;
+    const realGetState = BG.getState; BG.getState = async () => ({ enabled: false, isMoving: false });
+    try { await g.ensureBackgroundTaskAlive('777', '99', 30, 59, null, 0, 't', 'b', 'Other race'); }
+    finally { BG.getState = realGetState; }
+    const p = JSON.parse(M.store.get(PARAMS));
+    assert.strictEqual(p.participantId, '2'); assert.strictEqual(p.eventId, '12');
+    assert.ok(p.raceStartTime, 'gun kept');
+  });
+  test('approximate location (iOS reduced accuracy) → isApproximateLocation true; precise → false', async () => {
+    const { gpsService } = load('services/gpsService');
+    assert.strictEqual(typeof gpsService.isApproximateLocation, 'function', 'isApproximateLocation exists');
+    M.provider = { ...M.provider, accuracyAuthorization: 1 };
+    assert.strictEqual(await gpsService.isApproximateLocation(), true);
+    M.provider = { ...M.provider, accuracyAuthorization: 0 };
+    assert.strictEqual(await gpsService.isApproximateLocation(), false);
+  });
+  test('approximate location (Android "Approximate" = coarse) → true; fine → false; probe throws → false', async () => {
+    const RN = require('react-native'); const Loc = require('expo-location');
+    const realOS = RN.Platform.OS; const realFg = Loc.getForegroundPermissionsAsync;
+    RN.Platform.OS = 'android';
+    try {
+      const { gpsService } = load('services/gpsService');
+      Loc.getForegroundPermissionsAsync = async () => ({ status: 'granted', android: { accuracy: 'coarse' } });
+      assert.strictEqual(await gpsService.isApproximateLocation(), true, 'coarse');
+      Loc.getForegroundPermissionsAsync = async () => ({ status: 'granted', android: { accuracy: 'fine' } });
+      assert.strictEqual(await gpsService.isApproximateLocation(), false, 'fine');
+      Loc.getForegroundPermissionsAsync = async () => { throw new Error('probe failed'); };
+      assert.strictEqual(await gpsService.isApproximateLocation(), false, 'failed probe never warns');
+    } finally { RN.Platform.OS = realOS; Loc.getForegroundPermissionsAsync = realFg; }
+  });
+  test('cold boot: a session 20h after the gun (overnight ultra) is resumed, not stopped', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12', intervalSeconds: 30, raceStartTime: new Date(M.clock - 20 * HOUR).toISOString(), manualStart: 0 }));
+    load('services/gpsService'); await settle(); await settle();
+    assert.ok(M.store.has(PARAMS), 'live session kept');
+  });
+  test('new HomeScreen strings exist in en/fr/nl (post-gun Stop, approximate location)', async () => {
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      for (const k of ['stopAfterStartTitle', 'stopAfterStartMessage', 'approximateLocationTitle', 'approximateLocationMessage', 'openSettings', 'continueAnyway']) {
+        assert.ok(typeof j.alerts[k] === 'string' && j.alerts[k].length > 2, `${l}.alerts.${k}`);
+      }
+    }
+  });
+  test('HomeScreen wiring (2026-10-18): stale restore, offset gun, no pre-start fix, no home-mismatch stop, card while tracking, no-race abort', async () => {
+    const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    assert.ok(/if \(isStaleSession\(params, Date\.now\(\)\)\) \{[\s\S]{0,200}await stopWatching\(\);/.test(s), 'restore stops a >24h session');
+    assert.ok(/computeRaceStartTime\(raceData\.next_race_date, raceData\.next_race_time, serverTimeOffsetRef\.current\)/.test(s), 'gun from captured offset');
+    assert.ok(!/new Date\(Date\.now\(\) \+ msUntilRace\)/.test(s), 'old formula gone');
+    assert.ok(!/gpsService\.getCurrentPosition\(\)/.test(s), 'no expo-location first fix racing Transistor at start');
+    assert.ok(!/stopGPSTrackingRef|participantId: homePid/.test(s), 'no silent "home offers another race" mid-race stop');
+    assert.ok(/homeData\?\.show_start_track === 1 \|\| isGPSActive \?/.test(s), 'card rendered while tracking');
+    assert.ok(/if \(fresh && \(!fresh\.next_race_participant_app_id \|\| !fresh\.next_race_id\)\)/.test(s), 'no-race home aborts start');
+  });
+  test('HomeScreen wiring (2026-10-18): session ids for queue + Stop, approximate-location warning, gun only with a captured offset', async () => {
+    const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    // Queue processor: no longer needs home's ids (restore runs before home loads).
+    assert.ok(/if \(queueProcessorRef\.current\) return;/.test(s), 'processor starts without home ids');
+    assert.ok(/const sp = await getTrackingParams\(\);\s*const qPid = sp\?\.participantId \?\? participantId;/.test(s), 'processor drains the SESSION\'s ids');
+    // Stop drains / uploads under the running session's ids.
+    assert.ok(/stopParticipantId = String\(sp\.participantId\);/.test(s) && /drainForStop\(stopParticipantId, stopEventId\)/.test(s), 'Stop uses session ids');
+    // Approximate location (growth_v0.1): warned by the precise gate ("Start anyway"
+    // continues), never blocked — and not prompted twice by a second alert.
+    assert.ok(/if \(!allowApproximate && \(await readPrecise\(\)\) === false\)/.test(s), 'precise gate at Start');
+    assert.ok(!/if \(await gpsService\.isApproximateLocation\(\)\)/.test(s), 'no second approximate alert');
+    // No captured offset → no gun (session waits), as before when server_datetime was missing.
+    assert.ok(/const raceTime = serverTimeOffsetKnownRef\.current\s*\?\s*computeRaceStartTime\(/.test(s), 'gun only from a captured offset');
+    assert.ok(/serverTimeOffsetKnownRef\.current = true;/.test(s), 'flag set where the offset is captured');
+  });
+  results.push(await run('12. 2026-10-18 audit (rr finish authoritative, stale sessions, gun offset, watchdog ids)'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);

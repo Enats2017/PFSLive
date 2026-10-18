@@ -98,7 +98,15 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
             </View>
           ) : null}
 
-          <Text style={styles.subtitle}>{t('confirmModal:subtitle')}</Text>
+          {/* Only the ParticipantResult path sends a verification email;
+              the EventDetails path registers immediately. The button label
+              already switched on this prop - the subtitle promised an email
+              either way, so half the users waited for one that never came. */}
+          <Text style={styles.subtitle}>
+            {emailVerificationMode
+              ? t('confirmModal:subtitle_verify')
+              : t('confirmModal:subtitle')}
+          </Text>
 
           {/* Divider */}
           <View style={styles.divider} />
