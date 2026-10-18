@@ -36,6 +36,7 @@ import {
   LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY, FINAL_SENT_COUNT_KEY,
   GPS_HEALTH_KEY, maybeUploadInterimLog,
 } from '../services/gpsService';
+import { isStaleSession, computeRaceStartTime } from '../services/trackingSessionRules';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
@@ -281,6 +282,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const raceStartTimeRef = useRef<Date | null>(null);
   const isGPSActiveRef = useRef<boolean>(false);
   const serverTimeOffsetRef = useRef<number>(0);
+  // ✅ True once serverTimeOffsetRef holds a real offset (home data carried a
+  // server_datetime). 0 is a legal offset (event tz = UTC), so the ref alone
+  // cannot say "never captured" — and without an offset the gun is unknown.
+  const serverTimeOffsetKnownRef = useRef<boolean>(false);
+  // ✅ Name of the race the RUNNING session belongs to (from the start, or from
+  // the stored session on restore). The tracking card can stay up while home
+  // shows something else (M1, 2026-10-18 audit) — it must not label the live
+  // session with whatever race home currently offers.
+  const [sessionRaceName, setSessionRaceName] = useState<string | undefined>(undefined);
   // ✅ Set when doStartGPSTracking() bails at the permission gate. It means "the
   // runner already tapped START and confirmed — finish the job as soon as the
   // permission requirement is met", so granting Always does not make them tap
@@ -438,7 +448,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const hasRaceStarted = useCallback((): boolean => {
     if (homeData?.manual_start === 1) return true;
     if (!raceStartTimeRef.current) return false;
-    // ✅ raceStartTimeRef is real UTC ms (Date.now() + msUntilRace).
+    // ✅ raceStartTimeRef is real UTC ms (computeRaceStartTime / stored session gun).
     // Compare against Date.now() directly — no offset needed.
     // getServerTime() returns fake-UTC ms (event-tz number) which is
     // numerically larger than real UTC, causing race to appear started early.
@@ -623,8 +633,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             ).getTime();
             const offset = serverFakeMs - Date.now();
 
-            setServerTimeOffset(offset);
-            serverTimeOffsetRef.current = offset;
+            if (!isNaN(offset)) {
+              setServerTimeOffset(offset);
+              serverTimeOffsetRef.current = offset;
+              serverTimeOffsetKnownRef.current = true;
+            }
 
             if (API_CONFIG.DEBUG) {
               console.log('🖥️ server_datetime (event tz):', response.data.data.server_datetime);
@@ -704,7 +717,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, [homeData?.manual_start, getServerTime, t]);
 
   const startQueueProcessor = useCallback(() => {
-    if (queueProcessorRef.current || !participantId || !eventId) return;
+    // ✅ No home-id guard any more (M8, 2026-10-18 audit). The restore effect
+    // calls this on mount, usually BEFORE home data has loaded — the old
+    // `!participantId` early return meant the foreground drain never started for
+    // a restored session and nothing retried it. The ids are now resolved per
+    // tick, from the running session first (see below).
+    if (queueProcessorRef.current) return;
 
     queueProcessorRef.current = setInterval(async () => {
       // Foreground twin of the heartbeat's interim-log check: a session that is
@@ -717,7 +735,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       if (queueSize === 0) return;
 
       try {
-        const sentCount = await locationService.processQueue(participantId, eventId);
+        // ✅ The RUNNING session's ids, not home's: home can show another race
+        // mid-session (M2). Home ids are only the fallback when nothing is stored.
+        const sp = await getTrackingParams();
+        const qPid = sp?.participantId ?? participantId;
+        const qEid = sp?.eventId ?? eventId;
+        if (!qPid || !qEid) return;
+        const sentCount = await locationService.processQueue(String(qPid), String(qEid));
         if (sentCount > 0) {
           if (API_CONFIG.DEBUG) {
             toastSuccess(
@@ -809,6 +833,35 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // phantom start.
       pendingStartRef.current = false;
 
+      // ✅ APPROXIMATE LOCATION — WARN, never block (M6, 2026-10-18 audit).
+      // iOS "Precise: Off" / Android "Approximate" pass every check above, but
+      // the fixes are fuzzed by kilometres: the live dot wanders and the
+      // distance-based finish cannot fire. Blocking would be wrong on race day
+      // (the runner may not find the switch, and a fuzzy track beats none), so
+      // the runner chooses. "Open settings" re-arms pendingStartRef so returning
+      // from Settings resumes this start (and re-checks) like the permission gate.
+      if (await gpsService.isApproximateLocation()) {
+        const proceed = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            t('home:alerts.approximateLocationTitle'),
+            t('home:alerts.approximateLocationMessage'),
+            [
+              {
+                text: t('home:alerts.openSettings'),
+                onPress: () => {
+                  pendingStartRef.current = true;
+                  Linking.openSettings().catch(() => { /* silent */ });
+                  resolve(false);
+                },
+              },
+              { text: t('home:alerts.continueAnyway'), onPress: () => resolve(true) },
+            ],
+            { cancelable: false },
+          );
+        });
+        if (!proceed) return;
+      }
+
       // ✅ Re-fetch home data FRESH (cache-bypassed) at the moment Start is
       // pressed. The organiser can edit the race start_hour right before the
       // gun; the home response is cached ~45s server-side, and the session
@@ -821,39 +874,40 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const fresh = await fetchHomeData(true);
       const raceData = fresh ?? homeData;
 
+      // ✅ Home answered but offers NO race (M7, 2026-10-18 audit): the race was
+      // removed / the registration cancelled since the screen loaded. Starting
+      // anyway fell through to the stale state ids or sent participant '0'.
+      // Abort with the same message the Start button uses for missing ids. An
+      // offline start (fresh === null) still falls back to the loaded state.
+      if (fresh && (!fresh.next_race_participant_app_id || !fresh.next_race_id)) {
+        toastError(t('home:errors.missingInfo'), t('home:errors.missingInfoDescription'));
+        return;
+      }
+
       // Parse race start time
       if (raceData?.next_race_date && raceData?.next_race_time) {
         try {
-          // ✅ Both server_datetime and race_time are in the event timezone.
-          // Parse both as fake-UTC (appending 'Z') so JS doesn't apply any
-          // device timezone offset. Since both strings are in the SAME timezone,
-          // the difference between them is always correct — no device time needed.
+          // ✅ race_date/race_time are event-local. The gun is converted with the
+          // event-tz offset captured WHEN home data arrived (serverTimeOffsetRef,
+          // set in fetchHomeData) — see computeRaceStartTime (H2, 2026-10-18).
+          // The old `Date.now() + (race − server_datetime)` re-read the stored
+          // server_datetime: when the fresh fetch above failed and we fell back to
+          // hours-old home data, the gun landed late by exactly that age and
+          // every fix after the real gun was held as "race not started".
           //
-          // server_datetime (fake-UTC ms) = actual event-tz now
-          // race_datetime   (fake-UTC ms) = actual event-tz race start
-          // diff = race_ms - server_ms = how far in the future the race is (in ms)
-          // raceTime = Date.now() + diff  ← correct UTC race start time
+          // No offset ever captured (no server_datetime) → gun unknown, as before.
+          const raceTime = serverTimeOffsetKnownRef.current
+            ? computeRaceStartTime(raceData.next_race_date, raceData.next_race_time, serverTimeOffsetRef.current)
+            : null;
 
-          const serverDatetimeStr = raceData?.server_datetime;
-
-          if (serverDatetimeStr) {
-            const serverFakeMs = new Date(serverDatetimeStr.replace(' ', 'T') + 'Z').getTime();
-            const raceFakeMs = new Date(`${raceData.next_race_date}T${raceData.next_race_time}Z`).getTime();
-
-            // How many ms from event-tz now until race start (negative = already started)
-            const msUntilRace = raceFakeMs - serverFakeMs;
-
-            // Anchor to real UTC now — no device timezone involved
-            const raceTime = new Date(Date.now() + msUntilRace);
-
+          if (raceTime) {
             if (!isNaN(raceTime.getTime())) {
               setRaceStartTime(raceTime);
               raceStartTimeRef.current = raceTime;
 
               if (API_CONFIG.DEBUG) {
-                console.log('✅ server_datetime (event tz):', serverDatetimeStr);
                 console.log('✅ race_time (event tz):', `${raceData.next_race_date} ${raceData.next_race_time}`);
-                console.log('✅ ms until race:', msUntilRace, '→', (msUntilRace / 3600000).toFixed(2), 'h');
+                console.log('✅ event tz offset:', (serverTimeOffsetRef.current / 3600000).toFixed(2), 'h');
                 console.log('✅ raceTime (UTC):', raceTime.toISOString());
               }
             }
@@ -884,11 +938,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setIsGPSActive(true);
       isGPSActiveRef.current = true;
 
-      const initialGPS = await gpsService.getCurrentPosition();
-      setCurrentLocation({
-        lat: initialGPS.latitude,
-        lon: initialGPS.longitude,
-      });
+      // ✅ No separate "first fix" request before the engine starts (M5, 2026-10-18).
+      // It used expo-location's getCurrentPositionAsync, which can hang for a long
+      // time indoors / in a crowded start pen (and a throw aborted the whole start).
+      // Capping it with a timeout would leave that request running WHILE Transistor
+      // starts — two concurrent CLLocationManager users, exactly what "Option B"
+      // (gpsService header) removed because it destabilised Hermes. The engine's
+      // first onLocation fills the screen via attachUi/the UI callback instead.
 
       const raceAlreadyStarted = hasRaceStarted();
       if (raceAlreadyStarted) {
@@ -950,6 +1006,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       );
 
       gpsWatchRef.current = gpsWatch;
+      setSessionRaceName(raceData?.next_race_name);
 
       // ✅ Start background fetch keepalive — fires every 15s via JobScheduler.
       // Bypasses Samsung One UI Adaptive Battery throttling of GPS during walking.
@@ -1093,6 +1150,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       }
     } catch { /* silent — fall back to React state */ }
 
+    // ✅ Ids of the session being STOPPED, read before teardown clears them
+    // (M2, 2026-10-18 audit). Home's ids are whatever race home shows NOW — after
+    // a mid-race home change (or an old session found on relaunch) that is a
+    // different participant/race, and the stop-drain and the log upload went to
+    // it. Home ids are only the fallback when no session params are stored.
+    let stopParticipantId: string | null = participantId;
+    let stopEventId: string | null = eventId;
+    try {
+      const sp = await getTrackingParams();
+      if (sp?.participantId && sp?.eventId) {
+        stopParticipantId = String(sp.participantId);
+        stopEventId = String(sp.eventId);
+      }
+    } catch { /* silent — keep home ids */ }
+
     if (gpsWatchRef.current) {
       // ✅ Await full teardown before the log upload below. remove() →
       // _doFullStop() stops Transistor, appends the "🛑 Tracking stopped" entry,
@@ -1149,14 +1221,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // the finish path would strand them. processQueue's own deferred-finish logic
     // only tears down once the queue is actually empty, so this is safe to run.
     const queuedBeforeStop = await locationQueueService.getQueueSize();
-    if (participantId && eventId && (!raceAlreadyFinished || queuedBeforeStop > 0)) {
+    if (stopParticipantId && stopEventId && (!raceAlreadyFinished || queuedBeforeStop > 0)) {
       // ✅ Keep draining until empty, a pass makes no progress, or ~30s pass —
       // see locationService.drainForStop (one processQueue() call used to leave
       // everything past 50 fixes behind: p1652 stopped with 173 queued).
       // processQueue bumps BACKGROUND_SENT_COUNT_KEY per drained fix, so the
       // live counter is re-read below instead of adding the return value.
       try {
-        const drained = await locationService.drainForStop(participantId, eventId);
+        const drained = await locationService.drainForStop(stopParticipantId, stopEventId);
         if (drained > 0 && API_CONFIG.DEBUG) {
           console.log(`✅ Drained ${drained} queued locations on stop`);
         }
@@ -1191,7 +1263,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     setQueuedCount(remaining);
 
-    if (participantId && eventId) {
+    if (stopParticipantId && stopEventId) {
       try {
         // ✅ If the background auto-stop path already uploaded the log when the
         // finish was crossed (LOG_UPLOADED_KEY === '1'), skip re-uploading. For a
@@ -1208,8 +1280,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             // the save fails so the other path can still retry.
             await AsyncStorage.setItem(LOG_UPLOADED_KEY, '1');
             const uploaded = await locationService.saveTrackingLog(
-              participantId,
-              eventId,
+              stopParticipantId,
+              stopEventId,
               logs,
               actualSentCount,   // ✅ was: locationUpdateCount
               remaining,
@@ -1241,9 +1313,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       queuedRemaining: remaining,
       // Race context: tracking_started already sends event_id, so without these
       // a completed session could not be tied back to the race it belonged to.
-      eventId,
-      raceName: homeData?.next_race_name,
+      eventId: stopEventId,
+      raceName: sessionRaceName ?? homeData?.next_race_name,
     });
+    setSessionRaceName(undefined);
 
     AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY).catch(() => { });
     AsyncStorage.removeItem(FINAL_SENT_COUNT_KEY).catch(() => { });
@@ -1254,21 +1327,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // later launches/foregrounds) instead of sitting until the next Start
     // deleted it.
     if (remaining > 0) void locationService.drainOrphans();
-  }, [locationUpdateCount, participantId, eventId, t]);
+  }, [locationUpdateCount, participantId, eventId, sessionRaceName, t]);
 
   // ✅ Stop pressed BEFORE the gun → confirm first. Sep-Oct 2026: 12 runners
   // started early, stopped before the start (nothing is sent pre-gun, so it
   // looked like nothing was happening), never restarted — and then finished the
-  // race per RaceResult with no live track at all. After the gun (or with
-  // manual_start) Stop works immediately, exactly as before.
+  // race per RaceResult with no live track at all.
+  // ✅ AFTER the gun (or with manual_start) Stop is confirmed too (M4, 2026-10-18
+  // audit). It used to be one tap, and it is irreversible: once a stop log
+  // exists home hides Start for that race, so a pocket tap or a mis-tap mid-race
+  // ended the live track for good. Same dialog, post-gun copy.
   const confirmStopTracking = useCallback(() => {
-    if (hasRaceStarted()) {
-      void stopGPSTracking();
-      return;
-    }
+    const started = hasRaceStarted();
     Alert.alert(
-      t('home:alerts.stopBeforeStartTitle'),
-      t('home:alerts.stopBeforeStartMessage'),
+      t(started ? 'home:alerts.stopAfterStartTitle' : 'home:alerts.stopBeforeStartTitle'),
+      t(started ? 'home:alerts.stopAfterStartMessage' : 'home:alerts.stopBeforeStartMessage'),
       [
         { text: t('home:alerts.keepTracking'), style: 'cancel' },
         { text: t('home:alerts.stopAnyway'), style: 'destructive', onPress: () => { void stopGPSTracking(); } },
@@ -1424,7 +1497,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const params = await getTrackingParams();
         if (!params || cancelled) return;
 
+        // ✅ A session whose gun is more than a day old is not "the race in
+        // progress" — it was never stopped (DNF, missed finish, force-quit). Do
+        // not bring it back: it would send today's fixes into that old race and
+        // show its Stop button instead of today's Start (H1, 2026-10-18 audit).
+        // Same rule as gpsService's cold-boot rehydrate, which a warm reopen
+        // never runs. Its unsent fixes are parked and uploaded by drainOrphans.
+        if (isStaleSession(params, Date.now())) {
+          if (API_CONFIG.DEBUG) console.log('🧹 Stored session older than 24h — stopping instead of restoring');
+          await stopWatching();
+          void locationService.drainOrphans();
+          return;
+        }
+
         if (API_CONFIG.DEBUG) console.log('🔄 Restoring active tracking session');
+        setSessionRaceName(params.raceName);
 
         // Restore tracking flags.
         setIsGPSActive(true);
@@ -1506,6 +1593,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     };
   }, [hasRaceStarted, startQueueProcessor, startRaceStartChecker, t]);
 
+  // NOTE (2026-10-18 audit): there is deliberately NO "home offers a different
+  // race → stop the live session" check here. home_api drops a race once its
+  // end_time passes (and computes end_time on day 1 for overnight events), so a
+  // runner still on course late, with any other registration, would be stopped
+  // silently mid-race. Old never-stopped sessions are caught by age instead
+  // (isStaleSession, >24h after the gun) in the restore above and on cold boot.
+
   // ✅ RESUME A PENDING START WHEN THE RUNNER COMES BACK FROM SETTINGS.
   //
   // The permission modal's button closes the modal and sends the runner to the
@@ -1567,7 +1661,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           })();
         }
 
-        if (isGPSActive && participantId && eventId) {
+        // ✅ No home-id requirement here any more: the ids come from the running
+        // session (below), so a restored session whose home data has not loaded
+        // — or no longer shows its race — still gets the watchdog and the drain.
+        if (isGPSActive) {
           // ✅ FIX 2: Check the race-finished flag FIRST, before the watchdog.
           // If auto-stop already fired in the background while the app was
           // closed, calling ensureBackgroundTaskAlive first would restart
@@ -1584,25 +1681,35 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 return;
               }
 
+              // ✅ The RUNNING session's ids and settings, not home's (M2,
+              // 2026-10-18 audit): home can show another race (today's
+              // participant id) while an old/ongoing session runs, and the
+              // watchdog re-stores params — it used to re-point the session at
+              // home's race. Home values are only the fallback with no params.
+              const sp = await getTrackingParams();
+              const wPid = sp?.participantId ?? participantId;
+              const wEid = sp?.eventId ?? eventId;
+              if (!wPid || !wEid) return;
+
               // Race still running — watchdog + queue drain.
               if (trackingParamsRef.current) {
                 ensureBackgroundTaskAlive(
-                  participantId,
-                  eventId,
-                  trackingParamsRef.current.intervalSeconds,
-                  homeData?.next_race_category_id,
-                  raceStartTimeRef.current?.toISOString() ?? null,
-                  homeData?.manual_start,
+                  String(wPid),
+                  String(wEid),
+                  sp?.intervalSeconds ?? trackingParamsRef.current.intervalSeconds,
+                  sp ? sp.categoryId : homeData?.next_race_category_id,
+                  sp ? (sp.raceStartTime ?? null) : (raceStartTimeRef.current?.toISOString() ?? null),
+                  sp ? sp.manualStart : homeData?.manual_start,
                   trackingParamsRef.current.notificationTitle,
                   trackingParamsRef.current.notificationBody,
-                  homeData?.next_race_name,
+                  sp ? sp.raceName : homeData?.next_race_name,
                 ).then(alive => {
                   if (API_CONFIG.DEBUG) console.log('🔍 Background task alive:', alive);
                 });
               }
 
               // drain the backlog; counter is maintained inside processQueue now
-              await locationService.processQueue(participantId, eventId);
+              await locationService.processQueue(String(wPid), String(wEid));
               await loadQueueSize();
             } catch { /* silent */ }
           })();
@@ -1738,10 +1845,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ✅ Upload leftover fixes from ended sessions on mount and every foreground.
   // drainOrphans() is a no-op when there is nothing parked, checks the network
   // itself, and never touches the live session's own fixes.
+  // ✅ Skipped while a session is live (L8, 2026-10-18 audit): drainOrphans'
+  // contract is "only while NO session is live" — the server snaps each fix
+  // against the participant's LATEST stored fix, so an old fix landing between
+  // live ones mis-snaps. The Stop path and the next idle foreground run it.
   useEffect(() => {
-    void locationService.drainOrphans();
+    const drainIfIdle = async () => {
+      try { if (await isTracking()) return; } catch { /* unreadable → behave as before (drain) */ }
+      void locationService.drainOrphans();
+    };
+    void drainIfIdle();
     const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') void locationService.drainOrphans();
+      if (s === 'active') void drainIfIdle();
     });
     return () => sub.remove();
   }, []);
@@ -2160,21 +2275,31 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
         {/* Main Content */}
         <View style={homeStyles.textContainer}>
-          {homeData?.show_start_track === 1 ? (
+          {/* ✅ Also rendered while tracking runs (M1, 2026-10-18 audit): home can
+              flip show_start_track to 0 mid-race (e.g. the server counting an
+              interim log as a stop), which hid Stop and the status panel while
+              the engine kept going. In that "session-only" state home's race
+              fields may be missing or belong to another race, so the card
+              labels itself from the session and skips home's date. */}
+          {homeData?.show_start_track === 1 || isGPSActive ? (
             <>
               <View style={commonStyles.card}>
                 <View style={homeStyles.eventInfo}>
                   <Text style={homeStyles.eventNameText}>
                     <Text style={homeStyles.eventLabel}>{t('home:Event.title')}: </Text>
-                    <Text style={homeStyles.eventValue}>{homeData.next_race_name}</Text>
+                    <Text style={homeStyles.eventValue}>
+                      {(isGPSActive && sessionRaceName) || (homeData?.show_start_track === 1 ? homeData?.next_race_name : '') || ''}
+                    </Text>
                   </Text>
                 </View>
 
-                <Text style={homeStyles.smallText}>
-                  <Text style={{ fontWeight: typography.weights.bold }}>{t('home:Event.Date')}:</Text>
-                  {' '}
-                  {formatDate(homeData.next_race_date!)}
-                </Text>
+                {homeData?.show_start_track === 1 && !!homeData?.next_race_date && (
+                  <Text style={homeStyles.smallText}>
+                    <Text style={{ fontWeight: typography.weights.bold }}>{t('home:Event.Date')}:</Text>
+                    {' '}
+                    {formatDate(homeData.next_race_date)}
+                  </Text>
+                )}
                 {/* Manual Start Indicator */}
                 {homeData?.manual_start === 1 && (
                   <View style={[homeStyles.trackingStatus, { backgroundColor: colors.warning + '20' }]}>
@@ -2303,7 +2428,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   style={[
                     homeStyles.button,
                     { width: '100%', marginBottom: spacing.md },
-                    (!participantId || !eventId) && {
+                    // Greyed only when it cannot be pressed: while tracking it is
+                    // Stop, which works even if home no longer carries the ids (M1).
+                    !isGPSActive && (!participantId || !eventId) && {
                       backgroundColor: colors.gray400,
                       opacity: 0.6,
                     },

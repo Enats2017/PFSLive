@@ -2,11 +2,12 @@ import * as Location from 'expo-location';
 import BackgroundGeolocation from 'react-native-background-geolocation';
 import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import * as Battery from 'expo-battery';
 import { LocationData } from './locationService';
 import { API_CONFIG } from '../constants/config';
 import i18n from '../i18n'; // adjust to wherever your configured i18next instance lives
+import { isStaleSession } from './trackingSessionRules';
 
 export interface GPSPosition {
   latitude: number;
@@ -1938,6 +1939,7 @@ export const getTrackingParams = async (): Promise<{
   categoryId?: number;
   raceStartTime?: string | null;
   manualStart?: number;
+  raceName?: string;
 } | null> => {
   try {
     const json = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
@@ -2033,18 +2035,26 @@ export const ensureBackgroundTaskAlive = async (
     if (API_CONFIG.DEBUG) console.log('⚠️ Transistor was stopped — restarting...');
 
     // Re-store params in case they were cleared.
+    // ✅ The STORED session wins over the caller's values (2026-10-18 audit, M2).
+    // The caller passes what HomeScreen currently shows, and home can have moved
+    // on to another race (today's participant id) while an old session is still
+    // live — re-storing those would silently re-point the running session at a
+    // different participant/race mid-way. The arguments are only a fallback for
+    // a field the stored params do not have.
     let _wdRaceName: string | undefined;
+    let _prevParams: any = null;
     try {
       const _prev = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
-      if (_prev) _wdRaceName = JSON.parse(_prev)?.raceName;
+      if (_prev) _prevParams = JSON.parse(_prev);
+      _wdRaceName = _prevParams?.raceName;
     } catch { /* silent — a missing name must not break the watchdog */ }
     await AsyncStorage.setItem(TRACKING_PARAMS_KEY, JSON.stringify({
-      participantId,
-      eventId,
-      intervalSeconds,
-      categoryId,
-      raceStartTime,
-      manualStart,
+      participantId: _prevParams?.participantId ?? participantId,
+      eventId: _prevParams?.eventId ?? eventId,
+      intervalSeconds: _prevParams?.intervalSeconds ?? intervalSeconds,
+      categoryId: _prevParams?.categoryId ?? categoryId,
+      raceStartTime: (_prevParams && _prevParams.raceStartTime !== undefined) ? _prevParams.raceStartTime : raceStartTime,
+      manualStart: _prevParams?.manualStart ?? manualStart,
       // Preserve the race name the session started with. The watchdog does not
       // receive it, and re-storing without it would silently strip the only copy
       // the background finish path has.
@@ -2204,6 +2214,31 @@ export const gpsService = {
     }
   },
 
+  /**
+   * True when location is granted but only APPROXIMATE (2026-10-18 audit, M6):
+   * iOS 14+ "Precise: Off" (reduced accuracy) or Android 12+ "Approximate"
+   * (coarse). Both pass the foreground/background gate above, yet fixes are
+   * fuzzed by kilometres — the live dot jumps around and distance-based finish
+   * detection cannot work. HomeScreen WARNS on this, never blocks: on race day a
+   * fuzzy track is better than none, and the runner may not find the switch.
+   * iOS reads Transistor's accuracyAuthorization (expo-location does not expose
+   * it); Android reads expo-location's android.accuracy. Unknown → false.
+   */
+  async isApproximateLocation(): Promise<boolean> {
+    try {
+      if (Platform.OS === 'android') {
+        const fg: any = await Location.getForegroundPermissionsAsync();
+        return fg?.status === 'granted' && fg?.android?.accuracy === 'coarse';
+      }
+      const p: any = await BackgroundGeolocation.getProviderState();
+      const _r = (BackgroundGeolocation as any).ACCURACY_AUTHORIZATION_REDUCED;
+      const REDUCED = typeof _r === 'number' ? _r : 1;   // SDK constant; 1 per its docs
+      return p?.accuracyAuthorization === REDUCED;
+    } catch {
+      return false;   // unknown -> never warn (or block) on a failed probe
+    }
+  },
+
   async hasPermissions(): Promise<boolean> {
     try {
       const { status } = await Location.getForegroundPermissionsAsync();
@@ -2360,6 +2395,13 @@ export const gpsService = {
       await AsyncStorage.removeItem(NEAR_FINISH_KEY);
       await AsyncStorage.removeItem(LAST_LOC_FIRE_KEY);
       await AsyncStorage.removeItem(LOG_UPLOADED_KEY);
+      // A finish detected on the live path never runs _doFullStop, so last
+      // race's warning banner / drain-failure / offline-cooldown state could
+      // otherwise greet the runner at the start of this one.
+      await AsyncStorage.removeItem(GPS_HEALTH_KEY);
+      await AsyncStorage.removeItem(GPS_FAULT_STREAK_KEY);
+      await AsyncStorage.removeItem(DRAIN_FAILS_KEY);
+      await AsyncStorage.removeItem(OFFLINE_UNTIL_KEY);
       await AsyncStorage.removeItem(LAST_QUEUED_KEY);
       await AsyncStorage.removeItem(FINISH_COORDS_KEY);
       await AsyncStorage.removeItem(REMAINING_KEY);
@@ -2685,6 +2727,18 @@ const _rehydrateTrackingOnBoot = async (): Promise<void> => {
     // "session still live" signal.
     const paramsJson = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
     if (!paramsJson) return;
+
+    // ✅ A session whose gun is more than a day old was never stopped (DNF,
+    // finish missed, force-quit). Resuming it would send today's fixes into that
+    // old race and hide today's Start. Stop it; its unsent fixes are parked by
+    // drainOrphans() and still uploaded under the old race.
+    try {
+      if (isStaleSession(JSON.parse(paramsJson), Date.now())) {
+        await addLog('🧹', 'Cold boot — session older than 24h found, stopped instead of resumed');
+        await _doFullStop();
+        return;
+      }
+    } catch { /* unparsable params: fall through to the old behaviour */ }
 
     const finished = await AsyncStorage.getItem(RACE_FINISHED_KEY);
     if (finished === '1') {
