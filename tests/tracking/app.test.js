@@ -837,6 +837,22 @@ const L = () => load('services/locationService').locationService;
     assert.ok(/const raceTime = serverTimeOffsetKnownRef\.current\s*\?\s*computeRaceStartTime\(/.test(s), 'gun only from a captured offset');
     assert.ok(/serverTimeOffsetKnownRef\.current = true;/.test(s), 'flag set where the offset is captured');
   });
+  test('HomeScreen merge (growth_v0.1, 2026-10-18): design card follows the session in the session-only state', async () => {
+    const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    // Card title: the running session's race while tracking, home's race otherwise.
+    assert.ok(/<Text style=\{homeStyles\.eventName\}[^>]*>\s*\{\(isGPSActive && sessionRaceName\) \|\| \(homeData\?\.show_start_track === 1 \? homeData\?\.next_race_name : ''\) \|\| ''\}/.test(s), 'card title from the session');
+    // Date / start time line only while home offers this race.
+    assert.ok(/\{homeData\?\.show_start_track === 1 && !!homeData\?\.next_race_date && \(\s*<View style=\{homeStyles\.eventMetaRow\}>/.test(s), 'date line guarded');
+    assert.ok(!/<Text style=\{homeStyles\.eventName\}[^>]*>\s*\{homeData\.next_race_name\}/.test(s), 'no unguarded homeData.next_race_name title');
+    // "Tracking active" card: the session's race first.
+    assert.ok(/\{sessionRaceName \|\| homeData\?\.next_race_name\}/.test(s), 'active card names the session race');
+    // Stop stays pressable while tracking even if home lost the ids.
+    assert.ok(/disabled=\{!isGPSActive && \(!participantId \|\| !eventId\)\}/.test(s), 'Stop never disabled by missing home ids');
+    // Share link: home's race only — in the session-only state homeData may be absent / another race.
+    assert.ok(/\{homeData\?\.show_start_track === 1 && \(\s*<ShareTrackingLink/.test(s), 'share link only while home offers the race');
+    // Approximate location: growth's precise gate only — no second alert after it.
+    assert.ok(!/if \(await gpsService\.isApproximateLocation\(\)\)/.test(s), 'no duplicate approximate alert');
+  });
   results.push(await run('12. 2026-10-18 audit (rr finish authoritative, stale sessions, gun offset, watchdog ids)'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
