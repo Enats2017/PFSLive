@@ -649,26 +649,15 @@ const L = () => load('services/locationService').locationService;
     assert.strictEqual(isStaleSession({ participantId: '2', eventId: '12', raceStartTime: new Date(M.clock - 25 * HOUR).toISOString() }, M.clock), true);
     assert.strictEqual(isStaleSession({ participantId: '2', eventId: '12', raceStartTime: new Date(M.clock - 2 * HOUR).toISOString() }, M.clock), false);
   });
-  test('isStaleSession: home offers ANOTHER race → stale; same race → not', async () => {
+  test('isStaleSession: overnight ultra 20h after the gun → still resumes; no session → false', async () => {
     const { isStaleSession } = R();
-    const p = { participantId: '2', eventId: '12', raceStartTime: new Date(M.clock - 10 * HOUR).toISOString() };
-    assert.strictEqual(isStaleSession(p, M.clock, { participantId: '7', eventId: '13' }), true, 'other participant + race');
-    assert.strictEqual(isStaleSession(p, M.clock, { participantId: '2', eventId: '13' }), true, 'same participant, other race');
-    assert.strictEqual(isStaleSession(p, M.clock, { participantId: 2, eventId: 12 }), false, 'same race (number vs string ids)');
+    assert.strictEqual(isStaleSession({ raceStartTime: new Date(M.clock - 20 * HOUR).toISOString() }, M.clock), false);
+    assert.strictEqual(isStaleSession(null, M.clock), false);
   });
-  test('isStaleSession: offline relaunch (no home ids) → keeps resuming', async () => {
+  test('isStaleSession: manual start without a stored gun → never stale; with an old stored gun → stale', async () => {
     const { isStaleSession } = R();
-    const p = { participantId: '2', eventId: '12', raceStartTime: new Date(M.clock - 3 * HOUR).toISOString() };
-    assert.strictEqual(isStaleSession(p, M.clock, null), false);
-    assert.strictEqual(isStaleSession(p, M.clock, { participantId: undefined, eventId: undefined }), false);
-    assert.strictEqual(isStaleSession(null, M.clock), false, 'no session');
-  });
-  test('isStaleSession: manual start (no gun stored) → only the home check applies', async () => {
-    const { isStaleSession } = R();
-    const p = { participantId: '2', eventId: '12', raceStartTime: null, manualStart: 1 };
-    assert.strictEqual(isStaleSession(p, M.clock), false);
-    assert.strictEqual(isStaleSession(p, M.clock, { participantId: '9', eventId: '99' }), true);
-    assert.strictEqual(isStaleSession({ ...p, raceStartTime: new Date(M.clock - 30 * HOUR).toISOString() }, M.clock), true, 'manual with an old stored gun');
+    assert.strictEqual(isStaleSession({ raceStartTime: null }, M.clock), false);
+    assert.strictEqual(isStaleSession({ raceStartTime: new Date(M.clock - 30 * HOUR).toISOString() }, M.clock), true);
   });
 
   test('computeRaceStartTime: offset captured at receipt → real gun however old the data (old formula late by the data age)', async () => {
@@ -813,6 +802,20 @@ const L = () => load('services/locationService').locationService;
     assert.ok(!/stopGPSTrackingRef|participantId: homePid/.test(s), 'no silent "home offers another race" mid-race stop');
     assert.ok(/homeData\?\.show_start_track === 1 \|\| isGPSActive \?/.test(s), 'card rendered while tracking');
     assert.ok(/if \(fresh && \(!fresh\.next_race_participant_app_id \|\| !fresh\.next_race_id\)\)/.test(s), 'no-race home aborts start');
+  });
+  test('HomeScreen wiring (2026-10-18): session ids for queue + Stop, approximate-location warning, gun only with a captured offset', async () => {
+    const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    // Queue processor: no longer needs home's ids (restore runs before home loads).
+    assert.ok(/if \(queueProcessorRef\.current\) return;/.test(s), 'processor starts without home ids');
+    assert.ok(/const sp = await getTrackingParams\(\);\s*const qPid = sp\?\.participantId \?\? participantId;/.test(s), 'processor drains the SESSION\'s ids');
+    // Stop drains / uploads under the running session's ids.
+    assert.ok(/stopParticipantId = String\(sp\.participantId\);/.test(s) && /drainForStop\(stopParticipantId, stopEventId\)/.test(s), 'Stop uses session ids');
+    // Approximate location: warned (Open settings / Continue anyway), never blocked.
+    assert.ok(/if \(await gpsService\.isApproximateLocation\(\)\)/.test(s), 'approximate check at Start');
+    assert.ok(/t\('home:alerts\.continueAnyway'\), onPress: \(\) => resolve\(true\)/.test(s), 'Continue anyway proceeds');
+    // No captured offset → no gun (session waits), as before when server_datetime was missing.
+    assert.ok(/const raceTime = serverTimeOffsetKnownRef\.current\s*\?\s*computeRaceStartTime\(/.test(s), 'gun only from a captured offset');
+    assert.ok(/serverTimeOffsetKnownRef\.current = true;/.test(s), 'flag set where the offset is captured');
   });
   results.push(await run('12. 2026-10-18 audit (rr finish authoritative, stale sessions, gun offset, watchdog ids)'));
 

@@ -12,40 +12,23 @@
 export const STALE_SESSION_MS = 24 * 60 * 60 * 1000;
 
 export interface StoredSessionLike {
-  participantId?: string | number | null;
-  eventId?: string | number | null;
   raceStartTime?: string | null;
-  manualStart?: number;
-}
-
-export interface HomeRaceLike {
-  participantId?: string | number | null;
-  eventId?: string | number | null;
 }
 
 /**
- * True when a stored session must be stopped instead of resumed.
- * - gun more than STALE_SESSION_MS ago (manual-start sessions included: their
- *   stored gun is the real one when present);
- * - or home is offering a DIFFERENT race for this account (only checked when
- *   home's ids are known — an offline relaunch must still resume).
+ * True when a stored session must be stopped instead of resumed: its gun was
+ * more than STALE_SESSION_MS ago. A session without a stored gun (manual start)
+ * is never judged stale here. Deliberately age only — no "home offers another
+ * race" check: home_api drops a race once its end_time passes, so that check
+ * would stop a runner still on course late (2026-10-18 review).
  */
 export function isStaleSession(
   params: StoredSessionLike | null | undefined,
   nowMs: number,
-  homeRace?: HomeRaceLike | null,
 ): boolean {
-  if (!params) return false;
-  if (params.raceStartTime) {
-    const gun = new Date(params.raceStartTime).getTime();
-    if (!isNaN(gun) && nowMs - gun > STALE_SESSION_MS) return true;
-  }
-  if (homeRace && homeRace.participantId && homeRace.eventId
-      && params.participantId && params.eventId) {
-    if (String(homeRace.participantId) !== String(params.participantId)
-        || String(homeRace.eventId) !== String(params.eventId)) return true;
-  }
-  return false;
+  if (!params || !params.raceStartTime) return false;
+  const gun = new Date(params.raceStartTime).getTime();
+  return !isNaN(gun) && nowMs - gun > STALE_SESSION_MS;
 }
 
 /**
