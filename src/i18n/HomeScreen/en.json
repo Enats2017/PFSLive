@@ -72,7 +72,13 @@
     "stopBeforeStartTitle": "The race hasn't started yet",
     "stopBeforeStartMessage": "Tracking is ready and will start sending your position automatically at the start. If you stop now, nobody can follow you unless you tap Start again before you run.",
     "keepTracking": "Keep tracking",
-    "stopAnyway": "Stop anyway"
+    "stopAnyway": "Stop anyway",
+    "stopAfterStartTitle": "Stop tracking?",
+    "stopAfterStartMessage": "If you stop now, your followers will no longer see your live position, and you may not be able to restart tracking for this race.",
+    "approximateLocationTitle": "Precise location is off",
+    "approximateLocationMessage": "Livio only has your approximate location, so your position on the live map can be off by a kilometre or more and your finish may not be detected. Turn on Precise Location for Livio in Settings for accurate tracking.",
+    "openSettings": "Open settings",
+    "continueAnyway": "Continue anyway"
   },
   "errors": {
     "missingInfo": "Missing Information",

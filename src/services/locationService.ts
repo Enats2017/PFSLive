@@ -6,6 +6,7 @@ import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
 import { TrackingLogEntry, RACE_FINISHED_KEY } from './gpsService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { RR_FINISH_CONFIRMATIONS } from './trackingSessionRules';
 
 // Mirror of gpsService's BACKGROUND_SENT_COUNT_KEY — declared locally to avoid
 // a circular import. processQueue bumps it per drained fix so the counter is
@@ -15,6 +16,11 @@ const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
 // Mirror of gpsService's FINISH_LINE_THRESHOLD_KM (0.05 = 50m) — the distance
 // under which a `finish_source: 'distance'` finish is believed.
 const FINISH_LINE_THRESHOLD_KM = 0.05;
+
+// Mirror of gpsService's RR_FINISH_STREAK_KEY — declared locally to avoid a
+// circular import (trackingSessionRules has no imports, so pulling the count
+// from there is safe). The drain bumps the SAME counter as the live path.
+const RR_FINISH_STREAK_KEY = '@PFSLive:rrFinishStreak';
 
 // How many times one queued fix may be rejected by the server before it is
 // discarded to unblock everything behind it. Only counts CLIENT-side rejections
@@ -481,6 +487,32 @@ export const locationService = {
               } catch { /* logging must never break the drain */ }
               qFinished = false;
             }
+          }
+
+          // ✅ RR finish needs RR_FINISH_CONFIRMATIONS answers in a row here too —
+          // same rule and SAME counter as the live path (gpsService's shouldStop),
+          // so a live answer and a drained answer count together. 2026-10-17: the
+          // server read RaceResult's PREDICTED finish as a crossing; one answer was
+          // enough to end the session. A real RR finish is still finished on the
+          // next drained fix, so a genuine offline finish is only held one fix.
+          // Any not-finished answer resets the streak.
+          try {
+            if (qFinished && qResult!.finish_source === 'rr') {
+              const streak = (parseInt((await AsyncStorage.getItem(RR_FINISH_STREAK_KEY)) || '0', 10) || 0) + 1;
+              await AsyncStorage.setItem(RR_FINISH_STREAK_KEY, String(streak));
+              if (streak < RR_FINISH_CONFIRMATIONS) {
+                try {
+                  const { addLog } = require('./gpsService');
+                  await addLog('⏭️', `Finish held during drain — RaceResult says finished (${streak}/${RR_FINISH_CONFIRMATIONS}), waiting for confirmation`);
+                } catch { /* logging must never break the drain */ }
+                qFinished = false;
+              }
+            } else if (!qFinished) {
+              await AsyncStorage.removeItem(RR_FINISH_STREAK_KEY);
+            }
+          } catch {
+            // Storage failure must not fabricate a finish (matches the live path).
+            if (qResult!.finish_source === 'rr') qFinished = false;
           }
 
           if (qFinished) {

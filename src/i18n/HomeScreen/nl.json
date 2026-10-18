@@ -72,7 +72,13 @@
     "stopBeforeStartTitle": "De race is nog niet gestart",
     "stopBeforeStartMessage": "Tracking staat klaar en verstuurt je positie automatisch vanaf de start. Als je nu stopt, kan niemand je volgen, tenzij je opnieuw op Start tikt voordat je vertrekt.",
     "keepTracking": "Blijven tracken",
-    "stopAnyway": "Toch stoppen"
+    "stopAnyway": "Toch stoppen",
+    "stopAfterStartTitle": "Tracking stoppen?",
+    "stopAfterStartMessage": "Als je nu stopt, zien je volgers je live positie niet meer en kun je de tracking voor deze race mogelijk niet opnieuw starten.",
+    "approximateLocationTitle": "Exacte locatie staat uit",
+    "approximateLocationMessage": "Livio heeft alleen je geschatte locatie. Je positie op de live kaart kan daardoor een kilometer of meer afwijken en je aankomst wordt mogelijk niet herkend. Zet Exacte locatie aan voor Livio in Instellingen voor nauwkeurige tracking.",
+    "openSettings": "Instellingen openen",
+    "continueAnyway": "Toch doorgaan"
   },
   "errors": {
     "missingInfo": "Informatie ontbreekt",
