@@ -402,6 +402,16 @@ export const homeStyles = StyleSheet.create({
   notifViewButton: {
     backgroundColor: palette.navy,
   },
+  // Destructive choice inside a notif popup (e.g. "Stop anyway")
+  notifIconWrapperDanger: {
+    backgroundColor: palette.dangerBg,
+  },
+  notifDangerButton: {
+    borderColor: palette.danger,
+  },
+  notifDangerText: {
+    color: palette.danger,
+  },
   logosSection: {
     marginTop: spacing.md,
     paddingHorizontal: space.xl,

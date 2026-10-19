@@ -25,10 +25,16 @@ export interface StoredSessionLike {
 export function isStaleSession(
   params: StoredSessionLike | null | undefined,
   nowMs: number,
+  // When the session has no stored gun, judge it by when Start was pressed
+  // (gpsService's SESSION_STARTED_AT_KEY). 0/undefined = unknown → never stale.
+  sessionStartedAtMs?: number,
 ): boolean {
-  if (!params || !params.raceStartTime) return false;
-  const gun = new Date(params.raceStartTime).getTime();
-  return !isNaN(gun) && nowMs - gun > STALE_SESSION_MS;
+  if (!params) return false;
+  if (params.raceStartTime) {
+    const gun = new Date(params.raceStartTime).getTime();
+    if (!isNaN(gun)) return nowMs - gun > STALE_SESSION_MS;
+  }
+  return !!sessionStartedAtMs && sessionStartedAtMs > 0 && nowMs - sessionStartedAtMs > STALE_SESSION_MS;
 }
 
 /**
