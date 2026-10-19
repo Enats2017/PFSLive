@@ -1009,6 +1009,67 @@ const L = () => load('services/locationService').locationService;
     const all = await g2.getFullTrackingLog();
     assert.deepStrictEqual(all.map((x) => x.msg), ['a', 'b']);
   });
+  // ── 2026-10-19 re-check: edge cases ──
+  test('Android Start in the FOREGROUND → starts normally (control for the Android-only wait)', async () => {
+    await withRN('android', 'active', async () => { await startSession('2', '12'); });
+    assert.ok(M.store.has(PARAMS));
+  });
+  test('two flushes at the same moment (heartbeat + queue timer) → ONE start request', async () => {
+    armPing(); M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    const ts = TS();
+    const r = await Promise.all([ts.flushPendingStartPing(), ts.flushPendingStartPing()]);
+    assert.strictEqual(startPosts().length, 1); assert.ok(r.includes('sent') && r.includes('none'), JSON.stringify(r));
+  });
+  test('flush answered 429 (rate limited) → kept pending; next flush delivers it', async () => {
+    armPing(); M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    M.axios.script = [429];
+    assert.strictEqual(await TS().flushPendingStartPing(), 'gave_up'); assert.ok(M.store.has(PENDING_PING));
+    assert.strictEqual(await TS().flushPendingStartPing(), 'sent'); assert.ok(!M.store.has(PENDING_PING));
+  });
+  test('cold boot: session with NO stored gun but Start pressed 3 days ago → stopped, not resumed', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '1601', eventId: '100040', intervalSeconds: 30, raceStartTime: null, manualStart: 1 }));
+    M.store.set('@PFSLive:sessionStartedAt', String(M.clock - 72 * HOUR));
+    const g = load('services/gpsService'); await settle();
+    assert.ok(!M.store.has(PARAMS));
+    assert.ok((await g.getFullTrackingLog()).some((e) => e.icon === '🧹' && /^Cold boot/.test(e.msg)));
+  });
+  test('cold boot: manual-start session started 2h ago (no gun) → resumed (control)', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '1601', eventId: '100040', intervalSeconds: 30, raceStartTime: null, manualStart: 1 }));
+    M.store.set('@PFSLive:sessionStartedAt', String(M.clock - 2 * HOUR));
+    load('services/gpsService'); await settle();
+    assert.ok(M.store.has(PARAMS));
+  });
+  test('pre-gun wake boundary: exactly 30 min before → ⏰; 31 min before → 🔋', async () => {
+    await startSession('4823', '19', new Date(M.clock + 30 * 60000).toISOString());
+    M.bg.pace = []; await M.bg.heartbeat({});
+    assert.deepStrictEqual(M.bg.pace, [true]);
+    await load('services/gpsService').stopWatching();
+    await startSession('4823', '19', new Date(M.clock + 31 * 60000).toISOString());
+    M.bg.pace = []; await M.bg.heartbeat({});
+    assert.deepStrictEqual(M.bg.pace, []);
+  });
+  test('heartbeat never stops a session whose gun is in the future or a manual start of today', async () => {
+    await startSession('2', '12', new Date(M.clock + 5 * HOUR).toISOString());
+    await M.bg.heartbeat({}); assert.ok(M.store.has(PARAMS), 'future gun kept');
+    await load('services/gpsService').stopWatching();
+    const { gpsService } = load('services/gpsService');
+    await gpsService.startWatchingPosition(() => {}, () => {}, 30, '7', '100050', 't', 'b', 59, null, 1, 'Custom');
+    await M.bg.heartbeat({}); assert.ok(M.store.has(PARAMS), 'manual start kept');
+  });
+  test('log de-dup keeps the SAME message at DIFFERENT times (only exact repeats go)', async () => {
+    M.store.set('@PFSLive:trackingLogSeg:0', JSON.stringify([{ ts: 1, icon: '⏭️', msg: 'Throttled' }, { ts: 2, icon: '⏭️', msg: 'Throttled' }, { ts: 1, icon: '⏭️', msg: 'Throttled' }]));
+    M.store.set('@PFSLive:trackingLogSegCount', '1');
+    const log = await G().getFullTrackingLog();
+    assert.deepStrictEqual(log.map((e) => e.ts), [1, 2]);
+  });
+  test('interim single-flight releases: a failed upload is retried by the NEXT call', async () => {
+    arm();
+    M.api.handler = () => Promise.reject(Object.assign(new Error('x'), { type: 'network' }));
+    await Promise.all([G().maybeUploadInterimLog(), G().maybeUploadInterimLog()]);
+    M.api.handler = null;
+    await G().maybeUploadInterimLog();
+    assert.strictEqual(logUploads().length, 1);
+  });
   results.push(await run('13. event 19 review (silent iOS starts, persisted start ping, pre-gun wake, zombie sessions, interim race, log dup)'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
