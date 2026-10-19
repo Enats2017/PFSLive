@@ -573,42 +573,125 @@ const L = () => load('services/locationService').locationService;
   const bodyOf = (re) => { const m = home.match(re); assert.ok(m, 'function found in HomeScreen.tsx: ' + re); return m[1]; };
   // Looked up inside each test (not here), so code without the function fails
   // those tests instead of crashing the whole run.
-  const confirmBody = () => bodyOf(/const confirmStopTracking = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[hasRaceStarted, stopGPSTracking, t\]\);/);
+  const confirmBody = () => bodyOf(/const confirmStopTracking = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[hasRaceStarted\]\);/);
+  const yesBody = () => bodyOf(/const handleStopConfirmYes = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[stopGPSTracking\]\);/);
+  const noBody = () => bodyOf(/const handleStopConfirmNo = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[\]\);/);
   const startedBody = () => bodyOf(/const hasRaceStarted = useCallback\(\(\): boolean => \{([\s\S]*?)\n  \}, \[homeData\?\.manual_start\]\);/);
+  // Runs the real bodies: Stop opens the popup (mode), the two buttons close it.
   const confirmStop = (started) => {
-    const calls = { stop: 0, alerts: [] };
-    new Function('hasRaceStarted', 'stopGPSTracking', 'Alert', 't', confirmBody())(
-      () => started, () => { calls.stop++; return Promise.resolve(); },
-      { alert: (title, msg, buttons) => calls.alerts.push({ title, msg, buttons }) }, (k) => k);
+    const calls = { stop: 0, modes: [] };
+    const setMode = (m) => calls.modes.push(m);
+    const stopFn = () => { calls.stop++; return Promise.resolve(); };
+    new Function('hasRaceStarted', 'setStopConfirmMode', confirmBody())(() => started, setMode);
+    calls.yes = () => new Function('setStopConfirmMode', 'stopGPSTracking', yesBody())(setMode, stopFn);
+    calls.no = () => new Function('setStopConfirmMode', noBody())(setMode);
     return calls;
   };
   const raceStarted = (homeData, start) =>
     new Function('homeData', 'raceStartTimeRef', startedBody())(homeData, { current: start });
 
-  test('#2 Stop BEFORE the gun → confirmation, tracking keeps running', async () => {
+  test('#2 Stop BEFORE the gun → confirmation popup (pre-gun copy), tracking keeps running', async () => {
     const c = confirmStop(false);
     assert.strictEqual(c.stop, 0, 'not stopped yet');
-    assert.strictEqual(c.alerts.length, 1);
-    assert.strictEqual(c.alerts[0].title, 'home:alerts.stopBeforeStartTitle');
-    assert.strictEqual(c.alerts[0].msg, 'home:alerts.stopBeforeStartMessage');
+    assert.deepStrictEqual(c.modes, ['before']);
   });
-  test('#2 "Keep tracking" → nothing happens; "Stop anyway" → stops once', async () => {
+  test('#2 "Keep tracking" → popup closes, nothing stopped; "Stop anyway" → closes and stops once', async () => {
     const c = confirmStop(false);
-    const [keep, stop] = c.alerts[0].buttons;
-    assert.strictEqual(keep.text, 'home:alerts.keepTracking'); assert.strictEqual(keep.style, 'cancel');
-    assert.strictEqual(keep.onPress, undefined, 'keep has no action');
-    assert.strictEqual(stop.text, 'home:alerts.stopAnyway'); assert.strictEqual(stop.style, 'destructive');
-    stop.onPress();
-    assert.strictEqual(c.stop, 1);
+    c.no();
+    assert.deepStrictEqual(c.modes, ['before', null]); assert.strictEqual(c.stop, 0);
+    c.yes();
+    assert.deepStrictEqual(c.modes, ['before', null, null]); assert.strictEqual(c.stop, 1);
   });
   // Changed 2026-10-18 (M4): post-gun Stop used to be one tap and irreversible.
-  test('#2 Stop AFTER the gun → confirmation with post-gun copy, not stopped until confirmed', async () => {
+  test('#2 Stop AFTER the gun → confirmation popup with post-gun copy, not stopped until confirmed', async () => {
     const c = confirmStop(true);
-    assert.strictEqual(c.stop, 0, 'not stopped yet'); assert.strictEqual(c.alerts.length, 1);
-    assert.strictEqual(c.alerts[0].title, 'home:alerts.stopAfterStartTitle');
-    assert.strictEqual(c.alerts[0].msg, 'home:alerts.stopAfterStartMessage');
-    c.alerts[0].buttons[1].onPress();
+    assert.strictEqual(c.stop, 0, 'not stopped yet'); assert.deepStrictEqual(c.modes, ['after']);
+    c.yes();
     assert.strictEqual(c.stop, 1);
+  });
+  // 2026-10-19: the confirm was a native Alert.alert, unlike every other popup.
+  test('#2 Stop popup is the app\'s own notif modal (not Alert), copy + buttons wired', async () => {
+    assert.ok(!/confirmStopTracking[\s\S]{0,200}Alert\.alert/.test(home), 'no Alert.alert in the stop confirm');
+    const m = home.match(/<Modal[^>]*?visible=\{stopConfirmMode !== null\}[\s\S]*?<\/Modal>/);
+    assert.ok(m, 'Modal bound to stopConfirmMode');
+    const jsx = m[0];
+    for (const k of ['homeStyles.notifCard', 'home:alerts.stopAfterStartTitle', 'home:alerts.stopBeforeStartTitle',
+      'home:alerts.stopAfterStartMessage', 'home:alerts.stopBeforeStartMessage', 'home:alerts.keepTracking', 'home:alerts.stopAnyway',
+      'onRequestClose={handleStopConfirmNo}']) assert.ok(jsx.includes(k), 'modal has ' + k);
+    assert.ok(/onPress=\{handleStopConfirmNo\}[\s\S]*?home:alerts\.keepTracking/.test(jsx), 'Keep tracking → No handler');
+    assert.ok(/onPress=\{handleStopConfirmYes\}[\s\S]*?home:alerts\.stopAnyway/.test(jsx), 'Stop anyway → Yes handler');
+    const styles = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8');
+    for (const k of ['notifIconWrapperDanger', 'notifDangerButton', 'notifDangerText']) assert.ok(styles.includes(k + ':'), 'style ' + k);
+  });
+  // Bodies lifted from HomeScreen.tsx (CR-stripped) and run with stand-ins.
+  const homeLF = home.replace(/\r/g, '');
+  const cb = (name, deps) => {
+    const re = new RegExp('const ' + name + ' = useCallback\\(\\(([^)]*)\\) => \\{([\\s\\S]*?)\\n  \\}, \\[' + deps + '\\]\\);');
+    const m = homeLF.match(re); assert.ok(m, name + ' found'); return { params: m[1], body: m[2] };
+  };
+  const modalJsx = (visible) => {
+    const esc = visible.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const m = homeLF.match(new RegExp('<Modal[^>]*?visible=\\{' + esc + '\\}[\\s\\S]*?</Modal>'));
+    assert.ok(m, 'Modal bound to ' + visible); return m[0];
+  };
+  test('#2 popups close by themselves when tracking ends while open (Stop: no second stop; override: no late Start Now)', async () => {
+    const m = homeLF.match(/useEffect\(\(\) => \{\n    if \(!isGPSActive\) \{([\s\S]*?)\n    \}\n  \}, \[isGPSActive\]\);/);
+    assert.ok(m, 'auto-close effect present');
+    const run = (active) => {
+      const calls = [];
+      new Function('isGPSActive', 'setStopConfirmMode', 'setShowOverrideModal', 'if (!isGPSActive) {' + m[1] + '}')(
+        active, (x) => calls.push(['stop', x]), (x) => calls.push(['override', x]));
+      return calls;
+    };
+    assert.deepStrictEqual(run(false), [['stop', null], ['override', false]]);
+    assert.deepStrictEqual(run(true), [], 'nothing closed while tracking runs');
+  });
+
+  // ── 2026-10-19: the last three Home popups moved off Alert.alert ──
+  test('Home has no native Alert left (every popup is the notif modal)', async () => {
+    assert.ok(!/Alert\.alert\(/.test(homeLF), 'no Alert.alert');
+    assert.ok(!/^\s*Alert,$/m.test(homeLF), 'Alert no longer imported');
+    for (const v of ['showStartConfirmModal', 'stopConfirmMode !== null', 'startErrorMessage !== null', 'showOverrideModal', 'showEarlyTrackingModal'])
+      assert.ok(modalJsx(v).includes('homeStyles.notifCard'), v + ' uses notifCard');
+  });
+  test('start failure: error text shown in the popup with one OK button; OK closes it', async () => {
+    assert.ok(/setStartErrorMessage\(error instanceof Error \? error\.message : t\('home:errors\.trackingFailed'\)\);/.test(homeLF), 'error → popup');
+    const jsx = modalJsx('startErrorMessage !== null');
+    assert.ok(jsx.includes("t('common:errors.generic')") && jsx.includes('{startErrorMessage}'), 'title + message');
+    assert.strictEqual((jsx.match(/<TouchableOpacity/g) || []).length, 1, 'one button');
+    assert.ok(/onPress=\{handleStartErrorClose\}[\s\S]*?t\('common:ok'\)/.test(jsx), 'OK closes');
+    assert.ok(jsx.includes('onRequestClose={handleStartErrorClose}'), 'back closes');
+    const c = cb('handleStartErrorClose', ''); const set = [];
+    new Function('setStartErrorMessage', c.body)((x) => set.push(x));
+    assert.deepStrictEqual(set, [null]);
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/common/${l}.json`, 'utf8'));
+      assert.ok(j.ok && j.errors && j.errors.generic, `${l}: common ok + errors.generic`);
+    }
+  });
+  test('start in a pocket (Android backgrounded) still re-arms with a toast, never the error popup', async () => {
+    assert.ok(/code === START_BACKGROUNDED_CODE\) \{[\s\S]{0,200}pendingStartRef\.current = true;[\s\S]{0,200}return;\s*\}\s*setStartErrorMessage\(/.test(homeLF));
+  });
+  test('manual override: button opens popup; "Start Now" → sending on + toast; "Cancel" → nothing', async () => {
+    const open = cb('manualStartSending', ''); const shown = [];
+    new Function('setShowOverrideModal', open.body)((x) => shown.push(x));
+    assert.deepStrictEqual(shown, [true]);
+    const yes = cb('handleOverrideConfirm', 't');
+    const st = { shown: [], sending: [], toasts: 0 }; const ref = { current: false };
+    new Function('setShowOverrideModal', 'isSendingDataRef', 'setIsSendingData', 'toastSuccess', 't', yes.body)(
+      (x) => st.shown.push(x), ref, (x) => st.sending.push(x), () => st.toasts++, (k) => k);
+    assert.deepStrictEqual([st.shown, ref.current, st.sending, st.toasts], [[false], true, [true], 1]);
+    const no = cb('handleOverrideCancel', ''); const n = [];
+    new Function('setShowOverrideModal', no.body)((x) => n.push(x));
+    assert.deepStrictEqual(n, [false]);
+    const jsx = modalJsx('showOverrideModal');
+    assert.ok(/onPress=\{handleOverrideConfirm\}[\s\S]*?home:alerts\.startNow/.test(jsx), 'Start Now wired');
+    assert.ok(/onPress=\{handleOverrideCancel\}[\s\S]*?home:alerts\.cancel/.test(jsx), 'Cancel wired');
+    assert.ok(jsx.includes('home:alerts.overrideTitle') && jsx.includes('home:alerts.overrideMessage') && jsx.includes('onRequestClose={handleOverrideCancel}'));
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      for (const k of ['overrideTitle', 'overrideMessage', 'startNow', 'cancel']) assert.ok(j.alerts[k], `${l}.alerts.${k}`);
+    }
   });
   test('#2 "has the race started": before/after gun, unknown start, manual start', async () => {
     const now = Date.now();
@@ -854,6 +937,252 @@ const L = () => load('services/locationService').locationService;
     assert.ok(!/if \(await gpsService\.isApproximateLocation\(\)\)/.test(s), 'no duplicate approximate alert');
   });
   results.push(await run('12. 2026-10-18 audit (rr finish authoritative, stale sessions, gun offset, watchdog ids)'));
+
+  // ════════════ 13. event 19 post-race review (2026-10-19) ════════════
+  // Evidence: prod DB + api_logs_2026-10-18, running code 06ffa9a (OTA 01a138e5).
+  const RN = require('react-native');
+  const PENDING_PING = '@PFSLive:pendingStartPing';
+  const withRN = async (os, appState, fn) => {
+    const o = RN.Platform.OS, a = RN.AppState.currentState;
+    RN.Platform.OS = os; RN.AppState.currentState = appState;
+    try { return await fn(); } finally { RN.Platform.OS = o; RN.AppState.currentState = a; }
+  };
+  const startPosts = () => M.axios.calls.filter((c) => c.url.endsWith('/save_tracking_start_api.php'));
+
+  test('p4537/p4807/p4826: iOS Start with the phone already pocketed → session starts (no 3s foreground wait)', async () => {
+    await withRN('ios', 'background', async () => { await startSession('4807', '19'); });
+    assert.ok(M.store.has(PARAMS), 'session params stored');
+    assert.strictEqual(JSON.parse(M.store.get(PARAMS)).participantId, '4807');
+  });
+  test('Android Start while backgrounded → throws code start_backgrounded (HomeScreen re-arms it), no session', async () => {
+    const { START_BACKGROUNDED_CODE } = load('services/gpsService');
+    let err = null;
+    await withRN('android', 'background', async () => { try { await startSession('2', '12'); } catch (e) { err = e; } });
+    assert.ok(err, 'start threw'); assert.strictEqual(START_BACKGROUNDED_CODE, 'start_backgrounded'); assert.strictEqual(err.code, 'start_backgrounded');
+    assert.ok(!M.store.has(PARAMS), 'no half-started session');
+  });
+  test('HomeScreen wiring: start ping only AFTER the engine started; backgrounded start re-armed; pending ping flushed by the queue timer', async () => {
+    const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
+    const iStart = s.indexOf('await gpsService.startWatchingPosition(');
+    const iPing = s.indexOf('void sendTrackingStartPing({');
+    assert.ok(iStart > 0 && iPing > iStart, 'ping after startWatchingPosition');
+    assert.ok(/\(error as any\)\?\.code === START_BACKGROUNDED_CODE\) \{\s*pendingStartRef\.current = true;/.test(s), 'backgrounded start re-armed');
+    assert.ok(/void maybeUploadInterimLog\(\);\s*\/\/[^\n]*\n\s*void flushPendingStartPing\(\);/.test(s), 'queue timer flushes the pending ping');
+  });
+  test('reopenToStart string exists in en/fr/nl', async () => {
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      assert.ok(typeof j.tracking.reopenToStart === 'string' && j.tracking.reopenToStart.length > 10, l);
+    }
+  });
+
+  const TS = () => load('services/trackingStartService');
+  const armPing = (pid = '4566', eid = '19') => M.store.set(PARAMS, JSON.stringify({ participantId: pid, eventId: eid, raceStartTime: new Date(M.clock - HOUR).toISOString(), manualStart: 0 }));
+  test('p4566: all in-line retries fail → ping stays pending; later flush delivers it (late_ping) and clears it', async () => {
+    armPing(); M.axios.script = ['network', 'network', 'network', 'network'];
+    assert.strictEqual(await TS().sendTrackingStartPing({ participantId: '4566', eventId: '19', startedAfterGun: false, isStillTracking: () => true, sleep: async () => {} }), 'gave_up');
+    assert.ok(M.store.has(PENDING_PING), 'pending kept');
+    assert.strictEqual(await TS().flushPendingStartPing(), 'sent');
+    const last = startPosts().pop();
+    assert.strictEqual(last.body.participantId, '4566'); assert.strictEqual(last.body.diag.late_ping, true);
+    assert.ok(!M.store.has(PENDING_PING), 'cleared after delivery');
+  });
+  test('pending ping cleared on sent / 4xx / Stop-before-retry', async () => {
+    armPing();
+    await TS().sendTrackingStartPing({ participantId: '4566', eventId: '19', startedAfterGun: false, isStillTracking: () => true, sleep: async () => {} });
+    assert.ok(!M.store.has(PENDING_PING), 'sent');
+    M.axios.script = [401];
+    await TS().sendTrackingStartPing({ participantId: '4566', eventId: '19', startedAfterGun: false, isStillTracking: () => true, sleep: async () => {} });
+    assert.ok(!M.store.has(PENDING_PING), 'rejected');
+    let active = true; M.axios.script = ['network'];
+    await TS().sendTrackingStartPing({ participantId: '4566', eventId: '19', startedAfterGun: false, isStillTracking: () => active, sleep: async () => { active = false; } });
+    assert.ok(!M.store.has(PENDING_PING), 'stopped');
+  });
+  test('pending ping for an ended / different session → dropped, never sent late', async () => {
+    M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    assert.strictEqual(await TS().flushPendingStartPing(), 'stopped');       // no session at all
+    assert.strictEqual(startPosts().length, 0); assert.ok(!M.store.has(PENDING_PING));
+    armPing('9999', '20');
+    M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    assert.strictEqual(await TS().flushPendingStartPing(), 'stopped');       // another session is live
+    assert.strictEqual(startPosts().length, 0);
+  });
+  test('flush still failing (network) → stays pending for the next wake; no pending → no request', async () => {
+    assert.strictEqual(await TS().flushPendingStartPing(), 'none'); assert.strictEqual(startPosts().length, 0);
+    armPing(); M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    M.axios.script = ['network'];
+    assert.strictEqual(await TS().flushPendingStartPing(), 'gave_up'); assert.ok(M.store.has(PENDING_PING));
+  });
+  test('heartbeat delivers a pending start ping; Stop (stopWatching) discards it', async () => {
+    await startSession('4566', '19');
+    M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    await M.bg.heartbeat({}); await settle();
+    assert.ok(startPosts().some((c) => c.body.diag && c.body.diag.late_ping === true), 'sent from the heartbeat');
+    M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    await load('services/gpsService').stopWatching();
+    assert.ok(!M.store.has(PENDING_PING), 'cleared by the stop');
+  });
+
+  test('p4823: pre-race heartbeat 20 min before the gun → engine kept MOVING (⏰), nothing sent', async () => {
+    await startSession('4823', '19', new Date(M.clock + 20 * 60000).toISOString());
+    M.bg.pace = [];
+    await M.bg.heartbeat({});
+    const log = await load('services/gpsService').getFullTrackingLog();
+    assert.ok(log.some((e) => e.icon === '⏰' && /gun in 20min, engine kept moving/.test(e.msg)), '⏰ logged');
+    assert.deepStrictEqual(M.bg.pace, [true], 'changePace(true)');
+    assert.strictEqual(locPosts(), 0, 'no fix sent before the gun');
+  });
+  test('pre-race heartbeat 60 min before the gun → still low-power (🔋), engine left idle', async () => {
+    await startSession('4823', '19', new Date(M.clock + 60 * 60000).toISOString());
+    M.bg.pace = [];
+    await M.bg.heartbeat({});
+    const log = await load('services/gpsService').getFullTrackingLog();
+    assert.ok(log.some((e) => e.icon === '🔋')); assert.ok(!log.some((e) => e.icon === '⏰'));
+    assert.deepStrictEqual(M.bg.pace, []);
+  });
+
+  test('isStaleSession: no gun → judged by session start (25h stale, 2h not, unknown never)', async () => {
+    const { isStaleSession } = load('services/trackingSessionRules');
+    assert.strictEqual(isStaleSession({ raceStartTime: null }, M.clock, M.clock - 25 * HOUR), true);
+    assert.strictEqual(isStaleSession({ raceStartTime: null }, M.clock, M.clock - 2 * HOUR), false);
+    assert.strictEqual(isStaleSession({ raceStartTime: null }, M.clock, 0), false);
+    assert.strictEqual(isStaleSession({ raceStartTime: new Date(M.clock - 2 * HOUR).toISOString() }, M.clock, M.clock - 99 * HOUR), false, 'a stored gun wins');
+  });
+  test('p2525 (race of 10-03, 16 days later): heartbeat in a never-restarted process → session stopped', async () => {
+    await startSession('2525', '15', new Date(M.clock - 16 * 24 * HOUR).toISOString());
+    assert.ok(M.store.has(PARAMS));
+    await M.bg.heartbeat({});
+    assert.ok(!M.store.has(PARAMS), 'stopped');
+    assert.ok((await load('services/gpsService').getFullTrackingLog()).some((e) => e.icon === '🧹' && /^Heartbeat/.test(e.msg)));
+  });
+  test('stale session: a live fix is NOT sent, the session stops', async () => {
+    liveAnswers.length = 0; lat = 50; answerLocation();
+    await startSession('2525', '15', new Date(M.clock - 26 * HOUR).toISOString());
+    M.clock += 1000; await fire(); M.clock += 31000; await fire();
+    assert.strictEqual(locPosts(), 0, 'nothing posted');
+    assert.ok(!M.store.has(PARAMS), 'stopped');
+  });
+  test('control: 20h after the gun (overnight ultra) the heartbeat and sends carry on', async () => {
+    liveAnswers.length = 0; lat = 50; answerLocation();
+    await startSession('2', '12', new Date(M.clock - 20 * HOUR).toISOString());
+    await M.bg.heartbeat({});
+    assert.ok(M.store.has(PARAMS));
+    M.clock += 1000; await fire(); M.clock += 31000; await fire();
+    assert.strictEqual(locPosts(), 1);
+  });
+  test('p1601 (custom event, no stored gun, Start pressed 6 weeks ago) → stopped on the heartbeat', async () => {
+    await startSession('1601', '100040', null);
+    M.store.set('@PFSLive:sessionStartedAt', String(M.clock - 42 * 24 * HOUR));
+    await M.bg.heartbeat({});
+    assert.ok(!M.store.has(PARAMS));
+  });
+
+  test('p4536: 7 concurrent interim checks → ONE upload', async () => {
+    arm();
+    const g = G();
+    await Promise.all(Array.from({ length: 7 }, () => g.maybeUploadInterimLog()));
+    assert.strictEqual(logUploads().length, 1);
+  });
+  test('p4848: a log whose segments repeat a whole block uploads each entry once, in order', async () => {
+    const e = (i) => ({ ts: 1000 + i, icon: '🛰️', msg: 'loc ' + i });
+    const block = Array.from({ length: 220 }, (_, i) => e(i));
+    M.store.set('@PFSLive:trackingLogSeg:0', JSON.stringify(block.concat(block)));
+    M.store.set('@PFSLive:trackingLogSeg:1', JSON.stringify(block.concat([e(300), e(301)])));
+    M.store.set('@PFSLive:trackingLogSegCount', '2');
+    M.store.set('@PFSLive:trackingLog', JSON.stringify([e(300), e(302)]));
+    const log = await G().getFullTrackingLog();
+    assert.strictEqual(log.length, 223);
+    assert.deepStrictEqual(log.slice(-3).map((x) => x.msg), ['loc 300', 'loc 301', 'loc 302']);
+  });
+  // Guard only: the exact interleaving that tripled p4848's block was not
+  // reproducible in this harness; this pins the de-dup on the rehydrate path.
+  test('rehydrate never doubles entries the buffer already holds (guard)', async () => {
+    const g = G();
+    await g.addLog('🛰️', 'a');                        // hydrates (empty disk), buffer [a]
+    await g.flushTrackingLog();
+    const disk = JSON.parse(M.store.get('@PFSLive:trackingLog'));
+    assert.strictEqual(disk.length, 1);
+    // a second context: disk holds [a]; that context had already pushed the same entry
+    delete require.cache[require.resolve(`${SRC}/services/gpsService.ts`)];
+    const g2 = G();
+    await g2.addLog('🛰️', 'b');
+    const all = await g2.getFullTrackingLog();
+    assert.deepStrictEqual(all.map((x) => x.msg), ['a', 'b']);
+  });
+  // ── 2026-10-19 re-check: edge cases ──
+  test('Android Start in the FOREGROUND → starts normally (control for the Android-only wait)', async () => {
+    await withRN('android', 'active', async () => { await startSession('2', '12'); });
+    assert.ok(M.store.has(PARAMS));
+  });
+  test('two flushes at the same moment (heartbeat + queue timer) → ONE start request', async () => {
+    armPing(); M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    const ts = TS();
+    const r = await Promise.all([ts.flushPendingStartPing(), ts.flushPendingStartPing()]);
+    assert.strictEqual(startPosts().length, 1); assert.ok(r.includes('sent') && r.includes('none'), JSON.stringify(r));
+  });
+  test('finish already detected (finishBackgroundStop uploading, params still there) → pending ping dropped, NOT sent', async () => {
+    armPing(); M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    M.store.set('@PFSLive:raceFinished', '1');
+    assert.strictEqual(await TS().flushPendingStartPing(), 'stopped');
+    assert.strictEqual(startPosts().length, 0); assert.ok(!M.store.has(PENDING_PING));
+  });
+  test('a NEW Start clears the previous finish flag, so its own pending ping is still delivered', async () => {
+    M.store.set('@PFSLive:raceFinished', '1');
+    await startSession('4566', '19');
+    M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    assert.strictEqual(await TS().flushPendingStartPing(), 'sent');
+  });
+  test('flush answered 429 (rate limited) → kept pending; next flush delivers it', async () => {
+    armPing(); M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    M.axios.script = [429];
+    assert.strictEqual(await TS().flushPendingStartPing(), 'gave_up'); assert.ok(M.store.has(PENDING_PING));
+    assert.strictEqual(await TS().flushPendingStartPing(), 'sent'); assert.ok(!M.store.has(PENDING_PING));
+  });
+  test('cold boot: session with NO stored gun but Start pressed 3 days ago → stopped, not resumed', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '1601', eventId: '100040', intervalSeconds: 30, raceStartTime: null, manualStart: 1 }));
+    M.store.set('@PFSLive:sessionStartedAt', String(M.clock - 72 * HOUR));
+    const g = load('services/gpsService'); await settle();
+    assert.ok(!M.store.has(PARAMS));
+    assert.ok((await g.getFullTrackingLog()).some((e) => e.icon === '🧹' && /^Cold boot/.test(e.msg)));
+  });
+  test('cold boot: manual-start session started 2h ago (no gun) → resumed (control)', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '1601', eventId: '100040', intervalSeconds: 30, raceStartTime: null, manualStart: 1 }));
+    M.store.set('@PFSLive:sessionStartedAt', String(M.clock - 2 * HOUR));
+    load('services/gpsService'); await settle();
+    assert.ok(M.store.has(PARAMS));
+  });
+  test('pre-gun wake boundary: exactly 30 min before → ⏰; 31 min before → 🔋', async () => {
+    await startSession('4823', '19', new Date(M.clock + 30 * 60000).toISOString());
+    M.bg.pace = []; await M.bg.heartbeat({});
+    assert.deepStrictEqual(M.bg.pace, [true]);
+    await load('services/gpsService').stopWatching();
+    await startSession('4823', '19', new Date(M.clock + 31 * 60000).toISOString());
+    M.bg.pace = []; await M.bg.heartbeat({});
+    assert.deepStrictEqual(M.bg.pace, []);
+  });
+  test('heartbeat never stops a session whose gun is in the future or a manual start of today', async () => {
+    await startSession('2', '12', new Date(M.clock + 5 * HOUR).toISOString());
+    await M.bg.heartbeat({}); assert.ok(M.store.has(PARAMS), 'future gun kept');
+    await load('services/gpsService').stopWatching();
+    const { gpsService } = load('services/gpsService');
+    await gpsService.startWatchingPosition(() => {}, () => {}, 30, '7', '100050', 't', 'b', 59, null, 1, 'Custom');
+    await M.bg.heartbeat({}); assert.ok(M.store.has(PARAMS), 'manual start kept');
+  });
+  test('log de-dup keeps the SAME message at DIFFERENT times (only exact repeats go)', async () => {
+    M.store.set('@PFSLive:trackingLogSeg:0', JSON.stringify([{ ts: 1, icon: '⏭️', msg: 'Throttled' }, { ts: 2, icon: '⏭️', msg: 'Throttled' }, { ts: 1, icon: '⏭️', msg: 'Throttled' }]));
+    M.store.set('@PFSLive:trackingLogSegCount', '1');
+    const log = await G().getFullTrackingLog();
+    assert.deepStrictEqual(log.map((e) => e.ts), [1, 2]);
+  });
+  test('interim single-flight releases: a failed upload is retried by the NEXT call', async () => {
+    arm();
+    M.api.handler = () => Promise.reject(Object.assign(new Error('x'), { type: 'network' }));
+    await Promise.all([G().maybeUploadInterimLog(), G().maybeUploadInterimLog()]);
+    M.api.handler = null;
+    await G().maybeUploadInterimLog();
+    assert.strictEqual(logUploads().length, 1);
+  });
+  results.push(await run('13. event 19 review (silent iOS starts, persisted start ping, pre-gun wake, zombie sessions, interim race, log dup)'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);

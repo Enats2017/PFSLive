@@ -281,7 +281,8 @@ module.exports = function register({ M, load, test, SRC }) {
     const s = read('screens/HomeScreen.tsx');
     const fn = block(s, 'const doStartGPSTracking = useCallback(async () => {', 700);
     assert.ok(/if \(isStarting\(\) \|\| isGPSActiveRef\.current\) return;\s*startingRef\.current = true;/.test(fn));
-    assert.ok(/\} finally \{[\s\S]{0,200}startingRef\.current = false;\s*\}/.test(block(s, "void analyticsService.logStartStep('failed', 'exception'", 900)));
+    // 1400: the catch also holds master's pocket re-arm + error popup (merged 2026-10-19).
+    assert.ok(/\} finally \{[\s\S]{0,200}startingRef\.current = false;\s*\}/.test(block(s, "void analyticsService.logStartStep('failed', 'exception'", 1400)));
     assert.ok(/if \(isStarting\(\)\) return;/.test(block(s, 'const confirmStartTracking', 200)), 'confirm ignores');
     assert.ok(/if \(isStarting\(\)\) return;[\s\S]{0,120}'start_approximate'/.test(s), '"Start anyway" ignores');
   });

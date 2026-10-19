@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import * as Application from 'expo-application';
@@ -24,7 +25,24 @@ import { gpsService } from './gpsService';
 // device log only uploads on Stop, so nothing told us why. The server logs
 // these fields on the TRACKING_START line.
 //
+// ✅ PERSISTED until delivered (2026-10-19, event 19 review). The 3s/10s/30s
+// retries are JS timers, and iOS suspends those the moment the phone is
+// pocketed: p4566 pressed Start, went to the background 8s later, tracked the
+// whole race — and the server never got its start row. Without that row home_api
+// read the 🩺 interim log as a STOP and told the phone "no race" mid-race. So the
+// ping is stored under PENDING_START_PING_KEY before the first attempt, and
+// flushPendingStartPing() (called from the engine heartbeat and HomeScreen's
+// queue timer, both of which run in background wakes) delivers it later. Cleared
+// on success, on a definitive 4xx, and when the session ends (_doFullStop).
+//
 // Lives here rather than inline in HomeScreen so the retry rules can be tested.
+
+export const PENDING_START_PING_KEY = '@PFSLive:pendingStartPing';
+// Same literal as gpsService's TRACKING_PARAMS_KEY — re-declared to avoid an
+// import cycle at load time (see CLAUDE.md on locally re-declared keys).
+const TRACKING_PARAMS_KEY_LOCAL = '@PFSLive:trackingParams';
+// gpsService's RACE_FINISHED_KEY, same reason.
+const RACE_FINISHED_KEY_LOCAL = '@PFSLive:raceFinished';
 
 export const START_PING_DELAYS_MS = [0, 3000, 10000, 30000];
 
@@ -65,11 +83,17 @@ export const sendTrackingStartPing = async (opts: {
   if (!participantId || !eventId) return 'skipped';
 
   const diag = await buildStartDiag(startedAfterGun);
+  try {
+    await AsyncStorage.setItem(PENDING_START_PING_KEY, JSON.stringify({ participantId, eventId, diag }));
+  } catch { /* silent — the in-line attempts below still run */ }
+  const clearPending = async () => {
+    try { await AsyncStorage.removeItem(PENDING_START_PING_KEY); } catch { /* silent */ }
+  };
 
   for (let attempt = 0; attempt < START_PING_DELAYS_MS.length; attempt++) {
     if (START_PING_DELAYS_MS[attempt] > 0) await sleep(START_PING_DELAYS_MS[attempt]);
     // Runner already pressed Stop — a late start row would only mislead.
-    if (!isStillTracking()) return 'stopped';
+    if (!isStillTracking()) { await clearPending(); return 'stopped'; }
     try {
       const headers = await API_CONFIG.getHeaders();
       await axios.post(
@@ -78,16 +102,74 @@ export const sendTrackingStartPing = async (opts: {
         { headers, timeout: API_CONFIG.TIMEOUT },
       );
       if (API_CONFIG.DEBUG) console.log('✅ start ping sent', participantId, eventId);
+      await clearPending();
       return 'sent';
     } catch (e: any) {
       // A 4xx (other than 429) is a definitive answer — retrying can't change it.
       const status = e?.response?.status;
       if (status && status >= 400 && status < 500 && status !== 429) {
         if (API_CONFIG.DEBUG) console.log('⚠️ start ping rejected', status);
+        await clearPending();
         return 'rejected';
       }
       if (API_CONFIG.DEBUG) console.log(`⚠️ start ping failed (attempt ${attempt + 1}, non-blocking)`, e?.message);
     }
   }
+  // Left in PENDING_START_PING_KEY — flushPendingStartPing() keeps trying.
   return 'gave_up';
+};
+
+let _flushInFlight = false;
+
+/**
+ * One delivery attempt for a start ping that the in-line retries did not get
+ * through. Only while the SAME session is still live: a ping for a session that
+ * has ended (or been replaced) is dropped, never sent late. Safe to call often —
+ * a no-op without a pending ping, and single-flight within a JS context.
+ */
+export const flushPendingStartPing = async (): Promise<StartPingResult | 'none'> => {
+  if (_flushInFlight) return 'none';
+  _flushInFlight = true;
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_START_PING_KEY);
+    if (!raw) return 'none';
+    let pending: any = null;
+    try { pending = JSON.parse(raw); } catch { /* corrupt — drop below */ }
+    const paramsRaw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY_LOCAL);
+    let params: any = null;
+    try { params = paramsRaw ? JSON.parse(paramsRaw) : null; } catch { /* treat as no session */ }
+    const sameSession = !!pending && !!params
+      && String(params.participantId) === String(pending.participantId)
+      && String(params.eventId) === String(pending.eventId);
+    // A finished session is over even while its params still exist:
+    // finishBackgroundStop uploads the finish log BEFORE _doFullStop clears them,
+    // and a start row written in that gap would be newer than the finish log —
+    // home_api would then offer Start again to a finisher.
+    const finished = (await AsyncStorage.getItem(RACE_FINISHED_KEY_LOCAL)) === '1';
+    if (!sameSession || finished) {
+      await AsyncStorage.removeItem(PENDING_START_PING_KEY);
+      return 'stopped';
+    }
+    try {
+      const headers = await API_CONFIG.getHeaders();
+      await axios.post(
+        getApiEndpoint(API_CONFIG.ENDPOINTS.SAVE_TRACKING_START),
+        { participantId: pending.participantId, eventId: pending.eventId, diag: { ...(pending.diag || {}), late_ping: true } },
+        { headers, timeout: API_CONFIG.TIMEOUT },
+      );
+      await AsyncStorage.removeItem(PENDING_START_PING_KEY);
+      return 'sent';
+    } catch (e: any) {
+      const status = e?.response?.status;
+      if (status && status >= 400 && status < 500 && status !== 429) {
+        await AsyncStorage.removeItem(PENDING_START_PING_KEY);
+        return 'rejected';
+      }
+      return 'gave_up';
+    }
+  } catch {
+    return 'gave_up';
+  } finally {
+    _flushInFlight = false;
+  }
 };
