@@ -48,6 +48,17 @@ module.exports = function register({ M, load, test, SRC }) {
     const missing = visibles.filter((v) => !gate.includes(v));
     assert.deepStrictEqual(missing, []);
   });
+  // 2026-10-19 merge: the popups master added have comparison expressions
+  // (stopConfirmMode !== null), which the identifier-only test above cannot see.
+  test('homeModalOpen covers every Home popup, comparison expressions included (Stop / start error / override)', () => {
+    const s = read('screens/HomeScreen.tsx').replace(/\r/g, '');
+    const at = s.indexOf('const homeModalOpen =');
+    const gate = s.slice(at, s.indexOf(';', at));
+    for (const v of ['stopConfirmMode !== null', 'startErrorMessage !== null', 'showOverrideModal']) assert.ok(gate.includes(v), v);
+    const visibles = [...s.matchAll(/<Modal[^>]*?visible=\{([^}]+)\}/g)].map((m) => m[1].trim());
+    assert.ok(visibles.length >= 8, 'found the modals: ' + visibles.length);
+    assert.deepStrictEqual(visibles.filter((v) => !gate.includes(v)), []);
+  });
   // ── round 3c: Start sequence, last-moment veto, merges vs downloads ────
   const RR = () => load('services/raceReadyService');
   const FS = () => load('utils/followStorage');

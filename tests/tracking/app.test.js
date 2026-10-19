@@ -1182,6 +1182,31 @@ const L = () => load('services/locationService').locationService;
     await G().maybeUploadInterimLog();
     assert.strictEqual(logUploads().length, 1);
   });
+  // ── merge of master into growth_v0.1 (2026-10-19) ──
+  // This branch has no `colors` palette and folds the session-start key into
+  // SESSION_START_KEY; the merge mapped master's code onto both.
+  test('growth_v0.1 merge (2026-10-19): merged popups use this branch\'s palette, not the old colors', async () => {
+    const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    const st = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(!/\bcolors\./.test(s), 'no colors.* in HomeScreen');
+    assert.ok(!/\bcolors\./.test(st), 'no colors.* in home.styles');
+    for (const [visible, colour] of [['stopConfirmMode !== null', 'palette.danger'], ['startErrorMessage !== null', 'palette.danger'], ['showOverrideModal', 'palette.navy']]) {
+      const esc = visible.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const m = s.match(new RegExp('<Modal[^>]*?visible=\\{' + esc + '\\}[\\s\\S]*?</Modal>'));
+      assert.ok(m, 'modal ' + visible);
+      assert.ok(m[0].includes('<Ionicons') && m[0].includes('color={' + colour + '}'), visible + ' icon is ' + colour);
+    }
+    assert.ok(/notifIconWrapperDanger: \{\s*backgroundColor: palette\.dangerBg,\s*\}/.test(st), 'danger circle = dangerBg');
+    assert.ok(/notifDangerButton: \{\s*borderColor: palette\.danger,\s*\}/.test(st), 'danger button border');
+    assert.ok(/notifDangerText: \{\s*color: palette\.danger,\s*\}/.test(st), 'danger button text');
+  });
+  test('growth_v0.1 merge (2026-10-19): the stale-session stop reads the one session-start key', async () => {
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(/const SESSION_START_KEY = '@PFSLive:sessionStartedAt';/.test(g), 'one constant, same storage key');
+    assert.ok(!/SESSION_STARTED_AT_KEY/.test(g), "master's duplicate constant not carried over");
+    assert.ok(/const _stopIfStale = async[\s\S]{0,400}AsyncStorage\.getItem\(SESSION_START_KEY\)/.test(g), '_stopIfStale reads it');
+    assert.ok(/const bootStartedAt = parseInt\(\(await AsyncStorage\.getItem\(SESSION_START_KEY\)\)/.test(g), 'cold boot reads it');
+  });
   results.push(await run('13. event 19 review (silent iOS starts, persisted start ping, pre-gun wake, zombie sessions, interim race, log dup)'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
