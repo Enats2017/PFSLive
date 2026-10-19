@@ -623,6 +623,15 @@ const L = () => load('services/locationService').locationService;
     const styles = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8');
     for (const k of ['notifIconWrapperDanger', 'notifDangerButton', 'notifDangerText']) assert.ok(styles.includes(k + ':'), 'style ' + k);
   });
+  test('#2 Stop popup closes by itself when tracking ends while it is open (no second stop)', async () => {
+    const m = home.match(/useEffect\(\(\) => \{\r?\n    if \(!isGPSActive\) setStopConfirmMode\(null\);\r?\n  \}, \[isGPSActive\]\);/);
+    assert.ok(m, 'auto-close effect present');
+    const modes = [];
+    const body = 'if (!isGPSActive) setStopConfirmMode(null);';
+    new Function('isGPSActive', 'setStopConfirmMode', body)(false, (x) => modes.push(x));
+    new Function('isGPSActive', 'setStopConfirmMode', body)(true, (x) => modes.push(x));
+    assert.deepStrictEqual(modes, [null], 'closed only when tracking is no longer active');
+  });
   test('#2 "has the race started": before/after gun, unknown start, manual start', async () => {
     const now = Date.now();
     assert.strictEqual(raceStarted({ manual_start: 0 }, new Date(now + 10 * 60000)), false, '10 min before gun');

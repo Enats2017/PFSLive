@@ -1372,6 +1372,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setStopConfirmMode(null);
   }, []);
 
+  // Tracking ended by itself while the popup was open (finish crossed, stale
+  // stop) → close it, so "Stop anyway" cannot run the stop flow a second time.
+  useEffect(() => {
+    if (!isGPSActive) setStopConfirmMode(null);
+  }, [isGPSActive]);
+
   const manualStartSending = useCallback(() => {
     Alert.alert(
       t('home:alerts.overrideTitle'),
