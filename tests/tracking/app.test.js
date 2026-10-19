@@ -573,42 +573,55 @@ const L = () => load('services/locationService').locationService;
   const bodyOf = (re) => { const m = home.match(re); assert.ok(m, 'function found in HomeScreen.tsx: ' + re); return m[1]; };
   // Looked up inside each test (not here), so code without the function fails
   // those tests instead of crashing the whole run.
-  const confirmBody = () => bodyOf(/const confirmStopTracking = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[hasRaceStarted, stopGPSTracking, t\]\);/);
+  const confirmBody = () => bodyOf(/const confirmStopTracking = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[hasRaceStarted\]\);/);
+  const yesBody = () => bodyOf(/const handleStopConfirmYes = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[stopGPSTracking\]\);/);
+  const noBody = () => bodyOf(/const handleStopConfirmNo = useCallback\(\(\) => \{([\s\S]*?)\n  \}, \[\]\);/);
   const startedBody = () => bodyOf(/const hasRaceStarted = useCallback\(\(\): boolean => \{([\s\S]*?)\n  \}, \[homeData\?\.manual_start\]\);/);
+  // Runs the real bodies: Stop opens the popup (mode), the two buttons close it.
   const confirmStop = (started) => {
-    const calls = { stop: 0, alerts: [] };
-    new Function('hasRaceStarted', 'stopGPSTracking', 'Alert', 't', confirmBody())(
-      () => started, () => { calls.stop++; return Promise.resolve(); },
-      { alert: (title, msg, buttons) => calls.alerts.push({ title, msg, buttons }) }, (k) => k);
+    const calls = { stop: 0, modes: [] };
+    const setMode = (m) => calls.modes.push(m);
+    const stopFn = () => { calls.stop++; return Promise.resolve(); };
+    new Function('hasRaceStarted', 'setStopConfirmMode', confirmBody())(() => started, setMode);
+    calls.yes = () => new Function('setStopConfirmMode', 'stopGPSTracking', yesBody())(setMode, stopFn);
+    calls.no = () => new Function('setStopConfirmMode', noBody())(setMode);
     return calls;
   };
   const raceStarted = (homeData, start) =>
     new Function('homeData', 'raceStartTimeRef', startedBody())(homeData, { current: start });
 
-  test('#2 Stop BEFORE the gun → confirmation, tracking keeps running', async () => {
+  test('#2 Stop BEFORE the gun → confirmation popup (pre-gun copy), tracking keeps running', async () => {
     const c = confirmStop(false);
     assert.strictEqual(c.stop, 0, 'not stopped yet');
-    assert.strictEqual(c.alerts.length, 1);
-    assert.strictEqual(c.alerts[0].title, 'home:alerts.stopBeforeStartTitle');
-    assert.strictEqual(c.alerts[0].msg, 'home:alerts.stopBeforeStartMessage');
+    assert.deepStrictEqual(c.modes, ['before']);
   });
-  test('#2 "Keep tracking" → nothing happens; "Stop anyway" → stops once', async () => {
+  test('#2 "Keep tracking" → popup closes, nothing stopped; "Stop anyway" → closes and stops once', async () => {
     const c = confirmStop(false);
-    const [keep, stop] = c.alerts[0].buttons;
-    assert.strictEqual(keep.text, 'home:alerts.keepTracking'); assert.strictEqual(keep.style, 'cancel');
-    assert.strictEqual(keep.onPress, undefined, 'keep has no action');
-    assert.strictEqual(stop.text, 'home:alerts.stopAnyway'); assert.strictEqual(stop.style, 'destructive');
-    stop.onPress();
-    assert.strictEqual(c.stop, 1);
+    c.no();
+    assert.deepStrictEqual(c.modes, ['before', null]); assert.strictEqual(c.stop, 0);
+    c.yes();
+    assert.deepStrictEqual(c.modes, ['before', null, null]); assert.strictEqual(c.stop, 1);
   });
   // Changed 2026-10-18 (M4): post-gun Stop used to be one tap and irreversible.
-  test('#2 Stop AFTER the gun → confirmation with post-gun copy, not stopped until confirmed', async () => {
+  test('#2 Stop AFTER the gun → confirmation popup with post-gun copy, not stopped until confirmed', async () => {
     const c = confirmStop(true);
-    assert.strictEqual(c.stop, 0, 'not stopped yet'); assert.strictEqual(c.alerts.length, 1);
-    assert.strictEqual(c.alerts[0].title, 'home:alerts.stopAfterStartTitle');
-    assert.strictEqual(c.alerts[0].msg, 'home:alerts.stopAfterStartMessage');
-    c.alerts[0].buttons[1].onPress();
+    assert.strictEqual(c.stop, 0, 'not stopped yet'); assert.deepStrictEqual(c.modes, ['after']);
+    c.yes();
     assert.strictEqual(c.stop, 1);
+  });
+  // 2026-10-19: the confirm was a native Alert.alert, unlike every other popup.
+  test('#2 Stop popup is the app\'s own notif modal (not Alert), copy + buttons wired', async () => {
+    assert.ok(!/confirmStopTracking[\s\S]{0,200}Alert\.alert/.test(home), 'no Alert.alert in the stop confirm');
+    const m = home.match(/<Modal[^>]*?visible=\{stopConfirmMode !== null\}[\s\S]*?<\/Modal>/);
+    assert.ok(m, 'Modal bound to stopConfirmMode');
+    const jsx = m[0];
+    for (const k of ['homeStyles.notifCard', 'home:alerts.stopAfterStartTitle', 'home:alerts.stopBeforeStartTitle',
+      'home:alerts.stopAfterStartMessage', 'home:alerts.stopBeforeStartMessage', 'home:alerts.keepTracking', 'home:alerts.stopAnyway',
+      'onRequestClose={handleStopConfirmNo}']) assert.ok(jsx.includes(k), 'modal has ' + k);
+    assert.ok(/onPress=\{handleStopConfirmNo\}[\s\S]*?home:alerts\.keepTracking/.test(jsx), 'Keep tracking → No handler');
+    assert.ok(/onPress=\{handleStopConfirmYes\}[\s\S]*?home:alerts\.stopAnyway/.test(jsx), 'Stop anyway → Yes handler');
+    const styles = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8');
+    for (const k of ['notifIconWrapperDanger', 'notifDangerButton', 'notifDangerText']) assert.ok(styles.includes(k + ':'), 'style ' + k);
   });
   test('#2 "has the race started": before/after gun, unknown start, manual start', async () => {
     const now = Date.now();

@@ -266,6 +266,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const [showStartConfirmModal, setShowStartConfirmModal] = useState(false);
 
+  // ✅ Stop confirmation — null = closed; 'before'/'after' the gun picks the copy.
+  // Was a native Alert.alert, which looked unlike every other popup on this screen.
+  const [stopConfirmMode, setStopConfirmMode] = useState<null | 'before' | 'after'>(null);
+
   // ✅ Notification popup state
   const [notificationPopup, setNotificationPopup] = useState<{
     visible: boolean;
@@ -1352,17 +1356,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // audit). It used to be one tap, and it is irreversible: once a stop log
   // exists home hides Start for that race, so a pocket tap or a mis-tap mid-race
   // ended the live track for good. Same dialog, post-gun copy.
+  // ✅ Shown in the app's own notif* modal (2026-10-19) instead of Alert.alert.
   const confirmStopTracking = useCallback(() => {
-    const started = hasRaceStarted();
-    Alert.alert(
-      t(started ? 'home:alerts.stopAfterStartTitle' : 'home:alerts.stopBeforeStartTitle'),
-      t(started ? 'home:alerts.stopAfterStartMessage' : 'home:alerts.stopBeforeStartMessage'),
-      [
-        { text: t('home:alerts.keepTracking'), style: 'cancel' },
-        { text: t('home:alerts.stopAnyway'), style: 'destructive', onPress: () => { void stopGPSTracking(); } },
-      ],
-    );
-  }, [hasRaceStarted, stopGPSTracking, t]);
+    setStopConfirmMode(hasRaceStarted() ? 'after' : 'before');
+  }, [hasRaceStarted]);
+
+  // "Stop anyway" → close the popup, run the real stop flow
+  const handleStopConfirmYes = useCallback(() => {
+    setStopConfirmMode(null);
+    void stopGPSTracking();
+  }, [stopGPSTracking]);
+
+  // "Keep tracking" → just close, tracking keeps running
+  const handleStopConfirmNo = useCallback(() => {
+    setStopConfirmMode(null);
+  }, []);
 
   const manualStartSending = useCallback(() => {
     Alert.alert(
@@ -1984,6 +1992,48 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   activeOpacity={0.7}
                 >
                   <Text style={commonStyles.secondaryButtonText}>{t('home:startConfirm.no')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ✅ Stop tracking confirmation — before/after-gun copy. The safe choice
+          (Keep tracking) is the primary button: a stop cannot be undone. */}
+      <Modal
+        transparent
+        visible={stopConfirmMode !== null}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={handleStopConfirmNo}
+      >
+        <View style={homeStyles.notifBackdrop}>
+          <View style={homeStyles.notifWrapper}>
+            <View style={homeStyles.notifCard}>
+              <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger]}>
+                <Ionicons name="stop-circle-outline" size={36} color={colors.error} />
+              </View>
+              <Text style={homeStyles.notifTitle}>
+                {t(stopConfirmMode === 'after' ? 'home:alerts.stopAfterStartTitle' : 'home:alerts.stopBeforeStartTitle')}
+              </Text>
+              <Text style={homeStyles.notifBody}>
+                {t(stopConfirmMode === 'after' ? 'home:alerts.stopAfterStartMessage' : 'home:alerts.stopBeforeStartMessage')}
+              </Text>
+              <View style={homeStyles.notifButtonContainer}>
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  onPress={handleStopConfirmNo}
+                  activeOpacity={0.8}
+                >
+                  <Text style={commonStyles.primaryButtonText}>{t('home:alerts.keepTracking')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[commonStyles.secondaryButton, homeStyles.notifDangerButton]}
+                  onPress={handleStopConfirmYes}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[commonStyles.secondaryButtonText, homeStyles.notifDangerText]}>{t('home:alerts.stopAnyway')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
