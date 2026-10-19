@@ -27,6 +27,8 @@ What each group guards:
 | 9. gpsService wiring | the REAL startWatchingPosition still wiping the queue, or the heartbeat not triggering the interim log |
 | 10. incident replays | end-to-end replays of p2699, p1652, p2595 (stuck "offline"), the Dinant DB outage and a silent session |
 | 11. device test plan | rows 1, 2, 6 of the checklist below, run against the real code: `deviceInfo` on a normal Stop upload, HomeScreen's own Stop-before-gun dialog, the 🩺 line with location off / permission denied |
+| 12. 2026-10-18 audit | a RaceResult finish not stopping tracking; sessions >24h after the gun resuming; gun from stale home data; watchdog re-pointing the session |
+| 13. event 19 review (2026-10-19) | iOS Start failing when the phone is pocketed at once (p4537/p4807/p4826); the start ping lost in a pocket (p4566); iOS killing the idle engine before the gun (p4823); zombie sessions sending for weeks (p2525, p1601); 7 concurrent interim uploads (p4536); repeated log blocks (p4848) |
 
 Groups 8-11 fail on the pre-fix commit `ebfec46` (except the DB-outage replay,
 which the app already survived — that fix was server-side — and two group-11

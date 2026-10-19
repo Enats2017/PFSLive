@@ -838,6 +838,179 @@ const L = () => load('services/locationService').locationService;
   });
   results.push(await run('12. 2026-10-18 audit (rr finish authoritative, stale sessions, gun offset, watchdog ids)'));
 
+  // ════════════ 13. event 19 post-race review (2026-10-19) ════════════
+  // Evidence: prod DB + api_logs_2026-10-18, running code 06ffa9a (OTA 01a138e5).
+  const RN = require('react-native');
+  const PENDING_PING = '@PFSLive:pendingStartPing';
+  const withRN = async (os, appState, fn) => {
+    const o = RN.Platform.OS, a = RN.AppState.currentState;
+    RN.Platform.OS = os; RN.AppState.currentState = appState;
+    try { return await fn(); } finally { RN.Platform.OS = o; RN.AppState.currentState = a; }
+  };
+  const startPosts = () => M.axios.calls.filter((c) => c.url.endsWith('/save_tracking_start_api.php'));
+
+  test('p4537/p4807/p4826: iOS Start with the phone already pocketed → session starts (no 3s foreground wait)', async () => {
+    await withRN('ios', 'background', async () => { await startSession('4807', '19'); });
+    assert.ok(M.store.has(PARAMS), 'session params stored');
+    assert.strictEqual(JSON.parse(M.store.get(PARAMS)).participantId, '4807');
+  });
+  test('Android Start while backgrounded → throws code start_backgrounded (HomeScreen re-arms it), no session', async () => {
+    const { START_BACKGROUNDED_CODE } = load('services/gpsService');
+    let err = null;
+    await withRN('android', 'background', async () => { try { await startSession('2', '12'); } catch (e) { err = e; } });
+    assert.ok(err, 'start threw'); assert.strictEqual(START_BACKGROUNDED_CODE, 'start_backgrounded'); assert.strictEqual(err.code, 'start_backgrounded');
+    assert.ok(!M.store.has(PARAMS), 'no half-started session');
+  });
+  test('HomeScreen wiring: start ping only AFTER the engine started; backgrounded start re-armed; pending ping flushed by the queue timer', async () => {
+    const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
+    const iStart = s.indexOf('await gpsService.startWatchingPosition(');
+    const iPing = s.indexOf('void sendTrackingStartPing({');
+    assert.ok(iStart > 0 && iPing > iStart, 'ping after startWatchingPosition');
+    assert.ok(/\(error as any\)\?\.code === START_BACKGROUNDED_CODE\) \{\s*pendingStartRef\.current = true;/.test(s), 'backgrounded start re-armed');
+    assert.ok(/void maybeUploadInterimLog\(\);\s*\/\/[^\n]*\n\s*void flushPendingStartPing\(\);/.test(s), 'queue timer flushes the pending ping');
+  });
+  test('reopenToStart string exists in en/fr/nl', async () => {
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      assert.ok(typeof j.tracking.reopenToStart === 'string' && j.tracking.reopenToStart.length > 10, l);
+    }
+  });
+
+  const TS = () => load('services/trackingStartService');
+  const armPing = (pid = '4566', eid = '19') => M.store.set(PARAMS, JSON.stringify({ participantId: pid, eventId: eid, raceStartTime: new Date(M.clock - HOUR).toISOString(), manualStart: 0 }));
+  test('p4566: all in-line retries fail → ping stays pending; later flush delivers it (late_ping) and clears it', async () => {
+    armPing(); M.axios.script = ['network', 'network', 'network', 'network'];
+    assert.strictEqual(await TS().sendTrackingStartPing({ participantId: '4566', eventId: '19', startedAfterGun: false, isStillTracking: () => true, sleep: async () => {} }), 'gave_up');
+    assert.ok(M.store.has(PENDING_PING), 'pending kept');
+    assert.strictEqual(await TS().flushPendingStartPing(), 'sent');
+    const last = startPosts().pop();
+    assert.strictEqual(last.body.participantId, '4566'); assert.strictEqual(last.body.diag.late_ping, true);
+    assert.ok(!M.store.has(PENDING_PING), 'cleared after delivery');
+  });
+  test('pending ping cleared on sent / 4xx / Stop-before-retry', async () => {
+    armPing();
+    await TS().sendTrackingStartPing({ participantId: '4566', eventId: '19', startedAfterGun: false, isStillTracking: () => true, sleep: async () => {} });
+    assert.ok(!M.store.has(PENDING_PING), 'sent');
+    M.axios.script = [401];
+    await TS().sendTrackingStartPing({ participantId: '4566', eventId: '19', startedAfterGun: false, isStillTracking: () => true, sleep: async () => {} });
+    assert.ok(!M.store.has(PENDING_PING), 'rejected');
+    let active = true; M.axios.script = ['network'];
+    await TS().sendTrackingStartPing({ participantId: '4566', eventId: '19', startedAfterGun: false, isStillTracking: () => active, sleep: async () => { active = false; } });
+    assert.ok(!M.store.has(PENDING_PING), 'stopped');
+  });
+  test('pending ping for an ended / different session → dropped, never sent late', async () => {
+    M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    assert.strictEqual(await TS().flushPendingStartPing(), 'stopped');       // no session at all
+    assert.strictEqual(startPosts().length, 0); assert.ok(!M.store.has(PENDING_PING));
+    armPing('9999', '20');
+    M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    assert.strictEqual(await TS().flushPendingStartPing(), 'stopped');       // another session is live
+    assert.strictEqual(startPosts().length, 0);
+  });
+  test('flush still failing (network) → stays pending for the next wake; no pending → no request', async () => {
+    assert.strictEqual(await TS().flushPendingStartPing(), 'none'); assert.strictEqual(startPosts().length, 0);
+    armPing(); M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    M.axios.script = ['network'];
+    assert.strictEqual(await TS().flushPendingStartPing(), 'gave_up'); assert.ok(M.store.has(PENDING_PING));
+  });
+  test('heartbeat delivers a pending start ping; Stop (stopWatching) discards it', async () => {
+    await startSession('4566', '19');
+    M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    await M.bg.heartbeat({}); await settle();
+    assert.ok(startPosts().some((c) => c.body.diag && c.body.diag.late_ping === true), 'sent from the heartbeat');
+    M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    await load('services/gpsService').stopWatching();
+    assert.ok(!M.store.has(PENDING_PING), 'cleared by the stop');
+  });
+
+  test('p4823: pre-race heartbeat 20 min before the gun → engine kept MOVING (⏰), nothing sent', async () => {
+    await startSession('4823', '19', new Date(M.clock + 20 * 60000).toISOString());
+    M.bg.pace = [];
+    await M.bg.heartbeat({});
+    const log = await load('services/gpsService').getFullTrackingLog();
+    assert.ok(log.some((e) => e.icon === '⏰' && /gun in 20min, engine kept moving/.test(e.msg)), '⏰ logged');
+    assert.deepStrictEqual(M.bg.pace, [true], 'changePace(true)');
+    assert.strictEqual(locPosts(), 0, 'no fix sent before the gun');
+  });
+  test('pre-race heartbeat 60 min before the gun → still low-power (🔋), engine left idle', async () => {
+    await startSession('4823', '19', new Date(M.clock + 60 * 60000).toISOString());
+    M.bg.pace = [];
+    await M.bg.heartbeat({});
+    const log = await load('services/gpsService').getFullTrackingLog();
+    assert.ok(log.some((e) => e.icon === '🔋')); assert.ok(!log.some((e) => e.icon === '⏰'));
+    assert.deepStrictEqual(M.bg.pace, []);
+  });
+
+  test('isStaleSession: no gun → judged by session start (25h stale, 2h not, unknown never)', async () => {
+    const { isStaleSession } = load('services/trackingSessionRules');
+    assert.strictEqual(isStaleSession({ raceStartTime: null }, M.clock, M.clock - 25 * HOUR), true);
+    assert.strictEqual(isStaleSession({ raceStartTime: null }, M.clock, M.clock - 2 * HOUR), false);
+    assert.strictEqual(isStaleSession({ raceStartTime: null }, M.clock, 0), false);
+    assert.strictEqual(isStaleSession({ raceStartTime: new Date(M.clock - 2 * HOUR).toISOString() }, M.clock, M.clock - 99 * HOUR), false, 'a stored gun wins');
+  });
+  test('p2525 (race of 10-03, 16 days later): heartbeat in a never-restarted process → session stopped', async () => {
+    await startSession('2525', '15', new Date(M.clock - 16 * 24 * HOUR).toISOString());
+    assert.ok(M.store.has(PARAMS));
+    await M.bg.heartbeat({});
+    assert.ok(!M.store.has(PARAMS), 'stopped');
+    assert.ok((await load('services/gpsService').getFullTrackingLog()).some((e) => e.icon === '🧹' && /^Heartbeat/.test(e.msg)));
+  });
+  test('stale session: a live fix is NOT sent, the session stops', async () => {
+    liveAnswers.length = 0; lat = 50; answerLocation();
+    await startSession('2525', '15', new Date(M.clock - 26 * HOUR).toISOString());
+    M.clock += 1000; await fire(); M.clock += 31000; await fire();
+    assert.strictEqual(locPosts(), 0, 'nothing posted');
+    assert.ok(!M.store.has(PARAMS), 'stopped');
+  });
+  test('control: 20h after the gun (overnight ultra) the heartbeat and sends carry on', async () => {
+    liveAnswers.length = 0; lat = 50; answerLocation();
+    await startSession('2', '12', new Date(M.clock - 20 * HOUR).toISOString());
+    await M.bg.heartbeat({});
+    assert.ok(M.store.has(PARAMS));
+    M.clock += 1000; await fire(); M.clock += 31000; await fire();
+    assert.strictEqual(locPosts(), 1);
+  });
+  test('p1601 (custom event, no stored gun, Start pressed 6 weeks ago) → stopped on the heartbeat', async () => {
+    await startSession('1601', '100040', null);
+    M.store.set('@PFSLive:sessionStartedAt', String(M.clock - 42 * 24 * HOUR));
+    await M.bg.heartbeat({});
+    assert.ok(!M.store.has(PARAMS));
+  });
+
+  test('p4536: 7 concurrent interim checks → ONE upload', async () => {
+    arm();
+    const g = G();
+    await Promise.all(Array.from({ length: 7 }, () => g.maybeUploadInterimLog()));
+    assert.strictEqual(logUploads().length, 1);
+  });
+  test('p4848: a log whose segments repeat a whole block uploads each entry once, in order', async () => {
+    const e = (i) => ({ ts: 1000 + i, icon: '🛰️', msg: 'loc ' + i });
+    const block = Array.from({ length: 220 }, (_, i) => e(i));
+    M.store.set('@PFSLive:trackingLogSeg:0', JSON.stringify(block.concat(block)));
+    M.store.set('@PFSLive:trackingLogSeg:1', JSON.stringify(block.concat([e(300), e(301)])));
+    M.store.set('@PFSLive:trackingLogSegCount', '2');
+    M.store.set('@PFSLive:trackingLog', JSON.stringify([e(300), e(302)]));
+    const log = await G().getFullTrackingLog();
+    assert.strictEqual(log.length, 223);
+    assert.deepStrictEqual(log.slice(-3).map((x) => x.msg), ['loc 300', 'loc 301', 'loc 302']);
+  });
+  // Guard only: the exact interleaving that tripled p4848's block was not
+  // reproducible in this harness; this pins the de-dup on the rehydrate path.
+  test('rehydrate never doubles entries the buffer already holds (guard)', async () => {
+    const g = G();
+    await g.addLog('🛰️', 'a');                        // hydrates (empty disk), buffer [a]
+    await g.flushTrackingLog();
+    const disk = JSON.parse(M.store.get('@PFSLive:trackingLog'));
+    assert.strictEqual(disk.length, 1);
+    // a second context: disk holds [a]; that context had already pushed the same entry
+    delete require.cache[require.resolve(`${SRC}/services/gpsService.ts`)];
+    const g2 = G();
+    await g2.addLog('🛰️', 'b');
+    const all = await g2.getFullTrackingLog();
+    assert.deepStrictEqual(all.map((x) => x.msg), ['a', 'b']);
+  });
+  results.push(await run('13. event 19 review (silent iOS starts, persisted start ping, pre-gun wake, zombie sessions, interim race, log dup)'));
+
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);
   process.exit(tot.fail ? 1 : 0);

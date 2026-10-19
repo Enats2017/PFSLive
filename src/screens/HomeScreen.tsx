@@ -27,14 +27,14 @@ import { HomeScreenProps } from '../types/navigation';
 import { AppHeader } from '../components/common/AppHeader';
 import { toastSuccess, toastError } from '../../utils/toast';
 import { locationService } from '../services/locationService';
-import { sendTrackingStartPing } from '../services/trackingStartService';
+import { sendTrackingStartPing, flushPendingStartPing } from '../services/trackingStartService';
 import {
   gpsService, BACKGROUND_SENT_COUNT_KEY, RACE_FINISHED_KEY,
   ensureBackgroundTaskAlive, TRACKING_LOG_KEY, TrackingLogEntry,
   startBackgroundFetchKeepalive, stopBackgroundFetchKeepalive,
   isTracking, getTrackingParams, stopWatching, attachUi, detachUi, rehydrateTracking,
   LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY, FINAL_SENT_COUNT_KEY,
-  GPS_HEALTH_KEY, maybeUploadInterimLog,
+  GPS_HEALTH_KEY, maybeUploadInterimLog, START_BACKGROUNDED_CODE,
 } from '../services/gpsService';
 import { isStaleSession, computeRaceStartTime } from '../services/trackingSessionRules';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
@@ -728,6 +728,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // Foreground twin of the heartbeat's interim-log check: a session that is
       // past the gun and has sent nothing ships its device log (one-shot).
       void maybeUploadInterimLog();
+      // A start ping the in-line retries could not deliver (no-op otherwise).
+      void flushPendingStartPing();
 
       // ✅ Check queue count key first — cheap single string read,
       // avoids parsing full queue JSON when nothing is queued.
@@ -957,15 +959,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const startParticipantId = raceData?.next_race_participant_app_id ?? participantId;
       const startEventId = raceData?.next_race_id ?? eventId;
 
-      // ✅ START PING — fire-and-forget, retried, carries diagnostics.
-      // See trackingStartService for the rules and the incident behind them.
-      void sendTrackingStartPing({
-        participantId: startParticipantId,
-        eventId: startEventId,
-        startedAfterGun: raceAlreadyStarted,
-        isStillTracking: () => isGPSActiveRef.current,
-      });
-
       const gpsWatch = await gpsService.startWatchingPosition(
         async (gpsPosition) => {
           if (!isGPSActiveRef.current) {
@@ -1008,6 +1001,19 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       gpsWatchRef.current = gpsWatch;
       setSessionRaceName(raceData?.next_race_name);
 
+      // ✅ START PING — fire-and-forget, retried, persisted, carries diagnostics.
+      // See trackingStartService for the rules and the incidents behind them.
+      // Sent only AFTER the engine started (2026-10-19, event 19 review): it used
+      // to go out first, so a start that then threw still left a server start row
+      // — p4537/p4807/p4826 looked "tracking" to the server with no session on
+      // the phone at all.
+      void sendTrackingStartPing({
+        participantId: startParticipantId,
+        eventId: startEventId,
+        startedAfterGun: raceAlreadyStarted,
+        isStillTracking: () => isGPSActiveRef.current,
+      });
+
       // ✅ Start background fetch keepalive — fires every 15s via JobScheduler.
       // Bypasses Samsung One UI Adaptive Battery throttling of GPS during walking.
       await startBackgroundFetchKeepalive();
@@ -1046,12 +1052,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         intervalSeconds: trackingParamsRef.current?.intervalSeconds,
       });
     } catch (error) {
+      setIsGPSActive(false);
+      isGPSActiveRef.current = false;
+      // Android: the app left the foreground before the engine could start (the
+      // OS forbids starting the location service from the background). Re-arm
+      // the start — the pendingStartRef listener resumes it on the next
+      // foreground — instead of an error popup nobody sees in a pocket.
+      if ((error as any)?.code === START_BACKGROUNDED_CODE) {
+        pendingStartRef.current = true;
+        toastError(t('home:errors.trackingFailed'), t('home:tracking.reopenToStart'));
+        return;
+      }
       Alert.alert(
         t('common:errors.generic'),
         error instanceof Error ? error.message : t('home:errors.trackingFailed')
       );
-      setIsGPSActive(false);
-      isGPSActiveRef.current = false;
     }
   }, [
     hasPermission,

@@ -235,6 +235,10 @@ const MAX_LOG_SEGMENTS = 40;
 // IDs needed for the log upload. Cleared once the log is uploaded.
 export const PENDING_FINISH_KEY = '@PFSLive:pendingFinish';
 
+// Error.code thrown by startWatchingPosition when an Android start could not
+// begin because the app left the foreground (see the guard there).
+export const START_BACKGROUNDED_CODE = 'start_backgrounded';
+
 export interface TrackingLogEntry {
   ts: number;
   icon: string;
@@ -316,6 +320,24 @@ const isRaceNotStarted = async (): Promise<boolean> => {
     return Date.now() < startMs;                // true only while still pre-race
   } catch {
     return false;                               // any error → run normally
+  }
+};
+
+// Final stretch before the gun in which the pre-race low-power mode is lifted
+// (see the heartbeat). 30 min: p4823's app was terminated ~20 min before its gun.
+export const PRE_GUN_WAKE_MS = 30 * 60 * 1000;
+
+// ms until the stored gun, or null when there is none (manual start / no session).
+const msUntilGun = async (): Promise<number | null> => {
+  try {
+    const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!raw) return null;
+    const { raceStartTime, manualStart } = JSON.parse(raw);
+    if (manualStart === 1 || !raceStartTime) return null;
+    const startMs = new Date(raceStartTime).getTime();
+    return isNaN(startMs) ? null : startMs - Date.now();
+  } catch {
+    return null;
   }
 };
 
@@ -419,10 +441,19 @@ const _readFullLog = async (): Promise<TrackingLogEntry[]> => {
   // whichever path emitted them, so dropping the repeat is lossless. Done here at
   // assembly rather than in the seal/hydrate path, which has a history of
   // log-loss regressions and is not worth disturbing for a size problem.
+  //
+  // Not only ADJACENT repeats any more (2026-10-19): 9 of 40 event-19 logs carried
+  // whole BLOCKS again — p4848's first 220 entries three times over, written in
+  // one iOS background wake — up to 41% of the upload, which pushed 8 logs past
+  // the server's 512 KB cap and cut off their race start. An entry seen before
+  // anywhere in the log (same ms, same text) is dropped; first occurrence wins,
+  // so order is kept.
   const deduped: TrackingLogEntry[] = [];
+  const seen = new Set<string>();
   for (const entry of all) {
-    const prev = deduped[deduped.length - 1];
-    if (prev && prev.ts === entry.ts && prev.msg === entry.msg) continue;
+    const key = entry.ts + '|' + entry.msg;
+    if (seen.has(key)) continue;
+    seen.add(key);
     deduped.push(entry);
   }
   return deduped;
@@ -443,7 +474,12 @@ const _hydrateBufferOnce = async (): Promise<void> => {
     if (cur) {
       const arr = JSON.parse(cur);
       // Prepend disk entries before anything pushed during the await (race-safe).
-      if (Array.isArray(arr)) _logBuffer = arr.concat(_logBuffer);
+      // Skip disk entries the buffer already holds, so a rehydrate can never
+      // put the same block into the segment twice.
+      if (Array.isArray(arr)) {
+        const have = new Set(_logBuffer.map((e) => e.ts + '|' + e.msg));
+        _logBuffer = arr.filter((e: TrackingLogEntry) => !have.has(e.ts + '|' + e.msg)).concat(_logBuffer);
+      }
     }
   } catch { /* silent */ }
 };
@@ -730,6 +766,10 @@ const _processLocationForSendInternal = async (
     }
 
     const { participantId, eventId, intervalSeconds, categoryId, raceStartTime, manualStart } = JSON.parse(paramsJson);
+
+    // ✅ Zombie guard — same rule as the heartbeat / cold boot: nothing is sent
+    // into a race whose gun is more than 24h old; the session is stopped instead.
+    if (await _stopIfStale(`Send${tag}`)) return;
 
     // ✅ Race start check — block sends before race begins.
     //
@@ -1621,6 +1661,15 @@ const _registerTransistorListeners = (): void => {
   // movement gets through).
   BackgroundGeolocation.onHeartbeat(async () => {
     try {
+      // ✅ Zombie guard (2026-10-19): a session more than 24h past its gun stops
+      // here, not only on cold boot — a process that never restarts kept p2525
+      // (race of 10-03) sending ~500 fixes a day for 16 days.
+      if (await _stopIfStale('Heartbeat')) return;
+
+      // A start ping the in-line retries could not deliver (JS timers are
+      // suspended in a pocket) goes out from this background wake.
+      try { void require('./trackingStartService').flushPendingStartPing(); } catch { /* silent */ }
+
       // ✅ Server-side liveness ping — fire on EVERY beat, BEFORE any early
       // return, so the server confirms the heartbeat is alive even when the beat
       // produces no coordinate (stationary, or moving-with-no-extra-fix). Reads
@@ -1647,6 +1696,20 @@ const _registerTransistorListeners = (): void => {
       // arming would otherwise burn. Resumes full behaviour the moment the race
       // starts. The liveness ping above already self-gates on raceStartedOk.
       if (await isRaceNotStarted()) {
+        // ✅ …except in the last PRE_GUN_WAKE_MS before the gun (2026-10-19,
+        // event 19 review). An idle (stationary) engine let iOS terminate the app
+        // before the gun; it only came back when the runner left the stationary
+        // geofence — 2 to 6 min / up to 1.2 km into the race on 5 of 19 iPhones
+        // (p4823: last beat 09:40:30, next sign of life 10:08 at km 1.24). Keeping
+        // the engine MOVING for the final half hour keeps the location stream —
+        // and with it the app — alive through the gun. Still nothing is sent
+        // until the gun (PRESTART_SKIP in the send path is unchanged).
+        const untilGun = await msUntilGun();
+        if (untilGun !== null && untilGun <= PRE_GUN_WAKE_MS) {
+          await safeChangePace(true);
+          await addLog('⏰', `Heartbeat — gun in ${Math.max(0, Math.round(untilGun / 60000))}min, engine kept moving`);
+          return;
+        }
         await addLog('🔋', 'Heartbeat — pre-race low-power (engine idle until start)');
         return;
       }
@@ -1762,6 +1825,8 @@ const _doFullStop = async (): Promise<void> => {
   // race must still be warned in the next.
   await AsyncStorage.removeItem(GPS_HEALTH_KEY);
   await AsyncStorage.removeItem(GPS_FAULT_STREAK_KEY);
+  // An undelivered start ping belongs to this session only — never send it late.
+  await AsyncStorage.removeItem(PENDING_START_PING_KEY_LOCAL);
 
   if (API_CONFIG.DEBUG) console.log('✅ Tracking stopped');
   await addLog('🛑', 'Tracking stopped');
@@ -1872,9 +1937,44 @@ export const flushTrackingLog   = async (): Promise<void> => _flushLogsNow();
 // (background) and HomeScreen's queue timer (foreground); idempotent per session.
 const INTERIM_LOG_KEY = '@PFSLive:interimLogUploaded';
 const SESSION_STARTED_AT_KEY = '@PFSLive:sessionStartedAt';
+// trackingStartService's PENDING_START_PING_KEY, re-declared to avoid an import
+// cycle (that module imports this one).
+const PENDING_START_PING_KEY_LOCAL = '@PFSLive:pendingStartPing';
+
+// Stops the live session when isStaleSession says it is over (gun > 24h ago, or
+// — with no gun — Start pressed > 24h ago). Returns true when it stopped.
+const _stopIfStale = async (where: string): Promise<boolean> => {
+  try {
+    const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!raw) return false;
+    const startedAt = parseInt((await AsyncStorage.getItem(SESSION_STARTED_AT_KEY)) || '0', 10) || 0;
+    if (!isStaleSession(JSON.parse(raw), Date.now(), startedAt)) return false;
+    await addLog('🧹', `${where} — session older than 24h, stopped`);
+    await _doFullStop();
+    return true;
+  } catch {
+    return false;   // never let the guard itself break tracking
+  }
+};
 const INTERIM_LOG_AFTER_MS = 5 * 60 * 1000;
 
+// Single-flight within a JS context (2026-10-19): the storage claim below is a
+// read-then-write, so callers arriving together (heartbeat, motionchange wake,
+// HomeScreen's timer) all read "not claimed" before any wrote it — p4536 uploaded
+// the interim log 7 times in one second.
+let _interimInFlight = false;
+
 export const maybeUploadInterimLog = async (): Promise<void> => {
+  if (_interimInFlight) return;
+  _interimInFlight = true;
+  try {
+    await _maybeUploadInterimLogInner();
+  } finally {
+    _interimInFlight = false;
+  }
+};
+
+const _maybeUploadInterimLogInner = async (): Promise<void> => {
   try {
     if ((await AsyncStorage.getItem(INTERIM_LOG_KEY)) === '1') return;
     const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
@@ -2302,15 +2402,24 @@ export const gpsService = {
     raceName?: string,
   ): Promise<{ remove: () => void }> {
     try {
-      // ✅ Guard: foreground service cannot start when app is backgrounded.
-      // Wait up to 3s for app to come to foreground.
+      // ✅ Guard: an ANDROID foreground service cannot start while the app is
+      // backgrounded (Android 12+). Wait up to 3s for the app to come back.
+      //
+      // Android only (2026-10-19, event 19 review): iOS has no such restriction —
+      // with "Always" permission Transistor starts fine from the background. On iOS
+      // this wait turned "Start, then phone straight into the pocket" into a thrown
+      // start AFTER the start ping had gone out: three iPhones (p4537, p4807,
+      // p4826) had a server start row, the app open and polling home, and not one
+      // fix or log for the whole race.
       const appCurrentState = AppState.currentState;
-      if (appCurrentState !== 'active') {
+      if (Platform.OS === 'android' && appCurrentState !== 'active') {
         if (API_CONFIG.DEBUG) console.log(`⚠️ App state is '${appCurrentState}' — waiting for foreground...`);
         await new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
             subscription.remove();
-            reject(new Error('App did not return to foreground in time'));
+            // Tagged so HomeScreen can re-arm the start for the next foreground
+            // instead of showing a generic error to a phone that is in a pocket.
+            reject(Object.assign(new Error('App did not return to foreground in time'), { code: START_BACKGROUNDED_CODE }));
           }, 3000);
           const subscription = AppState.addEventListener('change', (state) => {
             if (state === 'active') {
@@ -2733,7 +2842,8 @@ const _rehydrateTrackingOnBoot = async (): Promise<void> => {
     // old race and hide today's Start. Stop it; its unsent fixes are parked by
     // drainOrphans() and still uploaded under the old race.
     try {
-      if (isStaleSession(JSON.parse(paramsJson), Date.now())) {
+      const bootStartedAt = parseInt((await AsyncStorage.getItem(SESSION_STARTED_AT_KEY)) || '0', 10) || 0;
+      if (isStaleSession(JSON.parse(paramsJson), Date.now(), bootStartedAt)) {
         await addLog('🧹', 'Cold boot — session older than 24h found, stopped instead of resumed');
         await _doFullStop();
         return;

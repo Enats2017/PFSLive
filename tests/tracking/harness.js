@@ -84,6 +84,8 @@ const overrides = {
     onLocation: (cb) => { M.bg.location = cb; return { remove() {} }; },
     onMotionChange: (cb) => { M.bg.motion = cb; return { remove() {} }; },
     onProviderChange: (cb) => { M.bg.provider = cb; return { remove() {} }; },
+    // Record pace changes so tests can see the engine being kept MOVING.
+    changePace: async (v) => { (M.bg.pace = M.bg.pace || []).push(v); },
   }, { get(t, p) { return p in t ? t[p] : anyStub('BG.' + String(p)); } }) },
   axios: { __esModule: true, default: {
     post: async (url, body, cfg) => {
