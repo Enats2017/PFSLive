@@ -623,14 +623,117 @@ const L = () => load('services/locationService').locationService;
     const styles = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8');
     for (const k of ['notifIconWrapperDanger', 'notifDangerButton', 'notifDangerText']) assert.ok(styles.includes(k + ':'), 'style ' + k);
   });
-  test('#2 Stop popup closes by itself when tracking ends while it is open (no second stop)', async () => {
-    const m = home.match(/useEffect\(\(\) => \{\r?\n    if \(!isGPSActive\) setStopConfirmMode\(null\);\r?\n  \}, \[isGPSActive\]\);/);
+  // Bodies lifted from HomeScreen.tsx (CR-stripped) and run with stand-ins.
+  const homeLF = home.replace(/\r/g, '');
+  const cb = (name, deps) => {
+    const re = new RegExp('const ' + name + ' = useCallback\\(\\(([^)]*)\\) => \\{([\\s\\S]*?)\\n  \\}, \\[' + deps + '\\]\\);');
+    const m = homeLF.match(re); assert.ok(m, name + ' found'); return { params: m[1], body: m[2] };
+  };
+  const modalJsx = (visible) => {
+    const esc = visible.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const m = homeLF.match(new RegExp('<Modal[^>]*?visible=\\{' + esc + '\\}[\\s\\S]*?</Modal>'));
+    assert.ok(m, 'Modal bound to ' + visible); return m[0];
+  };
+  const liftResolveApprox = (setShown, ref) => {
+    const r = cb('resolveApprox', '');
+    const params = r.params.replace(/:\s*[A-Za-z]+/g, '');   // drop the TS type ("proceed: boolean")
+    return new Function('setShowApproxModal', 'approxResolveRef', 'return (' + params + ') => {' + r.body + '\n};')(setShown, ref);
+  };
+  test('#2 popups close by themselves when tracking ends while open (Stop: no second stop; override: no late Start Now)', async () => {
+    const m = homeLF.match(/useEffect\(\(\) => \{\n    if \(!isGPSActive\) \{([\s\S]*?)\n    \}\n  \}, \[isGPSActive\]\);/);
     assert.ok(m, 'auto-close effect present');
-    const modes = [];
-    const body = 'if (!isGPSActive) setStopConfirmMode(null);';
-    new Function('isGPSActive', 'setStopConfirmMode', body)(false, (x) => modes.push(x));
-    new Function('isGPSActive', 'setStopConfirmMode', body)(true, (x) => modes.push(x));
-    assert.deepStrictEqual(modes, [null], 'closed only when tracking is no longer active');
+    const run = (active) => {
+      const calls = [];
+      new Function('isGPSActive', 'setStopConfirmMode', 'setShowOverrideModal', 'if (!isGPSActive) {' + m[1] + '}')(
+        active, (x) => calls.push(['stop', x]), (x) => calls.push(['override', x]));
+      return calls;
+    };
+    assert.deepStrictEqual(run(false), [['stop', null], ['override', false]]);
+    assert.deepStrictEqual(run(true), [], 'nothing closed while tracking runs');
+  });
+
+  // ── 2026-10-19: the last three Home popups moved off Alert.alert ──
+  test('Home has no native Alert left (every popup is the notif modal)', async () => {
+    assert.ok(!/Alert\.alert\(/.test(homeLF), 'no Alert.alert');
+    assert.ok(!/^\s*Alert,$/m.test(homeLF), 'Alert no longer imported');
+    for (const v of ['showStartConfirmModal', 'stopConfirmMode !== null', 'showApproxModal', 'startErrorMessage !== null', 'showOverrideModal', 'showEarlyTrackingModal'])
+      assert.ok(modalJsx(v).includes('homeStyles.notifCard'), v + ' uses notifCard');
+  });
+  test('approximate location: Start waits; "Continue anyway" → proceeds; popup closes', async () => {
+    const c = cb('handleApproxContinue', 'resolveApprox');
+    const shown = []; const ref = { current: null };
+    const resolveApprox = liftResolveApprox((x) => shown.push(x), ref);
+    const answer = new Promise((res) => { ref.current = res; });
+    new Function('resolveApprox', c.body)(resolveApprox);
+    assert.strictEqual(await answer, true);
+    assert.deepStrictEqual(shown, [false]);
+    assert.strictEqual(ref.current, null, 'resolver released');
+  });
+  test('approximate location: "Open settings" → start stops here, re-armed for return, Settings opened', async () => {
+    const o = cb('handleApproxOpenSettings', 'resolveApprox');
+    const shown = []; const ref = { current: null }; let settings = 0;
+    const resolveApprox = liftResolveApprox((x) => shown.push(x), ref);
+    const answer = new Promise((res) => { ref.current = res; });
+    const pendingStartRef = { current: false };
+    new Function('pendingStartRef', 'Linking', 'resolveApprox', o.body)(
+      pendingStartRef, { openSettings: () => { settings++; return Promise.resolve(); } }, resolveApprox);
+    assert.strictEqual(await answer, false);
+    assert.strictEqual(pendingStartRef.current, true);
+    assert.strictEqual(settings, 1);
+    assert.deepStrictEqual(shown, [false]);
+  });
+  test('approximate location: a second answer is ignored (resolver used once)', async () => {
+    const ref = { current: null }; let n = 0;
+    const resolveApprox = liftResolveApprox(() => {}, ref);
+    ref.current = () => { n++; };
+    resolveApprox(true); resolveApprox(false);
+    assert.strictEqual(n, 1);
+  });
+  test('approximate location popup: copy, buttons wired, back press does not dismiss (choice required)', async () => {
+    const jsx = modalJsx('showApproxModal');
+    for (const k of ['home:alerts.approximateLocationTitle', 'home:alerts.approximateLocationMessage']) assert.ok(jsx.includes(k), k);
+    assert.ok(/onPress=\{handleApproxOpenSettings\}[\s\S]*?home:alerts\.openSettings/.test(jsx), 'Open settings wired');
+    assert.ok(/onPress=\{handleApproxContinue\}[\s\S]*?home:alerts\.continueAnyway/.test(jsx), 'Continue anyway wired');
+    assert.ok(/onRequestClose=\{\(\) => \{ \/\* a choice is required \*\/ \}\}/.test(jsx), 'back press keeps it open');
+  });
+  test('start failure: error text shown in the popup with one OK button; OK closes it', async () => {
+    assert.ok(/setStartErrorMessage\(error instanceof Error \? error\.message : t\('home:errors\.trackingFailed'\)\);/.test(homeLF), 'error → popup');
+    const jsx = modalJsx('startErrorMessage !== null');
+    assert.ok(jsx.includes("t('common:errors.generic')") && jsx.includes('{startErrorMessage}'), 'title + message');
+    assert.strictEqual((jsx.match(/<TouchableOpacity/g) || []).length, 1, 'one button');
+    assert.ok(/onPress=\{handleStartErrorClose\}[\s\S]*?t\('common:ok'\)/.test(jsx), 'OK closes');
+    assert.ok(jsx.includes('onRequestClose={handleStartErrorClose}'), 'back closes');
+    const c = cb('handleStartErrorClose', ''); const set = [];
+    new Function('setStartErrorMessage', c.body)((x) => set.push(x));
+    assert.deepStrictEqual(set, [null]);
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/common/${l}.json`, 'utf8'));
+      assert.ok(j.ok && j.errors && j.errors.generic, `${l}: common ok + errors.generic`);
+    }
+  });
+  test('start in a pocket (Android backgrounded) still re-arms with a toast, never the error popup', async () => {
+    assert.ok(/code === START_BACKGROUNDED_CODE\) \{[\s\S]{0,200}pendingStartRef\.current = true;[\s\S]{0,200}return;\s*\}\s*setStartErrorMessage\(/.test(homeLF));
+  });
+  test('manual override: button opens popup; "Start Now" → sending on + toast; "Cancel" → nothing', async () => {
+    const open = cb('manualStartSending', ''); const shown = [];
+    new Function('setShowOverrideModal', open.body)((x) => shown.push(x));
+    assert.deepStrictEqual(shown, [true]);
+    const yes = cb('handleOverrideConfirm', 't');
+    const st = { shown: [], sending: [], toasts: 0 }; const ref = { current: false };
+    new Function('setShowOverrideModal', 'isSendingDataRef', 'setIsSendingData', 'toastSuccess', 't', yes.body)(
+      (x) => st.shown.push(x), ref, (x) => st.sending.push(x), () => st.toasts++, (k) => k);
+    assert.deepStrictEqual([st.shown, ref.current, st.sending, st.toasts], [[false], true, [true], 1]);
+    const no = cb('handleOverrideCancel', ''); const n = [];
+    new Function('setShowOverrideModal', no.body)((x) => n.push(x));
+    assert.deepStrictEqual(n, [false]);
+    const jsx = modalJsx('showOverrideModal');
+    assert.ok(/onPress=\{handleOverrideConfirm\}[\s\S]*?home:alerts\.startNow/.test(jsx), 'Start Now wired');
+    assert.ok(/onPress=\{handleOverrideCancel\}[\s\S]*?home:alerts\.cancel/.test(jsx), 'Cancel wired');
+    assert.ok(jsx.includes('home:alerts.overrideTitle') && jsx.includes('home:alerts.overrideMessage') && jsx.includes('onRequestClose={handleOverrideCancel}'));
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      for (const k of ['overrideTitle', 'overrideMessage', 'startNow', 'cancel']) assert.ok(j.alerts[k], `${l}.alerts.${k}`);
+    }
   });
   test('#2 "has the race started": before/after gun, unknown start, manual start', async () => {
     const now = Date.now();
@@ -853,7 +956,8 @@ const L = () => load('services/locationService').locationService;
     assert.ok(/stopParticipantId = String\(sp\.participantId\);/.test(s) && /drainForStop\(stopParticipantId, stopEventId\)/.test(s), 'Stop uses session ids');
     // Approximate location: warned (Open settings / Continue anyway), never blocked.
     assert.ok(/if \(await gpsService\.isApproximateLocation\(\)\)/.test(s), 'approximate check at Start');
-    assert.ok(/t\('home:alerts\.continueAnyway'\), onPress: \(\) => resolve\(true\)/.test(s), 'Continue anyway proceeds');
+    assert.ok(/approxResolveRef\.current = resolve;\s*setShowApproxModal\(true\);/.test(s), 'Start waits on the approximate-location popup');
+    assert.ok(/const handleApproxContinue = useCallback\(\(\) => \{\s*resolveApprox\(true\);/.test(s), 'Continue anyway proceeds');
     // No captured offset → no gun (session waits), as before when server_datetime was missing.
     assert.ok(/const raceTime = serverTimeOffsetKnownRef\.current\s*\?\s*computeRaceStartTime\(/.test(s), 'gun only from a captured offset');
     assert.ok(/serverTimeOffsetKnownRef\.current = true;/.test(s), 'flag set where the offset is captured');

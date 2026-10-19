@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StatusBar,
   ScrollView,
-  Alert,
   AppState,
   ActivityIndicator,
   BackHandler,
@@ -269,6 +268,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ✅ Stop confirmation — null = closed; 'before'/'after' the gun picks the copy.
   // Was a native Alert.alert, which looked unlike every other popup on this screen.
   const [stopConfirmMode, setStopConfirmMode] = useState<null | 'before' | 'after'>(null);
+
+  // ✅ The other three Home popups, moved off Alert.alert onto the same notif*
+  // modal (2026-10-19):
+  //   - approximate location at Start: the start flow awaits the runner's
+  //     choice through approxResolveRef (true = continue, false = settings)
+  //   - start failure: the error text, one OK button
+  //   - manual override ("start sending now")
+  const [showApproxModal, setShowApproxModal] = useState(false);
+  const approxResolveRef = useRef<((proceed: boolean) => void) | null>(null);
+  const [startErrorMessage, setStartErrorMessage] = useState<string | null>(null);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
 
   // ✅ Notification popup state
   const [notificationPopup, setNotificationPopup] = useState<{
@@ -847,23 +857,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // the runner chooses. "Open settings" re-arms pendingStartRef so returning
       // from Settings resumes this start (and re-checks) like the permission gate.
       if (await gpsService.isApproximateLocation()) {
+        // Answered by handleApproxOpenSettings / handleApproxContinue.
         const proceed = await new Promise<boolean>((resolve) => {
-          Alert.alert(
-            t('home:alerts.approximateLocationTitle'),
-            t('home:alerts.approximateLocationMessage'),
-            [
-              {
-                text: t('home:alerts.openSettings'),
-                onPress: () => {
-                  pendingStartRef.current = true;
-                  Linking.openSettings().catch(() => { /* silent */ });
-                  resolve(false);
-                },
-              },
-              { text: t('home:alerts.continueAnyway'), onPress: () => resolve(true) },
-            ],
-            { cancelable: false },
-          );
+          approxResolveRef.current = resolve;
+          setShowApproxModal(true);
         });
         if (!proceed) return;
       }
@@ -1067,10 +1064,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         toastError(t('home:errors.trackingFailed'), t('home:tracking.reopenToStart'));
         return;
       }
-      Alert.alert(
-        t('common:errors.generic'),
-        error instanceof Error ? error.message : t('home:errors.trackingFailed')
-      );
+      setStartErrorMessage(error instanceof Error ? error.message : t('home:errors.trackingFailed'));
     }
   }, [
     hasPermission,
@@ -1372,29 +1366,56 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setStopConfirmMode(null);
   }, []);
 
-  // Tracking ended by itself while the popup was open (finish crossed, stale
-  // stop) → close it, so "Stop anyway" cannot run the stop flow a second time.
+  // Tracking ended by itself while a popup was open (finish crossed, stale
+  // stop) → close it, so "Stop anyway" cannot run the stop flow a second time
+  // and "Start Now" cannot switch on sending for a session that is over.
   useEffect(() => {
-    if (!isGPSActive) setStopConfirmMode(null);
+    if (!isGPSActive) {
+      setStopConfirmMode(null);
+      setShowOverrideModal(false);
+    }
   }, [isGPSActive]);
 
   const manualStartSending = useCallback(() => {
-    Alert.alert(
-      t('home:alerts.overrideTitle'),
-      t('home:alerts.overrideMessage'),
-      [
-        { text: t('home:alerts.cancel'), style: 'cancel' },
-        {
-          text: t('home:alerts.startNow'),
-          onPress: () => {
-            isSendingDataRef.current = true;
-            setIsSendingData(true);
-            toastSuccess(t('home:tracking.manualStart'), t('home:tracking.manualStartMessage'));
-          },
-        },
-      ]
-    );
+    setShowOverrideModal(true);
+  }, []);
+
+  // "Start Now" → close, start sending immediately
+  const handleOverrideConfirm = useCallback(() => {
+    setShowOverrideModal(false);
+    isSendingDataRef.current = true;
+    setIsSendingData(true);
+    toastSuccess(t('home:tracking.manualStart'), t('home:tracking.manualStartMessage'));
   }, [t]);
+
+  // "Cancel" → just close
+  const handleOverrideCancel = useCallback(() => {
+    setShowOverrideModal(false);
+  }, []);
+
+  // Approximate-location popup: hand the choice back to the waiting start flow.
+  const resolveApprox = useCallback((proceed: boolean) => {
+    setShowApproxModal(false);
+    const resolve = approxResolveRef.current;
+    approxResolveRef.current = null;
+    resolve?.(proceed);
+  }, []);
+
+  // "Open settings" re-arms pendingStartRef so returning from Settings resumes
+  // this start (and re-checks), like the permission gate.
+  const handleApproxOpenSettings = useCallback(() => {
+    pendingStartRef.current = true;
+    Linking.openSettings().catch(() => { /* silent */ });
+    resolveApprox(false);
+  }, [resolveApprox]);
+
+  const handleApproxContinue = useCallback(() => {
+    resolveApprox(true);
+  }, [resolveApprox]);
+
+  const handleStartErrorClose = useCallback(() => {
+    setStartErrorMessage(null);
+  }, []);
 
   // ==================== EFFECTS ====================
 
@@ -2040,6 +2061,111 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   activeOpacity={0.7}
                 >
                   <Text style={[commonStyles.secondaryButtonText, homeStyles.notifDangerText]}>{t('home:alerts.stopAnyway')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ✅ Approximate location at Start — warn, never block. No dismiss on
+          back (was cancelable: false): the start flow waits for a choice. */}
+      <Modal
+        transparent
+        visible={showApproxModal}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => { /* a choice is required */ }}
+      >
+        <View style={homeStyles.notifBackdrop}>
+          <View style={homeStyles.notifWrapper}>
+            <View style={homeStyles.notifCard}>
+              <View style={homeStyles.notifIconWrapper}>
+                <Ionicons name="locate-outline" size={36} color={colors.warning} />
+              </View>
+              <Text style={homeStyles.notifTitle}>{t('home:alerts.approximateLocationTitle')}</Text>
+              <Text style={homeStyles.notifBody}>{t('home:alerts.approximateLocationMessage')}</Text>
+              <View style={homeStyles.notifButtonContainer}>
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  onPress={handleApproxOpenSettings}
+                  activeOpacity={0.8}
+                >
+                  <Text style={commonStyles.primaryButtonText}>{t('home:alerts.openSettings')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={commonStyles.secondaryButton}
+                  onPress={handleApproxContinue}
+                  activeOpacity={0.7}
+                >
+                  <Text style={commonStyles.secondaryButtonText}>{t('home:alerts.continueAnyway')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ✅ Start failed — the error, one OK button */}
+      <Modal
+        transparent
+        visible={startErrorMessage !== null}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={handleStartErrorClose}
+      >
+        <View style={homeStyles.notifBackdrop}>
+          <View style={homeStyles.notifWrapper}>
+            <View style={homeStyles.notifCard}>
+              <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger]}>
+                <Ionicons name="alert-circle-outline" size={36} color={colors.error} />
+              </View>
+              <Text style={homeStyles.notifTitle}>{t('common:errors.generic')}</Text>
+              <Text style={homeStyles.notifBody}>{startErrorMessage}</Text>
+              <View style={homeStyles.notifButtonContainer}>
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  onPress={handleStartErrorClose}
+                  activeOpacity={0.8}
+                >
+                  <Text style={commonStyles.primaryButtonText}>{t('common:ok')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ✅ Manual override — start sending now, ignoring the race start time */}
+      <Modal
+        transparent
+        visible={showOverrideModal}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={handleOverrideCancel}
+      >
+        <View style={homeStyles.notifBackdrop}>
+          <View style={homeStyles.notifWrapper}>
+            <View style={homeStyles.notifCard}>
+              <View style={homeStyles.notifIconWrapper}>
+                <Ionicons name="play-circle-outline" size={36} color={colors.primary} />
+              </View>
+              <Text style={homeStyles.notifTitle}>{t('home:alerts.overrideTitle')}</Text>
+              <Text style={homeStyles.notifBody}>{t('home:alerts.overrideMessage')}</Text>
+              <View style={homeStyles.notifButtonContainer}>
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  onPress={handleOverrideConfirm}
+                  activeOpacity={0.8}
+                >
+                  <Text style={commonStyles.primaryButtonText}>{t('home:alerts.startNow')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={commonStyles.secondaryButton}
+                  onPress={handleOverrideCancel}
+                  activeOpacity={0.7}
+                >
+                  <Text style={commonStyles.secondaryButtonText}>{t('home:alerts.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
