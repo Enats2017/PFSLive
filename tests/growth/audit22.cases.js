@@ -108,13 +108,20 @@ module.exports = function register({ M, load, test, SRC }) {
     const m = RAW();
     await m.getFollowedUsers();
     let stall = true;
-    AS.getItem = async (k) => { if (k === '@PFSLive:followSeqIssued' && stall) { stall = false; await wait(6000); } return origGet(k); };
+    // Waited on below instead of a fixed sleep: on a busy machine a fixed 3 s
+    // could end before the stalled read (and the upload behind it) was done.
+    let stallDone; const stalled = new Promise((r) => { stallDone = r; });
+    AS.getItem = async (k) => {
+      if (k === '@PFSLive:followSeqIssued' && stall) { stall = false; await wait(6000); stallDone(); }
+      return origGet(k);
+    };
     M.api.syncScript = [{ delay: 1500 }];
     const pA = m.followUser(1);
     await wait(5300);
     await pA;
     await m.unfollowUser(1);
-    await wait(3000);
+    await stalled;
+    await wait(1700);                         // the stalled upload's 1.5 s server delay
     restoreAS();
     await idle(m);
     const list = ok().length ? ok().pop().body.customer_app_id_string : '(none)';
