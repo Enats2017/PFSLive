@@ -1020,6 +1020,18 @@ const L = () => load('services/locationService').locationService;
     const r = await Promise.all([ts.flushPendingStartPing(), ts.flushPendingStartPing()]);
     assert.strictEqual(startPosts().length, 1); assert.ok(r.includes('sent') && r.includes('none'), JSON.stringify(r));
   });
+  test('finish already detected (finishBackgroundStop uploading, params still there) → pending ping dropped, NOT sent', async () => {
+    armPing(); M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    M.store.set('@PFSLive:raceFinished', '1');
+    assert.strictEqual(await TS().flushPendingStartPing(), 'stopped');
+    assert.strictEqual(startPosts().length, 0); assert.ok(!M.store.has(PENDING_PING));
+  });
+  test('a NEW Start clears the previous finish flag, so its own pending ping is still delivered', async () => {
+    M.store.set('@PFSLive:raceFinished', '1');
+    await startSession('4566', '19');
+    M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
+    assert.strictEqual(await TS().flushPendingStartPing(), 'sent');
+  });
   test('flush answered 429 (rate limited) → kept pending; next flush delivers it', async () => {
     armPing(); M.store.set(PENDING_PING, JSON.stringify({ participantId: '4566', eventId: '19', diag: {} }));
     M.axios.script = [429];

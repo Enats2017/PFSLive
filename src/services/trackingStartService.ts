@@ -41,6 +41,8 @@ export const PENDING_START_PING_KEY = '@PFSLive:pendingStartPing';
 // Same literal as gpsService's TRACKING_PARAMS_KEY — re-declared to avoid an
 // import cycle at load time (see CLAUDE.md on locally re-declared keys).
 const TRACKING_PARAMS_KEY_LOCAL = '@PFSLive:trackingParams';
+// gpsService's RACE_FINISHED_KEY, same reason.
+const RACE_FINISHED_KEY_LOCAL = '@PFSLive:raceFinished';
 
 export const START_PING_DELAYS_MS = [0, 3000, 10000, 30000];
 
@@ -139,7 +141,12 @@ export const flushPendingStartPing = async (): Promise<StartPingResult | 'none'>
     const sameSession = !!pending && !!params
       && String(params.participantId) === String(pending.participantId)
       && String(params.eventId) === String(pending.eventId);
-    if (!sameSession) {
+    // A finished session is over even while its params still exist:
+    // finishBackgroundStop uploads the finish log BEFORE _doFullStop clears them,
+    // and a start row written in that gap would be newer than the finish log —
+    // home_api would then offer Start again to a finisher.
+    const finished = (await AsyncStorage.getItem(RACE_FINISHED_KEY_LOCAL)) === '1';
+    if (!sameSession || finished) {
       await AsyncStorage.removeItem(PENDING_START_PING_KEY);
       return 'stopped';
     }
