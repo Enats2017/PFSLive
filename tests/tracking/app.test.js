@@ -711,8 +711,60 @@ const L = () => load('services/locationService').locationService;
       assert.ok(j.ok && j.errors && j.errors.generic, `${l}: common ok + errors.generic`);
     }
   });
-  test('start in a pocket (Android backgrounded) still re-arms with a toast, never the error popup', async () => {
-    assert.ok(/code === START_BACKGROUNDED_CODE\) \{[\s\S]{0,200}pendingStartRef\.current = true;[\s\S]{0,200}return;\s*\}\s*setStartErrorMessage\(/.test(homeLF));
+  // The real catch of the start flow, run with stand-ins.
+  const runStartCatch = (error, notifyFails = false) => {
+    const m = homeLF.match(/\n    \} catch \(error\) \{\n      setIsGPSActive\(false\);([\s\S]*?)\n    \}\n  \}, \[\n    hasPermission,/);
+    assert.ok(m, 'start catch found');
+    const out = { pending: { current: false }, toasts: [], notes: [], errorMsg: undefined, active: [] };
+    const Notifications = { scheduleNotificationAsync: (req) => { out.notes.push(req); return notifyFails ? Promise.reject(new Error('x')) : Promise.resolve('id'); } };
+    new Function('error', 'setIsGPSActive', 'isGPSActiveRef', 'START_BACKGROUNDED_CODE', 'pendingStartRef', 'toastError', 't', 'Notifications', 'setStartErrorMessage',
+      'setIsGPSActive(false);' + m[1].replace(/\(error as any\)/g, 'error'))(
+      error, (x) => out.active.push(x), { current: true }, 'start_backgrounded', out.pending,
+      (a, b) => out.toasts.push([a, b]), (k) => k, Notifications, (x) => { out.errorMsg = x; });
+    return out;
+  };
+  test('start in a pocket (Android backgrounded): re-armed, toast AND a notification, never the error popup', async () => {
+    const o = runStartCatch(Object.assign(new Error('App did not return to foreground in time'), { code: 'start_backgrounded' }));
+    assert.strictEqual(o.pending.current, true, 'start re-armed for the next foreground');
+    assert.deepStrictEqual(o.toasts, [['home:errors.trackingFailed', 'home:tracking.reopenToStart']]);
+    assert.strictEqual(o.notes.length, 1, 'one notification');
+    assert.deepStrictEqual(o.notes[0], { content: { title: 'home:tracking.notStartedTitle', body: 'home:tracking.notStartedBody', data: { type: 'start_backgrounded' } }, trigger: null });
+    assert.strictEqual(o.errorMsg, undefined, 'no error popup');
+    assert.deepStrictEqual(o.active, [false]);
+  });
+  test('backgrounded start: a failing notification is swallowed (no unhandled rejection, start still armed)', async () => {
+    let unhandled = null; const h = (e) => { unhandled = e; };
+    process.on('unhandledRejection', h);
+    const o = runStartCatch(Object.assign(new Error('bg'), { code: 'start_backgrounded' }), true);
+    await new Promise((r) => setTimeout(r, 20));
+    process.off('unhandledRejection', h);
+    assert.strictEqual(unhandled, null); assert.strictEqual(o.pending.current, true);
+  });
+  test('any other start error: error popup, no notification, not re-armed', async () => {
+    const o = runStartCatch(new Error('boom'));
+    assert.strictEqual(o.errorMsg, 'boom'); assert.strictEqual(o.notes.length, 0); assert.strictEqual(o.pending.current, false);
+    assert.strictEqual(runStartCatch('weird').errorMsg, 'home:errors.trackingFailed');
+  });
+  test('Start popup tells the runner to keep Livio on screen 5 s, in the amber box, before the buttons', async () => {
+    const jsx = modalJsx('showStartConfirmModal');
+    const iBody = jsx.indexOf("t('home:startConfirm.message')");
+    const iKeep = jsx.indexOf("<Text style={homeStyles.notifKeepOpenText}>{t('home:startConfirm.keepOpen')}</Text>");
+    const iBox = jsx.indexOf('<View style={homeStyles.notifKeepOpenBox}>');
+    const iButtons = jsx.indexOf('homeStyles.notifButtonContainer');
+    assert.ok(iBody > 0 && iBox > iBody && iKeep > iBox && iButtons > iKeep, 'message → amber box → buttons');
+    assert.ok(!/Platform\.OS/.test(jsx), 'shown on both platforms');
+    const st = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(/notifKeepOpenBox: \{\s*backgroundColor: colors\.warning \+ "15",/.test(st), 'amber tint');
+    assert.ok(/notifKeepOpenText: \{[^}]*color: "#B45309",/.test(st), 'dark amber text');
+    const gps = { en: 'GPS Activated', fr: 'GPS Activé', nl: 'GPS Geactiveerd' };
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      const k = j.startConfirm.keepOpen;
+      assert.ok(typeof k === 'string' && /\b5\b/.test(k), l + ': keepOpen says 5 seconds');
+      assert.strictEqual(j.tracking.gpsActivated, gps[l], l + ': toast label');
+      assert.ok(k.includes(gps[l]), l + ': keepOpen quotes the real toast title "' + gps[l] + '"');
+      for (const n of ['notStartedTitle', 'notStartedBody']) assert.ok(typeof j.tracking[n] === 'string' && j.tracking[n].length > 10, l + ': ' + n);
+    }
   });
   test('manual override: button opens popup; "Start Now" → sending on + toast; "Cancel" → nothing', async () => {
     const open = cb('manualStartSending', ''); const shown = [];

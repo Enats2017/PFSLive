@@ -1062,6 +1062,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       if ((error as any)?.code === START_BACKGROUNDED_CODE) {
         pendingStartRef.current = true;
         toastError(t('home:errors.trackingFailed'), t('home:tracking.reopenToStart'));
+        // The toast is invisible in a pocket. A notification at least reaches a
+        // runner who checks the phone (or wears it on the wrist); tapping it opens
+        // Livio and the armed start above runs on that foreground.
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: t('home:tracking.notStartedTitle'),
+            body: t('home:tracking.notStartedBody'),
+            data: { type: 'start_backgrounded' },
+          },
+          trigger: null,   // deliver immediately
+        }).catch(() => { /* silent — a failed notification must not break the start */ });
         return;
       }
       setStartErrorMessage(error instanceof Error ? error.message : t('home:errors.trackingFailed'));
@@ -2005,6 +2016,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:startConfirm.title')}</Text>
               <Text style={homeStyles.notifBody}>{t('home:startConfirm.message')}</Text>
+              {/* Android cannot start the location service once the app is in the
+                  background: a phone pocketed within ~3 s of Start never tracks
+                  until Livio is opened again (start_backgrounded). A runner does
+                  not feel a notification mid-race, so say it before they start. */}
+              <View style={homeStyles.notifKeepOpenBox}>
+                <Text style={homeStyles.notifKeepOpenText}>{t('home:startConfirm.keepOpen')}</Text>
+              </View>
               <View style={homeStyles.notifButtonContainer}>
                 <TouchableOpacity
                   style={[commonStyles.primaryButton, homeStyles.notifViewButton]}

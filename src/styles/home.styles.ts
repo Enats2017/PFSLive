@@ -274,6 +274,23 @@ export const homeStyles = StyleSheet.create({
   notifDangerText: {
     color: colors.error,
   },
+  // Start popup: "keep Livio open 5 s" — amber tint so it reads as an instruction,
+  // dark amber text because colors.warning itself is too light to read on white.
+  notifKeepOpenBox: {
+    backgroundColor: colors.warning + "15",
+    borderRadius: 12,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: -spacing.md,
+    marginBottom: spacing.xl,
+  },
+  notifKeepOpenText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: "#B45309",
+    textAlign: "center",
+    lineHeight: 20,
+  },
   logosSection: {
     marginTop: spacing.md,
     paddingHorizontal: spacing.md,
