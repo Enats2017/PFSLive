@@ -46,6 +46,29 @@ export function isStaleSession(
  * to hours-old home data and pushed the gun late by exactly that age, so every
  * fix after the real gun was dropped as "race not started".
  */
+/**
+ * A backgrounded Android start (start_backgrounded) is re-armed in memory, but
+ * Samsung / Doze can kill the backgrounded process, and then opening Livio
+ * started nothing (2026-10-20 re-check). The re-arm is persisted too; this
+ * decides whether a cold start should finish it: only recent (the runner tapped
+ * Start minutes ago, not yesterday) and only for the race home still offers.
+ */
+export const PENDING_BG_START_MAX_AGE_MS = 10 * 60 * 1000;
+
+export function shouldResumePendingStart(
+  pending: { participantId?: unknown; eventId?: unknown; at?: unknown } | null | undefined,
+  home: { show_start_track?: number; next_race_participant_app_id?: unknown; next_race_id?: unknown } | null | undefined,
+  nowMs: number,
+): boolean {
+  if (!pending || typeof pending.at !== 'number' || !isFinite(pending.at)) return false;
+  const age = nowMs - pending.at;
+  if (age < 0 || age > PENDING_BG_START_MAX_AGE_MS) return false;
+  if (!home || home.show_start_track !== 1) return false;
+  if (pending.participantId == null || pending.eventId == null) return false;
+  return String(home.next_race_participant_app_id) === String(pending.participantId)
+    && String(home.next_race_id) === String(pending.eventId);
+}
+
 export function computeRaceStartTime(
   raceDate: string | null | undefined,
   raceTime: string | null | undefined,

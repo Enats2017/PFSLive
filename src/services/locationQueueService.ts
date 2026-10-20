@@ -83,7 +83,15 @@ export const locationQueueService = {
     _trustedOnlineUntil = Date.now() + TRUST_AFTER_SUCCESS_MS;
   },
 
-  async hasNetwork(): Promise<boolean> {
+  /**
+   * `allowProbe: false` answers "is the network really back?" — NetInfo online,
+   * or a real send just went through — without the periodic probe. The backlog
+   * guard uses it to decide whether a queued fix may skip the queue throttle:
+   * a probe window is a guess, and in a dead zone (now probed too, 2026-10-20)
+   * it would let every SDK fire into the queue for 15 s out of every 30.
+   */
+  async hasNetwork(opts: { allowProbe?: boolean } = {}): Promise<boolean> {
+    const allowProbe = opts.allowProbe !== false;
     try {
       const now = Date.now();
 
@@ -96,26 +104,34 @@ export const locationQueueService = {
           setTimeout(() => reject(new Error('NetInfo timeout')), 3000)
         ),
       ]);
-      // No radio link at all (airplane mode, no signal) — that one is reliable.
-      if (state.isConnected === false) return false;
-
-      // A real request just went through — believe that over NetInfo's
-      // reachability guess (but never over "no radio" above).
-      if (now < _trustedOnlineUntil) return true;
+      // "No radio link" (isConnected=false) gets the same treatment as
+      // "unreachable" below since 2026-10-20 (re-check). It used to return false
+      // outright, so nothing was ever attempted: bib 2000 (p4789, iOS, event 19)
+      // had isConnected=false the whole race and all 177 fixes arrived after the
+      // finish — whether NetInfo was stale in the background or data was really
+      // off cannot be told from the log. A truly dead link fails the probe at once
+      // (no route), so the cost is one instant failure per 30 s.
+      const noRadio = state.isConnected === false;
 
       // ✅ isInternetReachable can be null on Android while still determining.
       // Treat null as true (optimistic) — better to attempt a send and fail
       // than to queue unnecessarily when connectivity is likely fine.
-      if (state.isInternetReachable !== false) return true;
+      if (!noRadio && state.isInternetReachable !== false) return true;
 
-      // Connected but NetInfo says "unreachable": allow a periodic real attempt.
+      // A real request just went through — believe that over NetInfo.
+      if (now < _trustedOnlineUntil) return true;
+
+      // NetInfo says offline: allow a periodic real attempt.
+      if (!allowProbe) return false;
       if (now < _probeWindowUntil) return true;
       if (now - _lastProbeOpenedAt >= PROBE_EVERY_MS) {
         _lastProbeOpenedAt = now;
         _probeWindowUntil = now + PROBE_WINDOW_MS;
         try {
           const { addLog } = require('./gpsService');
-          await addLog('🔎', 'NetInfo says unreachable — trying the API anyway (probe)');
+          await addLog('🔎', noRadio
+            ? `NetInfo says no connection (type:${state.type}) — trying the API anyway (probe)`
+            : 'NetInfo says unreachable — trying the API anyway (probe)');
         } catch { /* silent */ }
         return true;
       }
@@ -128,7 +144,10 @@ export const locationQueueService = {
     }
   },
 
-  async addToQueue(location: QueuedLocation, throttle: boolean = true): Promise<void> {
+  // Returns whether the fix was STORED (2026-10-20 re-check): callers logged
+  // "queued" for fixes the throttle had just dropped — 4,016 "Backlog present —
+  // current fix queued" lines on 10-17/18 directly followed "fix dropped".
+  async addToQueue(location: QueuedLocation, throttle: boolean = true): Promise<boolean> {
     try {
       // ✅ QUEUE-INSERT THROTTLE — single chokepoint for offline-queue growth.
       //
@@ -168,7 +187,7 @@ export const locationQueueService = {
             const { addLog } = require('./gpsService');
             await addLog('⏭️', `Queue-throttled — ${((now - lastQueuedAt) / 1000).toFixed(0)}s < ${intervalSec}s, fix dropped`);
           } catch { /* silent */ }
-          return; // within the interval — drop this fix, keep queue at interval rate
+          return false; // within the interval — drop this fix, keep queue at interval rate
         }
       }
 
@@ -201,6 +220,7 @@ export const locationQueueService = {
       if (API_CONFIG.DEBUG) {
         console.log(`📦 Location queued (${queue.length} in queue)`);
       }
+      return true;
     } catch (error) {
       // A failed insert means a fix is LOST — silently, until now. console.error
       // doesn't exist in a production build, so this went to the on-device panel
@@ -214,6 +234,7 @@ export const locationQueueService = {
         console.error('❌ Error adding to queue:', error);
       }
     }
+    return false;
   },
 
   async getQueue(): Promise<QueuedLocation[]> {

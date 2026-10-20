@@ -243,6 +243,9 @@ export const PENDING_FINISH_KEY = '@PFSLive:pendingFinish';
 // Error.code thrown by startWatchingPosition when an Android start could not
 // begin because the app left the foreground (see the guard there).
 export const START_BACKGROUNDED_CODE = 'start_backgrounded';
+// Error.code thrown by startWatchingPosition when Transistor's ready()/start()
+// failed (in the foreground) — nothing would be recorded.
+export const ENGINE_START_FAILED_CODE = 'engine_start_failed';
 
 export interface TrackingLogEntry {
   ts: number;
@@ -267,6 +270,13 @@ let _logDirty = false;
 let _lastBgFlushAt = 0;
 let _logSegCount = 0;                           // number of sealed segments on disk
 let _segCountLoaded = false;                    // synced from disk on first seal (cold-relaunch safety)
+// Segment being written by _sealCurrentSegment right now (null otherwise). Taken
+// out of _logBuffer synchronously, so _readFullLog must include it until the
+// write lands — see the seal race note there.
+let _sealingSeg: TrackingLogEntry[] | null = null;
+// When THIS JS context started (module load). A send gap that began before it
+// spans a process restart — see the send-gap diagnostic.
+const _jsContextStartedAt = Date.now();
 let _bufferHydrated = false;                    // ✅ current-segment buffer rehydrated from disk in THIS JS context
 const LOG_FLUSH_INTERVAL_MS = 2000;
 
@@ -329,8 +339,94 @@ const isRaceNotStarted = async (): Promise<boolean> => {
 };
 
 // Final stretch before the gun in which the pre-race low-power mode is lifted
-// (see the heartbeat). 30 min: p4823's app was terminated ~20 min before its gun.
-export const PRE_GUN_WAKE_MS = 30 * 60 * 1000;
+// (see the heartbeat). 60 min since 2026-10-20 (was 30): an engine left idle is
+// what iOS suspends, and it then wakes only once the phone has moved well away
+// (p4823: idle 09:09, suspended, relaunched 09:39 when the runner walked, next
+// sign of life 1.2 km into the race). Of 385 starts before the gun since 09-04,
+// 221 were within 30 min and 111 more within 60 — the 30-min window left that
+// second group idle long enough to be suspended. Starts earlier than 60 min
+// still idle to save battery until the window opens or the runner moves.
+export const PRE_GUN_WAKE_MS = 60 * 60 * 1000;
+
+// True while the engine should be kept MOVING: a live, unfinished session whose
+// race is on (or manual), or whose gun is within PRE_GUN_WAKE_MS. Same rule the
+// heartbeat applies, reused by the motion-change listener.
+const _shouldStayMoving = async (): Promise<boolean> => {
+  try {
+    if ((await AsyncStorage.getItem(TRACKING_PARAMS_KEY)) === null) return false;
+    if ((await AsyncStorage.getItem(RACE_FINISHED_KEY)) === '1') return false;
+    if (!(await isRaceNotStarted())) return true;
+    const untilGun = await msUntilGun();
+    return untilGun !== null && untilGun <= PRE_GUN_WAKE_MS;
+  } catch {
+    return false;
+  }
+};
+
+// ── Battery state in the tracking log (2026-10-20) ──────────────────────────
+// 8 Android sessions (Sept/early Oct) went silent minutes before the gun with
+// the app backgrounded and stayed silent all race — the pattern of Android
+// putting the app to sleep. The logs could not say whether Battery Saver or
+// battery optimisation was on, so that question had no answer. Logged at Start
+// and whenever Battery Saver / Low Power Mode changes during the session.
+const LAST_POWER_SAVER_KEY = '@PFSLive:lastPowerSaver';
+
+const _readBatteryState = async (): Promise<{ level: number | null; saver: boolean | null; optimized: boolean | null; charging: boolean | null }> => {
+  let level: number | null = null, saver: boolean | null = null, optimized: boolean | null = null, charging: boolean | null = null;
+  try {
+    const ps: any = await Battery.getPowerStateAsync();
+    if (typeof ps?.batteryLevel === 'number' && ps.batteryLevel >= 0) level = Math.round(ps.batteryLevel * 100);
+    if (typeof ps?.lowPowerMode === 'boolean') saver = ps.lowPowerMode;
+    if (ps?.batteryState !== undefined) charging = ps.batteryState === Battery.BatteryState.CHARGING || ps.batteryState === Battery.BatteryState.FULL;
+  } catch { /* silent */ }
+  if (Platform.OS === 'android') {
+    try { optimized = await Battery.isBatteryOptimizationEnabledAsync(); } catch { /* silent */ }
+  }
+  return { level, saver, optimized, charging };
+};
+
+export const logBatteryState = async (context: string): Promise<void> => {
+  try {
+    const b = await _readBatteryState();
+    const opt = Platform.OS !== 'android' ? 'n/a'
+      : b.optimized === null ? '?' : (b.optimized ? 'ON (Android may pause Livio)' : 'off (exempt)');
+    await addLog('🔋', `Battery (${context}) — level:${b.level ?? '?'}% saver:${b.saver === null ? '?' : (b.saver ? 'ON' : 'off')} optimisation:${opt} charging:${b.charging === null ? '?' : (b.charging ? 'yes' : 'no')}`);
+    if (b.saver !== null) await AsyncStorage.setItem(LAST_POWER_SAVER_KEY, b.saver ? '1' : '0');
+  } catch { /* silent — diagnostics only */ }
+};
+
+// Heartbeat: log only a CHANGE of Battery Saver / Low Power Mode (Samsung turns
+// it on by itself at 15-20 %; Start only checks it at the tap).
+const _logPowerSaverChange = async (): Promise<void> => {
+  try {
+    const b = await _readBatteryState();
+    if (b.saver === null) return;
+    const now = b.saver ? '1' : '0';
+    const prev = await AsyncStorage.getItem(LAST_POWER_SAVER_KEY);
+    if (prev === now) return;
+    await AsyncStorage.setItem(LAST_POWER_SAVER_KEY, now);
+    if (prev === null) return;   // first reading of this session — logged at Start
+    await addLog(b.saver ? '🪫' : '🔋', b.saver
+      ? `Battery Saver turned ON during the session (level:${b.level ?? '?'}%) — Android/iOS may throttle tracking`
+      : `Battery Saver turned off (level:${b.level ?? '?'}%)`);
+    // Start refuses Battery Saver; once tracking runs it can only be reported.
+    // Tell the runner (once per switch-on) — Samsung turns it on by itself at
+    // 15-20 %, so they may not know.
+    if (b.saver) {
+      try {
+        const Notifications = require('expo-notifications');
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: i18n.t('home:powerSaving.midRaceTitle'),
+            body: i18n.t('home:powerSaving.midRaceBody'),
+            data: { type: 'battery_saver' },
+          },
+          trigger: null,
+        });
+      } catch { /* silent — notifications unavailable */ }
+    }
+  } catch { /* silent */ }
+};
 
 // ms until the stored gun, or null when there is none (manual start / no session).
 const msUntilGun = async (): Promise<number | null> => {
@@ -377,7 +473,18 @@ const _scheduleLogFlush = (): void => {
 // buffer for the next segment. Written exactly once per segment and never
 // rewritten, so cost stays flat no matter how long the ride runs.
 const _sealCurrentSegment = async (): Promise<void> => {
-  if (_logBuffer.length === 0) return;
+  // Single-flight (2026-10-20 re-check). Every addLog that lands while a seal is
+  // awaiting its writes still sees a full buffer and used to start ANOTHER seal:
+  // all wrote the same index, each then bumped _logSegCount, leaving empty
+  // indexes — the 40-segment ceiling was reached after a few real segments and
+  // everything but the last 500 entries was dropped. 18 of the 10-17/18 logs had
+  // a 7-165 min hole mid-race (fixes reached the server; only the log was lost),
+  // 277 of 552 logs since 09-01. Entries logged during a seal stay in the buffer
+  // and go into the next segment.
+  if (_logBuffer.length === 0 || _sealingSeg !== null) return;
+  const seg = _logBuffer;
+  _sealingSeg = seg;
+  _logBuffer = [];
 
   // Cold-relaunch safety: if the OS killed us mid-ride and Transistor restarted
   // this JS context, _logSegCount is 0 in memory while disk already holds sealed
@@ -390,20 +497,28 @@ const _sealCurrentSegment = async (): Promise<void> => {
     _segCountLoaded = true;
   }
 
+  const idx = _logSegCount;
   try {
-    await AsyncStorage.setItem(TRACKING_LOG_SEG_PREFIX + _logSegCount, JSON.stringify(_logBuffer));
-    _logSegCount += 1;
+    await AsyncStorage.setItem(TRACKING_LOG_SEG_PREFIX + idx, JSON.stringify(seg));
+    // Count and _sealingSeg change together (no await between), so a concurrent
+    // _readFullLog sees the segment either on disk or in _sealingSeg, never both.
+    _logSegCount = idx + 1;
+    _sealingSeg = null;
     await AsyncStorage.setItem(TRACKING_LOG_SEG_COUNT_KEY, String(_logSegCount));
   } catch {
-    // Seal failed (disk full / transient) — keep entries in memory and retry on
-    // the next entry. Do NOT reset the buffer, so nothing is lost.
+    // Seal failed (disk full / transient) — put the entries back in front and
+    // retry on the next entry, so nothing is lost.
+    if (_sealingSeg === seg) {
+      _logBuffer = seg.concat(_logBuffer);
+      _sealingSeg = null;
+    }
     return;
   }
 
-  _logBuffer = [];
-  _logDirty = false;
+  _logDirty = _logBuffer.length > 0;
   if (_logFlushTimer) { clearTimeout(_logFlushTimer); _logFlushTimer = null; }
-  try { await AsyncStorage.setItem(TRACKING_LOG_KEY, '[]'); } catch { /* silent */ }
+  // The current segment may already hold entries logged during the seal.
+  try { await AsyncStorage.setItem(TRACKING_LOG_KEY, JSON.stringify(_logBuffer)); } catch { /* silent */ }
 };
 
 // Stitch all sealed segments (in order) + the current in-memory segment back
@@ -427,6 +542,8 @@ const _readFullLog = async (): Promise<TrackingLogEntry[]> => {
       }
     } catch { /* skip a corrupt/missing segment */ }
   }
+  // A seal in progress: its entries are neither in _logBuffer nor counted yet.
+  if (_sealingSeg) all.push(..._sealingSeg);
   if (_logBuffer.length > 0) {
     all.push(..._logBuffer);
   } else {
@@ -553,6 +670,7 @@ const _resetLogBuffer = async (): Promise<void> => {
     await AsyncStorage.removeItem(TRACKING_LOG_SEG_COUNT_KEY);
   } catch { /* silent */ }
   _logSegCount = 0;
+  _sealingSeg = null;
   _segCountLoaded = true;   // we just authoritatively cleared — no disk sync needed
   _bufferHydrated = true;   // ✅ fresh session — buffer is authoritatively empty, skip disk rehydrate
   _lastBgFlushAt = 0;
@@ -1025,7 +1143,8 @@ const _processLocationForSendInternal = async (
         // So: only bypass the throttle when we actually have network (real drain).
         // Offline → route through the normal THROTTLED insert so the queue grows
         // at the interval rate, exactly like a first-fix offline queue would.
-        const online = await locationQueueService.hasNetwork();
+        // allowProbe:false — a probe window is not a drain (see hasNetwork).
+        const online = await locationQueueService.hasNetwork({ allowProbe: false });
 
         // ✅ Movement gate for the guard path.
         //
@@ -1109,7 +1228,7 @@ const _processLocationForSendInternal = async (
                                  state === Battery.BatteryState.FULL;
         } catch { /* silent */ }
 
-        await locationQueueService.addToQueue({
+        const stored = await locationQueueService.addToQueue({
           latitude:         raw.latitude,
           longitude:        raw.longitude,
           altitude:         raw.altitude ?? undefined,
@@ -1150,7 +1269,8 @@ const _processLocationForSendInternal = async (
         // filling the 500-fix cap several times faster and shifting out real
         // positions. That is what the note above warns about. Spacing is already
         // enforced upstream; the queue's job here is ordering, not rate limiting.
-        await addLog('📥', `Backlog present — current fix queued behind it${tag}`);
+        // Only when it really was stored — a throttle drop logged its own line.
+        if (stored) await addLog('📥', `Backlog present — current fix queued behind it${tag}`);
       } catch { /* silent */ }
       return;
     }
@@ -1292,9 +1412,18 @@ const _processLocationForSendInternal = async (
       const engineWasFiring = prevFireAt > lastSentAt + 5000;
       const isFreeze = gapSec > (expectedSec + 10) && !engineWasFiring;
       const longPause = gapSec > (expectedSec + 10) && engineWasFiring;
+      // 2026-10-20 re-check: every gap over 4 min on 10-17/18 (98 of them) was a
+      // queue/offline period or an OS kill, yet all were labelled "movement
+      // filter" — LAST_SENT_KEY advances only on live sends. Say what happened.
+      let lastQueuedAt = 0;
+      try { lastQueuedAt = parseInt((await AsyncStorage.getItem(LAST_QUEUED_KEY)) ?? '0', 10) || 0; } catch { /* silent */ }
+      const restartedInGap = _jsContextStartedAt > lastSentAt;
+      const queuedInGap = lastQueuedAt > lastSentAt;
       const icon = isFreeze ? '⏱️🔴' : '⏱️';
-      const suffix = isFreeze
-        ? ' — POSSIBLE FREEZE/THROTTLE'
+      const suffix = gapSec <= (expectedSec + 10) ? ''
+        : restartedInGap ? ' — app was restarted during the gap (killed by the OS?)'
+        : queuedInGap ? ' — no network: fixes were queued, delivered from the queue'
+        : isFreeze ? ' — POSSIBLE FREEZE/THROTTLE'
         : (longPause ? ' — long pause (engine alive, movement filter)' : '');
       await addLog(icon, `Send gap ${gapSec.toFixed(1)}s (expected ~${expectedSec}s)${suffix}${tag}`);
     }
@@ -1324,6 +1453,11 @@ const _processLocationForSendInternal = async (
     }
 
     await addLog('✅', `Sent OK — id:${result.locationId ?? '?'} dist_to_finish:${result.distance_to_finish_km ?? '?'}km${tag}`);
+    // A delivered fix ends the drain-failure streak (2026-10-20 re-check). It was
+    // cleared only by a drain pass that flushed something, so after one outage the
+    // streak stayed at N and the first dry pass of the NEXT blip opened the 60 s
+    // cooldown at once: 420 of 525 "Drain stalled" lines on 10-17/18 had N >= 3.
+    try { await AsyncStorage.removeItem(DRAIN_FAILS_KEY); } catch { /* silent */ }
     const countStr = await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY);
     const count = countStr ? parseInt(countStr) : 0;
     const sentCount = count + 1;
@@ -1434,7 +1568,7 @@ const _processLocationForSendInternal = async (
       try { await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK); } catch { /* silent */ }
       try {
         await BackgroundGeolocation.stop();
-        BackgroundGeolocation.removeListeners();
+        _removeTransistorListeners();
       } catch { /* silent */ }
       await addLog('🛑', `GPS engines stopped — finish line reached${tag}`);
 
@@ -1556,13 +1690,36 @@ const _registerFgAppStateListener = (): void => {
 // idempotent: calling it again detaches the old handlers and attaches fresh
 // ones instead of double-firing.
 // ════════════════════════════════════════════════════════════════════════
-const _registerTransistorListeners = (): void => {
+// Handles of the listeners _registerTransistorListeners attached in THIS JS
+// context. Removed one by one in _removeTransistorListeners.
+let _transistorSubs: Array<{ remove: () => void }> = [];
+
+// SDK 5.1.1's removeListeners() is broken: it walks its subscription list with
+// forEach while each remove() splices that same list, so only every other
+// listener is removed. Each re-attach therefore left about half the old
+// listeners alive — logs on 10-17/18 had every heartbeat 2-6x and a single fix
+// logged up to 52x (p4848, 25 re-attaches), each copy running the keepalive
+// pull, liveness ping and changePace again. Remove our own handles instead; the
+// SDK call stays as a sweep for anything else.
+const _removeTransistorListeners = (): void => {
+  for (const sub of _transistorSubs) {
+    try { sub.remove(); } catch { /* silent */ }
+  }
+  _transistorSubs = [];
   try { BackgroundGeolocation.removeListeners(); } catch { /* silent */ }
+};
+
+const _trackTransistorSub = (sub: any): void => {
+  if (sub && typeof sub.remove === 'function') _transistorSubs.push(sub);
+};
+
+const _registerTransistorListeners = (): void => {
+  _removeTransistorListeners();
 
   // Location services switched off, or permission revoked, MID-RACE. This was
   // previously undetectable — the app kept showing "GPS Active" indefinitely.
   // Unambiguous and instant, unlike inferring it from missing fixes.
-  BackgroundGeolocation.onProviderChange((provider) => {
+  _trackTransistorSub(BackgroundGeolocation.onProviderChange((provider) => {
     try {
       const usable = !!provider?.enabled && (!!provider?.gps || !!provider?.network);
       if (!usable) {
@@ -1581,9 +1738,9 @@ const _registerTransistorListeners = (): void => {
         void _clearGpsFault();
       }
     } catch { /* silent — a listener must never throw into native */ }
-  });
+  }));
 
-  BackgroundGeolocation.onLocation((bgLoc) => {
+  _trackTransistorSub(BackgroundGeolocation.onLocation((bgLoc) => {
     try {
       // ✅ GUARD: a location event can arrive without a valid coords object
       // (sample/heartbeat events or a malformed payload). Reading
@@ -1643,11 +1800,26 @@ const _registerTransistorListeners = (): void => {
       // uncaught exception under the New Architecture.
       addLog('❌', `onLocation handler error: ${cbErr?.message ?? 'unknown'}`);
     }
-  });
+  }));
 
-  BackgroundGeolocation.onMotionChange((event) => {
+  _trackTransistorSub(BackgroundGeolocation.onMotionChange((event) => {
     addLog(event.isMoving ? '🏃' : '🧍', `Motion: ${event.isMoving ? 'moving' : 'stationary'}`);
-  });
+    // An idle (stationary) engine is what the OS kills: 5 of 19 iPhones before
+    // the gun at event 19, 8 Android sessions in Sept/Oct. The heartbeat
+    // re-asserts MOVING, but iOS throttles heartbeats with the screen off. React
+    // to the transition itself while the race is on or the gun is close
+    // (2026-10-20). Never after the finish, never long before the gun.
+    if (!event.isMoving) {
+      void (async () => {
+        try {
+          if (await _shouldStayMoving()) {
+            await safeChangePace(true);
+            await addLog('🏃', 'Went stationary while the race is on / gun is close — re-asserted moving');
+          }
+        } catch { /* silent — a listener must never throw into native */ }
+      })();
+    }
+  }));
 
   // ✅ HEARTBEAT — defense-in-depth wake path while stationary.
   //
@@ -1664,7 +1836,7 @@ const _registerTransistorListeners = (): void => {
   // onLocation → processLocationForSend pipeline (throttle + movement filter
   // still apply, so a genuinely-stopped runner produces NO send — only real
   // movement gets through).
-  BackgroundGeolocation.onHeartbeat(async () => {
+  _trackTransistorSub(BackgroundGeolocation.onHeartbeat(async () => {
     try {
       // ✅ Zombie guard (2026-10-19): a session more than 24h past its gun stops
       // here, not only on cold boot — a process that never restarts kept p2525
@@ -1694,6 +1866,8 @@ const _registerTransistorListeners = (): void => {
         }
       } catch { /* silent */ }
 
+      await _logPowerSaverChange();
+
       // ── PRE-RACE LOW-POWER: before the gun, don't re-wake the dense stream and
       // don't pull a keepalive fix. No fix is sent pre-race anyway, so this just
       // lets the engine idle (coarse distanceFilter + motion sensor still re-wake
@@ -1706,9 +1880,9 @@ const _registerTransistorListeners = (): void => {
         // before the gun; it only came back when the runner left the stationary
         // geofence — 2 to 6 min / up to 1.2 km into the race on 5 of 19 iPhones
         // (p4823: last beat 09:40:30, next sign of life 10:08 at km 1.24). Keeping
-        // the engine MOVING for the final half hour keeps the location stream —
-        // and with it the app — alive through the gun. Still nothing is sent
-        // until the gun (PRESTART_SKIP in the send path is unchanged).
+        // the engine MOVING for the final hour (PRE_GUN_WAKE_MS) keeps the
+        // location stream — and with it the app — alive through the gun. Still
+        // nothing is sent until the gun (PRESTART_SKIP in the send path is unchanged).
         const untilGun = await msUntilGun();
         if (untilGun !== null && untilGun <= PRE_GUN_WAKE_MS) {
           await safeChangePace(true);
@@ -1777,7 +1951,7 @@ const _registerTransistorListeners = (): void => {
       addLog('💓', `Heartbeat fix failed: ${hbErr?.message ?? 'unknown'}`);
       void _bumpGpsFault('no_fix');
     }
-  });
+  }));
 };
 
 // ✅ Internal: full teardown — stops Transistor, the AppState listener, and
@@ -1796,7 +1970,7 @@ const _doFullStop = async (): Promise<void> => {
   try { await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK); } catch { /* silent */ }
   try {
     await BackgroundGeolocation.stop();
-    BackgroundGeolocation.removeListeners();
+    _removeTransistorListeners();
   } catch { /* silent */ }
   // Clean up all session-scoped keys.
   await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
@@ -1863,7 +2037,7 @@ export const finishBackgroundStop = async (
 
   // 1) Kill engine + notification NOW — must not wait on the network.
   try { await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK); } catch {}
-  try { await BackgroundGeolocation.stop(); BackgroundGeolocation.removeListeners(); } catch {}
+  try { await BackgroundGeolocation.stop(); _removeTransistorListeners(); } catch {}
 
   // 2) Upload (can be slow; notification is already gone).
   let sentCount = 0;
@@ -2369,6 +2543,51 @@ export const gpsService = {
    * iOS reads Transistor's accuracyAuthorization (expo-location does not expose
    * it); Android reads expo-location's android.accuracy. Unknown → false.
    */
+  /**
+   * iOS: ask for background running time for the rest of a Start (event 19
+   * review follow-up, 2026-10-20). iOS gives a backgrounded app only a few
+   * seconds before suspending it, and the start still has a home refetch (up to
+   * the 15s API timeout on a crowded start line), ~25 storage writes and
+   * ready() ahead of BackgroundGeolocation.start(). A phone pocketed right after
+   * Start could be suspended in between: nothing tracked, nothing sent, the start
+   * frozen until Livio is opened again. Once start() has run the engine keeps the
+   * app alive itself, so the task only has to cover the start.
+   * Returns the task id to hand to endStartWindow, or null (Android, or the call
+   * failed — the start must never depend on it). Android has its own rule (the
+   * foreground wait in startWatchingPosition) and gets nothing here.
+   */
+  async beginStartWindow(): Promise<number | null> {
+    if (Platform.OS !== 'ios') return null;
+    try {
+      return await BackgroundGeolocation.startBackgroundTask();
+    } catch {
+      return null;
+    }
+  },
+
+  /** Ends the task from beginStartWindow. Safe with null; never throws. */
+  async endStartWindow(taskId: number | null): Promise<void> {
+    if (taskId === null) return;
+    try {
+      await BackgroundGeolocation.stopBackgroundTask(taskId);
+    } catch { /* silent — iOS ends an expired task by itself */ }
+  },
+
+  /**
+   * Android: true while Livio is still subject to battery optimisation, i.e.
+   * Android may put it to sleep in the background (Samsung "Sleeping apps").
+   * HomeScreen asks again at every Start while this is true — the first-install
+   * prompt was asked once, ever. False on iOS and when unknown.
+   */
+  async isBatteryOptimized(): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    try {
+      return await Battery.isBatteryOptimizationEnabledAsync();
+    } catch {
+      return false;
+    }
+  },
+
   async isApproximateLocation(): Promise<boolean> {
     try {
       if (Platform.OS === 'android') {
@@ -2598,7 +2817,7 @@ export const gpsService = {
       // safety net for older app installs.
       try {
         // Defensive: clear any listeners left over from a previous start.
-        try { BackgroundGeolocation.removeListeners(); } catch { /* silent */ }
+        _removeTransistorListeners();
 
         await BackgroundGeolocation.ready({
           geolocation: {
@@ -2691,13 +2910,30 @@ export const gpsService = {
         await AsyncStorage.setItem(TRANSISTOR_ACTIVE_KEY, '1');
 
         await addLog('🛰️', 'Transistor started — native WakeLock active');
+        await logBatteryState('start');
         if (API_CONFIG.DEBUG) console.log('✅ Transistor started');
       } catch (transistorErr: any) {
-        // Non-fatal — clean up any partially registered listeners.
-        try { BackgroundGeolocation.removeListeners(); } catch { /* silent */ }
+        // FATAL since 2026-10-20 (re-check). Transistor is the only engine, so a
+        // failed ready()/start() means nothing will be recorded — yet this was
+        // swallowed: the handle was returned, HomeScreen showed "GPS Activated"
+        // and sent the start ping, i.e. the p4537 symptom (server start row, no
+        // fix) on a path the foreground wait does not cover (an Android phone
+        // pocketed during the setup writes above, so start() runs backgrounded).
+        _removeTransistorListeners();
         try { await AsyncStorage.removeItem(TRANSISTOR_ACTIVE_KEY); } catch { /* silent */ }
+        // Undo this call's session params: no half-started session for restore()
+        // or the background handlers to pick up. A prior session's params go back.
+        try {
+          if (_priorParamsRaw !== null) await AsyncStorage.setItem(TRACKING_PARAMS_KEY, _priorParamsRaw);
+          else await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
+        } catch { /* silent */ }
         await addLog('⚠️', `Transistor start failed: ${transistorErr?.message ?? 'unknown'}`);
         if (API_CONFIG.DEBUG) console.warn('⚠️ Transistor failed to start:', transistorErr?.message);
+        // Backgrounded Android → the same re-arm as the foreground wait.
+        const backgrounded = Platform.OS === 'android' && AppState.currentState !== 'active';
+        throw Object.assign(new Error(i18n.t('home:errors.trackingFailed')), {
+          code: backgrounded ? START_BACKGROUNDED_CODE : ENGINE_START_FAILED_CODE,
+        });
       }
 
       // ✅ Wire up the UI callback. Transistor's onLocation handler above reads

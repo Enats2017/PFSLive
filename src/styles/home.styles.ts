@@ -412,6 +412,26 @@ export const homeStyles = StyleSheet.create({
   notifDangerText: {
     color: palette.danger,
   },
+  // Start popup: "keep Livio open 5 s" — the branch's amber note (warningBg +
+  // warningText, the deck's readable amber copy), so it reads as an instruction.
+  notifKeepOpenBox: {
+    backgroundColor: palette.warningBg,
+    borderWidth: 1,
+    borderColor: palette.warningBorder,
+    // same box metrics as permissionWarning, the branch's other amber note
+    borderRadius: 14,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: -spacing.md,
+    marginBottom: spacing.xl,
+  },
+  notifKeepOpenText: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 13,
+    color: palette.warningText,
+    textAlign: "center",
+    lineHeight: 20,
+  },
   logosSection: {
     marginTop: spacing.md,
     paddingHorizontal: space.xl,

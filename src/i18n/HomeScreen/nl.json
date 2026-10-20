@@ -49,6 +49,8 @@
     "retryQueue": "{{count}} niet-verzonden locatie(s) versturen",
     "queueRetryFailed": "Geen netwerk — probeer het later opnieuw",
     "reopenToStart": "Open Livio opnieuw om de tracking te starten — de telefoon verliet de app te snel.",
+    "notStartedTitle": "Tracking is niet gestart",
+    "notStartedBody": "Je telefoon verliet Livio te snel. Open Livio om de tracking te starten.",
     "bgPermission": {
       "title": "{applicationName} toestaan om de locatie van dit apparaat te gebruiken, zelfs als de app gesloten of niet in gebruik is?",
       "message": "{applicationName} deelt je live positie met je volgers tijdens een wedstrijd, zelfs als de app gesloten of niet in gebruik is. Kies \"{backgroundPermissionOptionLabel}\" om dit in te schakelen.",
@@ -61,6 +63,7 @@
     "message": "Voor betrouwbare GPS-tracking tijdens je race, sta onbeperkt batterijgebruik toe. Dit voorkomt dat Android locatie-updates pauzeert als het scherm uit is.",
     "allow": "Toestaan",
     "skip": "Overslaan",
+    "startAnyway": "Toch starten",
     "revertTitle": "Batterij-instelling",
     "revertMessage": "Je kunt het batterijgebruik terugzetten naar Geoptimaliseerd via Instellingen → Apps → Livio → Batterij.",
     "revertSettings": "Instellingen openen",
@@ -101,7 +104,9 @@
     "title": "Batterijbesparing staat aan",
     "messageAndroid": "Batterijbesparing kan het gps-volgen op de achtergrond stopzetten. Schakel het uit voordat je begint met volgen.",
     "messageIos": "De energiebesparingsmodus kan het gps-volgen op de achtergrond onderbreken. Open de app Instellingen → Batterij → schakel de energiebesparingsmodus uit, kom dan terug en tik opnieuw op START VOLGEN.",
-    "disable": "Batterij-instellingen openen"
+    "disable": "Batterij-instellingen openen",
+    "midRaceTitle": "Batterijbesparing staat aan",
+    "midRaceBody": "Batterijbesparing kan voorkomen dat Livio je wedstrijd registreert. Zet het uit als dat kan."
   },
   "followingEvents": {
     "sectionTitle": "Evenementen die u volgt",
@@ -115,7 +120,8 @@
     "title": "Live tracking starten?",
     "message": "Je live locatie wordt tijdens de wedstrijd met je volgers gedeeld. Houd Livio actief en je telefoon bij je tot je finisht. Klaar om te starten?",
     "yes": "Ja, start tracking",
-    "no": "Nog niet"
+    "no": "Nog niet",
+    "keepOpen": "Houd Livio na het tikken op Start 5 seconden op het scherm tot je \"GPS Geactiveerd\" ziet. Vergrendel daarna je telefoon en berg hem op."
   },
   "fanEmail": {
     "title": "Blijf op de hoogte",
@@ -161,5 +167,11 @@
     "minAgo": "{{n}} min geleden",
     "justNow": "zojuist",
     "keepOpen": "Vergrendel je telefoon en steek hem weg — Livio blijft op de achtergrond tracken. Sluit de app alleen niet af."
+  },
+  "reminders": {
+    "preTitle": "Je wedstrijd start over 10 minuten",
+    "preBody": "Open Livio en tik op Start tracking zodat je volgers je live kunnen volgen.",
+    "postTitle": "Je wedstrijd is gestart",
+    "postBody": "Je tracking staat nog niet aan. Open Livio en tik op Start tracking."
   }
 }
