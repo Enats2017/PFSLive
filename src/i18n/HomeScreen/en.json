@@ -62,6 +62,7 @@
     "message": "For reliable GPS tracking during your race, please allow unrestricted battery usage. This prevents Android from pausing location updates while the screen is off.",
     "allow": "Allow",
     "skip": "Skip",
+    "startAnyway": "Start anyway",
     "revertTitle": "Battery Setting",
     "revertMessage": "You can revert battery usage back to Optimized in Settings → Apps → Livio → Battery.",
     "revertSettings": "Open Settings",

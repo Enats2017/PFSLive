@@ -62,6 +62,7 @@
     "message": "Voor betrouwbare GPS-tracking tijdens je race, sta onbeperkt batterijgebruik toe. Dit voorkomt dat Android locatie-updates pauzeert als het scherm uit is.",
     "allow": "Toestaan",
     "skip": "Overslaan",
+    "startAnyway": "Toch starten",
     "revertTitle": "Batterij-instelling",
     "revertMessage": "Je kunt het batterijgebruik terugzetten naar Geoptimaliseerd via Instellingen → Apps → Livio → Batterij.",
     "revertSettings": "Instellingen openen",

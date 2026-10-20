@@ -337,6 +337,70 @@ const isRaceNotStarted = async (): Promise<boolean> => {
 // (see the heartbeat). 30 min: p4823's app was terminated ~20 min before its gun.
 export const PRE_GUN_WAKE_MS = 30 * 60 * 1000;
 
+// True while the engine should be kept MOVING: a live, unfinished session whose
+// race is on (or manual), or whose gun is within PRE_GUN_WAKE_MS. Same rule the
+// heartbeat applies, reused by the motion-change listener.
+const _shouldStayMoving = async (): Promise<boolean> => {
+  try {
+    if ((await AsyncStorage.getItem(TRACKING_PARAMS_KEY)) === null) return false;
+    if ((await AsyncStorage.getItem(RACE_FINISHED_KEY)) === '1') return false;
+    if (!(await isRaceNotStarted())) return true;
+    const untilGun = await msUntilGun();
+    return untilGun !== null && untilGun <= PRE_GUN_WAKE_MS;
+  } catch {
+    return false;
+  }
+};
+
+// ── Battery state in the tracking log (2026-10-20) ──────────────────────────
+// 8 Android sessions (Sept/early Oct) went silent minutes before the gun with
+// the app backgrounded and stayed silent all race — the pattern of Android
+// putting the app to sleep. The logs could not say whether Battery Saver or
+// battery optimisation was on, so that question had no answer. Logged at Start
+// and whenever Battery Saver / Low Power Mode changes during the session.
+const LAST_POWER_SAVER_KEY = '@PFSLive:lastPowerSaver';
+
+const _readBatteryState = async (): Promise<{ level: number | null; saver: boolean | null; optimized: boolean | null; charging: boolean | null }> => {
+  let level: number | null = null, saver: boolean | null = null, optimized: boolean | null = null, charging: boolean | null = null;
+  try {
+    const ps: any = await Battery.getPowerStateAsync();
+    if (typeof ps?.batteryLevel === 'number' && ps.batteryLevel >= 0) level = Math.round(ps.batteryLevel * 100);
+    if (typeof ps?.lowPowerMode === 'boolean') saver = ps.lowPowerMode;
+    if (ps?.batteryState !== undefined) charging = ps.batteryState === Battery.BatteryState.CHARGING || ps.batteryState === Battery.BatteryState.FULL;
+  } catch { /* silent */ }
+  if (Platform.OS === 'android') {
+    try { optimized = await Battery.isBatteryOptimizationEnabledAsync(); } catch { /* silent */ }
+  }
+  return { level, saver, optimized, charging };
+};
+
+export const logBatteryState = async (context: string): Promise<void> => {
+  try {
+    const b = await _readBatteryState();
+    const opt = Platform.OS !== 'android' ? 'n/a'
+      : b.optimized === null ? '?' : (b.optimized ? 'ON (Android may pause Livio)' : 'off (exempt)');
+    await addLog('🔋', `Battery (${context}) — level:${b.level ?? '?'}% saver:${b.saver === null ? '?' : (b.saver ? 'ON' : 'off')} optimisation:${opt} charging:${b.charging === null ? '?' : (b.charging ? 'yes' : 'no')}`);
+    if (b.saver !== null) await AsyncStorage.setItem(LAST_POWER_SAVER_KEY, b.saver ? '1' : '0');
+  } catch { /* silent — diagnostics only */ }
+};
+
+// Heartbeat: log only a CHANGE of Battery Saver / Low Power Mode (Samsung turns
+// it on by itself at 15-20 %; Start only checks it at the tap).
+const _logPowerSaverChange = async (): Promise<void> => {
+  try {
+    const b = await _readBatteryState();
+    if (b.saver === null) return;
+    const now = b.saver ? '1' : '0';
+    const prev = await AsyncStorage.getItem(LAST_POWER_SAVER_KEY);
+    if (prev === now) return;
+    await AsyncStorage.setItem(LAST_POWER_SAVER_KEY, now);
+    if (prev === null) return;   // first reading of this session — logged at Start
+    await addLog(b.saver ? '🪫' : '🔋', b.saver
+      ? `Battery Saver turned ON during the session (level:${b.level ?? '?'}%) — Android/iOS may throttle tracking`
+      : `Battery Saver turned off (level:${b.level ?? '?'}%)`);
+  } catch { /* silent */ }
+};
+
 // ms until the stored gun, or null when there is none (manual start / no session).
 const msUntilGun = async (): Promise<number | null> => {
   try {
@@ -1712,6 +1776,21 @@ const _registerTransistorListeners = (): void => {
 
   _trackTransistorSub(BackgroundGeolocation.onMotionChange((event) => {
     addLog(event.isMoving ? '🏃' : '🧍', `Motion: ${event.isMoving ? 'moving' : 'stationary'}`);
+    // An idle (stationary) engine is what the OS kills: 5 of 19 iPhones before
+    // the gun at event 19, 8 Android sessions in Sept/Oct. The heartbeat
+    // re-asserts MOVING, but iOS throttles heartbeats with the screen off. React
+    // to the transition itself while the race is on or the gun is close
+    // (2026-10-20). Never after the finish, never long before the gun.
+    if (!event.isMoving) {
+      void (async () => {
+        try {
+          if (await _shouldStayMoving()) {
+            await safeChangePace(true);
+            await addLog('🏃', 'Went stationary while the race is on / gun is close — re-asserted moving');
+          }
+        } catch { /* silent — a listener must never throw into native */ }
+      })();
+    }
   }));
 
   // ✅ HEARTBEAT — defense-in-depth wake path while stationary.
@@ -1758,6 +1837,8 @@ const _registerTransistorListeners = (): void => {
           }
         }
       } catch { /* silent */ }
+
+      await _logPowerSaverChange();
 
       // ── PRE-RACE LOW-POWER: before the gun, don't re-wake the dense stream and
       // don't pull a keepalive fix. No fix is sent pre-race anyway, so this just
@@ -2424,6 +2505,21 @@ export const gpsService = {
     } catch { /* silent — iOS ends an expired task by itself */ }
   },
 
+  /**
+   * Android: true while Livio is still subject to battery optimisation, i.e.
+   * Android may put it to sleep in the background (Samsung "Sleeping apps").
+   * HomeScreen asks again at every Start while this is true — the first-install
+   * prompt was asked once, ever. False on iOS and when unknown.
+   */
+  async isBatteryOptimized(): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    try {
+      return await Battery.isBatteryOptimizationEnabledAsync();
+    } catch {
+      return false;
+    }
+  },
+
   async isApproximateLocation(): Promise<boolean> {
     try {
       if (Platform.OS === 'android') {
@@ -2736,6 +2832,7 @@ export const gpsService = {
         await AsyncStorage.setItem(TRANSISTOR_ACTIVE_KEY, '1');
 
         await addLog('🛰️', 'Transistor started — native WakeLock active');
+        await logBatteryState('start');
         if (API_CONFIG.DEBUG) console.log('✅ Transistor started');
       } catch (transistorErr: any) {
         // FATAL since 2026-10-20 (re-check). Transistor is the only engine, so a

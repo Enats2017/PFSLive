@@ -1363,20 +1363,23 @@ const L = () => load('services/locationService').locationService;
   test('re-check 10-20: a failed seal puts its entries back in front; the next seal writes them; a log read during a seal sees them', async () => {
     await startSession('2', '12');
     const g = load('services/gpsService');
-    const real = AS.setItem; let fail = true, midSealRead = null;
+    const real = AS.setItem; let fail = true, midSealRead = null, midSealExpected = null, logged = 0;
     AS.setItem = async (k, v) => {
       if (k.startsWith('@PFSLive:trackingLogSeg:')) {
         if (fail) { fail = false; throw new Error('disk full'); }
-        if (midSealRead === null) midSealRead = (await g.getFullTrackingLog()).map((e) => e.msg).filter((m) => m.startsWith('f-')).length;
+        if (midSealRead === null) {
+          midSealExpected = logged;   // every f- entry logged so far, the ones being sealed included
+          midSealRead = (await g.getFullTrackingLog()).map((e) => e.msg).filter((m) => m.startsWith('f-')).length;
+        }
       }
       return real(k, v);
     };
     try {
-      for (let i = 0; i < 1100; i++) await g.addLog('🧪', 'f-' + i);
+      for (let i = 0; i < 1100; i++) { logged++; await g.addLog('🧪', 'f-' + i); }
     } finally { AS.setItem = real; }
     const msgs = (await g.getFullTrackingLog()).map((e) => e.msg).filter((m) => m.startsWith('f-'));
     assert.deepStrictEqual(msgs, Array.from({ length: 1100 }, (_, i) => 'f-' + i), 'nothing lost or reordered');
-    assert.ok(midSealRead >= 500, 'entries being sealed are visible to a concurrent read (' + midSealRead + ')');
+    assert.ok(midSealExpected >= 400 && midSealRead === midSealExpected, `entries being sealed are visible to a concurrent read (${midSealRead} of ${midSealExpected})`);
   });
   test('re-check 10-20: re-attaching listeners leaves exactly one of each, even with SDK 5.1.1\'s every-other removeListeners()', async () => {
     const BG = require('react-native-background-geolocation').default;
@@ -1575,6 +1578,113 @@ const L = () => load('services/locationService').locationService;
     const m = g.match(/const suffix = gapSec <= \(expectedSec \+ 10\) \? ''\n\s*: restartedInGap \? [^\n]*\n\s*: queuedInGap \? [^\n]*\n\s*: isFreeze \? [^\n]*\n\s*: \(longPause \? [^\n]*/);
     assert.ok(m, 'restart → queue → freeze → pause, in that order');
     assert.ok(/const restartedInGap = _jsContextStartedAt > lastSentAt;/.test(g) && /const queuedInGap = lastQueuedAt > lastSentAt;/.test(g));
+  });
+  // ── 2026-10-20 battery: check at every Android Start, state in the log ──
+  const { reset } = require('./harness');
+  const battLines = async () => (await load('services/gpsService').getFullTrackingLog()).map((e) => e.msg).filter((m) => /Battery|Saver/.test(m));
+  test('battery: Start logs level, saver, optimisation and charging (Android, optimisation ON)', async () => {
+    M.battery.power = { batteryLevel: 0.42, lowPowerMode: false, batteryState: 1 }; M.battery.optimized = true;
+    await withRN('android', 'active', () => startSession('2', '12'));
+    assert.deepStrictEqual(await battLines(), ['Battery (start) — level:42% saver:off optimisation:ON (Android may pause Livio) charging:no']);
+    assert.strictEqual(M.store.get('@PFSLive:lastPowerSaver'), '0');
+  });
+  test('battery: iOS logs optimisation n/a; charging phone says yes; unreadable battery → "?" and the start still works', async () => {
+    M.battery.power = { batteryLevel: 0.9, lowPowerMode: true, batteryState: 2 };
+    await withRN('ios', 'active', () => startSession('2', '12'));
+    assert.deepStrictEqual(await battLines(), ['Battery (start) — level:90% saver:ON optimisation:n/a charging:yes']);
+    reset(); M.battery.fail = true;
+    await withRN('android', 'active', () => startSession('2', '12'));
+    assert.ok(M.store.has(PARAMS), 'started');
+    assert.deepStrictEqual(await battLines(), ['Battery (start) — level:?% saver:? optimisation:? charging:?']);
+  });
+  test('battery: heartbeat logs a Battery Saver CHANGE once (on, then off), never every beat', async () => {
+    M.battery.power = { batteryLevel: 0.2, lowPowerMode: false, batteryState: 1 }; M.battery.optimized = false;
+    await withRN('android', 'active', () => startSession('2', '12'));
+    await M.bg.heartbeat(); await M.bg.heartbeat();
+    M.battery.power = { batteryLevel: 0.15, lowPowerMode: true, batteryState: 1 };
+    await M.bg.heartbeat(); await M.bg.heartbeat();
+    M.battery.power = { batteryLevel: 0.15, lowPowerMode: false, batteryState: 1 };
+    await M.bg.heartbeat();
+    assert.deepStrictEqual(await battLines(), [
+      'Battery (start) — level:20% saver:off optimisation:off (exempt) charging:no',
+      'Battery Saver turned ON during the session (level:15%) — Android/iOS may throttle tracking',
+      'Battery Saver turned off (level:15%)',
+    ]);
+  });
+  test('battery: isBatteryOptimized — Android reads the OS, iOS never asks, errors → false', async () => {
+    const { gpsService } = load('services/gpsService');
+    M.battery.optimized = true;
+    assert.strictEqual(await withRN('android', 'active', () => gpsService.isBatteryOptimized()), true);
+    M.battery.optimized = false;
+    assert.strictEqual(await withRN('android', 'active', () => gpsService.isBatteryOptimized()), false);
+    M.battery.optimized = true;
+    assert.strictEqual(await withRN('ios', 'active', () => gpsService.isBatteryOptimized()), false);
+    M.battery.fail = true;
+    assert.strictEqual(await withRN('android', 'active', () => gpsService.isBatteryOptimized()), false);
+  });
+  // The real block from startGPSTracking, run with stand-ins.
+  const runBatteryGate = async ({ os = 'android', optimized = true, choice = null }) => {
+    const m = homeLF.match(/\n    if \(Platform\.OS === 'android' && \(await gpsService\.isBatteryOptimized\(\)\)\) \{([\s\S]*?)\n    \}\n/);
+    assert.ok(m, 'battery gate found in startGPSTracking');
+    const calls = { asked: 0, shown: [], exempt: 0 };
+    const ref = { current: null };
+    const fn = new Function('Platform', 'gpsService', 'batteryStartResolveRef', 'setShowBatteryStartModal', 'requestBatteryOptimizationExemption',
+      'return (async () => { if (Platform.OS === \'android\' && (await gpsService.isBatteryOptimized())) {' + m[1].replace(/new Promise<[^>]*>\(/g, 'new Promise(') + '\n} return \'continued\'; })();');
+    const p = fn({ OS: os }, { isBatteryOptimized: async () => { calls.asked++; return optimized; } }, ref,
+      (v) => calls.shown.push(v), async () => { calls.exempt++; });
+    await new Promise((r) => setTimeout(r, 5));
+    if (choice) { assert.ok(typeof ref.current === 'function', 'popup waiting for an answer'); ref.current(choice); }
+    return { result: await p, calls };
+  };
+  test('battery gate at Start: Android + optimisation ON → popup; Allow opens the exemption then continues; Start anyway continues; Back cancels', async () => {
+    let r = await runBatteryGate({ choice: 'allow' });
+    assert.deepStrictEqual([r.result, r.calls.shown, r.calls.exempt], ['continued', [true], 1]);
+    r = await runBatteryGate({ choice: 'anyway' });
+    assert.deepStrictEqual([r.result, r.calls.exempt], ['continued', 0]);
+    r = await runBatteryGate({ choice: 'cancel' });
+    assert.deepStrictEqual([r.result, r.calls.exempt], [undefined, 0], 'start abandoned');
+    r = await runBatteryGate({ optimized: false });
+    assert.deepStrictEqual([r.result, r.calls.shown], ['continued', []], 'exempt → no popup');
+    r = await runBatteryGate({ os: 'ios' });
+    assert.deepStrictEqual([r.result, r.calls.asked, r.calls.shown], ['continued', 0, []], 'iOS never asks');
+  });
+  test('battery gate at Start: after Battery Saver, before the early-start warning; popup wired (Allow / Start anyway / Back = cancel); texts in en/fr/nl', async () => {
+    const fnAt = homeLF.indexOf('const startGPSTracking = useCallback(async () => {');
+    const iSaver = homeLF.indexOf('const isPowerSaving = await checkPowerSavingMode();', fnAt);
+    const iGate = homeLF.indexOf("if (Platform.OS === 'android' && (await gpsService.isBatteryOptimized())) {", fnAt);
+    const iWarn = homeLF.indexOf('// Warn for ANY start before the gun', fnAt);
+    assert.ok(fnAt > 0 && iSaver > fnAt && iGate > iSaver && iWarn > iGate, 'order');
+    const jsx = modalJsx('showBatteryStartModal');
+    for (const k of ['onPress={handleBatteryStartAllow}', 'onPress={handleBatteryStartAnyway}', 'onRequestClose={handleBatteryStartCancel}',
+      "t('home:battery.allow')", "t('home:battery.startAnyway')"]) assert.ok(jsx.includes(k), k);
+    const c = cb('resolveBatteryStart', ''); const shown = []; const got = [];
+    const ref = { current: (x) => got.push(x) };
+    const run = new Function('setShowBatteryStartModal', 'batteryStartResolveRef', 'return (' + c.params.replace(/:[^)]*$/, '') + ') => {' + c.body + '\n};')((v) => shown.push(v), ref);
+    run('anyway'); run('allow');
+    assert.deepStrictEqual([shown, got, ref.current], [[false, false], ['anyway'], null], 'settles exactly once');
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      assert.ok(j.battery.startAnyway && j.battery.allow && j.battery.title && j.battery.message, l);
+    }
+  });
+  const paceAfter = async (fn) => { const before = (M.bg.pace || []).length; await fn(); await new Promise((r) => setTimeout(r, 20)); return (M.bg.pace || []).slice(before); };
+  test('stationary transition while the race is on → engine re-asserted moving (and logged)', async () => {
+    await startSession('2', '12');                                   // gun 1h ago
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [true]);
+    const log = (await load('services/gpsService').getFullTrackingLog()).map((e) => e.msg);
+    assert.ok(log.includes('Went stationary while the race is on / gun is close — re-asserted moving'));
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: true })), [], 'moving → nothing to do');
+  });
+  test('stationary transition: gun in 20 min → moving; gun in 2 h → left idle; after the finish → left idle', async () => {
+    await startSession('2', '12', new Date(M.clock + 20 * 60000).toISOString());
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [true], 'inside the 30-min window');
+    reset();
+    await startSession('2', '12', new Date(M.clock + 120 * 60000).toISOString());
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [], 'long before the gun: battery saved');
+    reset();
+    await startSession('2', '12');
+    M.store.set('@PFSLive:raceFinished', '1');
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [], 'finished');
   });
   results.push(await run('13. event 19 review (silent iOS starts, persisted start ping, pre-gun wake, zombie sessions, interim race, log dup)'));
 

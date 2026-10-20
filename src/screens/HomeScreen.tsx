@@ -273,6 +273,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // ✅ Battery explanation modal — shown once before system dialog
   const [showBatteryModal, setShowBatteryModal] = useState(false);
+  // Start-time battery optimisation check (Android) — answered by
+  // handleBatteryStart* below; see startGPSTracking.
+  const [showBatteryStartModal, setShowBatteryStartModal] = useState(false);
+  const batteryStartResolveRef = useRef<((choice: 'allow' | 'anyway' | 'cancel') => void) | null>(null);
 
   // ✅ Early tracking warning modal — shown when race is more than 24h away
   const [showEarlyTrackingModal, setShowEarlyTrackingModal] = useState(false);
@@ -1137,6 +1141,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     }
 
+    // ✅ Android battery optimisation, at EVERY Start (2026-10-20). The
+    // first-install prompt is asked once, ever, so a runner who dismissed it raced
+    // with Android free to put Livio to sleep — the likely end of 8 Android
+    // sessions that went silent before the gun. Not a hard block (OEM settings
+    // vary and some phones cannot grant it): Allow opens the system dialog and the
+    // start continues when the runner comes back; Start anyway continues as is.
+    if (Platform.OS === 'android' && (await gpsService.isBatteryOptimized())) {
+      const choice = await new Promise<'allow' | 'anyway' | 'cancel'>((resolve) => {
+        batteryStartResolveRef.current = resolve;
+        setShowBatteryStartModal(true);
+      });
+      if (choice === 'cancel') return;
+      if (choice === 'allow') {
+        try { await requestBatteryOptimizationExemption(); } catch { /* the start still goes on */ }
+      }
+    }
+
     // Warn for ANY start before the gun, not just >24h out.
     //
     // The threshold used to be EARLY_TRACKING_WARNING_HOURS (24), so a runner
@@ -1456,6 +1477,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const handleApproxContinue = useCallback(() => {
     resolveApprox(true);
   }, [resolveApprox]);
+
+  // Settles the start-time battery popup exactly once.
+  const resolveBatteryStart = useCallback((choice: 'allow' | 'anyway' | 'cancel') => {
+    setShowBatteryStartModal(false);
+    const resolve = batteryStartResolveRef.current;
+    batteryStartResolveRef.current = null;
+    resolve?.(choice);
+  }, []);
+  const handleBatteryStartAllow = useCallback(() => resolveBatteryStart('allow'), [resolveBatteryStart]);
+  const handleBatteryStartAnyway = useCallback(() => resolveBatteryStart('anyway'), [resolveBatteryStart]);
+  const handleBatteryStartCancel = useCallback(() => resolveBatteryStart('cancel'), [resolveBatteryStart]);
 
   const handleStartErrorClose = useCallback(() => {
     setStartErrorMessage(null);
@@ -2066,6 +2098,45 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     <Text style={commonStyles.primaryButtonText}>{t('home:battery.allow')}</Text>
                   </TouchableOpacity>
 
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* ✅ Start-time battery optimisation (Android) — see startGPSTracking */}
+      {Platform.OS === 'android' && (
+        <Modal
+          transparent
+          visible={showBatteryStartModal}
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={handleBatteryStartCancel}
+        >
+          <View style={homeStyles.notifBackdrop}>
+            <View style={homeStyles.notifWrapper}>
+              <View style={homeStyles.notifCard}>
+                <View style={homeStyles.notifIconWrapper}>
+                  <Ionicons name="battery-charging" size={36} color={colors.primary} />
+                </View>
+                <Text style={homeStyles.notifTitle}>{t('home:battery.title')}</Text>
+                <Text style={homeStyles.notifBody}>{t('home:battery.message')}</Text>
+                <View style={homeStyles.notifButtonContainer}>
+                  <TouchableOpacity
+                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                    onPress={handleBatteryStartAllow}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={commonStyles.primaryButtonText}>{t('home:battery.allow')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={commonStyles.secondaryButton}
+                    onPress={handleBatteryStartAnyway}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={commonStyles.secondaryButtonText}>{t('home:battery.startAnyway')}</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>

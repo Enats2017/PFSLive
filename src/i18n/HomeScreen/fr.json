@@ -62,6 +62,7 @@
     "message": "Pour un suivi GPS fiable pendant votre course, autorisez une utilisation illimitée de la batterie. Cela empêche Android de suspendre les mises à jour de localisation lorsque l'écran est éteint.",
     "allow": "Autoriser",
     "skip": "Ignorer",
+    "startAnyway": "Démarrer quand même",
     "revertTitle": "Paramètre de batterie",
     "revertMessage": "Vous pouvez remettre l'utilisation de la batterie sur Optimisé via Paramètres → Applications → Livio → Batterie.",
     "revertSettings": "Ouvrir les paramètres",
