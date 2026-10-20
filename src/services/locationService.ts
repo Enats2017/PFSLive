@@ -178,8 +178,9 @@ export const locationService = {
           queuedAt: new Date().toISOString(),
           retryCount: 0,
         };
-        await locationQueueService.addToQueue(queuedLocation);
+        const stored = await locationQueueService.addToQueue(queuedLocation);
         if (API_CONFIG.DEBUG) console.log('📦 Location queued (offline)');
+        if (!stored) return { success: false, message: 'Location not queued — queue throttle (offline)' };
       }
 
       return {
@@ -302,7 +303,7 @@ export const locationService = {
           queuedAt: new Date().toISOString(),
           retryCount: 0,
         };
-        await locationQueueService.addToQueue(queuedLocation);
+        const stored = await locationQueueService.addToQueue(queuedLocation);
         if (API_CONFIG.DEBUG) console.log('📦 Location queued (error)');
         // Carry WHY it failed into the message. Every failure class — HTTP 429
         // rate-limit, 5xx, 404, DNS, socket timeout — used to collapse into the
@@ -312,7 +313,9 @@ export const locationService = {
         // AppError{type, code}; withTimeout throws a plain Error.
         return {
           success: false,
-          message: `Location queued (${_describeSendError(error)})`,
+          message: stored
+            ? `Location queued (${_describeSendError(error)})`
+            : `Location not queued — queue throttle (${_describeSendError(error)})`,
         };
       }
 

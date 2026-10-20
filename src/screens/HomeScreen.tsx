@@ -35,7 +35,8 @@ import {
   LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY, FINAL_SENT_COUNT_KEY,
   GPS_HEALTH_KEY, maybeUploadInterimLog, START_BACKGROUNDED_CODE,
 } from '../services/gpsService';
-import { isStaleSession, computeRaceStartTime } from '../services/trackingSessionRules';
+import { isStaleSession, computeRaceStartTime, shouldResumePendingStart } from '../services/trackingSessionRules';
+import { startReminderService } from '../services/startReminderService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
@@ -117,6 +118,11 @@ const BATTERY_PROMPTED_KEY = '@PFSLive:batteryOptimizationPrompted';
 // and iOS could outlast its background task. The loaded homeData is the fallback,
 // exactly as when the refetch fails.
 const START_HOME_REFETCH_MS = 4000;
+
+// Persisted copy of the in-memory start_backgrounded re-arm (pendingStartRef),
+// so a process killed in the background still finishes the start on the next
+// open — see shouldResumePendingStart.
+const PENDING_BG_START_KEY = '@PFSLive:pendingBgStart';
 
 // ✅ Hours threshold — show early tracking warning if race is more than this far away
 
@@ -1061,6 +1067,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       }
 
       toastSuccess(t('home:tracking.gpsActivated'), message);
+      void AsyncStorage.removeItem(PENDING_BG_START_KEY).catch(() => { /* silent */ });
       // Never awaited into the catch below: the engine is already running, and a
       // throw here marked the UI "not tracking" over a live session.
       void analyticsService.markAsParticipant('start_tracking').catch(() => { /* silent */ });
@@ -1080,6 +1087,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // foreground — instead of an error popup nobody sees in a pocket.
       if ((error as any)?.code === START_BACKGROUNDED_CODE) {
         pendingStartRef.current = true;
+        void AsyncStorage.setItem(PENDING_BG_START_KEY, JSON.stringify({
+          participantId: homeData?.next_race_participant_app_id ?? participantId,
+          eventId: homeData?.next_race_id ?? eventId,
+          at: Date.now(),
+        })).catch(() => { /* silent — the in-memory re-arm still works */ });
         toastError(t('home:errors.trackingFailed'), t('home:tracking.reopenToStart'));
         // The toast is invisible in a pocket. A notification at least reaches a
         // runner who checks the phone (or wears it on the wrist); tapping it opens
@@ -1731,6 +1743,46 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     return () => sub.remove();
   }, []);
+
+  // ✅ Cold start after a killed backgrounded start (2026-10-20 re-check). The
+  // listener above only fires on a background→active CHANGE; when Android killed
+  // the process, the next open is a fresh launch with pendingStartRef=false, so
+  // "Open Livio to start tracking" started nothing. Checked once, on the first
+  // home answer; the key is consumed either way.
+  const coldPendingCheckedRef = useRef(false);
+  useEffect(() => {
+    if (coldPendingCheckedRef.current || !homeData) return;
+    coldPendingCheckedRef.current = true;
+    void (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(PENDING_BG_START_KEY);
+        if (!raw) return;
+        await AsyncStorage.removeItem(PENDING_BG_START_KEY);
+        let pending: any = null;
+        try { pending = JSON.parse(raw); } catch { return; }
+        if (isGPSActiveRef.current || !shouldResumePendingStart(pending, homeData, Date.now())) return;
+        await doStartGPSTrackingRef.current();
+      } catch { /* silent — the runner can still press Start */ }
+    })();
+  }, [homeData]);
+
+  // ✅ Start reminders — see startReminderService. Re-planned on every home
+  // answer and tracking change; Start not offered or tracking running → none.
+  useEffect(() => {
+    const gun = homeData?.next_race_date && homeData?.next_race_time && serverTimeOffsetKnownRef.current
+      ? computeRaceStartTime(homeData.next_race_date, homeData.next_race_time, serverTimeOffsetRef.current)
+      : null;
+    void startReminderService.sync({
+      gun,
+      eligible: homeData?.show_start_track === 1 && !!homeData?.next_race_participant_app_id && !isGPSActive,
+      texts: {
+        preTitle: t('home:reminders.preTitle'),
+        preBody: t('home:reminders.preBody'),
+        postTitle: t('home:reminders.postTitle'),
+        postBody: t('home:reminders.postBody'),
+      },
+    });
+  }, [homeData, isGPSActive, t]);
 
   // App state changes
   useEffect(() => {

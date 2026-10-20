@@ -144,5 +144,11 @@
     "stepsIos": "Touchez Position, puis choisissez « Toujours ».",
     "stepsAndroid": "Choisissez « Toujours autoriser » sur l'écran suivant.",
     "stepsAndroidSettings": "Ouvrez Autorisations → Localisation, puis choisissez « Toujours autoriser »."
+  },
+  "reminders": {
+    "preTitle": "Votre course commence dans 10 minutes",
+    "preBody": "Ouvrez Livio et appuyez sur Démarrer le suivi pour que vos abonnés vous suivent en direct.",
+    "postTitle": "Votre course a commencé",
+    "postBody": "Le suivi n'est pas encore actif. Ouvrez Livio et appuyez sur Démarrer le suivi."
   }
 }

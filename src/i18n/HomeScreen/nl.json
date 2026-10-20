@@ -144,5 +144,11 @@
     "stepsIos": "Tik op Locatie en kies daarna “Altijd”.",
     "stepsAndroid": "Kies “Altijd toestaan” op het volgende scherm.",
     "stepsAndroidSettings": "Open Machtigingen → Locatie en kies daarna “Altijd toestaan”."
+  },
+  "reminders": {
+    "preTitle": "Je wedstrijd start over 10 minuten",
+    "preBody": "Open Livio en tik op Start tracking zodat je volgers je live kunnen volgen.",
+    "postTitle": "Je wedstrijd is gestart",
+    "postBody": "Je tracking staat nog niet aan. Open Livio en tik op Start tracking."
   }
 }

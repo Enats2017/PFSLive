@@ -135,7 +135,10 @@ export const locationQueueService = {
     }
   },
 
-  async addToQueue(location: QueuedLocation, throttle: boolean = true): Promise<void> {
+  // Returns whether the fix was STORED (2026-10-20 re-check): callers logged
+  // "queued" for fixes the throttle had just dropped — 4,016 "Backlog present —
+  // current fix queued" lines on 10-17/18 directly followed "fix dropped".
+  async addToQueue(location: QueuedLocation, throttle: boolean = true): Promise<boolean> {
     try {
       // ✅ QUEUE-INSERT THROTTLE — single chokepoint for offline-queue growth.
       //
@@ -175,7 +178,7 @@ export const locationQueueService = {
             const { addLog } = require('./gpsService');
             await addLog('⏭️', `Queue-throttled — ${((now - lastQueuedAt) / 1000).toFixed(0)}s < ${intervalSec}s, fix dropped`);
           } catch { /* silent */ }
-          return; // within the interval — drop this fix, keep queue at interval rate
+          return false; // within the interval — drop this fix, keep queue at interval rate
         }
       }
 
@@ -208,6 +211,7 @@ export const locationQueueService = {
       if (API_CONFIG.DEBUG) {
         console.log(`📦 Location queued (${queue.length} in queue)`);
       }
+      return true;
     } catch (error) {
       // A failed insert means a fix is LOST — silently, until now. console.error
       // doesn't exist in a production build, so this went to the on-device panel
@@ -221,6 +225,7 @@ export const locationQueueService = {
         console.error('❌ Error adding to queue:', error);
       }
     }
+    return false;
   },
 
   async getQueue(): Promise<QueuedLocation[]> {

@@ -15,6 +15,7 @@ const M = {
   store: new Map(),
   net: { isConnected: true, isInternetReachable: true },
   netHang: false,
+  notif: { pending: [], log: [], fail: false },
   api: { mode: 'ok', posted: [], handler: null },
   axios: { calls: [], script: [] },
   logs: [],
@@ -69,6 +70,20 @@ const overrides = {
   'react-native': { Platform: { OS: 'ios', Version: '26.6', select: (o) => o.ios }, AppState: { addEventListener: () => ({ remove() {} }), currentState: 'active' }, NativeModules: {}, Alert: { alert() {} } },
   'expo-application': { get nativeApplicationVersion() { return M.appVersion; }, getAndroidId: () => 'aid', getIosIdForVendorAsync: async () => 'vid' },
   'expo-updates': { get updateId() { return M.updateId; } },
+  // Records local notifications (start reminders, 2026-10-20). Scheduling an
+  // identifier that is already pending REPLACES it, as on a device.
+  'expo-notifications': {
+    SchedulableTriggerInputTypes: { DATE: 'date' },
+    scheduleNotificationAsync: async (req) => {
+      if (M.notif.fail) throw new Error('notifications unavailable');
+      M.notif.pending = M.notif.pending.filter((r) => r.identifier !== req.identifier);
+      M.notif.pending.push(req); M.notif.log.push(['schedule', req.identifier]);
+      return req.identifier;
+    },
+    cancelScheduledNotificationAsync: async (id) => {
+      M.notif.pending = M.notif.pending.filter((r) => r.identifier !== id); M.notif.log.push(['cancel', id]);
+    },
+  },
   'expo-location': {
     getForegroundPermissionsAsync: async () => ({ status: M.perm.fg, canAskAgain: true, ios: { accuracy: M.perm.iosAccuracy } }),
     getBackgroundPermissionsAsync: async () => ({ status: M.perm.bg, canAskAgain: true }),
@@ -151,6 +166,7 @@ function reset() {
   M.perm = { fg: 'granted', bg: 'granted', iosAccuracy: 'full' };
   M.provider = { enabled: true, gps: true, network: true, status: 3 };
   M.bg = {};
+  M.notif = { pending: [], log: [], fail: false };
   M.clock = realNow();
   // Fresh module instances per test: the services keep module-level state
   // (probe window, trust window, drain mutexes) that must not leak between tests.

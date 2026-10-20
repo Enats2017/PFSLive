@@ -737,12 +737,15 @@ const L = () => load('services/locationService').locationService;
   const runStartCatch = (error, notifyFails = false) => {
     const m = homeLF.match(/\n    \} catch \(error\) \{\n      setIsGPSActive\(false\);([\s\S]*?)\n    \} finally \{\n      void gpsService\.endStartWindow\(startWindow\);\n    \}\n  \}, \[\n    hasPermission,/);
     assert.ok(m, 'start catch found');
-    const out = { pending: { current: false }, toasts: [], notes: [], errorMsg: undefined, active: [] };
+    const out = { pending: { current: false }, toasts: [], notes: [], errorMsg: undefined, active: [], stored: {} };
     const Notifications = { scheduleNotificationAsync: (req) => { out.notes.push(req); return notifyFails ? Promise.reject(new Error('x')) : Promise.resolve('id'); } };
+    const AsyncStorageStub = { setItem: async (k, v) => { out.stored[k] = v; } };
     new Function('error', 'setIsGPSActive', 'isGPSActiveRef', 'START_BACKGROUNDED_CODE', 'pendingStartRef', 'toastError', 't', 'Notifications', 'setStartErrorMessage',
+      'AsyncStorage', 'PENDING_BG_START_KEY', 'homeData', 'participantId', 'eventId',
       'setIsGPSActive(false);' + m[1].replace(/\(error as any\)/g, 'error'))(
       error, (x) => out.active.push(x), { current: true }, 'start_backgrounded', out.pending,
-      (a, b) => out.toasts.push([a, b]), (k) => k, Notifications, (x) => { out.errorMsg = x; });
+      (a, b) => out.toasts.push([a, b]), (k) => k, Notifications, (x) => { out.errorMsg = x; },
+      AsyncStorageStub, '@PFSLive:pendingBgStart', { next_race_participant_app_id: '4807', next_race_id: '19' }, 'x', 'y');
     return out;
   };
   test('start in a pocket (Android backgrounded): re-armed, toast AND a notification, never the error popup', async () => {
@@ -753,6 +756,8 @@ const L = () => load('services/locationService').locationService;
     assert.deepStrictEqual(o.notes[0], { content: { title: 'home:tracking.notStartedTitle', body: 'home:tracking.notStartedBody', data: { type: 'start_backgrounded' } }, trigger: null });
     assert.strictEqual(o.errorMsg, undefined, 'no error popup');
     assert.deepStrictEqual(o.active, [false]);
+    const saved = JSON.parse(o.stored['@PFSLive:pendingBgStart'] || 'null');
+    assert.ok(saved && saved.participantId === '4807' && saved.eventId === '19' && typeof saved.at === 'number', 're-arm persisted for a killed process');
   });
   test('backgrounded start: a failing notification is swallowed (no unhandled rejection, start still armed)', async () => {
     let unhandled = null; const h = (e) => { unhandled = e; };
@@ -765,6 +770,7 @@ const L = () => load('services/locationService').locationService;
   test('any other start error: error popup, no notification, not re-armed', async () => {
     const o = runStartCatch(new Error('boom'));
     assert.strictEqual(o.errorMsg, 'boom'); assert.strictEqual(o.notes.length, 0); assert.strictEqual(o.pending.current, false);
+    assert.deepStrictEqual(o.stored, {}, 'nothing persisted');
     assert.strictEqual(runStartCatch('weird').errorMsg, 'home:errors.trackingFailed');
   });
   test('Start popup tells the runner to keep Livio on screen 5 s, in the amber box, before the buttons', async () => {
@@ -1470,6 +1476,105 @@ const L = () => load('services/locationService').locationService;
       new Promise((resolve) => setTimeout(() => resolve(null), START_HOME_REFETCH_MS)),
     ]);
     assert.strictEqual(fresh ?? homeData, homeData); assert.ok(Date.now() - t0 < 1000);
+  });
+  // ── 2026-10-20 round 2: what the first re-check left open ──
+  const SR = () => load('services/startReminderService');
+  test('reminders: plan = 10 min before + 2 min after the gun, only future ones, none when not eligible or gun unknown', async () => {
+    const { planStartReminders, START_REMINDER_PRE_ID, START_REMINDER_POST_ID } = SR();
+    const gun = new Date(M.clock + 60 * 60000);
+    const plan = planStartReminders(gun, M.clock, true);
+    assert.deepStrictEqual(plan.map((x) => [x.id, x.at.getTime() - gun.getTime()]),
+      [[START_REMINDER_PRE_ID, -10 * 60000], [START_REMINDER_POST_ID, 2 * 60000]]);
+    assert.deepStrictEqual(planStartReminders(new Date(M.clock + 5 * 60000), M.clock, true).map((x) => x.kind), ['post'], 'inside T-10: only the post one');
+    assert.deepStrictEqual(planStartReminders(new Date(M.clock - 3 * 60000), M.clock, true), [], 'gun +3 min: none left');
+    assert.deepStrictEqual(planStartReminders(gun, M.clock, false), [], 'not eligible');
+    assert.deepStrictEqual(planStartReminders(null, M.clock, true), [], 'gun unknown');
+    assert.deepStrictEqual(planStartReminders(new Date('x'), M.clock, true), [], 'invalid gun');
+  });
+  const TEXTS = { preTitle: 'PT', preBody: 'PB', postTitle: 'QT', postBody: 'QB' };
+  test('reminders: sync schedules both with fixed ids at the planned dates; a second sync replaces, never stacks', async () => {
+    const { startReminderService, START_REMINDER_PRE_ID, START_REMINDER_POST_ID } = SR();
+    const gun = new Date(M.clock + 60 * 60000);
+    await startReminderService.sync({ gun, eligible: true, texts: TEXTS });
+    await startReminderService.sync({ gun: new Date(gun.getTime() + 15 * 60000), eligible: true, texts: TEXTS });   // organiser moved the gun
+    assert.deepStrictEqual(M.notif.pending.map((r) => r.identifier).sort(), [START_REMINDER_POST_ID, START_REMINDER_PRE_ID].sort(), 'exactly two pending');
+    const pre = M.notif.pending.find((r) => r.identifier === START_REMINDER_PRE_ID);
+    assert.strictEqual(pre.trigger.type, 'date');
+    assert.strictEqual(pre.trigger.date.getTime(), gun.getTime() + 15 * 60000 - 10 * 60000, 'follows the moved gun');
+    assert.deepStrictEqual([pre.content.title, pre.content.body, pre.content.data.type], ['PT', 'PB', 'start_reminder']);
+  });
+  test('reminders: tracking running (screen says so, OR a stored session after a cold start) → both cancelled, none scheduled', async () => {
+    const { startReminderService } = SR();
+    const gun = new Date(M.clock + 60 * 60000);
+    await startReminderService.sync({ gun, eligible: true, texts: TEXTS });
+    assert.strictEqual(M.notif.pending.length, 2);
+    await startReminderService.sync({ gun, eligible: false, texts: TEXTS });
+    assert.strictEqual(M.notif.pending.length, 0, 'screen not eligible → cancelled');
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12' }));   // engine running, isGPSActive not restored yet
+    await startReminderService.sync({ gun, eligible: true, texts: TEXTS });
+    assert.strictEqual(M.notif.pending.length, 0, 'stored live session wins over the screen');
+  });
+  test('reminders: notifications unavailable → sync returns [] and never throws', async () => {
+    const { startReminderService } = SR();
+    M.notif.fail = true;
+    assert.deepStrictEqual(await startReminderService.sync({ gun: new Date(M.clock + 3600000), eligible: true, texts: TEXTS }), []);
+  });
+  test('reminders: HomeScreen re-plans on every home answer + tracking change; eligible = Start offered and not tracking; texts in en/fr/nl', async () => {
+    const m = homeLF.match(/useEffect\(\(\) => \{\n    const gun = homeData\?\.next_race_date[\s\S]*?\n  \}, \[homeData, isGPSActive, t\]\);/);
+    assert.ok(m, 'reminder effect with deps [homeData, isGPSActive, t]');
+    assert.ok(m[0].includes('computeRaceStartTime(homeData.next_race_date, homeData.next_race_time, serverTimeOffsetRef.current)'), 'same gun as the session');
+    assert.ok(m[0].includes("eligible: homeData?.show_start_track === 1 && !!homeData?.next_race_participant_app_id && !isGPSActive,"));
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      for (const k of ['preTitle', 'preBody', 'postTitle', 'postBody']) assert.ok(typeof j.reminders[k] === 'string' && j.reminders[k].length > 10, l + ' ' + k);
+      assert.ok(/10/.test(j.reminders.preTitle), l + ': says 10 minutes');
+    }
+  });
+  test('persisted backgrounded start: resumes only within 10 min, only for the race home still offers with Start shown', async () => {
+    const { shouldResumePendingStart, PENDING_BG_START_MAX_AGE_MS } = R();
+    const home = { show_start_track: 1, next_race_participant_app_id: '4807', next_race_id: '19' };
+    const p = { participantId: '4807', eventId: '19', at: M.clock - 60000 };
+    assert.strictEqual(PENDING_BG_START_MAX_AGE_MS, 600000);
+    assert.strictEqual(shouldResumePendingStart(p, home, M.clock), true);
+    assert.strictEqual(shouldResumePendingStart({ ...p, at: M.clock - 601000 }, home, M.clock), false, 'too old');
+    assert.strictEqual(shouldResumePendingStart({ ...p, at: M.clock + 5000 }, home, M.clock), false, 'from the future');
+    assert.strictEqual(shouldResumePendingStart(p, { ...home, show_start_track: 0 }, M.clock), false, 'Start no longer offered');
+    assert.strictEqual(shouldResumePendingStart(p, { ...home, next_race_id: '20' }, M.clock), false, 'another race');
+    assert.strictEqual(shouldResumePendingStart({ eventId: '19', at: M.clock }, home, M.clock), false, 'no participant');
+    assert.strictEqual(shouldResumePendingStart(null, home, M.clock), false);
+    assert.strictEqual(shouldResumePendingStart(p, null, M.clock), false);
+  });
+  test('persisted backgrounded start: HomeScreen consumes it once on the first home answer, and only then starts; success clears it', async () => {
+    const m = homeLF.match(/const coldPendingCheckedRef = useRef\(false\);\n  useEffect\(\(\) => \{([\s\S]*?)\n  \}, \[homeData\]\);/);
+    assert.ok(m, 'cold-start effect');
+    const b = m[1];
+    const iGet = b.indexOf('AsyncStorage.getItem(PENDING_BG_START_KEY)');
+    const iDel = b.indexOf('AsyncStorage.removeItem(PENDING_BG_START_KEY)');
+    const iRule = b.indexOf('shouldResumePendingStart(pending, homeData, Date.now())');
+    const iStart = b.indexOf('await doStartGPSTrackingRef.current();');
+    assert.ok(iGet > 0 && iDel > iGet && iRule > iDel && iStart > iRule, 'read → consume → decide → start');
+    assert.ok(b.includes('if (coldPendingCheckedRef.current || !homeData) return;') && b.includes('coldPendingCheckedRef.current = true;'), 'once');
+    assert.ok(b.includes('isGPSActiveRef.current ||'), 'never while tracking');
+    assert.ok(/toastSuccess\(t\('home:tracking\.gpsActivated'\), message\);\n\s*void AsyncStorage\.removeItem\(PENDING_BG_START_KEY\)/.test(homeLF), 'a successful start clears it');
+  });
+  test('queue: addToQueue says whether it stored the fix (throttle drop → false); offline send reports "not queued" for a dropped fix', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12', intervalSeconds: 60 }));
+    const { locationQueueService: q } = Q();
+    assert.strictEqual(await q.addToQueue(fix(2, 12, 1), true), true, 'stored');
+    assert.strictEqual(await q.addToQueue(fix(2, 12, 0), true), false, 'throttled within the interval');
+    assert.strictEqual(await q.addToQueue(fix(2, 12, 0), false), true, 'unthrottled insert stored');
+    M.net = { isConnected: false, isInternetReachable: false }; M.api.mode = 'down';
+    const r = await L().sendLocation('2', '12', { latitude: 50, longitude: 4, timestamp: new Date(M.clock).toISOString() });
+    assert.ok(/^Location not queued — queue throttle/.test(r.message), r.message);
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(/const stored = await locationQueueService\.addToQueue\(/.test(g) && /if \(stored\) await addLog\('📥', `Backlog present/.test(g), 'backlog line only when stored');
+  });
+  test('send-gap label: a restart or a queue period in the gap is named, not "movement filter"', async () => {
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(/const _jsContextStartedAt = Date\.now\(\);/.test(g));
+    const m = g.match(/const suffix = gapSec <= \(expectedSec \+ 10\) \? ''\n\s*: restartedInGap \? [^\n]*\n\s*: queuedInGap \? [^\n]*\n\s*: isFreeze \? [^\n]*\n\s*: \(longPause \? [^\n]*/);
+    assert.ok(m, 'restart → queue → freeze → pause, in that order');
+    assert.ok(/const restartedInGap = _jsContextStartedAt > lastSentAt;/.test(g) && /const queuedInGap = lastQueuedAt > lastSentAt;/.test(g));
   });
   results.push(await run('13. event 19 review (silent iOS starts, persisted start ping, pre-gun wake, zombie sessions, interim race, log dup)'));
 

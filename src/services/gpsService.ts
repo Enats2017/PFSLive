@@ -269,6 +269,9 @@ let _segCountLoaded = false;                    // synced from disk on first sea
 // out of _logBuffer synchronously, so _readFullLog must include it until the
 // write lands — see the seal race note there.
 let _sealingSeg: TrackingLogEntry[] | null = null;
+// When THIS JS context started (module load). A send gap that began before it
+// spans a process restart — see the send-gap diagnostic.
+const _jsContextStartedAt = Date.now();
 let _bufferHydrated = false;                    // ✅ current-segment buffer rehydrated from disk in THIS JS context
 const LOG_FLUSH_INTERVAL_MS = 2000;
 
@@ -1133,7 +1136,7 @@ const _processLocationForSendInternal = async (
                                  state === Battery.BatteryState.FULL;
         } catch { /* silent */ }
 
-        await locationQueueService.addToQueue({
+        const stored = await locationQueueService.addToQueue({
           latitude:         raw.latitude,
           longitude:        raw.longitude,
           altitude:         raw.altitude ?? undefined,
@@ -1174,7 +1177,8 @@ const _processLocationForSendInternal = async (
         // filling the 500-fix cap several times faster and shifting out real
         // positions. That is what the note above warns about. Spacing is already
         // enforced upstream; the queue's job here is ordering, not rate limiting.
-        await addLog('📥', `Backlog present — current fix queued behind it${tag}`);
+        // Only when it really was stored — a throttle drop logged its own line.
+        if (stored) await addLog('📥', `Backlog present — current fix queued behind it${tag}`);
       } catch { /* silent */ }
       return;
     }
@@ -1316,9 +1320,18 @@ const _processLocationForSendInternal = async (
       const engineWasFiring = prevFireAt > lastSentAt + 5000;
       const isFreeze = gapSec > (expectedSec + 10) && !engineWasFiring;
       const longPause = gapSec > (expectedSec + 10) && engineWasFiring;
+      // 2026-10-20 re-check: every gap over 4 min on 10-17/18 (98 of them) was a
+      // queue/offline period or an OS kill, yet all were labelled "movement
+      // filter" — LAST_SENT_KEY advances only on live sends. Say what happened.
+      let lastQueuedAt = 0;
+      try { lastQueuedAt = parseInt((await AsyncStorage.getItem(LAST_QUEUED_KEY)) ?? '0', 10) || 0; } catch { /* silent */ }
+      const restartedInGap = _jsContextStartedAt > lastSentAt;
+      const queuedInGap = lastQueuedAt > lastSentAt;
       const icon = isFreeze ? '⏱️🔴' : '⏱️';
-      const suffix = isFreeze
-        ? ' — POSSIBLE FREEZE/THROTTLE'
+      const suffix = gapSec <= (expectedSec + 10) ? ''
+        : restartedInGap ? ' — app was restarted during the gap (killed by the OS?)'
+        : queuedInGap ? ' — no network: fixes were queued, delivered from the queue'
+        : isFreeze ? ' — POSSIBLE FREEZE/THROTTLE'
         : (longPause ? ' — long pause (engine alive, movement filter)' : '');
       await addLog(icon, `Send gap ${gapSec.toFixed(1)}s (expected ~${expectedSec}s)${suffix}${tag}`);
     }
