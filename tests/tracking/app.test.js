@@ -1731,6 +1731,59 @@ const L = () => load('services/locationService').locationService;
       assert.ok(j.powerSaving.midRaceTitle && j.powerSaving.midRaceBody, l);
     }
   });
+  // ── final confirmation pass (2026-10-20) ──
+  test('hasNetwork({ allowProbe:false }): a probe window is not "online" (dead zone keeps the queue throttled); a real send or NetInfo online is', async () => {
+    const { locationQueueService: q } = Q();
+    M.net = { isConnected: false, isInternetReachable: false };
+    assert.strictEqual(await q.hasNetwork(), true, 'probe opens for the send path');
+    assert.strictEqual(await q.hasNetwork({ allowProbe: false }), false, '…but it is no drain');
+    M.net = { isConnected: true, isInternetReachable: false };
+    assert.strictEqual(await q.hasNetwork({ allowProbe: false }), false, 'unreachable, no real send yet');
+    q.markSendSucceeded();
+    assert.strictEqual(await q.hasNetwork({ allowProbe: false }), true, 'a real send = drain');
+    M.net = { isConnected: true, isInternetReachable: true };
+    M.clock += 61000;
+    assert.strictEqual(await q.hasNetwork({ allowProbe: false }), true, 'NetInfo online');
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8');
+    assert.ok(/const online = await locationQueueService\.hasNetwork\(\{ allowProbe: false \}\);/.test(g), 'backlog guard asks without the probe');
+  });
+  test('hasNetwork({ allowProbe:false }) never opens a probe window (the send path still gets its probe)', async () => {
+    const { locationQueueService: q } = Q();
+    M.net = { isConnected: false, isInternetReachable: false };
+    assert.strictEqual(await q.hasNetwork({ allowProbe: false }), false);
+    assert.strictEqual(await q.hasNetwork(), true, 'first real probe still available');
+  });
+  test('every home:/common: text the changed screens and services use exists in en, fr and nl', async () => {
+    const files = ['screens/HomeScreen.tsx', 'services/gpsService.ts', 'services/trackingStartService.ts', 'services/startReminderService.ts'];
+    const keys = new Set();
+    for (const f of files) {
+      // code only: comments may name keys on purpose (e.g. the retired powerSaving.message)
+      const src = fs.readFileSync(`${SRC}/${f}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const m of src.matchAll(/\bt\(\s*'((?:home|common):[A-Za-z0-9_.]+)'/g)) keys.add(m[1]);
+    }
+    assert.ok(keys.size > 40, 'found the keys: ' + keys.size);
+    const ns = { home: 'HomeScreen', common: 'common' };
+    const missing = [];
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = {};
+      for (const [n, dir] of Object.entries(ns)) j[n] = JSON.parse(fs.readFileSync(`${SRC}/i18n/${dir}/${l}.json`, 'utf8'));
+      for (const k of keys) {
+        const [n, path] = k.split(':');
+        const v = path.split('.').reduce((o, p) => (o && typeof o === 'object' ? o[p] : undefined), j[n]);
+        if (typeof v !== 'string' || !v.trim()) missing.push(`${l} ${k}`);
+      }
+    }
+    assert.deepStrictEqual(missing, []);
+  });
+  test('BackgroundGeolocation.removeListeners() is called only from _removeTransistorListeners (SDK 5.1.1 removes every other one)', async () => {
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8').replace(/\r/g, '');
+    const code = g.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+    const calls = [...code.matchAll(/BackgroundGeolocation\.removeListeners\(\)/g)].length;
+    assert.strictEqual(calls, 1, 'one call: the sweep inside the helper');
+    assert.ok(/const _removeTransistorListeners = \(\): void => \{[\s\S]{0,300}BackgroundGeolocation\.removeListeners\(\)/.test(code));
+    assert.strictEqual([...code.matchAll(/BackgroundGeolocation\.on(Location|Heartbeat|MotionChange|ProviderChange)\(/g)].length, 4);
+    assert.strictEqual([...code.matchAll(/_trackTransistorSub\(BackgroundGeolocation\.on(Location|Heartbeat|MotionChange|ProviderChange)\(/g)].length, 4, 'every listener tracked');
+  });
   results.push(await run('13. event 19 review (silent iOS starts, persisted start ping, pre-gun wake, zombie sessions, interim race, log dup)'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });

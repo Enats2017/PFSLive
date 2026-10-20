@@ -83,7 +83,15 @@ export const locationQueueService = {
     _trustedOnlineUntil = Date.now() + TRUST_AFTER_SUCCESS_MS;
   },
 
-  async hasNetwork(): Promise<boolean> {
+  /**
+   * `allowProbe: false` answers "is the network really back?" — NetInfo online,
+   * or a real send just went through — without the periodic probe. The backlog
+   * guard uses it to decide whether a queued fix may skip the queue throttle:
+   * a probe window is a guess, and in a dead zone (now probed too, 2026-10-20)
+   * it would let every SDK fire into the queue for 15 s out of every 30.
+   */
+  async hasNetwork(opts: { allowProbe?: boolean } = {}): Promise<boolean> {
+    const allowProbe = opts.allowProbe !== false;
     try {
       const now = Date.now();
 
@@ -114,6 +122,7 @@ export const locationQueueService = {
       if (now < _trustedOnlineUntil) return true;
 
       // NetInfo says offline: allow a periodic real attempt.
+      if (!allowProbe) return false;
       if (now < _probeWindowUntil) return true;
       if (now - _lastProbeOpenedAt >= PROBE_EVERY_MS) {
         _lastProbeOpenedAt = now;

@@ -1138,7 +1138,8 @@ const _processLocationForSendInternal = async (
         // So: only bypass the throttle when we actually have network (real drain).
         // Offline → route through the normal THROTTLED insert so the queue grows
         // at the interval rate, exactly like a first-fix offline queue would.
-        const online = await locationQueueService.hasNetwork();
+        // allowProbe:false — a probe window is not a drain (see hasNetwork).
+        const online = await locationQueueService.hasNetwork({ allowProbe: false });
 
         // ✅ Movement gate for the guard path.
         //
