@@ -2324,6 +2324,36 @@ export const gpsService = {
    * iOS reads Transistor's accuracyAuthorization (expo-location does not expose
    * it); Android reads expo-location's android.accuracy. Unknown → false.
    */
+  /**
+   * iOS: ask for background running time for the rest of a Start (event 19
+   * review follow-up, 2026-10-20). iOS gives a backgrounded app only a few
+   * seconds before suspending it, and the start still has a home refetch (up to
+   * the 15s API timeout on a crowded start line), ~25 storage writes and
+   * ready() ahead of BackgroundGeolocation.start(). A phone pocketed right after
+   * Start could be suspended in between: nothing tracked, nothing sent, the start
+   * frozen until Livio is opened again. Once start() has run the engine keeps the
+   * app alive itself, so the task only has to cover the start.
+   * Returns the task id to hand to endStartWindow, or null (Android, or the call
+   * failed — the start must never depend on it). Android has its own rule (the
+   * foreground wait in startWatchingPosition) and gets nothing here.
+   */
+  async beginStartWindow(): Promise<number | null> {
+    if (Platform.OS !== 'ios') return null;
+    try {
+      return await BackgroundGeolocation.startBackgroundTask();
+    } catch {
+      return null;
+    }
+  },
+
+  /** Ends the task from beginStartWindow. Safe with null; never throws. */
+  async endStartWindow(taskId: number | null): Promise<void> {
+    if (taskId === null) return;
+    try {
+      await BackgroundGeolocation.stopBackgroundTask(taskId);
+    } catch { /* silent — iOS ends an expired task by itself */ }
+  },
+
   async isApproximateLocation(): Promise<boolean> {
     try {
       if (Platform.OS === 'android') {

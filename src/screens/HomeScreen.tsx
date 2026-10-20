@@ -803,6 +803,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
    * Core GPS tracking logic — called after all confirmations passed.
    */
   const doStartGPSTracking = useCallback(async () => {
+    // iOS background time for the start — taken after the last popup (see
+    // gpsService.beginStartWindow), always released in finally.
+    let startWindow: number | null = null;
     try {
       // ── PERMISSION GATE ─────────────────────────────────────────────────
       // This used to accept FOREGROUND permission alone and start tracking.
@@ -874,6 +877,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // reading the homeData state right after the await won't reflect the
       // update yet. Fall back to existing state if the fresh fetch fails, so an
       // offline start still works.
+      // From here on nothing waits for the runner, so a phone pocketed now must
+      // not be suspended before the engine starts (iOS only; null on Android).
+      startWindow = await gpsService.beginStartWindow();
       const fresh = await fetchHomeData(true);
       const raceData = fresh ?? homeData;
 
@@ -1076,6 +1082,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         return;
       }
       setStartErrorMessage(error instanceof Error ? error.message : t('home:errors.trackingFailed'));
+    } finally {
+      void gpsService.endStartWindow(startWindow);
     }
   }, [
     hasPermission,

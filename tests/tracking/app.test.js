@@ -713,7 +713,7 @@ const L = () => load('services/locationService').locationService;
   });
   // The real catch of the start flow, run with stand-ins.
   const runStartCatch = (error, notifyFails = false) => {
-    const m = homeLF.match(/\n    \} catch \(error\) \{\n      setIsGPSActive\(false\);([\s\S]*?)\n    \}\n  \}, \[\n    hasPermission,/);
+    const m = homeLF.match(/\n    \} catch \(error\) \{\n      setIsGPSActive\(false\);([\s\S]*?)\n    \} finally \{\n      void gpsService\.endStartWindow\(startWindow\);\n    \}\n  \}, \[\n    hasPermission,/);
     assert.ok(m, 'start catch found');
     const out = { pending: { current: false }, toasts: [], notes: [], errorMsg: undefined, active: [] };
     const Notifications = { scheduleNotificationAsync: (req) => { out.notes.push(req); return notifyFails ? Promise.reject(new Error('x')) : Promise.resolve('id'); } };
@@ -1038,6 +1038,54 @@ const L = () => load('services/locationService').locationService;
     await withRN('android', 'background', async () => { try { await startSession('2', '12'); } catch (e) { err = e; } });
     assert.ok(err, 'start threw'); assert.strictEqual(START_BACKGROUNDED_CODE, 'start_backgrounded'); assert.strictEqual(err.code, 'start_backgrounded');
     assert.ok(!M.store.has(PARAMS), 'no half-started session');
+  });
+  // iOS start window (2026-10-20): background time from the home refetch to start().
+  const withBgTask = async (impl, fn) => {
+    const BG = require('react-native-background-geolocation').default;
+    const calls = [];
+    BG.startBackgroundTask = async () => { calls.push(['start']); return impl.start(); };
+    BG.stopBackgroundTask = async (id) => { calls.push(['stop', id]); return impl.stop ? impl.stop(id) : undefined; };
+    try { return await fn(calls); } finally { delete BG.startBackgroundTask; delete BG.stopBackgroundTask; }
+  };
+  test('iOS start window: beginStartWindow takes a background task on iOS, endStartWindow releases that id', async () => {
+    const { gpsService } = load('services/gpsService');
+    await withBgTask({ start: () => 42 }, async (calls) => {
+      const id = await withRN('ios', 'active', () => gpsService.beginStartWindow());
+      assert.strictEqual(id, 42);
+      await gpsService.endStartWindow(id);
+      assert.deepStrictEqual(calls, [['start'], ['stop', 42]]);
+    });
+  });
+  test('iOS start window: Android takes none; a failing start/stop never throws; null is not released', async () => {
+    const { gpsService } = load('services/gpsService');
+    await withBgTask({ start: () => 1 }, async (calls) => {
+      assert.strictEqual(await withRN('android', 'active', () => gpsService.beginStartWindow()), null);
+      await gpsService.endStartWindow(null);
+      assert.deepStrictEqual(calls, [], 'no native call on Android or for null');
+    });
+    await withBgTask({ start: () => { throw new Error('no task'); }, stop: () => { throw new Error('gone'); } }, async (calls) => {
+      assert.strictEqual(await withRN('ios', 'active', () => gpsService.beginStartWindow()), null, 'failed start → null');
+      await gpsService.endStartWindow(5);   // must not throw
+      assert.deepStrictEqual(calls, [['start'], ['stop', 5]]);
+    });
+  });
+  test('iOS start window wiring: taken after the last popup, before the home refetch; released in finally on every exit', async () => {
+    const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    const fnAt = s.indexOf('const doStartGPSTracking = useCallback(async () => {');
+    const fnEnd = s.indexOf('\n  }, [\n    hasPermission,', fnAt);
+    const fn = s.slice(fnAt, fnEnd);
+    assert.ok(fnAt > 0 && fnEnd > fnAt, 'doStartGPSTracking found');
+    const iDecl = fn.indexOf('let startWindow: number | null = null;');
+    const iTry = fn.indexOf('\n    try {');
+    const iApprox = fn.indexOf('if (!proceed) return;');
+    const iTake = fn.indexOf('startWindow = await gpsService.beginStartWindow();');
+    const iFetch = fn.indexOf('await fetchHomeData(true)');
+    const iEngine = fn.indexOf('await gpsService.startWatchingPosition(');
+    assert.ok(iDecl > 0 && iDecl < iTry, 'declared before the try');
+    assert.ok(iApprox > 0 && iTake > iApprox, 'after the approximate-location popup (nothing waits for the runner after it)');
+    assert.ok(iFetch > iTake && iEngine > iFetch, 'before the home refetch and the engine start');
+    assert.strictEqual((fn.match(/beginStartWindow\(/g) || []).length, 1, 'taken once');
+    assert.ok(/\n    \} finally \{\n      void gpsService\.endStartWindow\(startWindow\);\n    \}$/.test(fn), 'the function-level finally releases it');
   });
   test('HomeScreen wiring: start ping only AFTER the engine started; backgrounded start re-armed; pending ping flushed by the queue timer', async () => {
     const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
