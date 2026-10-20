@@ -48,6 +48,8 @@
     "retryQueue": "Envoyer {{count}} position(s) non envoyée(s)",
     "queueRetryFailed": "Pas de réseau — réessayez plus tard",
     "reopenToStart": "Rouvrez Livio pour démarrer le suivi — le téléphone a quitté l'app trop vite.",
+    "notStartedTitle": "Le suivi n'a pas démarré",
+    "notStartedBody": "Votre téléphone a quitté Livio trop vite. Ouvrez Livio pour démarrer le suivi.",
     "bgPermission": {
       "title": "Autoriser {applicationName} à accéder à la localisation de cet appareil même lorsqu'elle est fermée ou inutilisée ?",
       "message": "{applicationName} partage votre position en direct avec vos abonnés pendant une course, même lorsque l'application est fermée ou inutilisée. Pour l'activer, choisissez « {backgroundPermissionOptionLabel} ».",
@@ -60,6 +62,7 @@
     "message": "Pour un suivi GPS fiable pendant votre course, autorisez une utilisation illimitée de la batterie. Cela empêche Android de suspendre les mises à jour de localisation lorsque l'écran est éteint.",
     "allow": "Autoriser",
     "skip": "Ignorer",
+    "startAnyway": "Démarrer quand même",
     "revertTitle": "Paramètre de batterie",
     "revertMessage": "Vous pouvez remettre l'utilisation de la batterie sur Optimisé via Paramètres → Applications → Livio → Batterie.",
     "revertSettings": "Ouvrir les paramètres",
@@ -100,7 +103,9 @@
     "title": "L'économiseur de batterie est activé",
     "messageAndroid": "L'économiseur de batterie peut interrompre le suivi GPS en arrière-plan. Veuillez le désactiver avant de démarrer le suivi.",
     "messageIos": "Le mode économie d'énergie peut interrompre le suivi GPS en arrière-plan. Ouvrez l'app Réglages → Batterie → désactivez le mode économie d'énergie, puis revenez et appuyez de nouveau sur DÉMARRER LE SUIVI.",
-    "disable": "Ouvrir les réglages de batterie"
+    "disable": "Ouvrir les réglages de batterie",
+    "midRaceTitle": "L'économiseur de batterie est activé",
+    "midRaceBody": "L'économiseur de batterie peut empêcher Livio d'enregistrer votre course. Désactivez-le si possible."
   },
   "followingEvents": {
     "sectionTitle": "ÉVÉNEMENTS QUE VOUS SUIVEZ",
@@ -112,7 +117,8 @@
     "title": "Démarrer le suivi en direct ?",
     "message": "Votre position en direct sera partagée avec vos abonnés pendant toute la course. Gardez Livio ouvert et votre téléphone avec vous jusqu'à l'arrivée. Prêt à démarrer ?",
     "yes": "Oui, démarrer le suivi",
-    "no": "Pas encore"
+    "no": "Pas encore",
+    "keepOpen": "Après avoir appuyé sur Démarrer, gardez Livio à l'écran pendant 5 secondes jusqu'à voir « GPS Activé ». Ensuite, verrouillez votre téléphone et rangez-le."
   },
   "fanEmail": {
     "title": "Restez informé",
@@ -141,5 +147,11 @@
     "stepsIos": "Touchez Position, puis choisissez « Toujours ».",
     "stepsAndroid": "Choisissez « Toujours autoriser » sur l'écran suivant.",
     "stepsAndroidSettings": "Ouvrez Autorisations → Localisation, puis choisissez « Toujours autoriser »."
+  },
+  "reminders": {
+    "preTitle": "Votre course commence dans 10 minutes",
+    "preBody": "Ouvrez Livio et appuyez sur Démarrer le suivi pour que vos abonnés vous suivent en direct.",
+    "postTitle": "Votre course a commencé",
+    "postBody": "Le suivi n'est pas encore actif. Ouvrez Livio et appuyez sur Démarrer le suivi."
   }
 }

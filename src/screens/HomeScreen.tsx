@@ -35,7 +35,8 @@ import {
   LOG_UPLOADED_KEY, getFullTrackingLog,PENDING_FINISH_KEY, FINAL_SENT_COUNT_KEY,
   GPS_HEALTH_KEY, maybeUploadInterimLog, START_BACKGROUNDED_CODE,
 } from '../services/gpsService';
-import { isStaleSession, computeRaceStartTime } from '../services/trackingSessionRules';
+import { isStaleSession, computeRaceStartTime, shouldResumePendingStart } from '../services/trackingSessionRules';
+import { startReminderService } from '../services/startReminderService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { locationQueueService } from '../services/locationQueueService';
@@ -109,6 +110,19 @@ interface HomeData {
 
 // ✅ Stored permanently — never cleared after first prompt
 const BATTERY_PROMPTED_KEY = '@PFSLive:batteryOptimizationPrompted';
+
+// Hard ceiling on the fresh home refetch at Start (2026-10-20 re-check). It ran
+// before the engine with only axios's 15 s timeout (which does not reliably fire
+// on a half-open socket): on a crowded start line an Android runner who waited
+// the 5 s the popup asks for and then locked the phone hit the foreground rule,
+// and iOS could outlast its background task. The loaded homeData is the fallback,
+// exactly as when the refetch fails.
+const START_HOME_REFETCH_MS = 4000;
+
+// Persisted copy of the in-memory start_backgrounded re-arm (pendingStartRef),
+// so a process killed in the background still finishes the start on the next
+// open — see shouldResumePendingStart.
+const PENDING_BG_START_KEY = '@PFSLive:pendingBgStart';
 
 // ✅ Hours threshold — show early tracking warning if race is more than this far away
 
@@ -259,6 +273,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // ✅ Battery explanation modal — shown once before system dialog
   const [showBatteryModal, setShowBatteryModal] = useState(false);
+  // Start-time battery optimisation check (Android) — answered by
+  // handleBatteryStart* below; see startGPSTracking.
+  const [showBatteryStartModal, setShowBatteryStartModal] = useState(false);
+  const batteryStartResolveRef = useRef<((choice: 'allow' | 'anyway' | 'cancel') => void) | null>(null);
 
   // ✅ Early tracking warning modal — shown when race is more than 24h away
   const [showEarlyTrackingModal, setShowEarlyTrackingModal] = useState(false);
@@ -803,7 +821,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
    * Core GPS tracking logic — called after all confirmations passed.
    */
   const doStartGPSTracking = useCallback(async () => {
+    // iOS background time for the start — taken after the last popup (see
+    // gpsService.beginStartWindow), always released in finally.
+    let startWindow: number | null = null;
     try {
+      // ── BATTERY SAVER GATE — on EVERY start path (2026-10-20) ────────────
+      // startGPSTracking (the button) already refuses Battery Saver / Low Power
+      // Mode, but the resumed starts call this function directly: back from the
+      // permission screen, back after a pocketed Android start, the cold-start
+      // resume. Battery Saver switched on in between went straight through.
+      if (await checkPowerSavingMode()) {
+        setShowPowerSavingModal(true);
+        return;
+      }
+
       // ── PERMISSION GATE ─────────────────────────────────────────────────
       // This used to accept FOREGROUND permission alone and start tracking.
       // That is what broke the 2026-08-23 race: a runner with "While Using the
@@ -874,7 +905,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // reading the homeData state right after the await won't reflect the
       // update yet. Fall back to existing state if the fresh fetch fails, so an
       // offline start still works.
-      const fresh = await fetchHomeData(true);
+      // From here on nothing waits for the runner, so a phone pocketed now must
+      // not be suspended before the engine starts (iOS only; null on Android).
+      startWindow = await gpsService.beginStartWindow();
+      const fresh = await Promise.race([
+        fetchHomeData(true),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), START_HOME_REFETCH_MS)),
+      ]);
       const raceData = fresh ?? homeData;
 
       // ✅ Home answered but offers NO race (M7, 2026-10-18 audit): the race was
@@ -1044,7 +1081,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       }
 
       toastSuccess(t('home:tracking.gpsActivated'), message);
-      await analyticsService.markAsParticipant('start_tracking');
+      void AsyncStorage.removeItem(PENDING_BG_START_KEY).catch(() => { /* silent */ });
+      // Never awaited into the catch below: the engine is already running, and a
+      // throw here marked the UI "not tracking" over a live session.
+      void analyticsService.markAsParticipant('start_tracking').catch(() => { /* silent */ });
       // Records its own start timestamp, so duration is computed by the service
       // and doesn't depend on gpsService session state.
       void analyticsService.logTrackingStarted({
@@ -1061,10 +1101,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // foreground — instead of an error popup nobody sees in a pocket.
       if ((error as any)?.code === START_BACKGROUNDED_CODE) {
         pendingStartRef.current = true;
+        void AsyncStorage.setItem(PENDING_BG_START_KEY, JSON.stringify({
+          participantId: homeData?.next_race_participant_app_id ?? participantId,
+          eventId: homeData?.next_race_id ?? eventId,
+          at: Date.now(),
+        })).catch(() => { /* silent — the in-memory re-arm still works */ });
         toastError(t('home:errors.trackingFailed'), t('home:tracking.reopenToStart'));
+        // The toast is invisible in a pocket. A notification at least reaches a
+        // runner who checks the phone (or wears it on the wrist); tapping it opens
+        // Livio and the armed start above runs on that foreground.
+        Notifications.scheduleNotificationAsync({
+          content: {
+            title: t('home:tracking.notStartedTitle'),
+            body: t('home:tracking.notStartedBody'),
+            data: { type: 'start_backgrounded' },
+          },
+          trigger: null,   // deliver immediately
+        }).catch(() => { /* silent — a failed notification must not break the start */ });
         return;
       }
       setStartErrorMessage(error instanceof Error ? error.message : t('home:errors.trackingFailed'));
+    } finally {
+      void gpsService.endStartWindow(startWindow);
     }
   }, [
     hasPermission,
@@ -1077,6 +1135,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     startRaceStartChecker,
     fetchHomeData,
     t,
+    checkPowerSavingMode,
   ]);
 
   const startGPSTracking = useCallback(async () => {
@@ -1091,6 +1150,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setShowPowerSavingModal(true);
       return;
 
+    }
+
+    // ✅ Android battery optimisation, at EVERY Start (2026-10-20). The
+    // first-install prompt is asked once, ever, so a runner who dismissed it raced
+    // with Android free to put Livio to sleep — the likely end of 8 Android
+    // sessions that went silent before the gun. Not a hard block (OEM settings
+    // vary and some phones cannot grant it): Allow opens the system dialog and the
+    // start continues when the runner comes back; Start anyway continues as is.
+    if (Platform.OS === 'android' && (await gpsService.isBatteryOptimized())) {
+      const choice = await new Promise<'allow' | 'anyway' | 'cancel'>((resolve) => {
+        batteryStartResolveRef.current = resolve;
+        setShowBatteryStartModal(true);
+      });
+      if (choice === 'cancel') return;
+      if (choice === 'allow') {
+        try { await requestBatteryOptimizationExemption(); } catch { /* the start still goes on */ }
+      }
     }
 
     // Warn for ANY start before the gun, not just >24h out.
@@ -1413,6 +1489,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     resolveApprox(true);
   }, [resolveApprox]);
 
+  // Settles the start-time battery popup exactly once.
+  const resolveBatteryStart = useCallback((choice: 'allow' | 'anyway' | 'cancel') => {
+    setShowBatteryStartModal(false);
+    const resolve = batteryStartResolveRef.current;
+    batteryStartResolveRef.current = null;
+    resolve?.(choice);
+  }, []);
+  const handleBatteryStartAllow = useCallback(() => resolveBatteryStart('allow'), [resolveBatteryStart]);
+  const handleBatteryStartAnyway = useCallback(() => resolveBatteryStart('anyway'), [resolveBatteryStart]);
+  const handleBatteryStartCancel = useCallback(() => resolveBatteryStart('cancel'), [resolveBatteryStart]);
+
   const handleStartErrorClose = useCallback(() => {
     setStartErrorMessage(null);
   }, []);
@@ -1699,6 +1786,46 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     return () => sub.remove();
   }, []);
+
+  // ✅ Cold start after a killed backgrounded start (2026-10-20 re-check). The
+  // listener above only fires on a background→active CHANGE; when Android killed
+  // the process, the next open is a fresh launch with pendingStartRef=false, so
+  // "Open Livio to start tracking" started nothing. Checked once, on the first
+  // home answer; the key is consumed either way.
+  const coldPendingCheckedRef = useRef(false);
+  useEffect(() => {
+    if (coldPendingCheckedRef.current || !homeData) return;
+    coldPendingCheckedRef.current = true;
+    void (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(PENDING_BG_START_KEY);
+        if (!raw) return;
+        await AsyncStorage.removeItem(PENDING_BG_START_KEY);
+        let pending: any = null;
+        try { pending = JSON.parse(raw); } catch { return; }
+        if (isGPSActiveRef.current || !shouldResumePendingStart(pending, homeData, Date.now())) return;
+        await doStartGPSTrackingRef.current();
+      } catch { /* silent — the runner can still press Start */ }
+    })();
+  }, [homeData]);
+
+  // ✅ Start reminders — see startReminderService. Re-planned on every home
+  // answer and tracking change; Start not offered or tracking running → none.
+  useEffect(() => {
+    const gun = homeData?.next_race_date && homeData?.next_race_time && serverTimeOffsetKnownRef.current
+      ? computeRaceStartTime(homeData.next_race_date, homeData.next_race_time, serverTimeOffsetRef.current)
+      : null;
+    void startReminderService.sync({
+      gun,
+      eligible: homeData?.show_start_track === 1 && !!homeData?.next_race_participant_app_id && !isGPSActive,
+      texts: {
+        preTitle: t('home:reminders.preTitle'),
+        preBody: t('home:reminders.preBody'),
+        postTitle: t('home:reminders.postTitle'),
+        postBody: t('home:reminders.postBody'),
+      },
+    });
+  }, [homeData, isGPSActive, t]);
 
   // App state changes
   useEffect(() => {
@@ -1989,6 +2116,45 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </Modal>
       )}
 
+      {/* ✅ Start-time battery optimisation (Android) — see startGPSTracking */}
+      {Platform.OS === 'android' && (
+        <Modal
+          transparent
+          visible={showBatteryStartModal}
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={handleBatteryStartCancel}
+        >
+          <View style={homeStyles.notifBackdrop}>
+            <View style={homeStyles.notifWrapper}>
+              <View style={homeStyles.notifCard}>
+                <View style={homeStyles.notifIconWrapper}>
+                  <Ionicons name="battery-charging" size={36} color={colors.primary} />
+                </View>
+                <Text style={homeStyles.notifTitle}>{t('home:battery.title')}</Text>
+                <Text style={homeStyles.notifBody}>{t('home:battery.message')}</Text>
+                <View style={homeStyles.notifButtonContainer}>
+                  <TouchableOpacity
+                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                    onPress={handleBatteryStartAllow}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={commonStyles.primaryButtonText}>{t('home:battery.allow')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={commonStyles.secondaryButton}
+                    onPress={handleBatteryStartAnyway}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={commonStyles.secondaryButtonText}>{t('home:battery.startAnyway')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {/* ✅ Start tracking confirmation */}
       <Modal
         transparent
@@ -2005,6 +2171,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:startConfirm.title')}</Text>
               <Text style={homeStyles.notifBody}>{t('home:startConfirm.message')}</Text>
+              {/* Android cannot start the location service once the app is in the
+                  background: a phone pocketed within ~3 s of Start never tracks
+                  until Livio is opened again (start_backgrounded). A runner does
+                  not feel a notification mid-race, so say it before they start. */}
+              <View style={homeStyles.notifKeepOpenBox}>
+                <Text style={homeStyles.notifKeepOpenText}>{t('home:startConfirm.keepOpen')}</Text>
+              </View>
               <View style={homeStyles.notifButtonContainer}>
                 <TouchableOpacity
                   style={[commonStyles.primaryButton, homeStyles.notifViewButton]}

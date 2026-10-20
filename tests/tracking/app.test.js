@@ -23,9 +23,17 @@ const L = () => load('services/locationService').locationService;
     M.net = { isConnected: true, isInternetReachable: null };
     assert.strictEqual(await Q().locationQueueService.hasNetwork(), true);
   });
-  test('no radio (isConnected=false) → false', async () => {
-    M.net = { isConnected: false, isInternetReachable: false };
-    assert.strictEqual(await Q().locationQueueService.hasNetwork(), false);
+  // 2026-10-20 re-check: "no radio" is probed like "unreachable" (p4789 had
+  // isConnected=false the whole of event 19, all 177 fixes arrived after the finish).
+  test('no radio (isConnected=false) → a probe every 30s, logged with the type; false in between', async () => {
+    M.net = { isConnected: false, isInternetReachable: false, type: 'cellular' };
+    const { locationQueueService: q } = Q();
+    assert.strictEqual(await q.hasNetwork(), true, 'first call opens a probe');
+    M.clock += 14000; assert.strictEqual(await q.hasNetwork(), true, 'inside the 15s window');
+    M.clock += 2000; assert.strictEqual(await q.hasNetwork(), false, 'window over');
+    M.clock += 14500; assert.strictEqual(await q.hasNetwork(), true, 'next probe after 30s');
+    const log = await load('services/gpsService').getFullTrackingLog();
+    assert.ok(log.some((e) => /NetInfo says no connection \(type:cellular\) — trying the API anyway \(probe\)/.test(e.msg)), 'probe logged');
   });
   test('unreachable → 1st call opens a probe (true) and logs it', async () => {
     M.net = { isConnected: true, isInternetReachable: false };
@@ -63,11 +71,13 @@ const L = () => load('services/locationService').locationService;
     M.clock += 2000;                                 // 61s → trust expired, probe not due (<30s? no: 81s since probe → due)
     assert.strictEqual(await q.hasNetwork(), true, 'next probe due');
   });
-  test('trust never overrides "no radio"', async () => {
+  test('a send that just went through overrides "no radio" too (it proves a link)', async () => {
     const { locationQueueService: q } = Q();
     q.markSendSucceeded();
     M.net = { isConnected: false, isInternetReachable: false };
-    assert.strictEqual(await q.hasNetwork(), false);
+    assert.strictEqual(await q.hasNetwork(), true);
+    M.clock += 61000; await q.hasNetwork();                  // trust over → probe opens…
+    M.clock += 16000; assert.strictEqual(await q.hasNetwork(), false, '…and closes again');
   });
   test('NetInfo hangs → optimistic true after 3s timeout', async () => {
     M.netHang = true;
@@ -214,7 +224,7 @@ const L = () => load('services/locationService').locationService;
     assert.strictEqual(getO().length, 0);
   });
   test('offline (no radio) → nothing sent, nothing lost', async () => {
-    M.store.set(OK_, JSON.stringify([fix(1, 1, 5)])); M.net = { isConnected: false, isInternetReachable: false };
+    M.store.set(OK_, JSON.stringify([fix(1, 1, 5)])); M.net = { isConnected: false, isInternetReachable: false }; M.api.mode = 'down';
     assert.strictEqual(await L().drainOrphans(), 0); assert.strictEqual(getO().length, 1);
   });
   test('concurrent call is a no-op (mutex) and no double send', async () => {
@@ -431,7 +441,7 @@ const L = () => load('services/locationService').locationService;
     assert.strictEqual(getQ().length, 50);
   });
   test('offline at Stop → 0 sent, all kept', async () => {
-    setQ([fix(2, 12, 3), fix(2, 12, 2)]); M.net = { isConnected: false, isInternetReachable: false };
+    setQ([fix(2, 12, 3), fix(2, 12, 2)]); M.net = { isConnected: false, isInternetReachable: false }; M.api.mode = 'down';
     assert.strictEqual(await L().drainForStop('2', '12', 30000, FAST), 0); assert.strictEqual(getQ().length, 2);
   });
   test('time budget respected', async () => {
@@ -491,22 +501,22 @@ const L = () => load('services/locationService').locationService;
   // ════════════ 10. incident replays (from the 2026-10-07 audit) ════════════
   test('p2699 (Dinant): 173 queued, Stop while offline → nothing lost; uploaded on next app open', async () => {
     setQ(Array.from({ length: 173 }, (_, i) => fix(2699, 12, 120 - i * 0.5)));
-    M.net = { isConnected: false, isInternetReachable: false };
+    M.net = { isConnected: false, isInternetReachable: false }; M.api.mode = 'down';
     assert.strictEqual(await L().drainForStop('2699', '12', 30000, FAST), 0);
     // session ends (params cleared by the real stop) → leftovers parked, still offline
     assert.strictEqual(await L().drainOrphans(), 0); assert.strictEqual(getO().length + getQ().length, 173);
     // later: app opened with network
-    M.net = { isConnected: true, isInternetReachable: true }; M.clock += 3600000;
+    M.net = { isConnected: true, isInternetReachable: true }; M.api.mode = 'ok'; M.clock += 3600000;
     let sent = 0; for (let i = 0; i < 10 && (getO().length || getQ().length); i++) sent += await L().drainOrphans(45000);
     assert.strictEqual(sent, 173); assert.strictEqual(M.api.posted.length, 173);
     assert.ok(M.api.posted.every((p) => p.body.participantId === '2699' && p.body.is_queued === 1));
   });
   test('p1652 (Kemmelberg): Stop with 173 queued, then Start again same race → leftovers sent FIRST', async () => {
     setQ(Array.from({ length: 173 }, (_, i) => fix(2, 9, 200 - i)));
-    M.net = { isConnected: false, isInternetReachable: false };
+    M.net = { isConnected: false, isInternetReachable: false }; M.api.mode = 'down';
     await L().drainForStop('2', '9', 30000, FAST);
     await L().drainOrphans();                     // parks them (no session)
-    M.net = { isConnected: true, isInternetReachable: true };
+    M.net = { isConnected: true, isInternetReachable: true }; M.api.mode = 'ok';
     await startSession('2', '9');                 // runner restarts the same race
     assert.strictEqual(getQ().length, 173, 'back in the live queue, ahead of new fixes');
     assert.strictEqual(await L().drainForStop('2', '9', 30000, FAST), 173);
@@ -517,6 +527,18 @@ const L = () => load('services/locationService').locationService;
     for (let t = 0; t < 20 * 60; t += 10) {            // 20 minutes, 10s queue-processor ticks
       setQ(getQ().concat([fix(2595, 12, 0)]));          // one new fix per tick
       await svc.processQueue('2595', '12');
+      const oldest = getQ()[0]; if (oldest) maxLagMs = Math.max(maxLagMs, M.clock - new Date(oldest.timestamp).getTime());
+      M.clock += 10000;
+    }
+    assert.ok(M.api.posted.length >= 100, `sent ${M.api.posted.length} of 120`);
+    assert.ok(maxLagMs <= 30000, `oldest unsent fix never older than 30s (was ${maxLagMs / 1000}s)`);
+  });
+  test('p4789 (event 19): NetInfo stuck "no connection" all race while the API works → fixes still go out ≤30s', async () => {
+    M.net = { isConnected: false, isInternetReachable: false, type: 'none' };
+    const svc = L(); let maxLagMs = 0;
+    for (let t = 0; t < 20 * 60; t += 10) {
+      setQ(getQ().concat([fix(4789, 19, 0)]));
+      await svc.processQueue('4789', '19');
       const oldest = getQ()[0]; if (oldest) maxLagMs = Math.max(maxLagMs, M.clock - new Date(oldest.timestamp).getTime());
       M.clock += 10000;
     }
@@ -711,8 +733,66 @@ const L = () => load('services/locationService').locationService;
       assert.ok(j.ok && j.errors && j.errors.generic, `${l}: common ok + errors.generic`);
     }
   });
-  test('start in a pocket (Android backgrounded) still re-arms with a toast, never the error popup', async () => {
-    assert.ok(/code === START_BACKGROUNDED_CODE\) \{[\s\S]{0,200}pendingStartRef\.current = true;[\s\S]{0,200}return;\s*\}\s*setStartErrorMessage\(/.test(homeLF));
+  // The real catch of the start flow, run with stand-ins.
+  const runStartCatch = (error, notifyFails = false) => {
+    const m = homeLF.match(/\n    \} catch \(error\) \{\n      setIsGPSActive\(false\);([\s\S]*?)\n    \} finally \{\n      void gpsService\.endStartWindow\(startWindow\);\n    \}\n  \}, \[\n    hasPermission,/);
+    assert.ok(m, 'start catch found');
+    const out = { pending: { current: false }, toasts: [], notes: [], errorMsg: undefined, active: [], stored: {} };
+    const Notifications = { scheduleNotificationAsync: (req) => { out.notes.push(req); return notifyFails ? Promise.reject(new Error('x')) : Promise.resolve('id'); } };
+    const AsyncStorageStub = { setItem: async (k, v) => { out.stored[k] = v; } };
+    new Function('error', 'setIsGPSActive', 'isGPSActiveRef', 'START_BACKGROUNDED_CODE', 'pendingStartRef', 'toastError', 't', 'Notifications', 'setStartErrorMessage',
+      'AsyncStorage', 'PENDING_BG_START_KEY', 'homeData', 'participantId', 'eventId',
+      'setIsGPSActive(false);' + m[1].replace(/\(error as any\)/g, 'error'))(
+      error, (x) => out.active.push(x), { current: true }, 'start_backgrounded', out.pending,
+      (a, b) => out.toasts.push([a, b]), (k) => k, Notifications, (x) => { out.errorMsg = x; },
+      AsyncStorageStub, '@PFSLive:pendingBgStart', { next_race_participant_app_id: '4807', next_race_id: '19' }, 'x', 'y');
+    return out;
+  };
+  test('start in a pocket (Android backgrounded): re-armed, toast AND a notification, never the error popup', async () => {
+    const o = runStartCatch(Object.assign(new Error('App did not return to foreground in time'), { code: 'start_backgrounded' }));
+    assert.strictEqual(o.pending.current, true, 'start re-armed for the next foreground');
+    assert.deepStrictEqual(o.toasts, [['home:errors.trackingFailed', 'home:tracking.reopenToStart']]);
+    assert.strictEqual(o.notes.length, 1, 'one notification');
+    assert.deepStrictEqual(o.notes[0], { content: { title: 'home:tracking.notStartedTitle', body: 'home:tracking.notStartedBody', data: { type: 'start_backgrounded' } }, trigger: null });
+    assert.strictEqual(o.errorMsg, undefined, 'no error popup');
+    assert.deepStrictEqual(o.active, [false]);
+    const saved = JSON.parse(o.stored['@PFSLive:pendingBgStart'] || 'null');
+    assert.ok(saved && saved.participantId === '4807' && saved.eventId === '19' && typeof saved.at === 'number', 're-arm persisted for a killed process');
+  });
+  test('backgrounded start: a failing notification is swallowed (no unhandled rejection, start still armed)', async () => {
+    let unhandled = null; const h = (e) => { unhandled = e; };
+    process.on('unhandledRejection', h);
+    const o = runStartCatch(Object.assign(new Error('bg'), { code: 'start_backgrounded' }), true);
+    await new Promise((r) => setTimeout(r, 20));
+    process.off('unhandledRejection', h);
+    assert.strictEqual(unhandled, null); assert.strictEqual(o.pending.current, true);
+  });
+  test('any other start error: error popup, no notification, not re-armed', async () => {
+    const o = runStartCatch(new Error('boom'));
+    assert.strictEqual(o.errorMsg, 'boom'); assert.strictEqual(o.notes.length, 0); assert.strictEqual(o.pending.current, false);
+    assert.deepStrictEqual(o.stored, {}, 'nothing persisted');
+    assert.strictEqual(runStartCatch('weird').errorMsg, 'home:errors.trackingFailed');
+  });
+  test('Start popup tells the runner to keep Livio on screen 5 s, in the amber box, before the buttons', async () => {
+    const jsx = modalJsx('showStartConfirmModal');
+    const iBody = jsx.indexOf("t('home:startConfirm.message')");
+    const iKeep = jsx.indexOf("<Text style={homeStyles.notifKeepOpenText}>{t('home:startConfirm.keepOpen')}</Text>");
+    const iBox = jsx.indexOf('<View style={homeStyles.notifKeepOpenBox}>');
+    const iButtons = jsx.indexOf('homeStyles.notifButtonContainer');
+    assert.ok(iBody > 0 && iBox > iBody && iKeep > iBox && iButtons > iKeep, 'message → amber box → buttons');
+    assert.ok(!/Platform\.OS/.test(jsx), 'shown on both platforms');
+    const st = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(/notifKeepOpenBox: \{\s*backgroundColor: colors\.warning \+ "15",/.test(st), 'amber tint');
+    assert.ok(/notifKeepOpenText: \{[^}]*color: "#B45309",/.test(st), 'dark amber text');
+    const gps = { en: 'GPS Activated', fr: 'GPS Activé', nl: 'GPS Geactiveerd' };
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      const k = j.startConfirm.keepOpen;
+      assert.ok(typeof k === 'string' && /\b5\b/.test(k), l + ': keepOpen says 5 seconds');
+      assert.strictEqual(j.tracking.gpsActivated, gps[l], l + ': toast label');
+      assert.ok(k.includes(gps[l]), l + ': keepOpen quotes the real toast title "' + gps[l] + '"');
+      for (const n of ['notStartedTitle', 'notStartedBody']) assert.ok(typeof j.tracking[n] === 'string' && j.tracking[n].length > 10, l + ': ' + n);
+    }
   });
   test('manual override: button opens popup; "Start Now" → sending on + toast; "Cancel" → nothing', async () => {
     const open = cb('manualStartSending', ''); const shown = [];
@@ -987,6 +1067,54 @@ const L = () => load('services/locationService').locationService;
     assert.ok(err, 'start threw'); assert.strictEqual(START_BACKGROUNDED_CODE, 'start_backgrounded'); assert.strictEqual(err.code, 'start_backgrounded');
     assert.ok(!M.store.has(PARAMS), 'no half-started session');
   });
+  // iOS start window (2026-10-20): background time from the home refetch to start().
+  const withBgTask = async (impl, fn) => {
+    const BG = require('react-native-background-geolocation').default;
+    const calls = [];
+    BG.startBackgroundTask = async () => { calls.push(['start']); return impl.start(); };
+    BG.stopBackgroundTask = async (id) => { calls.push(['stop', id]); return impl.stop ? impl.stop(id) : undefined; };
+    try { return await fn(calls); } finally { delete BG.startBackgroundTask; delete BG.stopBackgroundTask; }
+  };
+  test('iOS start window: beginStartWindow takes a background task on iOS, endStartWindow releases that id', async () => {
+    const { gpsService } = load('services/gpsService');
+    await withBgTask({ start: () => 42 }, async (calls) => {
+      const id = await withRN('ios', 'active', () => gpsService.beginStartWindow());
+      assert.strictEqual(id, 42);
+      await gpsService.endStartWindow(id);
+      assert.deepStrictEqual(calls, [['start'], ['stop', 42]]);
+    });
+  });
+  test('iOS start window: Android takes none; a failing start/stop never throws; null is not released', async () => {
+    const { gpsService } = load('services/gpsService');
+    await withBgTask({ start: () => 1 }, async (calls) => {
+      assert.strictEqual(await withRN('android', 'active', () => gpsService.beginStartWindow()), null);
+      await gpsService.endStartWindow(null);
+      assert.deepStrictEqual(calls, [], 'no native call on Android or for null');
+    });
+    await withBgTask({ start: () => { throw new Error('no task'); }, stop: () => { throw new Error('gone'); } }, async (calls) => {
+      assert.strictEqual(await withRN('ios', 'active', () => gpsService.beginStartWindow()), null, 'failed start → null');
+      await gpsService.endStartWindow(5);   // must not throw
+      assert.deepStrictEqual(calls, [['start'], ['stop', 5]]);
+    });
+  });
+  test('iOS start window wiring: taken after the last popup, before the home refetch; released in finally on every exit', async () => {
+    const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    const fnAt = s.indexOf('const doStartGPSTracking = useCallback(async () => {');
+    const fnEnd = s.indexOf('\n  }, [\n    hasPermission,', fnAt);
+    const fn = s.slice(fnAt, fnEnd);
+    assert.ok(fnAt > 0 && fnEnd > fnAt, 'doStartGPSTracking found');
+    const iDecl = fn.indexOf('let startWindow: number | null = null;');
+    const iTry = fn.indexOf('\n    try {');
+    const iApprox = fn.indexOf('if (!proceed) return;');
+    const iTake = fn.indexOf('startWindow = await gpsService.beginStartWindow();');
+    const iFetch = fn.indexOf('fetchHomeData(true)');
+    const iEngine = fn.indexOf('await gpsService.startWatchingPosition(');
+    assert.ok(iDecl > 0 && iDecl < iTry, 'declared before the try');
+    assert.ok(iApprox > 0 && iTake > iApprox, 'after the approximate-location popup (nothing waits for the runner after it)');
+    assert.ok(iFetch > iTake && iEngine > iFetch, 'before the home refetch and the engine start');
+    assert.strictEqual((fn.match(/beginStartWindow\(/g) || []).length, 1, 'taken once');
+    assert.ok(/\n    \} finally \{\n      void gpsService\.endStartWindow\(startWindow\);\n    \}$/.test(fn), 'the function-level finally releases it');
+  });
   test('HomeScreen wiring: start ping only AFTER the engine started; backgrounded start re-armed; pending ping flushed by the queue timer', async () => {
     const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
     const iStart = s.indexOf('await gpsService.startWatchingPosition(');
@@ -1058,12 +1186,14 @@ const L = () => load('services/locationService').locationService;
     assert.deepStrictEqual(M.bg.pace, [true], 'changePace(true)');
     assert.strictEqual(locPosts(), 0, 'no fix sent before the gun');
   });
-  test('pre-race heartbeat 60 min before the gun → still low-power (🔋), engine left idle', async () => {
-    await startSession('4823', '19', new Date(M.clock + 60 * 60000).toISOString());
+  // Window widened 30 → 60 min on 2026-10-20 (see PRE_GUN_WAKE_MS).
+  test('pre-race heartbeat 61 min before the gun → still low-power (🔋), engine left idle', async () => {
+    await startSession('4823', '19', new Date(M.clock + 61 * 60000).toISOString());
     M.bg.pace = [];
     await M.bg.heartbeat({});
     const log = await load('services/gpsService').getFullTrackingLog();
-    assert.ok(log.some((e) => e.icon === '🔋')); assert.ok(!log.some((e) => e.icon === '⏰'));
+    // by message: the Start's battery line carries the same 🔋 icon
+    assert.ok(log.some((e) => e.msg === 'Heartbeat — pre-race low-power (engine idle until start)')); assert.ok(!log.some((e) => e.icon === '⏰'));
     assert.deepStrictEqual(M.bg.pace, []);
   });
 
@@ -1177,12 +1307,12 @@ const L = () => load('services/locationService').locationService;
     load('services/gpsService'); await settle();
     assert.ok(M.store.has(PARAMS));
   });
-  test('pre-gun wake boundary: exactly 30 min before → ⏰; 31 min before → 🔋', async () => {
-    await startSession('4823', '19', new Date(M.clock + 30 * 60000).toISOString());
+  test('pre-gun wake boundary: exactly 60 min before → ⏰; 61 min before → 🔋', async () => {
+    await startSession('4823', '19', new Date(M.clock + 60 * 60000).toISOString());
     M.bg.pace = []; await M.bg.heartbeat({});
     assert.deepStrictEqual(M.bg.pace, [true]);
     await load('services/gpsService').stopWatching();
-    await startSession('4823', '19', new Date(M.clock + 31 * 60000).toISOString());
+    await startSession('4823', '19', new Date(M.clock + 61 * 60000).toISOString());
     M.bg.pace = []; await M.bg.heartbeat({});
     assert.deepStrictEqual(M.bg.pace, []);
   });
@@ -1207,6 +1337,452 @@ const L = () => load('services/locationService').locationService;
     M.api.handler = null;
     await G().maybeUploadInterimLog();
     assert.strictEqual(logUploads().length, 1);
+  });
+  // ── 2026-10-20 re-check: logs + DB of races since 09-04, every fix re-traced ──
+  const AS = require('@react-native-async-storage/async-storage').default;
+  test('re-check 10-20: log seal is single-flight — two writers on a slow disk: every entry kept, in order, no skipped segment', async () => {
+    await startSession('2', '12');
+    const g = load('services/gpsService');
+    const real = AS.setItem;
+    // a seal's disk write takes a moment, as on a phone — the other writer keeps logging meanwhile
+    AS.setItem = async (k, v) => { if (k.startsWith('@PFSLive:trackingLogSeg:')) await new Promise((r) => setTimeout(r, 3)); return real(k, v); };
+    try {
+      const writer = async (tag) => { for (let i = 0; i < 800; i++) await g.addLog('🧪', `${tag}-${i}`); };
+      await Promise.all([writer('a'), writer('b')]);
+    } finally { AS.setItem = real; }
+    const msgs = (await g.getFullTrackingLog()).map((e) => e.msg);
+    for (const tag of ['a', 'b']) {
+      const mine = msgs.filter((m) => m.startsWith(tag + '-'));
+      assert.deepStrictEqual(mine, Array.from({ length: 800 }, (_, i) => `${tag}-${i}`), tag + ': all 800, in order');
+    }
+    const cnt = parseInt(M.store.get('@PFSLive:trackingLogSegCount'), 10);
+    assert.ok(cnt >= 2 && cnt <= 4, 'segment count matches ~1600 entries: ' + cnt);
+    for (let i = 0; i < cnt; i++) {
+      const seg = JSON.parse(M.store.get('@PFSLive:trackingLogSeg:' + i) || '[]');
+      assert.ok(seg.length > 0, 'segment ' + i + ' written, not skipped');
+    }
+  });
+  test('re-check 10-20: a failed seal puts its entries back in front; the next seal writes them; a log read during a seal sees them', async () => {
+    await startSession('2', '12');
+    const g = load('services/gpsService');
+    const real = AS.setItem; let fail = true, midSealRead = null, midSealExpected = null, logged = 0;
+    AS.setItem = async (k, v) => {
+      if (k.startsWith('@PFSLive:trackingLogSeg:')) {
+        if (fail) { fail = false; throw new Error('disk full'); }
+        if (midSealRead === null) {
+          midSealExpected = logged;   // every f- entry logged so far, the ones being sealed included
+          midSealRead = (await g.getFullTrackingLog()).map((e) => e.msg).filter((m) => m.startsWith('f-')).length;
+        }
+      }
+      return real(k, v);
+    };
+    try {
+      for (let i = 0; i < 1100; i++) { logged++; await g.addLog('🧪', 'f-' + i); }
+    } finally { AS.setItem = real; }
+    const msgs = (await g.getFullTrackingLog()).map((e) => e.msg).filter((m) => m.startsWith('f-'));
+    assert.deepStrictEqual(msgs, Array.from({ length: 1100 }, (_, i) => 'f-' + i), 'nothing lost or reordered');
+    assert.ok(midSealExpected >= 400 && midSealRead === midSealExpected, `entries being sealed are visible to a concurrent read (${midSealRead} of ${midSealExpected})`);
+  });
+  test('re-check 10-20: re-attaching listeners leaves exactly one of each, even with SDK 5.1.1\'s every-other removeListeners()', async () => {
+    const BG = require('react-native-background-geolocation').default;
+    const subs = []; const saved = {};
+    const names = ['onLocation', 'onHeartbeat', 'onMotionChange', 'onProviderChange', 'removeListeners'];
+    for (const n of names) saved[n] = BG[n];
+    const mk = (ev) => (cb) => {
+      const sub = { ev, cb, remove() { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); } };
+      subs.push(sub); return sub;
+    };
+    BG.onLocation = mk('location'); BG.onHeartbeat = mk('heartbeat'); BG.onMotionChange = mk('motion'); BG.onProviderChange = mk('provider');
+    // SDK 5.1.1 NativeModule.removeListeners: forEach over the list while remove() splices it.
+    BG.removeListeners = () => { subs.forEach((x) => x.remove()); return Promise.resolve(); };
+    try {
+      // the model really is broken: 4 subscriptions, one sweep leaves 2
+      BG.onLocation(() => {}); BG.onLocation(() => {}); BG.onLocation(() => {}); BG.onLocation(() => {});
+      BG.removeListeners(); assert.strictEqual(subs.length, 2, 'SDK model removes every other one'); subs.length = 0;
+      M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12', intervalSeconds: 30 }));
+      const g = load('services/gpsService');
+      for (let i = 0; i < 6; i++) await g.headlessTask({ name: 'boot', params: {} });
+      const per = {}; for (const x of subs) per[x.ev] = (per[x.ev] || 0) + 1;
+      assert.deepStrictEqual(per, { provider: 1, location: 1, motion: 1, heartbeat: 1 });
+    } finally { for (const n of names) BG[n] = saved[n]; }
+  });
+  test('re-check 10-20: engine start failure is a failed start — throws engine_start_failed, no half session, prior session restored', async () => {
+    const BG = require('react-native-background-geolocation').default;
+    const savedStart = BG.start;
+    BG.start = async () => { throw new Error('start refused'); };
+    try {
+      let err = null;
+      await withRN('ios', 'active', async () => { try { await startSession('4807', '19'); } catch (e) { err = e; } });
+      const { ENGINE_START_FAILED_CODE } = load('services/gpsService');
+      assert.ok(err && err.code === ENGINE_START_FAILED_CODE && ENGINE_START_FAILED_CODE === 'engine_start_failed', 'threw ' + (err && err.code));
+      assert.ok(!M.store.has(PARAMS), 'fresh start leaves no session params');
+      assert.notStrictEqual(M.store.get('@PFSLive:transistorActive'), '1');
+      const prior = JSON.stringify({ participantId: '4807', eventId: '19', intervalSeconds: 30, raceStartTime: null });
+      M.store.set(PARAMS, prior); err = null;
+      await withRN('ios', 'active', async () => { try { await startSession('4807', '19'); } catch (e) { err = e; } });
+      assert.ok(err, 'threw again'); assert.strictEqual(M.store.get(PARAMS), prior, 'prior session params put back');
+      const log = await load('services/gpsService').getFullTrackingLog();
+      assert.ok(log.some((e) => /Transistor start failed: start refused/.test(e.msg)), 'logged');
+    } finally { BG.start = savedStart; }
+  });
+  test('re-check 10-20: Android engine start that fails after the app went to background → start_backgrounded (HomeScreen re-arms)', async () => {
+    const BG = require('react-native-background-geolocation').default;
+    const savedStart = BG.start;
+    BG.start = async () => { RN.AppState.currentState = 'background'; throw new Error('bg start not allowed'); };
+    try {
+      let err = null;
+      await withRN('android', 'active', async () => { try { await startSession('2', '12'); } catch (e) { err = e; } });
+      assert.ok(err && err.code === 'start_backgrounded', 'code ' + (err && err.code));
+      assert.ok(!M.store.has(PARAMS));
+    } finally { BG.start = savedStart; }
+  });
+  test('re-check 10-20: start ping retries stand down when a flush already delivered it, or the race finished', async () => {
+    const { sendTrackingStartPing, PENDING_START_PING_KEY } = TS();
+    M.axios.script = ['network', 'ok', 'ok'];
+    let r = await sendTrackingStartPing({ participantId: '2', eventId: '12', startedAfterGun: false, isStillTracking: () => true,
+      sleep: async () => { M.store.delete(PENDING_START_PING_KEY); } });       // heartbeat flush delivered + cleared it
+    assert.strictEqual(r, 'sent'); assert.strictEqual(startPosts().length, 1, 'no duplicate row');
+    M.axios.calls = []; M.axios.script = ['network', 'ok'];
+    r = await sendTrackingStartPing({ participantId: '2', eventId: '12', startedAfterGun: false, isStillTracking: () => true,
+      sleep: async () => { M.store.set('@PFSLive:raceFinished', '1'); } });
+    assert.strictEqual(r, 'stopped'); assert.strictEqual(startPosts().length, 1, 'no row after the finish');
+    assert.ok(!M.store.has(PENDING_START_PING_KEY), 'pending cleared');
+  });
+  test('re-check 10-20: a delivered queue pass ends the drain-failure streak; so does a live Sent OK', async () => {
+    setQ([fix(2, 12, 3), fix(2, 12, 2)]); M.store.set('@PFSLive:drainFailStreak', '4');
+    assert.strictEqual(await L().processQueue('2', '12'), 2);
+    assert.ok(!M.store.has('@PFSLive:drainFailStreak'), 'streak cleared by the queue pass');
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(/addLog\('✅', `Sent OK[^\n]*\n(?:\s*\/\/[^\n]*\n)*\s*try \{ await AsyncStorage\.removeItem\(DRAIN_FAILS_KEY\); \}/.test(g), 'live Sent OK clears it');
+  });
+  test('re-check 10-20: a busy (-1) or empty queue pass does not touch the streak', async () => {
+    M.store.set('@PFSLive:drainFailStreak', '2');
+    assert.strictEqual(await L().processQueue('2', '12'), 0);
+    assert.strictEqual(M.store.get('@PFSLive:drainFailStreak'), '2');
+  });
+  test('re-check 10-20: Start refetch capped at 4 s with the loaded homeData as fallback; analytics cannot fail a running start', async () => {
+    const s = homeLF;
+    assert.ok(/const START_HOME_REFETCH_MS = 4000;/.test(s));
+    assert.ok(/const fresh = await Promise\.race\(\[\n\s*fetchHomeData\(true\),\n\s*new Promise<null>\(\(resolve\) => setTimeout\(\(\) => resolve\(null\), START_HOME_REFETCH_MS\)\),\n\s*\]\);\n\s*const raceData = fresh \?\? homeData;/.test(s), 'raced, falls back');
+    assert.ok(/void analyticsService\.markAsParticipant\('start_tracking'\)\.catch\(/.test(s), 'markAsParticipant not awaited into the catch');
+    assert.ok(!/await analyticsService\.markAsParticipant/.test(s));
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      assert.ok(!/Tap here|Appuyez ici|Tik hier/.test(j.tracking.notStartedBody), l + ': no "tap here" promise (a killed process does not resume the start)');
+    }
+  });
+  test('re-check 10-20: the 4 s race really resolves to the fallback when home hangs', async () => {
+    const START_HOME_REFETCH_MS = 40;
+    const fetchHomeData = () => new Promise(() => {});        // half-open socket
+    const homeData = { next_race_id: 19 };
+    const t0 = Date.now();
+    const fresh = await Promise.race([
+      fetchHomeData(true),
+      new Promise((resolve) => setTimeout(() => resolve(null), START_HOME_REFETCH_MS)),
+    ]);
+    assert.strictEqual(fresh ?? homeData, homeData); assert.ok(Date.now() - t0 < 1000);
+  });
+  // ── 2026-10-20 round 2: what the first re-check left open ──
+  const SR = () => load('services/startReminderService');
+  test('reminders: plan = 10 min before + 2 min after the gun, only future ones, none when not eligible or gun unknown', async () => {
+    const { planStartReminders, START_REMINDER_PRE_ID, START_REMINDER_POST_ID } = SR();
+    const gun = new Date(M.clock + 60 * 60000);
+    const plan = planStartReminders(gun, M.clock, true);
+    assert.deepStrictEqual(plan.map((x) => [x.id, x.at.getTime() - gun.getTime()]),
+      [[START_REMINDER_PRE_ID, -10 * 60000], [START_REMINDER_POST_ID, 2 * 60000]]);
+    assert.deepStrictEqual(planStartReminders(new Date(M.clock + 5 * 60000), M.clock, true).map((x) => x.kind), ['post'], 'inside T-10: only the post one');
+    assert.deepStrictEqual(planStartReminders(new Date(M.clock - 3 * 60000), M.clock, true), [], 'gun +3 min: none left');
+    assert.deepStrictEqual(planStartReminders(gun, M.clock, false), [], 'not eligible');
+    assert.deepStrictEqual(planStartReminders(null, M.clock, true), [], 'gun unknown');
+    assert.deepStrictEqual(planStartReminders(new Date('x'), M.clock, true), [], 'invalid gun');
+  });
+  const TEXTS = { preTitle: 'PT', preBody: 'PB', postTitle: 'QT', postBody: 'QB' };
+  test('reminders: sync schedules both with fixed ids at the planned dates; a second sync replaces, never stacks', async () => {
+    const { startReminderService, START_REMINDER_PRE_ID, START_REMINDER_POST_ID } = SR();
+    const gun = new Date(M.clock + 60 * 60000);
+    await startReminderService.sync({ gun, eligible: true, texts: TEXTS });
+    await startReminderService.sync({ gun: new Date(gun.getTime() + 15 * 60000), eligible: true, texts: TEXTS });   // organiser moved the gun
+    assert.deepStrictEqual(M.notif.pending.map((r) => r.identifier).sort(), [START_REMINDER_POST_ID, START_REMINDER_PRE_ID].sort(), 'exactly two pending');
+    const pre = M.notif.pending.find((r) => r.identifier === START_REMINDER_PRE_ID);
+    assert.strictEqual(pre.trigger.type, 'date');
+    assert.strictEqual(pre.trigger.date.getTime(), gun.getTime() + 15 * 60000 - 10 * 60000, 'follows the moved gun');
+    assert.deepStrictEqual([pre.content.title, pre.content.body, pre.content.data.type], ['PT', 'PB', 'start_reminder']);
+  });
+  test('reminders: tracking running (screen says so, OR a stored session after a cold start) → both cancelled, none scheduled', async () => {
+    const { startReminderService } = SR();
+    const gun = new Date(M.clock + 60 * 60000);
+    await startReminderService.sync({ gun, eligible: true, texts: TEXTS });
+    assert.strictEqual(M.notif.pending.length, 2);
+    await startReminderService.sync({ gun, eligible: false, texts: TEXTS });
+    assert.strictEqual(M.notif.pending.length, 0, 'screen not eligible → cancelled');
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12' }));   // engine running, isGPSActive not restored yet
+    await startReminderService.sync({ gun, eligible: true, texts: TEXTS });
+    assert.strictEqual(M.notif.pending.length, 0, 'stored live session wins over the screen');
+  });
+  test('reminders: notifications unavailable → sync returns [] and never throws', async () => {
+    const { startReminderService } = SR();
+    M.notif.fail = true;
+    assert.deepStrictEqual(await startReminderService.sync({ gun: new Date(M.clock + 3600000), eligible: true, texts: TEXTS }), []);
+  });
+  test('reminders: HomeScreen re-plans on every home answer + tracking change; eligible = Start offered and not tracking; texts in en/fr/nl', async () => {
+    const m = homeLF.match(/useEffect\(\(\) => \{\n    const gun = homeData\?\.next_race_date[\s\S]*?\n  \}, \[homeData, isGPSActive, t\]\);/);
+    assert.ok(m, 'reminder effect with deps [homeData, isGPSActive, t]');
+    assert.ok(m[0].includes('computeRaceStartTime(homeData.next_race_date, homeData.next_race_time, serverTimeOffsetRef.current)'), 'same gun as the session');
+    assert.ok(m[0].includes("eligible: homeData?.show_start_track === 1 && !!homeData?.next_race_participant_app_id && !isGPSActive,"));
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      for (const k of ['preTitle', 'preBody', 'postTitle', 'postBody']) assert.ok(typeof j.reminders[k] === 'string' && j.reminders[k].length > 10, l + ' ' + k);
+      assert.ok(/10/.test(j.reminders.preTitle), l + ': says 10 minutes');
+    }
+  });
+  test('persisted backgrounded start: resumes only within 10 min, only for the race home still offers with Start shown', async () => {
+    const { shouldResumePendingStart, PENDING_BG_START_MAX_AGE_MS } = R();
+    const home = { show_start_track: 1, next_race_participant_app_id: '4807', next_race_id: '19' };
+    const p = { participantId: '4807', eventId: '19', at: M.clock - 60000 };
+    assert.strictEqual(PENDING_BG_START_MAX_AGE_MS, 600000);
+    assert.strictEqual(shouldResumePendingStart(p, home, M.clock), true);
+    assert.strictEqual(shouldResumePendingStart({ ...p, at: M.clock - 601000 }, home, M.clock), false, 'too old');
+    assert.strictEqual(shouldResumePendingStart({ ...p, at: M.clock + 5000 }, home, M.clock), false, 'from the future');
+    assert.strictEqual(shouldResumePendingStart(p, { ...home, show_start_track: 0 }, M.clock), false, 'Start no longer offered');
+    assert.strictEqual(shouldResumePendingStart(p, { ...home, next_race_id: '20' }, M.clock), false, 'another race');
+    assert.strictEqual(shouldResumePendingStart({ eventId: '19', at: M.clock }, home, M.clock), false, 'no participant');
+    assert.strictEqual(shouldResumePendingStart(null, home, M.clock), false);
+    assert.strictEqual(shouldResumePendingStart(p, null, M.clock), false);
+  });
+  test('persisted backgrounded start: HomeScreen consumes it once on the first home answer, and only then starts; success clears it', async () => {
+    const m = homeLF.match(/const coldPendingCheckedRef = useRef\(false\);\n  useEffect\(\(\) => \{([\s\S]*?)\n  \}, \[homeData\]\);/);
+    assert.ok(m, 'cold-start effect');
+    const b = m[1];
+    const iGet = b.indexOf('AsyncStorage.getItem(PENDING_BG_START_KEY)');
+    const iDel = b.indexOf('AsyncStorage.removeItem(PENDING_BG_START_KEY)');
+    const iRule = b.indexOf('shouldResumePendingStart(pending, homeData, Date.now())');
+    const iStart = b.indexOf('await doStartGPSTrackingRef.current();');
+    assert.ok(iGet > 0 && iDel > iGet && iRule > iDel && iStart > iRule, 'read → consume → decide → start');
+    assert.ok(b.includes('if (coldPendingCheckedRef.current || !homeData) return;') && b.includes('coldPendingCheckedRef.current = true;'), 'once');
+    assert.ok(b.includes('isGPSActiveRef.current ||'), 'never while tracking');
+    assert.ok(/toastSuccess\(t\('home:tracking\.gpsActivated'\), message\);\n\s*void AsyncStorage\.removeItem\(PENDING_BG_START_KEY\)/.test(homeLF), 'a successful start clears it');
+  });
+  test('queue: addToQueue says whether it stored the fix (throttle drop → false); offline send reports "not queued" for a dropped fix', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12', intervalSeconds: 60 }));
+    const { locationQueueService: q } = Q();
+    assert.strictEqual(await q.addToQueue(fix(2, 12, 1), true), true, 'stored');
+    assert.strictEqual(await q.addToQueue(fix(2, 12, 0), true), false, 'throttled within the interval');
+    assert.strictEqual(await q.addToQueue(fix(2, 12, 0), false), true, 'unthrottled insert stored');
+    M.net = { isConnected: false, isInternetReachable: false }; M.api.mode = 'down';
+    const r = await L().sendLocation('2', '12', { latitude: 50, longitude: 4, timestamp: new Date(M.clock).toISOString() });
+    assert.ok(/^Location not queued — queue throttle/.test(r.message), r.message);
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(/const stored = await locationQueueService\.addToQueue\(/.test(g) && /if \(stored\) await addLog\('📥', `Backlog present/.test(g), 'backlog line only when stored');
+  });
+  test('send-gap label: a restart or a queue period in the gap is named, not "movement filter"', async () => {
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(/const _jsContextStartedAt = Date\.now\(\);/.test(g));
+    const m = g.match(/const suffix = gapSec <= \(expectedSec \+ 10\) \? ''\n\s*: restartedInGap \? [^\n]*\n\s*: queuedInGap \? [^\n]*\n\s*: isFreeze \? [^\n]*\n\s*: \(longPause \? [^\n]*/);
+    assert.ok(m, 'restart → queue → freeze → pause, in that order');
+    assert.ok(/const restartedInGap = _jsContextStartedAt > lastSentAt;/.test(g) && /const queuedInGap = lastQueuedAt > lastSentAt;/.test(g));
+  });
+  // ── 2026-10-20 battery: check at every Android Start, state in the log ──
+  const { reset } = require('./harness');
+  const battLines = async () => (await load('services/gpsService').getFullTrackingLog()).map((e) => e.msg).filter((m) => /Battery|Saver/.test(m));
+  test('battery: Start logs level, saver, optimisation and charging (Android, optimisation ON)', async () => {
+    M.battery.power = { batteryLevel: 0.42, lowPowerMode: false, batteryState: 1 }; M.battery.optimized = true;
+    await withRN('android', 'active', () => startSession('2', '12'));
+    assert.deepStrictEqual(await battLines(), ['Battery (start) — level:42% saver:off optimisation:ON (Android may pause Livio) charging:no']);
+    assert.strictEqual(M.store.get('@PFSLive:lastPowerSaver'), '0');
+  });
+  test('battery: iOS logs optimisation n/a; charging phone says yes; unreadable battery → "?" and the start still works', async () => {
+    M.battery.power = { batteryLevel: 0.9, lowPowerMode: true, batteryState: 2 };
+    await withRN('ios', 'active', () => startSession('2', '12'));
+    assert.deepStrictEqual(await battLines(), ['Battery (start) — level:90% saver:ON optimisation:n/a charging:yes']);
+    reset(); M.battery.fail = true;
+    await withRN('android', 'active', () => startSession('2', '12'));
+    assert.ok(M.store.has(PARAMS), 'started');
+    assert.deepStrictEqual(await battLines(), ['Battery (start) — level:?% saver:? optimisation:? charging:?']);
+  });
+  test('battery: heartbeat logs a Battery Saver CHANGE once (on, then off), never every beat', async () => {
+    M.battery.power = { batteryLevel: 0.2, lowPowerMode: false, batteryState: 1 }; M.battery.optimized = false;
+    await withRN('android', 'active', () => startSession('2', '12'));
+    await M.bg.heartbeat(); await M.bg.heartbeat();
+    M.battery.power = { batteryLevel: 0.15, lowPowerMode: true, batteryState: 1 };
+    await M.bg.heartbeat(); await M.bg.heartbeat();
+    M.battery.power = { batteryLevel: 0.15, lowPowerMode: false, batteryState: 1 };
+    await M.bg.heartbeat();
+    assert.deepStrictEqual(await battLines(), [
+      'Battery (start) — level:20% saver:off optimisation:off (exempt) charging:no',
+      'Battery Saver turned ON during the session (level:15%) — Android/iOS may throttle tracking',
+      'Battery Saver turned off (level:15%)',
+    ]);
+  });
+  test('battery: isBatteryOptimized — Android reads the OS, iOS never asks, errors → false', async () => {
+    const { gpsService } = load('services/gpsService');
+    M.battery.optimized = true;
+    assert.strictEqual(await withRN('android', 'active', () => gpsService.isBatteryOptimized()), true);
+    M.battery.optimized = false;
+    assert.strictEqual(await withRN('android', 'active', () => gpsService.isBatteryOptimized()), false);
+    M.battery.optimized = true;
+    assert.strictEqual(await withRN('ios', 'active', () => gpsService.isBatteryOptimized()), false);
+    M.battery.fail = true;
+    assert.strictEqual(await withRN('android', 'active', () => gpsService.isBatteryOptimized()), false);
+  });
+  // The real block from startGPSTracking, run with stand-ins.
+  const runBatteryGate = async ({ os = 'android', optimized = true, choice = null }) => {
+    const m = homeLF.match(/\n    if \(Platform\.OS === 'android' && \(await gpsService\.isBatteryOptimized\(\)\)\) \{([\s\S]*?)\n    \}\n/);
+    assert.ok(m, 'battery gate found in startGPSTracking');
+    const calls = { asked: 0, shown: [], exempt: 0 };
+    const ref = { current: null };
+    const fn = new Function('Platform', 'gpsService', 'batteryStartResolveRef', 'setShowBatteryStartModal', 'requestBatteryOptimizationExemption',
+      'return (async () => { if (Platform.OS === \'android\' && (await gpsService.isBatteryOptimized())) {' + m[1].replace(/new Promise<[^>]*>\(/g, 'new Promise(') + '\n} return \'continued\'; })();');
+    const p = fn({ OS: os }, { isBatteryOptimized: async () => { calls.asked++; return optimized; } }, ref,
+      (v) => calls.shown.push(v), async () => { calls.exempt++; });
+    await new Promise((r) => setTimeout(r, 5));
+    if (choice) { assert.ok(typeof ref.current === 'function', 'popup waiting for an answer'); ref.current(choice); }
+    return { result: await p, calls };
+  };
+  test('battery gate at Start: Android + optimisation ON → popup; Allow opens the exemption then continues; Start anyway continues; Back cancels', async () => {
+    let r = await runBatteryGate({ choice: 'allow' });
+    assert.deepStrictEqual([r.result, r.calls.shown, r.calls.exempt], ['continued', [true], 1]);
+    r = await runBatteryGate({ choice: 'anyway' });
+    assert.deepStrictEqual([r.result, r.calls.exempt], ['continued', 0]);
+    r = await runBatteryGate({ choice: 'cancel' });
+    assert.deepStrictEqual([r.result, r.calls.exempt], [undefined, 0], 'start abandoned');
+    r = await runBatteryGate({ optimized: false });
+    assert.deepStrictEqual([r.result, r.calls.shown], ['continued', []], 'exempt → no popup');
+    r = await runBatteryGate({ os: 'ios' });
+    assert.deepStrictEqual([r.result, r.calls.asked, r.calls.shown], ['continued', 0, []], 'iOS never asks');
+  });
+  test('battery gate at Start: after Battery Saver, before the early-start warning; popup wired (Allow / Start anyway / Back = cancel); texts in en/fr/nl', async () => {
+    const fnAt = homeLF.indexOf('const startGPSTracking = useCallback(async () => {');
+    const iSaver = homeLF.indexOf('const isPowerSaving = await checkPowerSavingMode();', fnAt);
+    const iGate = homeLF.indexOf("if (Platform.OS === 'android' && (await gpsService.isBatteryOptimized())) {", fnAt);
+    const iWarn = homeLF.indexOf('// Warn for ANY start before the gun', fnAt);
+    assert.ok(fnAt > 0 && iSaver > fnAt && iGate > iSaver && iWarn > iGate, 'order');
+    const jsx = modalJsx('showBatteryStartModal');
+    for (const k of ['onPress={handleBatteryStartAllow}', 'onPress={handleBatteryStartAnyway}', 'onRequestClose={handleBatteryStartCancel}',
+      "t('home:battery.allow')", "t('home:battery.startAnyway')"]) assert.ok(jsx.includes(k), k);
+    const c = cb('resolveBatteryStart', ''); const shown = []; const got = [];
+    const ref = { current: (x) => got.push(x) };
+    const run = new Function('setShowBatteryStartModal', 'batteryStartResolveRef', 'return (' + c.params.replace(/:[^)]*$/, '') + ') => {' + c.body + '\n};')((v) => shown.push(v), ref);
+    run('anyway'); run('allow');
+    assert.deepStrictEqual([shown, got, ref.current], [[false, false], ['anyway'], null], 'settles exactly once');
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      assert.ok(j.battery.startAnyway && j.battery.allow && j.battery.title && j.battery.message, l);
+    }
+  });
+  const paceAfter = async (fn) => { const before = (M.bg.pace || []).length; await fn(); await new Promise((r) => setTimeout(r, 20)); return (M.bg.pace || []).slice(before); };
+  test('stationary transition while the race is on → engine re-asserted moving (and logged)', async () => {
+    await startSession('2', '12');                                   // gun 1h ago
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [true]);
+    const log = (await load('services/gpsService').getFullTrackingLog()).map((e) => e.msg);
+    assert.ok(log.includes('Went stationary while the race is on / gun is close — re-asserted moving'));
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: true })), [], 'moving → nothing to do');
+  });
+  test('stationary transition: gun in 20 / 50 min → moving; gun in 2 h → left idle; after the finish → left idle', async () => {
+    await startSession('2', '12', new Date(M.clock + 20 * 60000).toISOString());
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [true], 'inside the window');
+    reset();
+    await startSession('2', '12', new Date(M.clock + 50 * 60000).toISOString());
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [true], '50 min: inside the 60-min window');
+    reset();
+    await startSession('2', '12', new Date(M.clock + 120 * 60000).toISOString());
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [], 'long before the gun: battery saved');
+    reset();
+    await startSession('2', '12');
+    M.store.set('@PFSLive:raceFinished', '1');
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [], 'finished');
+  });
+  test('PRE_GUN_WAKE_MS is 60 min; a heartbeat 45 min before the gun keeps the engine moving (the p4823 gap)', async () => {
+    assert.strictEqual(load('services/gpsService').PRE_GUN_WAKE_MS, 60 * 60000);
+    await startSession('4823', '19', new Date(M.clock + 45 * 60000).toISOString());
+    M.bg.pace = []; await M.bg.heartbeat({});
+    assert.deepStrictEqual(M.bg.pace, [true]);
+    const log = await load('services/gpsService').getFullTrackingLog();
+    assert.ok(log.some((e) => /Heartbeat — gun in 45min, engine kept moving/.test(e.msg)));
+  });
+  test('Battery Saver gate runs on EVERY start path: first thing in doStartGPSTracking, before the permission gate', async () => {
+    const at = homeLF.indexOf('const doStartGPSTracking = useCallback(async () => {');
+    const iTry = homeLF.indexOf('\n    try {', at);
+    const iSaver = homeLF.indexOf('if (await checkPowerSavingMode()) {\n        setShowPowerSavingModal(true);\n        return;\n      }', at);
+    const iPerm = homeLF.indexOf('const perms = await gpsService.getPermissionState();', at);
+    assert.ok(iTry > at && iSaver > iTry && iPerm > iSaver, 'saver gate before permissions, inside doStartGPSTracking');
+    const end = homeLF.indexOf('\n  }, [\n    hasPermission,', at);
+    assert.ok(homeLF.slice(end, homeLF.indexOf(']);', end)).includes('checkPowerSavingMode'), 'in the deps');
+    // the resumed paths all go through doStartGPSTracking
+    for (const re of [/pendingStartRef\.current = false;\n\s*setShowLocationPermissionModal\(false\);\n\s*await doStartGPSTrackingRef\.current\(\);/,
+      /shouldResumePendingStart\(pending, homeData, Date\.now\(\)\)\) return;\n\s*await doStartGPSTrackingRef\.current\(\);/,
+      /pendingStartRef\.current = false;\n\s*await doStartGPSTracking\(\);/]) assert.ok(re.test(homeLF), String(re));
+    // and the power-saving popup offers no way to start: settings or close only
+    const jsx = modalJsx('showPowerSavingModal');
+    assert.ok(!/doStartGPSTracking|startGPSTracking/.test(jsx), 'no start from the Battery Saver popup');
+  });
+  test('Battery Saver switched ON mid-race → one notification to the runner (and none when it goes off)', async () => {
+    M.battery.power = { batteryLevel: 0.3, lowPowerMode: false, batteryState: 1 };
+    await startSession('2', '12');
+    M.battery.power = { batteryLevel: 0.18, lowPowerMode: true, batteryState: 1 };
+    await M.bg.heartbeat({}); await M.bg.heartbeat({});
+    M.battery.power = { batteryLevel: 0.18, lowPowerMode: false, batteryState: 1 };
+    await M.bg.heartbeat({});
+    const notes = M.notif.log.filter((x) => x[0] === 'schedule');
+    assert.strictEqual(notes.length, 1, 'once');
+    const n = M.notif.pending.find((r) => r.content && r.content.data && r.content.data.type === 'battery_saver');
+    assert.ok(n && n.trigger === null && n.content.title === 'home:powerSaving.midRaceTitle', 'immediate, translated');
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      assert.ok(j.powerSaving.midRaceTitle && j.powerSaving.midRaceBody, l);
+    }
+  });
+  // ── final confirmation pass (2026-10-20) ──
+  test('hasNetwork({ allowProbe:false }): a probe window is not "online" (dead zone keeps the queue throttled); a real send or NetInfo online is', async () => {
+    const { locationQueueService: q } = Q();
+    M.net = { isConnected: false, isInternetReachable: false };
+    assert.strictEqual(await q.hasNetwork(), true, 'probe opens for the send path');
+    assert.strictEqual(await q.hasNetwork({ allowProbe: false }), false, '…but it is no drain');
+    M.net = { isConnected: true, isInternetReachable: false };
+    assert.strictEqual(await q.hasNetwork({ allowProbe: false }), false, 'unreachable, no real send yet');
+    q.markSendSucceeded();
+    assert.strictEqual(await q.hasNetwork({ allowProbe: false }), true, 'a real send = drain');
+    M.net = { isConnected: true, isInternetReachable: true };
+    M.clock += 61000;
+    assert.strictEqual(await q.hasNetwork({ allowProbe: false }), true, 'NetInfo online');
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8');
+    assert.ok(/const online = await locationQueueService\.hasNetwork\(\{ allowProbe: false \}\);/.test(g), 'backlog guard asks without the probe');
+  });
+  test('hasNetwork({ allowProbe:false }) never opens a probe window (the send path still gets its probe)', async () => {
+    const { locationQueueService: q } = Q();
+    M.net = { isConnected: false, isInternetReachable: false };
+    assert.strictEqual(await q.hasNetwork({ allowProbe: false }), false);
+    assert.strictEqual(await q.hasNetwork(), true, 'first real probe still available');
+  });
+  test('every home:/common: text the changed screens and services use exists in en, fr and nl', async () => {
+    const files = ['screens/HomeScreen.tsx', 'services/gpsService.ts', 'services/trackingStartService.ts', 'services/startReminderService.ts'];
+    const keys = new Set();
+    for (const f of files) {
+      // code only: comments may name keys on purpose (e.g. the retired powerSaving.message)
+      const src = fs.readFileSync(`${SRC}/${f}`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const m of src.matchAll(/\bt\(\s*'((?:home|common):[A-Za-z0-9_.]+)'/g)) keys.add(m[1]);
+    }
+    assert.ok(keys.size > 40, 'found the keys: ' + keys.size);
+    const ns = { home: 'HomeScreen', common: 'common' };
+    const missing = [];
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = {};
+      for (const [n, dir] of Object.entries(ns)) j[n] = JSON.parse(fs.readFileSync(`${SRC}/i18n/${dir}/${l}.json`, 'utf8'));
+      for (const k of keys) {
+        const [n, path] = k.split(':');
+        const v = path.split('.').reduce((o, p) => (o && typeof o === 'object' ? o[p] : undefined), j[n]);
+        if (typeof v !== 'string' || !v.trim()) missing.push(`${l} ${k}`);
+      }
+    }
+    assert.deepStrictEqual(missing, []);
+  });
+  test('BackgroundGeolocation.removeListeners() is called only from _removeTransistorListeners (SDK 5.1.1 removes every other one)', async () => {
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8').replace(/\r/g, '');
+    const code = g.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+    const calls = [...code.matchAll(/BackgroundGeolocation\.removeListeners\(\)/g)].length;
+    assert.strictEqual(calls, 1, 'one call: the sweep inside the helper');
+    assert.ok(/const _removeTransistorListeners = \(\): void => \{[\s\S]{0,300}BackgroundGeolocation\.removeListeners\(\)/.test(code));
+    assert.strictEqual([...code.matchAll(/BackgroundGeolocation\.on(Location|Heartbeat|MotionChange|ProviderChange)\(/g)].length, 4);
+    assert.strictEqual([...code.matchAll(/_trackTransistorSub\(BackgroundGeolocation\.on(Location|Heartbeat|MotionChange|ProviderChange)\(/g)].length, 4, 'every listener tracked');
   });
   results.push(await run('13. event 19 review (silent iOS starts, persisted start ping, pre-gun wake, zombie sessions, interim race, log dup)'));
 
