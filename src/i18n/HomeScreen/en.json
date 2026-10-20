@@ -49,6 +49,8 @@
     "retryQueue": "Send {{count}} unsent location(s)",
     "queueRetryFailed": "No network — try again later",
     "reopenToStart": "Open Livio again to start tracking — the phone left the app too quickly.",
+    "notStartedTitle": "Tracking has not started",
+    "notStartedBody": "Your phone left Livio too quickly. Open Livio to start tracking.",
     "bgPermission": {
       "title": "Allow {applicationName} to access this device's location even when closed or not in use?",
       "message": "{applicationName} shares your live position with your followers during a race, even when the app is closed or not in use. To enable this, please choose \"{backgroundPermissionOptionLabel}\".",
@@ -61,6 +63,7 @@
     "message": "For reliable GPS tracking during your race, please allow unrestricted battery usage. This prevents Android from pausing location updates while the screen is off.",
     "allow": "Allow",
     "skip": "Skip",
+    "startAnyway": "Start anyway",
     "revertTitle": "Battery setting",
     "revertMessage": "You can revert battery usage back to Optimized in Settings → Apps → Livio → Battery.",
     "revertSettings": "Open settings",
@@ -101,7 +104,9 @@
     "title": "Battery saver is on",
     "messageAndroid": "Battery Saver can stop GPS tracking in the background. Please turn it off before you start tracking.",
     "messageIos": "Low Power Mode can interrupt GPS tracking in the background. Open the Settings app → Battery → turn off Low Power Mode, then come back and tap START TRACKING again.",
-    "disable": "Open battery settings"
+    "disable": "Open battery settings",
+    "midRaceTitle": "Battery saver is on",
+    "midRaceBody": "Battery saver can stop Livio recording your race. Turn it off if you can."
   },
   "followingEvents": {
     "sectionTitle": "Events you follow",
@@ -115,7 +120,8 @@
     "title": "Start live tracking?",
     "message": "Your live location will be shared with your followers throughout the race. Keep Livio running and your phone with you until you finish. Ready to go?",
     "yes": "Yes, start tracking",
-    "no": "Not yet"
+    "no": "Not yet",
+    "keepOpen": "After you tap Start, keep Livio on screen for 5 seconds until you see \"GPS activated\". Then lock your phone and put it away."
   },
   "fanEmail": {
     "title": "Stay in the loop",
@@ -171,5 +177,11 @@
     "minAgo": "{{n}} min ago",
     "justNow": "just now",
     "keepOpen": "Lock your phone and put it away — Livio keeps tracking in the background. Just don’t close the app."
+  },
+  "reminders": {
+    "preTitle": "Your race starts in 10 minutes",
+    "preBody": "Open Livio and tap Start tracking so your followers can follow you live.",
+    "postTitle": "Your race has started",
+    "postBody": "You are not tracking yet. Open Livio and tap Start tracking."
   }
 }
