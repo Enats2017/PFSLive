@@ -49,7 +49,7 @@
     "queueRetryFailed": "Pas de réseau — réessayez plus tard",
     "reopenToStart": "Rouvrez Livio pour démarrer le suivi — le téléphone a quitté l'app trop vite.",
     "notStartedTitle": "Le suivi n'a pas démarré",
-    "notStartedBody": "Votre téléphone a quitté Livio trop vite. Appuyez ici pour démarrer le suivi.",
+    "notStartedBody": "Votre téléphone a quitté Livio trop vite. Ouvrez Livio pour démarrer le suivi.",
     "bgPermission": {
       "title": "Autoriser {applicationName} à accéder à la localisation de cet appareil même lorsqu'elle est fermée ou inutilisée ?",
       "message": "{applicationName} partage votre position en direct avec vos abonnés pendant une course, même lorsque l'application est fermée ou inutilisée. Pour l'activer, choisissez « {backgroundPermissionOptionLabel} ».",

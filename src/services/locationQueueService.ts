@@ -96,26 +96,33 @@ export const locationQueueService = {
           setTimeout(() => reject(new Error('NetInfo timeout')), 3000)
         ),
       ]);
-      // No radio link at all (airplane mode, no signal) — that one is reliable.
-      if (state.isConnected === false) return false;
-
-      // A real request just went through — believe that over NetInfo's
-      // reachability guess (but never over "no radio" above).
-      if (now < _trustedOnlineUntil) return true;
+      // "No radio link" (isConnected=false) gets the same treatment as
+      // "unreachable" below since 2026-10-20 (re-check). It used to return false
+      // outright, so nothing was ever attempted: bib 2000 (p4789, iOS, event 19)
+      // had isConnected=false the whole race and all 177 fixes arrived after the
+      // finish — whether NetInfo was stale in the background or data was really
+      // off cannot be told from the log. A truly dead link fails the probe at once
+      // (no route), so the cost is one instant failure per 30 s.
+      const noRadio = state.isConnected === false;
 
       // ✅ isInternetReachable can be null on Android while still determining.
       // Treat null as true (optimistic) — better to attempt a send and fail
       // than to queue unnecessarily when connectivity is likely fine.
-      if (state.isInternetReachable !== false) return true;
+      if (!noRadio && state.isInternetReachable !== false) return true;
 
-      // Connected but NetInfo says "unreachable": allow a periodic real attempt.
+      // A real request just went through — believe that over NetInfo.
+      if (now < _trustedOnlineUntil) return true;
+
+      // NetInfo says offline: allow a periodic real attempt.
       if (now < _probeWindowUntil) return true;
       if (now - _lastProbeOpenedAt >= PROBE_EVERY_MS) {
         _lastProbeOpenedAt = now;
         _probeWindowUntil = now + PROBE_WINDOW_MS;
         try {
           const { addLog } = require('./gpsService');
-          await addLog('🔎', 'NetInfo says unreachable — trying the API anyway (probe)');
+          await addLog('🔎', noRadio
+            ? `NetInfo says no connection (type:${state.type}) — trying the API anyway (probe)`
+            : 'NetInfo says unreachable — trying the API anyway (probe)');
         } catch { /* silent */ }
         return true;
       }

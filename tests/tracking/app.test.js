@@ -23,9 +23,17 @@ const L = () => load('services/locationService').locationService;
     M.net = { isConnected: true, isInternetReachable: null };
     assert.strictEqual(await Q().locationQueueService.hasNetwork(), true);
   });
-  test('no radio (isConnected=false) → false', async () => {
-    M.net = { isConnected: false, isInternetReachable: false };
-    assert.strictEqual(await Q().locationQueueService.hasNetwork(), false);
+  // 2026-10-20 re-check: "no radio" is probed like "unreachable" (p4789 had
+  // isConnected=false the whole of event 19, all 177 fixes arrived after the finish).
+  test('no radio (isConnected=false) → a probe every 30s, logged with the type; false in between', async () => {
+    M.net = { isConnected: false, isInternetReachable: false, type: 'cellular' };
+    const { locationQueueService: q } = Q();
+    assert.strictEqual(await q.hasNetwork(), true, 'first call opens a probe');
+    M.clock += 14000; assert.strictEqual(await q.hasNetwork(), true, 'inside the 15s window');
+    M.clock += 2000; assert.strictEqual(await q.hasNetwork(), false, 'window over');
+    M.clock += 14500; assert.strictEqual(await q.hasNetwork(), true, 'next probe after 30s');
+    const log = await load('services/gpsService').getFullTrackingLog();
+    assert.ok(log.some((e) => /NetInfo says no connection \(type:cellular\) — trying the API anyway \(probe\)/.test(e.msg)), 'probe logged');
   });
   test('unreachable → 1st call opens a probe (true) and logs it', async () => {
     M.net = { isConnected: true, isInternetReachable: false };
@@ -63,11 +71,13 @@ const L = () => load('services/locationService').locationService;
     M.clock += 2000;                                 // 61s → trust expired, probe not due (<30s? no: 81s since probe → due)
     assert.strictEqual(await q.hasNetwork(), true, 'next probe due');
   });
-  test('trust never overrides "no radio"', async () => {
+  test('a send that just went through overrides "no radio" too (it proves a link)', async () => {
     const { locationQueueService: q } = Q();
     q.markSendSucceeded();
     M.net = { isConnected: false, isInternetReachable: false };
-    assert.strictEqual(await q.hasNetwork(), false);
+    assert.strictEqual(await q.hasNetwork(), true);
+    M.clock += 61000; await q.hasNetwork();                  // trust over → probe opens…
+    M.clock += 16000; assert.strictEqual(await q.hasNetwork(), false, '…and closes again');
   });
   test('NetInfo hangs → optimistic true after 3s timeout', async () => {
     M.netHang = true;
@@ -214,7 +224,7 @@ const L = () => load('services/locationService').locationService;
     assert.strictEqual(getO().length, 0);
   });
   test('offline (no radio) → nothing sent, nothing lost', async () => {
-    M.store.set(OK_, JSON.stringify([fix(1, 1, 5)])); M.net = { isConnected: false, isInternetReachable: false };
+    M.store.set(OK_, JSON.stringify([fix(1, 1, 5)])); M.net = { isConnected: false, isInternetReachable: false }; M.api.mode = 'down';
     assert.strictEqual(await L().drainOrphans(), 0); assert.strictEqual(getO().length, 1);
   });
   test('concurrent call is a no-op (mutex) and no double send', async () => {
@@ -431,7 +441,7 @@ const L = () => load('services/locationService').locationService;
     assert.strictEqual(getQ().length, 50);
   });
   test('offline at Stop → 0 sent, all kept', async () => {
-    setQ([fix(2, 12, 3), fix(2, 12, 2)]); M.net = { isConnected: false, isInternetReachable: false };
+    setQ([fix(2, 12, 3), fix(2, 12, 2)]); M.net = { isConnected: false, isInternetReachable: false }; M.api.mode = 'down';
     assert.strictEqual(await L().drainForStop('2', '12', 30000, FAST), 0); assert.strictEqual(getQ().length, 2);
   });
   test('time budget respected', async () => {
@@ -491,22 +501,22 @@ const L = () => load('services/locationService').locationService;
   // ════════════ 10. incident replays (from the 2026-10-07 audit) ════════════
   test('p2699 (Dinant): 173 queued, Stop while offline → nothing lost; uploaded on next app open', async () => {
     setQ(Array.from({ length: 173 }, (_, i) => fix(2699, 12, 120 - i * 0.5)));
-    M.net = { isConnected: false, isInternetReachable: false };
+    M.net = { isConnected: false, isInternetReachable: false }; M.api.mode = 'down';
     assert.strictEqual(await L().drainForStop('2699', '12', 30000, FAST), 0);
     // session ends (params cleared by the real stop) → leftovers parked, still offline
     assert.strictEqual(await L().drainOrphans(), 0); assert.strictEqual(getO().length + getQ().length, 173);
     // later: app opened with network
-    M.net = { isConnected: true, isInternetReachable: true }; M.clock += 3600000;
+    M.net = { isConnected: true, isInternetReachable: true }; M.api.mode = 'ok'; M.clock += 3600000;
     let sent = 0; for (let i = 0; i < 10 && (getO().length || getQ().length); i++) sent += await L().drainOrphans(45000);
     assert.strictEqual(sent, 173); assert.strictEqual(M.api.posted.length, 173);
     assert.ok(M.api.posted.every((p) => p.body.participantId === '2699' && p.body.is_queued === 1));
   });
   test('p1652 (Kemmelberg): Stop with 173 queued, then Start again same race → leftovers sent FIRST', async () => {
     setQ(Array.from({ length: 173 }, (_, i) => fix(2, 9, 200 - i)));
-    M.net = { isConnected: false, isInternetReachable: false };
+    M.net = { isConnected: false, isInternetReachable: false }; M.api.mode = 'down';
     await L().drainForStop('2', '9', 30000, FAST);
     await L().drainOrphans();                     // parks them (no session)
-    M.net = { isConnected: true, isInternetReachable: true };
+    M.net = { isConnected: true, isInternetReachable: true }; M.api.mode = 'ok';
     await startSession('2', '9');                 // runner restarts the same race
     assert.strictEqual(getQ().length, 173, 'back in the live queue, ahead of new fixes');
     assert.strictEqual(await L().drainForStop('2', '9', 30000, FAST), 173);
@@ -517,6 +527,18 @@ const L = () => load('services/locationService').locationService;
     for (let t = 0; t < 20 * 60; t += 10) {            // 20 minutes, 10s queue-processor ticks
       setQ(getQ().concat([fix(2595, 12, 0)]));          // one new fix per tick
       await svc.processQueue('2595', '12');
+      const oldest = getQ()[0]; if (oldest) maxLagMs = Math.max(maxLagMs, M.clock - new Date(oldest.timestamp).getTime());
+      M.clock += 10000;
+    }
+    assert.ok(M.api.posted.length >= 100, `sent ${M.api.posted.length} of 120`);
+    assert.ok(maxLagMs <= 30000, `oldest unsent fix never older than 30s (was ${maxLagMs / 1000}s)`);
+  });
+  test('p4789 (event 19): NetInfo stuck "no connection" all race while the API works → fixes still go out ≤30s', async () => {
+    M.net = { isConnected: false, isInternetReachable: false, type: 'none' };
+    const svc = L(); let maxLagMs = 0;
+    for (let t = 0; t < 20 * 60; t += 10) {
+      setQ(getQ().concat([fix(4789, 19, 0)]));
+      await svc.processQueue('4789', '19');
       const oldest = getQ()[0]; if (oldest) maxLagMs = Math.max(maxLagMs, M.clock - new Date(oldest.timestamp).getTime());
       M.clock += 10000;
     }
@@ -1079,7 +1101,7 @@ const L = () => load('services/locationService').locationService;
     const iTry = fn.indexOf('\n    try {');
     const iApprox = fn.indexOf('if (!proceed) return;');
     const iTake = fn.indexOf('startWindow = await gpsService.beginStartWindow();');
-    const iFetch = fn.indexOf('await fetchHomeData(true)');
+    const iFetch = fn.indexOf('fetchHomeData(true)');
     const iEngine = fn.indexOf('await gpsService.startWatchingPosition(');
     assert.ok(iDecl > 0 && iDecl < iTry, 'declared before the try');
     assert.ok(iApprox > 0 && iTake > iApprox, 'after the approximate-location popup (nothing waits for the runner after it)');
@@ -1307,6 +1329,147 @@ const L = () => load('services/locationService').locationService;
     M.api.handler = null;
     await G().maybeUploadInterimLog();
     assert.strictEqual(logUploads().length, 1);
+  });
+  // ── 2026-10-20 re-check: logs + DB of races since 09-04, every fix re-traced ──
+  const AS = require('@react-native-async-storage/async-storage').default;
+  test('re-check 10-20: log seal is single-flight — two writers on a slow disk: every entry kept, in order, no skipped segment', async () => {
+    await startSession('2', '12');
+    const g = load('services/gpsService');
+    const real = AS.setItem;
+    // a seal's disk write takes a moment, as on a phone — the other writer keeps logging meanwhile
+    AS.setItem = async (k, v) => { if (k.startsWith('@PFSLive:trackingLogSeg:')) await new Promise((r) => setTimeout(r, 3)); return real(k, v); };
+    try {
+      const writer = async (tag) => { for (let i = 0; i < 800; i++) await g.addLog('🧪', `${tag}-${i}`); };
+      await Promise.all([writer('a'), writer('b')]);
+    } finally { AS.setItem = real; }
+    const msgs = (await g.getFullTrackingLog()).map((e) => e.msg);
+    for (const tag of ['a', 'b']) {
+      const mine = msgs.filter((m) => m.startsWith(tag + '-'));
+      assert.deepStrictEqual(mine, Array.from({ length: 800 }, (_, i) => `${tag}-${i}`), tag + ': all 800, in order');
+    }
+    const cnt = parseInt(M.store.get('@PFSLive:trackingLogSegCount'), 10);
+    assert.ok(cnt >= 2 && cnt <= 4, 'segment count matches ~1600 entries: ' + cnt);
+    for (let i = 0; i < cnt; i++) {
+      const seg = JSON.parse(M.store.get('@PFSLive:trackingLogSeg:' + i) || '[]');
+      assert.ok(seg.length > 0, 'segment ' + i + ' written, not skipped');
+    }
+  });
+  test('re-check 10-20: a failed seal puts its entries back in front; the next seal writes them; a log read during a seal sees them', async () => {
+    await startSession('2', '12');
+    const g = load('services/gpsService');
+    const real = AS.setItem; let fail = true, midSealRead = null;
+    AS.setItem = async (k, v) => {
+      if (k.startsWith('@PFSLive:trackingLogSeg:')) {
+        if (fail) { fail = false; throw new Error('disk full'); }
+        if (midSealRead === null) midSealRead = (await g.getFullTrackingLog()).map((e) => e.msg).filter((m) => m.startsWith('f-')).length;
+      }
+      return real(k, v);
+    };
+    try {
+      for (let i = 0; i < 1100; i++) await g.addLog('🧪', 'f-' + i);
+    } finally { AS.setItem = real; }
+    const msgs = (await g.getFullTrackingLog()).map((e) => e.msg).filter((m) => m.startsWith('f-'));
+    assert.deepStrictEqual(msgs, Array.from({ length: 1100 }, (_, i) => 'f-' + i), 'nothing lost or reordered');
+    assert.ok(midSealRead >= 500, 'entries being sealed are visible to a concurrent read (' + midSealRead + ')');
+  });
+  test('re-check 10-20: re-attaching listeners leaves exactly one of each, even with SDK 5.1.1\'s every-other removeListeners()', async () => {
+    const BG = require('react-native-background-geolocation').default;
+    const subs = []; const saved = {};
+    const names = ['onLocation', 'onHeartbeat', 'onMotionChange', 'onProviderChange', 'removeListeners'];
+    for (const n of names) saved[n] = BG[n];
+    const mk = (ev) => (cb) => {
+      const sub = { ev, cb, remove() { const i = subs.indexOf(sub); if (i >= 0) subs.splice(i, 1); } };
+      subs.push(sub); return sub;
+    };
+    BG.onLocation = mk('location'); BG.onHeartbeat = mk('heartbeat'); BG.onMotionChange = mk('motion'); BG.onProviderChange = mk('provider');
+    // SDK 5.1.1 NativeModule.removeListeners: forEach over the list while remove() splices it.
+    BG.removeListeners = () => { subs.forEach((x) => x.remove()); return Promise.resolve(); };
+    try {
+      // the model really is broken: 4 subscriptions, one sweep leaves 2
+      BG.onLocation(() => {}); BG.onLocation(() => {}); BG.onLocation(() => {}); BG.onLocation(() => {});
+      BG.removeListeners(); assert.strictEqual(subs.length, 2, 'SDK model removes every other one'); subs.length = 0;
+      M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12', intervalSeconds: 30 }));
+      const g = load('services/gpsService');
+      for (let i = 0; i < 6; i++) await g.headlessTask({ name: 'boot', params: {} });
+      const per = {}; for (const x of subs) per[x.ev] = (per[x.ev] || 0) + 1;
+      assert.deepStrictEqual(per, { provider: 1, location: 1, motion: 1, heartbeat: 1 });
+    } finally { for (const n of names) BG[n] = saved[n]; }
+  });
+  test('re-check 10-20: engine start failure is a failed start — throws engine_start_failed, no half session, prior session restored', async () => {
+    const BG = require('react-native-background-geolocation').default;
+    const savedStart = BG.start;
+    BG.start = async () => { throw new Error('start refused'); };
+    try {
+      let err = null;
+      await withRN('ios', 'active', async () => { try { await startSession('4807', '19'); } catch (e) { err = e; } });
+      const { ENGINE_START_FAILED_CODE } = load('services/gpsService');
+      assert.ok(err && err.code === ENGINE_START_FAILED_CODE && ENGINE_START_FAILED_CODE === 'engine_start_failed', 'threw ' + (err && err.code));
+      assert.ok(!M.store.has(PARAMS), 'fresh start leaves no session params');
+      assert.notStrictEqual(M.store.get('@PFSLive:transistorActive'), '1');
+      const prior = JSON.stringify({ participantId: '4807', eventId: '19', intervalSeconds: 30, raceStartTime: null });
+      M.store.set(PARAMS, prior); err = null;
+      await withRN('ios', 'active', async () => { try { await startSession('4807', '19'); } catch (e) { err = e; } });
+      assert.ok(err, 'threw again'); assert.strictEqual(M.store.get(PARAMS), prior, 'prior session params put back');
+      const log = await load('services/gpsService').getFullTrackingLog();
+      assert.ok(log.some((e) => /Transistor start failed: start refused/.test(e.msg)), 'logged');
+    } finally { BG.start = savedStart; }
+  });
+  test('re-check 10-20: Android engine start that fails after the app went to background → start_backgrounded (HomeScreen re-arms)', async () => {
+    const BG = require('react-native-background-geolocation').default;
+    const savedStart = BG.start;
+    BG.start = async () => { RN.AppState.currentState = 'background'; throw new Error('bg start not allowed'); };
+    try {
+      let err = null;
+      await withRN('android', 'active', async () => { try { await startSession('2', '12'); } catch (e) { err = e; } });
+      assert.ok(err && err.code === 'start_backgrounded', 'code ' + (err && err.code));
+      assert.ok(!M.store.has(PARAMS));
+    } finally { BG.start = savedStart; }
+  });
+  test('re-check 10-20: start ping retries stand down when a flush already delivered it, or the race finished', async () => {
+    const { sendTrackingStartPing, PENDING_START_PING_KEY } = TS();
+    M.axios.script = ['network', 'ok', 'ok'];
+    let r = await sendTrackingStartPing({ participantId: '2', eventId: '12', startedAfterGun: false, isStillTracking: () => true,
+      sleep: async () => { M.store.delete(PENDING_START_PING_KEY); } });       // heartbeat flush delivered + cleared it
+    assert.strictEqual(r, 'sent'); assert.strictEqual(startPosts().length, 1, 'no duplicate row');
+    M.axios.calls = []; M.axios.script = ['network', 'ok'];
+    r = await sendTrackingStartPing({ participantId: '2', eventId: '12', startedAfterGun: false, isStillTracking: () => true,
+      sleep: async () => { M.store.set('@PFSLive:raceFinished', '1'); } });
+    assert.strictEqual(r, 'stopped'); assert.strictEqual(startPosts().length, 1, 'no row after the finish');
+    assert.ok(!M.store.has(PENDING_START_PING_KEY), 'pending cleared');
+  });
+  test('re-check 10-20: a delivered queue pass ends the drain-failure streak; so does a live Sent OK', async () => {
+    setQ([fix(2, 12, 3), fix(2, 12, 2)]); M.store.set('@PFSLive:drainFailStreak', '4');
+    assert.strictEqual(await L().processQueue('2', '12'), 2);
+    assert.ok(!M.store.has('@PFSLive:drainFailStreak'), 'streak cleared by the queue pass');
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(/addLog\('✅', `Sent OK[^\n]*\n(?:\s*\/\/[^\n]*\n)*\s*try \{ await AsyncStorage\.removeItem\(DRAIN_FAILS_KEY\); \}/.test(g), 'live Sent OK clears it');
+  });
+  test('re-check 10-20: a busy (-1) or empty queue pass does not touch the streak', async () => {
+    M.store.set('@PFSLive:drainFailStreak', '2');
+    assert.strictEqual(await L().processQueue('2', '12'), 0);
+    assert.strictEqual(M.store.get('@PFSLive:drainFailStreak'), '2');
+  });
+  test('re-check 10-20: Start refetch capped at 4 s with the loaded homeData as fallback; analytics cannot fail a running start', async () => {
+    const s = homeLF;
+    assert.ok(/const START_HOME_REFETCH_MS = 4000;/.test(s));
+    assert.ok(/const fresh = await Promise\.race\(\[\n\s*fetchHomeData\(true\),\n\s*new Promise<null>\(\(resolve\) => setTimeout\(\(\) => resolve\(null\), START_HOME_REFETCH_MS\)\),\n\s*\]\);\n\s*const raceData = fresh \?\? homeData;/.test(s), 'raced, falls back');
+    assert.ok(/void analyticsService\.markAsParticipant\('start_tracking'\)\.catch\(/.test(s), 'markAsParticipant not awaited into the catch');
+    assert.ok(!/await analyticsService\.markAsParticipant/.test(s));
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      assert.ok(!/Tap here|Appuyez ici|Tik hier/.test(j.tracking.notStartedBody), l + ': no "tap here" promise (a killed process does not resume the start)');
+    }
+  });
+  test('re-check 10-20: the 4 s race really resolves to the fallback when home hangs', async () => {
+    const START_HOME_REFETCH_MS = 40;
+    const fetchHomeData = () => new Promise(() => {});        // half-open socket
+    const homeData = { next_race_id: 19 };
+    const t0 = Date.now();
+    const fresh = await Promise.race([
+      fetchHomeData(true),
+      new Promise((resolve) => setTimeout(() => resolve(null), START_HOME_REFETCH_MS)),
+    ]);
+    assert.strictEqual(fresh ?? homeData, homeData); assert.ok(Date.now() - t0 < 1000);
   });
   results.push(await run('13. event 19 review (silent iOS starts, persisted start ping, pre-gun wake, zombie sessions, interim race, log dup)'));
 

@@ -94,6 +94,20 @@ export const sendTrackingStartPing = async (opts: {
     if (START_PING_DELAYS_MS[attempt] > 0) await sleep(START_PING_DELAYS_MS[attempt]);
     // Runner already pressed Stop — a late start row would only mislead.
     if (!isStillTracking()) { await clearPending(); return 'stopped'; }
+    if (attempt > 0) {
+      // Between retries the heartbeat/queue-timer flush may have delivered the
+      // ping (and cleared the key), or the race may have finished: a second row
+      // would be a duplicate, and one written after the finish log makes home
+      // offer Start again (2026-10-20 re-check; isStillTracking() reads the
+      // HomeScreen instance that started, which goes stale after a remount).
+      let stillPending = true, finished = false;
+      try {
+        stillPending = (await AsyncStorage.getItem(PENDING_START_PING_KEY)) !== null;
+        finished = (await AsyncStorage.getItem(RACE_FINISHED_KEY_LOCAL)) === '1';
+      } catch { /* storage unreadable — keep trying */ }
+      if (!stillPending) return 'sent';
+      if (finished) { await clearPending(); return 'stopped'; }
+    }
     try {
       const headers = await API_CONFIG.getHeaders();
       await axios.post(

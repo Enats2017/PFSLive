@@ -49,7 +49,7 @@
     "queueRetryFailed": "No network — try again later",
     "reopenToStart": "Open Livio again to start tracking — the phone left the app too quickly.",
     "notStartedTitle": "Tracking has not started",
-    "notStartedBody": "Your phone left Livio too quickly. Tap here to start tracking.",
+    "notStartedBody": "Your phone left Livio too quickly. Open Livio to start tracking.",
     "bgPermission": {
       "title": "Allow {applicationName} to access this device's location even when closed or not in use?",
       "message": "{applicationName} shares your live position with your followers during a race, even when the app is closed or not in use. To enable this, please choose \"{backgroundPermissionOptionLabel}\".",

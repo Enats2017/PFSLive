@@ -110,6 +110,14 @@ interface HomeData {
 // ✅ Stored permanently — never cleared after first prompt
 const BATTERY_PROMPTED_KEY = '@PFSLive:batteryOptimizationPrompted';
 
+// Hard ceiling on the fresh home refetch at Start (2026-10-20 re-check). It ran
+// before the engine with only axios's 15 s timeout (which does not reliably fire
+// on a half-open socket): on a crowded start line an Android runner who waited
+// the 5 s the popup asks for and then locked the phone hit the foreground rule,
+// and iOS could outlast its background task. The loaded homeData is the fallback,
+// exactly as when the refetch fails.
+const START_HOME_REFETCH_MS = 4000;
+
 // ✅ Hours threshold — show early tracking warning if race is more than this far away
 
 // ==================== BATTERY OPTIMIZATION ====================
@@ -880,7 +888,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // From here on nothing waits for the runner, so a phone pocketed now must
       // not be suspended before the engine starts (iOS only; null on Android).
       startWindow = await gpsService.beginStartWindow();
-      const fresh = await fetchHomeData(true);
+      const fresh = await Promise.race([
+        fetchHomeData(true),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), START_HOME_REFETCH_MS)),
+      ]);
       const raceData = fresh ?? homeData;
 
       // ✅ Home answered but offers NO race (M7, 2026-10-18 audit): the race was
@@ -1050,7 +1061,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       }
 
       toastSuccess(t('home:tracking.gpsActivated'), message);
-      await analyticsService.markAsParticipant('start_tracking');
+      // Never awaited into the catch below: the engine is already running, and a
+      // throw here marked the UI "not tracking" over a live session.
+      void analyticsService.markAsParticipant('start_tracking').catch(() => { /* silent */ });
       // Records its own start timestamp, so duration is computed by the service
       // and doesn't depend on gpsService session state.
       void analyticsService.logTrackingStarted({

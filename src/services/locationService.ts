@@ -11,6 +11,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // a circular import. processQueue bumps it per drained fix so the counter is
 // LIVE before finishBackgroundStop reads it for the tracking-log upload.
 const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
+// Mirror of gpsService's DRAIN_FAILS_KEY (local for the same reason). Cleared
+// when a queue pass delivers something — see processQueue's return.
+const DRAIN_FAILS_KEY_LOCAL = '@PFSLive:drainFailStreak';
 
 // Mirror of gpsService's FINISH_LINE_THRESHOLD_KM (0.05 = 50m) — the distance
 // under which a `finish_source: 'distance'` finish is believed.
@@ -579,6 +582,11 @@ export const locationService = {
       _isProcessingQueue = false;
     }
 
+    // Delivered fixes end the drain-failure streak, whichever caller drained
+    // (HomeScreen's 10 s processor too, not only gpsService's live-path drain).
+    if (sentCount > 0) {
+      try { await AsyncStorage.removeItem(DRAIN_FAILS_KEY_LOCAL); } catch { /* silent */ }
+    }
     return sentCount;
   },
 

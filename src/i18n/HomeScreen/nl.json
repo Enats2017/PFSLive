@@ -49,7 +49,7 @@
     "queueRetryFailed": "Geen netwerk — probeer het later opnieuw",
     "reopenToStart": "Open Livio opnieuw om de tracking te starten — de telefoon verliet de app te snel.",
     "notStartedTitle": "Tracking is niet gestart",
-    "notStartedBody": "Je telefoon verliet Livio te snel. Tik hier om de tracking te starten.",
+    "notStartedBody": "Je telefoon verliet Livio te snel. Open Livio om de tracking te starten.",
     "bgPermission": {
       "title": "{applicationName} toestaan om de locatie van dit apparaat te gebruiken, zelfs als de app gesloten of niet in gebruik is?",
       "message": "{applicationName} deelt je live positie met je volgers tijdens een wedstrijd, zelfs als de app gesloten of niet in gebruik is. Kies \"{backgroundPermissionOptionLabel}\" om dit in te schakelen.",
