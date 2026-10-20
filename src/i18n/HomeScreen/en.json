@@ -103,7 +103,9 @@
     "title": "Battery saver is on",
     "messageAndroid": "Battery Saver can stop GPS tracking in the background. Please turn it off before you start tracking.",
     "messageIos": "Low Power Mode can interrupt GPS tracking in the background. Open the Settings app → Battery → turn off Low Power Mode, then come back and tap START TRACKING again.",
-    "disable": "Open battery settings"
+    "disable": "Open battery settings",
+    "midRaceTitle": "Battery Saver is on",
+    "midRaceBody": "Battery Saver can stop Livio recording your race. Turn it off if you can."
   },
   "followingEvents": {
     "sectionTitle": "EVENTS YOU FOLLOW",

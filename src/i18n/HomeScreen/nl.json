@@ -103,7 +103,9 @@
     "title": "Batterijbesparing staat aan",
     "messageAndroid": "Batterijbesparing kan het gps-volgen op de achtergrond stopzetten. Schakel het uit voordat je begint met volgen.",
     "messageIos": "De energiebesparingsmodus kan het gps-volgen op de achtergrond onderbreken. Open de app Instellingen → Batterij → schakel de energiebesparingsmodus uit, kom dan terug en tik opnieuw op START VOLGEN.",
-    "disable": "Batterij-instellingen openen"
+    "disable": "Batterij-instellingen openen",
+    "midRaceTitle": "Batterijbesparing staat aan",
+    "midRaceBody": "Batterijbesparing kan voorkomen dat Livio je wedstrijd registreert. Zet het uit als dat kan."
   },
   "followingEvents": {
     "sectionTitle": "EVENEMENTEN DIE U VOLGT",

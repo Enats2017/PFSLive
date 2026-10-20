@@ -1186,12 +1186,14 @@ const L = () => load('services/locationService').locationService;
     assert.deepStrictEqual(M.bg.pace, [true], 'changePace(true)');
     assert.strictEqual(locPosts(), 0, 'no fix sent before the gun');
   });
-  test('pre-race heartbeat 60 min before the gun → still low-power (🔋), engine left idle', async () => {
-    await startSession('4823', '19', new Date(M.clock + 60 * 60000).toISOString());
+  // Window widened 30 → 60 min on 2026-10-20 (see PRE_GUN_WAKE_MS).
+  test('pre-race heartbeat 61 min before the gun → still low-power (🔋), engine left idle', async () => {
+    await startSession('4823', '19', new Date(M.clock + 61 * 60000).toISOString());
     M.bg.pace = [];
     await M.bg.heartbeat({});
     const log = await load('services/gpsService').getFullTrackingLog();
-    assert.ok(log.some((e) => e.icon === '🔋')); assert.ok(!log.some((e) => e.icon === '⏰'));
+    // by message: the Start's battery line carries the same 🔋 icon
+    assert.ok(log.some((e) => e.msg === 'Heartbeat — pre-race low-power (engine idle until start)')); assert.ok(!log.some((e) => e.icon === '⏰'));
     assert.deepStrictEqual(M.bg.pace, []);
   });
 
@@ -1305,12 +1307,12 @@ const L = () => load('services/locationService').locationService;
     load('services/gpsService'); await settle();
     assert.ok(M.store.has(PARAMS));
   });
-  test('pre-gun wake boundary: exactly 30 min before → ⏰; 31 min before → 🔋', async () => {
-    await startSession('4823', '19', new Date(M.clock + 30 * 60000).toISOString());
+  test('pre-gun wake boundary: exactly 60 min before → ⏰; 61 min before → 🔋', async () => {
+    await startSession('4823', '19', new Date(M.clock + 60 * 60000).toISOString());
     M.bg.pace = []; await M.bg.heartbeat({});
     assert.deepStrictEqual(M.bg.pace, [true]);
     await load('services/gpsService').stopWatching();
-    await startSession('4823', '19', new Date(M.clock + 31 * 60000).toISOString());
+    await startSession('4823', '19', new Date(M.clock + 61 * 60000).toISOString());
     M.bg.pace = []; await M.bg.heartbeat({});
     assert.deepStrictEqual(M.bg.pace, []);
   });
@@ -1675,9 +1677,12 @@ const L = () => load('services/locationService').locationService;
     assert.ok(log.includes('Went stationary while the race is on / gun is close — re-asserted moving'));
     assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: true })), [], 'moving → nothing to do');
   });
-  test('stationary transition: gun in 20 min → moving; gun in 2 h → left idle; after the finish → left idle', async () => {
+  test('stationary transition: gun in 20 / 50 min → moving; gun in 2 h → left idle; after the finish → left idle', async () => {
     await startSession('2', '12', new Date(M.clock + 20 * 60000).toISOString());
-    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [true], 'inside the 30-min window');
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [true], 'inside the window');
+    reset();
+    await startSession('2', '12', new Date(M.clock + 50 * 60000).toISOString());
+    assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [true], '50 min: inside the 60-min window');
     reset();
     await startSession('2', '12', new Date(M.clock + 120 * 60000).toISOString());
     assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [], 'long before the gun: battery saved');
@@ -1685,6 +1690,46 @@ const L = () => load('services/locationService').locationService;
     await startSession('2', '12');
     M.store.set('@PFSLive:raceFinished', '1');
     assert.deepStrictEqual(await paceAfter(() => M.bg.motion({ isMoving: false })), [], 'finished');
+  });
+  test('PRE_GUN_WAKE_MS is 60 min; a heartbeat 45 min before the gun keeps the engine moving (the p4823 gap)', async () => {
+    assert.strictEqual(load('services/gpsService').PRE_GUN_WAKE_MS, 60 * 60000);
+    await startSession('4823', '19', new Date(M.clock + 45 * 60000).toISOString());
+    M.bg.pace = []; await M.bg.heartbeat({});
+    assert.deepStrictEqual(M.bg.pace, [true]);
+    const log = await load('services/gpsService').getFullTrackingLog();
+    assert.ok(log.some((e) => /Heartbeat — gun in 45min, engine kept moving/.test(e.msg)));
+  });
+  test('Battery Saver gate runs on EVERY start path: first thing in doStartGPSTracking, before the permission gate', async () => {
+    const at = homeLF.indexOf('const doStartGPSTracking = useCallback(async () => {');
+    const iTry = homeLF.indexOf('\n    try {', at);
+    const iSaver = homeLF.indexOf('if (await checkPowerSavingMode()) {\n        setShowPowerSavingModal(true);\n        return;\n      }', at);
+    const iPerm = homeLF.indexOf('const perms = await gpsService.getPermissionState();', at);
+    assert.ok(iTry > at && iSaver > iTry && iPerm > iSaver, 'saver gate before permissions, inside doStartGPSTracking');
+    const end = homeLF.indexOf('\n  }, [\n    hasPermission,', at);
+    assert.ok(homeLF.slice(end, homeLF.indexOf(']);', end)).includes('checkPowerSavingMode'), 'in the deps');
+    // the resumed paths all go through doStartGPSTracking
+    for (const re of [/pendingStartRef\.current = false;\n\s*setShowLocationPermissionModal\(false\);\n\s*await doStartGPSTrackingRef\.current\(\);/,
+      /shouldResumePendingStart\(pending, homeData, Date\.now\(\)\)\) return;\n\s*await doStartGPSTrackingRef\.current\(\);/,
+      /pendingStartRef\.current = false;\n\s*await doStartGPSTracking\(\);/]) assert.ok(re.test(homeLF), String(re));
+    // and the power-saving popup offers no way to start: settings or close only
+    const jsx = modalJsx('showPowerSavingModal');
+    assert.ok(!/doStartGPSTracking|startGPSTracking/.test(jsx), 'no start from the Battery Saver popup');
+  });
+  test('Battery Saver switched ON mid-race → one notification to the runner (and none when it goes off)', async () => {
+    M.battery.power = { batteryLevel: 0.3, lowPowerMode: false, batteryState: 1 };
+    await startSession('2', '12');
+    M.battery.power = { batteryLevel: 0.18, lowPowerMode: true, batteryState: 1 };
+    await M.bg.heartbeat({}); await M.bg.heartbeat({});
+    M.battery.power = { batteryLevel: 0.18, lowPowerMode: false, batteryState: 1 };
+    await M.bg.heartbeat({});
+    const notes = M.notif.log.filter((x) => x[0] === 'schedule');
+    assert.strictEqual(notes.length, 1, 'once');
+    const n = M.notif.pending.find((r) => r.content && r.content.data && r.content.data.type === 'battery_saver');
+    assert.ok(n && n.trigger === null && n.content.title === 'home:powerSaving.midRaceTitle', 'immediate, translated');
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      assert.ok(j.powerSaving.midRaceTitle && j.powerSaving.midRaceBody, l);
+    }
   });
   results.push(await run('13. event 19 review (silent iOS starts, persisted start ping, pre-gun wake, zombie sessions, interim race, log dup)'));
 

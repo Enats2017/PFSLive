@@ -103,7 +103,9 @@
     "title": "L'économiseur de batterie est activé",
     "messageAndroid": "L'économiseur de batterie peut interrompre le suivi GPS en arrière-plan. Veuillez le désactiver avant de démarrer le suivi.",
     "messageIos": "Le mode économie d'énergie peut interrompre le suivi GPS en arrière-plan. Ouvrez l'app Réglages → Batterie → désactivez le mode économie d'énergie, puis revenez et appuyez de nouveau sur DÉMARRER LE SUIVI.",
-    "disable": "Ouvrir les réglages de batterie"
+    "disable": "Ouvrir les réglages de batterie",
+    "midRaceTitle": "L'économiseur de batterie est activé",
+    "midRaceBody": "L'économiseur de batterie peut empêcher Livio d'enregistrer votre course. Désactivez-le si possible."
   },
   "followingEvents": {
     "sectionTitle": "ÉVÉNEMENTS QUE VOUS SUIVEZ",

@@ -334,8 +334,14 @@ const isRaceNotStarted = async (): Promise<boolean> => {
 };
 
 // Final stretch before the gun in which the pre-race low-power mode is lifted
-// (see the heartbeat). 30 min: p4823's app was terminated ~20 min before its gun.
-export const PRE_GUN_WAKE_MS = 30 * 60 * 1000;
+// (see the heartbeat). 60 min since 2026-10-20 (was 30): an engine left idle is
+// what iOS suspends, and it then wakes only once the phone has moved well away
+// (p4823: idle 09:09, suspended, relaunched 09:39 when the runner walked, next
+// sign of life 1.2 km into the race). Of 385 starts before the gun since 09-04,
+// 221 were within 30 min and 111 more within 60 — the 30-min window left that
+// second group idle long enough to be suspended. Starts earlier than 60 min
+// still idle to save battery until the window opens or the runner moves.
+export const PRE_GUN_WAKE_MS = 60 * 60 * 1000;
 
 // True while the engine should be kept MOVING: a live, unfinished session whose
 // race is on (or manual), or whose gun is within PRE_GUN_WAKE_MS. Same rule the
@@ -398,6 +404,22 @@ const _logPowerSaverChange = async (): Promise<void> => {
     await addLog(b.saver ? '🪫' : '🔋', b.saver
       ? `Battery Saver turned ON during the session (level:${b.level ?? '?'}%) — Android/iOS may throttle tracking`
       : `Battery Saver turned off (level:${b.level ?? '?'}%)`);
+    // Start refuses Battery Saver; once tracking runs it can only be reported.
+    // Tell the runner (once per switch-on) — Samsung turns it on by itself at
+    // 15-20 %, so they may not know.
+    if (b.saver) {
+      try {
+        const Notifications = require('expo-notifications');
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: i18n.t('home:powerSaving.midRaceTitle'),
+            body: i18n.t('home:powerSaving.midRaceBody'),
+            data: { type: 'battery_saver' },
+          },
+          trigger: null,
+        });
+      } catch { /* silent — notifications unavailable */ }
+    }
   } catch { /* silent */ }
 };
 
@@ -1852,9 +1874,9 @@ const _registerTransistorListeners = (): void => {
         // before the gun; it only came back when the runner left the stationary
         // geofence — 2 to 6 min / up to 1.2 km into the race on 5 of 19 iPhones
         // (p4823: last beat 09:40:30, next sign of life 10:08 at km 1.24). Keeping
-        // the engine MOVING for the final half hour keeps the location stream —
-        // and with it the app — alive through the gun. Still nothing is sent
-        // until the gun (PRESTART_SKIP in the send path is unchanged).
+        // the engine MOVING for the final hour (PRE_GUN_WAKE_MS) keeps the
+        // location stream — and with it the app — alive through the gun. Still
+        // nothing is sent until the gun (PRESTART_SKIP in the send path is unchanged).
         const untilGun = await msUntilGun();
         if (untilGun !== null && untilGun <= PRE_GUN_WAKE_MS) {
           await safeChangePace(true);

@@ -825,6 +825,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // gpsService.beginStartWindow), always released in finally.
     let startWindow: number | null = null;
     try {
+      // ── BATTERY SAVER GATE — on EVERY start path (2026-10-20) ────────────
+      // startGPSTracking (the button) already refuses Battery Saver / Low Power
+      // Mode, but the resumed starts call this function directly: back from the
+      // permission screen, back after a pocketed Android start, the cold-start
+      // resume. Battery Saver switched on in between went straight through.
+      if (await checkPowerSavingMode()) {
+        setShowPowerSavingModal(true);
+        return;
+      }
+
       // ── PERMISSION GATE ─────────────────────────────────────────────────
       // This used to accept FOREGROUND permission alone and start tracking.
       // That is what broke the 2026-08-23 race: a runner with "While Using the
@@ -1125,6 +1135,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     startRaceStartChecker,
     fetchHomeData,
     t,
+    checkPowerSavingMode,
   ]);
 
   const startGPSTracking = useCallback(async () => {
