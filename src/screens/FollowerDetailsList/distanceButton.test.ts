@@ -151,8 +151,9 @@ test('button.participants / button.results exist and are non-empty in en, fr, nl
 });
 
 // design_newv0.2 labels are Title Case (master's are uppercase).
+// FR is "Inscrits": "Participants" (~94pt) overflows this design's ~90pt button.
 test('agreed wording, Title Case like this design\'s other buttons', () => {
-  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.participants), ['Participants', 'Deelnemers', 'Participants']);
+  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.participants), ['Participants', 'Deelnemers', 'Inscrits']);
   assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.results), ['Results', 'Resultaten', 'Résultats']);
 });
 
