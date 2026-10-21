@@ -36,6 +36,15 @@ const BUDGETS = [
   { name: 'distance action button', match: /^(EventDetails:(gpx|map)$|RaceResult:button\.)/, px: 13, budget: 90, weight: 0.6 },
 ];
 
+// Accepted over-budget labels: exact namespace:key + language, each with the
+// decision behind it. Everything else in that slot is still checked.
+const WIDTH_ALLOW = [
+  // ~94pt: the client asked for "Participants" by name; the button grows ~4pt.
+  // FR uses "Inscrits" instead (fits). Decided 2026-10-21.
+  { id: 'RaceResult:button.participants', lang: 'en' },
+];
+const widthAllowed = (id, lang) => WIDTH_ALLOW.some((a) => a.id === id && a.lang === lang);
+
 const flatten = (obj, prefix = '', out = {}) => {
   for (const [k, v] of Object.entries(obj)) {
     const key = prefix ? `${prefix}.${k}` : k;
@@ -71,6 +80,10 @@ if (process.argv.includes('--selftest')) {
     ['SPELLING fires', /\bfavorite/i.test('Add to favorite')],
     ['SPELLING quiet', /\bfavorite/i.test('Add to favourite') === false],
     ['WIDTH fires', width('Persoonlijk evenement bewerken', 12, 0.62) > 200],
+    ['WIDTH allow-list is exact (key + language)', widthAllowed('RaceResult:button.participants', 'en')
+      && !widthAllowed('RaceResult:button.participants', 'fr')
+      && !widthAllowed('RaceResult:button.participants', 'nl')
+      && !widthAllowed('RaceResult:button.results', 'en')],
     ['HARDCODED fires', new RegExp(JSX_TEXT.source).test('<Text>Processing Payment</Text>')],
     ['HARDCODED quiet', new RegExp(JSX_TEXT.source).test("<Text>{t('a:b')}</Text>") === false],
     ['HARDCODED template fires', new RegExp(TEMPLATE_TEXT.source).test('`Race starts in: ${x}`')],
@@ -173,7 +186,7 @@ for (const ns of namespaces) {
       for (const b of BUDGETS) {
         if (!b.match.test(`${ns}:${k}`)) continue;
         const est = width(v, b.px, b.weight);
-        if (est > b.budget) {
+        if (est > b.budget && !widthAllowed(`${ns}:${k}`, lang)) {
           findings.WIDTH.push(`${b.name} ${ns}:${k} [${lang}] ~${Math.round(est)}pt > ${b.budget}pt ${JSON.stringify(v)}`);
         }
       }

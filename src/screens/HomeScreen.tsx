@@ -1989,8 +1989,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // answer and tracking change; Start not offered or tracking running → none.
   useEffect(() => {
     const gun = homeData?.next_race_date && homeData?.next_race_time && serverTimeOffsetKnownRef.current
-      // growth_v0.1: 00:00 / 00:01 is a placeholder (the real gun time isn't
-      // known — same rule as raceStartMs): no reminders, they would ring at midnight.
+      // 00:00 / 00:01 is a placeholder (the organiser has not set the real gun
+      // time yet — 27 of 151 upcoming distances on 2026-10-19; same rule as
+      // raceStartMs): no reminders, they would ring at 23:50 the night before.
       && !/^00:0[01](:00)?$/.test(String(homeData.next_race_time).trim())
       ? computeRaceStartTime(homeData.next_race_date, homeData.next_race_time, serverTimeOffsetRef.current)
       : null;

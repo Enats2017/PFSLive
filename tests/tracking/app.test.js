@@ -1540,6 +1540,30 @@ const L = () => load('services/locationService').locationService;
       assert.ok(/10/.test(j.reminders.preTitle), l + ': says 10 minutes');
     }
   });
+  // The reminder effect's own gun expression, run with stand-ins (2026-10-21).
+  const reminderGun = (homeData, offsetKnown = true, offsetMs = 2 * 3600000) => {
+    const at = homeLF.indexOf('// ✅ Start reminders — see startReminderService.');
+    assert.ok(at > 0, 'reminder effect found');
+    const m = homeLF.slice(at).match(/\n    const gun = ([\s\S]*?);\n    void startReminderService\.sync\(/);
+    assert.ok(m, 'gun expression found');
+    return new Function('homeData', 'serverTimeOffsetKnownRef', 'serverTimeOffsetRef', 'computeRaceStartTime', 'return (' + m[1] + ');')(
+      homeData, { current: offsetKnown }, { current: offsetMs }, R().computeRaceStartTime);
+  };
+  test('reminders: a placeholder start time (00:00 / 00:01, gun not set yet) schedules nothing — no 23:50 reminder the night before', async () => {
+    for (const t of ['00:00', '00:01', '00:00:00', '00:01:00', ' 00:00:00 ']) {
+      assert.strictEqual(reminderGun({ next_race_date: '2026-10-25', next_race_time: t }), null, JSON.stringify(t));
+    }
+  });
+  test('reminders: a real start time still gives the session\'s gun (event offset applied); unknown offset / no date → none', async () => {
+    for (const t of ['09:30:00', '00:02:00', '00:30', '12:00:00']) {
+      const gun = reminderGun({ next_race_date: '2026-10-25', next_race_time: t });
+      assert.ok(gun instanceof Date, t);
+      assert.strictEqual(gun.getTime(), R().computeRaceStartTime('2026-10-25', t, 2 * 3600000).getTime(), t);
+    }
+    assert.strictEqual(reminderGun({ next_race_date: '2026-10-25', next_race_time: '09:30:00' }, false), null, 'offset unknown');
+    assert.strictEqual(reminderGun({ next_race_date: '', next_race_time: '09:30:00' }) || null, null, 'no date');
+    assert.strictEqual(reminderGun(undefined) || null, null, 'no home data');
+  });
   test('persisted backgrounded start: resumes only within 10 min, only for the race home still offers with Start shown', async () => {
     const { shouldResumePendingStart, PENDING_BG_START_MAX_AGE_MS } = R();
     const home = { show_start_track: 1, next_race_participant_app_id: '4807', next_race_id: '19' };
