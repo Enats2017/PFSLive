@@ -1,6 +1,8 @@
 {
   "button": {
-    "result": "RESULT"
+    "result": "RESULT",
+    "participants": "PARTICIPANTS",
+    "results": "RESULTS"
   },
   "noResults": "No finished events yet",
   "error": {

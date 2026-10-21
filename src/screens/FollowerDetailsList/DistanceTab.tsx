@@ -21,6 +21,7 @@ import { formatClockTime } from '../../utils/timeFormat';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
+import { distanceButtonKind } from './distanceButton';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 
@@ -236,7 +237,11 @@ const DistanceTab = ({
                 activeOpacity={0.8}
               >
                 <Text style={[commonStyles.primaryButtonText,{fontSize: 11.5}]}>
-                  {t('button.result')}
+                  {/* PARTICIPANTS before race day, RESULTS from race day on (distanceButton.ts).
+                      button.result stays as-is: RaceResultScreen still uses it. */}
+                  {t(distanceButtonKind(item.race_date, item.countdown?.status) === 'participants'
+                    ? 'button.participants'
+                    : 'button.results')}
                 </Text>
               </TouchableOpacity>
             )}
