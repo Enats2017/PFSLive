@@ -927,6 +927,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // permission screen, back after a pocketed Android start, the cold-start
       // resume. Battery Saver switched on in between went straight through.
       if (await checkPowerSavingMode()) {
+        // growth_v0.1: every gate that stops a start is a funnel step
+        void analyticsService.logStartStep('blocked', 'power_saving', raceReadyKey);
         setShowPowerSavingModal(true);
         return;
       }
@@ -1287,7 +1289,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         batteryStartResolveRef.current = resolve;
         setShowBatteryStartModal(true);
       });
-      if (choice === 'cancel') return;
+      if (choice === 'cancel') {
+        // growth_v0.1: a start abandoned here is a funnel drop-off like the others
+        void analyticsService.logStartStep('blocked', 'battery_optimization', raceReadyKey);
+        return;
+      }
       if (choice === 'allow') {
         try { await requestBatteryOptimizationExemption(); } catch { /* the start still goes on */ }
       }
@@ -1983,6 +1989,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // answer and tracking change; Start not offered or tracking running → none.
   useEffect(() => {
     const gun = homeData?.next_race_date && homeData?.next_race_time && serverTimeOffsetKnownRef.current
+      // growth_v0.1: 00:00 / 00:01 is a placeholder (the real gun time isn't
+      // known — same rule as raceStartMs): no reminders, they would ring at midnight.
+      && !/^00:0[01](:00)?$/.test(String(homeData.next_race_time).trim())
       ? computeRaceStartTime(homeData.next_race_date, homeData.next_race_time, serverTimeOffsetRef.current)
       : null;
     void startReminderService.sync({

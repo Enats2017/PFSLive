@@ -1633,12 +1633,14 @@ const L = () => load('services/locationService').locationService;
   const runBatteryGate = async ({ os = 'android', optimized = true, choice = null }) => {
     const m = homeLF.match(/\n    if \(Platform\.OS === 'android' && \(await gpsService\.isBatteryOptimized\(\)\)\) \{([\s\S]*?)\n    \}\n/);
     assert.ok(m, 'battery gate found in startGPSTracking');
-    const calls = { asked: 0, shown: [], exempt: 0 };
+    const calls = { asked: 0, shown: [], exempt: 0, steps: [] };
     const ref = { current: null };
-    const fn = new Function('Platform', 'gpsService', 'batteryStartResolveRef', 'setShowBatteryStartModal', 'requestBatteryOptimizationExemption',
+    // growth_v0.1: the gate also logs the start funnel (analyticsService, raceReadyKey)
+    const fn = new Function('Platform', 'gpsService', 'batteryStartResolveRef', 'setShowBatteryStartModal', 'requestBatteryOptimizationExemption', 'analyticsService', 'raceReadyKey',
       'return (async () => { if (Platform.OS === \'android\' && (await gpsService.isBatteryOptimized())) {' + m[1].replace(/new Promise<[^>]*>\(/g, 'new Promise(') + '\n} return \'continued\'; })();');
     const p = fn({ OS: os }, { isBatteryOptimized: async () => { calls.asked++; return optimized; } }, ref,
-      (v) => calls.shown.push(v), async () => { calls.exempt++; });
+      (v) => calls.shown.push(v), async () => { calls.exempt++; },
+      { logStartStep: async (...a) => { calls.steps.push(a); } }, '19');
     await new Promise((r) => setTimeout(r, 5));
     if (choice) { assert.ok(typeof ref.current === 'function', 'popup waiting for an answer'); ref.current(choice); }
     return { result: await p, calls };
@@ -1650,6 +1652,8 @@ const L = () => load('services/locationService').locationService;
     assert.deepStrictEqual([r.result, r.calls.exempt], ['continued', 0]);
     r = await runBatteryGate({ choice: 'cancel' });
     assert.deepStrictEqual([r.result, r.calls.exempt], [undefined, 0], 'start abandoned');
+    assert.deepStrictEqual(r.calls.steps, [['blocked', 'battery_optimization', '19']], 'growth_v0.1: the abandoned start is a funnel step');
+    for (const choice of ['allow', 'anyway']) assert.deepStrictEqual((await runBatteryGate({ choice })).calls.steps, [], choice + ': no blocked step');
     r = await runBatteryGate({ optimized: false });
     assert.deepStrictEqual([r.result, r.calls.shown], ['continued', []], 'exempt → no popup');
     r = await runBatteryGate({ os: 'ios' });
@@ -1707,7 +1711,8 @@ const L = () => load('services/locationService').locationService;
   test('Battery Saver gate runs on EVERY start path: first thing in doStartGPSTracking, before the permission gate', async () => {
     const at = homeLF.indexOf('const doStartGPSTracking = useCallback(async () => {');
     const iTry = homeLF.indexOf('\n    try {', at);
-    const iSaver = homeLF.indexOf('if (await checkPowerSavingMode()) {\n        setShowPowerSavingModal(true);\n        return;\n      }', at);
+    // growth_v0.1: the gate logs the blocked start step before the popup
+    const iSaver = homeLF.indexOf("if (await checkPowerSavingMode()) {\n        // growth_v0.1: every gate that stops a start is a funnel step\n        void analyticsService.logStartStep('blocked', 'power_saving', raceReadyKey);\n        setShowPowerSavingModal(true);\n        return;\n      }", at);
     const iPerm = homeLF.indexOf('const perms = await gpsService.getPermissionState();', at);
     assert.ok(iTry > at && iSaver > iTry && iPerm > iSaver, 'saver gate before permissions, inside doStartGPSTracking');
     const end = homeLF.indexOf('\n  }, [\n    hasPermission,', at);
