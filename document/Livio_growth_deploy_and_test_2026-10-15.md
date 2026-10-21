@@ -4,9 +4,13 @@ Three branches, all pushed, none deployed:
 
 | Repo | Branch | Base | Ships as |
 |---|---|---|---|
-| App `D:\react_native\PFSLive` | `growth_v0.1` @ `0e47e06` | `design_newv0.2` | store build **1.1.0** (not OTA to 1.0.9) |
-| Server `C:\xampp\htdocs\larssie` | `growth_api_v0.1` @ `32b432573` | `design-api` | file upload + **1 SQL file** + 2 crons |
-| Web `C:\xampp\htdocs\larssie\livio_web` | `growth_web_v0.1` @ `86a1d92` | `web-design` | rebuilt static export |
+| App `D:\react_native\PFSLive` | `growth_v0.1` @ `9aca494` | `design_newv0.2` | store build **1.1.0** (not OTA to 1.0.9) |
+| Server `C:\xampp\htdocs\larssie` | `growth_api_v0.1` @ `4e7df57e8` | `design-api` | file upload + **1 SQL file** + 2 crons |
+| Web `C:\xampp\htdocs\larssie\livio_web` | `growth_web_v0.1` @ `c615850` | `web-design` | rebuilt static export |
+
+All three branches contain their main / master as of 2026-10-20 (app: start reminders, battery checks at Start,
+iOS start window; server: checkpoint catch-up, expired sessions, event-page member price; web: race-day report only).
+Deploying growth therefore also deploys those main changes — if main is already live, nothing extra.
 
 `<LIVE>` below = the live larssie root (believed `/var/www/html/larssie/` — **confirm**).
 Nothing here needs a change to the live `config.php` / `snippet_config.php`.
@@ -176,8 +180,9 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 324 · 107 · 19 passed · exit 0 |
-| Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows) | 422 passed, 0 failed, leftover rows 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 330 · 186 · 19 passed · exit 0 |
+| Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 425 passed, 0 failed, leftover rows 0 |
+| Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Web | `npm run test:follow` · `npx vitest run` · `node_modules/.bin/tsc --noEmit -p .` · `npx eslint .` | 96 passed · 77 passed · clean · clean |
 
 ### Server (quick checks with curl / phpMyAdmin)
@@ -357,7 +362,7 @@ The sequencing request is moot — the free session is already off on live (2026
 
 ### Known, not done
 - S1 (verify the live result page shows the live position for `from_live=1`) — not checked by me on live; please open one share link on live.
-- Test suites are local only: app 324/324 (+ tracking 107, activation 19), server 422/422 (self-cleaning), web 96/96 (`npm run test:follow`) + 77 vitest + type-check + lint.
+- Test suites are local only: app 330/330 (+ tracking 186, activation 19), server 425/425 (self-cleaning) + main's server suites, web 96/96 (`npm run test:follow`) + 77 vitest + type-check + lint.
 - Verified by reading only (need a live SendGrid / Expo call): the 48 h mail record upsert and its Throwable catch. (The push per-message retry and the single-message 400 are tested with a stand-in for Expo.)
 
 ### Audit status (fourth exhaustive audit 2026-10-16 — everything fixable is fixed)
@@ -371,6 +376,19 @@ Not code — your action / decision:
 - Real-device checks (App steps 1–36, Web 1–23).
 - FR/NL copy of the new precise-location popup — native-speaker check.
 - Locally `config.php` prints "Undefined array key HTTP_HOST" warnings when a cron runs from the command line; check the live crons' mail/output for the same (harmless, but noisy).
+Merge of main into the growth branches — checked 2026-10-21:
+- Every main change is in its growth branch; the merges kept both sides (no lost lines), and every suite of both sides passes.
+- The step 1 SQL was run on a fresh copy of live (imported 2026-10-19, strict sql_mode): 29 statements, no error, 6 columns added,
+  sections 5 and 6 found nothing to change; a second run changed nothing.
+- Fixed where main's new start code met growth rules (app): start reminders skip a placeholder start time (00:00 / 00:01 — they
+  rang at 23:50 the night before); the Start funnel now logs the two new gates (battery-optimisation popup cancelled,
+  Battery Saver on a resumed start) like every other gate. Checked, no change needed: the new local notifications
+  (start reminders, start not started, Battery Saver) never open the race popup or navigate; the new battery popup
+  holds back Get race-ready like the other popups; a dual-transport follower (phone + web on one row) gets one push
+  per transport for the furthest checkpoint only.
+- `tests/tracking_api/audit_2026_10_18_http_test.php` (main) needs event 19 to have a RaceResult URL with
+  race_result_status = 1 in the local DB; the fresh live copy has it switched off after the race, so it was not run.
+
 Product-decision items — round 25 (2026-10-18):
 - FIXED: someone who knew a web guest's private id could switch its row to "app" (blocking that guest's merge and web push), put their own Expo token on it, or set its email/language. App-only endpoints now refuse any browser-guest id (`api/FollowerGuard.php`); phones and the website are unaffected (no phone ever has a browser-shaped id — checked on the live copy: 2,139 browser ids, all web rows).
 - FIXED (website half): a web guest's follow list can no longer be replaced with its id alone — its row needs the browser's secret, which the website now sends. If a browser ever lost the secret but kept the id, it starts a fresh guest once and keeps its follows.
