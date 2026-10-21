@@ -16,7 +16,8 @@
     "i18n-check": "node scripts/i18n-check.mjs",
     "data-check": "node scripts/data-loss-check.mjs",
     "test:tracking": "node tests/tracking/app.test.js",
-    "test:activation": "tsc src/screens/ProfileScreen/activationCard.ts src/screens/ProfileScreen/activationCard.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/screens/ProfileScreen/activationCard.test.js"
+    "test:activation": "tsc src/screens/ProfileScreen/activationCard.ts src/screens/ProfileScreen/activationCard.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/screens/ProfileScreen/activationCard.test.js",
+    "test:distance-button": "tsc src/screens/FollowerDetailsList/distanceButton.ts src/screens/FollowerDetailsList/distanceButton.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/screens/FollowerDetailsList/distanceButton.test.js"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
