@@ -56,7 +56,7 @@
     "availableServices": "Beschikbare diensten",
     "toNextPoint": "Tot volgend punt",
     "segmentDistance": "Sinds vorig punt",
-    "segmentElevation": "Klim sinds vorig punt"
+    "segmentElevation": "Hoogtemeters sinds vorige punt"
   },
   "runnerInfo": {
     "club": "CLUB",

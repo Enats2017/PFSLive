@@ -180,7 +180,7 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 330 · 186 · 19 passed · exit 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 341 · 188 · 19 passed · exit 0 |
 | Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 425 passed, 0 failed, leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Web | `npm run test:follow` · `npx vitest run` · `node_modules/.bin/tsc --noEmit -p .` · `npx eslint .` | 96 passed · 77 passed · clean · clean |
@@ -362,7 +362,7 @@ The sequencing request is moot — the free session is already off on live (2026
 
 ### Known, not done
 - S1 (verify the live result page shows the live position for `from_live=1`) — not checked by me on live; please open one share link on live.
-- Test suites are local only: app 330/330 (+ tracking 186, activation 19), server 425/425 (self-cleaning) + main's server suites, web 96/96 (`npm run test:follow`) + 77 vitest + type-check + lint.
+- Test suites are local only: app 341/341 (+ tracking 188, activation 19), server 425/425 (self-cleaning) + main's server suites, web 96/96 (`npm run test:follow`) + 77 vitest + type-check + lint.
 - Verified by reading only (need a live SendGrid / Expo call): the 48 h mail record upsert and its Throwable catch. (The push per-message retry and the single-message 400 are tested with a stand-in for Expo.)
 
 ### Audit status (fourth exhaustive audit 2026-10-16 — everything fixable is fixed)

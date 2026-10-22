@@ -158,8 +158,26 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
         </View>
     );
 
+    // Finished: the middle column repeated the finish (last point = FIN, same
+    // time of day as the FINISH column). It shows the gender rank instead
+    // (client 2026-10-22). No usable gender rank → the old column.
+    const finishedGenderRank = finishCp?.is_crossed && !nextCp && /^\d+$/.test(item.finish_rank_gender ?? '')
+        ? item.finish_rank_gender
+        : null;
+    const genderWord = item.gender === 'female'
+        ? t('common:gender.women')
+        : item.gender === 'male' ? t('common:gender.men') : '';
+
     return (
-        <View style={[resultListStyle.cardWithLeftBorder, isWomen && { backgroundColor: categoryColors.womenSurface }]}>
+        // The whole card opens the athlete. Only the stats strip under the
+        // identity used to, so a tap on the name or rank did nothing and it
+        // "sometimes took several taps" (client 2026-10-22). The star is a
+        // nested touchable and keeps its own press.
+        <TouchableOpacity
+            style={[resultListStyle.cardWithLeftBorder, isWomen && { backgroundColor: categoryColors.womenSurface }]}
+            onPress={handleCardPress}
+            activeOpacity={0.7}
+        >
 
             {/* Row head — rank circle, identity, follow star. */}
             <View style={resultListStyle.rowHead}>
@@ -207,6 +225,15 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             {[item.name_participant_1, item.name_participant_2].filter(Boolean).join(' & ')}
                         </Text>
                     ) : null}
+                    {hasUtmbIndex ? (
+                        <View style={resultListStyle.utmbInline}>
+                            <View style={[resultListStyle.utmbBadge, resultListStyle.utmbBadgeCompact]}>
+                                <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
+                                <Text style={resultListStyle.utmbBadgeTextBottom}>{t('allrace:race.utmbIndex')}</Text>
+                            </View>
+                            <Text style={resultListStyle.utmbInlineValue}>{item.utmb_index}</Text>
+                        </View>
+                    ) : null}
                 </View>
                 <TouchableOpacity
                     onPress={handleStarPress}
@@ -222,20 +249,10 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         color={isFollowed ? palette.lime : palette.placeholder}
                     />
                 </TouchableOpacity>
+                <Ionicons name="chevron-forward" size={18} color={palette.placeholder} style={resultListStyle.cardChevron} />
             </View>
 
-            <TouchableOpacity onPress={handleCardPress} activeOpacity={0.7}>
-
-                {hasUtmbIndex && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.md }}>
-                        <View style={resultListStyle.utmbBadge}>
-                        <Text style={resultListStyle.utmbBadgeTextTop}>UTMB</Text>
-                        <Text style={resultListStyle.utmbBadgeTextBottom}>Index</Text>
-                        </View>
-                        <Text style={[resultListStyle.utmbValue, { fontFamily: fonts.body,
-        fontSize: 15 }]}>{item.utmb_index}</Text>
-                    </View>
-                )}
+            <View>
 
                 {isLive && !isCheckpointMode && (
                     <View style={{ marginTop: 8 }}>
@@ -302,6 +319,14 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         </>
                     ) : (
                         <>
+                            {finishedGenderRank ? (
+                                <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
+                                    <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                                        {[t('allrace:race.ranking'), genderWord].filter(Boolean).join(' ')}
+                                    </Text>
+                                    <Text style={resultListStyle.statVal}>{finishedGenderRank}</Text>
+                                </View>
+                            ) : (
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                 <Text style={resultListStyle.statLabel} numberOfLines={2}>
                                     {nextCp
@@ -314,6 +339,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     {formatClockTime(nextCp?.actual_time || lastCrossed?.actual_time) || '-'}
                                 </Text>
                             </View>
+                            )}
 
                             <View style={resultListStyle.statCol}>
                                 <Text style={resultListStyle.statLabel} numberOfLines={1}>
@@ -326,8 +352,8 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         </>
                     )}
                 </View>
-            </TouchableOpacity>
-        </View>
+            </View>
+        </TouchableOpacity>
     );
 }, (prev, next) =>
     prev.fromLive === next.fromLive &&
@@ -339,6 +365,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     prev.item.position === next.item.position &&
     prev.item.live_tracking_activated === next.item.live_tracking_activated &&
     prev.item.status === next.item.status &&
+    prev.item.finish_rank_gender === next.item.finish_rank_gender &&
     prev.item.checkpoints === next.item.checkpoints &&
     prev.isCheckpointMode === next.isCheckpointMode &&
     prev.selectedCheckpointIndex === next.selectedCheckpointIndex && 

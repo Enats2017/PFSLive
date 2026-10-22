@@ -105,7 +105,12 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 
 
     return (
-        <View style={[resultListStyle.cardWithLeftBorder, isWomen && { backgroundColor: categoryColors.womenSurface }]}>
+        // The whole card opens the athlete — see ResultCardLive (client 2026-10-22).
+        <TouchableOpacity
+            style={[resultListStyle.cardWithLeftBorder, isWomen && { backgroundColor: categoryColors.womenSurface }]}
+            onPress={handleCardPress}
+            activeOpacity={0.7}
+        >
 
             {/* Row head — rank circle, identity, follow star. */}
             <View style={resultListStyle.rowHead}>
@@ -177,9 +182,10 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                         color={isFollowed ? palette.lime : palette.placeholder}
                     />
                 </TouchableOpacity>
+                <Ionicons name="chevron-forward" size={18} color={palette.placeholder} style={resultListStyle.cardChevron} />
             </View>
 
-            <TouchableOpacity onPress={handleCardPress} activeOpacity={0.7}>
+            <View>
 
                 {isLive && (
                     <View style={{ marginTop: 8 }}>
@@ -255,8 +261,8 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                         </>
                     )}
                 </View>
-            </TouchableOpacity>
-        </View>
+            </View>
+        </TouchableOpacity>
     );
 }, (prev, next) =>
     prev.fromLive === next.fromLive &&

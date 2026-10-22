@@ -40,7 +40,7 @@ const Divider = () => <View style={resultListStyle.divider} />;
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
-    const { width } = useDimensions();
+    const { width, isLandscape: isLandscapeView } = useDimensions();
     const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
     const isLandscape = width
@@ -197,24 +197,21 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             : null
         , [pageLoad]);
 
+    // Only once there is a list to scroll: loading / error / empty states keep
+    // the filters fixed above them, so a filter can still be changed.
+    const filtersInList = isLandscapeView && !initialLoad && !hasError && displayResults.length > 0;
+
     const keyExtractor = useCallback(
         (item: RaceResult, index: number) => `${item.bib}_${item.position}_${index}`,
         []
     );
 
-    return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
-
-            <AppHeader title={event_name}
-                showLogo={true}
-                showSearch={true}
-                product_app_id={product_app_id}
-                event_name={event_name}
-                product_option_value_app_id={currentPovId}
-                raceStatus={raceStatus as 'finished' | 'in_progress' | 'not_started'}
-                showBack
-            />
-
+    // Landscape: the header, three filter rows, the statistics strip and the
+    // bottom bar left the list almost no height, so the results could not be
+    // scrolled (client 2026-10-22). There the filters and statistics ride at
+    // the top of the list and scroll away with it; portrait is unchanged.
+    const filterHeader = (
+        <>
             <View style={resultListStyle.filterRow1}>
                 <Dropdown
                     label={selectedDistanceLabel}
@@ -274,6 +271,23 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     )}
                 </View>
             )}
+        </>
+    );
+
+    return (
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
+
+            <AppHeader title={event_name}
+                showLogo={true}
+                showSearch={true}
+                product_app_id={product_app_id}
+                event_name={event_name}
+                product_option_value_app_id={currentPovId}
+                raceStatus={raceStatus as 'finished' | 'in_progress' | 'not_started'}
+                showBack
+            />
+
+            {!filtersInList && filterHeader}
             {initialLoad ? (
                 <View style={resultListStyle.center}>
                     <ActivityIndicator size="large" color={palette.navy} />
@@ -307,6 +321,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     <FlatList
                         data={displayResults}
                         keyExtractor={keyExtractor}
+                        ListHeaderComponent={filtersInList ? filterHeader : null}
                         renderItem={renderItem}
                         contentContainerStyle={resultListStyle.list}
                         showsVerticalScrollIndicator={false}

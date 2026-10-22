@@ -163,10 +163,13 @@ divider: {
     gap: space.md,
     width: '100%',
   },
+  // minWidth, not width: a 4-5 digit rank (1000+) or "DNF" did not fit a fixed
+  // 34pt circle. Short ranks stay a circle; longer ones grow into a pill.
   rankCircle: {
-    width: 34,
+    minWidth: 34,
     height: 34,
-    borderRadius: 17,
+    paddingHorizontal: space.xs,
+    borderRadius: radii.pill,
     backgroundColor: palette.lime,
     alignItems: 'center',
     justifyContent: 'center',
@@ -184,6 +187,29 @@ divider: {
   rankGender: {
     fontFamily: fonts.bodySemi,
     fontSize: 10,
+    color: palette.ink,
+  },
+  // The whole card opens the athlete; this says so (client 2026-10-22: "not
+  // immediately obvious that you can click on a participant").
+  cardChevron: {
+    marginTop: space.xs,
+  },
+  // Live card: the UTMB index is one more identity line under the name, in the
+  // name's column. As its own full-width row (15pt value, from the card edge)
+  // it was too prominent and did not line up with anything (client 2026-10-22).
+  utmbInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    marginTop: space.xs,
+  },
+  utmbBadgeCompact: {
+    paddingHorizontal: space.xs,
+    paddingVertical: 2,
+  },
+  utmbInlineValue: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 12,
     color: palette.ink,
   },
 

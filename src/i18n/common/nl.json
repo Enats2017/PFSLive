@@ -19,7 +19,7 @@
   "nav": {
     "home": "Startpagina",
     "favorites": "Favorieten",
-    "results": "Resultaten",
+    "results": "Results",
     "participants": "Deelnemers",
     "map": "Kaart",
     "more": "Meer"
@@ -106,7 +106,7 @@
     "women": "Vrouwen"
   },
   "band": {
-    "home": "Live volgen & uitslagen",
+    "home": "Live tracking & results",
     "login": "Inloggen",
     "register": "Registreren",
     "verifyEmail": "E-mail verifiëren",

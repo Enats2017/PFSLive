@@ -38,9 +38,12 @@ export const headerStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // The PNG is 900x474 (~1.9:1). The old 96x22 box was far wider than that, so
+  // `contain` drew the mark only ~42x22 — client: "the logo is too small"
+  // (2026-10-22). The box now has the image's own ratio and fills the 44pt row.
   centerLogo: {
-    height: 22,
-    width: 96,
+    height: 38,
+    width: 72,
   },
 
   band: {

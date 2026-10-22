@@ -141,6 +141,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                         color={isFollowed ? palette.lime : palette.placeholder}
                     />
                 </TouchableOpacity>
+                <Ionicons name="chevron-forward" size={18} color={palette.placeholder} style={resultListStyle.cardChevron} />
             </View>
 
             <View>

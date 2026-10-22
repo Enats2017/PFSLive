@@ -40,7 +40,7 @@
   "hoursAgo_one": "{{count}} uur geleden",
   "hoursAgo_other": "{{count}} uur geleden",
   "bar": {
-    "label": "Live volgen"
+    "label": "Live tracking"
   },
   "meterDPlus": "m D+",
   "liveMap": "Live kaart",

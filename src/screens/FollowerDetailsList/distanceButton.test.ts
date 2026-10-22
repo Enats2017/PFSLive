@@ -154,11 +154,12 @@ test('button.participants / button.results exist and are non-empty in en, fr, nl
 // FR is "Inscrits": "Participants" (~94pt) overflows this design's ~90pt button.
 test('agreed wording, Title Case like this design\'s other buttons', () => {
   assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.participants), ['Participants', 'Deelnemers', 'Inscrits']);
-  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.results), ['Results', 'Resultaten', 'Résultats']);
+  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.results), ['Results', 'Results', 'Résultats']);
 });
 
-test('button.result and button.route are unchanged (RaceResultScreen / the route button render them)', () => {
-  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.result), ['Result', 'Resultaat', 'Résultat']);
+// nl: "Results" / "Result" stay English (client, 2026-10-22).
+test('button.result and button.route (RaceResultScreen / the route button render them)', () => {
+  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.result), ['Result', 'Result', 'Résultat']);
   assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.route), ['Route', 'Route', 'Itinéraire']);
 });
 
