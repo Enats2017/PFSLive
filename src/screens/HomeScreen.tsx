@@ -10,6 +10,7 @@ import {
   BackHandler,
   Modal,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -64,7 +65,7 @@ import { spacing, typography, commonStyles, palette, fonts } from '../styles/com
 import { homeStyles } from '../styles/home.styles';
 import FollowingLiveEventsSection from './FollowingLiveEventsSection';
 import { useDimensions } from '../hooks/useDimensions';
-import { useLandscapeSidePadding, useSafeAreaEdges } from '../hooks/useLandscapeSidePadding';
+import { useLandscapeSidePadding, useSafeAreaEdges, isShortScreen } from '../hooks/useLandscapeSidePadding';
 import ModalScroll from '../components/ui/ModalScroll';
 import { FanEmailModal } from '../components/Fanemailmodal';
 import { fanEmailStorage } from '../utils/fanEmailStorage';
@@ -186,6 +187,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Notched iPhones in landscape resolve to edges ['bottom'] below, so the
   // body sat under the notch — pad it here (audit 2026-10-22).
   const sidePadding = useLandscapeSidePadding();
+  // landscape on a phone: compact popups (home.styles notif*Compact)
+  const compactPopups = isShortScreen(useWindowDimensions().height);
   const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
   const [showFanEmailModal, setShowFanEmailModal] = useState(false);
 
@@ -2293,27 +2296,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           onRequestClose={handleBatteryStartCancel}
         >
           <View style={homeStyles.notifBackdrop}>
-            <View style={homeStyles.notifWrapper}>
+            <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
               {/* ModalScroll: every notif card was ~500-540pt tall — in landscape and
                   on SE / larger text the icon went off the top and the buttons off the
                   bottom, unreachable. Tall cards now scroll (audit 2026-10-22). */}
-              <ModalScroll style={homeStyles.notifScroll}>
-              <View style={homeStyles.notifCard}>
-                <View style={homeStyles.notifIconWrapper}>
+              <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+              <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+                <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
                   <Ionicons name="battery-charging" size={36} color={palette.navy} />
                 </View>
                 <Text style={homeStyles.notifTitle}>{t('home:battery.title')}</Text>
-                <Text style={homeStyles.notifBody}>{t('home:battery.message')}</Text>
-                <View style={homeStyles.notifButtonContainer}>
+                <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>{t('home:battery.message')}</Text>
+                <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                   <TouchableOpacity
-                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                    style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                     onPress={handleBatteryStartAllow}
                     activeOpacity={0.8}
                   >
                     <Text style={commonStyles.primaryButtonText}>{t('home:battery.allow')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={commonStyles.secondaryButton}
+                    style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                     onPress={handleBatteryStartAnyway}
                     activeOpacity={0.7}
                   >
@@ -2336,31 +2339,31 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={handleStartConfirmNo}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <ModalScroll style={homeStyles.notifScroll}>
-            <View style={homeStyles.notifCard}>
-              <View style={homeStyles.notifIconWrapper}>
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
                 <Ionicons name="navigate-circle-outline" size={36} color={palette.navy} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:startConfirm.title')}</Text>
-              <Text style={homeStyles.notifBody}>{t('home:startConfirm.message')}</Text>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>{t('home:startConfirm.message')}</Text>
               {/* Android cannot start the location service once the app is in the
                   background: a phone pocketed within ~3 s of Start never tracks
                   until Livio is opened again (start_backgrounded). A runner does
                   not feel a notification mid-race, so say it before they start. */}
-              <View style={homeStyles.notifKeepOpenBox}>
+              <View style={[homeStyles.notifKeepOpenBox, compactPopups && homeStyles.notifKeepOpenCompact]}>
                 <Text style={homeStyles.notifKeepOpenText}>{t('home:startConfirm.keepOpen')}</Text>
               </View>
-              <View style={homeStyles.notifButtonContainer}>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleStartConfirmYes}
                   activeOpacity={0.8}
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('home:startConfirm.yes')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={commonStyles.secondaryButton}
+                  style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleStartConfirmNo}
                   activeOpacity={0.7}
                 >
@@ -2383,28 +2386,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={handleStopConfirmNo}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <ModalScroll style={homeStyles.notifScroll}>
-            <View style={homeStyles.notifCard}>
-              <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger]}>
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger, compactPopups && homeStyles.hideCompact]}>
                 <Ionicons name="stop-circle-outline" size={36} color={palette.danger} />
               </View>
               <Text style={homeStyles.notifTitle}>
                 {t(stopConfirmMode === 'after' ? 'home:alerts.stopAfterStartTitle' : 'home:alerts.stopBeforeStartTitle')}
               </Text>
-              <Text style={homeStyles.notifBody}>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>
                 {t(stopConfirmMode === 'after' ? 'home:alerts.stopAfterStartMessage' : 'home:alerts.stopBeforeStartMessage')}
               </Text>
-              <View style={homeStyles.notifButtonContainer}>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleStopConfirmNo}
                   activeOpacity={0.8}
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('home:alerts.keepTracking')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[commonStyles.secondaryButton, homeStyles.notifDangerButton]}
+                  style={[commonStyles.secondaryButton, homeStyles.notifDangerButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleStopConfirmYes}
                   activeOpacity={0.7}
                 >
@@ -2426,17 +2429,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={handleStartErrorClose}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <ModalScroll style={homeStyles.notifScroll}>
-            <View style={homeStyles.notifCard}>
-              <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger]}>
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger, compactPopups && homeStyles.hideCompact]}>
                 <Ionicons name="alert-circle-outline" size={36} color={palette.danger} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('common:errors.generic')}</Text>
-              <Text style={homeStyles.notifBody}>{startErrorMessage}</Text>
-              <View style={homeStyles.notifButtonContainer}>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>{startErrorMessage}</Text>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleStartErrorClose}
                   activeOpacity={0.8}
                 >
@@ -2458,24 +2461,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={handleOverrideCancel}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <ModalScroll style={homeStyles.notifScroll}>
-            <View style={homeStyles.notifCard}>
-              <View style={homeStyles.notifIconWrapper}>
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
                 <Ionicons name="play-circle-outline" size={36} color={palette.navy} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:alerts.overrideTitle')}</Text>
-              <Text style={homeStyles.notifBody}>{t('home:alerts.overrideMessage')}</Text>
-              <View style={homeStyles.notifButtonContainer}>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>{t('home:alerts.overrideMessage')}</Text>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleOverrideConfirm}
                   activeOpacity={0.8}
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('home:alerts.startNow')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={commonStyles.secondaryButton}
+                  style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleOverrideCancel}
                   activeOpacity={0.7}
                 >
@@ -2497,26 +2500,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={handleEarlyTrackingCancel}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <ModalScroll style={homeStyles.notifScroll}>
-            <View style={homeStyles.notifCard}>
-              <View style={homeStyles.notifIconWrapper}>
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
                 <Ionicons name="time-outline" size={36} color={palette.warning} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:earlyTracking.title')}</Text>
-              <Text style={homeStyles.notifBody}>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>
                 {t('home:earlyTracking.message', { hours: hoursDisplay })}
               </Text>
-              <View style={homeStyles.notifButtonContainer}>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleEarlyTrackingConfirm}
                   activeOpacity={0.8}
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('home:earlyTracking.yes')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={commonStyles.secondaryButton}
+                  style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleEarlyTrackingCancel}
                   activeOpacity={0.7}
                 >
@@ -2542,16 +2545,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={closeLocationPermissionModal}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <ModalScroll style={homeStyles.notifScroll}>
-            <View style={homeStyles.notifCard}>
-              <View style={homeStyles.notifIconWrapper}>
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
                 <Ionicons name="location-outline" size={36} color={palette.navy} />
               </View>
               <Text style={homeStyles.notifTitle}>
                 {t(popupCopy.titleKey)}
               </Text>
-              <Text style={homeStyles.notifBody}>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>
                 {/* Three distinct problems, three distinct instructions: turn the
                     phone's Location on, grant the permission at all, or upgrade
                     While-Using to Always. Collapsing them tells most runners to
@@ -2565,7 +2568,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   JS cannot send. Android's location_off deep-link IS exact, so
                   that combination alone gets no extra line. */}
               {popupCopy.showSettingsSteps && (
-                <Text style={homeStyles.notifBody}>
+                <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>
                   {permissionBlockReason === 'precise'
                     ? (Platform.OS === 'ios'
                         ? t('home:gpsHealth.stepsPreciseIos')
@@ -2579,10 +2582,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       : t('home:gpsHealth.stepsAndroidSettings')}
                 </Text>
               )}
-              <View style={homeStyles.notifButtonContainer}>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 {popupCopy.showSettingsButton && (
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={() => {
                     setShowLocationPermissionModal(false);
                     // The runner is acting on the blocked start right now:
@@ -2681,7 +2684,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     still gets tracked (approximately) — never blocked. */}
                 {permissionBlockReason === 'precise' && !permissionModalMidRace && (
                   <TouchableOpacity
-                    style={commonStyles.secondaryButton}
+                    style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                     onPress={() => {
                       // A start is already running — ignore the tap (startingRef).
                       if (isStarting()) return;
@@ -2697,7 +2700,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
-                  style={commonStyles.secondaryButton}
+                  style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={closeLocationPermissionModal}
                   activeOpacity={0.7}
                 >
@@ -2720,12 +2723,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={() => setShowPowerSavingModal(false)}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <ModalScroll style={homeStyles.notifScroll}>
-            <View style={homeStyles.notifCard}>
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
 
               {/* Icon */}
-              <View style={homeStyles.notifIconWrapper}>
+              <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
                 <Ionicons name="battery-dead-outline" size={36} color={palette.danger} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:powerSaving.title')}</Text>
@@ -2735,23 +2738,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   modal rendered the literal string "home:powerSaving.message"
                   to users. iOS has no deep link to Low Power Mode, hence the
                   two different texts. */}
-              <Text style={homeStyles.notifBody}>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>
                 {Platform.OS === 'android'
                   ? t('home:powerSaving.messageAndroid')
                   : t('home:powerSaving.messageIos')}
               </Text>
-              <View style={homeStyles.notifButtonContainer}>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 {Platform.OS === 'android' ? (
                   <>
                     <TouchableOpacity
-                      style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                      style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                       onPress={openPowerSavingSettings}
                       activeOpacity={0.8}
                     >
                       <Text style={commonStyles.primaryButtonText}>{t('home:powerSaving.disable')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={commonStyles.secondaryButton}
+                      style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                       onPress={() => setShowPowerSavingModal(false)}
                       activeOpacity={0.7}
                     >
@@ -2762,7 +2765,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   // iOS: no deep link to Low Power Mode exists, so a Settings button is
                   // pointless. Instruction text does the work; this only acknowledges.
                   <TouchableOpacity
-                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                    style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                     onPress={() => setShowPowerSavingModal(false)}
                     activeOpacity={0.8}
                   >
@@ -2796,9 +2799,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
         {/* Card — box-none: this full-screen wrapper sat over the backdrop
             above and swallowed every tap outside the card (audit 2026-10-22). */}
-        <View style={homeStyles.notifWrapper} pointerEvents="box-none">
-          <ModalScroll style={homeStyles.notifScroll}>
-          <View style={homeStyles.notifCard}>
+        <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]} pointerEvents="box-none">
+          <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+          <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
             {/* Close button */}
             <TouchableOpacity
               style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: palette.fill, justifyContent: 'center', alignItems: 'center', zIndex: 10 }}
@@ -2809,20 +2812,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
 
             {/* Icon */}
-            <View style={homeStyles.notifIconWrapper}>
+            <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
               <Ionicons name="notifications" size={36} color={palette.navy} />
             </View>
 
             {/* Title */}
-            <Text style={homeStyles.notifTitle}>{notificationPopup.title}</Text>
+            <Text style={[homeStyles.notifTitle, compactPopups && homeStyles.notifTitleClearClose]}>{notificationPopup.title}</Text>
 
             {/* Body */}
-            <Text style={homeStyles.notifBody}>{notificationPopup.body}</Text>
+            <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>{notificationPopup.body}</Text>
 
             {/* Buttons */}
-            <View style={homeStyles.notifButtonContainer}>
+            <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
               <TouchableOpacity
-                style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                 onPress={() => {
                   closeNotificationPopup();
                   if (notificationPopup.data) navigateToResultDetails(notificationPopup.data);
@@ -2833,7 +2836,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={commonStyles.secondaryButton}
+                style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                 onPress={closeNotificationPopup}
                 activeOpacity={0.7}
               >

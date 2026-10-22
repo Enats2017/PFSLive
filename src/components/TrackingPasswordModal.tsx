@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import FloatingLabelInput from './FloatingLabelInput';
 import { commonStyles, palette, fonts, space, shadows, withAlpha } from '../styles/common.styles';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
-import { useLandscapeSidePadding } from '../hooks/useLandscapeSidePadding';
+import { useModalSideInsets } from '../hooks/useLandscapeSidePadding';
 
 interface Props {
     visible: boolean;
@@ -39,7 +39,9 @@ export const TrackingPasswordModal: React.FC<Props> = ({
     const insets = useSafeAreaInsets();
     const [password, setPassword] = useState('');
     const { height: windowHeight } = useWindowDimensions();
-    const side = useLandscapeSidePadding();
+    // a Modal is outside any SafeAreaView: pad by the side insets in landscape on every
+    // platform (the screen rule returned 0 on Android 3-button — sheet under the nav bar)
+    const side = useModalSideInsets();
     // Mirrors keyboardOffset as plain state, only to cap the sheet height: the
     // sheet is lifted by the full keyboard height, so in landscape (~320-430pt
     // tall) the title, ✕ and even the input went off the top with nothing to

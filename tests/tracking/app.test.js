@@ -737,7 +737,7 @@ const L = () => load('services/locationService').locationService;
     const jsx = modalJsx('showStartConfirmModal');
     const iBody = jsx.indexOf("t('home:startConfirm.message')");
     const iKeep = jsx.indexOf("<Text style={homeStyles.notifKeepOpenText}>{t('home:startConfirm.keepOpen')}</Text>");
-    const iBox = jsx.indexOf('<View style={homeStyles.notifKeepOpenBox}>');
+    const iBox = jsx.indexOf('<View style={[homeStyles.notifKeepOpenBox');   // + compact variant in landscape
     const iButtons = jsx.indexOf('homeStyles.notifButtonContainer');
     assert.ok(iBody > 0 && iBox > iBody && iKeep > iBox && iButtons > iKeep, 'message → amber box → buttons');
     assert.ok(!/Platform\.OS/.test(jsx), 'shown on both platforms');

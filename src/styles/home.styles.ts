@@ -372,6 +372,48 @@ export const homeStyles = StyleSheet.create({
   notifScroll: {
     maxWidth: 400,
   },
+  // ✅ Compact popups on a short screen (landscape on a phone, isShortScreen):
+  // the 90pt icon is hidden, the card may be 560 wide (fewer text lines) and
+  // the gaps are tighter, so most popups fit a ~360-430pt tall screen without
+  // scrolling (device test 2026-10-22: "the popup does not fit"). The rest
+  // scroll, with the scroll bar shown (ModalScroll).
+  notifWrapperCompact: {
+    paddingVertical: spacing.sm,
+  },
+  notifScrollCompact: {
+    maxWidth: 520,
+  },
+  notifCardCompact: {
+    maxWidth: 520,
+    paddingVertical: spacing.md,
+  },
+  notifBodyCompact: {
+    marginBottom: spacing.md,
+  },
+  notifKeepOpenCompact: {
+    marginTop: -spacing.sm,   // 4pt under the body (its compact marginBottom is 12)
+    marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  hideCompact: {
+    display: 'none',
+  },
+  // the foreground popup's ✕ sits top-right; with no icon above it in compact
+  // mode the title moved up level with it
+  notifTitleClearClose: {
+    paddingHorizontal: 40,
+  },
+  // buttons side by side in compact mode (~60pt less height: the French start
+  // confirmation then fits a 360pt-tall landscape phone); a third one wraps
+  notifButtonRowCompact: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  notifButtonCompact: {
+    flexGrow: 1,
+    // > (472 inner − 2 gaps) / 3: two share a row, a third wraps to its own
+    flexBasis: 160,
+  },
   notifCard: {
     backgroundColor: palette.surface,
     borderRadius: radii.lg,

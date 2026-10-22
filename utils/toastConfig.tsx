@@ -4,11 +4,11 @@ import {
   StyleSheet,
   Text,
   View,
-  Dimensions,
+  useWindowDimensions,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
-const { width } = Dimensions.get("window");
 
 /* ✅ Define Toast Types */
 type ToastType = "success" | "error" | "info" | "warning";
@@ -67,6 +67,12 @@ const AnimatedToast: React.FC<AnimatedToastProps> = ({
   text2,
   type = "info",
 }) => {
+  // maxWidth from the CURRENT window (was read once at module load: started in
+  // landscape it was wider than the portrait screen) and clear of the camera /
+  // nav bar in landscape (device test 2026-10-22)
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const maxWidth = Math.min(width * 0.85, width - 2 * Math.max(insets.left, insets.right) - 16);
   const translateY = useRef(new Animated.Value(-16)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const iconScale = useRef(new Animated.Value(0.5)).current;
@@ -114,6 +120,7 @@ const AnimatedToast: React.FC<AnimatedToastProps> = ({
         style={[
           styles.toast,
           {
+            maxWidth,
             backgroundColor: config.bg,
             borderColor: config.border,
             opacity,
@@ -180,7 +187,6 @@ const styles = StyleSheet.create({
   toast: {
     flexDirection: "row",
     alignItems: "center",
-    maxWidth: width * 0.85,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 999,

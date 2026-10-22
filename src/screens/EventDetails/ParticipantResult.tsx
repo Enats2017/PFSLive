@@ -526,7 +526,7 @@ const ParticipantResult = () => {
         {/* ModalScroll: the card (~494-520pt) was taller than a landscape
             screen — the button was off the bottom (audit 2026-10-22) */}
         <View style={mailStyles.backdrop}>
-          <ModalScroll contentStyle={{ alignItems: 'center' }}>
+          <ModalScroll contentStyle={{ alignItems: 'center' }} reserve={48}>
             <View style={mailStyles.card}>
               <View style={mailStyles.iconWrapper}>
                 <Ionicons name="mail" size={28} color={palette.navy} />

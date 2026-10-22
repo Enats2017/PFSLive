@@ -95,7 +95,7 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
             <View style={styles.backdrop}>
                 {/* ModalScroll: keeps the button reachable when the card is taller
                     than a landscape screen (audit 2026-10-22) */}
-                <ModalScroll contentStyle={{ alignItems: 'center' }}>
+                <ModalScroll contentStyle={{ alignItems: 'center' }} reserve={48}>
                     <Animated.View
                         style={[
                             styles.card,

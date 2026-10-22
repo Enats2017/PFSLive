@@ -16,7 +16,7 @@ import { RING_TINT } from '../../components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
+import { useModalSideInsets } from '../../hooks/useLandscapeSidePadding';
 
 interface ConfirmRaceResultModalProps {
   visible: boolean;
@@ -40,7 +40,9 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
 }) => {
   const { t } = useTranslation(['confirmModal']);
   const insets = useSafeAreaInsets();
-  const side = useLandscapeSidePadding();
+  // a Modal is outside any SafeAreaView: pad by the side insets in landscape on every
+  // platform (the screen rule returned 0 on Android 3-button — sheet under the nav bar)
+  const side = useModalSideInsets();
 
   if (!data) return null;
 

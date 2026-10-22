@@ -194,7 +194,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
           pointerEvents="box-none"
           style={{ width: '100%', maxHeight: '100%', alignItems: 'center', transform: [{ translateY: cardTranslateY }], opacity: cardOpacity }}
         >
-        <ModalScroll contentStyle={{ alignItems: 'center' }}>
+        <ModalScroll contentStyle={{ alignItems: 'center' }} reserve={48}>
           <Animated.View style={styles.card}>
             {/* Top accent bar */}
 

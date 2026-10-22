@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform, KeyboardEvent, Keyboard } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform, KeyboardEvent, Keyboard, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -9,6 +9,7 @@ import FloatingLabelInput from './FloatingLabelInput';
 import ModalScroll from './ui/ModalScroll';
 import { fanEmailApi } from '../services/Fanemailservice';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import { isShortScreen } from '../hooks/useLandscapeSidePadding';
 
 
 
@@ -25,6 +26,8 @@ export const isValidEmail = (value: string): boolean => EMAIL_REGEX.test(value.t
 
 export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, onSkip }) => {
     const { t } = useTranslation(['home', 'common']);
+    // landscape: compact card, clear of the camera (device test 2026-10-22)
+    const compact = isShortScreen(useWindowDimensions().height);
     const [email, setEmail] = useState('');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -96,13 +99,13 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
     return (
         <Modal supportedOrientations={MODAL_ORIENTATIONS} transparent visible={visible} animationType="fade" statusBarTranslucent onRequestClose={handleSkipPress}>
             <View style={homeStyles.notifBackdrop}>
-                <View style={[homeStyles.notifWrapper, keyboardHeight > 0 && { paddingBottom: spacing.xl + keyboardHeight }]}>
+                <View style={[homeStyles.notifWrapper, compact && homeStyles.notifWrapperCompact, keyboardHeight > 0 && { paddingBottom: spacing.xl + keyboardHeight }]}>
                     {/* ModalScroll: the card is taller than a landscape screen —
                         icon / buttons were unreachable (audit 2026-10-22) */}
-                    <ModalScroll contentStyle={{ alignItems: 'center' }}>
-                        <View style={homeStyles.notifCard}>
+                    <ModalScroll contentStyle={{ alignItems: 'center' }} style={compact ? homeStyles.notifScrollCompact : undefined} reserve={(compact ? 16 : 40) + keyboardHeight}>
+                        <View style={[homeStyles.notifCard, compact && homeStyles.notifCardCompact]}>
 
-                            <View style={homeStyles.notifIconWrapper}>
+                            <View style={[homeStyles.notifIconWrapper, compact && homeStyles.hideCompact]}>
                                 <Ionicons name="mail-outline" size={36} color={palette.navy} />
                             </View>
 

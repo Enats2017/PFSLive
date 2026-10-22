@@ -57,13 +57,13 @@ module.exports = ({ M, load, test, SRC }) => {
   // ── popups taller than a landscape screen ──────────────────────────────
   test('every modal can scroll when taller than the screen (ModalScroll / its own ScrollView / Dialog); the only exception is the short follow-prompt sheet', () => {
     const bad = tsx.filter(([p, s]) => /<Modal\s/.test(s) && !/<ModalScroll\b|<ScrollView\b|<FlatList\b|<Dialog\b/.test(s)).map(([p]) => p);
-    assert.deepStrictEqual(bad, ['components/FollowNotificationPrompt.tsx']);   // ~300pt bottom sheet: fits a 320pt-tall screen
+    assert.deepStrictEqual(bad, []);   // the follow-prompt sheet scrolls too since the landscape fix (audit38)
     const ms = files['components/ui/ModalScroll.tsx'];
-    assert.ok(/flexGrow: 0, maxHeight: '100%', width: '100%', maxWidth: 400, alignSelf: 'center'/.test(ms), 'only as tall as the card, never taller than the screen; no wider than a card');
+    assert.ok(/flexGrow: 0, flexShrink: 1, maxHeight: maxBoxHeight, width: '100%', maxWidth: 400, alignSelf: 'center'/.test(ms), 'only as tall as the card, never taller than the screen (explicit cap, audit38); no wider than a card');
     assert.ok(/flexGrow: 1, justifyContent: 'center'/.test(ms), 'short cards stay centred');
     assert.ok(/<ModalScroll\b/.test(files['components/ui/Dialog.tsx']), 'Dialog (device transfer, e-mail change) through the shared component');
     const home = files['screens/HomeScreen.tsx'];
-    assert.strictEqual((home.match(/<ModalScroll style=\{homeStyles\.notifScroll\}>/g) || []).length, 9, 'all 9 Home popups');
+    assert.strictEqual((home.match(/<ModalScroll style=\{\[homeStyles\.notifScroll, compactPopups && homeStyles\.notifScrollCompact\]\}[^>]*>/g) || []).length, 9, 'all 9 Home popups (compact in landscape)');
   });
 
   test('tap outside closes: the full-screen wrappers let touches through to their backdrop (pointerEvents box-none)', () => {

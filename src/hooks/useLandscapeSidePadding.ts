@@ -25,3 +25,21 @@ export const useLandscapeSidePadding = () => {
   const side = landscapeSideInsets(insets, width, height);
   return { paddingLeft: side.left, paddingRight: side.right };
 };
+
+// ✅ Inside a <Modal> nothing is in a SafeAreaView, so the screen rule above
+// (0 where SafeAreaView pads) does not apply: a full-width sheet ran under the
+// camera / notch / Android nav bar in landscape (device test 2026-10-22). This
+// pads by the side insets whenever the window is landscape, on every platform.
+// Put it on the sheet's full-screen backdrop: the sheet sits inside the safe
+// area, only the dimmed backdrop shows under the camera.
+export const useModalSideInsets = () => {
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  return width > height
+    ? { paddingLeft: insets.left, paddingRight: insets.right }
+    : { paddingLeft: 0, paddingRight: 0 };
+};
+
+/** Landscape on a phone (or any window under 500pt tall): popups go compact. */
+export const SHORT_SCREEN_HEIGHT = 500;
+export const isShortScreen = (height: number | undefined): boolean => !!height && height < SHORT_SCREEN_HEIGHT;

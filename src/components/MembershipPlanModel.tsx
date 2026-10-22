@@ -80,7 +80,7 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
                 <View style={styles.backdrop}>
                     {/* ModalScroll: in landscape the card was taller than the screen —
                         icon off the top, buttons off the bottom (audit 2026-10-22) */}
-                    <ModalScroll contentStyle={{ alignItems: 'center' }}>
+                    <ModalScroll contentStyle={{ alignItems: 'center' }} reserve={48}>
                         <TouchableWithoutFeedback onPress={() => {}}>
                             <Animated.View
                                 style={[

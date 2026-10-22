@@ -5,7 +5,7 @@
 // useFollowPromptStore. Button copy avoids "Allow" (Apple 5.1.1).
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, Platform, Pressable, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ import { notificationPermissionService } from '../services/notificationPermissio
 import { analyticsService } from '../services/analyticsService';
 import { watchForOsPrompt } from '../utils/permissionPrompt';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import { useModalSideInsets, isShortScreen } from '../hooks/useLandscapeSidePadding';
 
 /** iOS: wait for a closing modal (password modal ~300 ms animation) first. */
 export const FOLLOW_SHEET_IOS_DELAY_MS = 600;
@@ -26,6 +27,9 @@ export const FOLLOW_SHEET_SHOW_TIMEOUT_MS = 2000;
 export const FollowNotificationPrompt: React.FC = () => {
   const { t } = useTranslation(['readiness']);
   const insets = useSafeAreaInsets();
+  const modalSides = useModalSideInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const compact = isShortScreen(windowHeight);
   const visible = useFollowPromptStore((st) => st.visible);
   const hide = useFollowPromptStore((st) => st.hide);
 
@@ -82,9 +86,17 @@ export const FollowNotificationPrompt: React.FC = () => {
 
   return (
     <Modal supportedOrientations={MODAL_ORIENTATIONS} visible={presented} transparent animationType="slide" onRequestClose={onDismiss} onShow={onShow} statusBarTranslucent>
-      <Pressable style={s.sheetBackdrop} onPress={onDismiss}>
-        <Pressable style={[s.sheet, { paddingBottom: space.xl + insets.bottom }]} onPress={() => { /* swallow */ }}>
-          <View style={s.stepIconPlate}>
+      {/* landscape: the sheet sits clear of the camera / nav bar (modals are outside any SafeAreaView) */}
+      <Pressable style={[s.sheetBackdrop, modalSides]} onPress={onDismiss}>
+        {/* Capped to the screen and scrolling (landscape: ~355pt sheet on a ~340-393pt
+            screen, icon / title went off the top); max 560 wide, centred; no icon in
+            compact mode (device test 2026-10-22). */}
+        <Pressable
+          style={[s.sheet, { paddingBottom: space.xl + insets.bottom, maxHeight: windowHeight - insets.top - 8, maxWidth: 560, width: '100%', alignSelf: 'center' }]}
+          onPress={() => { /* swallow */ }}
+        >
+          <ScrollView style={{ alignSelf: 'stretch' }} contentContainerStyle={{ alignItems: 'center', gap: space.md }} bounces={false} showsVerticalScrollIndicator={compact}>
+          <View style={[s.stepIconPlate, compact && { display: 'none' }]}>
             <Ionicons name="notifications-outline" size={30} color={palette.navy} />
           </View>
           <Text style={s.stepTitle}>{t('readiness:followPrompt.title')}</Text>
@@ -102,6 +114,7 @@ export const FollowNotificationPrompt: React.FC = () => {
               <Text style={s.laterText}>{t('readiness:followPrompt.dismiss')}</Text>
             </TouchableOpacity>
           </View>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>

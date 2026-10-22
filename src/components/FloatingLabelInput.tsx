@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { palette, radii, fonts, shadows, space, withAlpha } from '../styles/common.styles';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import { useModalSideInsets } from '../hooks/useLandscapeSidePadding';
 
 // ✅ TYPES
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -336,6 +337,9 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     return showClearButton && !!value && !isPassword && !isDatePicker && !isTimePicker;
   }, [showClearButton, value, isPassword, isDatePicker, isTimePicker]);
 
+  // landscape: Cancel / Done clear of the camera (modals are outside any SafeAreaView)
+  const modalSides = useModalSideInsets();
+
   // ✅ Shared iOS bottom-sheet wrapper for either picker
   const renderIosPickerModal = (
     visible: boolean,
@@ -349,7 +353,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
       animationType="slide"
       onRequestClose={onCancel}
     >
-      <TouchableOpacity style={styles.pickerBackdrop} activeOpacity={1} onPress={onCancel}>
+      <TouchableOpacity style={[styles.pickerBackdrop, modalSides]} activeOpacity={1} onPress={onCancel}>
         {/* Inner touchable swallows taps so pressing the sheet doesn't cancel */}
         <TouchableOpacity activeOpacity={1} style={styles.pickerSheet} onPress={() => {}}>
           <View style={styles.pickerBar}>

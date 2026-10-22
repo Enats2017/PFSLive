@@ -16,6 +16,7 @@ import { resultListStyle } from '../styles/ResultList.styles';
 import { useTranslation } from 'react-i18next';
 import { palette } from '../styles/common.styles';
 import { dropPosition, DropPos, POPUP_MAX } from '../utils/screenFit';
+import { useModalSideInsets } from '../hooks/useLandscapeSidePadding';
 
 export type { DropPos };
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
@@ -44,6 +45,7 @@ const Dropdown: React.FC<DropdownProps> = ({
   style,
 }) => {
   const { t } = useTranslation(['allrace', 'common']);
+  const modalSides = useModalSideInsets();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<DropPos>({ top: 0, left: 0, width: 0, maxHeight: POPUP_MAX });
   // Room to the right of the popup's left edge, measured at open time. The
@@ -60,7 +62,8 @@ const Dropdown: React.FC<DropdownProps> = ({
       const { width: screenW, height: screenH } = Dimensions.get('window');
       const p = dropPosition(x, y, w, h, screenW, screenH);
       setPos(p);
-      setMaxW(Math.max(p.width, screenW - p.left - 8));
+      // never past a right-side camera / nav bar in landscape (popup is outside any SafeAreaView)
+      setMaxW(Math.max(p.width, screenW - p.left - 8 - modalSides.paddingRight));
 
       setOpen(true);
 

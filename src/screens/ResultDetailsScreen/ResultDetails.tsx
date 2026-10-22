@@ -222,7 +222,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
 
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']} >
+            <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']} >
                 {/* The loading state kept the pre-redesign bar - a chevron and a
                     "..." placeholder on white - while the loaded and error
                     states both use AppHeader, so the screen changed shape as it
@@ -237,7 +237,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
                 <AppHeader showBack />
                 <ErrorScreen
                     type={error!.type}

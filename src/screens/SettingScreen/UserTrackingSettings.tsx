@@ -19,7 +19,7 @@ import { useLanguageStore } from '../../store/useLanguageStore';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
-import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
+import { useLandscapeSidePadding, useModalSideInsets } from '../../hooks/useLandscapeSidePadding';
 
 type Visibility = 'public' | 'private';
 
@@ -46,6 +46,9 @@ export const UserTrackingSettings: React.FC = () => {
     // landscape: the parent screen's SafeAreaView only pads the bottom, so the
     // cards and the sheet sat under the notch (audit 2026-10-22)
     const side = useLandscapeSidePadding();
+    // a Modal is outside any SafeAreaView: pad by the side insets in landscape on every
+    // platform (the screen rule returned 0 on Android 3-button — sheet under the nav bar)
+    const sheetSide = useModalSideInsets();
     // Plain-state mirror of keyboardOffset, only to cap the sheet height: the
     // sheet is lifted by the full keyboard height, so in landscape the title,
     // ✕ and input went off the top with nothing to scroll. The sheet is now at
@@ -325,13 +328,13 @@ export const UserTrackingSettings: React.FC = () => {
                         {
                             paddingBottom: (keyboardHeight > 0 ? 0 : insets.bottom) + 24,   // home-indicator inset is behind the keyboard while typing
                             maxHeight: windowHeight - keyboardHeight - insets.top - 8,
-                            paddingLeft: space.xxl + side.paddingLeft,
-                            paddingRight: space.xxl + side.paddingRight,
+                            paddingLeft: space.xxl + sheetSide.paddingLeft,
+                            paddingRight: space.xxl + sheetSide.paddingRight,
                         },
                         { transform: [{ translateY: Animated.subtract(slideAnim, keyboardOffset) }] },
                     ]}>
                         <View style={styles.sheetHandle} />
-                        <TouchableOpacity style={[styles.closeBtn, { right: 14 + side.paddingRight }]} onPress={closeModal} hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}>
+                        <TouchableOpacity style={[styles.closeBtn, { right: 14 + sheetSide.paddingRight }]} onPress={closeModal} hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}>
                             <Text style={styles.closeBtnText}>✕</Text>
                         </TouchableOpacity>
 

@@ -20,6 +20,7 @@ import axios from 'axios';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { palette, fonts, shadows, radii, space, withAlpha } from '../styles/common.styles';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import { useModalSideInsets } from '../hooks/useLandscapeSidePadding';
 
 // ─── Types ───────────────────────────────────────────────────────
 export interface Country {
@@ -116,6 +117,8 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   // portrait.
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  // landscape: the picker sheet clear of the camera / nav bar (modals are outside any SafeAreaView)
+  const modalSides = useModalSideInsets();
   const isLandscape = windowWidth > windowHeight;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -301,7 +304,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
         transparent
         onRequestClose={() => setShowModal(false)}
       >
-        <View style={[styles.modalOverlay, { paddingBottom: keyboardHeight }]}>
+        <View style={[styles.modalOverlay, modalSides, { paddingBottom: keyboardHeight }]}>
           <View
             style={[
               styles.modalContainer,

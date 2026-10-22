@@ -272,7 +272,7 @@ module.exports = function register({ M, load, test, SRC }) {
   // ── 9–12. HomeScreen Start flow (HomeScreen is not loadable here) ──────
   test('pending start: window refreshed when the popup button is pressed and when the listener re-shows it', () => {
     const s = read('screens/HomeScreen.tsx');
-    const btn = block(s, '{popupCopy.showSettingsButton && (', 600);
+    const btn = block(s, '{popupCopy.showSettingsButton && (', 900);   // the compact-button style made the block longer
     assert.ok(/setShowLocationPermissionModal\(false\);[\s\S]{0,300}if \(pendingStartRef\.current\) pendingStartAtRef\.current = Date\.now\(\);/.test(btn));
     const re = block(s, "'still_blocked_on_return'", 900);
     assert.ok(/pendingStartAtRef\.current = Date\.now\(\);[\s\S]*setShowLocationPermissionModal\(true\)/.test(re));
