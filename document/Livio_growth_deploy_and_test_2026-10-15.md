@@ -143,9 +143,10 @@ The 48 h push cron reads `oc_follower_app.notifications_enabled` — run the SQL
 cd livio_web
 git checkout growth_web_v0.1
 npm ci
-npm run test:follow    # 96 behavioural tests of the follow/login logic — must all pass
-npm run build          # your usual static export
+npm run test:follow    # 97 behavioural tests of the follow/login logic — must all pass
+NEXT_PUBLIC_BASE_PATH=/livio_website npm run build   # production base path (a local .env.local may set another)
 ```
+(Windows Git Bash: prefix `MSYS_NO_PATHCONV=1`, or Git Bash turns `/livio_website` into a Windows path.)
 Upload the export the way you normally do (it lives at `my.liviolive.com/livio_website`).
 Changed: `src/hooks/useAuth.tsx`, `src/hooks/useFollowManager.ts`, `src/services/allFavouritesService.ts`,
 `src/services/authService.ts`, `src/services/tokenService.ts`, `src/utils/followAuthSync.ts`, `src/utils/followStorage.ts`,
@@ -185,7 +186,7 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 | Repo | Command | Expected |
 |---|---|---|
 | App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 376 · 188 · 19 passed · exit 0 |
-| Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 425 passed, 0 failed, leftover rows 0 |
+| Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 435 passed, 0 failed (1 skipped on a local web build), leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
 | Web | `npm run test:follow` · `npx vitest run` · `node_modules/.bin/tsc --noEmit -p .` · `npx eslint .` | 96 passed · 77 passed · clean · clean |
@@ -400,9 +401,17 @@ The sequencing request is moot — the free session is already off on live (2026
 - `wp_endpoint` index — **already exists** (`idx_wp_endpoint`, 191-char prefix) on the live copy.
 
 ### Known, not done
-- S1 (verify the live result page shows the live position for `from_live=1`) — not checked by me on live; please open one share link on live.
-- Test suites are local only: app 376/376 (+ tracking 188, activation 19), server 425/425 (self-cleaning) + main's server suites, web 96/96 (`npm run test:follow`) + 77 vitest + type-check + lint.
-- Verified by reading only (need a live SendGrid / Expo call): the 48 h mail record upsert and its Throwable catch. (The push per-message retry and the single-message 400 are tested with a stand-in for Expo.)
+- Test suites are local only (all green 2026-10-22, run twice): app 376 (+ tracking 188, activation 19, distance button 20),
+  server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
+  DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 106 vitest + type-check + lint.
+- The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`
+  holds a local build; it passes on a build made with `NEXT_PUBLIC_BASE_PATH=/livio_website` (step 3).
+- Closed 2026-10-22 (now tested, no longer "read only"):
+  - S1 — a share link with `from_live=1` returns exactly the same live race info (previous / next point) as without it
+    (`tests/tracking_api/audit_2026_10_18_http_test.php`, live race fixture); the web picks the live card from the race status.
+    Opening one link on live after the deploy is a normal smoke check, not an open point.
+  - 48 h mail record — run in LIVE mode with a stand-in sender (round 28): the record is an upsert (last edition's row
+    overwritten), and a failing record is logged and the run goes on. Actual delivery by SendGrid / Expo can only be seen on live.
 
 ### Audit status (fourth exhaustive audit 2026-10-16 — everything fixable is fixed)
 Four full audits; every medium and low item that code can fix is fixed, each with a test that fails on the old code, plus one review pass per batch (its findings fixed and tested too).
@@ -426,7 +435,7 @@ Merge of main into the growth branches — checked 2026-10-21:
   holds back Get race-ready like the other popups; a dual-transport follower (phone + web on one row) gets one push
   per transport for the furthest checkpoint only.
 - `tests/tracking_api/audit_2026_10_18_http_test.php` (main) needs event 19 to have a RaceResult URL with
-  race_result_status = 1 in the local DB; the fresh live copy has it switched off after the race, so it was not run.
+  race_result_status = 1 in the local DB; switched on for the run only (then back to 0): 18 passed (2026-10-22).
 
 Product-decision items — round 25 (2026-10-18):
 - FIXED: someone who knew a web guest's private id could switch its row to "app" (blocking that guest's merge and web push), put their own Expo token on it, or set its email/language. App-only endpoints now refuse any browser-guest id (`api/FollowerGuard.php`); phones and the website are unaffected (no phone ever has a browser-shaped id — checked on the live copy: 2,139 browser ids, all web rows).
@@ -435,7 +444,13 @@ Product-decision items — round 25 (2026-10-18):
 - FIXED: a start moved by the organiser now reaches the registrations already made (event panel save + one-off SQL section 6), so home's countdown, the 1 h race-start push and the 48 h reminder use the new time.
 - STILL OPEN (phone half): anyone who knows a PHONE's device id can replace its Expo push token or follow list. Device ids are never shown or returned to others (checked), so this needs the id to leak first. A real fix needs a per-device secret in a future app release AND a product decision: on Android a reinstall keeps the device id but wipes the secret, so a guest phone would lose access to its own follows after reinstalling (logged-in phones could recover with their login).
 Accepted limits (by design, not bugs):
-- The 48 h mail's group A uses the race's start time: `oc_participant` doesn't store the distance, so a distance with a later start can't be looked up.
+- (Closed 2026-10-22) The 48 h mail's group A now uses the entrant's own distance start: order line (`oc_order_option`,
+  distance option) → app distance (`web_product_option_value_id`) — 99 % of web entries since September resolve. Event
+  time only when the distance is unknown or still a 00:00 / 00:01 placeholder.
+  ⚠ `web_product_option_value_id` is NOT added by this branch: it comes with the `gpx-single-source` /
+  `free-event-tracking` release (column + event-panel link + `backfill_web_distance_links.php`). Deploy order does not
+  matter: until that column exists the mail checks for it and uses the event's start exactly as before (tested with
+  the column removed, round 28); once that release is live (column + backfill) the distance start is used by itself.
 - Web: keepalive on tab close may be refused by some browsers for a cross-origin API; the pending change is then sent on the next visit (persisted).
 - Web: a guest list over the 1000 limit reverts only once that browser has had one accepted upload after this release.
 - A row whose `follow_seq` was never set (only old clients ever wrote it) can't raise a conflict until a new client uploads once; the web login union covers that first step.

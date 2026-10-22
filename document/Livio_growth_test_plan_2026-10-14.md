@@ -11,10 +11,10 @@ App branch `growth_v0.1` (PFSLive) · API branch `growth_api_v0.1` (larssie) · 
 | Tracking engine (regression) | `npm run test:tracking` | 188 / 188 |
 | Profile activation (regression) | `npm run test:activation` | 19 / 19 |
 | **Growth — app** | `npm run test:growth` | **376 / 376** |
-| **Growth — API + crons + web** | `php tests/growth/growth_api_test.php` (larssie, local only) | **425 / 425** |
+| **Growth — API + crons + web** | `php tests/growth/growth_api_test.php` (larssie, local only) | **435 / 435** (+1 skipped on a local web build) |
 | Segment distance (2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` (larssie) | 10 / 10 |
-| **Growth — web follow/login** | `npm run test:follow` (livio_web) | **96 / 96** |
-| Web (other) | `npx vitest run` (livio_web) | 77 / 77 |
+| **Growth — web follow/login** | `npm run test:follow` (livio_web) | **97 / 97** |
+| Web (other) | `npx vitest run` (livio_web) | 106 / 106 |
 
 Proof the app suite catches regressions: run against the pre-change code
 (`APP_SRC=<design_newv0.2 checkout>/src npm run test:growth`) → 64 of 67 fail; the 3 that pass
