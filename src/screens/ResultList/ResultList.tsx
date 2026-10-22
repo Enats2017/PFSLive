@@ -25,6 +25,7 @@ import ResultCardBeforeRace from './ResultCardBeforeRace';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useDimensions } from '../../hooks/useDimensions';
+import { landscapeSideInsets } from '../../utils/landscapeInsets';
 import {  ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 const StatItem = ({ label, value, highlight }: { label: string; value: number | string; highlight?: boolean }) => (
@@ -40,8 +41,11 @@ const Divider = () => <View style={resultListStyle.divider} />;
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
-    const { width, isLandscape: isLandscapeView } = useDimensions();
+    const { width, height, isLandscape: isLandscapeView } = useDimensions();
     const insets = useSafeAreaInsets();
+    // Side padding for the content under the header in landscape on a notch /
+    // Dynamic Island phone (0 in portrait) — see utils/landscapeInsets.
+    const side = landscapeSideInsets(insets, width, height);
     const isGestureNav = insets.bottom > 0;
     const isLandscape = width
     const {
@@ -287,6 +291,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 showBack
             />
 
+            <View style={{ flex: 1, paddingLeft: side.left, paddingRight: side.right }}>
             {!filtersInList && filterHeader}
             {initialLoad ? (
                 <View style={resultListStyle.center}>
@@ -348,6 +353,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                     )}
                 </View>
             )}
+            </View>
 
             {sectionType === 'follower' ? (
                 <BottomNavigationFollower

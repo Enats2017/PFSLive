@@ -118,6 +118,10 @@ so web first, then 2c, never hits this.) A browser tab left open on the OLD web 
 - `api/send_checkpoint_notifications_test.php`, `api/send_custom_checkpoint_notifications_test.php`, `api/send_race_start_notifications_test.php`
   (their test copies — same rule)
 - `api/ParticipantYearHelper.php`
+- `api/get_result_detail_api.php`, `api/get_favourite_api.php`, `api/get_favourite_all_events_api.php`,
+  `api/get_live_tracking_data_api.php` + their test copies `api/get_result_detail_test_api.php`,
+  `api/get_live_tracking_data_test_api.php` ("distance since last point": a timing point without km no longer
+  makes the next point count from the start — client feedback 2026-10-22)
 - `api/RaceReminder48hLib.php` (new)
 - `api/send_race_reminder_48h.php` (new — push cron)
 - `api/language/en/notification.php`, `api/language/fr/notification.php`, `api/language/nl/notification.php`
@@ -180,9 +184,10 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 364 · 188 · 19 passed · exit 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 370 · 188 · 19 passed · exit 0 |
 | Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 425 passed, 0 failed, leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
+| Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
 | Web | `npm run test:follow` · `npx vitest run` · `node_modules/.bin/tsc --noEmit -p .` · `npx eslint .` | 96 passed · 77 passed · clean · clean |
 
 ### Server (quick checks with curl / phpMyAdmin)
@@ -297,6 +302,40 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 35. Press Start, then Start again quickly / double-tap "Start anyway" → tracking starts once.
 36. Pull down Control Center (iOS) while a Start popup is waiting → nothing happens; going to Settings and back does.
 
+**Client feedback on the test build (2026-10-22)** — iPhone SE or mini (small), a recent iPhone (Dynamic
+Island), one Android; app language EN, NL and FR.
+37. Home: the logo in the navy header is clearly bigger, centred, not cut off.
+38. Home in Dutch: the green band reads "LIVE TRACKING & RESULTS" on one line.
+39. Home hero: "Follow your race / in real time" + "And keep up with the athletes you follow"
+    (NL "Volg je wedstrijd / in realtime" + "En blijf op de hoogte van de atleten die je volgt";
+    FR "Suivez votre course / en temps réel" + "Et ne manquez rien des athlètes que vous suivez").
+40. Dutch elsewhere: bottom tab "Results" (from race day; "Deelnemers" before), distance button "Results"
+    (from race day), past race "Result", participant card button "Results" (RaceResult entries), results
+    filter "Results", live bar on result cards "Live tracking".
+41. Text size: walk through every screen (login/register, home, event details, results list, result detail —
+    3 tabs, live map + popups, profile, membership, settings, every popup) → nothing cut off or overlapping.
+    Repeat on an iPhone with Settings → Accessibility → Display & Text Size → Larger Text one or two steps up.
+42. Results list in landscape (iPhone with notch/Dynamic Island AND Android): the list scrolls; filters and
+    statistics scroll away at the top; changing a filter still works; header icons, filters and cards stay
+    clear of the notch on both sides. Back to portrait → filters fixed at the top as before.
+43. Result detail in landscape: tabs and swiping between them work; content clear of the notch.
+44. Tap a result card anywhere (name, rank circle, stats) → athlete opens on the FIRST tap; the star only
+    follows / unfollows; every card shows a › arrow.
+45. Live race (Live events → event → distance → Results, or the bottom-bar Results tab during the race):
+    finished runner shows "FIN (RACE TIME)" · "RANK WOMEN/MEN n" · "FINISH" time of day (once);
+    a runner still racing shows the ETA of the next point in the middle; UTMB index (event with UTMB on)
+    is a small line under the name.
+46. Rank of 1000+ or "DNF" shows in full inside a wider green pill; 1-3 digits stay a circle.
+47. Dutch results: column label "KLASSEMENT …", nothing in the stat columns split mid-word (small phone too).
+48. Result detail → Timing points (Dutch): "Sinds vorige punt" / "Hoogtemeters sinds vorige punt"; distances
+    add up point to point (none counted from the start again after a point without km).
+49. Result detail → Race info → "Share result" → send to yourself (WhatsApp / Mail):
+    message = result line + ONE link `https://my.liviolive.com/livio_website/result_detail/?product_app_id=…&product_option_value_app_id=…&bib=…`;
+    open the link on another phone/computer → that runner's result page. A DNF runner's message shows "DNF"
+    instead of an empty time.
+50. Live map elevation chart: km labels slightly bigger, never overlapping.
+51. Regression: one normal tracking Start → Stop on a test race.
+
 ---
 
 ## 7. Status of everything discussed (client "livio improvements" message + plan)
@@ -362,7 +401,7 @@ The sequencing request is moot — the free session is already off on live (2026
 
 ### Known, not done
 - S1 (verify the live result page shows the live position for `from_live=1`) — not checked by me on live; please open one share link on live.
-- Test suites are local only: app 364/364 (+ tracking 188, activation 19), server 425/425 (self-cleaning) + main's server suites, web 96/96 (`npm run test:follow`) + 77 vitest + type-check + lint.
+- Test suites are local only: app 370/370 (+ tracking 188, activation 19), server 425/425 (self-cleaning) + main's server suites, web 96/96 (`npm run test:follow`) + 77 vitest + type-check + lint.
 - Verified by reading only (need a live SendGrid / Expo call): the 48 h mail record upsert and its Throwable catch. (The push per-message retry and the single-message 400 are tested with a stand-in for Expo.)
 
 ### Audit status (fourth exhaustive audit 2026-10-16 — everything fixable is fixed)

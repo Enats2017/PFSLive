@@ -62,7 +62,9 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
             name: raceInfo?.name ?? '',
             event: event?.race_name ?? '',
             distance: event?.distance_name ?? '',
-            time: raceInfo?.time ?? '',
+            // No finish time (DNF / DNS / DSQ): the status, not an empty
+            // "25km: " with nothing after it.
+            time: raceInfo?.time || (raceInfo?.participant_status ? statusText(raceInfo.participant_status) : ''),
             position,
         };
         const text = t(

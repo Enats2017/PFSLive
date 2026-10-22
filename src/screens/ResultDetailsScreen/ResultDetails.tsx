@@ -20,6 +20,7 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { AppHeader } from '../../components/common/AppHeader';
 import { useDimensions } from '../../hooks/useDimensions';
+import { landscapeSideInsets } from '../../utils/landscapeInsets';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
@@ -28,12 +29,16 @@ const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo'];
 
 const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     const { t } = useTranslation(['resultdetails', 'common']);
-    const { width: windowWidth } = useDimensions();
+    const { width: windowWidth, height: windowHeight } = useDimensions();
     const [containerWidth, setContainerWidth] = useState(0);
     const width = containerWidth || windowWidth;
     const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
     const isLandscape = windowWidth
+    // Side padding in landscape on a notch / Dynamic Island phone (0 in
+    // portrait). On a wrapper OUTSIDE the measured View, so the pages are
+    // sized to the padded width — see utils/landscapeInsets.
+    const side = landscapeSideInsets(insets, windowWidth, windowHeight);
     const {
         raceStatus,
         product_app_id,
@@ -245,6 +250,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
             <AppHeader title={data?.race_info?.name ?? ''} showBack />
+            <View style={{ flex: 1, paddingLeft: side.left, paddingRight: side.right }}>
             <View
                 style={{ flex: 1 }}
                 onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
@@ -324,6 +330,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     onSubmit={handlePasswordSubmit}
                     onClose={handlePasswordModalClose}
                 />
+            </View>
             </View>
         </SafeAreaView>
     );

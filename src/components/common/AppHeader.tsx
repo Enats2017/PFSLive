@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StatusBar, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { headerStyles } from '../../styles/header.styles';
 import { useNavigation } from '@react-navigation/native';
 import { tokenService } from '../../services/tokenService';
-import { palette } from '../../styles/common.styles';
+import { palette, space } from '../../styles/common.styles';
+import { landscapeSideInsets } from '../../utils/landscapeInsets';
 
 const HIT = { top: 10, bottom: 10, left: 10, right: 10 };
 
@@ -50,6 +51,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  // Landscape on a notch / Dynamic Island phone: keep the icons and the band
+  // text out of the side safe area (0 in portrait) — utils/landscapeInsets.
+  const { width, height } = useWindowDimensions();
+  const side = landscapeSideInsets(insets, width, height);
 
   const handleBackPress = () => {
     if (onBack) return onBack();
@@ -98,7 +103,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         // The bar paints behind the status bar, so it carries the top inset.
-        style={[headerStyles.bar, { paddingTop: insets.top + 16 }]}
+        style={[headerStyles.bar, { paddingTop: insets.top + 16, paddingLeft: space.xl + side.left, paddingRight: space.xl + side.right }]}
       >
         <View style={headerStyles.row}>
           {showBack && (
@@ -193,7 +198,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       </LinearGradient>
 
       {!!title && (
-        <View style={headerStyles.band}>
+        <View style={[headerStyles.band, { paddingLeft: space.xl + side.left, paddingRight: space.xl + side.right }]}>
           <Text style={headerStyles.bandText} numberOfLines={1}>
             {title}
           </Text>
