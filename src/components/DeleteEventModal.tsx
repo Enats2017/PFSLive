@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, palette, fonts, space, shadows, withAlpha } from '../styles/common.styles';
 import { dialogTone, RING_TINT } from './ui';
 import { AthleteEvent } from '../services/athleteProfileService';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface Props {
     visible: boolean;
@@ -63,7 +64,7 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
     if (!internalVisible) return null;
 
     return (
-        <Modal statusBarTranslucent transparent visible={internalVisible} animationType="none" onRequestClose={onCancel}>
+        <Modal supportedOrientations={MODAL_ORIENTATIONS} statusBarTranslucent transparent visible={internalVisible} animationType="none" onRequestClose={onCancel}>
             <View style={styles.overlay}>
                 <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onCancel} />
 

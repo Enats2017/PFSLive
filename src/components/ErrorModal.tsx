@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
 import { RING_TINT } from './ui';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface ErrorModalProps {
   visible: boolean;
@@ -30,7 +31,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
   const { t } = useTranslation();
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="fade"

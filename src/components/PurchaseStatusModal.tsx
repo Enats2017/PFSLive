@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, palette, radii, shadows, space, type, withAlpha } from '../styles/common.styles';
 import { dialogTone, RING_TINT } from './ui';
 import { useTranslation } from 'react-i18next';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 type PurchaseStatus = 'processing' | 'success' | 'error';
 
@@ -102,7 +103,7 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
     };
 
     return (
-        <Modal
+        <Modal supportedOrientations={MODAL_ORIENTATIONS}
             visible={visible}
             transparent
             animationType="fade"

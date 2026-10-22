@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
 import { RING_TINT } from './ui';
 import { useTranslation } from 'react-i18next';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 export type ModalActionType =  'disabled' | 'locked' | 'hidden';
 
@@ -73,7 +74,7 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
     const icon = ICON_BY_ACTION[actionType];
 
     return (
-        <Modal statusBarTranslucent visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+        <Modal supportedOrientations={MODAL_ORIENTATIONS} statusBarTranslucent visible={visible} transparent animationType="fade" onRequestClose={onClose}>
             <TouchableWithoutFeedback onPress={onClose}>
                 <View style={styles.backdrop}>
                     <TouchableWithoutFeedback onPress={() => {}}>

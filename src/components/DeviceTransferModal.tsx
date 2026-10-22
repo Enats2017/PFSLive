@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Dialog, dialogStyles } from './ui';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface DeviceTransferModalProps {
   visible: boolean;
@@ -32,7 +33,7 @@ const DeviceTransferModal: React.FC<DeviceTransferModalProps> = ({
   const { t } = useTranslation(['login']);
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="fade"

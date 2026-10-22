@@ -117,7 +117,7 @@ module.exports = function register({ M, load, test, SRC }) {
   test('iOS: follow sheet presented only after a closing modal has gone (no stuck sheet)', () => {
     const s = read('components/FollowNotificationPrompt.tsx');
     assert.ok(/FOLLOW_SHEET_IOS_DELAY_MS = 600/.test(s));
-    assert.ok(/<Modal visible=\{presented\}/.test(s));
+    assert.ok(/<Modal (?:supportedOrientations=\{MODAL_ORIENTATIONS\} )?visible=\{presented\}/.test(s));
     assert.ok(/clearTimeout\(timer\)/.test(s), 'timer cleared when hidden/unmounted');
   });
   test('push-token timeout timer is cleared after the fetch', () => {

@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, palette, fonts, radii, withAlpha } from '../styles/common.styles';
 import { dialogStyles, dialogTone } from './ui';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface UndoConfirmModalProps {
   visible: boolean;
@@ -28,7 +29,7 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
   const { t } = useTranslation(['undoModal']);
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="fade"

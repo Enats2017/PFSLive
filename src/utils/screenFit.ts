@@ -46,3 +46,36 @@ export const filtersOnePerRow = (width: number | undefined, fontScale: number | 
   return row / 2.6 - FILTER_TAB_CHROME < FILTER_LONGEST_TYPE_WORD * s
     || row / 2 - FILTER_TAB_CHROME < FILTER_LONGEST_WORD * s;
 };
+
+// Result-list filter dropdown (components/FilterDropdown.tsx).
+export interface DropPos {
+  top: number;
+  left: number;
+  width: number;
+  /** Set when the list opens ABOVE the button (more room there). */
+  bottom?: number;
+  maxHeight: number;
+}
+
+export const POPUP_MAX = 420;
+const EDGE = 8;
+
+/**
+ * Where the option list goes. It used to always open below the button with a
+ * fixed 420pt max height — in landscape (~360-430pt tall) most of it, or all of
+ * it for a button low on the screen, was off-screen. Now it opens below when
+ * there is room, above when there is more room there, and never runs past the
+ * screen edge.
+ */
+export const dropPosition = (
+  x: number, y: number, w: number, h: number, screenW: number, screenH: number,
+): DropPos => {
+  const below = screenH - (y + h) - EDGE;
+  const above = y - EDGE;
+  const width = Math.max(w, 160);
+  const left = Math.max(EDGE, Math.min(x, screenW - width - EDGE));
+  if (below >= Math.min(POPUP_MAX, 240) || below >= above) {
+    return { top: y + h, left, width, maxHeight: Math.min(POPUP_MAX, below) };
+  }
+  return { top: 0, bottom: screenH - y, left, width, maxHeight: Math.min(POPUP_MAX, above) };
+};

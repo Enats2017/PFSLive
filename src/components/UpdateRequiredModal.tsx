@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform } from 'react
 import { spacing, typography, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface UpdateRequiredModalProps {
   visible: boolean;
@@ -34,7 +35,7 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
   }
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent={true}
       animationType="fade"

@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Dialog, dialogStyles } from './ui';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface EmailChangeConfirmModalProps {
   visible: boolean;
@@ -34,7 +35,7 @@ const EmailChangeConfirmModal: React.FC<EmailChangeConfirmModalProps> = ({
   const { t } = useTranslation(['profile']);
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="fade"

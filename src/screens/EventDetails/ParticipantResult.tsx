@@ -29,6 +29,7 @@ import { getCurrentLanguageId } from '../../i18n';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
 
 interface ParticipantResultRouteParams {
   product_app_id: number;
@@ -490,7 +491,7 @@ const ParticipantResult = () => {
       />
 
       {/* ✅ Mail sent modal */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         visible={mailSentVisible}
         transparent
         animationType="fade"

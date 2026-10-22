@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { palette, fonts, shadows, radii, space, withAlpha } from '../styles/common.styles';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 // ─── Types ───────────────────────────────────────────────────────
 export interface Country {
@@ -260,7 +261,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
       {/* ══════════════════════════════════════════════════════════
        *  MODAL
        * ══════════════════════════════════════════════════════════ */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         visible={showModal}
         animationType="slide"
         transparent

@@ -72,11 +72,12 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
     return (
         <View style={[commonStyles.card, { marginBottom: spacing.md }]}>
             <View style={styles.info}>
-                <Text style={[commonStyles.title, { marginBottom: spacing.sm }]} numberOfLines={1}>{item.name}</Text>
+                {/* no line limit (was 1): see EventCardLive */}
+                <Text style={[commonStyles.title, { marginBottom: spacing.sm }]}>{item.name}</Text>
                 <View style={styles.dateRow}>
                     <MaterialCommunityIcons name="calendar-month-outline" size={16} color={palette.textMuted} style={{ marginRight: 4 }} />
                     {/* ✅ Same overflow guard as EventCardLive — see the note there. */}
-                    <Text style={[commonStyles.date, { flexShrink: 1 }]} numberOfLines={1}>
+                    <Text style={[commonStyles.date, { flexShrink: 1 }]} numberOfLines={2}>
                         {metaLine}
                     </Text>
                 </View>

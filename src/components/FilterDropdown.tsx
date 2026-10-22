@@ -15,14 +15,12 @@ import Entypo from '@expo/vector-icons/Entypo';
 import { resultListStyle } from '../styles/ResultList.styles';
 import { useTranslation } from 'react-i18next';
 import { palette } from '../styles/common.styles';
+import { dropPosition, DropPos, POPUP_MAX } from '../utils/screenFit';
+
+export type { DropPos };
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 
-
-export interface DropPos {
-  top: number;
-  left: number;
-  width: number;
-}
 
 export interface FilterOption {
   label: string;
@@ -47,7 +45,7 @@ const Dropdown: React.FC<DropdownProps> = ({
 }) => {
   const { t } = useTranslation(['allrace', 'common']);
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<DropPos>({ top: 0, left: 0, width: 0 });
+  const [pos, setPos] = useState<DropPos>({ top: 0, left: 0, width: 0, maxHeight: POPUP_MAX });
   const btnRef = useRef<View | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -56,12 +54,8 @@ const Dropdown: React.FC<DropdownProps> = ({
     if (!btnRef.current) return;
 
     btnRef.current.measureInWindow((x, y, w, h) => {
-      const screenW = Dimensions.get('window').width;
-      setPos({
-        top: y + h,
-        left: Math.min(x, screenW - w - 8),
-        width: Math.max(w, 160),
-      });
+      const { width: screenW, height: screenH } = Dimensions.get('window');
+      setPos(dropPosition(x, y, w, h, screenW, screenH));
 
       setOpen(true);
 
@@ -130,7 +124,7 @@ const Dropdown: React.FC<DropdownProps> = ({
       </TouchableOpacity>
 
       {open && (
-        <Modal transparent animationType="none" onRequestClose={closeMenu}>
+        <Modal supportedOrientations={MODAL_ORIENTATIONS} transparent animationType="none" onRequestClose={closeMenu}>
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
             activeOpacity={1}
@@ -141,11 +135,10 @@ const Dropdown: React.FC<DropdownProps> = ({
             style={[
               resultListStyle.popup,
               {
-                top: pos.top,
+                ...(pos.bottom !== undefined ? { bottom: pos.bottom } : { top: pos.top }),
                 left: pos.left,
                 minWidth: pos.width,
-                  maxHeight: 420,  
-                
+                maxHeight: pos.maxHeight,
                 opacity: fadeAnim,
                 transform: [{ scaleY: scaleAnim }],
               },

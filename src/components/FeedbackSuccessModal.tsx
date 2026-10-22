@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, spacing, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
 import { RING_TINT } from './ui';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface FeedbackSuccessModalProps {
     visible: boolean;
@@ -94,7 +95,7 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
     }, [visible]);
 
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+        <Modal supportedOrientations={MODAL_ORIENTATIONS} visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
             <View style={styles.backdrop}>
                 <Animated.View
                     style={[

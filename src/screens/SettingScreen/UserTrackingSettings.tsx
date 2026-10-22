@@ -17,6 +17,7 @@ import { saveLanguage, getLanguageCodeFromId } from '../../i18n';
 import { useLanguageStore } from '../../store/useLanguageStore';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
 
 type Visibility = 'public' | 'private';
 
@@ -300,7 +301,7 @@ export const UserTrackingSettings: React.FC = () => {
                 )}
             </ScrollView>
 
-            <Modal transparent visible={modalVisible} animationType="none" onRequestClose={closeModal}>
+            <Modal supportedOrientations={MODAL_ORIENTATIONS} transparent visible={modalVisible} animationType="none" onRequestClose={closeModal}>
                 <View style={styles.modalOverlay}>
                     <TouchableOpacity style={styles.modalBackdrop} onPress={closeModal} activeOpacity={1} />
                     <Animated.View style={[

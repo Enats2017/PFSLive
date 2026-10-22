@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { palette, radii, fonts, shadows, space, withAlpha } from '../styles/common.styles';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 // ✅ TYPES
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -301,7 +302,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     onConfirm: () => void,
     picker: React.ReactNode,
   ) => (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="slide"

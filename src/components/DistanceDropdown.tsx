@@ -6,6 +6,7 @@ import { liveTrackingStyles } from '../styles/liveTracking.styles';
 import { palette } from '../styles/common.styles';
 import { useTranslation } from 'react-i18next';
 import { RaceStatePill } from './RaceStatePill';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface DistanceDropdownProps {
     distances: DistanceOption[];
@@ -51,7 +52,7 @@ export const DistanceDropdown: React.FC<DistanceDropdownProps> = ({
                 <Ionicons name="chevron-down" size={20} color={palette.ink} />
             </TouchableOpacity>
 
-            <Modal
+            <Modal supportedOrientations={MODAL_ORIENTATIONS}
                 visible={isOpen}
                 transparent
                 animationType="fade"

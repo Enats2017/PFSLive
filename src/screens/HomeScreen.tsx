@@ -68,6 +68,7 @@ import { FanEmailModal } from '../components/Fanemailmodal';
 import { fanEmailStorage } from '../utils/fanEmailStorage';
 import { formatClockTime, formatEventDate } from '../utils/timeFormat';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../constants/analyticsScreens';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface StandardApiResponse<T = any> {
   success: boolean;
@@ -2265,7 +2266,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       {/* ✅ Start-time battery optimisation (Android) — see startGPSTracking */}
       {Platform.OS === 'android' && (
-        <Modal
+        <Modal supportedOrientations={MODAL_ORIENTATIONS}
           transparent
           visible={showBatteryStartModal}
           animationType="fade"
@@ -2303,7 +2304,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       )}
 
       {/* ✅ Start tracking confirmation */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={showStartConfirmModal}
         animationType="fade"
@@ -2348,7 +2349,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       {/* ✅ Stop tracking confirmation — before/after-gun copy. The safe choice
           (Keep tracking) is the primary button: a stop cannot be undone. */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={stopConfirmMode !== null}
         animationType="fade"
@@ -2389,7 +2390,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </Modal>
 
       {/* ✅ Start failed — the error, one OK button */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={startErrorMessage !== null}
         animationType="fade"
@@ -2419,7 +2420,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </Modal>
 
       {/* ✅ Manual override — start sending now, ignoring the race start time */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={showOverrideModal}
         animationType="fade"
@@ -2456,7 +2457,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </Modal>
 
       {/* ✅ Early tracking warning modal — shown when race is more than 24h away */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={showEarlyTrackingModal}
         animationType="fade"
@@ -2497,7 +2498,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       {/* ✅ Location-permission modal — blocks Start, and is also reachable by
           tapping the mid-race health banner. Same notif* skeleton as every
           other modal on this screen. */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={showLocationPermissionModal}
         animationType="fade"
@@ -2679,7 +2680,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </Modal>
 
       {/* ✅ Power Saving Mode modal — blocks tracking when battery saver is ON */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={showPowerSavingModal}
         animationType="fade"
@@ -2742,7 +2743,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
 
       {/* ✅ Foreground notification popup */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={notificationPopup.visible}
         animationType="fade"

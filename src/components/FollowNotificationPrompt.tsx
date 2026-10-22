@@ -15,6 +15,7 @@ import { useFollowPromptStore, markFollowPromptDismissed, setFollowPromptAsking 
 import { notificationPermissionService } from '../services/notificationPermissionService';
 import { analyticsService } from '../services/analyticsService';
 import { watchForOsPrompt } from '../utils/permissionPrompt';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 /** iOS: wait for a closing modal (password modal ~300 ms animation) first. */
 export const FOLLOW_SHEET_IOS_DELAY_MS = 600;
@@ -80,7 +81,7 @@ export const FollowNotificationPrompt: React.FC = () => {
   }, [hide]);
 
   return (
-    <Modal visible={presented} transparent animationType="slide" onRequestClose={onDismiss} onShow={onShow} statusBarTranslucent>
+    <Modal supportedOrientations={MODAL_ORIENTATIONS} visible={presented} transparent animationType="slide" onRequestClose={onDismiss} onShow={onShow} statusBarTranslucent>
       <Pressable style={s.sheetBackdrop} onPress={onDismiss}>
         <Pressable style={[s.sheet, { paddingBottom: space.xl + insets.bottom }]} onPress={() => { /* swallow */ }}>
           <View style={s.stepIconPlate}>

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import FloatingLabelInput from './FloatingLabelInput';
 import { commonStyles, palette, fonts, space, shadows, withAlpha } from '../styles/common.styles';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface Props {
     visible: boolean;
@@ -107,7 +108,7 @@ export const TrackingPasswordModal: React.FC<Props> = ({
     };
 
     return (
-        <Modal statusBarTranslucent
+        <Modal supportedOrientations={MODAL_ORIENTATIONS} statusBarTranslucent
             transparent
             visible={visible}
             animationType="none"

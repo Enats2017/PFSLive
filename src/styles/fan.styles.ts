@@ -84,6 +84,10 @@ export const fanstyle = StyleSheet.create({
 
   eventCard: {
     width: 160,
+    // Fills its touchable, which the horizontal row stretches to the tallest
+    // card: every "Next events" card is the same height whatever the name's
+    // length (a 2-line name made its card taller than the rest).
+    flex: 1,
     backgroundColor: palette.surface,
     borderRadius: 14,
     overflow: "hidden",
@@ -112,6 +116,10 @@ export const fanstyle = StyleSheet.create({
   // },
   eventInfo: {
     padding: 12,
+    // name at the top, date row pinned to the bottom — the same layout in
+    // every card of the row
+    flex: 1,
+    justifyContent: "space-between",
   },
   eventName: {
     fontFamily: fonts.bodySemi,

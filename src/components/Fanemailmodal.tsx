@@ -7,6 +7,7 @@ import { spacing, commonStyles, palette, fonts } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
 import FloatingLabelInput from './FloatingLabelInput';
 import { fanEmailApi } from '../services/Fanemailservice';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 
 
@@ -101,7 +102,7 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
     }, [onSkip]);
 
     return (
-        <Modal transparent visible={visible} animationType="fade" statusBarTranslucent onRequestClose={handleSkipPress}>
+        <Modal supportedOrientations={MODAL_ORIENTATIONS} transparent visible={visible} animationType="fade" statusBarTranslucent onRequestClose={handleSkipPress}>
             <View style={homeStyles.notifBackdrop}>
                 <View style={homeStyles.notifWrapper}>
                     <Animated.View

@@ -123,7 +123,7 @@ module.exports = ({ test, SRC }) => {
       // each count is its own item in a wrapping row — the row wraps, the item never needs "…"
       'components/ProfileCard.tsx:90', 'components/ProfileCard.tsx:98', 'components/ProfileCard.tsx:112',
       // distance · bib · wave / bib · distance · nation · age: data lines under a name
-      'screens/EventDetails/ParticipantCard.tsx:183', 'screens/EventDetails/ParticipantResult.tsx:325',
+      'screens/EventDetails/ParticipantCard.tsx:183', 'screens/EventDetails/ParticipantResult.tsx:326',
       'screens/FavouriteScreen/FavouriteCard.tsx:139', 'screens/ResultDetailsScreen/ResultDetails.tsx:262',
       'screens/ResultList/ParticipantCard.tsx:54',
       'screens/ResultList/ResultCardBeforeRace.tsx:117', 'screens/ResultList/ResultCardLive.tsx:216',

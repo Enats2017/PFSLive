@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, palette, fonts, shadows, space, withAlpha } from '../styles/common.styles';
 import { useNavigation } from '@react-navigation/native';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 type RegistrationStatus =
   | 'registered'
@@ -166,7 +167,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="none"

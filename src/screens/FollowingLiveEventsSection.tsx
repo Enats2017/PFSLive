@@ -71,7 +71,9 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                         <View style={homeStyles.cardTop}>
                             {/* Left: name + time */}
                             <View style={homeStyles.eventBody}>
-                                <Text style={commonStyles.title} numberOfLines={1}>
+                                {/* No line limit (was 1): long event names were cut with "…" —
+                                    the name column is flex 1 beside the countdown, so it wraps. */}
+                                <Text style={commonStyles.title}>
                                     {event.event_name}
                                 </Text>
                                

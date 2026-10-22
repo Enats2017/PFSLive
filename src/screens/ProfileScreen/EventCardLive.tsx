@@ -71,14 +71,15 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
     return (
         <View style={[commonStyles.card, { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }]}>
             <View style={styles.info}>
-                <Text style={commonStyles.title} numberOfLines={1}>{item.name}</Text>
+                {/* no line limit (was 1): a long event name was cut with "…" (device test 2026-10-22) */}
+                <Text style={commonStyles.title}>{item.name}</Text>
                 <View style={styles.dateRow}>
                     <MaterialCommunityIcons name="calendar-month-outline" size={13} color={palette.textMuted} style={{ marginRight: 4 }} />
                     {/* ✅ flexShrink + numberOfLines so a long "26 August 2026 12:00 AM" ellipsises
                         instead of running under the delete/edit/view buttons. RN defaults flex
                         items to flexShrink: 0, so without this the Text keeps its intrinsic width
                         and overflows the flex:1 info column. Matches the title Text above. */}
-                    <Text style={[commonStyles.date, { flexShrink: 1 }]} numberOfLines={1}>
+                    <Text style={[commonStyles.date, { flexShrink: 1 }]} numberOfLines={2}>
                         {item.race_date_formatted} {formatClockTime(item.race_time)}
                     </Text>
                 </View>

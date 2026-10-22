@@ -543,6 +543,9 @@ export const homeStyles = StyleSheet.create({
     color: palette.ink,
     fontFamily: fonts.bodySemi,
         fontSize: 15,
-
+    // beside the 24pt icon: a long label ("Suivre l'événement", larger text)
+    // wraps inside the button instead of running past it
+    flexShrink: 1,
+    textAlign: 'center',
         }
 });

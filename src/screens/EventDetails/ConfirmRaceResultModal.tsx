@@ -14,6 +14,7 @@ import { RaceResultData } from '../../services/eventDetailService';
 import { commonStyles, palette, fonts, shadows, radii, space, withAlpha } from '../../styles/common.styles';
 import { RING_TINT } from '../../components/ui';
 import { Ionicons } from '@expo/vector-icons';
+import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
 
 interface ConfirmRaceResultModalProps {
   visible: boolean;
@@ -49,7 +50,7 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
   };
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="slide"
