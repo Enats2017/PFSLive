@@ -173,14 +173,16 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
         </View>
 
         <View style={detailsStyles.info}>
-          <Text style={detailsStyles.rowName} numberOfLines={1}>{fullName}</Text>
+          {/* 2 lines (was 1): long names / team names were cut to "…" */}
+          <Text style={detailsStyles.rowName} numberOfLines={2}>{fullName}</Text>
           {/* City + country is one phrase: it wraps rather than being cut. */}
           <Text style={detailsStyles.rowMeta} numberOfLines={2}>
             {[item.city, item.country].filter(Boolean).join(' \u00b7 ')}
           </Text>
           {/* Distance, bib and wave read as one line in the deck rather than
-              three stacked rows. */}
-          <Text style={detailsStyles.rowMeta} numberOfLines={1}>
+              three stacked rows. 2 lines (was 1): with a wave label the
+              line ran past the column and the wave was cut off. */}
+          <Text style={detailsStyles.rowMeta} numberOfLines={2}>
             {[
               item.race_distance,
               hasBibNumber ? `${t('details:tracking.bib')} ${item.bib_number}` : null,

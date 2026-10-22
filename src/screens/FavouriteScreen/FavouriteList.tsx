@@ -18,8 +18,15 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 import { Ionicons } from '@expo/vector-icons';
+
+// FAB bottom offset above the bottom bar: 40 in portrait keeps it where it
+// sat before (was 140 from the screen bottom, nav ~77 + inset), space.lg in
+// landscape where the list area is short. Clearance = button 56 + offset + gap.
+const FAB_BOTTOM_PORTRAIT = 40;
+const fabClearance = (bottom: number) => 56 + bottom + space.lg;
 
 const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const {
@@ -32,10 +39,17 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         product_option_value_app_id,
     } = route.params;
 
-    const { width } = useDimensions();
-    const insets = useSafeAreaInsets(); 
+    const { width, height } = useDimensions();
+    const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // A real boolean: this was `= width` (always truthy), so the SafeAreaView
+    // took left/right edges in PORTRAIT on 3-button Android too.
+    const isLandscape = width > height;
+    const fabBottom = isLandscape ? space.lg : FAB_BOTTOM_PORTRAIT;
+    // Notch / Dynamic Island in landscape on gesture phones, where the
+    // SafeAreaView below only takes the bottom edge (0 everywhere else).
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
     const { t } = useTranslation(['favourite', 'common']);
     const [favourites, setFavourites] = useState<FavouriteItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -198,7 +212,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
 
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={event_name} showBack />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={palette.navy} />
@@ -214,7 +228,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={event_name} showBack />
                 {/* 25_Favourites.png: one line saying what the list is. */}
                 <View style={favstyle.subHeader}>
@@ -238,37 +252,54 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                 rendered in the error branch, so the populated list - the state
                 people actually see - had nothing between the lime band and the
                 first card, and the cards read as glued to the header. */}
-            <View style={favstyle.subHeader}>
+            {/* Gutter + notch inset added together: spreading sidePadding here
+                would replace the 20pt gutter with 0 in portrait. */}
+            <View style={[favstyle.subHeader, {
+                paddingLeft: space.xl + sidePadding.paddingLeft,
+                paddingRight: space.xl + sidePadding.paddingRight,
+            }]}>
                 <Text style={favstyle.subHeaderText}>{t('favourite:subheader')}</Text>
             </View>
 
-            <FlatList
-                data={favourites}
-                keyExtractor={keyExtractor}
-                renderItem={renderItem}
-                onEndReached={loadMore}
-                onEndReachedThreshold={0.5}
-                contentContainerStyle={{
-                    // The page gutter is 20 everywhere else; this list was at 8.
-                    paddingHorizontal: space.xl,
-                    paddingTop: spacing.lg,
-                    paddingBottom: spacing.xxxl,
-                    flexGrow: 1,
-                }}
-                ListFooterComponent={renderFooter}
-                ListEmptyComponent={renderEmptyComponent}
-            />
+            {/* Body between the sub-header and the bottom bar. The FAB is
+                anchored to THIS box (bottom-right, above the bottom bar) instead
+                of the screen's bottom edge + a fixed 140pt measured once at
+                module load — in landscape that put it over the middle of the
+                cards. The list sits in its own padded box so the FAB's offsets
+                never depend on how Yoga treats padding for absolute children. */}
+            <View style={{ flex: 1 }}>
+                <View style={[{ flex: 1 }, sidePadding]}>
+                    <FlatList
+                        data={favourites}
+                        keyExtractor={keyExtractor}
+                        renderItem={renderItem}
+                        onEndReached={loadMore}
+                        onEndReachedThreshold={0.5}
+                        contentContainerStyle={{
+                            // The page gutter is 20 everywhere else; this list was at 8.
+                            paddingHorizontal: space.xl,
+                            paddingTop: spacing.lg,
+                            // FAB (56) + its bottom offset + a gap, so the last card
+                            // can scroll clear above the button (was 32: never did).
+                            paddingBottom: fabClearance(fabBottom),
+                            flexGrow: 1,
+                        }}
+                        ListFooterComponent={renderFooter}
+                        ListEmptyComponent={renderEmptyComponent}
+                    />
+                </View>
 
-            <View style={favstyle.addButtonContainer}>
-                <TouchableOpacity
-                    style={[favstyle.addButton,{right: isLandscape && !isGestureNav ? insets.right : 0,}]}
-                    activeOpacity={0.8}
-                    onPress={handleAddPress}
-                >
-                    <View style={favstyle.iconWrapper}>
-                        <MaterialIcons name="person-add-alt" size={30} color={palette.surface} />
-                    </View>
-                </TouchableOpacity>
+                <View style={[favstyle.addButtonContainer, { bottom: fabBottom, right: space.xl + sidePadding.paddingRight }]}>
+                    <TouchableOpacity
+                        style={favstyle.addButton}
+                        activeOpacity={0.8}
+                        onPress={handleAddPress}
+                    >
+                        <View style={favstyle.iconWrapper}>
+                            <MaterialIcons name="person-add-alt" size={30} color={palette.surface} />
+                        </View>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {sectionType === 'follower' ? (

@@ -93,7 +93,16 @@ export const liveTrackingStyles = StyleSheet.create({
         padding: spacing.xl,
         width: '90%',
         maxWidth: 400,
+        // Never taller than the map overlay; the body (popupBody) scrolls
+        // instead. Without it the X ended up above the overlay (audit 2026-10-22).
+        maxHeight: '90%',
   },
+    // ScrollView around the popup body: content height until the card hits
+    // its maxHeight, then it scrolls.
+    popupBody: {
+        flexGrow: 0,
+        flexShrink: 1,
+    },
     popupCloseBtn: {
         position: 'absolute',
         top: 12,
@@ -347,6 +356,10 @@ export const liveTrackingStyles = StyleSheet.create({
     dropdownButtonText: {
         fontFamily: fonts.bodySemi,
         fontSize: 15,
+        // ✅ Shrink + wrap beside the chevron: a long distance name pushed the
+        // chevron out of the button (layout audit 2026-10-22).
+        flexShrink: 1,
+        marginRight: spacing.sm,
 
         color: palette.ink,
     },
@@ -379,6 +392,9 @@ export const liveTrackingStyles = StyleSheet.create({
     dropdownItemText: {
         fontFamily: fonts.body,
     fontSize: 15,
+        // ✅ Wrap beside the checkmark instead of pushing it out of the row.
+        flexShrink: 1,
+        marginRight: spacing.sm,
         color: palette.ink,
     },
     dropdownItemTextActive: {

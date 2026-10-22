@@ -7,6 +7,7 @@ import {
     ActivityIndicator,
     Linking,
     Alert,
+    useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { commonStyles, palette } from '../../styles/common.styles';
 import { AppHeader } from '../../components/common/AppHeader';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { Button } from '../../components/ui';
 import { membershipPlansStyle as styles, COLORS } from '../../styles/membershipPlans.styles';
 import { useMembershipPlans, PlanId, PLAN_IDS } from '../../hooks/useMembershipplans';
@@ -53,6 +55,15 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     // RESULT effect below, which doesn't otherwise receive it.
     const pendingProductIdRef = useRef<string | null>(null);
     const insets = useSafeAreaInsets();
+    const sidePadding = useLandscapeSidePadding();   // landscape: body clear of the notch (audit 2026-10-22)
+    const safeEdges = useSafeAreaEdges();
+    // ✅ Below 400pt or with larger text the sessions badge gets its own line
+    // under the name (layout audit 2026-10-22): name, badge, price and period
+    // on one row left the badge empty / "5 sess…" at 320-360pt, and at ×1.35
+    // the row ran ~50pt past the card. Wider phones keep the one-row layout
+    // (see the layout note in membershipPlans.styles.ts).
+    const { width: windowWidth, fontScale } = useWindowDimensions();
+    const badgeOwnLine = windowWidth < 400 || fontScale > 1;
 
 
     const {
@@ -306,6 +317,19 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     const renderPlanCard = (id: PlanId) => {
         const plan = getPlan(id);
         const isSelected = selected === id;
+        const sessionsBadge = (
+            <View style={[styles.sessionsBadge, isSelected && styles.sessionsBadgeLime]}>
+                <Text
+                    style={[
+                        styles.sessionsBadgeText,
+                        isSelected && styles.sessionsBadgeTextSelected,
+                    ]}
+                    numberOfLines={1}
+                >
+                    {getSessionsLabel(id)}
+                </Text>
+            </View>
+        );
         return (
             <TouchableOpacity
                 key={id}
@@ -334,20 +358,10 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 )}
 
                 <View style={styles.planRow}>
-                    <Text style={[styles.planName, isSelected && styles.textLight]}>
+                    <Text style={[styles.planName, badgeOwnLine && styles.planNameShrink, isSelected && styles.textLight]}>
                         {plan.name}
                     </Text>
-                    <View style={[styles.sessionsBadge, isSelected && styles.sessionsBadgeLime]}>
-                        <Text
-                            style={[
-                                styles.sessionsBadgeText,
-                                isSelected && styles.sessionsBadgeTextSelected,
-                            ]}
-                            numberOfLines={1}
-                        >
-                            {getSessionsLabel(id)}
-                        </Text>
-                    </View>
+                    {!badgeOwnLine && sessionsBadge}
                     <View style={styles.spacer} />
                     {/* Name, badge and price stay on ONE row — see the layout note in
                         membershipPlans.styles.ts: stacking the price pushes the App
@@ -375,6 +389,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                         {plan.period}
                     </Text>
                 </View>
+                {badgeOwnLine && <View style={styles.sessionsBadgeLine}>{sessionsBadge}</View>}
 
                 <View style={styles.featuresWrapper}>
                     {plan.features.map((feature, idx) => (
@@ -394,7 +409,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     if (loadingPlans || loadingPrices) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={t('common:band.membership')} showBack />
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                     <ActivityIndicator size="large" color={palette.navy} />
@@ -405,7 +420,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     if (plansError) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={t('common:band.membership')} showBack />
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
                     <Text style={[styles.headerSubtitle, { textAlign: 'center', marginBottom: 16 }]}>
@@ -422,14 +437,14 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={safeEdges}>
             {/* The screen name now lives in the header's lime band, so
                 membership:header.label is no longer rendered here. */}
             <AppHeader title={t('common:band.membership')} showBack />
 
             <ScrollView
                 style={styles.scroll}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[styles.scrollContent, sidePadding]}
                 showsVerticalScrollIndicator={false}
             >
                 <Text style={styles.headerTitle}>{t('membership:header.title')}</Text>

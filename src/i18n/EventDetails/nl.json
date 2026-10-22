@@ -31,6 +31,8 @@
     "noResults": "Geen deelnemers gevonden voor",
     "favorite": "Toevoegen aan favorieten",
     "unknownName": "Onbekende deelnemer",
+    "loadingMore": "Meer laden… ({{page}}/{{total}})",
+    "scrollForMore": "Scroll voor meer ({{count}})",
     "results": "Results"
   },
   "tracking": {

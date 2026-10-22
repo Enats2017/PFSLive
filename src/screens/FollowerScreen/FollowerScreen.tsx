@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Animated,
     Platform,
     ScrollView,
     Text,
@@ -25,6 +24,7 @@ import useSearchSuggestions from '../../hooks/useSearchSuggestions';
 import { eventService, ParticipantItem } from '../../services/followerEvent';
 import AthleteSuggestionDropdown from '../../components/AthleteSuggestionDropdown';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { analyticsService } from '../../services/analyticsService';
 
 const Divider = () => (
@@ -36,10 +36,14 @@ const Divider = () => (
 const FollowerScreen = () => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['follow']);
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged
+    // in effect (portrait has no side/bottom inset where the branches differ).
+    const isLandscape = width > height;
+    // ✅ Notch clearance for the body in landscape (edges fall back to ['bottom']).
+    const sidePadding = useLandscapeSidePadding();
     const upcoming = useSearchSuggestions('filter_name', ['upcoming', 'live']);
     const past = useSearchSuggestions('filter_name_past_suggestion', ['past']);
     const [athleteQuery, setAthleteQuery] = useState('');
@@ -53,7 +57,15 @@ const FollowerScreen = () => {
     const athleteQueryRef = useRef('');
 
     const participantSearchFocused = useRef(false);
-    const keyboardOffset = useRef(new Animated.Value(0)).current;
+    // ✅ Athlete search vs the keyboard: scroll the field into view instead of
+    // translating the whole page up by the full keyboard height. The translate
+    // ignored where the field already was, so it could leave the screen at the
+    // top and, in landscape, paint over AppHeader. Now the list gets bottom
+    // padding equal to the keyboard (so the offset is reachable) and scrolls
+    // to the athlete section's measured y.
+    const listRef = useRef<FlatList<never>>(null);
+    const athleteSectionY = useRef(0);
+    const [keyboardPad, setKeyboardPad] = useState(0);
 
     useEffect(() => {
         const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -61,19 +73,11 @@ const FollowerScreen = () => {
 
         const onShow = (e: KeyboardEvent) => {
             if (!participantSearchFocused.current) return;
-            Animated.timing(keyboardOffset, {
-                toValue: e.endCoordinates.height,
-                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
-                useNativeDriver: true,
-            }).start();
+            setKeyboardPad(e.endCoordinates.height);
         };
 
-        const onHide = (e: KeyboardEvent) => {
-            Animated.timing(keyboardOffset, {
-                toValue: 0,
-                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
-                useNativeDriver: true,
-            }).start();
+        const onHide = () => {
+            setKeyboardPad(0);
         };
 
         const showSub = Keyboard.addListener(showEvent, onShow);
@@ -82,7 +86,16 @@ const FollowerScreen = () => {
             showSub.remove();
             hideSub.remove();
         };
-    }, [keyboardOffset]);
+    }, []);
+
+    // Runs after the padding has rendered, so the target offset exists.
+    useEffect(() => {
+        if (keyboardPad <= 0 || !participantSearchFocused.current) return;
+        listRef.current?.scrollToOffset({
+            offset: Math.max(0, athleteSectionY.current - spacing.sm),
+            animated: true,
+        });
+    }, [keyboardPad]);
 
     const handleUpcomingSelect = useCallback((item: SuggestionItem) => {
         upcoming.clearSuggestions();
@@ -229,7 +242,10 @@ const FollowerScreen = () => {
                 </View>
             </View>
             <Divider />
-            <View style={{ zIndex: 10, elevation: 10 }}>
+            <View
+                style={{ zIndex: 10, elevation: 10 }}
+                onLayout={(e) => { athleteSectionY.current = e.nativeEvent.layout.y; }}
+            >
                 <View style={follow.sectionLabel}>
                     <Feather name="plus-circle" size={18} color={palette.ink} style={{ marginRight: 8 }} />
                     <Text style={follow.sectionLabelText}>{t('follow:athlete')}</Text>
@@ -284,21 +300,22 @@ const FollowerScreen = () => {
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
             <AppHeader title={t('common:band.findRace')} showBack />
 
-            <Animated.View
-                style={{
-                    flex: 1,
-                    transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }],
-                }}
-            >
+            <View style={[{ flex: 1 }, sidePadding]}>
                 <FlatList
+                    ref={listRef}
                     data={[]}                         
                     renderItem={null}
-                    ListHeaderComponent={renderContent}
+                    // ✅ An element, not the function: renderContent is a new
+                    // function every render, and VirtualizedList renders a
+                    // function as <ListHeaderComponent /> — a new component type
+                    // each time, so the whole header (and the focused search
+                    // field) remounted on every state change.
+                    ListHeaderComponent={renderContent()}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: spacing.xxxxl}}
+                    contentContainerStyle={{ paddingBottom: spacing.xxxxl + keyboardPad }}
                 />
-            </Animated.View>
+            </View>
         </SafeAreaView>
     );
 };

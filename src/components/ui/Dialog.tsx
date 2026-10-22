@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import ModalScroll from './ModalScroll';
 import {
   palette,
   fonts,
@@ -59,6 +60,10 @@ export const dialogStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: space.xl,
+    // The wrapper is a full-screen SIBLING drawn over the backdrop touchable,
+    // so it swallowed every tap outside the card — tap-to-close never fired.
+    // box-none lets those taps fall through to the backdrop (audit 2026-10-22).
+    pointerEvents: 'box-none',
   },
   card: {
     backgroundColor: palette.surface,
@@ -147,54 +152,59 @@ export const Dialog: React.FC<DialogProps> = ({
 }) => {
   const { icon: iconColor, ring } = dialogTone[tone];
 
+  // ModalScroll: in landscape / larger text the card (90pt icon + copy + two
+  // buttons) was taller than the screen — icon off the top, Cancel off the
+  // bottom. Fixed here so every <Dialog> user is covered (audit 2026-10-22).
   return (
-    <View style={dialogStyles.card}>
-      <View style={[dialogStyles.iconWrapper, { backgroundColor: ring }]}>
-        <Ionicons name={icon} size={56} color={iconColor} />
-      </View>
-
-      <Text style={dialogStyles.title}>{title}</Text>
-      {!!message && <Text style={dialogStyles.message}>{message}</Text>}
-      {!!note && <Text style={dialogStyles.note}>{note}</Text>}
-
-      {children}
-
-      {(confirmLabel || cancelLabel) && (
-        <View style={dialogStyles.buttons}>
-          {!!confirmLabel && (
-            <TouchableOpacity
-              style={[
-                commonStyles.primaryButton,
-                dialogStyles.fullWidthButton,
-                loading && { opacity: 0.7 },
-              ]}
-              onPress={onConfirm}
-              disabled={loading}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: loading, busy: loading }}
-            >
-              {loading ? (
-                <ActivityIndicator color={palette.surface} size="small" />
-              ) : (
-                <Text style={commonStyles.primaryButtonText}>{confirmLabel}</Text>
-              )}
-            </TouchableOpacity>
-          )}
-
-          {!!cancelLabel && (
-            <TouchableOpacity
-              style={commonStyles.secondaryButton}
-              onPress={onCancel}
-              disabled={loading}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-            >
-              <Text style={commonStyles.secondaryButtonText}>{cancelLabel}</Text>
-            </TouchableOpacity>
-          )}
+    <ModalScroll contentStyle={{ alignItems: 'center' }}>
+      <View style={dialogStyles.card}>
+        <View style={[dialogStyles.iconWrapper, { backgroundColor: ring }]}>
+          <Ionicons name={icon} size={56} color={iconColor} />
         </View>
-      )}
-    </View>
+
+        <Text style={dialogStyles.title}>{title}</Text>
+        {!!message && <Text style={dialogStyles.message}>{message}</Text>}
+        {!!note && <Text style={dialogStyles.note}>{note}</Text>}
+
+        {children}
+
+        {(confirmLabel || cancelLabel) && (
+          <View style={dialogStyles.buttons}>
+            {!!confirmLabel && (
+              <TouchableOpacity
+                style={[
+                  commonStyles.primaryButton,
+                  dialogStyles.fullWidthButton,
+                  loading && { opacity: 0.7 },
+                ]}
+                onPress={onConfirm}
+                disabled={loading}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: loading, busy: loading }}
+              >
+                {loading ? (
+                  <ActivityIndicator color={palette.surface} size="small" />
+                ) : (
+                  <Text style={commonStyles.primaryButtonText}>{confirmLabel}</Text>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {!!cancelLabel && (
+              <TouchableOpacity
+                style={commonStyles.secondaryButton}
+                onPress={onCancel}
+                disabled={loading}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+              >
+                <Text style={commonStyles.secondaryButtonText}>{cancelLabel}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
+    </ModalScroll>
   );
 };

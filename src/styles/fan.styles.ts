@@ -64,11 +64,15 @@ export const fanstyle = StyleSheet.create({
     color: palette.ink,
     letterSpacing: 0.8,
     textTransform: "uppercase",
+    // flexShrink here, 0 on View all: nl "VOLGENDE EVENEMENTEN" + "Alles
+    // bekijken" = 314pt in 280 at 320 pushed View all off-screen (audit 2026-10-22)
+    flexShrink: 1,
   },
   viewAllBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
+    flexShrink: 0,
   },
   viewAllText: {
     fontFamily: fonts.bodySemi,
@@ -137,5 +141,8 @@ export const fanstyle = StyleSheet.create({
     fontFamily: fonts.body,
         fontSize: 13,
     color: palette.textMuted,
+    // flexShrink: "25 September 2026" at x1.35 pushed the calendar icon out of
+    // the 136pt card body (audit 2026-10-22)
+    flexShrink: 1,
   },
 });

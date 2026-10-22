@@ -1,8 +1,7 @@
-import { Platform, StyleSheet,Dimensions } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { spacing, typography, palette, fonts, shadows, space, radii } from "../styles/common.styles";
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const isTablet = SCREEN_WIDTH >= 600 && SCREEN_WIDTH <= 768; 
-const DIAG_SIZE = isTablet ? 162 : 140;
+// (DIAG_SIZE / Dimensions-at-module-load removed: the FAB is now anchored to
+// FavouriteList's body box — see addButtonContainer.)
 
 export const favstyle = StyleSheet.create({
   card: {
@@ -84,6 +83,12 @@ export const favstyle = StyleSheet.create({
     minHeight: 26,
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Below 360pt (FavouriteCard): the chip sits under the name's meta lines,
+  // left-aligned, instead of beside the name.
+  headerLeftUnderName: {
+    alignSelf: "flex-start",
+    marginTop: space.xs,
   },
 
   // ✅ Header label text (status + distance)
@@ -196,10 +201,13 @@ export const favstyle = StyleSheet.create({
   // left-aligned AND without rules; since the rules are kept (review request),
   // centring is what reads correctly between them - left-aligned content sat
   // against the rule on its left.
+  // space-between (was center): the columns stretch to the row's height, so
+  // labels stay at the top and the values share one baseline even when one
+  // label wraps more than its neighbours.
   statCol: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
   },
 
   // The middle column carries the separators. It originally had the borders and
@@ -225,6 +233,10 @@ export const favstyle = StyleSheet.create({
     textAlign: "center",
     textTransform: "uppercase",
     letterSpacing: 0.3,
+    // Fixed line height; no two-line minimum (it made every card taller when
+    // all labels fit one line) — statCol's space-between already puts the
+    // values on one baseline when a label wraps.
+    lineHeight: 14,
     marginBottom: space.xs,
   },
 
@@ -246,10 +258,14 @@ export const favstyle = StyleSheet.create({
   },
 
   // ── Add button (FAB) ─────────────────────────────────────
+  // Anchored inside FavouriteList's body (between the sub-header and the
+  // bottom bar), so it always sits just above the bar in either orientation.
+  // `right` is set in FavouriteList (gutter + landscape notch inset). The
+  // list's paddingBottom (FAB_CLEARANCE) lets the last card scroll above it.
   addButtonContainer: {
     position: "absolute",
-    bottom: DIAG_SIZE,
-    right: 25,
+    bottom: space.lg,
+    right: space.xl,
   },
 
   addButton: {
@@ -317,6 +333,16 @@ export const favstyle = StyleSheet.create({
   // navy on lime is 9.82:1, and is what the deck's lime circles use.
   bibBoxLime: {
     backgroundColor: palette.lime,
+  },
+  // All Runners: min size instead of a fixed 46x46, like resultListStyle.rankCircle —
+  // a 5-digit bib wrapped inside the circle from x1.1 larger text.
+  bibBoxGrow: {
+    width: "auto",
+    height: "auto",
+    minWidth: 46,
+    minHeight: 46,
+    paddingHorizontal: space.xs,
+    borderRadius: radii.pill,
   },
   bibBoxText: {
     fontFamily: fonts.display,

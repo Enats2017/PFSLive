@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView,Dimensions } from 'react-native';
+import { View, Text, ScrollView,Dimensions, useWindowDimensions } from 'react-native';
+import { isNarrowWidth } from '../../utils/screenFit';
 import { useTranslation } from 'react-i18next';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
 import { commonStyles, spacing, typography, palette, fonts } from '../../styles/common.styles';
@@ -37,6 +38,8 @@ interface RaceLiveProps {
 
 const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => {
     const { t } = useTranslation(['resultdetails', 'common']);
+    // 12pt headings only below 360pt; 14pt fits the column from 360pt (verify pass 2026-10-22)
+    const narrow = isNarrowWidth(useWindowDimensions().width);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
     const { points: gpxPoints, loading: gpxLoading } = useGpxElevation(event?.gpx_url);
@@ -94,16 +97,19 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                     two-tone banner. */}
                 <Text style={resultInfoStyles.sectionLabel}>{t('raceInfo.raceResult')}</Text>
 
+                {/* rowLabelFixed / rowValueEnd on these rows: the value never
+                    shrank, so a long one crushed the label ("Distance" broke a
+                    letter per line) or ran past the card edge at 320pt. */}
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.status')}</Text>
-                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.status')}</Text>
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={1}>
                         {t(`status.${event?.race_status ?? 'in_progress'}`)}
                     </Text>
                 </View>
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.distance')}</Text>
-                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.distance')}</Text>
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={2}>
                         {event?.distance_name ?? '—'}
                     </Text>
                 </View>
@@ -112,21 +118,22 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                     label/value rows. It reads as one of them now, matching the
                     Distance row above it. */}
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.runner')}</Text>
-                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.runner')}</Text>
+                    {/* 2 lines (was 1): long names / team names were cut to "…" */}
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={2}>
                         {raceInfo?.name ?? '—'}
                     </Text>
                 </View>
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.bib', 'Bib')}</Text>
-                    <Text style={resultInfoStyles.rowValue}>{raceInfo?.bib ?? '—'}</Text>
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.bib', 'Bib')}</Text>
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]}>{raceInfo?.bib ?? '—'}</Text>
                 </View>
                  {!!raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
-                        <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.wavelabel')}</Text>
+                        <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.wavelabel')}</Text>
                         {/* Value only — the label above already says "wave", so the
                             raw RR value ("Wave 1: Start @ 9h") said it twice, stacked. */}
-                        <Text style={resultInfoStyles.rowValue}>{stripWavePrefix(raceInfo?.wave)}</Text>
+                        <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]}>{stripWavePrefix(raceInfo?.wave)}</Text>
                     </View>
                 )}
 
@@ -143,7 +150,9 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                         borderLeftWidth: 0.28,
                         borderColor: palette.danger,
                     }]}>
-                        <View style={resultInfoStyles.bibCard}>
+                        {/* A column (was the bibCard ROW): label on top, then the
+                            name, the time and the countdown under it. */}
+                        <View style={resultInfoStyles.timingBlock}>
                             <Text style={resultInfoStyles.rowLabel}>
                                 {t('raceInfo.nextTimingPoint')}
                             </Text>
@@ -166,7 +175,8 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                 )}
 
                 {raceInfo?.previous_cp && (
-                    <View style={resultInfoStyles.bibCard}>
+                    // A column (was the bibCard ROW) — see the next-timing-point block.
+                    <View style={resultInfoStyles.timingBlock}>
                         <Text style={resultInfoStyles.rowLabel}>
                             {t('raceInfo.previousTimingPoint')}
                         </Text>
@@ -210,10 +220,16 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                                 i === 1 && resultInfoStyles.rankingColBorder,
                             ]}
                         >
-                            <Text style={resultInfoStyles.rankingLabel}>
+                            {/* 12pt, capped at x1: at 14pt "Classement" / "Klassement"
+                                (~77pt) broke mid-word in the ~58-72pt columns at
+                                320-360pt. Values: up to 2 lines, shrinking to fit,
+                                instead of wrapping freely ("12 / 345 Vrouwen" is
+                                166pt at 20pt); rankingCol's space-between lines
+                                them up at the bottom. */}
+                            <Text style={[resultInfoStyles.rankingLabel, narrow && resultInfoStyles.rankingLabelSmall]} maxFontSizeMultiplier={1}>
                                 {t(item.labelKey)}
                             </Text>
-                            <Text style={resultInfoStyles.rankingValue}>{item.value}</Text>
+                            <Text style={resultInfoStyles.rankingValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.6}>{item.value}</Text>
                         </View>
                     ))}
                 </View>

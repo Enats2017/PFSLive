@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { favstyle } from '../../styles/favourite.style';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { FavouriteItem, FavouriteCheckpoint } from '../../services/favourites';
 import { formatClockTime } from '../../utils/timeFormat';
+import { isNarrowWidth } from '../../utils/screenFit';
 
 const getStatusColors = (status: string) => {
     switch (status) {
@@ -40,11 +41,10 @@ const getLiveStats = (checkpoints: FavouriteCheckpoint[] | undefined) => {
     return { lastCrossed, nextCp, finishCp };
 };
 
-const truncateCheckpointName = (name: string, maxLength: number = 12): string => {
-    if (!name) return '';
-    if (name.length <= maxLength) return name;
-    return name.substring(0, maxLength - 1).trim() + '.';
-};
+// The whole checkpoint name, as on ResultCardLive. The 11-character hard cut
+// ("Checkpoint 10" → "Checkpoint.", "Kilometer 21,1" → "Kilometer 2.") read
+// as a different checkpoint; the labels wrap to 3 lines instead.
+const truncateCheckpointName = (name: string): string => (name ? name.trim() : '');
 
 interface FavouriteCardProps {
     item: FavouriteItem;
@@ -63,6 +63,10 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
 }) => {
     const { t } = useTranslation(['favourite', 'common', 'resultdetails', 'allrace']);
     const navigation = useNavigation<any>();
+    // Below 360pt the status chip moves under the name: beside it, "PAS
+    // COMMENCÉ" / "NIET GESTART" (~110-120pt with padding) left the name ~55pt
+    // and "Jean-Christophe" broke mid-word.
+    const narrow = isNarrowWidth(useWindowDimensions().width);
 
     const fullName = useMemo(
         () => (item.name && item.name.trim() !== ''
@@ -106,7 +110,15 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
         if (!isLoading) onToggleFollow();
     }, [isLoading, onToggleFollow]);
 
-    return (     
+    const statusChip = (
+        <View style={[favstyle.headerLeft, narrow && favstyle.headerLeftUnderName, { backgroundColor: statusColors.backgroundColor }]}>
+            <Text style={[favstyle.headerText, { color: statusColors.textColor }]}>
+                {t(`resultdetails:status.${item.race_status}`)}
+            </Text>
+        </View>
+    );
+
+    return (
             <View style={favstyle.card}>
                 {/* ── Identity row: avatar, name, bib · distance, status ── */}
                 <TouchableOpacity onPress={handleCardPress} activeOpacity={0.7}>
@@ -142,16 +154,13 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                                         .filter(Boolean).join(' · ')}
                                 </Text>
                             </View>
+                            {narrow ? statusChip : null}
                         </View>
 
                         {/* Status and the star/rank stack, so the pair costs the
                             row the width of the wider one rather than both. */}
                         <View style={favstyle.identityMeta}>
-                            <View style={[favstyle.headerLeft, { backgroundColor: statusColors.backgroundColor }]}>
-                                <Text style={[favstyle.headerText, { color: statusColors.textColor }]}>
-                                    {t(`resultdetails:status.${item.race_status}`)}
-                                </Text>
-                            </View>
+                            {narrow ? null : statusChip}
 
                             {/* ── Star + rank badge (interactive follow toggle) ── */}
                             <TouchableOpacity
@@ -186,11 +195,14 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                     <View style={favstyle.separator} />
 
                     {/* ── Bottom stats: CP race time / ETA next / ETA finish (always when started) ── */}
+                    {/* Labels 3 lines (was 2): "<checkpoint> (TEMPS DE COURSE)" needs 3
+                        in fr. favstyle.statCol's space-between + statLabel minHeight
+                        keep the three values on one baseline. */}
                     {isNotStarted ? null : (
                         <View style={favstyle.statsRow}>
                             {/* Col 1: last crossed CP race time (green) */}
                             <View style={favstyle.statCol}>
-                                <Text style={favstyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+                                <Text style={favstyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                                     {lastCrossed
                                         ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
                                         : t('allrace:race.raceTime')}
@@ -202,7 +214,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
 
                             {/* Col 2: ETA next CP — once finished there's no next, show last crossed name only (no ETA prefix) */}
                             <View style={[favstyle.statCol, favstyle.statColMid]}>
-                                <Text style={favstyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+                                <Text style={favstyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                                     {nextCp
                                         ? `${t('allrace:race.eta')} ${truncateCheckpointName(nextCp.name)}`
                                         : lastCrossed
@@ -216,7 +228,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
 
                             {/* Col 3: Finish — 'FINISH' once crossed (actual time), else 'ETA FINISH' */}
                             <View style={favstyle.statCol}>
-                                <Text style={favstyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+                                <Text style={favstyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
                                 <Text style={favstyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
@@ -237,5 +249,9 @@ export default React.memo(FavouriteCard, (prev, next) =>
     prev.item.live_tracking_activated === next.item.live_tracking_activated &&
     prev.isFollowed === next.isFollowed &&
     prev.isLoading === next.isLoading &&
-    prev.item.checkpoints === next.item.checkpoints
+    prev.item.checkpoints === next.item.checkpoints &&
+    // identity text — stale after a refresh without these
+    prev.item.name === next.item.name &&
+    prev.item.time === next.item.time &&
+    prev.item.finish_rank_gender === next.item.finish_rank_gender
 );

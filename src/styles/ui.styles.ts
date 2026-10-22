@@ -168,6 +168,8 @@ export const ui = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 28,
+    // breathing room top/bottom now that EmptyState scrolls (audit 2026-10-22)
+    paddingVertical: space.xl,
   },
   emptyRing: {
     width: 84,

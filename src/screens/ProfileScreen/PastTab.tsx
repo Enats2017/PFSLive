@@ -49,7 +49,9 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
             item={item}
             isOwnProfile={profile?.is_own_profile === 1} 
         />,
-        []
+        // ✅ Real deps (layout audit 2026-10-22): [] froze the first render's
+        // profile, so isOwnProfile stayed false after the profile loaded.
+        [profile?.is_own_profile]
     );
 
     const keyExtractor = useCallback(

@@ -52,7 +52,9 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     // Dynamic Island phone (0 in portrait) — see utils/landscapeInsets.
     const side = landscapeSideInsets(insets, width, height);
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width
+    // A real boolean (was `= width`, always truthy, so 3-button Android took
+    // left/right edges in portrait too).
+    const isLandscape = isLandscapeView;
     const {
         product_app_id,
         product_option_value_app_id,

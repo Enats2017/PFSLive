@@ -29,6 +29,7 @@
     "status": "Status",
     "distance": "Distance",
     "runner": "Runner",
+    "bib": "Bib",
     "splits": "Splits",
     "scratchPosition": "Scratch position",
     "category": "Category",

@@ -90,6 +90,9 @@ export const homeStyles = StyleSheet.create({
     letterSpacing: 0.7,
     textTransform: "uppercase",
     color: palette.textBody,
+    // flexShrink: long status ran past the card beside the dot (audit 2026-10-22)
+    flexShrink: 1,
+    textAlign: "center",
   },
   activeClock: {
     fontFamily: fonts.display,
@@ -132,6 +135,8 @@ export const homeStyles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 14,
     color: palette.textMuted,
+    // flexShrink: fr ran past the card at 390, every language at 320 (audit 2026-10-22)
+    flexShrink: 1,
   },
   keepOpenNote: {
     fontFamily: fonts.body,
@@ -362,6 +367,11 @@ export const homeStyles = StyleSheet.create({
     alignItems: "center",
     padding: spacing.xl,
   },
+  // ModalScroll around notifCard: same 400 cap as the card, so it stays
+  // centred in landscape and taps beside it still reach the backdrop (audit 2026-10-22)
+  notifScroll: {
+    maxWidth: 400,
+  },
   notifCard: {
     backgroundColor: palette.surface,
     borderRadius: radii.lg,
@@ -493,6 +503,9 @@ export const homeStyles = StyleSheet.create({
     gap: space.sm,
     marginTop: space.xs,
   },
+  // Text beside the eventMeta icon: a long distance ran into the countdown
+  // (no flexShrink in commonStyles.date) (audit 2026-10-22)
+  eventMetaShrink: { flexShrink: 1 },
   countdownBlock: { alignItems: "flex-end" },
   countdownValue: {
     fontFamily: fonts.displayMedium,

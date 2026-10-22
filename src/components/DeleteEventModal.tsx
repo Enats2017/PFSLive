@@ -14,6 +14,7 @@ import { commonStyles, spacing, palette, fonts, space, shadows, withAlpha } from
 import { dialogTone, RING_TINT } from './ui';
 import { AthleteEvent } from '../services/athleteProfileService';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
 
 interface Props {
     visible: boolean;
@@ -68,43 +69,47 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
             <View style={styles.overlay}>
                 <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onCancel} />
 
-                <Animated.View
-                    style={[
-                        styles.sheet,
-                        { opacity: opacityAnim, transform: [{ scale: scaleAnim }] },
-                    ]}
-                >
-                    <View style={styles.iconWrap}>
-                        <Ionicons name="trash-outline" size={56} color={dialogTone.danger.icon} />
-                    </View>
+                {/* ModalScroll: in landscape the card was taller than the screen —
+                    icon off the top, Cancel off the bottom (audit 2026-10-22) */}
+                <ModalScroll contentStyle={{ alignItems: 'center' }}>
+                    <Animated.View
+                        style={[
+                            styles.sheet,
+                            { opacity: opacityAnim, transform: [{ scale: scaleAnim }] },
+                        ]}
+                    >
+                        <View style={styles.iconWrap}>
+                            <Ionicons name="trash-outline" size={56} color={dialogTone.danger.icon} />
+                        </View>
 
-                    <Text style={styles.title}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
-                    <Text style={styles.message}>
-                        {t('ownProfile:deleteEvent.confirmMessage', { name: event?.name ?? '' })}
-                    </Text>
+                        <Text style={styles.title}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
+                        <Text style={styles.message}>
+                            {t('ownProfile:deleteEvent.confirmMessage', { name: event?.name ?? '' })}
+                        </Text>
 
-                    <View style={styles.actions}>
-                        <TouchableOpacity
-                            style={[commonStyles.primaryButton, isDeleting && { opacity: 0.7 }]}
-                            onPress={onConfirm}
-                            activeOpacity={0.85}
-                            disabled={isDeleting}
-                        >
-                            {isDeleting
-                                ? <ActivityIndicator size="small" color={palette.surface} />
-                                : <Text style={commonStyles.primaryButtonText}>{t('ownProfile:deleteEvent.confirm')}</Text>}
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[commonStyles.secondaryButton]}
-                            onPress={onCancel}
-                            activeOpacity={0.85}
-                            disabled={isDeleting}
-                        >
-                            <Text style={commonStyles.secondaryButtonText}>{t('ownProfile:deleteEvent.cancel')}</Text>
-                        </TouchableOpacity>
+                        <View style={styles.actions}>
+                            <TouchableOpacity
+                                style={[commonStyles.primaryButton, isDeleting && { opacity: 0.7 }]}
+                                onPress={onConfirm}
+                                activeOpacity={0.85}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting
+                                    ? <ActivityIndicator size="small" color={palette.surface} />
+                                    : <Text style={commonStyles.primaryButtonText}>{t('ownProfile:deleteEvent.confirm')}</Text>}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[commonStyles.secondaryButton]}
+                                onPress={onCancel}
+                                activeOpacity={0.85}
+                                disabled={isDeleting}
+                            >
+                                <Text style={commonStyles.secondaryButtonText}>{t('ownProfile:deleteEvent.cancel')}</Text>
+                            </TouchableOpacity>
 
-                    </View>
-                </Animated.View>
+                        </View>
+                    </Animated.View>
+                </ModalScroll>
             </View>
         </Modal>
     );
@@ -117,6 +122,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: withAlpha(palette.ink, 0.6),
         paddingHorizontal: spacing.lg,   // NEW — keeps the card off the screen edges
+        paddingVertical: spacing.lg,     // scrolled card keeps a gap top/bottom (audit 2026-10-22)
     },
     backdrop: { ...StyleSheet.absoluteFillObject },
     sheet: {

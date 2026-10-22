@@ -93,7 +93,9 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                     <Text style={resultListStyle.rankText}>{item.bib || '-'}</Text>
                 </View>
                 <View style={resultListStyle.cardTop}>
-                    <Text style={resultListStyle.cardName} numberOfLines={1}>{item.name}</Text>
+                    {/* 2 lines (was 1): a long name / team name in the ~160-200pt
+                        column at 320pt was cut to "…". */}
+                    <Text style={resultListStyle.cardName} numberOfLines={2}>{item.name}</Text>
                     {/* Two lines. Five values on one clamped line needed ~306pt
                         in a 234pt column, so the club, country and age were cut
                         off on every row that had them. Line 1 is the race entry
@@ -114,7 +116,9 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                         {!!item.nation_flag && (
                             <SvgUri uri={item.nation_flag} width={18} height={13} />
                         )}
-                        <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
+                        {/* 2 lines (was 1): club · country · age lost the country
+                            and age behind a long club name */}
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
                             {[item.club, item.nation,
                               item.age ? `${t('allrace:race.age')} ${item.age}` : null]
                                 .filter(Boolean).join(' \u00b7 ')}
@@ -207,6 +211,10 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
     prev.item.utmb_index === next.item.utmb_index &&
     prev.item.club === next.item.club &&
     prev.item.nation === next.item.nation &&
+    // also printed on the card — stale after a refresh without them
+    prev.item.name === next.item.name &&
+    prev.item.age === next.item.age &&
+    prev.item.wave === next.item.wave &&
     prev.showUtmbIndex === next.showUtmbIndex
 );
 

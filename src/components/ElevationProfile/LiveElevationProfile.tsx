@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, useWindowDimensions, TouchableOpacity } from 'react-native';
 import { VictoryArea, VictoryChart, VictoryAxis, VictoryScatter, VictoryLine, VictoryLabel } from 'victory-native';
 import { useTranslation } from 'react-i18next';
 import { ChartDataPoint } from '../../types';
 import { GPXAidStation } from '../../services/gpxService';
 import { ParticipantMapMarker, AidStationMapMarker, CheckpointData } from '../../types/liveTracking';
-import { liveTrackingStyles, ELEVATION_CHART_HEIGHT } from '../../styles/liveTracking.styles';
+import { liveTrackingStyles, ELEVATION_CHART_HEIGHT, ELEVATION_PANEL_HEIGHT } from '../../styles/liveTracking.styles';
 import { palette, mapColors, fonts, withAlpha } from '../../styles/common.styles';
 
 interface LiveElevationProfileProps {
@@ -20,6 +20,9 @@ interface LiveElevationProfileProps {
     elevationGain?: number;
     onAidStationPress?: (station: AidStationMapMarker) => void;
     onParticipantPress?: (participant: ParticipantMapMarker) => void;
+    /** Panel height when the screen has less room than ELEVATION_PANEL_HEIGHT
+     *  (landscape / short map area); the chart shrinks by the same amount. */
+    panelHeight?: number;
 }
 
 export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.memo(({
@@ -34,9 +37,13 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     elevationGain = 0,
     onAidStationPress,
     onParticipantPress,
+    panelHeight = ELEVATION_PANEL_HEIGHT,
 }) => {
     const { t } = useTranslation('livetracking');
-    const screenWidth = Dimensions.get('window').width;
+    // ✅ useWindowDimensions, not Dimensions.get in render (layout audit
+    // 2026-10-22): the snapshot went stale after a rotation, so the chart kept
+    // the portrait width in landscape until something else re-rendered it.
+    const { width: screenWidth } = useWindowDimensions();
 
     const scrollViewRef = React.useRef<ScrollView>(null);
 
@@ -79,7 +86,13 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     // (axis, tickLabels AND grid), so the old 20/20 padding reserved 40pt for
     // furniture that is never drawn - 20 of it as dead space directly under the
     // chart. Keep a little at the top so a peak is not clipped.
-    const chartHeight = ELEVATION_CHART_HEIGHT;
+    // ✅ Shrinks with the panel when the screen caps it (landscape): the panel
+    // used to stay 224pt and cover the whole map. Header + top padding are the
+    // fixed part (ELEVATION_PANEL_HEIGHT - ELEVATION_CHART_HEIGHT).
+    const chartHeight = Math.max(
+        40,
+        Math.min(ELEVATION_CHART_HEIGHT, panelHeight - (ELEVATION_PANEL_HEIGHT - ELEVATION_CHART_HEIGHT)),
+    );
 
     const elevationRange = maxElevation - minElevation;
     const topBuffer = elevationRange * 0.15;
@@ -202,7 +215,11 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                 station = {
                     id: `aid-${idx}`,
                     name: data.station.name,
-                    description: data.checkpoint.description,
+                    // ✅ was data.checkpoint.description - undefined on this
+                    // (GPX aid station) branch, so the TypeError was swallowed
+                    // and tapping a GPX aid station on the chart did nothing.
+                    // GPXAidStation has no description field.
+                    description: data.station.description ?? '',
                     lat: data.station.lat,
                     lon: data.station.lon,
                     ele: data.station.ele,
@@ -220,7 +237,9 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     // One flat list so taps are resolved by nearest-hit, not by which absolute
     // overlay happens to sit on top — fixes occlusion when participants cluster.
     const tapTargets = React.useMemo(() => {
-        const PAD_TOP = 20, PAD_BOTTOM = 20;   // must match VictoryChart padding
+        // ✅ Was 20/20 while the chart below uses 12/4: initials and tap boxes
+        // sat 8-16pt off their dots.
+        const PAD_TOP = 12, PAD_BOTTOM = 4;   // must match VictoryChart padding
         const plotHeight = chartHeight - PAD_TOP - PAD_BOTTOM;
         const toScreenY = (yVal: number) => {
             const yPct = (yVal - yDomain[0]) / (yDomain[1] - yDomain[0]);
@@ -274,7 +293,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
         // ✅ Transparent so the map behind shows through. (For the map to actually
         // be visible behind it, the parent chartContainer must overlap the map —
         // see the absolute-overlay snippet in LiveTrackingScreen.)
-        <View style={[liveTrackingStyles.profileContainer, { backgroundColor: 'transparent' }]}>
+        <View style={[liveTrackingStyles.profileContainer, { backgroundColor: 'transparent', height: panelHeight }]}>
             <View style={liveTrackingStyles.profileHeader}>
                 <Text style={liveTrackingStyles.profileTitle}>{t('elevationProfile')}</Text>
                 {elevationGain > 0 && (
@@ -427,9 +446,12 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                 key={`participant-label-${idx}`}
                                 style={{
                                     position: 'absolute',
-                                    left: t.sx - 11,
+                                    // ✅ 44 wide + one line, still centred on the
+                                    // dot: at 22 a bib fallback ("12345") wrapped
+                                    // onto a second line below the dot.
+                                    left: t.sx - 22,
                                     top: t.sy - 7,
-                                    width: 22,
+                                    width: 44,
                                     textAlign: 'center',
                                     color: palette.surface,
                                     fontFamily: fonts.bodySemi,
@@ -438,6 +460,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                     elevation: 20,
                                 }}
                                 pointerEvents="none"
+                                numberOfLines={1}
                             >
                                 {t.point.participant.initials || String(t.point.participant.bib) || '?'}
                             </Text>

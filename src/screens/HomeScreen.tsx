@@ -64,6 +64,8 @@ import { spacing, typography, commonStyles, palette, fonts } from '../styles/com
 import { homeStyles } from '../styles/home.styles';
 import FollowingLiveEventsSection from './FollowingLiveEventsSection';
 import { useDimensions } from '../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../hooks/useLandscapeSidePadding';
+import ModalScroll from '../components/ui/ModalScroll';
 import { FanEmailModal } from '../components/Fanemailmodal';
 import { fanEmailStorage } from '../utils/fanEmailStorage';
 import { formatClockTime, formatEventDate } from '../utils/timeFormat';
@@ -175,10 +177,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     () => t('common:monthsShort', { returnObjects: true }) as string[],
     [t],
   );
-  const { width } = useDimensions();
+  const { width, height } = useDimensions();
   const insets = useSafeAreaInsets();
   const isGestureNav = insets.bottom > 0;
-  const isLandscape = width
+  // width > height: `= width` was always truthy, so portrait 3-button phones
+  // also got ['left','right'] (harmless there — no side insets — but wrong) (audit 2026-10-22)
+  const isLandscape = width > height;
+  // Notched iPhones in landscape resolve to edges ['bottom'] below, so the
+  // body sat under the notch — pad it here (audit 2026-10-22).
+  const sidePadding = useLandscapeSidePadding();
+  const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
   const [showFanEmailModal, setShowFanEmailModal] = useState(false);
 
 
@@ -2238,7 +2246,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
         <AppHeader title={t('common:band.home')} logoimg showLogo={true} />
         <View style={commonStyles.centerContainer}>
           <ActivityIndicator size="large" color={palette.navy} />
@@ -2260,6 +2268,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       ? `${Math.floor(hoursUntilRace)}h ${Math.round((hoursUntilRace % 1) * 60)}m`
       : `${Math.max(1, Math.round(hoursUntilRace * 60))}m`;
 
+  // Location-permission popup: the Close button and Android back share this.
+  const closeLocationPermissionModal = () => {
+    // Backing out cancels the start — disarm, or a later
+    // foreground would fire a start the runner declined.
+    if (!permissionModalMidRace) {
+      void analyticsService.logStartStep('permission_result', 'dismissed', raceReadyKey);
+    }
+    pendingStartRef.current = false;
+    setShowLocationPermissionModal(false);
+  };
+
   return (
     <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
       <AppHeader title={t('common:band.home')} logoimg showLogo={true} />
@@ -2275,6 +2294,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         >
           <View style={homeStyles.notifBackdrop}>
             <View style={homeStyles.notifWrapper}>
+              {/* ModalScroll: every notif card was ~500-540pt tall — in landscape and
+                  on SE / larger text the icon went off the top and the buttons off the
+                  bottom, unreachable. Tall cards now scroll (audit 2026-10-22). */}
+              <ModalScroll style={homeStyles.notifScroll}>
               <View style={homeStyles.notifCard}>
                 <View style={homeStyles.notifIconWrapper}>
                   <Ionicons name="battery-charging" size={36} color={palette.navy} />
@@ -2298,6 +2321,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </TouchableOpacity>
                 </View>
               </View>
+              </ModalScroll>
             </View>
           </View>
         </Modal>
@@ -2313,6 +2337,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       >
         <View style={homeStyles.notifBackdrop}>
           <View style={homeStyles.notifWrapper}>
+            <ModalScroll style={homeStyles.notifScroll}>
             <View style={homeStyles.notifCard}>
               <View style={homeStyles.notifIconWrapper}>
                 <Ionicons name="navigate-circle-outline" size={36} color={palette.navy} />
@@ -2343,6 +2368,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
@@ -2358,6 +2384,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       >
         <View style={homeStyles.notifBackdrop}>
           <View style={homeStyles.notifWrapper}>
+            <ModalScroll style={homeStyles.notifScroll}>
             <View style={homeStyles.notifCard}>
               <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger]}>
                 <Ionicons name="stop-circle-outline" size={36} color={palette.danger} />
@@ -2385,6 +2412,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
@@ -2399,6 +2427,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       >
         <View style={homeStyles.notifBackdrop}>
           <View style={homeStyles.notifWrapper}>
+            <ModalScroll style={homeStyles.notifScroll}>
             <View style={homeStyles.notifCard}>
               <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger]}>
                 <Ionicons name="alert-circle-outline" size={36} color={palette.danger} />
@@ -2415,6 +2444,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
@@ -2429,6 +2459,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       >
         <View style={homeStyles.notifBackdrop}>
           <View style={homeStyles.notifWrapper}>
+            <ModalScroll style={homeStyles.notifScroll}>
             <View style={homeStyles.notifCard}>
               <View style={homeStyles.notifIconWrapper}>
                 <Ionicons name="play-circle-outline" size={36} color={palette.navy} />
@@ -2452,6 +2483,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
@@ -2466,6 +2498,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       >
         <View style={homeStyles.notifBackdrop}>
           <View style={homeStyles.notifWrapper}>
+            <ModalScroll style={homeStyles.notifScroll}>
             <View style={homeStyles.notifCard}>
               <View style={homeStyles.notifIconWrapper}>
                 <Ionicons name="time-outline" size={36} color={palette.warning} />
@@ -2491,6 +2524,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
@@ -2503,9 +2537,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         visible={showLocationPermissionModal}
         animationType="fade"
         statusBarTranslucent
+        // Android back = the Close button (audit 2026-10-22: there was no
+        // onRequestClose, so back did nothing)
+        onRequestClose={closeLocationPermissionModal}
       >
         <View style={homeStyles.notifBackdrop}>
           <View style={homeStyles.notifWrapper}>
+            <ModalScroll style={homeStyles.notifScroll}>
             <View style={homeStyles.notifCard}>
               <View style={homeStyles.notifIconWrapper}>
                 <Ionicons name="location-outline" size={36} color={palette.navy} />
@@ -2660,21 +2698,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 )}
                 <TouchableOpacity
                   style={commonStyles.secondaryButton}
-                  onPress={() => {
-                    // Backing out cancels the start — disarm, or a later
-                    // foreground would fire a start the runner declined.
-                    if (!permissionModalMidRace) {
-                      void analyticsService.logStartStep('permission_result', 'dismissed', raceReadyKey);
-                    }
-                    pendingStartRef.current = false;
-                    setShowLocationPermissionModal(false);
-                  }}
+                  onPress={closeLocationPermissionModal}
                   activeOpacity={0.7}
                 >
                   <Text style={commonStyles.secondaryButtonText}>{t('common:buttons.close')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
@@ -2685,9 +2716,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         visible={showPowerSavingModal}
         animationType="fade"
         statusBarTranslucent
+        // Android back = Close / Got it (audit 2026-10-22: no onRequestClose before)
+        onRequestClose={() => setShowPowerSavingModal(false)}
       >
         <View style={homeStyles.notifBackdrop}>
           <View style={homeStyles.notifWrapper}>
+            <ModalScroll style={homeStyles.notifScroll}>
             <View style={homeStyles.notifCard}>
 
               {/* Icon */}
@@ -2737,6 +2771,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 )}
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
@@ -2759,8 +2794,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           />
         </View>
 
-        {/* Card */}
-        <View style={homeStyles.notifWrapper}>
+        {/* Card — box-none: this full-screen wrapper sat over the backdrop
+            above and swallowed every tap outside the card (audit 2026-10-22). */}
+        <View style={homeStyles.notifWrapper} pointerEvents="box-none">
+          <ModalScroll style={homeStyles.notifScroll}>
           <View style={homeStyles.notifCard}>
             {/* Close button */}
             <TouchableOpacity
@@ -2804,12 +2841,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           </View>
+          </ModalScroll>
         </View>
       </Modal>
 
       <ScrollView
         style={homeStyles.scrollView}
-        contentContainerStyle={homeStyles.scrollContent}
+        // sidePadding: hero, cards and buttons clear of the notch in landscape (audit 2026-10-22)
+        contentContainerStyle={[homeStyles.scrollContent, sidePadding]}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}
       >
@@ -2836,7 +2875,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     meta line carrying the date and the start time. The old
                     "Event name: x" / "Date: y" label prefixes are not in the
                     deck and pushed the values down to caption size. */}
-                <Text style={homeStyles.eventName} numberOfLines={2}>
+                {/* No numberOfLines: 26pt cut long race names at 2 lines (audit 2026-10-22) */}
+                <Text style={homeStyles.eventName}>
                   {(isGPSActive && sessionRaceName) || (homeData?.show_start_track === 1 ? homeData?.next_race_name : '') || ''}
                 </Text>
 
@@ -2911,11 +2951,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                         </Text>
                       </View>
 
-                      <Text style={homeStyles.activeClock}>{elapsedLabel}</Text>
+                      {/* One line, shrinks: wrapped mid-number at 320 with larger text (audit 2026-10-22) */}
+                      <Text style={homeStyles.activeClock} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{elapsedLabel}</Text>
 
                       {/* The RUNNING session's race (M1): home may show another one mid-session. */}
                       {!!(sessionRaceName || homeData?.next_race_name) && (
-                        <Text style={homeStyles.activeEvent} numberOfLines={2}>
+                        // No numberOfLines: long race names were cut (audit 2026-10-22)
+                        <Text style={homeStyles.activeEvent}>
                           {sessionRaceName || homeData?.next_race_name}
                         </Text>
                       )}
@@ -2932,7 +2974,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     {/* Distance covered and whether everything reached the server */}
                     <View style={homeStyles.statCard}>
                       <Text style={homeStyles.sectionLabel}>{t('home:active.distance')}</Text>
-                      <Text style={homeStyles.statValue}>
+                      {/* One line, shrinks: wrapped mid-number at 320 with larger text (audit 2026-10-22) */}
+                      <Text style={homeStyles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                         {sessionStats.distanceKm != null
                           ? `${sessionStats.distanceKm.toFixed(1)} ${t('units.km', 'km')}`
                           : '—'}

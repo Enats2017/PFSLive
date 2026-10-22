@@ -126,6 +126,9 @@ export const styles = StyleSheet.create({
         paddingTop: 16,
         ...shadows.overlay,
     },
+    // Scrolling sheet body (audit 2026-10-22): flexGrow 0 = content height until
+    // the sheet hits its keyboard-aware maxHeight, then it scrolls.
+    sheetBody: { flexGrow: 0, flexShrink: 1 },
     sheetHandle: {
         width: 40,
         height: 4,

@@ -90,6 +90,6 @@ module.exports = ({ load, test, SRC }) => {
   });
 
   test('Next events: event names take up to 2 lines (were cut at one: "Trail Festival…")', () => {
-    assert.ok(/<Text style=\{fanstyle\.eventName\} numberOfLines=\{2\}>\{item\.name\}<\/Text>/.test(read('components/EventCard.tsx')));
+    assert.ok(/<Text style=\{fanstyle\.eventName\} numberOfLines=\{3\}>\{item\.name\}<\/Text>/.test(read('components/EventCard.tsx')));   // 3 since the full audit
   });
 };

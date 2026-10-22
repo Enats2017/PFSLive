@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, palette, fonts, radii, withAlpha } from '../styles/common.styles';
 import { dialogStyles, dialogTone } from './ui';
+import ModalScroll from './ui/ModalScroll';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface UndoConfirmModalProps {
@@ -46,51 +47,55 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
       </View>
 
       {/* Card */}
+      {/* ModalScroll: the card (~444pt) was taller than a landscape screen —
+          icon off the top, Cancel off the bottom (audit 2026-10-22) */}
       <View style={dialogStyles.wrapper}>
-        <View style={dialogStyles.card}>
-          {/* Icon */}
-          <View style={[dialogStyles.iconWrapper, { backgroundColor: dialogTone.warning.ring }]}>
-            <Ionicons name="alert-circle-outline" size={56} color={dialogTone.warning.icon} />
-          </View>
-
-          {/* Title */}
-          <Text style={dialogStyles.title}>{t('undoModal:title')}</Text>
-
-          {/* Distance name */}
-          {distanceName ? (
-            <View style={styles.chip}>
-              <Text style={styles.chipText} numberOfLines={1}>
-                {distanceName}
-              </Text>
+        <ModalScroll contentStyle={{ alignItems: 'center' }}>
+          <View style={dialogStyles.card}>
+            {/* Icon */}
+            <View style={[dialogStyles.iconWrapper, { backgroundColor: dialogTone.warning.ring }]}>
+              <Ionicons name="alert-circle-outline" size={56} color={dialogTone.warning.icon} />
             </View>
-          ) : null}
 
-          {/* Message */}
-          <Text style={dialogStyles.message}>{t('undoModal:message')}</Text>
+            {/* Title */}
+            <Text style={dialogStyles.title}>{t('undoModal:title')}</Text>
 
-          {/* Buttons */}
-          <View style={dialogStyles.buttons}>
-            <TouchableOpacity
-              style={[commonStyles.primaryButton, dialogStyles.fullWidthButton]}
-              onPress={onConfirm}
-              activeOpacity={0.8}
-            >
-              <Text style={commonStyles.primaryButtonText}>
-                {t('undoModal:buttons.confirm')}
-              </Text>
-            </TouchableOpacity>
+            {/* Distance name */}
+            {distanceName ? (
+              <View style={styles.chip}>
+                <Text style={styles.chipText} numberOfLines={2}>
+                  {distanceName}
+                </Text>
+              </View>
+            ) : null}
 
-            <TouchableOpacity
-              style={commonStyles.secondaryButton}
-              onPress={onClose}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.secondaryButtonText}>
-                {t('undoModal:buttons.cancel')}
-              </Text>
-            </TouchableOpacity>
+            {/* Message */}
+            <Text style={dialogStyles.message}>{t('undoModal:message')}</Text>
+
+            {/* Buttons */}
+            <View style={dialogStyles.buttons}>
+              <TouchableOpacity
+                style={[commonStyles.primaryButton, dialogStyles.fullWidthButton]}
+                onPress={onConfirm}
+                activeOpacity={0.8}
+              >
+                <Text style={commonStyles.primaryButtonText}>
+                  {t('undoModal:buttons.confirm')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={commonStyles.secondaryButton}
+                onPress={onClose}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.secondaryButtonText}>
+                  {t('undoModal:buttons.cancel')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </ModalScroll>
       </View>
     </Modal>
   );
@@ -114,5 +119,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: palette.navy,
     letterSpacing: 0.5,
+    // 2 lines (was 1): a long distance name was cut at 320pt (audit 2026-10-22)
+    textAlign: 'center',
   },
 });

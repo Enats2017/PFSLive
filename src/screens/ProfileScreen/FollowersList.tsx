@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import SearchInput from '../../components/SearchInput';
 import { userFollowersService, FollowerItem } from '../../services/followerListService';
 
@@ -30,6 +31,9 @@ const INITIAL_PAGINATION: PaginationState = { page: 1, total_pages: 1 };
 
 const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
     const { t } = useTranslation(['follow', 'follower', 'errorScreen']);
+    // ✅ Notch clearance for the body in landscape (edges are ['bottom']).
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
     const { customer_app_id } = route.params || {};
     console.log("followerlist");
     
@@ -256,15 +260,20 @@ const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
         : null;
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={safeEdges}>
             <AppHeader title={t('common:band.myFollowers')} showBack />
+            {/* ✅ Landscape notch padding on the body. The search band keeps its
+                white fill behind the inset so it still reads full-bleed. */}
+            <View style={[{ backgroundColor: palette.surface }, sidePadding]}>
             <SearchInput
                 placeholder={t('follow:search.athletesearch')}
                 value={searchText}
                 onChangeText={setSearchText}
                 icon="search"
             />
+            </View>
 
+            <View style={[{ flex: 1 }, sidePadding]}>
             <FlatList
                 data={displayList}
                 keyExtractor={(item, index) => `follower_${item.customer_app_id}_${index}`}
@@ -285,6 +294,7 @@ const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
                 ListEmptyComponent={renderEmpty}
                 ListFooterComponent={listFooter}
             />
+            </View>
 
         </SafeAreaView>
     );

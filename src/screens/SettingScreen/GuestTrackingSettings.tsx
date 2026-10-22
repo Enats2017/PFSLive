@@ -7,6 +7,8 @@ import { toastError, toastSuccess } from '../../../utils/toast';
 import { styles } from '../../styles/liveTrackingSettings.styles';
 import { saveLanguage, getLanguageCodeFromId, getCurrentLanguageId } from '../../i18n';
 import { useLanguageStore } from '../../store/useLanguageStore';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
+import { space } from '../../styles/common.styles';
 
 // The app's own language as a picker option. Shown when the server has no
 // language for this device (or can't be reached): the picker otherwise showed
@@ -16,6 +18,9 @@ const appLanguageOption = (): LanguageOption | null =>
 
 export const GuestTrackingSettings: React.FC = () => {
     const { t } = useTranslation(['setting']);
+    // ✅ landscape: the parent screen's SafeAreaView only pads the bottom, so the
+    // cards sat under the notch (same as UserTrackingSettings, audit 2026-10-22)
+    const side = useLandscapeSidePadding();
     const [selectedLanguage, setSelectedLanguage] = useState<LanguageOption | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     // Set when the user picks a language: a slow mount load landing AFTER that
@@ -76,7 +81,10 @@ export const GuestTrackingSettings: React.FC = () => {
     };
 
     return (
-        <ScrollView contentContainerStyle={styles.screen} showsVerticalScrollIndicator={false}>
+        <ScrollView
+            contentContainerStyle={[styles.screen, { paddingLeft: space.xl + side.paddingLeft, paddingRight: space.xl + side.paddingRight }]}
+            showsVerticalScrollIndicator={false}
+        >
             <View style={styles.pageTitleRow}>
                 <Text style={styles.pageTitle}>{t('setting:liveTrackingSettings.guestTitle')}</Text>
                 <Text style={styles.pageSubtitle}>{t('setting:liveTrackingSettings.guestSubtitle')}</Text>

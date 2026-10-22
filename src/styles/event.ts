@@ -68,6 +68,13 @@ export const eventStyles = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderRadius: radii.lg,
   },
+  // ✅ Below 360pt (layout audit 2026-10-22): three equal pills leave ~55pt of
+  // text at 320pt with 16pt padding — nl "Binnenkort" (66-72pt) broke mid-word
+  // even at default text. 8pt padding leaves ~71pt; the label also shrinks to
+  // fit (adjustsFontSizeToFit) with larger text.
+  tabItemNarrow: {
+    paddingHorizontal: space.sm,
+  },
   // ✅ Redesign: tabs are the segmented pill group from the design sheet, so
   // the active state is a navy pill rather than an underline. `underline` is
   // gone — it carried a three-colour gradient that appears nowhere in the deck.

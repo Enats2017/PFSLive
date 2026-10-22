@@ -17,6 +17,7 @@ import EventsContent from './EventsContent';
 import TrainingContent from './TrainingContent';
 import { resolveActivation } from './activationCard';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { DeleteEventModal } from '../../components/DeleteEventModal';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { appleVerifyService } from '../../services/appleverifyservice';
@@ -266,10 +267,13 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
 const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const { t } = useTranslation('ownProfile');
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width
+    // ✅ A real boolean (layout audit 2026-10-22): `width` alone was always
+    // truthy; the notch side padding is sidePadding on the body below AppHeader.
+    const isLandscape = width > height;
+    const sidePadding = useLandscapeSidePadding();
     const [activeSection, setActiveSection] = useState<SectionKey>('menu')
     const flatListRef = useRef<FlatList>(null);
     const [profile, setProfile] = useState<AthleteProfile | null>(null);
@@ -550,7 +554,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                 nestedScrollEnabled={true}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ flexGrow: 1 }}
+                contentContainerStyle={[{ flexGrow: 1 }, sidePadding]}
             >
                 <View style={ownProfile.scrollContent}>
                     <View style={ownProfile.profileRow}>

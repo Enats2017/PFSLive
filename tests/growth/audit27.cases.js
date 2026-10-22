@@ -86,7 +86,7 @@ module.exports = ({ M, load, test, SRC }) => {
       }
     })(SRC);
     assert.deepStrictEqual(small, ['components/ElevationProfile/LiveElevationProfile.tsx 10']);
-    assert.ok(/left: t\.sx - 11,\s*top: t\.sy - 7,\s*width: 22,[^}]*fontSize: 10,/.test(read('components/ElevationProfile/LiveElevationProfile.tsx')), 'the marker is the fixed 22pt badge');
+    assert.ok(/left: t\.sx - 22,\s*top: t\.sy - 7,\s*width: 44,[^}]*fontSize: 10,/.test(read('components/ElevationProfile/LiveElevationProfile.tsx')), 'the marker label over the 22pt dot (44 wide since the full audit: a bib fallback wrapped in 22)');
   });
 
   test('font size: every text style with a lineHeight still has room for its glyphs (lineHeight ≥ 1.2 × size) — nothing clipped by the bump', () => {

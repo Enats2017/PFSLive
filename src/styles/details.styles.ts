@@ -222,10 +222,11 @@ export const detailsStyles = StyleSheet.create({
   },
 
   // ✅ AVATAR IMAGE STYLE
+  // 100% of the 60pt avatar circle (was 65×65 in a 60pt clipped circle, so
+  // the photo was off-centre and cropped) - layout audit 2026-10-22.
   avatarImage: {
-    width: 65,
-    height: 65,
-    borderRadius: 32.5,
+    width: '100%',
+    height: '100%',
   },
 
   // ✅ AVATAR FALLBACK (FOR INITIALS)

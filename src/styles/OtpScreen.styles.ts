@@ -37,6 +37,11 @@ export const optStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    // ✅ wrap: fr "Mauvaise adresse ?" + "Changer d'e-mail" is ~259pt in the
+    // 240pt card body at 320 — the link was pushed out of the card.
+    flexWrap: 'wrap',
+    columnGap: space.md,
+    rowGap: space.xs,
     borderTopWidth: 1,
     borderTopColor: palette.border,
     marginTop: space.md,

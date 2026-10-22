@@ -72,8 +72,8 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                 )}
                 </View>
 
-                <View style={profileStyles.identityText}>
-                    <Text style={profileStyles.identityName} numberOfLines={1}>
+                <View style={profileStyles.identityText}>{/* ✅ name: 2 lines (layout audit 2026-10-22) - a long name at 20pt was cut */}
+                    <Text style={profileStyles.identityName} numberOfLines={2}>
                         {fullName || '—'}
                     </Text>
                     {!!(profile?.city || profile?.country) && (

@@ -29,6 +29,7 @@
     "status": "Statut",
     "distance": "Distance",
     "runner": "Coureur",
+    "bib": "Dossard",
     "splits": "Temps intermédiaires",
     "scratchPosition": "Classement scratch",
     "category": "Catégorie",

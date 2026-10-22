@@ -126,8 +126,12 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
                 <View style={resultInfoStyles.statDividerRow}>
                     {showUtmbIndex && hasUtmbIndex && (
                         <>
-                            <View style={resultInfoStyles.col}>
-                                <View style={resultInfoStyles.utmbIndexBadge}>
+                            {/* paddingHorizontal space.xs (was space.md, from `col`): the
+                                UTMB + INDEX badge is ~108pt and the column left it
+                                ~99pt at 320pt. The badge may also wrap its tag under
+                                "UTMB" with larger iOS text instead of overflowing. */}
+                            <View style={[resultInfoStyles.col, { paddingHorizontal: space.xs }]}>
+                                <View style={[resultInfoStyles.utmbIndexBadge, { flexWrap: 'wrap', justifyContent: 'center', maxWidth: '100%' }]}>
                                     <Text style={resultInfoStyles.utmbText}>
                                         UTMB
                                     </Text>
@@ -150,7 +154,8 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
                     <View
                         style={[
                             resultInfoStyles.col,
-                            { gap: space.sm },
+                            // same inset as the UTMB column beside it, so both stay equal
+                            { gap: space.sm, paddingHorizontal: space.xs },
                             !showUtmbIndex && resultInfoStyles.singleColumn,
                         ]}
                     >

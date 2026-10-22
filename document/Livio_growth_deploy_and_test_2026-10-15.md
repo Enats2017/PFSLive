@@ -185,7 +185,7 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 416 · 188 · 19 passed · exit 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 433 · 188 · 19 passed · exit 0 |
 | Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 435 passed, 0 failed (1 skipped on a local web build), leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
@@ -375,6 +375,31 @@ Island), one Android; app language EN, NL and FR.
 67. Any popup in landscape (start confirmation, delete event, country picker, error message…): it opens and the
     phone does not jump back to portrait.
 
+**Full layout audit (2026-10-22).** Every screen file was read against one checklist at 320-430pt, landscape,
+larger text and FR/NL; ~100 issues fixed. Check on an iPhone with a notch (landscape) and one Android with
+3-button navigation (landscape), plus an SE/mini with Display Zoom:
+68. Landscape, every screen: no card, field, list or button under the notch / Dynamic Island or under the Android
+    navigation bar.
+69. Landscape: every popup (start / stop tracking, location permission, registration, delete / undo, error, update,
+    membership, purchase, e-mail change, "Is this you?") — the buttons can be reached (the popup scrolls when it is
+    taller than the screen); tapping beside it closes it where it did before. "Is this you?": Confirm / Cancel are
+    always visible, the details above scroll.
+70. Live map in landscape: the map is usable (the elevation profile hides on a phone when there is no room, comes
+    back in portrait); the distance selector opens. Portrait: the collapse button sits on top of the profile.
+    Tapping a GPX aid station on the profile shows it (it did nothing).
+71. Long names in full or on 2-3 lines, never "…": event names (header band, Home, event lists, sliders), athlete
+    names (result cards, participant lists, "This is me", favourites, profile), checkpoint and distance names.
+72. Rows with text beside an icon or button (Home send status, readiness, share button, Next events title +
+    View all, OTP rows, terms checkbox, pending e-mail actions, membership plan row): nothing runs past the card.
+73. Result details (live / upcoming / race info): timing-point blocks, distance / runner / status rows and the
+    3 rankings stay inside the card at 320pt and in FR.
+74. Larger text: bottom-bar labels, event tabs (Verleden / Live / Binnenkort) and the language pills never split a
+    word; the Home clock / distance stay on one line.
+75. Forms: register / edit profile field labels are not hidden under the right icon (at 320pt or with larger text
+    the name and birth-date pairs stack); with the keyboard open (also landscape) the field stays visible.
+    Contact form: the message label floats when tapped.
+76. Header images (event details, follower distances, past races) in landscape take under half the screen.
+
 ---
 
 ## 7. Status of everything discussed (client "livio improvements" message + plan)
@@ -439,7 +464,7 @@ The sequencing request is moot — the free session is already off on live (2026
 - `wp_endpoint` index — **already exists** (`idx_wp_endpoint`, 191-char prefix) on the live copy.
 
 ### Known, not done
-- Test suites are local only (all green 2026-10-22, run twice): app 416 (+ tracking 188, activation 19, distance button 20),
+- Test suites are local only (all green 2026-10-22, run twice): app 433 (+ tracking 188, activation 19, distance button 20),
   server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
   DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 106 vitest + type-check + lint.
 - The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`

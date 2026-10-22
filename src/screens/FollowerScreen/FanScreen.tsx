@@ -10,6 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
 import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import SearchInput from '../../components/SearchInput';
 import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -52,9 +53,14 @@ const NavCard: React.FC<NavCardProps> = ({ icon, title, subtitle, onPress }) => 
 const FanScreen = () => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['follow']);
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets();
-    const isLandscape = width > 600;
+    // width > height (was > 600): SE landscape is 568 wide, tablets are > 600 in
+    // portrait too (audit 2026-10-22)
+    const isLandscape = width > height;
+    // Notched iPhones in landscape get edges ['bottom'] below — keep the body
+    // clear of the notch (audit 2026-10-22)
+    const sidePadding = useLandscapeSidePadding();
     const isGestureNav = insets.bottom > 0;
     const [searchQuery, setSearchQuery] = useState('');
     const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
@@ -145,7 +151,7 @@ const FanScreen = () => {
             <AppHeader title={t('common:band.followRace')} logoimg={true} showBack />
 
             <ScrollView
-                contentContainerStyle={fanstyle.scrollContent}
+                contentContainerStyle={[fanstyle.scrollContent, sidePadding]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >

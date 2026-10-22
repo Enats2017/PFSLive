@@ -5,6 +5,7 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  useWindowDimensions,
   } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
@@ -31,6 +32,12 @@ interface ParticipantTabProps {
 
 const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_image, showResults = true, event_name,   }) => {
   const { t } = useTranslation(['details', 'follower']);
+  // ✅ Header image capped in landscape (layout audit 2026-10-22): full width
+  // at 612:428 it was ~590pt tall there - taller than the screen. Portrait is
+  // unchanged.
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const headerLandscape = windowWidth > windowHeight;
+  const headerImageHeight = Math.round(windowHeight * 0.45);
 
   const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
   const {
@@ -237,12 +244,12 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     <>
       {event_image ? (
         <View
-          style={{
+          style={[{
             width: '100%',
             aspectRatio: 612 / 428,
             justifyContent: 'center',
             alignItems: 'center',
-          }}
+          }, headerLandscape && { aspectRatio: undefined, height: headerImageHeight }]}
         >
           {imageLoading && (
             <ActivityIndicator
@@ -256,11 +263,11 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
             source={{ uri: event_image }}
             contentFit="cover"
               cachePolicy="memory-disk"
-            style={{
+            style={[{
               width: '100%',
               aspectRatio: 612 / 428,
               opacity: imageLoading ? 0 : 1,
-            }}
+            }, headerLandscape && { aspectRatio: undefined, height: '100%' }]}
             onLoad={() => setImageLoading(false)}
             onError={(e) => {
               console.log('❌ Image failed:', event_image, e?.error);
@@ -270,7 +277,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
         </View>
       ) : null}
     </>
-  ), [event_image, imageLoading]);
+  ), [event_image, imageLoading, headerLandscape, headerImageHeight]);
 
   const renderFooter = useCallback(() => {
     if (loadingMore) {
@@ -278,7 +285,8 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
           <ActivityIndicator size="small" color={palette.navy} />
           <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
-            Loading more... ({page}/{totalPages})
+            {/* ✅ Translated (layout audit 2026-10-22): was hard-coded English */}
+            {t('details:participant.loadingMore', { page, total: totalPages })}
           </Text>
         </View>
       );
@@ -288,14 +296,14 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
           <Text style={{ color: palette.textMuted }}>
-            Scroll for more ({participants.length})
+            {t('details:participant.scrollForMore', { count: participants.length })}
           </Text>
         </View>
       );
     }
 
     return null;
-  }, [loadingMore, page, totalPages, hasMorePages, participants.length]);
+  }, [loadingMore, page, totalPages, hasMorePages, participants.length, t]);
 
   if (loading && searchText.length === 0) {
     return (

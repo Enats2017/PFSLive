@@ -43,7 +43,9 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
             <View style={styles.container}>
                 <View style={styles.centeredRow}>
                     <ActivityIndicator size="small" color={palette.navy} />
-                    <Text style={styles.loaderText}>Searching…</Text>
+                    {/* ✅ Was hard-coded English; reuses the existing
+                        follower:searching key (en/fr/nl already translated). */}
+                    <Text style={styles.loaderText}>{t('follower:searching')}</Text>
                 </View>
             </View>
         );
@@ -104,7 +106,9 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
 
                             {/* Info */}
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.name} numberOfLines={1}>
+                                {/* ✅ 2 lines: long double-barrelled names were cut to
+                                    one line in a ~200pt column at 320. */}
+                                <Text style={styles.name} numberOfLines={2}>
                                     {item.firstname?.trim()} {item.lastname?.trim()}
                                 </Text>
                                 <View style={styles.locationRow}>
@@ -198,6 +202,10 @@ const styles = StyleSheet.create({
         fontFamily: fonts.body,
         fontSize: 13,
         color: palette.textMuted,
+        // ✅ shrink inside locationRow: without it the Text kept its full width
+        // beside the flag, so numberOfLines' "…" never applied and the row's
+        // overflow: hidden just hard-cut the city mid-letter.
+        flexShrink: 1,
     },
     separator: {
         height: 1,

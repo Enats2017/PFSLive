@@ -20,15 +20,21 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { AppHeader } from '../../components/common/AppHeader';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => {
     const { product_app_id, event_name } = route.params;
     const { t } = useTranslation(['details', 'follower']);
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width
+    // A real boolean: this was `= width` (always truthy), so the SafeAreaView
+    // took left/right edges in PORTRAIT on 3-button Android too.
+    const isLandscape = width > height;
+    // Notch / Dynamic Island in landscape on gesture phones (0 elsewhere).
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
     const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
     const {
         isFollowed,
@@ -225,7 +231,10 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
 
     if (loading && searchText.length === 0) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                {/* The header in the first load too: without it the screen had
+                    no back button (or title) until the list arrived. */}
+                <AppHeader title={t('common:band.searchParticipants')} showBack />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={palette.navy} />
                 </View>
@@ -235,7 +244,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={t('common:band.searchParticipants')} showBack />
                 <ErrorScreen
                     type={error!.type}
@@ -257,6 +266,9 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
                 inset itself and would otherwise double-pad. */}
             <AppHeader title={t('common:band.searchParticipants')} showBack />
 
+            {/* Body below AppHeader, clear of the notch in landscape (0 in portrait,
+                so the search band stays full-bleed there). */}
+            <View style={[{ flex: 1 }, sidePadding]}>
             {/* Full-bleed, like every other search screen: the component draws
                 its own white sub-header band, which a padded wrapper broke. */}
             <SearchInput
@@ -297,6 +309,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
                 ListFooterComponent={renderFooter}
                 ListEmptyComponent={!loading ? renderEmpty : null}
             />
+            </View>
 
             <TrackingPasswordModal
                 visible={passwordModalVisible}

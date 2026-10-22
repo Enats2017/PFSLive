@@ -4,6 +4,7 @@ import { spacing, typography, palette, fonts, shadows, withAlpha } from '../styl
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
 
 interface UpdateRequiredModalProps {
   visible: boolean;
@@ -43,72 +44,76 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
       hardwareAccelerated={true}
     >
       <View style={styles.overlay}>
-        <View style={styles.container}>
-          {/* Icon */}
-          <View style={styles.iconContainer}>
-            <Ionicons name="refresh" size={56} color={palette.navy} />
-          </View>
-
-          {/* Title from API */}
-          {title ? (
-            <Text style={styles.title}>{title}</Text>
-          ) : null}
-
-          {/* Message from API */}
-          {message ? (
-            <Text style={styles.message}>{message}</Text>
-          ) : null}
-
-          {/* Version Info */}
-          <View style={styles.versionInfo}>
-            <View style={styles.versionRow}>
-              <Text style={styles.versionLabel}>
-                {t('common:update.currentVersion')}:
-              </Text>
-              <Text style={styles.versionValue}>{currentVersion}</Text>
+        {/* ModalScroll: icon + API message + versions + two buttons is taller
+            than a landscape screen — Update Now was off the bottom (audit 2026-10-22) */}
+        <ModalScroll contentStyle={{ alignItems: 'center' }}>
+          <View style={styles.container}>
+            {/* Icon */}
+            <View style={styles.iconContainer}>
+              <Ionicons name="refresh" size={56} color={palette.navy} />
             </View>
-            <View style={styles.versionRow}>
-              <Text style={styles.versionLabel}>
-                {t('common:update.latestVersion')}:
-              </Text>
-              <Text style={styles.versionValue}>{latestVersion}</Text>
+
+            {/* Title from API */}
+            {title ? (
+              <Text style={styles.title}>{title}</Text>
+            ) : null}
+
+            {/* Message from API */}
+            {message ? (
+              <Text style={styles.message}>{message}</Text>
+            ) : null}
+
+            {/* Version Info */}
+            <View style={styles.versionInfo}>
+              <View style={styles.versionRow}>
+                <Text style={styles.versionLabel}>
+                  {t('common:update.currentVersion')}:
+                </Text>
+                <Text style={styles.versionValue}>{currentVersion}</Text>
+              </View>
+              <View style={styles.versionRow}>
+                <Text style={styles.versionLabel}>
+                  {t('common:update.latestVersion')}:
+                </Text>
+                <Text style={styles.versionValue}>{latestVersion}</Text>
+              </View>
             </View>
-          </View>
 
-          {/* Buttons */}
-          <View style={styles.buttonContainer}>
-            {/* Update Button */}
-            <TouchableOpacity
-              style={[styles.button, styles.updateButton]}
-              onPress={onUpdate}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.updateButtonText}>
-                {t('common:update.updateNow')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Later Button */}
-            {!isForced && onLater && (
+            {/* Buttons */}
+            <View style={styles.buttonContainer}>
+              {/* Update Button */}
               <TouchableOpacity
-                style={[styles.button, styles.laterButton]}
-                onPress={onLater}
+                style={[styles.button, styles.updateButton]}
+                onPress={onUpdate}
                 activeOpacity={0.8}
               >
-                <Text style={styles.laterButtonText}>
-                  {t('common:update.later')}
+                <Text style={styles.updateButtonText}>
+                  {t('common:update.updateNow')}
                 </Text>
               </TouchableOpacity>
+
+              {/* Later Button */}
+              {!isForced && onLater && (
+                <TouchableOpacity
+                  style={[styles.button, styles.laterButton]}
+                  onPress={onLater}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.laterButtonText}>
+                    {t('common:update.later')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Forced update warning */}
+            {isForced && (
+              <Text style={styles.forcedText}>
+                {t('common:update.forcedMessage')}
+              </Text>
             )}
           </View>
-
-          {/* Forced update warning */}
-          {isForced && (
-            <Text style={styles.forcedText}>
-              {t('common:update.forcedMessage')}
-            </Text>
-          )}
-        </View>
+        </ModalScroll>
       </View>
     </Modal>
   );

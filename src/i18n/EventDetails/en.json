@@ -31,6 +31,8 @@
     "noResults": "No participants found for",
     "favorite": "Add to favourite",
     "unknownName": "Unknown participant",
+    "loadingMore": "Loading more… ({{page}}/{{total}})",
+    "scrollForMore": "Scroll for more ({{count}})",
     "results": "Results"
   },
   "tracking": {

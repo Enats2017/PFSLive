@@ -86,7 +86,7 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                                  {event.race_distance ? (
                                     <View style={homeStyles.eventMeta}>
                                         <Ionicons name="location" size={13} color={palette.textBody} />  {/* ✅ map icon for distance */}
-                                        <Text style={commonStyles.date}>
+                                        <Text style={[commonStyles.date, homeStyles.eventMetaShrink]}>
                                             {event.race_distance}
                                         </Text>
                                     </View>
@@ -131,7 +131,8 @@ const FollowingLiveEventsSection: React.FC<Props> = ({ events, onRoutePress }) =
                                             <View style={homeStyles.followAvatar}>
                                                 <Text style={homeStyles.followAvatarText}>{initials}</Text>
                                             </View>
-                                            <Text style={homeStyles.followName} numberOfLines={1}>{name}</Text>
+                                            {/* 2 lines (was 1): ~123pt beside "Bib 12345" cut most names (audit 2026-10-22) */}
+                                            <Text style={homeStyles.followName} numberOfLines={2}>{name}</Text>
                                             {!!p.bib_number && (
                                                 <Text style={homeStyles.followBib}>
                                                     {t('common:bib', 'Bib')} {p.bib_number}

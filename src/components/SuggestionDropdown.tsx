@@ -37,7 +37,9 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
             <View style={styles.container}>
                 <View style={styles.loaderRow}>
                     <ActivityIndicator size="small" color={palette.navy} />
-                    <Text style={styles.loaderText}>Searching…</Text>
+                    {/* ✅ Was hard-coded English; reuses the existing
+                        follower:searching key (en/fr/nl already translated). */}
+                    <Text style={styles.loaderText}>{t('follower:searching')}</Text>
                 </View>
             </View>
         );
@@ -72,7 +74,10 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
                         >
                             <Feather name="flag" size={14} color={palette.textMuted} style={styles.rowIcon} />
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.name} numberOfLines={1}>
+                                {/* ✅ 2 lines: full event names (often 40+ chars) were
+                                    cut to one line, hiding the part that tells
+                                    similar events apart. */}
+                                <Text style={styles.name} numberOfLines={2}>
                                     {item.name}
                                 </Text>
                                 <Text style={styles.date}>

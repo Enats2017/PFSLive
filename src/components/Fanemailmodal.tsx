@@ -1,11 +1,12 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform, Animated, KeyboardEvent, Keyboard } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform, KeyboardEvent, Keyboard } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
 import { spacing, commonStyles, palette, fonts } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
 import FloatingLabelInput from './FloatingLabelInput';
+import ModalScroll from './ui/ModalScroll';
 import { fanEmailApi } from '../services/Fanemailservice';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
@@ -29,27 +30,18 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
     const [isSaving, setIsSaving] = useState(false);
 
 
-    const keyboardOffset = useRef(new Animated.Value(0)).current;
+    // Keyboard height pads the bottom of the wrapper so the (scrollable) card
+    // is laid out in the space ABOVE the keyboard. It used to translate the
+    // card up by half the keyboard: in landscape / larger text that pushed the
+    // title off the top and left the buttons under the keyboard (audit 2026-10-22).
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     useEffect(() => {
         const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
         const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-        const onShow = (e: KeyboardEvent) => {
-            Animated.timing(keyboardOffset, {
-                toValue: e.endCoordinates.height / 2,
-                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
-                useNativeDriver: true,
-            }).start();
-        };
-
-        const onHide = (e: KeyboardEvent) => {
-            Animated.timing(keyboardOffset, {
-                toValue: 0,
-                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
-                useNativeDriver: true,
-            }).start();
-        };
+        const onShow = (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height);
+        const onHide = () => setKeyboardHeight(0);
 
         const showSub = Keyboard.addListener(showEvent, onShow);
         const hideSub = Keyboard.addListener(hideEvent, onHide);
@@ -58,7 +50,7 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
             showSub.remove();
             hideSub.remove();
         };
-    }, [keyboardOffset]);
+    }, []);
 
     const handleChangeText = useCallback((value: string) => {
         setEmail(value);
@@ -104,58 +96,57 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
     return (
         <Modal supportedOrientations={MODAL_ORIENTATIONS} transparent visible={visible} animationType="fade" statusBarTranslucent onRequestClose={handleSkipPress}>
             <View style={homeStyles.notifBackdrop}>
-                <View style={homeStyles.notifWrapper}>
-                    <Animated.View
-                        style={[
-                            homeStyles.notifCard,
-                            { transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }] },
-                        ]}
-                    >
+                <View style={[homeStyles.notifWrapper, keyboardHeight > 0 && { paddingBottom: spacing.xl + keyboardHeight }]}>
+                    {/* ModalScroll: the card is taller than a landscape screen —
+                        icon / buttons were unreachable (audit 2026-10-22) */}
+                    <ModalScroll contentStyle={{ alignItems: 'center' }}>
+                        <View style={homeStyles.notifCard}>
 
-                        <View style={homeStyles.notifIconWrapper}>
-                            <Ionicons name="mail-outline" size={36} color={palette.navy} />
+                            <View style={homeStyles.notifIconWrapper}>
+                                <Ionicons name="mail-outline" size={36} color={palette.navy} />
+                            </View>
+
+                            <Text style={homeStyles.notifTitle}>{t('home:fanEmail.title')}</Text>
+                            <Text style={[homeStyles.notifBody, { marginBottom: spacing.md, }]}>{t('home:fanEmail.description')}</Text>
+
+                            <View style={styles.inputWrapper}>
+                                <FloatingLabelInput
+                                    label={t('home:fanEmail.emailPlaceholder')}
+                                    value={email}
+                                    onChangeText={handleChangeText}
+                                    iconName="mail-outline"
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    error={!!errorMessage}
+                                    errorMessage={errorMessage ?? undefined}
+                                    editable={!isSaving}
+                                />
+                            </View>
+
+                            <View style={homeStyles.notifButtonContainer}>
+                                <TouchableOpacity
+                                    style={[commonStyles.primaryButton, homeStyles.notifViewButton, isSaving && { opacity: 0.6 }]}
+                                    onPress={handleSavePress}
+                                    activeOpacity={0.8}
+                                    disabled={isSaving}
+                                >
+                                    <Text style={commonStyles.primaryButtonText}>
+                                        {isSaving ? t('home:fanEmail.saving') : t('home:fanEmail.save')}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={commonStyles.secondaryButton}
+                                    onPress={handleSkipPress}
+                                    activeOpacity={0.7}
+                                    disabled={isSaving}
+                                >
+                                    <Text style={commonStyles.secondaryButtonText}>{t('home:fanEmail.maybeLater')}</Text>
+                                </TouchableOpacity>
+                            </View>
+
                         </View>
-
-                        <Text style={homeStyles.notifTitle}>{t('home:fanEmail.title')}</Text>
-                        <Text style={[homeStyles.notifBody, { marginBottom: spacing.md, }]}>{t('home:fanEmail.description')}</Text>
-
-                        <View style={styles.inputWrapper}>
-                            <FloatingLabelInput
-                                label={t('home:fanEmail.emailPlaceholder')}
-                                value={email}
-                                onChangeText={handleChangeText}
-                                iconName="mail-outline"
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                                error={!!errorMessage}
-                                errorMessage={errorMessage ?? undefined}
-                                editable={!isSaving}
-                            />
-                        </View>
-
-                        <View style={homeStyles.notifButtonContainer}>
-                            <TouchableOpacity
-                                style={[commonStyles.primaryButton, homeStyles.notifViewButton, isSaving && { opacity: 0.6 }]}
-                                onPress={handleSavePress}
-                                activeOpacity={0.8}
-                                disabled={isSaving}
-                            >
-                                <Text style={commonStyles.primaryButtonText}>
-                                    {isSaving ? t('home:fanEmail.saving') : t('home:fanEmail.save')}
-                                </Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={commonStyles.secondaryButton}
-                                onPress={handleSkipPress}
-                                activeOpacity={0.7}
-                                disabled={isSaving}
-                            >
-                                <Text style={commonStyles.secondaryButtonText}>{t('home:fanEmail.maybeLater')}</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                    </Animated.View>
+                    </ModalScroll>
 
                 </View>
             </View>

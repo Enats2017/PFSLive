@@ -30,6 +30,7 @@ import { usePersonalEventForm } from '../../hooks/usePersonalEventForm';
 import { startOfToday } from '../../utils/dateValidation';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { tokenService } from '../../services/tokenService';
 import { analyticsService } from '../../services/analyticsService';
 import { raceReadyService } from '../../services/raceReadyService';
@@ -40,10 +41,14 @@ type RegistrationStatus = 'membership_required' | 'limit_reached' | 'membership_
 
 const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }) => {
   const { t } = useTranslation(['personal', 'common']);
-  const { width } = useDimensions();
+  const { width, height } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged
+    // in effect (portrait has no side/bottom inset where the branches differ).
+    const isLandscape = width > height;
+    // ✅ Notch clearance in landscape, where edges fall back to ['bottom'].
+    const sidePadding = useLandscapeSidePadding();
 
   // ✅ GPX file URI and filename passed from share intent (may be undefined)
   const sharedFileUri = route?.params?.sharedFileUri;
@@ -293,9 +298,13 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
       <AppHeader title={t('common:band.newPersonalEvent')} showLogo={true} showBack />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, sidePadding]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        // ✅ 0, not 80: RN's KAV uses its onLayout frame, relative to a
+        // SafeAreaView that starts at the screen top (headerShown false), so
+        // AppHeader is already counted. 80 lifted the form 80pt clear of the
+        // keyboard — in landscape that left ~0-20pt of form while typing.
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           style={{ flex: 1 }}
@@ -419,7 +428,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
                       <Ionicons name="document-outline" size={28} color={palette.navy} />
                     </View>
                     <View style={personalStyles.fileDetails}>
-                      <Text numberOfLines={1} style={personalStyles.fileName}>{selectedFile.name}</Text>
+                      <Text numberOfLines={1} ellipsizeMode="middle" style={personalStyles.fileName}>{selectedFile.name}</Text>
                       <Text style={personalStyles.fileSize}>{formatFileSize(selectedFile.size)}</Text>
                     </View>
                   </View>

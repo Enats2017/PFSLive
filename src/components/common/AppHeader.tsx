@@ -199,7 +199,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       {!!title && (
         <View style={[headerStyles.band, { paddingLeft: space.xl + side.left, paddingRight: space.xl + side.right }]}>
-          <Text style={headerStyles.bandText} numberOfLines={1}>
+          {/* ✅ 2 lines (layout audit 2026-10-22): on several screens this is
+              the only place the event name shows, and long names were cut. */}
+          <Text style={headerStyles.bandText} numberOfLines={2}>
             {title}
           </Text>
         </View>

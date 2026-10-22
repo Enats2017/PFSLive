@@ -23,6 +23,9 @@ import { spacing, palette, radii, space, type, fonts } from './common.styles';
     sectionLabelText: {
         ...type.label,
         color: palette.textMuted,
+        // flexShrink: fr "INSCRIPTION AU SUIVI EN DIRECT" ran off-screen beside
+        // the icon at 320 x1.35 (audit 2026-10-22)
+        flexShrink: 1,
     },
 
     dividerRow: {

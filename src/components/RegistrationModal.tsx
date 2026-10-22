@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, palette, fonts, shadows, space, withAlpha } from '../styles/common.styles';
 import { useNavigation } from '@react-navigation/native';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
 
 type RegistrationStatus =
   | 'registered'
@@ -184,93 +185,97 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
       </Animated.View>
 
       {/* Card */}
+      {/* ModalScroll: the card (~450-485pt in fr) was taller than a landscape
+          screen — icon off the top, buttons off the bottom (audit 2026-10-22) */}
       <View style={styles.wrapper} pointerEvents="box-none">
+        {/* The slide-in sits OUTSIDE the scroll (verify pass): inside it the
+            ScrollView clipped the card while it moved up 80pt — a wipe, not a slide. */}
         <Animated.View
-          style={[
-            styles.card,
-            {
-              transform: [{ translateY: cardTranslateY }],
-              opacity: cardOpacity,
-            },
-          ]}
+          pointerEvents="box-none"
+          style={{ width: '100%', maxHeight: '100%', alignItems: 'center', transform: [{ translateY: cardTranslateY }], opacity: cardOpacity }}
         >
-          {/* Top accent bar */}
+        <ModalScroll contentStyle={{ alignItems: 'center' }}>
+          <Animated.View style={styles.card}>
+            {/* Top accent bar */}
 
-          {/* Close button */}
-          <TouchableOpacity
-            style={styles.closeBtn}
-            onPress={onClose}
-            hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
-          >
-            <Text style={styles.closeBtnText}>✕</Text>
-          </TouchableOpacity>
-
-          {/* Icon */}
-          <Animated.View
-            style={[
-              styles.iconWrapper,
-              {
-                backgroundColor: palette.fill,
-                transform: [{ scale: iconScale }],
-              },
-            ]}
-          >
-            <Text style={styles.iconText}>{config.icon}</Text>
-          </Animated.View>
-
-          {/* Distance chip */}
-          {distanceName ? (
-            <Text
-              style={[styles.distanceName, { color: config.accentColor }]}
-              numberOfLines={1}
+            {/* Close button */}
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={onClose}
+              hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
             >
-              {distanceName}
-            </Text>
-          ) : null}
+              <Text style={styles.closeBtnText}>✕</Text>
+            </TouchableOpacity>
 
-          {/* Title */}
-          <Text style={styles.title}>{config.title}</Text>
+            {/* Icon */}
+            <Animated.View
+              style={[
+                styles.iconWrapper,
+                {
+                  backgroundColor: palette.fill,
+                  transform: [{ scale: iconScale }],
+                },
+              ]}
+            >
+              <Text style={styles.iconText}>{config.icon}</Text>
+            </Animated.View>
 
-          {/* Description */}
-          <Text style={styles.description}>{config.description}</Text>
-          {config.buttonLabel && (
-          <View style = {{width:"100%", paddingTop:spacing.md}} >
-            {status === 'connect_confirm' ? (
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={[commonStyles.secondaryButton]}
-                  activeOpacity={0.7}
-                  onPress={onClose}
-                >
-                  <Text style={commonStyles.secondaryButtonText}>
-                    {config.notNowLabel}
+            {/* Distance chip */}
+            {distanceName ? (
+              // 2 lines, centred (was 1): long caps distance names were cut (audit 2026-10-22)
+              <Text
+                style={[styles.distanceName, { color: config.accentColor }]}
+                numberOfLines={2}
+              >
+                {distanceName}
+              </Text>
+            ) : null}
+
+            {/* Title */}
+            <Text style={styles.title}>{config.title}</Text>
+
+            {/* Description */}
+            <Text style={styles.description}>{config.description}</Text>
+            {config.buttonLabel && (
+            <View style = {{width:"100%", paddingTop:spacing.md}} >
+              {status === 'connect_confirm' ? (
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[commonStyles.secondaryButton]}
+                    activeOpacity={0.7}
+                    onPress={onClose}
+                  >
+                    <Text style={commonStyles.secondaryButtonText}>
+                      {config.notNowLabel}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[commonStyles.primaryButton, styles.confirmBtnRow, styles.modalPrimary]}
+                    activeOpacity={0.85}
+                    onPress={handleUpgradePress}
+                  >
+                    <Text style={[commonStyles.primaryButtonText, styles.modalPrimaryText]}>{config.buttonLabel}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={[commonStyles.primaryButton, styles.modalPrimary]}
+                    activeOpacity={0.85}
+                    onPress={handleUpgradePress}
+                  >
+                    <Text style={[commonStyles.primaryButtonText, styles.modalPrimaryText]}>{config.buttonLabel}</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.description, { marginTop: spacing.sm }]}>
+                    {t('details:iosnotnow')}
                   </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[commonStyles.primaryButton, styles.confirmBtnRow, styles.modalPrimary]}
-                  activeOpacity={0.85}
-                  onPress={handleUpgradePress}
-                >
-                  <Text style={[commonStyles.primaryButtonText, styles.modalPrimaryText]}>{config.buttonLabel}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={[commonStyles.primaryButton, styles.modalPrimary]}
-                  activeOpacity={0.85}
-                  onPress={handleUpgradePress}
-                >
-                  <Text style={[commonStyles.primaryButtonText, styles.modalPrimaryText]}>{config.buttonLabel}</Text>
-                </TouchableOpacity>
-                <Text style={[styles.description, { marginTop: spacing.sm }]}>
-                  {t('details:iosnotnow')}
-                </Text>
-              </>
+                </>
+              )}
+            </View>
             )}
-          </View>
-          )}
+          </Animated.View>
+        </ModalScroll>
         </Animated.View>
       </View>
     </Modal>
@@ -287,6 +292,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
+    // vertical room too, so a scrolled card never touches the screen edge (audit 2026-10-22)
+    paddingVertical: 24,
   },
   card: {
     width: '100%',
@@ -345,6 +352,7 @@ const styles = StyleSheet.create({
         fontSize: 13,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
+    textAlign: 'center',
     marginBottom: 8,
   },
   title: {

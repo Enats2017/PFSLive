@@ -53,11 +53,11 @@ const getLiveStats = (checkpoints: RaceResult['checkpoints']) => {
 const getDisplayCheckpoints = (cps: RaceResult['checkpoints']) =>
     (cps ?? []).filter(cp => !cp.is_start);
 
-const truncateCheckpointName = (name: string, maxLength: number = 12): string => {
-    if (!name) return '';
-    if (name.length <= maxLength) return name;
-    return name.substring(0, maxLength - 1).trim() + '.';
-};
+// The whole checkpoint name. This used to hard-cut it to 11 characters + "."
+// ("Checkpoint 10" → "Checkpoint.", "Kilometer 21,1" → "Kilometer 2."), which
+// read as a different checkpoint. The labels wrap to 3 lines instead and
+// numberOfLines ellipsizes anything longer.
+const truncateCheckpointName = (name: string): string => (name ? name.trim() : '');
 
 const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     item,
@@ -147,9 +147,12 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
         if (!isLoading) onToggleFollow();
     }, [isLoading, onToggleFollow]);
 
+    // Every stat label on this card: 3 lines (was 2). "<checkpoint> (TEMPS DE
+    // COURSE)" needs 3 in a ~85pt column in fr, so "COURSE" was lost; statCol's
+    // space-between keeps the values on one baseline.
     const renderCpColumn = (cp: RaceResult['checkpoints'][number] | null, style?: any) => (
         <View style={[resultListStyle.statCol, style]}>
-            <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+            <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                 {cp ? truncateCheckpointName(cp.name) : '-'}
             </Text>
             <Text style={[
@@ -190,7 +193,9 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     </Text>
                 </View>
                 <View style={resultListStyle.cardTop}>
-                    <Text style={resultListStyle.cardName} numberOfLines={1}>{item.name}</Text>
+                    {/* 2 lines (was 1): a long name / team name in the ~160-200pt
+                        column at 320pt was cut to "…". */}
+                    <Text style={resultListStyle.cardName} numberOfLines={2}>{item.name}</Text>
                     {/* The flag and age were part of this row before the redesign and
                         are kept: the deck's example runner simply had neither. */}
                     {/* Two lines. Five values on one clamped line needed ~306pt
@@ -213,7 +218,9 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         {!!item.nation_flag && (
                             <SvgUri uri={item.nation_flag} width={18} height={13} />
                         )}
-                        <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
+                        {/* 2 lines (was 1): club · country · age lost the country
+                            and age behind a long club name */}
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
                             {[item.club, item.nation,
                               item.age ? `${t('allrace:race.age')} ${item.age}` : null]
                                 .filter(Boolean).join(' \u00b7 ')}
@@ -275,7 +282,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             resultListStyle.statCol,
                             fromLive === 1 && !lastCrossed && { alignItems: 'flex-start' },
                         ]}>
-                            <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+                            <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                                 {lastCrossed
                                     ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
                                     : t('allrace:race.raceTime')}
@@ -289,7 +296,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     {fromLive === 0 ? (
                         isCheckpointMode ? (
                             <View style={[resultListStyle.statCol, resultListStyle.statColLeft]}>
-                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                                     {[t('allrace:race.ranking'), cp1 ? truncateCheckpointName(cp1.name) : '']
                                         .filter(Boolean).join(' ')}
                                 </Text>
@@ -299,7 +306,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             </View>
                         ) : (
                             <View style={[resultListStyle.statCol, resultListStyle.statColLeft]}>
-                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                                     {[t('allrace:race.ranking'), item.category_name]
                                         .filter(Boolean).join(' ')}
                                 </Text>
@@ -313,7 +320,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             {renderCpColumn(cp2, resultListStyle.statColMid)}
                             {/* {renderCpColumn(cp3)} */}
                             <View style={resultListStyle.statCol}>
-                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
                                 <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
@@ -325,14 +332,14 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         <>
                             {finishedGenderRank ? (
                                 <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
-                                    <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+                                    <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                                         {[t('allrace:race.rank'), genderWord].filter(Boolean).join(' ')}
                                     </Text>
                                     <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{finishedGenderRank}</Text>
                                 </View>
                             ) : (
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
-                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                                     {nextCp
                                         ? `${t('allrace:race.eta')} ${truncateCheckpointName(nextCp.name)}`
                                         : lastCrossed
@@ -346,7 +353,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             )}
 
                             <View style={resultListStyle.statCol}>
-                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
                                 <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
@@ -374,7 +381,13 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
     prev.isCheckpointMode === next.isCheckpointMode &&
     prev.selectedCheckpointIndex === next.selectedCheckpointIndex && 
     prev.showUtmbIndex === next.showUtmbIndex &&
-    prev.item.utmb_index === next.item.utmb_index
+    prev.item.utmb_index === next.item.utmb_index &&
+    // identity text — stale after a refresh without these
+    prev.item.name === next.item.name &&
+    prev.item.club === next.item.club &&
+    prev.item.category_name === next.item.category_name &&
+    prev.item.time === next.item.time &&
+    prev.item.finish_rank_agegroup === next.item.finish_rank_agegroup
 );
 
 ResultCardLive.displayName = 'ResultCardLive';

@@ -122,6 +122,8 @@ export const readinessStyles = StyleSheet.create({
   allSetText: {
     ...type.bodyMedium,
     color: palette.ink,
+    // flexShrink: fr ran past the card beside the icon at 320 (audit 2026-10-22)
+    flexShrink: 1,
   },
 
   // ── Countdown + share (home, upcoming race) ──────────────────────────────
@@ -152,11 +154,16 @@ export const readinessStyles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: palette.navy,
     marginTop: space.md,
+    // side padding + text flexShrink: the fr label ran out of the button at
+    // 320 from x1.1 text (audit 2026-10-22)
+    paddingHorizontal: space.lg,
   },
   shareButtonText: {
     fontFamily: fonts.display,
     fontSize: 15,
     color: palette.navy,
+    flexShrink: 1,
+    textAlign: 'center',
   },
 
   // ── Notifications screen ─────────────────────────────────────────────────
@@ -220,7 +227,13 @@ export const readinessStyles = StyleSheet.create({
     height: 96,
     backgroundColor: palette.fill,
   },
+  // flex 1 + space-between: tiles stretch to the tallest, so the date / city
+  // line sat at different heights and a no-image tile had a blank bottom —
+  // the meta line is now pinned to the bottom (audit 2026-10-22, same idea as
+  // fan.styles eventCard / eventInfo)
   eventTileBody: {
+    flex: 1,
+    justifyContent: 'space-between',
     padding: space.md,
     gap: 2,
   },

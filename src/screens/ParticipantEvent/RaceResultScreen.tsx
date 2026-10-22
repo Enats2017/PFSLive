@@ -22,6 +22,7 @@ import { useScreenError } from '../../hooks/useApiError';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { distanceButtonsBelow } from '../../utils/screenFit';
 
 const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }) => {
@@ -31,6 +32,13 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   // Card: margin spacing.md + padding space.lg each side.
   const buttonsBelow = distanceButtonsBelow(windowWidth - 2 * spacing.md - 2 * spacing.lg, fontScale);
   const insets = useSafeAreaInsets();
+  // ✅ Notch side padding for the list below AppHeader (edges are ['bottom']
+  // on a notched iPhone in landscape) - layout audit 2026-10-22.
+  const sidePadding = useLandscapeSidePadding();
+  const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
+  // ✅ Header image capped in landscape: full width at 612:428 it was ~590pt
+  // tall there - taller than the screen. Portrait is unchanged.
+  const headerImageHeight = Math.round(height * 0.45);
   const [containerWidth, setContainerWidth] = useState(0);
   const isGestureNav = insets.bottom > 0;
   const isLandscape = windowWidth > height;
@@ -109,12 +117,12 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
     <View style={{ marginBottom: spacing.md }}>
       {event_image ? (
         <View
-          style={{
+          style={[{
             width: '100%',
             aspectRatio: 612 / 428,
             justifyContent: 'center',
             alignItems: 'center',
-          }}
+          }, isLandscape && { aspectRatio: undefined, height: headerImageHeight }]}
         >
           {imageLoading && (
             <ActivityIndicator
@@ -141,17 +149,21 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         </View>
       ) : null}
     </View>
-  ), [event_name, event_image, imageLoading]);
+  ), [event_name, event_image, imageLoading, isLandscape, headerImageHeight]);
 
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     return (
       <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.md, marginHorizontal: spacing.md }]}>
+        {/* ✅ Distance name on its own full-width line, no line limit (layout
+            audit 2026-10-22): beside the button column it had ~99-169pt, so a
+            single nl word ("Recreatieloop" 141pt, "Wandeltocht" 132pt at 20pt)
+            broke mid-word at 360-414pt and long names were cut at 2 lines. */}
+        <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
+          {item.distance_name}
+        </Text>
         <View style={[detailsStyles.distance, buttonsBelow && detailsStyles.distanceStacked]}>
           <View style={[detailsStyles.distanceInfo, buttonsBelow && detailsStyles.distanceInfoStacked]}>
-            <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
-              {item.distance_name}
-            </Text>
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
               <Text style={detailsStyles.metaText}>
@@ -189,8 +201,11 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
               </View>
             )}
           </View>
-          {!buttonsBelow && <View style={detailsStyles.verticalDivider} />}
+          {/* ✅ Divider only with a button beside it (layout audit 2026-10-22):
+              without results it drew a line next to nothing. */}
           {showResults && (
+            <>
+          {!buttonsBelow && <View style={detailsStyles.verticalDivider} />}
             <TouchableOpacity
               style={[detailsStyles.resultsButton, buttonsBelow && detailsStyles.distanceButtonFull,
                 buttonsBelow && detailsStyles.distanceButtonsBelow]}
@@ -211,6 +226,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
                 {t('button.result')}
               </Text>
             </TouchableOpacity>
+            </>
           )}
         </View>
       </View>
@@ -220,7 +236,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   // ✅ LOADING STATE
   if (loading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
         <AppHeader title={event_name} showLogo={false} showBack />
         <View style={commonStyles.centerContainer}>
           <ActivityIndicator size="large" color={palette.navy} />
@@ -238,7 +254,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   // ✅ ERROR STATE
   if (hasError && !loading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
         <ErrorScreen
           type={error!.type}
           title={error!.title}
@@ -269,11 +285,11 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             `${item.product_option_value_app_id}-${index}`
           }
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
+          contentContainerStyle={[{
             flexGrow: 1,
 
             paddingBottom: 80,
-          }}
+          }, sidePadding]}
           ListHeaderComponent={renderListHeader}
           renderItem={renderItem}
         />

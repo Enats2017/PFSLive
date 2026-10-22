@@ -25,6 +25,7 @@ import { personalStyles } from '../../styles/personalEvent.styles';
 import { EditPersonalEventpops } from '../../types/navigation';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { FileCard } from '../../components/FileCard';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MB = MAX_FILE_SIZE / 1_048_576;
@@ -32,6 +33,9 @@ const MB = MAX_FILE_SIZE / 1_048_576;
 const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation }) => {
   const { eventId } = route.params;
   const { t } = useTranslation(['personal', 'common']);
+  // ✅ Notch clearance for the body in landscape (edges are ['bottom']).
+  const sidePadding = useLandscapeSidePadding();
+  const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
 
   const {
     formData,
@@ -226,7 +230,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
 
   if (isLoading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
         <AppHeader title={t('common:band.editPersonalEvent')} showLogo showBack />
         <View style={commonStyles.centerContainer}>
           <ActivityIndicator size="large" color={palette.navy} />
@@ -236,13 +240,17 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
   }
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+    <SafeAreaView style={commonStyles.container} edges={safeEdges}>
       <AppHeader title={t('common:band.editPersonalEvent')} showLogo showBack />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, sidePadding]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        // ✅ 0, not 80: RN's KAV uses its onLayout frame, relative to a
+        // SafeAreaView that starts at the screen top (headerShown false), so
+        // AppHeader is already counted. 80 lifted the form 80pt clear of the
+        // keyboard — in landscape that left ~0-20pt of form while typing.
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}

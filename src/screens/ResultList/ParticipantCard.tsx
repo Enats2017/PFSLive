@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { isNarrowWidth } from '../../utils/screenFit';
 import { useTranslation } from 'react-i18next';
 import { Participant } from '../../services/participantService';
 import { commonStyles, palette } from '../../styles/common.styles';
@@ -20,6 +21,7 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     product_option_value_app_id,
     raceStatus,
 }) => {
+    const { width } = useWindowDimensions();
     const { t } = useTranslation(['details']);
     const navigation = useNavigation<any>();
 
@@ -48,10 +50,15 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
                 </Text>
             </View>
             <View style={favstyle.content}>
-                <Text numberOfLines={1} style={commonStyles.title}>
+                {/* 2 lines in the 15pt athlete-name style (was 1 line of the 20pt
+                    commonStyles.title): ~131pt at 320pt cut most full names to
+                    "…". Same as AllParticipantCard. */}
+                {/* verify pass: 20pt title from 360pt as before; 15pt only below 360pt */}
+                <Text numberOfLines={2} style={isNarrowWidth(width) ? favstyle.runnerName : commonStyles.title}>
                     {fullName}
                 </Text>
-                <Text style={favstyle.participantMeta} numberOfLines={1}>
+                {/* 2 lines (was 1): a long distance name pushed off the end */}
+                <Text style={favstyle.participantMeta} numberOfLines={2}>
                     {[
                         item.bib_number ? `${t('details:tracking.bib')} ${item.bib_number}` : null,
                         item.race_distance,

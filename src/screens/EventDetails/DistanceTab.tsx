@@ -281,8 +281,13 @@ const DistanceTab = ({
   // ✅ PRESELECT (deep link) — scroll to the distance once, never register.
   const listRef = useRef<FlatList<Distance>>(null);
   // Card: margin space.xl + padding space.lg each side.
-  const { width: windowWidth, fontScale } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight, fontScale } = useWindowDimensions();
   const buttonsBelow = distanceButtonsBelow(windowWidth - 2 * space.xl - 2 * space.lg, fontScale);
+  // ✅ Header image capped in landscape (layout audit 2026-10-22): full width
+  // at 612:428 it was ~590pt tall there - more than the whole screen - and the
+  // distances started a full screen down. Portrait is unchanged.
+  const headerLandscape = windowWidth > windowHeight;
+  const headerImageHeight = Math.round(windowHeight * 0.45);
   const preselectDoneRef = useRef(false);
   // onScrollToIndexFailed retries the real index ONCE per preselect scroll
   // (a retry that fails again must not loop).
@@ -442,7 +447,10 @@ const handleExternalRegister = useCallback((url: string) => {
     return (
       <View>
         {headerImage ? (
-          <View style={{ width: '100%', aspectRatio: 612 / 428, justifyContent: 'center', alignItems: 'center',}}>
+          <View style={[
+            { width: '100%', aspectRatio: 612 / 428, justifyContent: 'center', alignItems: 'center',},
+            headerLandscape && { aspectRatio: undefined, height: headerImageHeight },
+          ]}>
             {imageLoading && (
               <ActivityIndicator
                 size="large"
@@ -455,11 +463,11 @@ const handleExternalRegister = useCallback((url: string) => {
               source={{ uri: headerImage }}
               contentFit="cover"
               cachePolicy="memory-disk"
-              style={{
+              style={[{
                 width: '100%',
                 aspectRatio: 612 / 428,
                 opacity: imageLoading ? 0 : 1,
-              }}
+              }, headerLandscape && { aspectRatio: undefined, height: '100%' }]}
               onLoad={() => setImageLoading(false)}
               onError={(e) => {
                 console.log('❌ Image failed:', headerImage, e?.error);
@@ -480,7 +488,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
       </View>
     );
-  }, [event_name, headerImage, distances, imageLoading]);
+  }, [event_name, headerImage, distances, imageLoading, headerLandscape, headerImageHeight]);
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isRegistering =
@@ -501,11 +509,15 @@ const handleExternalRegister = useCallback((url: string) => {
           },
         ]}
       >
+        {/* ✅ Distance name on its own full-width line, no line limit (layout
+            audit 2026-10-22): beside the button column it had ~99-169pt, so a
+            single nl word ("Recreatieloop" 141pt, "Wandeltocht" 132pt at 20pt)
+            broke mid-word at 360-414pt and long names were cut at 2 lines. */}
+        <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
+          {item.distance_name}
+        </Text>
         <View style={[detailsStyles.distance, buttonsBelow && detailsStyles.distanceStacked]}>
           <View style={[detailsStyles.distanceInfo, buttonsBelow && detailsStyles.distanceInfoStacked]}>
-            <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
-              {item.distance_name}
-            </Text>
 
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={palette.textBody} />

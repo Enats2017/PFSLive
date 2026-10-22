@@ -133,16 +133,17 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
 
                 {!!raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
-                        <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.wavelabel')}</Text>
+                        <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.wavelabel')}</Text>
                         {/* Value only — the label above already says "wave", so the
-                            raw RR value ("Wave 1: Start @ 9h") said it twice, stacked. */}
-                        <Text style={resultInfoStyles.rowValue}>{stripWavePrefix(raceInfo.wave)}</Text>
+                            raw RR value ("Wave 1: Start @ 9h") said it twice, stacked.
+                            rowValueEnd: wraps right-aligned instead of crushing the label. */}
+                        <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]}>{stripWavePrefix(raceInfo.wave)}</Text>
                     </View>
                 )}
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.status')}</Text>
-                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.status')}</Text>
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={1}>
                         {statusText(raceInfo?.participant_status)}
                     </Text>
                 </View>
@@ -150,8 +151,11 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                 {/* Kept beyond the mockup: values the app already showed and
                     that the timing feed provides. */}
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.distance')}</Text>
-                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                    {/* The value never shrank, so a long distance name crushed
+                        "Distance" to a letter per line at 320pt. Now it wraps
+                        (2 lines) right-aligned and the label keeps its width. */}
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.distance')}</Text>
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={2}>
                         {event?.distance_name ?? '—'}
                     </Text>
                 </View>
@@ -163,16 +167,20 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                     </Text>
                 </View>
 
+                {/* Label | value over day + time. All three side by side in one
+                    space-between row overflowed the card at 320-390pt. */}
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.previousTimingPoint')}</Text>
-                    <Text style={resultInfoStyles.rowValue}>
-                        {raceInfo?.previous_cp?.name ?? '—'}
-                    </Text>
-                    <Text style={resultInfoStyles.timingPointDate}>
-                        {raceInfo?.previous_cp?.day_name && raceInfo?.previous_cp?.actual_time
-                            ? `${t(`common:week.${raceInfo.previous_cp.day_name.toLowerCase()}`)} ${formatClockTime(raceInfo.previous_cp.actual_time)}`
-                            : '—'}
-                    </Text>
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.previousTimingPoint')}</Text>
+                    <View style={{ flexShrink: 1, alignItems: 'flex-end' }}>
+                        <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]}>
+                            {raceInfo?.previous_cp?.name ?? '—'}
+                        </Text>
+                        <Text style={[resultInfoStyles.timingPointDate, resultInfoStyles.rowValueEnd]}>
+                            {raceInfo?.previous_cp?.day_name && raceInfo?.previous_cp?.actual_time
+                                ? `${t(`common:week.${raceInfo.previous_cp.day_name.toLowerCase()}`)} ${formatClockTime(raceInfo.previous_cp.actual_time)}`
+                                : '—'}
+                        </Text>
+                    </View>
                 </View>
 
                 <View style={resultInfoStyles.statsCard}>

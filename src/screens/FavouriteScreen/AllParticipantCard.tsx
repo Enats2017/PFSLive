@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { isNarrowWidth } from '../../utils/screenFit';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Participant } from '../../services/participantService';
@@ -21,6 +22,7 @@ const AllParticipantCard: React.FC<AllParticipantCardProps> = React.memo(({
     isLoading,
     onToggleFollow
 }) => {
+    const { width } = useWindowDimensions();
     const { t } = useTranslation(['details', 'follower']);
 
     const fullName = useMemo(() =>
@@ -31,7 +33,9 @@ const AllParticipantCard: React.FC<AllParticipantCardProps> = React.memo(({
 
     return (
         <View style={favstyle.participantcard}>
-            <View style={[favstyle.bibBox, favstyle.bibBoxLime]}>
+            {/* bibBoxGrow: a 5-digit bib wrapped inside the fixed 46x46 circle
+                from x1.1 larger text; the circle now grows into a pill. */}
+            <View style={[favstyle.bibBox, favstyle.bibBoxLime, favstyle.bibBoxGrow]}>
                 {/* `primaryButtonText` is WHITE - on `bibBox`'s light fill the
                     bib number was invisible. `bibBoxText` was defined for this
                     and never wired up. */}
@@ -39,8 +43,11 @@ const AllParticipantCard: React.FC<AllParticipantCardProps> = React.memo(({
             </View>
             <View style={favstyle.content}>
                 {/* Long names wrap inside the card instead of running into the
-                    add button (review request). */}
-                <Text numberOfLines={2} style={commonStyles.title}>
+                    add button (review request).
+                    15pt athlete-name style (was commonStyles.title, 20pt): in
+                    ~131pt at 320pt "Vandenberghe" (153pt at 20) broke mid-word. */}
+                {/* verify pass: 20pt title from 360pt as before; 15pt only below 360pt */}
+                <Text numberOfLines={2} style={isNarrowWidth(width) ? favstyle.runnerName : commonStyles.title}>
                     {fullName}
                 </Text>
                 <Text style={commonStyles.subtitle}>{item.race_distance}</Text>

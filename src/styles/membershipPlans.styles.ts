@@ -125,6 +125,15 @@ export const membershipPlansStyle = StyleSheet.create({
         ...type.h3,
         flexShrink: 0,
     },
+    // Narrow / larger text: the badge is on its own line (sessionsBadgeLine),
+    // so the name may wrap before the price is pushed off the card.
+    planNameShrink: {
+        flexShrink: 1,
+    },
+    sessionsBadgeLine: {
+        flexDirection: 'row',
+        marginTop: space.xs,
+    },
     sessionsBadge: {
         flexShrink: 1,
         // Without minWidth a flex child will not shrink below its own content, so a

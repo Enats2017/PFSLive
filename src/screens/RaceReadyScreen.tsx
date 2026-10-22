@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AppHeader } from '../components/common/AppHeader';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../hooks/useLandscapeSidePadding';
 import { commonStyles, palette } from '../styles/common.styles';
 import { readinessStyles as s } from '../styles/readiness.styles';
 import { RootStackParamList } from '../types/navigation';
@@ -46,6 +47,9 @@ type StepName = 'notifications' | 'location' | 'background' | 'locationServices'
 
 const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
   const { t } = useTranslation(['readiness', 'common', 'home']);
+  // ✅ Notch clearance for the body in landscape (edges are ['bottom']).
+  const sidePadding = useLandscapeSidePadding();
+  const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
   const raceName = route.params?.race_name;
   const source = route.params?.source;
   // Partner races only (numeric product_app_id): which race the steps were for.
@@ -244,9 +248,9 @@ const RaceReadyScreen: React.FC<Props> = ({ navigation, route }) => {
     current === 'precise';
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+    <SafeAreaView style={commonStyles.container} edges={safeEdges}>
       <AppHeader title={t('readiness:raceReady.band')} showLogo showBack onBack={close} />
-      <ScrollView contentContainerStyle={s.screen} showsVerticalScrollIndicator={false}>
+      <ScrollView style={sidePadding} contentContainerStyle={s.screen} showsVerticalScrollIndicator={false}>
         {!state ? (
           <View style={commonStyles.centerContainer}>
             <ActivityIndicator size="large" color={palette.navy} />

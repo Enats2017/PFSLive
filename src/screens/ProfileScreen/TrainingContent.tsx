@@ -65,7 +65,9 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
             onDelete={onDeleteEvent}
         />
 
-    ), []);
+    // ✅ Real deps (layout audit 2026-10-22): [] froze the first render's
+    // profile / onDeleteEvent, so isOwnProfile and the delete handler went stale.
+    ), [profile?.is_own_profile, onDeleteEvent]);
 
     const keyExtractor = useCallback(
         (item: AthleteEvent, index: number) => `${item.participant_app_id}-${index}`,
@@ -90,7 +92,7 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
             message={t('profile:empty.no_live_events_msg')}
             onRetry={() => { }}
         />
-    ), []);
+    ), [t]);   // ✅ t: the empty-state copy follows a language change
 
 
     return (

@@ -11,6 +11,7 @@ import {
   ScrollView,
   Modal,
   Pressable,
+  LayoutChangeEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { palette, radii, fonts, shadows, space, withAlpha } from '../styles/common.styles';
@@ -127,6 +128,8 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   pickerCancelLabel = 'Cancel',
    multiline = false,
   inputHeight = 120,
+  onFocus: onFocusProp,
+  onBlur: onBlurProp,
   ...props
 }) => {
   // ✅ STATE
@@ -172,6 +175,21 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
 
   const labelLeft = iconName ? 44 : 15;
 
+  // ✅ Measured field width, so the label's maxWidth can be an exact figure.
+  // A flat '75%' ignored the right-hand icon: in a half-width field (134pt at
+  // 320) the label at left 44 ran to ~145pt, i.e. under the chevron/calendar
+  // at w − 34 — fr "Date de naissance", nl "Geboortedatum" were cut mid-glyph
+  // with the icon painted over them (audit 2026-10-22).
+  const [fieldWidth, setFieldWidth] = useState(0);
+  const handleFieldLayout = useCallback(
+    (e: LayoutChangeEvent) => setFieldWidth(e.nativeEvent.layout.width),
+    [],
+  );
+  // Pickers / dropdowns always show a right icon; the password eye too. The
+  // clear button only appears once there is a value — and then the label has
+  // already floated onto the border, clear of it.
+  const hasRestingRightIcon = isDropdown || isDatePicker || isTimePicker || isPassword;
+
   const labelStyle = useMemo(() => ({
     position: 'absolute' as const,
     left: labelLeft,
@@ -186,7 +204,20 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     //
     // `right` was also keeping a long label clear of the clear/eye button in the
     // resting position; maxWidth does that job now without stretching the box.
-    maxWidth: '75%' as const,
+    //
+    // Resting (inside the field, vertically level with the right icon at
+    // `right: 14`, 20pt wide) it must stop 40pt short of the edge; floated onto
+    // the border it no longer meets the icon and may use the width up to the
+    // rounded corner (12pt). '75%' stays only as the pre-layout fallback.
+    maxWidth: fieldWidth > 0
+      ? animatedValue.interpolate({
+          inputRange: [0, 1],
+          outputRange: [
+            Math.max(0, fieldWidth - labelLeft - (hasRestingRightIcon ? 40 : 12)),
+            Math.max(0, fieldWidth - labelLeft - 12),
+          ],
+        })
+      : ('75%' as const),
     top: animatedValue.interpolate({
       inputRange: [0, 1],
       outputRange: [17, -9],
@@ -204,7 +235,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     zIndex: 1,
     fontFamily: fonts.bodyMedium,
     letterSpacing: 0.3,
-  }), [animatedValue, labelLeft, error]);
+  }), [animatedValue, labelLeft, error, fieldWidth, hasRestingRightIcon]);
 
 
   // ══════════════════════════════════════════════════════════
@@ -264,8 +295,18 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     onChangeText('');
   }, [onChangeText]);
 
-  const handleFocus = useCallback(() => setIsFocused(true), []);
-  const handleBlur = useCallback(() => setIsFocused(false), []);
+  // ✅ Caller's onFocus/onBlur are chained, not spread: `{...props}` comes after
+  // onFocus={handleFocus} on the TextInput, so a caller's onFocus (Contact
+  // form's message field) silently replaced ours — the label never floated
+  // and the placeholder never showed on that field.
+  const handleFocus = useCallback<NonNullable<TextInputProps['onFocus']>>((e) => {
+    setIsFocused(true);
+    onFocusProp?.(e);
+  }, [onFocusProp]);
+  const handleBlur = useCallback<NonNullable<TextInputProps['onBlur']>>((e) => {
+    setIsFocused(false);
+    onBlurProp?.(e);
+  }, [onBlurProp]);
   const togglePassword = useCallback(() => setShowPassword(prev => !prev), []);
   const toggleDropdown = useCallback(() => setShowDropdown(prev => !prev), []);
 
@@ -333,8 +374,13 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
           activeOpacity={0.8}
           onPress={toggleDropdown}
           disabled={!editable}
+          onLayout={handleFieldLayout}
           style={[
             styles.container,
+            // ✅ minHeight, not a fixed 56: a long choice (fr "Problème lié à un
+            // événement", 206pt in a ~153pt value area) now wraps to a 2nd line
+            // and the box grows, instead of being cut to one line.
+            { height: 'auto', minHeight: INPUT_HEIGHT },
             { borderColor },
             showDropdown && styles.containerFocused,
             error && styles.containerError,
@@ -364,15 +410,19 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
                 // field is half-width (birth date and gender share a row on
                 // 04_Register.png) and the value is a full date.
                 paddingRight: 48,
-                // `lineHeight: INPUT_HEIGHT` already centres the single line in
-                // the 56pt box; `styles.input`'s paddingTop: 8 then pushed it
-                // 8pt below centre and clipped the descenders.
-                paddingTop: 0,
-                lineHeight: INPUT_HEIGHT,
+                // ✅ Dropdown only: natural line height + vertical padding instead
+                // of `lineHeight: INPUT_HEIGHT`. A 56pt line height made a 2nd
+                // line 112pt tall, so the value was locked to one line; the
+                // container's minHeight (above) now does the centring, and
+                // equal top/bottom padding replaces styles.input's 8pt-top-only
+                // shift (paddingTop, not paddingVertical — the specific key wins).
+                height: 'auto',
+                paddingTop: 8,
+                paddingBottom: 8,
                 color: value ? COLORS.GRAY_DARK : COLORS.GRAY_MED,
               },
             ]}
-            numberOfLines={1}
+            numberOfLines={2}
           >
             {value}
           </Text>
@@ -440,6 +490,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
           activeOpacity={0.8}
           onPress={openTimePicker}
           disabled={!editable}
+          onLayout={handleFieldLayout}
           style={[
             styles.container,
             { borderColor },
@@ -547,6 +598,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
           activeOpacity={0.8}
           onPress={openDatePicker}
           disabled={!editable}
+          onLayout={handleFieldLayout}
           style={[
             styles.container,
             { borderColor },
@@ -654,6 +706,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   <View style={styles.wrapper}>
     <Pressable
       onPress={focusInput}
+      onLayout={handleFieldLayout}
       style={[
         styles.container,
         { borderColor },

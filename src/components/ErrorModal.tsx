@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
 import { RING_TINT } from './ui';
+import ModalScroll from './ui/ModalScroll';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface ErrorModalProps {
@@ -46,45 +47,50 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
         />
       </View>
 
-      <View style={styles.wrapper}>
-        <View style={styles.card}>
-          <View style={styles.iconWrapper}>
-            <Ionicons name="alert-circle" size={56} color={palette.danger} />
-          </View>
+      {/* box-none: this full-screen wrapper sits over the backdrop touchable and
+          swallowed every outside tap, so tap-to-close never fired. ModalScroll:
+          in landscape the card was taller than the screen (audit 2026-10-22). */}
+      <View style={styles.wrapper} pointerEvents="box-none">
+        <ModalScroll contentStyle={{ alignItems: 'center' }}>
+          <View style={styles.card}>
+            <View style={styles.iconWrapper}>
+              <Ionicons name="alert-circle" size={56} color={palette.danger} />
+            </View>
 
-          <Text style={styles.title}>
-            {titleKey ? t(titleKey) : t('common:errors.generic')}
-          </Text>
+            <Text style={styles.title}>
+              {titleKey ? t(titleKey) : t('common:errors.generic')}
+            </Text>
 
-          <Text style={styles.message}>{t(messageKey)}</Text>
+            <Text style={styles.message}>{t(messageKey)}</Text>
 
-          <View style={styles.buttonContainer}>
-            {onRetry && (
+            <View style={styles.buttonContainer}>
+              {onRetry && (
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, styles.retryButton]}
+                  onPress={() => {
+                    onClose();
+                    onRetry();
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={commonStyles.primaryButtonText}>
+                    {t('common:buttons.retry')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
-                style={[commonStyles.primaryButton, styles.retryButton]}
-                onPress={() => {
-                  onClose();
-                  onRetry();
-                }}
-                activeOpacity={0.8}
+                style={commonStyles.secondaryButton}
+                onPress={onClose}
+                activeOpacity={0.7}
               >
-                <Text style={commonStyles.primaryButtonText}>
-                  {t('common:buttons.retry')}
+                <Text style={commonStyles.secondaryButtonText}>
+                  {t('common:buttons.close')}
                 </Text>
               </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={commonStyles.secondaryButton}
-              onPress={onClose}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.secondaryButtonText}>
-                {t('common:buttons.close')}
-              </Text>
-            </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </ModalScroll>
       </View>
     </Modal>
   );

@@ -174,7 +174,8 @@ const CheckpointHead = memo(({
         </View>
 
         <View style={resultInfoStyles.cpHeadText}>
-            <Text style={resultInfoStyles.cpName} numberOfLines={1}>{item.name}</Text>
+            {/* 2 lines (was 1): ~110pt at 320pt cut longer checkpoint names to "…" */}
+            <Text style={resultInfoStyles.cpName} numberOfLines={2}>{item.name}</Text>
             <Text style={resultInfoStyles.cpSub} numberOfLines={1}>{dist(item.distance, t)}</Text>
         </View>
 
@@ -225,7 +226,7 @@ const CheckpointCard = memo(({
     if (isFirstCheckpoint && isStartedOrPastRace) {
         return (
             <View style={resultInfoStyles.timingcard}>
-                <Text style={resultInfoStyles.checkpointName} numberOfLines={1}>{item.name}</Text>
+                <Text style={resultInfoStyles.checkpointName} numberOfLines={2}>{item.name}</Text>{/* 2 lines: checkpoint names were cut (audit 2026-10-22) */}
                 <StatCol
                     label={t('timingPoint.startTime')}
                     value={item.day_name

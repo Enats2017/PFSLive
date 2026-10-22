@@ -74,20 +74,28 @@ export const EventListCard: React.FC<EventListCardProps> = React.memo(({
       </View>
 
       <View style={styles.body}>
+        {/* ✅ Badge on its own line above the name (layout audit 2026-10-22):
+            beside it, a badge that does not shrink (nl "BINNENKORT" ~114pt)
+            left the name 22-40pt at 320pt. Name up to 3 lines. */}
+        {!!badgeLabel && (
+          <View style={styles.badgeRow}>
+            <Badge label={badgeLabel} tone={badgeTone} caps={badgeCaps} />
+          </View>
+        )}
         <View style={styles.titleRow}>
-          <Text style={styles.name} numberOfLines={2}>{name}</Text>
-          {!!badgeLabel && <Badge label={badgeLabel} tone={badgeTone} caps={badgeCaps} />}
+          <Text style={styles.name} numberOfLines={3}>{name}</Text>
         </View>
 
         <View style={styles.metaRow}>
           <Ionicons name="calendar-outline" size={13} color={palette.textMuted} />
-          <Text style={styles.meta} numberOfLines={1}>{date}</Text>
+          {/* 2 lines: a long date / place was cut at 320pt and larger text */}
+          <Text style={styles.meta} numberOfLines={2}>{date}</Text>
         </View>
 
         {!!place && (
           <View style={styles.metaRow}>
             <Ionicons name="location-outline" size={13} color={palette.textMuted} />
-            <Text style={styles.meta} numberOfLines={1}>{place}</Text>
+            <Text style={styles.meta} numberOfLines={2}>{place}</Text>
           </View>
         )}
       </View>
@@ -144,6 +152,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
     paddingVertical: space.md,
     paddingHorizontal: space.lg,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    marginBottom: space.xs,
   },
   titleRow: {
     flexDirection: 'row',

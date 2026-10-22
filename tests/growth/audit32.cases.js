@@ -89,8 +89,8 @@ module.exports = ({ test, SRC }) => {
 
   test('FINISH / ETA FINISH headings may take 2 lines (live card ×2, favourites)', () => {
     const live = read('screens/ResultList/ResultCardLive.tsx');
-    assert.strictEqual((live.match(/numberOfLines=\{2\}>\n\s*\{finishCp\?\.is_crossed \? t\('allrace:race\.finish'\)/g) || []).length, 2);
-    assert.ok(/<Text style=\{favstyle\.statLabel\} maxFontSizeMultiplier=\{1\} numberOfLines=\{2\}>\n\s*\{finishCp\?\.is_crossed/.test(read('screens/FavouriteScreen/FavouriteCard.tsx')));
+    assert.strictEqual((live.match(/numberOfLines=\{3\}>\n\s*\{finishCp\?\.is_crossed \? t\('allrace:race\.finish'\)/g) || []).length, 2);   // 3 since the full audit
+    assert.ok(/<Text style=\{favstyle\.statLabel\} maxFontSizeMultiplier=\{1\} numberOfLines=\{3\}>\n\s*\{finishCp\?\.is_crossed/.test(read('screens/FavouriteScreen/FavouriteCard.tsx')));
   });
 
   test('3-column stat grids: headings keep their size (maxFontSizeMultiplier 1) — at ×1.12 CLASSEMENT / KLASSEMENT broke mid-word; values still scale', () => {
@@ -122,15 +122,15 @@ module.exports = ({ test, SRC }) => {
     const reviewed = [
       // each count is its own item in a wrapping row — the row wraps, the item never needs "…"
       'components/ProfileCard.tsx:90', 'components/ProfileCard.tsx:98', 'components/ProfileCard.tsx:112',
-      // distance · bib · wave / bib · distance · nation · age: data lines under a name
-      'screens/EventDetails/ParticipantCard.tsx:183', 'screens/EventDetails/ParticipantResult.tsx:326',
-      'screens/FavouriteScreen/FavouriteCard.tsx:139', 'screens/ResultDetailsScreen/ResultDetails.tsx:262',
-      'screens/ResultList/ParticipantCard.tsx:54',
-      'screens/ResultList/ResultCardBeforeRace.tsx:117', 'screens/ResultList/ResultCardLive.tsx:216',
+      // nation · age under the favourite's name (the name / bib lines take 2 since the full audit)
+      'screens/FavouriteScreen/FavouriteCard.tsx:151',
+      // one line that SHRINKS to fit (adjustsFontSizeToFit), never "…": tab pills, the distance figure
+      'screens/FollowerEventList/FollowerEvent.tsx:392', 'screens/ParticipantEvent/ParticipantEvent.tsx:367',
+      'screens/HomeScreen.tsx:2978',
       // a checkpoint's km or name in a label / value row
-      'screens/ResultDetailsScreen/RaceInfoTab.tsx:255',
+      'screens/ResultDetailsScreen/RaceInfoTab.tsx:263',
       // status value ("In progress" / "Bezig" / "En cours") in a full-width row
-      'screens/ResultDetailsScreen/RaceLive.tsx:99', 'screens/ResultDetailsScreen/UpcomingRace.tsx:30',
+      'screens/ResultDetailsScreen/RaceLive.tsx:105', 'screens/ResultDetailsScreen/UpcomingRace.tsx:30',
     ];
     assert.deepStrictEqual(found.sort(), reviewed.sort());
   });

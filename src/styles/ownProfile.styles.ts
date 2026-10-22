@@ -53,7 +53,10 @@ export const ownProfile = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
-    gap: space.xl,
+    // ✅ Wrap (layout audit 2026-10-22): fr at ×1.35 ran off-screen in one row.
+    flexWrap: "wrap",
+    columnGap: space.xl,
+    rowGap: space.xs,
     marginTop: space.sm,
   },
   statItem: {
@@ -132,7 +135,10 @@ export const ownProfile = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        marginBottom: 20,
+        // ✅ 44pt touch target (was ~22pt, the text line). The 11pt it adds
+        // under the label comes off the margin, so the visual gap is unchanged.
+        minHeight: 44,
+        marginBottom: 8,
         paddingHorizontal: space.xl
     },
     backLabel: {
@@ -185,6 +191,9 @@ export const ownProfile = StyleSheet.create({
         color: palette.navy,
         fontFamily: fonts.display,
         fontSize: 15,
+        // ✅ Wraps instead of pushing the chevron out of the lime button (fr).
+        flexShrink: 1,
+        marginRight: 8,
         },
     createBtn: {
         flexDirection: 'row',
@@ -195,6 +204,9 @@ export const ownProfile = StyleSheet.create({
         borderRadius: 10,
         minHeight: 48,
         paddingVertical: 8,
+        // ✅ Side padding + shrinking label (layout audit 2026-10-22): the fr
+        // label ran out of the button at 320pt with larger text.
+        paddingHorizontal: space.lg,
         marginHorizontal: space.xl,
         marginBottom: spacing.md,
     },
@@ -202,6 +214,8 @@ export const ownProfile = StyleSheet.create({
         fontFamily: fonts.display,
         fontSize: 15,
         color: palette.ink,
+        flexShrink: 1,
+        textAlign: 'center',
     },
 
 });

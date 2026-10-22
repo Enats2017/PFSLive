@@ -10,12 +10,15 @@ import {
     Platform,
     ActivityIndicator,
     StyleSheet,
+    ScrollView,
+    useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import FloatingLabelInput from './FloatingLabelInput';
 import { commonStyles, palette, fonts, space, shadows, withAlpha } from '../styles/common.styles';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import { useLandscapeSidePadding } from '../hooks/useLandscapeSidePadding';
 
 interface Props {
     visible: boolean;
@@ -35,6 +38,14 @@ export const TrackingPasswordModal: React.FC<Props> = ({
     const { t } = useTranslation(['setting']);
     const insets = useSafeAreaInsets();
     const [password, setPassword] = useState('');
+    const { height: windowHeight } = useWindowDimensions();
+    const side = useLandscapeSidePadding();
+    // Mirrors keyboardOffset as plain state, only to cap the sheet height: the
+    // sheet is lifted by the full keyboard height, so in landscape (~320-430pt
+    // tall) the title, ✕ and even the input went off the top with nothing to
+    // scroll. Now the sheet is at most (window − keyboard − top inset) and its
+    // body scrolls (audit 2026-10-22).
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     // slideAnim     — sheet entrance/exit (400=off-screen, 0=resting)
     // keyboardOffset — additional upward lift when keyboard is visible
@@ -51,6 +62,7 @@ export const TrackingPasswordModal: React.FC<Props> = ({
         if (visible) {
             setPassword('');
             keyboardOffset.setValue(0);
+            setKeyboardHeight(0);
             Animated.spring(slideAnim, {
                 toValue: 0,
                 useNativeDriver: true,
@@ -72,6 +84,7 @@ export const TrackingPasswordModal: React.FC<Props> = ({
         const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
         const onShow = (e: KeyboardEvent) => {
+            setKeyboardHeight(e.endCoordinates.height);
             Animated.timing(keyboardOffset, {
                 toValue: e.endCoordinates.height,
                 duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
@@ -80,6 +93,7 @@ export const TrackingPasswordModal: React.FC<Props> = ({
         };
 
         const onHide = (e: KeyboardEvent) => {
+            setKeyboardHeight(0);
             Animated.timing(keyboardOffset, {
                 toValue: 0,
                 duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
@@ -129,7 +143,13 @@ export const TrackingPasswordModal: React.FC<Props> = ({
                     thread so it's smooth and jank-free. */}
                 <Animated.View style={[
                     styles.sheet,
-                    { paddingBottom: insets.bottom + 24 },
+                    {
+                        paddingBottom: (keyboardHeight > 0 ? 0 : insets.bottom) + 24,   // home-indicator inset is behind the keyboard while typing
+                        maxHeight: windowHeight - keyboardHeight - insets.top - 8,
+                        // landscape: keep the input clear of the notch
+                        paddingLeft: 24 + side.paddingLeft,
+                        paddingRight: 24 + side.paddingRight,
+                    },
                     {
                         transform: [{
                             translateY: Animated.subtract(slideAnim, keyboardOffset),
@@ -139,52 +159,59 @@ export const TrackingPasswordModal: React.FC<Props> = ({
                     <View style={styles.handle} />
 
                     <TouchableOpacity
-                        style={styles.closeBtn}
+                        style={[styles.closeBtn, { right: 14 + side.paddingRight }]}
                         onPress={handleClose}
                         hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
                     >
                         <Text style={styles.closeBtnText}>✕</Text>
                     </TouchableOpacity>
 
-                    <Text style={commonStyles.title}>
-                        {t('setting:passwordModal.title')}
-                    </Text>
-                    <Text style={commonStyles.subtitle}>
-                        {t('setting:passwordModal.subtitle')}
-                    </Text>
-
-                    <View style={styles.divider} />
-
-                    <FloatingLabelInput
-                        label={t('setting:passwordModal.placeholder')}
-                        value={password}
-                        onChangeText={setPassword}
-                        iconName="lock-closed-outline"
-                        isPassword
-                        required
-                    />
-
-                    {!!passwordError && (
-                        <Text style={styles.errorText}>{passwordError}</Text>
-                    )}
-
-                    <TouchableOpacity
-                        style={[
-                            commonStyles.primaryButton,
-                            { marginTop: 12 },
-                            isVerifying && { opacity: 0.7 },
-                        ]}
-                        onPress={handleSubmit}
-                        disabled={isVerifying}
-                        activeOpacity={0.85}
+                    <ScrollView
+                        style={styles.body}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                        bounces={false}
                     >
-                        {isVerifying
-                            ? <ActivityIndicator size="small" color={palette.surface} />
-                            : <Text style={commonStyles.primaryButtonText}>
-                                {t('setting:passwordModal.submit')}
-                              </Text>
-                        }
-                    </TouchableOpacity>
+                        <Text style={commonStyles.title}>
+                            {t('setting:passwordModal.title')}
+                        </Text>
+                        <Text style={commonStyles.subtitle}>
+                            {t('setting:passwordModal.subtitle')}
+                        </Text>
+
+                        <View style={styles.divider} />
+
+                        <FloatingLabelInput
+                            label={t('setting:passwordModal.placeholder')}
+                            value={password}
+                            onChangeText={setPassword}
+                            iconName="lock-closed-outline"
+                            isPassword
+                            required
+                        />
+
+                        {!!passwordError && (
+                            <Text style={styles.errorText}>{passwordError}</Text>
+                        )}
+
+                        <TouchableOpacity
+                            style={[
+                                commonStyles.primaryButton,
+                                { marginTop: 12 },
+                                isVerifying && { opacity: 0.7 },
+                            ]}
+                            onPress={handleSubmit}
+                            disabled={isVerifying}
+                            activeOpacity={0.85}
+                        >
+                            {isVerifying
+                                ? <ActivityIndicator size="small" color={palette.surface} />
+                                : <Text style={commonStyles.primaryButtonText}>
+                                    {t('setting:passwordModal.submit')}
+                                  </Text>
+                            }
+                        </TouchableOpacity>
+                    </ScrollView>
                 </Animated.View>
             </View>
         </Modal>
@@ -199,6 +226,8 @@ const styles = StyleSheet.create({
     closeBtn:     { position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: 15, backgroundColor: palette.navy, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
     closeBtnText: { fontFamily: fonts.bodySemi,
         fontSize: 14, color: palette.surface },
+    // flexGrow 0: content height until the sheet hits maxHeight, then scrolls
+    body:         { flexGrow: 0, flexShrink: 1 },
     divider:      { height: 1, backgroundColor: palette.border, marginVertical: 16 },
     errorText:    { fontFamily: fonts.body,
         fontSize: 14, color: palette.danger, marginBottom: space.md, marginTop: 4 },

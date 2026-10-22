@@ -9,7 +9,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   Animated,
+  Keyboard,
+  KeyboardEvent,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
@@ -103,6 +108,27 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
+
+  // Picker sheet keyboard handling (audit 2026-10-22): the sheet was a fixed
+  // 85% tall with an autoFocused search and no keyboard avoidance — in
+  // landscape the keyboard covered the whole country list. Now the sheet sits
+  // above the keyboard and shrinks to fit, and search only autoFocuses in
+  // portrait.
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isLandscape = windowWidth > windowHeight;
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    if (!showModal) return;
+    // the keyboard may already be up (another field) when the picker opens
+    setKeyboardHeight(Keyboard.isVisible() ? Keyboard.metrics()?.height ?? 0 : 0);
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); setKeyboardHeight(0); };
+  }, [showModal]);
 
   const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
 
@@ -229,9 +255,17 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
         </Animated.Text>
 
         {/* Selected value */}
+        {/* 2 lines + tighter right padding (was 1 line, 44/44): in EditProfile's
+            half-width field at 320pt the value got ~43pt and "France" was cut.
+            Right padding only clears the icon actually shown (chevron 18 / X 20)
+            (audit 2026-10-22). */}
         <Text
-          style={[styles.valueText, !value && styles.placeholder]}
-          numberOfLines={1}
+          style={[
+            styles.valueText,
+            { paddingRight: selectedCountry ? 38 : 34 },
+            !value && styles.placeholder,
+          ]}
+          numberOfLines={2}
         >
           {value || ''}
         </Text>
@@ -267,8 +301,13 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
         transparent
         onRequestClose={() => setShowModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+        <View style={[styles.modalOverlay, { paddingBottom: keyboardHeight }]}>
+          <View
+            style={[
+              styles.modalContainer,
+              { height: Math.min(windowHeight * 0.85, windowHeight - keyboardHeight - insets.top - 8) },
+            ]}
+          >
 
             {/* Header */}
             <View style={styles.modalHeader}>
@@ -287,7 +326,8 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                 placeholderTextColor={palette.placeholder}
                 value={search}
                 onChangeText={handleSearch}
-                autoFocus
+                // portrait only: in landscape the keyboard would hide the list
+                autoFocus={!isLandscape}
               />
               {search.length > 0 && (
                 <TouchableOpacity onPress={() => handleSearch('')}>
@@ -322,6 +362,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                 keyExtractor={(item) => item.country_id}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 renderItem={({ item }) => {
                   const isSelected = selectedCountry?.country_id === item.country_id;
                   return (
@@ -394,7 +435,7 @@ const styles = StyleSheet.create({
         fontSize: 15,
     color: palette.ink,
     paddingLeft: 44,
-    paddingRight: 44,
+    paddingRight: 44, // overridden inline to fit the right icon actually shown
     paddingTop: 8,
   },
   placeholder: { color: palette.placeholder },
@@ -414,7 +455,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    height: '85%',
+    // height set inline: 85% of the window, capped to the space above the keyboard
     paddingBottom: 20,
   },
   modalHeader: {

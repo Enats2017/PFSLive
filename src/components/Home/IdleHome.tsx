@@ -107,7 +107,8 @@ export const IdleHome: React.FC = () => {
                   <Image source={{ uri: item.event_image }} style={s.eventImage} contentFit="cover" cachePolicy="memory-disk" />
                 )}
                 <View style={s.eventTileBody}>
-                  <Text style={s.eventTileName} numberOfLines={2}>{item.name}</Text>
+                  {/* 3 lines: 2 cut names at x1.35 text (audit 2026-10-22) */}
+                  <Text style={s.eventTileName} numberOfLines={3}>{item.name}</Text>
                   <Text style={s.eventTileMeta} numberOfLines={1}>
                     {[formatEventDate(item.race_date, monthsShort), item.city].filter(Boolean).join(' · ')}
                   </Text>

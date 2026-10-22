@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
     View, Text, TouchableOpacity, Animated, Modal, ScrollView,
     Platform, Keyboard, KeyboardEvent, ActivityIndicator, Linking,
+    useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, palette } from '../../styles/common.styles';
+import { commonStyles, palette, space } from '../../styles/common.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, SegmentedFilter } from '../../components/ui';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
@@ -18,6 +19,7 @@ import { useLanguageStore } from '../../store/useLanguageStore';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 
 type Visibility = 'public' | 'private';
 
@@ -40,6 +42,15 @@ const generateStrongPassword = (): string => {
 export const UserTrackingSettings: React.FC = () => {
     const insets = useSafeAreaInsets();
     const { t } = useTranslation(['setting']);
+    const { height: windowHeight } = useWindowDimensions();
+    // landscape: the parent screen's SafeAreaView only pads the bottom, so the
+    // cards and the sheet sat under the notch (audit 2026-10-22)
+    const side = useLandscapeSidePadding();
+    // Plain-state mirror of keyboardOffset, only to cap the sheet height: the
+    // sheet is lifted by the full keyboard height, so in landscape the title,
+    // ✕ and input went off the top with nothing to scroll. The sheet is now at
+    // most (window − keyboard − top inset) and its body scrolls (audit 2026-10-22).
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     const [visibility, setVisibility] = useState<Visibility>('public');
     const [password, setPassword] = useState('');
@@ -64,6 +75,7 @@ export const UserTrackingSettings: React.FC = () => {
         const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
         const onShow = (e: KeyboardEvent) => {
+            setKeyboardHeight(e.endCoordinates.height);
             Animated.timing(keyboardOffset, {
                 toValue: e.endCoordinates.height,
                 duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
@@ -71,6 +83,7 @@ export const UserTrackingSettings: React.FC = () => {
             }).start();
         };
         const onHide = (e: KeyboardEvent) => {
+            setKeyboardHeight(0);
             Animated.timing(keyboardOffset, {
                 toValue: 0,
                 duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
@@ -196,6 +209,7 @@ export const UserTrackingSettings: React.FC = () => {
 
     const openModal = () => {
         keyboardOffset.setValue(0);
+        setKeyboardHeight(0);
         setModalVisible(true);
         Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
     };
@@ -235,7 +249,7 @@ export const UserTrackingSettings: React.FC = () => {
     return (
         <>
             <ScrollView
-                contentContainerStyle={styles.screen}
+                contentContainerStyle={[styles.screen, { paddingLeft: space.xl + side.paddingLeft, paddingRight: space.xl + side.paddingRight }]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
@@ -256,7 +270,9 @@ export const UserTrackingSettings: React.FC = () => {
                             <View style={styles.cardIconWrap}>
                                 <Ionicons name="location-outline" size={22} color={palette.navy} />
                             </View>
-                            <View>
+                            {/* flex 1 + minWidth 0: without it the text column sized to its
+                                content and fr copy ran past the card edge (audit 2026-10-22) */}
+                            <View style={{ flex: 1, minWidth: 0 }}>
                                 <Text style={styles.cardTitle}>{t('setting:liveTrackingSettings.cardTitle')}</Text>
                                 <Text style={styles.cardSubtitle}>{t('setting:liveTrackingSettings.cardSubtitle')}</Text>
                             </View>
@@ -306,54 +322,66 @@ export const UserTrackingSettings: React.FC = () => {
                     <TouchableOpacity style={styles.modalBackdrop} onPress={closeModal} activeOpacity={1} />
                     <Animated.View style={[
                         styles.bottomSheet,
-                        { paddingBottom: insets.bottom + 24 },
+                        {
+                            paddingBottom: (keyboardHeight > 0 ? 0 : insets.bottom) + 24,   // home-indicator inset is behind the keyboard while typing
+                            maxHeight: windowHeight - keyboardHeight - insets.top - 8,
+                            paddingLeft: space.xxl + side.paddingLeft,
+                            paddingRight: space.xxl + side.paddingRight,
+                        },
                         { transform: [{ translateY: Animated.subtract(slideAnim, keyboardOffset) }] },
                     ]}>
                         <View style={styles.sheetHandle} />
-                        <TouchableOpacity style={styles.closeBtn} onPress={closeModal} hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}>
+                        <TouchableOpacity style={[styles.closeBtn, { right: 14 + side.paddingRight }]} onPress={closeModal} hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}>
                             <Text style={styles.closeBtnText}>✕</Text>
                         </TouchableOpacity>
 
-                        <Text style={styles.modalTitle}>{t('setting:liveTrackingSettings.modalTitle')}</Text>
-                        <Text style={styles.modalSubtitle}>{t('setting:liveTrackingSettings.modalSubtitle')}</Text>
-                        <View style={styles.divider} />
-                        <Text style={styles.fieldLabel}>{t('setting:liveTrackingSettings.passwordLabel')}</Text>
-
-                        <FloatingLabelInput
-                            label={t('setting:liveTrackingSettings.passwordPlaceholder')}
-                            value={password}
-                            onChangeText={txt => { setPassword(txt); setPasswordError(''); }}
-                            iconName="lock-closed-outline"
-                            isPassword
-                            required
-                        />
-
-                        {!!passwordError && <Text style={commonStyles.errorText}>⚠️ {passwordError}</Text>}
-
-                        {password.length > 0 && (
-                            <Text style={styles.hintText}>
-                                {getStrengthLabel(password.length)} · {password.length} {t('setting:liveTrackingSettings.chars')}
-                            </Text>
-                        )}
-
-                        <TouchableOpacity
-                            style={commonStyles.secondaryButton}
-                            onPress={() => { setPassword(generateStrongPassword()); setPasswordError(''); }}
-                            activeOpacity={0.8}
+                        <ScrollView
+                            style={styles.sheetBody}
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={false}
+                            bounces={false}
                         >
-                            <Text style={commonStyles.secondaryButtonText}>{t('setting:liveTrackingSettings.generatePassword')}</Text>
-                        </TouchableOpacity>
+                            <Text style={styles.modalTitle}>{t('setting:liveTrackingSettings.modalTitle')}</Text>
+                            <Text style={styles.modalSubtitle}>{t('setting:liveTrackingSettings.modalSubtitle')}</Text>
+                            <View style={styles.divider} />
+                            <Text style={styles.fieldLabel}>{t('setting:liveTrackingSettings.passwordLabel')}</Text>
 
-                        <TouchableOpacity
-                            style={[commonStyles.primaryButton, { marginTop: 8 }, isUpdating && { opacity: 0.7 }]}
-                            onPress={() => handleSaveSettings('private')}
-                            activeOpacity={0.85}
-                            disabled={isUpdating}
-                        >
-                            {isUpdating
-                                ? <ActivityIndicator size="small" color={palette.surface} />
-                                : <Text style={commonStyles.primaryButtonText}>{t('setting:liveTrackingSettings.saveSettings')}</Text>}
-                        </TouchableOpacity>
+                            <FloatingLabelInput
+                                label={t('setting:liveTrackingSettings.passwordPlaceholder')}
+                                value={password}
+                                onChangeText={txt => { setPassword(txt); setPasswordError(''); }}
+                                iconName="lock-closed-outline"
+                                isPassword
+                                required
+                            />
+
+                            {!!passwordError && <Text style={commonStyles.errorText}>⚠️ {passwordError}</Text>}
+
+                            {password.length > 0 && (
+                                <Text style={styles.hintText}>
+                                    {getStrengthLabel(password.length)} · {password.length} {t('setting:liveTrackingSettings.chars')}
+                                </Text>
+                            )}
+
+                            <TouchableOpacity
+                                style={commonStyles.secondaryButton}
+                                onPress={() => { setPassword(generateStrongPassword()); setPasswordError(''); }}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={commonStyles.secondaryButtonText}>{t('setting:liveTrackingSettings.generatePassword')}</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[commonStyles.primaryButton, { marginTop: 8 }, isUpdating && { opacity: 0.7 }]}
+                                onPress={() => handleSaveSettings('private')}
+                                activeOpacity={0.85}
+                                disabled={isUpdating}
+                            >
+                                {isUpdating
+                                    ? <ActivityIndicator size="small" color={palette.surface} />
+                                    : <Text style={commonStyles.primaryButtonText}>{t('setting:liveTrackingSettings.saveSettings')}</Text>}
+                            </TouchableOpacity>
+                        </ScrollView>
                     </Animated.View>
                 </View>
             </Modal>

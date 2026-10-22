@@ -15,6 +15,8 @@ import { commonStyles, palette, fonts, shadows, radii, space, withAlpha } from '
 import { RING_TINT } from '../../components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 
 interface ConfirmRaceResultModalProps {
   visible: boolean;
@@ -37,6 +39,8 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation(['confirmModal']);
+  const insets = useSafeAreaInsets();
+  const side = useLandscapeSidePadding();
 
   if (!data) return null;
 
@@ -67,13 +71,27 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
       </View>
 
       {/* Card */}
-      <View style={styles.wrapper}>
-        <View style={styles.card}>
+      {/* The whole card body (icon → buttons) now scrolls as ONE ScrollView.
+          Before, only the data rows scrolled inside a maxHeight '75%' card with
+          paddingBottom 72: in landscape the buttons sat ~200pt off-screen and on
+          a 667pt phone the rows' ScrollView got ~0pt, so bib/name were invisible.
+          paddingBottom is now the real bottom inset (audit 2026-10-22). */}
+      <View style={styles.wrapper} pointerEvents="box-none">
+        <View
+          style={[
+            styles.card,
+            {
+              // landscape: keep the sheet content clear of the notch
+              paddingLeft: 24 + side.paddingLeft,
+              paddingRight: 24 + side.paddingRight,
+            },
+          ]}
+        >
           {/* Top accent bar */}
 
           {/* Close button */}
           <TouchableOpacity
-            style={styles.closeBtn}
+            style={[styles.closeBtn, { right: 16 + side.paddingRight }]}
             onPress={onClose}
             hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
           >
@@ -82,88 +100,96 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
             </View>
           </TouchableOpacity>
 
-          {/* Icon */}
-          <View style={styles.iconWrapper}>
-            <Ionicons name="flag" size={56} color={palette.navy} />
-          </View>
-
-          {/* Title */}
-          <Text style={styles.title}>{t('confirmModal:title')}</Text>
-
-          {/* Distance name */}
-          {distanceName ? (
-            <View style={styles.chip}>
-              <Text style={styles.chipText} numberOfLines={1}>
-                {distanceName}
-              </Text>
-            </View>
-          ) : null}
-
-          {/* Only the ParticipantResult path sends a verification email;
-              the EventDetails path registers immediately. The button label
-              already switched on this prop - the subtitle promised an email
-              either way, so half the users waited for one that never came. */}
-          <Text style={styles.subtitle}>
-            {emailVerificationMode
-              ? t('confirmModal:subtitle_verify')
-              : t('confirmModal:subtitle')}
-          </Text>
-
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* Data rows */}
           <ScrollView
-            style={styles.dataContainer}
+            style={styles.body}
             showsVerticalScrollIndicator={false}
+            bounces={false}
           >
-            <Row label={t('confirmModal:fields.bibNumber')} value={data.bib_number} highlight />
-            <Row label={t('confirmModal:fields.firstName')} value={data.firstname} />
-            <Row label={t('confirmModal:fields.lastName')} value={data.lastname} />
-            <Row label={t('confirmModal:fields.dob')} value={data.dob} />
-            <Row label={t('confirmModal:fields.gender')} value={data.gender} />
-            <Row label={t('confirmModal:fields.city')} value={data.city} />
-            <Row label={t('confirmModal:fields.country')} value={data.country} />
-            <Row label={t('confirmModal:fields.nation')} value={data.nation} />
-            <Row label={t('confirmModal:fields.distance')} value={data.distance_name} />
-            <Row label={t('confirmModal:fields.email')} value={maskEmail(data.email)} />
+            {/* Icon */}
+            <View style={styles.iconWrapper}>
+              <Ionicons name="flag" size={56} color={palette.navy} />
+            </View>
+
+            {/* Title */}
+            <Text style={styles.title}>{t('confirmModal:title')}</Text>
+
+            {/* Distance name */}
+            {distanceName ? (
+              <View style={styles.chip}>
+                <Text style={styles.chipText} numberOfLines={2}>
+                  {distanceName}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Only the ParticipantResult path sends a verification email;
+                the EventDetails path registers immediately. The button label
+                already switched on this prop - the subtitle promised an email
+                either way, so half the users waited for one that never came. */}
+            <Text style={styles.subtitle}>
+              {emailVerificationMode
+                ? t('confirmModal:subtitle_verify')
+                : t('confirmModal:subtitle')}
+            </Text>
+
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* Data rows */}
+            <View>
+              <Row label={t('confirmModal:fields.bibNumber')} value={data.bib_number} highlight />
+              <Row label={t('confirmModal:fields.firstName')} value={data.firstname} />
+              <Row label={t('confirmModal:fields.lastName')} value={data.lastname} />
+              <Row label={t('confirmModal:fields.dob')} value={data.dob} />
+              <Row label={t('confirmModal:fields.gender')} value={data.gender} />
+              <Row label={t('confirmModal:fields.city')} value={data.city} />
+              <Row label={t('confirmModal:fields.country')} value={data.country} />
+              <Row label={t('confirmModal:fields.nation')} value={data.nation} />
+              <Row label={t('confirmModal:fields.distance')} value={data.distance_name} />
+              <Row label={t('confirmModal:fields.email')} value={maskEmail(data.email)} />
+            </View>
           </ScrollView>
 
-          {/* Divider */}
-          <View style={styles.divider} />
+          {/* Footer outside the scroll (verify pass 2026-10-22): with the whole card
+              scrolling, Confirm / Cancel started below the fold on a normal phone.
+              Only the details scroll; the buttons are always on screen. */}
+          <View style={{ paddingBottom: insets.bottom + space.xl }}>
+            {/* Divider */}
+            <View style={styles.divider} />
 
-          {/* ✅ Confirm button — label changes based on mode */}
-          <TouchableOpacity
-            style={[
-              commonStyles.primaryButton,
-              { marginBottom: space.md },
-              registerLoading && { opacity: 0.7 },
-            ]}
-            onPress={onConfirm}
-            disabled={registerLoading}
-            activeOpacity={0.82}
-          >
-            {registerLoading ? (
-              <ActivityIndicator color={palette.surface} size="small" />
-            ) : (
-              <Text style={commonStyles.primaryButtonText}>
-                {emailVerificationMode
-                  ? t('confirmModal:buttons.confirmOnly')
-                  : t('confirmModal:buttons.confirm')}
+            {/* ✅ Confirm button — label changes based on mode */}
+            <TouchableOpacity
+              style={[
+                commonStyles.primaryButton,
+                { marginBottom: space.md },
+                registerLoading && { opacity: 0.7 },
+              ]}
+              onPress={onConfirm}
+              disabled={registerLoading}
+              activeOpacity={0.82}
+            >
+              {registerLoading ? (
+                <ActivityIndicator color={palette.surface} size="small" />
+              ) : (
+                <Text style={commonStyles.primaryButtonText}>
+                  {emailVerificationMode
+                    ? t('confirmModal:buttons.confirmOnly')
+                    : t('confirmModal:buttons.confirm')}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Cancel button */}
+            <TouchableOpacity
+              style={commonStyles.secondaryButton}
+              onPress={onClose}
+              activeOpacity={0.7}
+            >
+              <Text style={commonStyles.secondaryButtonText}>
+                {t('confirmModal:buttons.cancel')}
               </Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Cancel button */}
-          <TouchableOpacity
-            style={commonStyles.secondaryButton}
-            onPress={onClose}
-            activeOpacity={0.7}
-          >
-            <Text style={commonStyles.secondaryButtonText}>
-              {t('confirmModal:buttons.cancel')}
-            </Text>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -207,8 +233,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     paddingHorizontal: 24,
     paddingTop: 36,
-    paddingBottom: 72,
-    maxHeight: '75%',
+    // was paddingBottom 72 + maxHeight '75%' — see the comment on the card;
+    // the bottom inset now lives on the body ScrollView's content.
+    maxHeight: '90%',
     ...shadows.overlay,
   },
   closeBtn: {
@@ -267,6 +294,8 @@ const styles = StyleSheet.create({
     color: palette.navy,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
+    // 2 lines (was 1), centred: long distance names were cut (audit 2026-10-22)
+    textAlign: 'center',
   },
   subtitle: {
     fontFamily: fonts.body,
@@ -282,8 +311,11 @@ const styles = StyleSheet.create({
     backgroundColor: palette.border,
     marginVertical: 16,
   },
-  dataContainer: {
-    maxHeight: 280,
+  // flexGrow 0: as tall as its content, shrinking (and scrolling) only when
+  // the card hits maxHeight.
+  body: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
 });
 

@@ -25,6 +25,7 @@ import { usePendingRegistration } from '../../hooks/usePendingRegistration';
 import { API_CONFIG, getDeviceId } from '../../constants/config';
 import { useAuth } from '../../context/AuthContext';
 import { analyticsService } from '../../services/analyticsService';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
 const OTP_LENGTH = 6;
 const INITIAL_COUNTDOWN = 60;
@@ -34,6 +35,8 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
   route,
 }) => {
   const { t } = useTranslation(['otp', 'common']);
+  const sidePadding = useLandscapeSidePadding();
+  const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
   const { email, verification_token, purpose } = route.params;
   const { login } = useAuth(); // ✅ get login() from context
 
@@ -309,11 +312,12 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
   }, [canResend, resending, verification_token, purpose, showErrorToast, t]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+    <SafeAreaView style={commonStyles.container} edges={safeEdges}>
       <AppHeader title={t('common:band.verifyEmail')} showLogo={true} showBack />
 
+      {/* ✅ sidePadding: notch clearance in landscape (edges are ['bottom']). */}
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, sidePadding]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView

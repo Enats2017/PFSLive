@@ -63,7 +63,10 @@ const EventsContent: React.FC<EventsContentProps> = ({
     // read at MODULE scope - captured once at import, so it never updated on
     // rotation. It also ignored the bottom inset, which is what let the last
     // card sit under the fixed bar.
-    const TAB_CONTENT_HEIGHT = windowHeight * 0.56 - insets.bottom;
+    // ✅ At least 360pt (layout audit 2026-10-22): in landscape this left
+    // ~174-197pt - less than one card in the nested list. OwnProfile's outer
+    // ScrollView scrolls to the rest.
+    const TAB_CONTENT_HEIGHT = Math.max(windowHeight * 0.56 - insets.bottom, 360);
     const flatListRef = useRef<FlatList>(null);
     const activeTabRef = useRef<Tab>('Live');
     const [activeTab, setActiveTab] = React.useState<Tab>('Live');

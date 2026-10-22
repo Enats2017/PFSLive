@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../components/common/AppHeader';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { commonStyles, palette, space } from '../../styles/common.styles';
 import { readinessStyles as s } from '../../styles/readiness.styles';
 import {
@@ -27,6 +28,8 @@ import { watchForOsPrompt } from '../../utils/permissionPrompt';
 
 const NotificationSettingsScreen: React.FC = () => {
   const { t } = useTranslation(['readiness']);
+  const sidePadding = useLandscapeSidePadding();   // landscape: body clear of the notch (audit 2026-10-22)
+  const safeEdges = useSafeAreaEdges();
   const [perm, setPerm] = useState<NotificationPermissionState | null>(null);
 
   const refresh = useCallback(async () => {
@@ -96,9 +99,9 @@ const NotificationSettingsScreen: React.FC = () => {
         : t('readiness:notifications.bodyOff');
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+    <SafeAreaView style={commonStyles.container} edges={safeEdges}>
       <AppHeader title={t('readiness:notifications.band')} showLogo showBack />
-      <ScrollView contentContainerStyle={s.screen} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[s.screen, sidePadding]} showsVerticalScrollIndicator={false}>
         {perm && (
           <View style={s.card}>
             <View style={s.statusRow}>

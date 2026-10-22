@@ -16,6 +16,7 @@ import ParticipantTab from '../EventDetails/ParticipantTab';
 import type { followerDetailspops } from '../../types/navigation';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
@@ -24,12 +25,15 @@ const TABS: Tab[] = ['Participant', 'Distance'];
 
 const FollowerDetails = ({ route }: followerDetailspops) => {
   const { t } = useTranslation(['details']);
-  const { width: windowWidth } = useDimensions();
+  const { width: windowWidth, height: windowHeight } = useDimensions();
   const insets = useSafeAreaInsets();
   const [containerWidth, setContainerWidth] = useState(0);
   const isGestureNav = insets.bottom > 0;
   const width = containerWidth || windowWidth;
-  const isLandscape = width
+  // ✅ A real boolean (layout audit 2026-10-22): `width` alone was always
+  // truthy; the notch side padding is sidePadding on the body below AppHeader.
+  const isLandscape = windowWidth > windowHeight;
+  const sidePadding = useLandscapeSidePadding();
 
   const [activeTab, setActiveTab] = useState<Tab>('Distance');
   const activeTabRef = useRef<Tab>('Distance');
@@ -133,6 +137,9 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
     >
       <AppHeader title={event_name} showLogo={true} showBack />
 
+      {/* sidePadding on an outer View so the measured containerWidth below is
+          the padded width the pager pages must match. */}
+      <View style={[{ flex: 1 }, sidePadding]}>
       <View
         style={{ flex: 1 }}
         onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
@@ -175,6 +182,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
             )}
           />
         </View>
+      </View>
       </View>
 
       <BottomNavigationFollower

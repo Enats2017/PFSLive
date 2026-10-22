@@ -25,6 +25,7 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 type Tab = 'Past' | 'Live';
@@ -46,13 +47,23 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const { width: windowWidth, height } = useDimensions(); 
     const insets = useSafeAreaInsets();
     const [containerWidth, setContainerWidth] = useState(0);
-    const isLandscape = windowWidth ;
+    // ✅ A real boolean (layout audit 2026-10-22): `windowWidth` alone was always
+    // truthy, so a notched iPhone in landscape got edges ['bottom'] and no side
+    // inset. sidePadding pads the body below AppHeader for exactly that case.
+    const isLandscape = windowWidth > height;
     const isGestureNav = insets.bottom > 0;
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
 
     // The pager is inside a ScrollView, so it needs an explicit height rather
     // than flex:1. Reserve the bottom inset: without it the page ended level
     // with the screen edge and the last card sat under the fixed bar.
-    const TAB_CONTENT_HEIGHT = height * 0.5 - insets.bottom;
+    // ✅ At least 360pt (layout audit 2026-10-22): in landscape half the window
+    // height left ~174-197pt, a nested list showing less than one card. The
+    // outer ScrollView scrolls to the rest.
+    const TAB_CONTENT_HEIGHT = windowWidth > height
+        ? Math.max(height * 0.5 - insets.bottom, 360)   // landscape floor (audit 2026-10-22)
+        : height * 0.5 - insets.bottom;
     const width = containerWidth || windowWidth;
     const flatListRef = useRef<FlatList>(null);
 
@@ -341,7 +352,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
 
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={t('common:band.athlete')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={palette.navy} />
@@ -352,7 +363,7 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={t('common:band.athlete')} showLogo={true} showBack />
                 <ErrorScreen
                     type={error!.type}
@@ -371,10 +382,10 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
             <ScrollView                
                 nestedScrollEnabled={true}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{
+                contentContainerStyle={[{
                     flexGrow: 1,
                     paddingBottom: spacing.xxxxl,
-                }}
+                }, sidePadding]}
             >
                 <ProfileCard
                     profile={profile}
@@ -413,7 +424,14 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                     })}
                 </View>
 
-                <View style={{ height: TAB_CONTENT_HEIGHT }}>
+                {/* ✅ onLayout → containerWidth (as ResultDetails does): pages
+                    were window-wide, so with side padding (landscape notch) or
+                    any inset each page was wider than the viewport and paging
+                    drifted. */}
+                <View
+                    style={{ height: TAB_CONTENT_HEIGHT }}
+                    onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+                >
                     <FlatList
                         ref={flatListRef}
                         data={TABS}

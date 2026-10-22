@@ -27,6 +27,7 @@ import { useAuthForm } from '../../hooks/useAuthForm';
 import { API_CONFIG } from '../../constants/config';
 import { analyticsService } from '../../services/analyticsService';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { Button } from '../../components/ui';
 
 // ✅ CONSTANTS
@@ -76,9 +77,20 @@ const FIELD_ERROR_MAP: Record<string, { field: string; i18nKey: string }> = {
 const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
   const { t } = useTranslation(['register', 'common']);
   const insets = useSafeAreaInsets();
-  const { width } = useDimensions();
+  const { width, height, fontScale } = useDimensions();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged
+    // in effect (portrait has no side/bottom inset where they differ).
+    const isLandscape = width > height;
+    // ✅ Notch clearance in landscape: edges fall back to ['bottom'] there.
+    const sidePadding = useLandscapeSidePadding();
+    // ✅ The paired rows (first/last name, birth date/gender) are only ~134pt
+    // per field at 320pt — fr "Nom de famille *" / "Date de naissance" cannot
+    // fit beside the icons even with the label now ellipsized before the
+    // chevron. Below 360pt, or with iOS Larger Text, stack them full width.
+    const stackPairs = width < 360 || (fontScale ?? 1) >= 1.2;
+    const pairRowStyle = stackPairs ? undefined : registerStyles.fieldRow;
+    const pairHalfStyle = stackPairs ? undefined : registerStyles.fieldHalf;
 
   // ✅ FORM STATE (CUSTOM HOOK)
   const { formData, errors, setField, setErrors, clearAllErrors } =
@@ -376,9 +388,13 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
       <AppHeader title={t('common:band.register')} showLogo={true} showBack />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, sidePadding]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        // ✅ 0, not 80: RN's KAV uses its onLayout frame (relative to the parent,
+        // which starts at the screen top — headerShown is false), so frame.y
+        // already includes AppHeader. 80 lifted the form a further 80pt above
+        // the keyboard (landscape: almost no form left while typing).
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           style={{ flex: 1 }}
@@ -438,8 +454,8 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
             </View>
 
             {/* Form Fields — 04_Register.png pairs the two name fields. */}
-            <View style={registerStyles.fieldRow}>
-              <View style={registerStyles.fieldHalf}>
+            <View style={pairRowStyle}>
+              <View style={pairHalfStyle}>
                 <FloatingLabelInput
                   label={t('firstName')}
                   value={formData.firstname}
@@ -451,7 +467,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
                   errorMessage={errors.firstname}
                 />
               </View>
-              <View style={registerStyles.fieldHalf}>
+              <View style={pairHalfStyle}>
                 <FloatingLabelInput
                   label={t('lastName')}
                   value={formData.lastname}
@@ -519,8 +535,8 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
             />
 
             {/* Birth date and gender share a row, per the mockup. */}
-            <View style={registerStyles.fieldRow}>
-              <View style={registerStyles.fieldHalf}>
+            <View style={pairRowStyle}>
+              <View style={pairHalfStyle}>
                 <FloatingLabelInput
                   label={t('dateOfBirth')}
                   value={formData.dob}
@@ -540,7 +556,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
                   errorMessage={errors.dob}
                 />
               </View>
-              <View style={registerStyles.fieldHalf}>
+              <View style={pairHalfStyle}>
                 {/* ✅ Gender — displays translated label, stores English key for API */}
                 <FloatingLabelInput
                   label={t('register:Gender.gender')}
@@ -612,7 +628,15 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity disabled={loading}>
+              {/* ✅ flex 1 so the label wraps inside the row (fr overflowed the
+                  screen edge below ~416pt), and tapping it toggles the box —
+                  both as the parent-consent row above already does. */}
+              <TouchableOpacity
+                onPress={() => setField('acceptedTerms', !formData.acceptedTerms)}
+                activeOpacity={0.8}
+                disabled={loading}
+                style={{ flex: 1 }}
+              >
                 <Text style={registerStyles.termsText}>
                   {t('termsAndConditions')}
                 </Text>

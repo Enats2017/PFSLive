@@ -26,27 +26,32 @@ const UpcomingRace: React.FC<Props> = ({ raceInfo, event }) => {
                 <Text style={resultInfoStyles.sectionLabel}>{t('raceInfo.raceResult')}</Text>
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.status')}</Text>
-                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.status')}</Text>
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={1}>
                         {t(`status.${event?.race_status ?? 'not_started'}`)}
                     </Text>
                 </View>
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.distance')}</Text>
-                    <Text style={resultInfoStyles.rowValue} numberOfLines={1}>
+                    {/* rowLabelFixed / rowValueEnd: the value never shrank, so a long
+                        distance name squeezed "Afstand" at 320pt. */}
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.distance')}</Text>
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={2}>
                         {event?.distance_name ?? '—'}
                     </Text>
                 </View>
 
+                {/* The name takes the rest of the row and wraps (flex 1): neither
+                    text could shrink, so bib + a long name ran past the card at
+                    320pt (and 375pt with larger text). */}
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={resultInfoStyles.rowValue}>{raceInfo?.bib ?? '—'}</Text>
-                    <Text style={resultInfoStyles.rowValue}>{raceInfo?.name ?? '—'}</Text>
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd, { flex: 1 }]} numberOfLines={2}>{raceInfo?.name ?? '—'}</Text>
                 </View>
                 {!!raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
-                        <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.wavelabel')}</Text>
-                        <Text style={resultInfoStyles.rowValue}>{stripWavePrefix(raceInfo.wave)}</Text>
+                        <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.wavelabel')}</Text>
+                        <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]}>{stripWavePrefix(raceInfo.wave)}</Text>
                     </View>
                 )}
                 <View style={resultInfoStyles.bibCard}>

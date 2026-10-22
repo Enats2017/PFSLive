@@ -7,12 +7,12 @@ import {
     TouchableOpacity,
     Animated,
     Easing,
-    Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, spacing, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
 import { RING_TINT } from './ui';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
 
 interface FeedbackSuccessModalProps {
     visible: boolean;
@@ -21,10 +21,6 @@ interface FeedbackSuccessModalProps {
     buttonLabel?: string;
     onClose: () => void;
 }
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-// 400 is the shared modal cap; the -48 keeps the gutter on narrow phones.
-const CARD_WIDTH = Math.min(SCREEN_WIDTH - 48, 400);
 
 const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
     visible,
@@ -97,39 +93,43 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
     return (
         <Modal supportedOrientations={MODAL_ORIENTATIONS} visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
             <View style={styles.backdrop}>
-                <Animated.View
-                    style={[
-                        styles.card,
-                        { opacity: cardOpacity, transform: [{ scale: cardScale }] },
-                    ]}
-                >
+                {/* ModalScroll: keeps the button reachable when the card is taller
+                    than a landscape screen (audit 2026-10-22) */}
+                <ModalScroll contentStyle={{ alignItems: 'center' }}>
                     <Animated.View
                         style={[
-                            styles.iconCircle,
-                            { transform: [{ scale: iconScale }] },
+                            styles.card,
+                            { opacity: cardOpacity, transform: [{ scale: cardScale }] },
                         ]}
                     >
                         <Animated.View
-                            style={{
-                                opacity: checkOpacity,
-                                transform: [{ scale: checkScale }],
-                            }}
+                            style={[
+                                styles.iconCircle,
+                                { transform: [{ scale: iconScale }] },
+                            ]}
                         >
-                            <Ionicons name="checkmark" size={56} color={palette.ink} />
+                            <Animated.View
+                                style={{
+                                    opacity: checkOpacity,
+                                    transform: [{ scale: checkScale }],
+                                }}
+                            >
+                                <Ionicons name="checkmark" size={56} color={palette.ink} />
+                            </Animated.View>
                         </Animated.View>
+
+                        <Text style={[commonStyles.title, { textAlign: 'center' }]}>{title}</Text>
+                        <Text style={styles.subtitle}>{subtitle}</Text>
+
+                        <TouchableOpacity
+                            style={[commonStyles.primaryButton, { minWidth: '100%' }]}
+                            activeOpacity={0.9}
+                            onPress={onClose}
+                        >
+                            <Text style={commonStyles.primaryButtonText}>{buttonLabel}</Text>
+                        </TouchableOpacity>
                     </Animated.View>
-
-                    <Text style={[commonStyles.title, { textAlign: 'center' }]}>{title}</Text>
-                    <Text style={styles.subtitle}>{subtitle}</Text>
-
-                    <TouchableOpacity
-                        style={[commonStyles.primaryButton, { minWidth: '100%' }]}
-                        activeOpacity={0.9}
-                        onPress={onClose}
-                    >
-                        <Text style={commonStyles.primaryButtonText}>{buttonLabel}</Text>
-                    </TouchableOpacity>
-                </Animated.View>
+                </ModalScroll>
             </View>
         </Modal>
     );
@@ -142,11 +142,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 24,
+        paddingVertical: 24, // scrolled card keeps a gap top/bottom (audit 2026-10-22)
     },
     card: {
     ...shadows.overlay,
 
-        width: CARD_WIDTH,
+        // 400 is the shared modal cap; the backdrop's paddingHorizontal keeps the
+        // gutter. Was Math.min(Dimensions width - 48, 400) computed ONCE at module
+        // load — wrong after a rotation (portrait width in landscape and vice
+        // versa) (audit 2026-10-22).
+        width: '100%',
+        maxWidth: 400,
         backgroundColor: palette.surface,
         borderRadius: 16,
         paddingTop: 36,

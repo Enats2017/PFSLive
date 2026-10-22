@@ -19,6 +19,7 @@ import { toastError, toastSuccess } from '../../../utils/toast';
 import { feedbackApi, validateFeedbackFields, ALLOWED_TOPICS, TopicKey, SubmitFeedbackPayload } from '../../services/feedbackApi';
 import { ContactFeedbackScreenprops } from '../../types/navigation';
 import { contactStyles } from '../../services/contactFeedback.styles';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
 const TOPIC_ICONS: Record<TopicKey, keyof typeof Ionicons.glyphMap> = {
     bug: 'bug-outline',
@@ -45,6 +46,15 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
     const [submitting, setSubmitting] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const scrollRef = useRef<ScrollView>(null);
+    // ✅ Measured position of the message field inside the scroll content
+    // (card y + field y within the card). The old fixed scrollTo({ y: 260 })
+    // only matched one phone/language: a taller banner in fr/nl, Larger Text or
+    // a 2-line topic left the field under the keyboard or scrolled past it.
+    const cardYRef = useRef(0);
+    const messageYRef = useRef<number | null>(null);
+    // ✅ Notch clearance for the body in landscape (edges are ['bottom']).
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
     const topicLabels = t('topics', { returnObjects: true }) as Record<TopicKey, string>;
     const topicOptions = ALLOWED_TOPICS.map((key, index) => ({
         label: topicLabels[key],
@@ -124,14 +134,16 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
     const handleDescriptionFocus = useCallback(() => {
         requestAnimationFrame(() => {
             scrollRef.current?.scrollTo({
-                y: 260,
+                y: messageYRef.current !== null
+                    ? Math.max(0, cardYRef.current + messageYRef.current - 12)
+                    : 260,
                 animated: true,
             });
         });
     }, []);
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={safeEdges}>
             {/* header.title now reads from the shared band, so the local
                 back-arrow row is gone. */}
             <AppHeader title={t('common:band.contactFeedback')} showBack />
@@ -140,9 +152,13 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                 the header — without it the ScrollView sizes to its content and
                 the reachUs card falls off the bottom with nothing to scroll. */}
             <KeyboardAvoidingView
-                style={contactStyles.flex}
+                style={[contactStyles.flex, sidePadding]}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+                // ✅ 0, not 80: RN's KAV uses its onLayout frame, relative to a
+                // SafeAreaView that starts at the screen top (headerShown false),
+                // so AppHeader is already counted. 80 lifted the form 80pt clear
+                // of the keyboard — in landscape that left ~0-20pt of form.
+                keyboardVerticalOffset={0}
             >
                 <ScrollView
                     ref={scrollRef}
@@ -163,6 +179,7 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                             </View>
                         </View>
                     </View>
+                    <View onLayout={(e) => { cardYRef.current = e.nativeEvent.layout.y; }}>
                     <Card>
                         <FloatingLabelInput
                             label={t('fields.name.label')}
@@ -203,6 +220,7 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                             errorMessage={errors.topic}
                         />
 
+                        <View onLayout={(e) => { messageYRef.current = e.nativeEvent.layout.y; }}>
                         <FloatingLabelInput
                             label={t('fields.message.label')}
                             value={message}
@@ -217,8 +235,10 @@ const ContactFeedbackScreen: React.FC<ContactFeedbackScreenprops> = ({ navigatio
                             errorMessage={errors.message}
                             onFocus={handleDescriptionFocus}
                         />
+                        </View>
                         <Text style={contactStyles.charCount}>{message.length}/500</Text>
                     </Card>
+                    </View>
 
                     <Button
                         label={submitting ? t('button.sending') : t('button.send')}

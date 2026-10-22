@@ -111,17 +111,24 @@ const DistanceTab = ({
     [downloadGpx, event_name],
   );
 
+  // ✅ Header image capped in landscape (layout audit 2026-10-22): full width
+  // at 612:428 it was ~590pt tall there - taller than the screen. Portrait is
+  // unchanged.
+  const { width: headerWinWidth, height: headerWinHeight } = useWindowDimensions();
+  const headerLandscape = headerWinWidth > headerWinHeight;
+  const headerImageHeight = Math.round(headerWinHeight * 0.45);
+
   const renderListHeader = useCallback(() => (
     <>
       <View style={{ paddingTop: 2 }}>
         {event_image ? (
           <View
-            style={{
+            style={[{
               width: '100%',
               aspectRatio: 612 / 428,
               justifyContent: 'center',
               alignItems: 'center',
-            }}
+            }, headerLandscape && { aspectRatio: undefined, height: headerImageHeight }]}
           >
             {imageLoading && (
               <ActivityIndicator
@@ -150,7 +157,7 @@ const DistanceTab = ({
         ) : null}
       </View>
     </>
-  ), [event_image, imageLoading]);
+  ), [event_image, imageLoading, headerLandscape, headerImageHeight]);
 
   // Card: margin spacing.md + padding space.lg each side.
   const { width: windowWidth, fontScale } = useWindowDimensions();
@@ -162,11 +169,15 @@ const DistanceTab = ({
     
     return (
       <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.md }]}>
+        {/* ✅ Distance name on its own full-width line, no line limit (layout
+            audit 2026-10-22): beside the button column it had ~99-169pt, so a
+            single nl word ("Recreatieloop" 141pt, "Wandeltocht" 132pt at 20pt)
+            broke mid-word at 360-414pt and long names were cut at 2 lines. */}
+        <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
+          {item.distance_name}
+        </Text>
         <View style={[detailsStyles.distance, buttonsBelow && detailsStyles.distanceStacked]}>
           <View style={[detailsStyles.distanceInfo, buttonsBelow && detailsStyles.distanceInfoStacked]}>
-            <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
-              {item.distance_name}
-            </Text>
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
               <Text style={commonStyles.subtitle}>

@@ -17,6 +17,7 @@ export const bottomNavStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.xs,
+    paddingHorizontal: 2,   // keeps a shrunk label off its neighbour
   },
   // ✅ The active tab is a lime pill around the icon — this replaced the old
   // blue tint (`colors.accent`, #4A9EFF), which was the only blue in the app.
@@ -39,6 +40,8 @@ export const bottomNavStyles = StyleSheet.create({
     fontFamily: fonts.bodyMedium,
     fontSize: 11,
     color: palette.textMuted,
+    // Centred under the icon when adjustsFontSizeToFit shrinks it (L9).
+    textAlign: 'center',
   },
   labelActive: {
     fontFamily: fonts.bodySemi,

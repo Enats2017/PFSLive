@@ -23,6 +23,7 @@ import { useAuthForm } from '../../hooks/useAuthForm';
 import { usePendingRegistration } from '../../hooks/usePendingRegistration';
 import { useAuth } from '../../context/AuthContext';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { analyticsService } from '../../services/analyticsService';
 
 const INITIAL_FORM_DATA = {
@@ -33,10 +34,14 @@ const INITIAL_FORM_DATA = {
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['login', 'common']);
   const { login } = useAuth(); // ✅ get login() from context
-  const { width } = useDimensions();
+  const { width, height } = useDimensions();
   const insets = useSafeAreaInsets(); 
   const isGestureNav = insets.bottom > 0;
-  const isLandscape = width 
+  // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged in
+  // effect (portrait has no side/bottom inset where the two branches differ).
+  const isLandscape = width > height;
+  // ✅ Notch clearance in landscape, where edges fall back to ['bottom'].
+  const sidePadding = useLandscapeSidePadding();
 
   const { formData, errors, setField, setErrors, clearAllErrors } =
     useAuthForm(INITIAL_FORM_DATA);
@@ -230,9 +235,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       <AppHeader title={t('common:band.login')} showLogo={true} showBack />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, sidePadding]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        // ✅ 0, not 80: RN's KAV uses its onLayout frame (relative to the parent,
+        // which starts at the screen top — headerShown is false), so frame.y
+        // already includes AppHeader. 80 lifted the form a further 80pt above
+        // the keyboard (landscape: almost no form left while typing).
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           style={{ flex: 1 }}

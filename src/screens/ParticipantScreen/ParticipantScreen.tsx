@@ -19,6 +19,7 @@ import { SuggestionItem } from '../../services/followerScreenService';
 import SuggestionDropdown from '../../components/SuggestionDropdown';
 import useSearchSuggestions from '../../hooks/useSearchSuggestions';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { eventService, EventItem } from '../../services/followerEvent';
 import { fanstyle } from '../../styles/fan.styles';
 import EventCard from '../../components/EventCard';
@@ -26,10 +27,14 @@ import EventCard from '../../components/EventCard';
 const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['participant']);
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width
+    // width > height: `= width` was always truthy (audit 2026-10-22)
+    const isLandscape = width > height;
+    // Notched iPhones in landscape get edges ['bottom'] below — keep the body
+    // clear of the notch (audit 2026-10-22)
+    const sidePadding = useLandscapeSidePadding();
     const [events, setEvents] = useState<EventItem[]>([]);
     const [visibleCount, setVisibleCount] = useState(3);
 
@@ -98,7 +103,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
             <ScrollView
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: spacing.xxxxl }}
+                contentContainerStyle={[{ paddingBottom: spacing.xxxxl }, sidePadding]}
             >
                 <View style={{ zIndex: 50, elevation: 30 }}>
                     <View style={particpant.sectionLabel}>

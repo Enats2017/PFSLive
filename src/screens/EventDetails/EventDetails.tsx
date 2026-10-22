@@ -14,15 +14,20 @@ import DistanceTab from './DistanceTab';
 import type { EventDetailsProps } from '../../types/navigation';
 import { API_CONFIG } from '../../constants/config';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 
 const EventDetails = ({ route }: EventDetailsProps) => {
   const { t } = useTranslation(['details']);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { width: windowWidth } = useDimensions();
+  const { width: windowWidth, height: windowHeight } = useDimensions();
   const insets = useSafeAreaInsets(); 
   const [containerWidth, setContainerWidth] = useState(0);
   const width = containerWidth || windowWidth;
-  const isLandscape = windowWidth ;
+  // ✅ A real boolean (layout audit 2026-10-22): `windowWidth` alone was always
+  // truthy. Edges stay as before in practice ([left,right] only without a
+  // bottom inset); the notch side padding comes from sidePadding below.
+  const isLandscape = windowWidth > windowHeight;
+  const sidePadding = useLandscapeSidePadding();
   const isGestureNav = insets.bottom > 0;
   const [raceDate, setRaceDate] = useState<string | null>(null);
 
@@ -48,7 +53,7 @@ const EventDetails = ({ route }: EventDetailsProps) => {
   return (
     <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
       <AppHeader title={event_name} showLogo={true} showBack />
-      <View style={{ flex: 1 }}>
+      <View style={[{ flex: 1 }, sidePadding]}>
         {product_app_id ? (
           <DistanceTab
             key={`distance-${refreshKey}`}

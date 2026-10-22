@@ -16,7 +16,9 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { useTranslation } from 'react-i18next'
 import FloatingLabelInput from '../../components/FloatingLabelInput'
 import CountrySelector from '../../components/CountrySelector'
-import { commonStyles, palette } from '../../styles/common.styles'
+import { commonStyles, palette, space } from '../../styles/common.styles'
+import { useDimensions } from '../../hooks/useDimensions'
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding'
 import NoticeCard from '../../components/NoticeCard'
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens'
 import { EMAIL_REGEX, useEditProfile } from '../../hooks/Useeditprofile'
@@ -41,6 +43,16 @@ const GENDER_VALUES = [
 
 const EditProfileScreen = () => {
     const { t } = useTranslation(['profile', 'common'])
+    // ✅ Notch clearance for the body in landscape (edges are ['bottom'] here).
+    const sidePadding = useLandscapeSidePadding()
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
+    // ✅ Same rule as RegisterScreen: the paired rows leave ~134pt per field at
+    // 320pt, too narrow for fr/nl labels beside the icons — stack them below
+    // 360pt or with iOS Larger Text.
+    const { width: winWidth, fontScale } = useDimensions()
+    const stackPairs = winWidth < 360 || (fontScale ?? 1) >= 1.2
+    const pairRowStyle = stackPairs ? undefined : profileStyles.fieldRow
+    const pairHalfStyle = stackPairs ? undefined : profileStyles.fieldHalf
     const [profileLoading, setProfileLoading] = useState(true)
     const [profileError, setProfileError] = useState('')
     const [profile, setProfile] = useState<Awaited<ReturnType<typeof fetchProfileApi>> | null>(null)
@@ -329,7 +341,7 @@ const EditProfileScreen = () => {
 
     if (profileLoading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={t('common:band.account')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={palette.danger} />
@@ -340,7 +352,7 @@ const EditProfileScreen = () => {
 
     if (profileError) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={t('common:band.account')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
                     <Ionicons name="warning-outline" size={40} color={palette.danger} />
@@ -353,10 +365,10 @@ const EditProfileScreen = () => {
     const consentLocked = Number(profile?.parent_consent) === 1
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+        <SafeAreaView style={commonStyles.container} edges={safeEdges}>
             <AppHeader title={t('common:band.account')} showLogo={true} showBack />
             <KeyboardAvoidingView
-                style={{ flex: 1 }}
+                style={[{ flex: 1 }, sidePadding]}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={10}
             >
@@ -401,8 +413,8 @@ const EditProfileScreen = () => {
                         )}
                     </View>
 
-                    <View style={profileStyles.fieldRow}>
-                      <View style={profileStyles.fieldHalf}>
+                    <View style={pairRowStyle}>
+                      <View style={pairHalfStyle}>
                         <FloatingLabelInput
                             label={t('profile:labels.first_name')}
                             value={form.firstname}
@@ -414,7 +426,7 @@ const EditProfileScreen = () => {
                             errorMessage={errors.firstname}
                         />
                       </View>
-                      <View style={profileStyles.fieldHalf}>
+                      <View style={pairHalfStyle}>
                         <FloatingLabelInput
                             label={t('profile:labels.last_name')}
                             value={form.lastname}
@@ -469,7 +481,10 @@ const EditProfileScreen = () => {
                                 title={t('profile:emailChange.pending_title')}
                                 message={t('profile:emailChange.pending_message', { email: serverPendingEmail })}
                             >
-                                <View style={profileStyles.pendingEmailActions}>
+                                {/* ✅ wrap + rowGap: fr "Vérifier maintenant" + "Annuler le
+                                    changement" need ~301pt but the notice body is
+                                    214-284pt — the 2nd action ran out of the card. */}
+                                <View style={[profileStyles.pendingEmailActions, { flexWrap: 'wrap', rowGap: space.sm }]}>
                                     <TouchableOpacity
                                         onPress={handleVerifyPending}
                                         disabled={pendingBusy}
@@ -498,17 +513,29 @@ const EditProfileScreen = () => {
                         </View>
                     )}
 
-                    <View style={profileStyles.fieldRow}>
-                      <View style={profileStyles.fieldHalf}>
+                    <View style={pairRowStyle}>
+                      <View style={pairHalfStyle}>
                         <CountrySelector
                             label={t('profile:labels.country')}
                             value={form.countryName}
                             onSelect={handleCountrySelect}
                             isoCode={form.country_iso}
                             error={errors.countryName}
+                            // ✅ Same strings RegisterScreen passes — without them the
+                            // picker fell back to its English defaults in fr/nl.
+                            i18n={{
+                                title:             t('common:countrySelector.title'),
+                                searchPlaceholder: t('common:countrySelector.searchPlaceholder'),
+                                resultOne:         t('common:countrySelector.resultOne'),
+                                resultMany:        t('common:countrySelector.resultMany'),
+                                retry:             t('common:countrySelector.retry'),
+                                errorLoad:         t('common:countrySelector.errorLoad'),
+                                errorNetwork:      t('common:countrySelector.errorNetwork'),
+                                emptyResult:       t('common:countrySelector.emptyResult'),
+                            }}
                         />
                       </View>
-                      <View style={profileStyles.fieldHalf}>
+                      <View style={pairHalfStyle}>
                         <FloatingLabelInput
                             label={t('profile:labels.city')}
                             value={form.city}

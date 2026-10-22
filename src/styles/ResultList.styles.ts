@@ -143,14 +143,18 @@ divider: {
     paddingVertical: 12,
   },
   popupRowLast: { borderBottomWidth: 0 },
+  // No marginTop: the 12pt it carried opened a gap above whichever row was
+  // selected, so the list jumped in the middle (2026-10-22).
   popupRowActive: {
     backgroundColor: palette.border,
-    marginTop: 12,
   },
   popupRowText: {
     fontFamily: fonts.bodySemi,
         fontSize: 14,
     color: palette.ink,
+    // wraps inside the popup's maxWidth (FilterDropdown) instead of running
+    // past the right screen edge
+    flexShrink: 1,
     },
   popupRowTextActive: {
     color: palette.ink,
@@ -417,6 +421,10 @@ divider: {
     flexGrow: 1,
     flex: 1,
     minWidth: 0,
+    // Label at the top, value at the bottom: the columns stretch to the row's
+    // height, so when one label wraps to 3 lines (fr category / checkpoint
+    // names) the three values still share one baseline.
+    justifyContent: 'space-between',
   },
 
   // Separators between the stat columns. These carried borders with NO

@@ -34,7 +34,9 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     const width = containerWidth || windowWidth;
     const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = windowWidth
+    // A real boolean (was `= windowWidth`, always truthy, so 3-button Android
+    // took left/right edges in portrait too).
+    const isLandscape = windowWidth > windowHeight;
     // Side padding in landscape on a notch / Dynamic Island phone (0 in
     // portrait). On a wrapper OUTSIDE the measured View, so the pages are
     // sized to the padded width — see utils/landscapeInsets.
@@ -259,7 +261,9 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     mockups. The name moved up into the lime band. */}
                 <View style={s.header}>
                     <View style={s.headerCenter}>
-                        <Text style={s.runnerMeta} numberOfLines={1}>
+                        {/* 2 lines (was 1): a long distance name was cut to "…".
+                            raceInfo.bib now exists in en/fr/nl (was the English fallback). */}
+                        <Text style={s.runnerMeta} numberOfLines={2}>
                             {[
                                 data?.race_info?.bib ? `${t('raceInfo.bib', 'Bib')} ${data.race_info.bib}` : null,
                                 data?.event?.distance_name,

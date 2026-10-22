@@ -77,7 +77,10 @@ const FollowerListCard: React.FC<FollowerCardProps> = ({
                     <Text style={commonStyles.title}>{fullName}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
                         {/* City + country is one phrase: it wraps rather than being cut. */}
-                        <Text style={commonStyles.text} numberOfLines={2}>
+                        {/* ✅ flexShrink (layout audit 2026-10-22): without it the
+                            text kept its full width and pushed the flag over the
+                            "View" chip. */}
+                        <Text style={[commonStyles.text, { flexShrink: 1 }]} numberOfLines={2}>
                             {[item.city, item.country].filter(Boolean).join(' · ')}
                         </Text>
                         {flagImageUri && (

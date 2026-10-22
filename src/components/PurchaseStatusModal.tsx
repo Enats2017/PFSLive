@@ -13,6 +13,7 @@ import { commonStyles, palette, radii, shadows, space, type, withAlpha } from '.
 import { dialogTone, RING_TINT } from './ui';
 import { useTranslation } from 'react-i18next';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
 
 type PurchaseStatus = 'processing' | 'success' | 'error';
 
@@ -111,19 +112,23 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
             statusBarTranslucent
         >
             <View style={styles.backdrop}>
-                <Animated.View
-                    style={[
-                        styles.card,
-                        { opacity, transform: [{ scale }] },
-                    ]}
-                >
-                    <TouchableOpacity style={styles.iconclose} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Ionicons name="close" size={20} color={palette.textMuted} />
-                    </TouchableOpacity>
-                    <View style={styles.body}>
-                        {renderContent()}
-                    </View>
-                </Animated.View>
+                {/* ModalScroll: with larger text in landscape the error card (icon +
+                    copy + Close) was taller than the screen (audit 2026-10-22) */}
+                <ModalScroll contentStyle={{ alignItems: 'center' }}>
+                    <Animated.View
+                        style={[
+                            styles.card,
+                            { opacity, transform: [{ scale }] },
+                        ]}
+                    >
+                        <TouchableOpacity style={styles.iconclose} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                            <Ionicons name="close" size={20} color={palette.textMuted} />
+                        </TouchableOpacity>
+                        <View style={styles.body}>
+                            {renderContent()}
+                        </View>
+                    </Animated.View>
+                </ModalScroll>
             </View>
         </Modal>
     );
@@ -136,6 +141,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 28,
+        paddingVertical: 20, // scrolled card keeps a gap top/bottom (audit 2026-10-22)
     },
     card: {
         width: '100%',

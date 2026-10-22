@@ -137,16 +137,21 @@ export const forgotStyles = StyleSheet.create({
     marginBottom: space.xxl,
   },
 
+  // ✅ gap + flexible boxes: six fixed 48pt boxes need 288pt but the step is
+  // only 280pt wide at 320 — the last box was pushed past the padding. Boxes
+  // now shrink to ~42pt there and stay 48pt (space-between) on wider phones.
   otpRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 8,   // 4pt grid
     width: '100%',
     marginBottom: space.md,
   },
   // Same control as the registration OTP box (OtpScreen.styles.ts) - it was
   // 20pt in a softer ink, so the two screens drew the same field differently.
   otpInput: {
-    width: 48,
+    flex: 1,
+    maxWidth: 48,
     height: 56,
     borderWidth: 1.5,
     borderRadius: radii.md,
@@ -185,10 +190,17 @@ export const forgotStyles = StyleSheet.create({
   errorText: {
     ...type.smallMedium,
     color: palette.danger,
+    // ✅ shrink inside the icon row so a long server message wraps instead of
+    // running past the screen edge.
+    flexShrink: 1,
   },
 
   resendRow: {
     flexDirection: 'row',
+    // ✅ wrap: nl "Code niet ontvangen?" + "Opnieuw verzenden over 0:30"
+    // is ~327pt in a 280pt row at 320 — the link was clipped off-screen.
+    flexWrap: 'wrap',
+    rowGap: space.xs,
     alignItems: 'center',
     justifyContent: 'center',
     gap: space.xs,

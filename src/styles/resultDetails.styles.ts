@@ -204,6 +204,27 @@ export const resultInfoStyles = StyleSheet.create({
     fontSize: 15,
     color: palette.ink,
   },
+  // For a value with free text (name, distance, wave, checkpoint) in a
+  // `bibCard` row. rowValue alone never shrinks (RN flexShrink defaults to 0),
+  // so a long value crushed the label beside it — "Distance" / "Afstand" broke
+  // a letter per line at 320pt — or ran past the card edge.
+  rowValueEnd: {
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  // The label side of such a row: keeps its natural width up to half the row,
+  // so the value cannot squeeze it to a few pt.
+  rowLabelFixed: {
+    flexShrink: 0,
+    maxWidth: "50%",
+  },
+  // "Next / Previous timing point" block: label on top, then its lines. As a
+  // `bibCard` (a space-between ROW) its four texts sat side by side, the label
+  // was squeezed to a few pt and the name / time ran past the card edge.
+  timingBlock: {
+    paddingVertical: space.sm,
+    gap: 2,
+  },
 
   statLabel: {
     fontFamily: fonts.bodySemi,
@@ -228,17 +249,31 @@ export const resultInfoStyles = StyleSheet.create({
     color: palette.textMuted,
   },
 
+  // stretch (was flex-start) + rankingCol's space-between: the three values
+  // share one bottom line even when one label wraps more than the others.
   rankingsCard: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "stretch",
     paddingVertical: space.xl,
   },
   // 28_RunnerInfo.png DOES rule this two-column block, so the border stays -
   // but the columns need real clearance from it, not 4pt.
+  // space.xs (was space.md): at 320pt the 12+12 left a ~58pt column, and
+  // "Classement" / "Klassement" (~67pt at 12pt) broke mid-word.
   rankingCol: {
     flex: 1,
+    minWidth: 0,
     alignItems: "center",
-    paddingHorizontal: space.md,
+    justifyContent: "space-between",
+    paddingHorizontal: space.xs,
+  },
+  // The 3-column ranking headings (RaceLive). 12pt keeps the longest word,
+  // "Classement" (66.6pt, scripts/text-width.cjs), whole in the ~72pt middle
+  // column at 320pt; their <Text> also caps maxFontSizeMultiplier at 1.
+  rankingLabelSmall: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    lineHeight: 16,
   },
   // The value was centred with an inline override while the label was not, so a
   // label that wrapped to two lines sat ragged under a centred value.
@@ -261,9 +296,11 @@ export const resultInfoStyles = StyleSheet.create({
     borderColor: palette.placeholder,
   },
 
+  // stretch (was center) + statsCol's space-between: when one label wraps to
+  // more lines than the other, the two values still sit on one line.
   statsCard: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "stretch",
     // `flex: 1` on a child of a scroll view fought the row's own height, and
     // 4pt of padding let the 20pt values sit against the card edge.
     paddingVertical: space.md,
@@ -272,9 +309,12 @@ export const resultInfoStyles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: space.sm,
   },
   statsColBorder: {
+    // centred, 32pt as before — statsCard now stretches its columns
+    alignSelf: 'center',
     paddingVertical: 16,
     borderLeftWidth: 1,
     borderColor: palette.inputBorder,

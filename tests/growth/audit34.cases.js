@@ -68,7 +68,7 @@ module.exports = ({ load, test, SRC }) => {
     assert.ok(!/alignItems/.test(block(fan, 'sliderContent')), 'follower row: default stretch');
     const ec = read('components/EventCard.tsx');
     assert.ok(/<View style=\{fanstyle\.eventCard\}>/.test(ec) && /<View style=\{fanstyle\.eventInfo\}>/.test(ec));
-    assert.ok(/<Text style=\{fanstyle\.eventName\} numberOfLines=\{2\}>\{item\.name\}<\/Text>/.test(ec));
+    assert.ok(/<Text style=\{fanstyle\.eventName\} numberOfLines=\{3\}>\{item\.name\}<\/Text>/.test(ec));
     for (const f of ['screens/ParticipantScreen/ParticipantScreen.tsx', 'screens/FollowerScreen/FanScreen.tsx']) {
       const s = read(f);
       const i = s.indexOf('<EventCard item={item} t={t} />');
@@ -132,7 +132,7 @@ module.exports = ({ load, test, SRC }) => {
 
   test('filter popup: the dropdown uses the computed position (top or bottom, maxHeight), not the old fixed 420 below', () => {
     const s = read('components/FilterDropdown.tsx');
-    assert.ok(/const \{ width: screenW, height: screenH \} = Dimensions\.get\('window'\);\n\s*setPos\(dropPosition\(x, y, w, h, screenW, screenH\)\);/.test(s));
+    assert.ok(/const \{ width: screenW, height: screenH \} = Dimensions\.get\('window'\);\n\s*const p = dropPosition\(x, y, w, h, screenW, screenH\);\n\s*setPos\(p\);/.test(s));
     assert.ok(/\.\.\.\(pos\.bottom !== undefined \? \{ bottom: pos\.bottom \} : \{ top: pos\.top \}\),/.test(s));
     assert.ok(/maxHeight: pos\.maxHeight,/.test(s) && !/maxHeight: 420/.test(s));
   });

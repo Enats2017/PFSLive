@@ -46,6 +46,9 @@ const Dropdown: React.FC<DropdownProps> = ({
   const { t } = useTranslation(['allrace', 'common']);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<DropPos>({ top: 0, left: 0, width: 0, maxHeight: POPUP_MAX });
+  // Room to the right of the popup's left edge, measured at open time. The
+  // popup had a minWidth only, so a long option ran past the screen edge.
+  const [maxW, setMaxW] = useState<number | undefined>(undefined);
   const btnRef = useRef<View | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -55,7 +58,9 @@ const Dropdown: React.FC<DropdownProps> = ({
 
     btnRef.current.measureInWindow((x, y, w, h) => {
       const { width: screenW, height: screenH } = Dimensions.get('window');
-      setPos(dropPosition(x, y, w, h, screenW, screenH));
+      const p = dropPosition(x, y, w, h, screenW, screenH);
+      setPos(p);
+      setMaxW(Math.max(p.width, screenW - p.left - 8));
 
       setOpen(true);
 
@@ -138,6 +143,7 @@ const Dropdown: React.FC<DropdownProps> = ({
                 ...(pos.bottom !== undefined ? { bottom: pos.bottom } : { top: pos.top }),
                 left: pos.left,
                 minWidth: pos.width,
+                maxWidth: maxW,
                 maxHeight: pos.maxHeight,
                 opacity: fadeAnim,
                 transform: [{ scaleY: scaleAnim }],

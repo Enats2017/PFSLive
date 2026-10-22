@@ -30,6 +30,8 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
+import ModalScroll from '../../components/ui/ModalScroll';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
 interface ParticipantResultRouteParams {
   product_app_id: number;
@@ -46,6 +48,8 @@ const ParticipantResult = () => {
   const { t } = useTranslation(['details', 'participantResult', 'confirmModal']);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const sidePadding = useLandscapeSidePadding();
+  const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
 
   const params = route.params as ParticipantResultRouteParams | undefined;
   const product_app_id = params?.product_app_id;
@@ -322,8 +326,11 @@ const ParticipantResult = () => {
               </Text>
             </View>
             <View style={detailsStyles.info}>
-              <Text style={commonStyles.title} numberOfLines={1}>{fullName}</Text>
-              <Text style={detailsStyles.rowMeta} numberOfLines={1}>
+              {/* 2 lines (were 1): a 20pt caps name like "SOPHIE DE MEULEMEESTER"
+                  and the bib · distance · wave line were cut on every phone
+                  (audit 2026-10-22). */}
+              <Text style={commonStyles.title} numberOfLines={2}>{fullName}</Text>
+              <Text style={detailsStyles.rowMeta} numberOfLines={2}>
                 {[
                   hasBibNumber ? `${t('details:tracking.bib')} ${participant.bib_number}` : null,
                   participant.race_distance,
@@ -392,88 +399,106 @@ const ParticipantResult = () => {
 
   if (loading && searchText.length === 0) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
         <AppHeader title={event_name} showLogo={true} showBack />
         <ActivityIndicator size="large" color={palette.navy} style={{ marginTop: 40 }} />
       </SafeAreaView>
     );
   }
 
+  // Wrapped like the loading state: the bare ErrorScreen had no header, so
+  // there was no back button off this screen (audit 2026-10-22).
   if (hasError && !loading && searchText.length === 0) {
     return (
-      <ErrorScreen
-        type={error!.type}
-        title={error!.title}
-        message={error!.message}
-        onRetry={() => { clearError(); fetchParticipants(1, searchText); }}
-      />
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+        <AppHeader title={event_name} showLogo={true} showBack />
+        <View style={[{ flex: 1 }, sidePadding]}>
+          <ErrorScreen
+            type={error!.type}
+            title={error!.title}
+            message={error!.message}
+            onRetry={() => { clearError(); fetchParticipants(1, searchText); }}
+          />
+        </View>
+      </SafeAreaView>
     );
   }
 
+  // The info card scrolls away with the list (it used to sit fixed above it with
+  // the search, leaving ~77pt for the list in landscape). The search stays
+  // fixed so typing never unmounts it when results switch to the empty state.
+  const infoNotice = (
+    <NoticeCard
+      icon="information-circle-outline"
+      title={t('participantResult:info.title')}
+      message={t('participantResult:info.message')}
+    />
+  );
+
   return (
-    <SafeAreaView style={commonStyles.container} edges={['bottom']}>
+    <SafeAreaView style={commonStyles.container} edges={safeEdges}>
       <AppHeader title={event_name} showLogo={true} showBack />
 
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: space.md }}>
-        <NoticeCard
-          icon="information-circle-outline"
-          title={t('participantResult:info.title')}
-          message={t('participantResult:info.message')}
-        />
-        <View style={{ height: spacing.lg }} />
-
-        <SearchInput
-          framed={false}
-          ref={searchInputRef}
-          placeholder={t('details:participant.search')}
-          value={searchText}
-          onChangeText={setSearchText}
-          icon="search"
-        />
-      </View>
-
-      {loading && searchText.length > 0 && (
-        <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color={palette.navy} />
-          <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
-            {t('details:participant.searching')}
-          </Text>
+      {/* landscape: body kept clear of the notch (AppHeader pads itself) */}
+      <View style={[{ flex: 1 }, sidePadding]}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: space.md }}>
+          <SearchInput
+            framed={false}
+            ref={searchInputRef}
+            placeholder={t('details:participant.search')}
+            value={searchText}
+            onChangeText={setSearchText}
+            icon="search"
+          />
         </View>
-      )}
 
-      {!loading && participants.length === 0 ? (
-        <ErrorScreen
-          type="empty"
-          title={searchText
-            ? `${t('details:participant.noResults')} "${searchText}"`
-            : t('details:participant.empty')}
-          onRetry={() => { }}
-        />
-      ) : (
-        <FlatList
-          data={participants}
-          keyExtractor={(item, index) => `${participantService.getParticipantId(item)}-${index}`}
-          renderItem={renderParticipant}
-          showsVerticalScrollIndicator={false}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          contentContainerStyle={{
-            // The gutter lives HERE, not on the card: renderParticipant's card
-            // (above) carries no marginHorizontal, unlike ParticipantCard.tsx,
-            // which is a different component used by the Participants tab and
-            // brings its own 20pt. Matches the search header's inset at the top
-            // of this screen. `marginTop` on a content container alongside
-            // flexGrow is unreliable; paddingTop is the predictable form.
-            paddingHorizontal: spacing.lg,
-            paddingTop: spacing.md,
-            paddingBottom: spacing.xxxl,
-            flexGrow: 1,
-          }}
-          keyboardShouldPersistTaps="handled"
-          removeClippedSubviews={false}
-          ListFooterComponent={renderFooter}
-        />
-      )}
+        {loading && searchText.length > 0 && (
+          <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color={palette.navy} />
+            <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
+              {t('details:participant.searching')}
+            </Text>
+          </View>
+        )}
+
+        {!loading && participants.length === 0 ? (
+          <>
+            <View style={{ paddingHorizontal: spacing.lg }}>{infoNotice}</View>
+            <ErrorScreen
+              type="empty"
+              title={searchText
+                ? `${t('details:participant.noResults')} "${searchText}"`
+                : t('details:participant.empty')}
+              onRetry={() => { }}
+            />
+          </>
+        ) : (
+          <FlatList
+            data={participants}
+            keyExtractor={(item, index) => `${participantService.getParticipantId(item)}-${index}`}
+            renderItem={renderParticipant}
+            showsVerticalScrollIndicator={false}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            contentContainerStyle={{
+              // The gutter lives HERE, not on the card: renderParticipant's card
+              // (above) carries no marginHorizontal, unlike ParticipantCard.tsx,
+              // which is a different component used by the Participants tab and
+              // brings its own 20pt. Matches the search header's inset at the top
+              // of this screen. `marginTop` on a content container alongside
+              // flexGrow is unreliable; paddingTop is the predictable form.
+              paddingHorizontal: spacing.lg,
+              paddingTop: spacing.md,
+              paddingBottom: spacing.xxxl,
+              flexGrow: 1,
+            }}
+            keyboardShouldPersistTaps="handled"
+            removeClippedSubviews={false}
+            ListHeaderComponent={<View style={{ marginBottom: spacing.lg }}>{infoNotice}</View>}
+            ListFooterComponent={renderFooter}
+          />
+        )}
+      </View>
 
       {/* ✅ Confirm modal — email verification mode */}
       <ConfirmRaceResultModal
@@ -498,24 +523,28 @@ const ParticipantResult = () => {
         statusBarTranslucent
         onRequestClose={() => setMailSentVisible(false)}
       >
+        {/* ModalScroll: the card (~494-520pt) was taller than a landscape
+            screen — the button was off the bottom (audit 2026-10-22) */}
         <View style={mailStyles.backdrop}>
-          <View style={mailStyles.card}>
-            <View style={mailStyles.iconWrapper}>
-              <Ionicons name="mail" size={28} color={palette.navy} />
+          <ModalScroll contentStyle={{ alignItems: 'center' }}>
+            <View style={mailStyles.card}>
+              <View style={mailStyles.iconWrapper}>
+                <Ionicons name="mail" size={28} color={palette.navy} />
+              </View>
+              <Text style={mailStyles.title}>{t('participantResult:mailSent.title')}</Text>
+              <Text style={mailStyles.message}>{t('participantResult:mailSent.message')}</Text>
+              <TouchableOpacity
+                style={[commonStyles.primaryButton, { marginTop: 24 }]}
+                onPress={() => {
+                  setMailSentVisible(false);
+                  navigation.goBack();
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={commonStyles.primaryButtonText}>{t('participantResult:mailSent.button')}</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={mailStyles.title}>{t('participantResult:mailSent.title')}</Text>
-            <Text style={mailStyles.message}>{t('participantResult:mailSent.message')}</Text>
-            <TouchableOpacity
-              style={[commonStyles.primaryButton, { marginTop: 24 }]}
-              onPress={() => {
-                setMailSentVisible(false);
-                navigation.goBack();
-              }}
-              activeOpacity={0.8}
-            >
-              <Text style={commonStyles.primaryButtonText}>{t('participantResult:mailSent.button')}</Text>
-            </TouchableOpacity>
-          </View>
+          </ModalScroll>
         </View>
       </Modal>
 
@@ -546,6 +575,7 @@ const mailStyles = StyleSheet.create({
     padding: 32,
     alignItems: 'center',
     width: '100%',
+    maxWidth: 400, // shared modal cap — was full-width in landscape (audit 2026-10-22)
     ...shadows.overlay,
   },
   iconWrapper: {

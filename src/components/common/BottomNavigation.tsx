@@ -234,7 +234,16 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
                 contentFit="contain"
               />
             </View>
-            <Text style={[bottomNavStyles.label, isActive && bottomNavStyles.labelActive]}>
+            {/* ✅ One line, shrunk to fit (layout audit 2026-10-22): with larger iOS
+                text "Participants" / "Startpagina" broke mid-word in an 80pt tab at
+                320pt and the wrapped tab's icon rose above the others. At default
+                text every label already fits (audit27/33), so nothing shrinks. */}
+            <Text
+              style={[bottomNavStyles.label, isActive && bottomNavStyles.labelActive]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
               {tab.label}
             </Text>
           </TouchableOpacity>

@@ -19,6 +19,7 @@ import { eventService, ParticipantItem } from '../../services/followerEvent';
 import { AthleteSearchScreenpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 import { useFocusEffect } from '@react-navigation/native';
@@ -30,10 +31,14 @@ interface PaginationState {
 
 const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
     const { t } = useTranslation(['follow', 'follower']);
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged
+    // in effect (portrait has no side/bottom inset where the branches differ).
+    const isLandscape = width > height;
+    // ✅ Notch clearance for the body in landscape (edges fall back to ['bottom']).
+    const sidePadding = useLandscapeSidePadding();
 
     const [searchText, setSearchText] = useState('');
     const [participants, setParticipants] = useState<ParticipantItem[]>([]);
@@ -243,13 +248,18 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
             <AppHeader title={t('common:band.findAthlete')} showBack />
 
+            {/* ✅ Landscape notch padding on the body. The search band keeps its
+                white fill behind the inset so it still reads full-bleed. */}
+            <View style={[{ backgroundColor: palette.surface }, sidePadding]}>
             <SearchInput
                 placeholder={t('follow:search.athletesearch')}
                 value={searchText}
                 onChangeText={setSearchText}
                 icon="search"
             />
+            </View>
 
+            <View style={[{ flex: 1 }, sidePadding]}>
             <FlatList
                 data={displayEvents}
                 keyExtractor={(item, index) => `${item.customer_app_id}_${index}`}
@@ -277,6 +287,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
                     ) : null
                 }
             />
+            </View>
 
             <TrackingPasswordModal
                 visible={passwordModalVisible}

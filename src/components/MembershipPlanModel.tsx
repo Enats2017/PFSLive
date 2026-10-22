@@ -13,6 +13,7 @@ import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/comm
 import { RING_TINT } from './ui';
 import { useTranslation } from 'react-i18next';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
 
 export type ModalActionType =  'disabled' | 'locked' | 'hidden';
 
@@ -77,47 +78,51 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
         <Modal supportedOrientations={MODAL_ORIENTATIONS} statusBarTranslucent visible={visible} transparent animationType="fade" onRequestClose={onClose}>
             <TouchableWithoutFeedback onPress={onClose}>
                 <View style={styles.backdrop}>
-                    <TouchableWithoutFeedback onPress={() => {}}>
-                        <Animated.View
-                            style={[
-                                styles.card,
-                                { opacity, transform: [{ scale }] },
-                            ]}
-                        >
-                            <TouchableOpacity style={styles.closeButton} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                                <Ionicons name="close" size={20} color={palette.textMuted} />
-                            </TouchableOpacity>
-
-                            <View style={styles.iconWrapper}>
-                                <Ionicons name={icon.name} size={56} color={icon.color} />
-                            </View>
-
-                            <Text style={styles.title}>{title}</Text>
-                            <Text style={styles.description}>{description}</Text>
-
-                            {/* Stacked, primary on top — the shape ErrorModal,
-                                UndoConfirmModal and DeleteEventModal all use. */}
-                            <View style={styles.buttons}>
-                                <TouchableOpacity
-                                    style={[commonStyles.primaryButton, styles.fullWidth]}
-                                    onPress={showConfirm ? onConfirm : onClose}
-                                    activeOpacity={0.85}
-                                >
-                                    <Text style={commonStyles.primaryButtonText}>{confirmLabel}</Text>
+                    {/* ModalScroll: in landscape the card was taller than the screen —
+                        icon off the top, buttons off the bottom (audit 2026-10-22) */}
+                    <ModalScroll contentStyle={{ alignItems: 'center' }}>
+                        <TouchableWithoutFeedback onPress={() => {}}>
+                            <Animated.View
+                                style={[
+                                    styles.card,
+                                    { opacity, transform: [{ scale }] },
+                                ]}
+                            >
+                                <TouchableOpacity style={styles.closeButton} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                    <Ionicons name="close" size={20} color={palette.textMuted} />
                                 </TouchableOpacity>
 
-                                {showConfirm && (
+                                <View style={styles.iconWrapper}>
+                                    <Ionicons name={icon.name} size={56} color={icon.color} />
+                                </View>
+
+                                <Text style={styles.title}>{title}</Text>
+                                <Text style={styles.description}>{description}</Text>
+
+                                {/* Stacked, primary on top — the shape ErrorModal,
+                                    UndoConfirmModal and DeleteEventModal all use. */}
+                                <View style={styles.buttons}>
                                     <TouchableOpacity
-                                        style={[commonStyles.secondaryButton, styles.fullWidth]}
-                                        onPress={onClose}
+                                        style={[commonStyles.primaryButton, styles.fullWidth]}
+                                        onPress={showConfirm ? onConfirm : onClose}
                                         activeOpacity={0.85}
                                     >
-                                        <Text style={commonStyles.secondaryButtonText}>{t('common:buttons.cancel')}</Text>
+                                        <Text style={commonStyles.primaryButtonText}>{confirmLabel}</Text>
                                     </TouchableOpacity>
-                                )}
-                            </View>
-                        </Animated.View>
-                    </TouchableWithoutFeedback>
+
+                                    {showConfirm && (
+                                        <TouchableOpacity
+                                            style={[commonStyles.secondaryButton, styles.fullWidth]}
+                                            onPress={onClose}
+                                            activeOpacity={0.85}
+                                        >
+                                            <Text style={commonStyles.secondaryButtonText}>{t('common:buttons.cancel')}</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </Animated.View>
+                        </TouchableWithoutFeedback>
+                    </ModalScroll>
                 </View>
             </TouchableWithoutFeedback>
         </Modal>
@@ -131,6 +136,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 24,
+        // had no vertical padding: a tall card touched the status bar / home
+        // indicator (audit 2026-10-22)
+        paddingVertical: 24,
     },
     card: {
     ...shadows.overlay,

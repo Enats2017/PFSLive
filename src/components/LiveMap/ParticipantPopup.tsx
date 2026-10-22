@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -66,160 +66,172 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
 
     return (
         <View style={liveTrackingStyles.popupOverlay}>
+            {/* Backdrop tap closes (there was no way to dismiss except the X) */}
+            <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+            {/* popup has maxHeight '90%' of the map overlay and the body scrolls:
+                the card (430-590pt) was taller than the map area (~374-490pt
+                portrait, ~96pt landscape), so the X went above the overlay —
+                untappable on Android (audit 2026-10-22). */}
             <View style={liveTrackingStyles.popup}>
                 <TouchableOpacity style={liveTrackingStyles.popupCloseBtn} onPress={onClose}>
                     <Ionicons name="close" size={24} color={palette.textBody} />
                 </TouchableOpacity>
 
-                <View style={liveTrackingStyles.popupHeader}>
-                    {participant.profile_picture ? (
-                        <Image
-                            source={{ uri: participant.profile_picture }}
-                            cachePolicy="memory-disk"
-                            style={liveTrackingStyles.avatar}
-                        />
-                    ) : (
-                        <View style={liveTrackingStyles.avatarPlaceholder}>
-                            <Text style={liveTrackingStyles.initials}>
-                                {participant.initials || '?'}
+                <ScrollView
+                    style={liveTrackingStyles.popupBody}
+                    bounces={false}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={liveTrackingStyles.popupHeader}>
+                        {participant.profile_picture ? (
+                            <Image
+                                source={{ uri: participant.profile_picture }}
+                                cachePolicy="memory-disk"
+                                style={liveTrackingStyles.avatar}
+                            />
+                        ) : (
+                            <View style={liveTrackingStyles.avatarPlaceholder}>
+                                <Text style={liveTrackingStyles.initials}>
+                                    {participant.initials || '?'}
+                                </Text>
+                            </View>
+                        )}
+                        <View style={liveTrackingStyles.popupHeaderText}>
+                            <Text style={liveTrackingStyles.participantName}>
+                                {participant.name || 'Unknown'}
+                            </Text>
+                            {/* Fall back to the old event_source test for any caller
+                                that hasn't been updated to pass isRrActive yet. */}
+                            {(isRrActive ?? event_source !== 'custom') && !!participant.bib && (
+                                <Text style={liveTrackingStyles.participantBib}>
+                                    {t('livetracking:bibNumber')} {participant.bib}
+                                </Text>
+                            )}
+                        </View>
+                    </View>
+
+                    {hasFinished ? null : participant.connection_status === 'offline' ? (
+                        <View style={{
+                            flexDirection: 'row', alignItems: 'center', gap: space.sm,
+                            backgroundColor: palette.fill, borderColor: palette.border, borderWidth: 1,
+                            borderRadius: 10, paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: 12,
+                        }}>
+                            <Ionicons name="cloud-offline-outline" size={16} color={palette.textBody} />
+                            <Text style={{ flex: 1, color: palette.textBody, fontFamily: fonts.body,
+            fontSize: 13 }}>
+                                {t('livetracking:offlineNotice', {
+                                    time: formatLastUpdate(participant.last_update_time, participant.last_update_type),
+                                })}
+                            </Text>
+                        </View>
+                    ) : participant.is_estimated ? (
+                        <View style={{
+                            flexDirection: 'row', alignItems: 'center', gap: space.sm,
+                            backgroundColor: palette.warningBg, borderRadius: 10,
+                            paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: space.md,
+                        }}>
+                            <Ionicons name="cellular-outline" size={14} color={palette.warning} />
+                            <Text style={{ flex: 1, color: palette.warning, fontFamily: fonts.body,
+            fontSize: 13 }}>
+                                {t('livetracking:estimatedNotice')}
+                            </Text>
+                        </View>
+                    ) : null}
+
+                    {showLowBattery && (
+                        <View style={{
+                            flexDirection: 'row', alignItems: 'center', gap: space.sm,
+                            backgroundColor: palette.dangerBg, borderColor: palette.danger, borderWidth: 1,
+                            borderRadius: 10, paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: 12,
+                        }}>
+                            <Ionicons name="battery-dead-outline" size={18} color={palette.danger} />
+                            <Text style={{ color: palette.danger, fontFamily: fonts.bodySemi,
+            fontSize: 14, flex: 1 }}>
+                                {t('livetracking:lowBattery', { level: battery })}
                             </Text>
                         </View>
                     )}
-                    <View style={liveTrackingStyles.popupHeaderText}>
-                        <Text style={liveTrackingStyles.participantName}>
-                            {participant.name || 'Unknown'}
-                        </Text>
-                        {/* Fall back to the old event_source test for any caller
-                            that hasn't been updated to pass isRrActive yet. */}
-                        {(isRrActive ?? event_source !== 'custom') && !!participant.bib && (
-                            <Text style={liveTrackingStyles.participantBib}>
-                                {t('livetracking:bibNumber')} {participant.bib}
+
+                    {showPosition && (
+                        <View style={liveTrackingStyles.popupSection}>
+                            <Text style={liveTrackingStyles.popupSectionTitle}>
+                                {t('livetracking:positionAt')} {participant.last_checkpoint_name}
                             </Text>
-                        )}
-                    </View>
-                </View>
+                            <View style={liveTrackingStyles.popupRow}>
+                                <Text style={liveTrackingStyles.popupLabel}>
+                                    {t('livetracking:overall')}:
+                                </Text>
+                                <Text style={liveTrackingStyles.popupValue}>
+                                    #{participant.position || '—'}
+                                </Text>
+                            </View>
+                            {showFemalePosition && (
+                                <View style={liveTrackingStyles.popupRow}>
+                                    <Text style={liveTrackingStyles.popupLabel}>
+                                        {t('livetracking:female')}:
+                                    </Text>
+                                    <Text style={liveTrackingStyles.popupValue}>
+                                        #{participant.position_gender}
+                                    </Text>
+                                </View>
+                            )}
+                            {!!participant.position_category && (
+                                <View style={liveTrackingStyles.popupRow}>
+                                    <Text style={liveTrackingStyles.popupLabel}>
+                                        {t('livetracking:category')}:
+                                    </Text>
+                                    <Text style={liveTrackingStyles.popupValue}>
+                                        #{participant.position_category} ({participant.category || '—'})
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
 
-                {hasFinished ? null : participant.connection_status === 'offline' ? (
-                    <View style={{
-                        flexDirection: 'row', alignItems: 'center', gap: space.sm,
-                        backgroundColor: palette.fill, borderColor: palette.border, borderWidth: 1,
-                        borderRadius: 10, paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: 12,
-                    }}>
-                        <Ionicons name="cloud-offline-outline" size={16} color={palette.textBody} />
-                        <Text style={{ flex: 1, color: palette.textBody, fontFamily: fonts.body,
-        fontSize: 13 }}>
-                            {t('livetracking:offlineNotice', {
-                                time: formatLastUpdate(participant.last_update_time, participant.last_update_type),
-                            })}
-                        </Text>
-                    </View>
-                ) : participant.is_estimated ? (
-                    <View style={{
-                        flexDirection: 'row', alignItems: 'center', gap: space.sm,
-                        backgroundColor: palette.warningBg, borderRadius: 10,
-                        paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: space.md,
-                    }}>
-                        <Ionicons name="cellular-outline" size={14} color={palette.warning} />
-                        <Text style={{ flex: 1, color: palette.warning, fontFamily: fonts.body,
-        fontSize: 13 }}>
-                            {t('livetracking:estimatedNotice')}
-                        </Text>
-                    </View>
-                ) : null}
-
-                {showLowBattery && (
-                    <View style={{
-                        flexDirection: 'row', alignItems: 'center', gap: space.sm,
-                        backgroundColor: palette.dangerBg, borderColor: palette.danger, borderWidth: 1,
-                        borderRadius: 10, paddingVertical: 8, paddingHorizontal: space.xl, marginBottom: 12,
-                    }}>
-                        <Ionicons name="battery-dead-outline" size={18} color={palette.danger} />
-                        <Text style={{ color: palette.danger, fontFamily: fonts.bodySemi,
-        fontSize: 14, flex: 1 }}>
-                            {t('livetracking:lowBattery', { level: battery })}
-                        </Text>
-                    </View>
-                )}
-
-                {showPosition && (
                     <View style={liveTrackingStyles.popupSection}>
-                        <Text style={liveTrackingStyles.popupSectionTitle}>
-                            {t('livetracking:positionAt')} {participant.last_checkpoint_name}
-                        </Text>
                         <View style={liveTrackingStyles.popupRow}>
                             <Text style={liveTrackingStyles.popupLabel}>
-                                {t('livetracking:overall')}:
+                                {t('livetracking:time')}:
                             </Text>
                             <Text style={liveTrackingStyles.popupValue}>
-                                #{participant.position || '—'}
+                                {formatTime(participant.race_time_seconds)}
                             </Text>
                         </View>
-                        {showFemalePosition && (
+                        <View style={liveTrackingStyles.popupRow}>
+                            <Text style={liveTrackingStyles.popupLabel}>
+                                {t('livetracking:distance')}:
+                            </Text>
+                            <Text style={liveTrackingStyles.popupValue}>
+                                {participant.distance_km?.toFixed(1) || '0.0'} km
+                            </Text>
+                        </View>
+                        <View style={liveTrackingStyles.popupRow}>
+                            <Text style={liveTrackingStyles.popupLabel}>
+                                {t('livetracking:avgSpeed')}:
+                            </Text>
+                            <Text style={liveTrackingStyles.popupValue}>
+                                {participant.avg_speed_kmh?.toFixed(1) || '0.0'} km/h
+                            </Text>
+                        </View>
+                        {participant.distance_to_next_cp !== null && participant.distance_to_next_cp !== undefined && (
                             <View style={liveTrackingStyles.popupRow}>
                                 <Text style={liveTrackingStyles.popupLabel}>
-                                    {t('livetracking:female')}:
+                                    {t('livetracking:toNextCheckpoint')}:
                                 </Text>
                                 <Text style={liveTrackingStyles.popupValue}>
-                                    #{participant.position_gender}
+                                    {participant.distance_to_next_cp.toFixed(1)} km
                                 </Text>
                             </View>
                         )}
-                        {!!participant.position_category && (
-                            <View style={liveTrackingStyles.popupRow}>
-                                <Text style={liveTrackingStyles.popupLabel}>
-                                    {t('livetracking:category')}:
-                                </Text>
-                                <Text style={liveTrackingStyles.popupValue}>
-                                    #{participant.position_category} ({participant.category || '—'})
-                                </Text>
-                            </View>
-                        )}
                     </View>
-                )}
 
-                <View style={liveTrackingStyles.popupSection}>
-                    <View style={liveTrackingStyles.popupRow}>
-                        <Text style={liveTrackingStyles.popupLabel}>
-                            {t('livetracking:time')}:
-                        </Text>
-                        <Text style={liveTrackingStyles.popupValue}>
-                            {formatTime(participant.race_time_seconds)}
+                    <View style={liveTrackingStyles.popupFooter}>
+                        <Ionicons name="time-outline" size={14} color={palette.textMuted} />
+                        <Text style={liveTrackingStyles.lastUpdateText}>
+                            {t('livetracking:lastUpdate')}: {formatLastUpdate(participant.last_update_time, participant.last_update_type)}
                         </Text>
                     </View>
-                    <View style={liveTrackingStyles.popupRow}>
-                        <Text style={liveTrackingStyles.popupLabel}>
-                            {t('livetracking:distance')}:
-                        </Text>
-                        <Text style={liveTrackingStyles.popupValue}>
-                            {participant.distance_km?.toFixed(1) || '0.0'} km
-                        </Text>
-                    </View>
-                    <View style={liveTrackingStyles.popupRow}>
-                        <Text style={liveTrackingStyles.popupLabel}>
-                            {t('livetracking:avgSpeed')}:
-                        </Text>
-                        <Text style={liveTrackingStyles.popupValue}>
-                            {participant.avg_speed_kmh?.toFixed(1) || '0.0'} km/h
-                        </Text>
-                    </View>
-                    {participant.distance_to_next_cp !== null && participant.distance_to_next_cp !== undefined && (
-                        <View style={liveTrackingStyles.popupRow}>
-                            <Text style={liveTrackingStyles.popupLabel}>
-                                {t('livetracking:toNextCheckpoint')}:
-                            </Text>
-                            <Text style={liveTrackingStyles.popupValue}>
-                                {participant.distance_to_next_cp.toFixed(1)} km
-                            </Text>
-                        </View>
-                    )}
-                </View>
-
-                <View style={liveTrackingStyles.popupFooter}>
-                    <Ionicons name="time-outline" size={14} color={palette.textMuted} />
-                    <Text style={liveTrackingStyles.lastUpdateText}>
-                        {t('livetracking:lastUpdate')}: {formatLastUpdate(participant.last_update_time, participant.last_update_type)}
-                    </Text>
-                </View>
+                </ScrollView>
             </View>
         </View>
     );

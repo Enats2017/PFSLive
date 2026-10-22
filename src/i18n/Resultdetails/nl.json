@@ -29,6 +29,7 @@
     "status": "Status",
     "distance": "Afstand",
     "runner": "Loper",
+    "bib": "Startnummer",
     "splits": "Tussentijden",
     "scratchPosition": "Scratch klassement",
     "category": "Categorie",

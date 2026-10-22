@@ -13,6 +13,7 @@ import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/comm
 import { dialogTone } from './ui';
 import { useTranslation } from 'react-i18next';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
 
 interface SuccessCelebrationModalProps {
   visible: boolean;
@@ -117,43 +118,47 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
       ))}
 
       {/* Content */}
+      {/* ModalScroll: at 320pt tall (landscape) the card was taller than the
+          screen — the X (top 16) and Got it were off-screen (audit 2026-10-22) */}
       <View style={styles.wrapper}>
-        <View style={styles.card}>
-          {/* ✅ CLOSE BUTTON (TOP RIGHT X) */}
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={handleClose}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="close" size={24} color={palette.textMuted} />
-          </TouchableOpacity>
+        <ModalScroll contentStyle={{ alignItems: 'center' }}>
+          <View style={styles.card}>
+            {/* ✅ CLOSE BUTTON (TOP RIGHT X) */}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={handleClose}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={24} color={palette.textMuted} />
+            </TouchableOpacity>
 
-          {/* Success Icon */}
-          <View style={[styles.iconWrapper, { backgroundColor: dialogTone.success.ring }]}>
-            <Ionicons name="checkmark-circle" size={56} color={dialogTone.success.icon} />
+            {/* Success Icon */}
+            <View style={[styles.iconWrapper, { backgroundColor: dialogTone.success.ring }]}>
+              <Ionicons name="checkmark-circle" size={56} color={dialogTone.success.icon} />
+            </View>
+
+            {/* Title */}
+            <Text style={styles.title}>{title}</Text>
+
+            {/* Message */}
+            <Text style={styles.message}>{message}</Text>
+
+            {/* ✅ GOT IT BUTTON */}
+            {/* Primary, not secondary: across this app secondary means "the OTHER
+                choice" (cancel/close next to a primary). A lone acknowledge button
+                has no other choice to sit beside, so it is the primary — which is
+                what FeedbackSuccessModal and MembershipPlanModel already do. */}
+            <TouchableOpacity
+              style={[commonStyles.primaryButton, styles.button]}
+              onPress={handleClose}
+              activeOpacity={0.8}
+            >
+              <Text style={commonStyles.primaryButtonText}>
+                {t('common:buttons.gotIt')}
+              </Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Title */}
-          <Text style={styles.title}>{title}</Text>
-
-          {/* Message */}
-          <Text style={styles.message}>{message}</Text>
-
-          {/* ✅ GOT IT BUTTON */}
-          {/* Primary, not secondary: across this app secondary means "the OTHER
-              choice" (cancel/close next to a primary). A lone acknowledge button
-              has no other choice to sit beside, so it is the primary — which is
-              what FeedbackSuccessModal and MembershipPlanModel already do. */}
-          <TouchableOpacity
-            style={[commonStyles.primaryButton, styles.button]}
-            onPress={handleClose}
-            activeOpacity={0.8}
-          >
-            <Text style={commonStyles.primaryButtonText}>
-              {t('common:buttons.gotIt')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        </ModalScroll>
       </View>
     </Modal>
   );

@@ -128,7 +128,9 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                     </Text>
                 </View>
                 <View style={resultListStyle.cardTop}>
-                    <Text style={resultListStyle.cardName} numberOfLines={1}>{item.name}</Text>
+                    {/* 2 lines (was 1): a long name / team name in the ~160-200pt
+                        column at 320pt was cut to "…". */}
+                    <Text style={resultListStyle.cardName} numberOfLines={2}>{item.name}</Text>
                     {/* Two lines, matching the live and before-race cards. Four
                         values on one clamped line needed ~252pt in a 234pt
                         column, so the club and country were cut off on every row
@@ -155,7 +157,8 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                             {!!item.nation_flag && (
                                 <SvgUri uri={item.nation_flag} width={18} height={13} />
                             )}
-                            <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
+                            {/* 2 lines (was 1): a long club name pushed the country off */}
+                            <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
                                 {[item.club, item.nation].filter(Boolean).join(' \u00b7 ')}
                             </Text>
                         </View>
@@ -210,13 +213,16 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                         <>
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                 <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>{t('allrace:race.diffFirst')}</Text>
-                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}> {item.position === 'DNF' ? '-' : displayDiff}</Text>
+                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{item.position === 'DNF' ? '-' : displayDiff}</Text>
                             </View>
                             <View style={resultListStyle.statCol}>
                                 {/* One label, wrapped naturally — the hard \n made this
                                     column two lines tall while its neighbours were one,
-                                    so its value sat lower than theirs. */}
-                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
+                                    so its value sat lower than theirs.
+                                    3 lines (was 2): "CLASSEMENT MASTER 1 HOMMES" needs
+                                    ~194pt in a ~85-98pt column; statCol's space-between
+                                    keeps the value on its neighbours' baseline. */}
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
                                     {[t('allrace:race.ranking'), displayRankingLabel]
                                         .filter(Boolean).join(' ')}
                                 </Text>
@@ -280,7 +286,23 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     prev.item.diff === next.item.diff &&
     prev.item.finish_rank_agegroup === next.item.finish_rank_agegroup &&
     prev.item.live_tracking_activated === next.item.live_tracking_activated &&
-    prev.selectedCheckpoint?.value === next.selectedCheckpoint?.value
+    prev.selectedCheckpoint?.value === next.selectedCheckpoint?.value &&
+    // Everything else the card prints (cheap === checks). Without these a
+    // refresh that changed only a name / club / category / checkpoint list
+    // left stale text on screen.
+    prev.item.name === next.item.name &&
+    prev.item.club === next.item.club &&
+    prev.item.nation === next.item.nation &&
+    prev.item.nation_flag === next.item.nation_flag &&
+    prev.item.wave === next.item.wave &&
+    prev.item.category_name === next.item.category_name &&
+    prev.item.finish_rank_gender === next.item.finish_rank_gender &&
+    prev.item.status === next.item.status &&
+    prev.item.utmb_index === next.item.utmb_index &&
+    prev.item.name_participant_1 === next.item.name_participant_1 &&
+    prev.item.name_participant_2 === next.item.name_participant_2 &&
+    prev.item.checkpoints === next.item.checkpoints &&
+    prev.showUtmbIndex === next.showUtmbIndex
 );
 
 ResultCard.displayName = 'ResultCard';

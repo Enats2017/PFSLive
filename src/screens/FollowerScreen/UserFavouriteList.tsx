@@ -21,6 +21,7 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useSessionExpired } from '../../hooks/useSessionExpired';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 import { useFocusEffect,useRoute } from '@react-navigation/native';
@@ -36,10 +37,14 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     const { t } = useTranslation(['follow', 'follower', 'errorScreen']);
     const route = useRoute<any>();
      const targetCustomerAppId = route.params?.customer_app_id;
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged
+    // in effect (portrait has no side/bottom inset where the branches differ).
+    const isLandscape = width > height;
+    // ✅ Notch clearance for the body in landscape (edges fall back to ['bottom']).
+    const sidePadding = useLandscapeSidePadding();
 
     const [searchText, setSearchText]           = useState('');
     const [favourites, setFavourites]           = useState<FavouriteItem[]>([]);
@@ -357,13 +362,18 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
             <AppHeader title={t('common:band.favouriteAthletes')} showBack />
 
+            {/* ✅ Landscape notch padding on the body. The search band keeps its
+                white fill behind the inset so it still reads full-bleed. */}
+            <View style={[{ backgroundColor: palette.surface }, sidePadding]}>
             <SearchInput
                 placeholder={t('follow:search.athletesearch')}
                 value={searchText}
                 onChangeText={setSearchText}
                 icon="search"
             />
+            </View>
 
+            <View style={[{ flex: 1 }, sidePadding]}>
             <FlatList
                 data={displayList}
                 keyExtractor={(item, index) => `fav_${item.customer_app_id}_${index}`}
@@ -384,6 +394,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
                 ListEmptyComponent={renderEmpty}
                 ListFooterComponent={listFooter}
             />
+            </View>
 
             <TrackingPasswordModal
                 visible={passwordModalVisible}

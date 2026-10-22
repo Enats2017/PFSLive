@@ -32,7 +32,9 @@ interface FileCardProps {
         <Ionicons name="document-outline" size={28} color={palette.navy} />
       </View>
       <View style={personalStyles.fileDetails}>
-        <Text numberOfLines={1} style={personalStyles.fileName}>{fileName}</Text>
+        {/* ✅ middle ellipsis: GPX names share a prefix and differ at the end
+            (…_v2.gpx / …_final.gpx), which a tail "…" always hid. */}
+        <Text numberOfLines={1} ellipsizeMode="middle" style={personalStyles.fileName}>{fileName}</Text>
         <Text style={personalStyles.fileSize}>{fileSubtitle}</Text>
       </View>
     </View>

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,8 +20,13 @@ interface EventCardProps {
 export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: EventCardProps) => {
     const { t } = useTranslation(['profile']);
     const navigation = useNavigation<NavigationProp>();
+    // ✅ Own profile: three 48pt icon buttons beside the info left it ~88pt at
+    // 320pt, so the 20pt event name broke mid-word and the 2-line date lost the
+    // time (layout audit 2026-10-22). Below 400pt, or with larger text, the
+    // buttons go on their own row under the info.
+    const { width: windowWidth, fontScale } = useWindowDimensions();
+    const actionsBelow = isOwnProfile && (windowWidth < 400 || fontScale > 1);
 
-    
 
     const handleEditPress = useCallback(() => {
         if (item.event_source === 'custom') {
@@ -69,7 +74,11 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
     const isEditDisabled = item.race_status === 'finished';
 
     return (
-        <View style={[commonStyles.card, { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }]}>
+        <View style={[
+            commonStyles.card,
+            { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
+            actionsBelow && { flexDirection: 'column', alignItems: 'stretch' },
+        ]}>
             <View style={styles.info}>
                 {/* no line limit (was 1): a long event name was cut with "…" (device test 2026-10-22) */}
                 <Text style={commonStyles.title}>{item.name}</Text>
@@ -86,7 +95,10 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
             </View>
 
             {isOwnProfile ? (
-                <View style = {{flexDirection:'row', alignItems:'center', gap: space.sm}}>
+                <View style = {[
+                    {flexDirection:'row', alignItems:'center', gap: space.sm},
+                    actionsBelow && { justifyContent: 'flex-end', marginTop: space.md },
+                ]}>
                     {canDelete && (
                         <TouchableOpacity
                             style={[styles.iconBtn, styles.iconBtnDanger]}
