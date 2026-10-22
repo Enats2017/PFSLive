@@ -53,6 +53,9 @@ function freshState() {
     analytics: [],
     appStateListeners: [],
     shares: [], shareAction: 'sharedAction',
+    // screen + safe area for components that read them (portrait iPhone 15)
+    window: { width: 393, height: 852 },
+    insets: { top: 59, bottom: 34, left: 0, right: 0 },
   });
 }
 freshState();
@@ -127,6 +130,8 @@ const overrides = {
       share: async (content) => { M.shares.push(content); return { action: M.shareAction }; },
     },
     StyleSheet: { create: (x) => x, hairlineWidth: 1 },
+    useWindowDimensions: () => ({ ...M.window, scale: 3, fontScale: 1 }),
+    StatusBar: 'StatusBar',
     Text: 'Text', View: 'View', TouchableOpacity: 'TouchableOpacity', Pressable: 'Pressable', Modal: 'Modal',
   },
   'react-i18next': { useTranslation: () => ({ t, i18n: { language: 'en' } }) },
@@ -170,6 +175,9 @@ const overrides = {
   } },
   // useNavigation().navigate records into M.nav.navigations (same list as
   // navigationRef); everything else on the module stays an inert stub.
+  'react-native-safe-area-context': new Proxy({
+    useSafeAreaInsets: () => ({ ...M.insets }),
+  }, { get(tg, p) { return p in tg ? tg[p] : anyStub('safeArea.' + String(p)); } }),
   '@react-navigation/native': new Proxy({
     useNavigation: () => ({
       navigate: (name, params) => { M.nav.navigations.push({ name, params }); },
@@ -329,6 +337,10 @@ Module._extensions['.ts'] = function (module, filename) {
   module._compile(out.outputText, filename);
 };
 Module._extensions['.tsx'] = Module._extensions['.ts'];
+// require('…png') in components: Metro turns it into an asset id; here a name.
+for (const ext of ['.png', '.jpg', '.jpeg', '.gif', '.webp']) {
+  Module._extensions[ext] = function (module, filename) { module.exports = 'asset:' + path.basename(filename); };
+}
 
 // follow/unfollow resolve after the LOCAL save; their upload runs on its own
 // (followStorage: fire-and-forget). Tests that inspect what reached the server
