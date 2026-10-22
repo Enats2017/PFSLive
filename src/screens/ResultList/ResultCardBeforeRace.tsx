@@ -95,7 +95,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                         in a 234pt column, so the club, country and age were cut
                         off on every row that had them. Line 1 is the race entry
                         (always visible), line 2 is who the athlete is. */}
-                    <Text style={resultListStyle.bibText} numberOfLines={1}>
+                    <Text style={resultListStyle.bibText} numberOfLines={2}>
                         {`${t('allrace:race.bibNumber')} ${item.bib}`}
                     </Text>
                     {/* Wave gets its own row. Joined onto the bib line it ran to
@@ -103,7 +103,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                         longer in fr) and numberOfLines={1} truncated it mid-word in
                         this column. Empty on the many events with no wave column. */}
                     {item.wave ? (
-                        <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
                             {formatWave(t('allrace:race.wavelabel'), item.wave)}
                         </Text>
                     ) : null}
@@ -183,7 +183,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                                                 {t('allrace:race.utmbIndex')}
                                             </Text>
                                         </View>
-                                        <Text style={resultListStyle.statLabel}>—</Text>
+                                        <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>—</Text>
                                     </View>
                                 </View>
                             )}

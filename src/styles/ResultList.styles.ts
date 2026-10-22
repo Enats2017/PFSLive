@@ -87,6 +87,10 @@ statValueHighlight: {
     color: palette.danger, // make DNF stand out, e.g. red/orange
 },
 
+// Column headings of the 3-column stat grids. Their <Text> carries
+// maxFontSizeMultiplier={1}: with larger iOS text even one step up, "CLASSEMENT" /
+// "KLASSEMENT" no longer fit a ~75-90pt column and broke mid-word (2026-10-22).
+// The VALUES under them (times, ranks) still grow with the phone's text size.
 statLabel: {
     fontFamily: fonts.bodySemi,
     fontSize: 11,
@@ -176,7 +180,8 @@ divider: {
   // 34pt circle. Short ranks stay a circle; longer ones grow into a pill.
   rankCircle: {
     minWidth: 34,
-    height: 34,
+    // minHeight: grows with larger iOS text too (the number stays inside)
+    minHeight: 34,
     paddingHorizontal: space.xs,
     borderRadius: radii.pill,
     backgroundColor: palette.lime,

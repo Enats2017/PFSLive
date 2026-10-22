@@ -130,7 +130,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                         values on one clamped line needed ~252pt in a 234pt
                         column, so the club and country were cut off on every row
                         that had a club. */}
-                    <Text style={resultListStyle.bibText} numberOfLines={1}>
+                    <Text style={resultListStyle.bibText} numberOfLines={2}>
                         {`${t('allrace:race.bibNumber')} ${item.bib}`}
                     </Text>
                     {/* Wave gets its own row. Joined onto the bib line it ran to
@@ -138,7 +138,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                         longer in fr) and numberOfLines={1} truncated it mid-word in
                         this column. Empty on the many events with no wave column. */}
                     {item.wave ? (
-                        <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
                             {formatWave(t('allrace:race.wavelabel'), item.wave)}
                         </Text>
                     ) : null}
@@ -198,21 +198,21 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                     isWomen && { borderTopColor: categoryColors.womenDivider },
                 ]}>
                     <View style={resultListStyle.statCol}>
-                        <Text style={resultListStyle.statLabel}>{t('allrace:race.raceTime')}</Text>
+                        <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>{t('allrace:race.raceTime')}</Text>
                         <Text style={resultListStyle.statVal}>{item.time || "-"}</Text>
                     </View>
 
                     {fromLive === 0 ? (
                         <>
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
-                                <Text style={resultListStyle.statLabel}>{t('allrace:race.diffFirst')}</Text>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>{t('allrace:race.diffFirst')}</Text>
                                 <Text style={resultListStyle.statVal}> {item.position === 'DNF' ? '-' : displayDiff}</Text>
                             </View>
                             <View style={resultListStyle.statCol}>
                                 {/* One label, wrapped naturally — the hard \n made this
                                     column two lines tall while its neighbours were one,
                                     so its value sat lower than theirs. */}
-                                <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {[t('allrace:race.ranking'), displayRankingLabel]
                                         .filter(Boolean).join(' ')}
                                 </Text>
@@ -252,7 +252,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                                                         {t('allrace:race.utmbIndex')}
                                                     </Text>
                                                 </View>
-                                                <Text style={resultListStyle.statLabel}>-</Text>
+                                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>-</Text>
                                             </View>
                                         </View>
                                     )}

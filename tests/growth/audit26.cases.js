@@ -56,7 +56,8 @@ module.exports = ({ test, SRC }) => {
 
   test('rank circle grows with the rank (1000+ / DNF): minWidth, no fixed width, pill radius', () => {
     const b = block(read('styles/ResultList.styles.ts'), 'rankCircle');
-    assert.ok(/minWidth: 34,/.test(b) && /height: 34,/.test(b), 'min 34pt, same height');
+    // minHeight since the larger-text fix (audit32): grows taller too, never shorter than 34
+    assert.ok(/minWidth: 34,/.test(b) && /minHeight: 34,/.test(b), 'min 34pt, same height');
     assert.ok(!/(^|[^a-zA-Z])width:/.test(b), 'no fixed width');
     assert.ok(/borderRadius: radii\.pill,/.test(b), 'stays round at any width');
     assert.ok(/paddingHorizontal: space\.xs,/.test(b), 'breathing room once it grows');
@@ -93,7 +94,7 @@ module.exports = ({ test, SRC }) => {
     const tt = (k) => ({ 'common:gender.women': 'Women', 'common:gender.men': 'Men' }[k]);
     const word = (gender) => expr(s, 'genderWord', ['item', 't'], [{ gender }, tt]);
     assert.deepStrictEqual(['female', 'male', ''].map(word), ['Women', 'Men', '']);
-    assert.ok(/\{finishedGenderRank \? \(\n\s*<View style=\{\[resultListStyle\.statCol, resultListStyle\.statColMid\]\}>\n\s*<Text style=\{resultListStyle\.statLabel\} numberOfLines=\{2\}>\n\s*\{\[t\('allrace:race\.rank'\), genderWord\]\.filter\(Boolean\)\.join\(' '\)\}/.test(s), 'RANK WOMEN / MEN label (short word: fits the middle column — audit27)');
+    assert.ok(/\{finishedGenderRank \? \(\n\s*<View style=\{\[resultListStyle\.statCol, resultListStyle\.statColMid\]\}>\n\s*<Text style=\{resultListStyle\.statLabel\}[^>]*numberOfLines=\{2\}>\n\s*\{\[t\('allrace:race\.rank'\), genderWord\]\.filter\(Boolean\)\.join\(' '\)\}/.test(s), 'RANK WOMEN / MEN label (short word: fits the middle column — audit27)');
     assert.ok(/<Text style=\{resultListStyle\.statVal\}>\{finishedGenderRank\}<\/Text>/.test(s), 'rank value');
     assert.ok(/prev\.item\.finish_rank_gender === next\.item\.finish_rank_gender/.test(s), 'repaints when the rank arrives');
   });

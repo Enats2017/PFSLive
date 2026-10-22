@@ -126,7 +126,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                                 shows on top of it. Squeezed onto one line these
                                 needed ~180pt in a 149pt column, so the country and
                                 age were always cut off. */}
-                            <Text style={[favstyle.nationText, favstyle.metaLine]} numberOfLines={1}>
+                            <Text style={[favstyle.nationText, favstyle.metaLine]} numberOfLines={2}>
                                 {[`${t('allrace:race.bibNumber')} ${item.bib_number}`,
                                   item.distance_name]
                                     .filter(Boolean).join(' · ')}
@@ -190,7 +190,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                         <View style={favstyle.statsRow}>
                             {/* Col 1: last crossed CP race time (green) */}
                             <View style={favstyle.statCol}>
-                                <Text style={favstyle.statLabel} numberOfLines={2}>
+                                <Text style={favstyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {lastCrossed
                                         ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
                                         : t('allrace:race.raceTime')}
@@ -202,7 +202,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
 
                             {/* Col 2: ETA next CP — once finished there's no next, show last crossed name only (no ETA prefix) */}
                             <View style={[favstyle.statCol, favstyle.statColMid]}>
-                                <Text style={favstyle.statLabel} numberOfLines={2}>
+                                <Text style={favstyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {nextCp
                                         ? `${t('allrace:race.eta')} ${truncateCheckpointName(nextCp.name)}`
                                         : lastCrossed
@@ -216,7 +216,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
 
                             {/* Col 3: Finish — 'FINISH' once crossed (actual time), else 'ETA FINISH' */}
                             <View style={favstyle.statCol}>
-                                <Text style={favstyle.statLabel} numberOfLines={1}>
+                                <Text style={favstyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
                                 <Text style={favstyle.statVal}>

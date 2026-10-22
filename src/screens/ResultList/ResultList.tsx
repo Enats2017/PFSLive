@@ -30,7 +30,7 @@ import {  ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 const StatItem = ({ label, value, highlight }: { label: string; value: number | string; highlight?: boolean }) => (
     <View style={resultListStyle.statItem}>
-        <Text style={resultListStyle.statLabel}>{label}</Text>
+        <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>{label}</Text>
         <Text style={[resultListStyle.statValue, highlight && resultListStyle.statValueHighlight]}>
             {value}
         </Text>

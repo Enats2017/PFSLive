@@ -370,7 +370,10 @@ const styles = StyleSheet.create({
 
     flexDirection: 'row',
     alignItems: 'center',
-    height: 56,
+    // minHeight (was a fixed height): with larger iOS text the field grows
+    // instead of clipping the chosen country (2026-10-22).
+    minHeight: 56,
+    paddingVertical: 4,
     borderWidth: 1.5,
     borderRadius: 14,
     borderColor: palette.inputBorder,

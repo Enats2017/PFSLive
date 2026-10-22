@@ -146,7 +146,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
 
     const renderCpColumn = (cp: RaceResult['checkpoints'][number] | null, style?: any) => (
         <View style={[resultListStyle.statCol, style]}>
-            <Text style={resultListStyle.statLabel} numberOfLines={2}>
+            <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                 {cp ? truncateCheckpointName(cp.name) : '-'}
             </Text>
             <Text style={[
@@ -194,7 +194,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         in a 234pt column, so the club, country and age were cut
                         off on every row that had them. Line 1 is the race entry
                         (always visible), line 2 is who the athlete is. */}
-                    <Text style={resultListStyle.bibText} numberOfLines={1}>
+                    <Text style={resultListStyle.bibText} numberOfLines={2}>
                         {`${t('allrace:race.bibNumber')} ${item.bib}`}
                     </Text>
                     {/* Wave gets its own row. Joined onto the bib line it ran to
@@ -202,7 +202,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         longer in fr) and numberOfLines={1} truncated it mid-word in
                         this column. Empty on the many events with no wave column. */}
                     {item.wave ? (
-                        <Text style={resultListStyle.bibTextTight} numberOfLines={1}>
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
                             {formatWave(t('allrace:race.wavelabel'), item.wave)}
                         </Text>
                     ) : null}
@@ -271,7 +271,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             resultListStyle.statCol,
                             fromLive === 1 && !lastCrossed && { alignItems: 'flex-start' },
                         ]}>
-                            <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                            <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                 {lastCrossed
                                     ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
                                     : t('allrace:race.raceTime')}
@@ -285,7 +285,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                     {fromLive === 0 ? (
                         isCheckpointMode ? (
                             <View style={[resultListStyle.statCol, resultListStyle.statColLeft]}>
-                                <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {[t('allrace:race.ranking'), cp1 ? truncateCheckpointName(cp1.name) : '']
                                         .filter(Boolean).join(' ')}
                                 </Text>
@@ -295,7 +295,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             </View>
                         ) : (
                             <View style={[resultListStyle.statCol, resultListStyle.statColLeft]}>
-                                <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {[t('allrace:race.ranking'), item.category_name]
                                         .filter(Boolean).join(' ')}
                                 </Text>
@@ -309,7 +309,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             {renderCpColumn(cp2, resultListStyle.statColMid)}
                             {/* {renderCpColumn(cp3)} */}
                             <View style={resultListStyle.statCol}>
-                                <Text style={resultListStyle.statLabel} numberOfLines={1}>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
@@ -321,14 +321,14 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                         <>
                             {finishedGenderRank ? (
                                 <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
-                                    <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                                    <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                         {[t('allrace:race.rank'), genderWord].filter(Boolean).join(' ')}
                                     </Text>
                                     <Text style={resultListStyle.statVal}>{finishedGenderRank}</Text>
                                 </View>
                             ) : (
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
-                                <Text style={resultListStyle.statLabel} numberOfLines={2}>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {nextCp
                                         ? `${t('allrace:race.eta')} ${truncateCheckpointName(nextCp.name)}`
                                         : lastCrossed
@@ -342,7 +342,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             )}
 
                             <View style={resultListStyle.statCol}>
-                                <Text style={resultListStyle.statLabel} numberOfLines={1}>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
                                 <Text style={resultListStyle.statVal}>
