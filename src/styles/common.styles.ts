@@ -388,7 +388,8 @@ export const commonStyles = StyleSheet.create({
   // these remain for the call sites that have not migrated yet.
   primaryButton: {
     backgroundColor: palette.navy,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
     paddingHorizontal: space.xl,
     alignItems: 'center',
     justifyContent: 'center',
@@ -399,6 +400,8 @@ export const commonStyles = StyleSheet.create({
     color: palette.surface,
     fontFamily: fonts.display,
     fontSize: 15,
+    textAlign: 'center',
+    flexShrink: 1,   // wraps inside the button (larger iOS text) instead of spilling out
   },
   // ── The deck's MENU ROW (07_Profile.png, 14_FanHub.png) ──
   // A white card: a fill-tinted rounded-square icon plate, an ink title over a
@@ -448,7 +451,8 @@ export const commonStyles = StyleSheet.create({
     backgroundColor: palette.surface,
     borderWidth: 1.5,
     borderColor: palette.navy,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
     paddingHorizontal: space.xl,
     alignItems: 'center',
     justifyContent: 'center',
@@ -459,10 +463,13 @@ export const commonStyles = StyleSheet.create({
     color: palette.navy,
     fontFamily: fonts.display,
     fontSize: 15,
+    textAlign: 'center',
+    flexShrink: 1,   // wraps inside the button (larger iOS text) instead of spilling out
   },
   limeButton: {
     backgroundColor: palette.lime,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
     paddingHorizontal: space.xl,
     alignItems: 'center',
     justifyContent: 'center',
@@ -473,11 +480,14 @@ export const commonStyles = StyleSheet.create({
     color: palette.ink,
     fontFamily: fonts.display,
     fontSize: 15,
+    textAlign: 'center',
+    flexShrink: 1,   // wraps inside the button (larger iOS text) instead of spilling out
   },
 
   secondaryButton: {
     backgroundColor: 'transparent',
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
     paddingHorizontal: space.xl,
     borderRadius: radii.md,
     borderWidth: 1.5,
@@ -490,6 +500,8 @@ export const commonStyles = StyleSheet.create({
     color: palette.navy,
     fontFamily: fonts.display,
     fontSize: 15,
+    textAlign: 'center',
+    flexShrink: 1,   // wraps inside the button (larger iOS text) instead of spilling out
   },
 
   // Card
@@ -516,7 +528,8 @@ export const commonStyles = StyleSheet.create({
 
   favoriteButton: {
     backgroundColor: palette.navy,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
     paddingHorizontal: space.xl,
     flex: 1,
     borderBottomRightRadius: radii.md,

@@ -533,7 +533,8 @@ export const resultInfoStyles = StyleSheet.create({
         fontSize: 20,
   },
   mapButton: {
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 8,
     borderRadius: radii.md,
     backgroundColor: palette.lime,
     flexDirection: 'row',

@@ -173,7 +173,8 @@ export const ownProfile = StyleSheet.create({
     iosbutton: {
         backgroundColor: palette.lime,
         borderRadius: 10,
-        height: 44,
+        minHeight: 44,
+        paddingVertical: 8,
         paddingHorizontal: 16,
         
         flexDirection: 'row',
@@ -192,7 +193,8 @@ export const ownProfile = StyleSheet.create({
         gap: 8,
         backgroundColor: palette.lime,
         borderRadius: 10,
-        height: 48,
+        minHeight: 48,
+        paddingVertical: 8,
         marginHorizontal: space.xl,
         marginBottom: spacing.md,
     },

@@ -163,7 +163,7 @@ const DistanceTab = ({
             </Text>
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
-              <Text style={commonStyles.subtitle} numberOfLines={1}>
+              <Text style={commonStyles.subtitle}>
                 {item.race_date_formatted}
               </Text>
             </View>
@@ -176,7 +176,7 @@ const DistanceTab = ({
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Feather name="users" size={16} color={palette.textMuted} />
-                <Text style={commonStyles.subtitle} numberOfLines={1}>
+                <Text style={commonStyles.subtitle}>
                   {item.participant_started_count} {t('details:athletes')}
                 </Text>
               </View>
@@ -184,7 +184,7 @@ const DistanceTab = ({
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="ribbon-outline" size={15} color={palette.textBody} />
-                <Text style={commonStyles.subtitle} numberOfLines={1}>
+                <Text style={commonStyles.subtitle}>
                   {item.finished_count} {t('details:finished')}
                 </Text>
               </View>
@@ -192,7 +192,7 @@ const DistanceTab = ({
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="close-circle-outline" size={15} color={palette.textBody} />
-                <Text style={commonStyles.subtitlered} numberOfLines={1}>
+                <Text style={commonStyles.subtitlered}>
                   {item.dnf_count} {t('details:dnf')}
                 </Text>
               </View>

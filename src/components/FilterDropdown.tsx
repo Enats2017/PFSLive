@@ -7,7 +7,9 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
-  ScrollView
+  ScrollView,
+  StyleProp,
+  ViewStyle,
 } from 'react-native';
 import Entypo from '@expo/vector-icons/Entypo';
 import { resultListStyle } from '../styles/ResultList.styles';
@@ -32,6 +34,8 @@ export interface DropdownProps {
   options: FilterOption[];
    selected?: FilterOption;  
   onSelect: (o: FilterOption) => void;
+  /** Extra style for the button, e.g. a larger flex share in its row. */
+  style?: StyleProp<ViewStyle>;
 }
 
 const Dropdown: React.FC<DropdownProps> = ({
@@ -39,6 +43,7 @@ const Dropdown: React.FC<DropdownProps> = ({
   options,
   selected,
   onSelect,
+  style,
 }) => {
   const { t } = useTranslation(['allrace', 'common']);
   const [open, setOpen] = useState(false);
@@ -100,7 +105,7 @@ const Dropdown: React.FC<DropdownProps> = ({
     <>
       <TouchableOpacity
         ref={btnRef}
-        style={resultListStyle.filterTab}
+        style={[resultListStyle.filterTab, style]}
         activeOpacity={0.75}
         onPress={open ? closeMenu : openMenu}
       >
@@ -111,9 +116,11 @@ const Dropdown: React.FC<DropdownProps> = ({
           >
             {label}
           </Text>
+          {/* 18, was 26: in a half-width filter the 26pt chevron took a third
+              of the label's room (labels ended in "…", 2026-10-22). */}
           <Entypo
             name="chevron-down"
-            size={26}
+            size={18}
             color={palette.ink}
             style={resultListStyle.filterArrow}
           />

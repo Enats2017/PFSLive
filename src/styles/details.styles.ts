@@ -312,11 +312,16 @@ export const detailsStyles = StyleSheet.create({
     resultsButton: {
     backgroundColor: palette.navyLift,
     borderRadius: radii.md,
-    paddingHorizontal: space.xl,
+    // space.lg (was xl) + maxWidth 140 (2026-10-22): with the 14pt labels a long one
+    // ("Annuler l'inscription", "Suivi en direct") pushed this column so wide that the
+    // date / athlete counts beside it ended in "…" (fr / nl, device test). A long
+    // label now wraps to two centred lines inside 140 instead.
+    paddingHorizontal: space.lg,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     minWidth: 130,
+    maxWidth: 140,
     minHeight: 44, 
     
   },
@@ -326,22 +331,25 @@ export const detailsStyles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: palette.navy,
     borderRadius: radii.md,
-    paddingHorizontal: space.xl,
+    paddingHorizontal: space.lg,   // see resultsButton
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     minWidth: 130,
+    maxWidth: 140,
     minHeight: 44,
   },
   routeButtonText: {
     fontFamily: fonts.display,
     fontSize: 14,
     color: palette.navy,
+    textAlign: 'center',
   },
   resultsButtonText: {
     fontFamily: fonts.display,
     fontSize: 14,
     color: palette.surface,
+    textAlign: 'center',
   },
   verticalDivider: {
     width: 1,

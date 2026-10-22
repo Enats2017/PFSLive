@@ -185,7 +185,7 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 376 · 188 · 19 passed · exit 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 388 · 188 · 19 passed · exit 0 |
 | Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 435 passed, 0 failed (1 skipped on a local web build), leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
@@ -337,6 +337,18 @@ Island), one Android; app language EN, NL and FR.
 50. Live map elevation chart: km labels slightly bigger, never overlapping.
 51. Regression: one normal tracking Start → Stop on a test race.
 
+**Fixes after the first device test (2026-10-22)** — re-check in FR and NL, and on iOS with Larger Text 1-3 steps up:
+52. Event details (runner and follower) and Past race → distance cards: date and "Athletes started / finished" lines
+    are never cut ("…"); they wrap. Long button labels ("Annuler l'inscription", "Suivi en direct") wrap to two
+    centred lines inside the button; the buttons are at most 140pt wide.
+53. Results list filters: now two per row (distance + Results/Live, then category + checkpoint); no label ends in "…"
+    ("Point de contrôle", "Suivi en direct", "Controlepunt").
+54. Profile: "races · followers · following" wraps to a second row instead of ending in "…".
+55. Participant screen (Home → "I am a participant"): "All events" and "Create personal event" — with larger text the
+    button grows; the text stays inside its colour. Next events: event names take up to two lines.
+56. Every other button in the app (login, register, home Start/Stop, membership, readiness, share, map, settings,
+    popups): with larger text the button grows with its label — never text outside the button.
+
 ---
 
 ## 7. Status of everything discussed (client "livio improvements" message + plan)
@@ -401,7 +413,7 @@ The sequencing request is moot — the free session is already off on live (2026
 - `wp_endpoint` index — **already exists** (`idx_wp_endpoint`, 191-char prefix) on the live copy.
 
 ### Known, not done
-- Test suites are local only (all green 2026-10-22, run twice): app 376 (+ tracking 188, activation 19, distance button 20),
+- Test suites are local only (all green 2026-10-22, run twice): app 388 (+ tracking 188, activation 19, distance button 20),
   server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
   DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 106 vitest + type-check + lint.
 - The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`

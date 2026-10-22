@@ -28,7 +28,8 @@ export const ui = StyleSheet.create({
 
   // ── Button ─────────────────────────────────────────────────────────────
   btn: {
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
     borderRadius: radii.md,
     flexDirection: 'row',
     alignItems: 'center',
@@ -56,6 +57,8 @@ export const ui = StyleSheet.create({
   btnLabel: {
     fontFamily: fonts.display,
     fontSize: 15,
+    textAlign: 'center',
+    flexShrink: 1,   // wraps inside the button (larger iOS text) instead of spilling out
   },
   btnLabelPrimary: { color: palette.surface },
   btnLabelAccent: { color: palette.ink },

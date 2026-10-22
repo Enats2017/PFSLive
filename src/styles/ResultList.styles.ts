@@ -33,12 +33,19 @@ export const resultListStyle = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: 38,
-    paddingHorizontal: space.md,
+    minHeight: 38,
+    paddingVertical: 4,
+    // space.sm (was md): two filters per row now (ResultList), and every pt
+    // goes to the label — "Point de contrôle" needs ~114pt at 14pt.
+    paddingHorizontal: space.sm,
     borderRadius: radii.sm,
     backgroundColor: palette.page,
     borderWidth: 1,
     borderColor: palette.inputBorder,
+  },
+  // The distance filter's share of row 1 (the type filter beside it is flex 1).
+  filterTabWide: {
+    flex: 1.6,
   },
   tabrow: {
     flex: 1,
@@ -102,7 +109,7 @@ divider: {
 
 
   filterArrow: { fontFamily: fonts.body,
-        fontSize: 14, color: palette.ink, marginLeft: 8 },
+        fontSize: 14, color: palette.ink, marginLeft: space.xs },
   filterArrowOpen: { color: palette.lime },
 
   popup: {

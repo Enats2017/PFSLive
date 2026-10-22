@@ -76,7 +76,7 @@ export const Button: React.FC<ButtonProps> = ({
       ) : (
         <>
           {iconPosition === 'leading' && glyph}
-          <Text style={[ui.btnLabel, LABEL_STYLE[variant]]} numberOfLines={1}>
+          <Text style={[ui.btnLabel, LABEL_STYLE[variant]]} numberOfLines={2}>
             {label}
           </Text>
           {iconPosition === 'trailing' && glyph}

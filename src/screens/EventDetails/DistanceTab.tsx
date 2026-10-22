@@ -504,7 +504,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
+              <Text style={detailsStyles.metaText}>
                 {item.race_date_formatted}
               </Text>
             </View>
@@ -519,7 +519,7 @@ const handleExternalRegister = useCallback((url: string) => {
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Feather name="users" size={16} color={palette.textMuted} />
-                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                <Text style={detailsStyles.metaText}>
                   {item.participant_started_count} {t('details:athletes')}
                 </Text>
               </View>
@@ -528,7 +528,7 @@ const handleExternalRegister = useCallback((url: string) => {
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="ribbon-outline" size={15} color={palette.textBody} />
-                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                <Text style={detailsStyles.metaText}>
                   {item.finished_count} {t('details:finished')}
                 </Text>
               </View>
@@ -537,7 +537,7 @@ const handleExternalRegister = useCallback((url: string) => {
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="close-circle-outline" size={15} color={palette.textBody} />
-                <Text style={detailsStyles.metaTextRed} numberOfLines={1}>
+                <Text style={detailsStyles.metaTextRed}>
                   {item.dnf_count} {t('details:dnf')}
                 </Text>
               </View>

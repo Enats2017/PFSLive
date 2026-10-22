@@ -216,22 +216,27 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     // the top of the list and scroll away with it; portrait is unchanged.
     const filterHeader = (
         <>
+            {/* Two filters per row (2026-10-22). Three in one row left each label
+                ~45pt on a 360-375pt phone: "Results", "Checkpoint", "Point de
+                contrôle", "Suivi en direct" all ended in "…". Distance takes the
+                larger share of row 1 (names are long, the type is one word). */}
             <View style={resultListStyle.filterRow1}>
                 <Dropdown
                     label={selectedDistanceLabel}
                     options={distanceOptions}
                     selected={{ label: selectedDistanceLabel, value: String(selectedPovId) }}
                     onSelect={onDistanceSelect}
+                    style={resultListStyle.filterTabWide}
                 />
-            </View>
-
-            <View style={resultListStyle.filterRow2}>
                 <Dropdown
                     label={t(selectedType.label)}
                     options={TYPE_OPTIONS}
                     selected={selectedType}
                     onSelect={onTypeSelect}
                 />
+            </View>
+
+            <View style={resultListStyle.filterRow2}>
                 <Dropdown
                     label={selectedCategoryLabel}
                     options={categoryOptions}

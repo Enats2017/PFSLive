@@ -143,7 +143,8 @@ export const homeStyles = StyleSheet.create({
     marginBottom: space.xl,
   },
   stopButton: {
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 8,
     borderRadius: radii.md,
     borderWidth: 1.5,
     borderColor: palette.danger,
@@ -316,7 +317,8 @@ export const homeStyles = StyleSheet.create({
 
   // Buttons
   button: {
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
     borderRadius: radii.md,
     backgroundColor: palette.navy,
     flexDirection: "row",

@@ -65,7 +65,8 @@ export const loginStyles = StyleSheet.create({
   },
 
   registerButton: {
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 8,
     borderRadius: radii.md,
     borderWidth: 1.5,
     borderColor: palette.navy,

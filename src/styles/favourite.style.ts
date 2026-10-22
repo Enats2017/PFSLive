@@ -213,7 +213,9 @@ export const favstyle = StyleSheet.create({
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderColor: palette.inputBorder,
-    paddingHorizontal: space.md,
+    // space.sm + letterSpacing 0.3 below: same as the result cards (ResultList
+    // styles), so 11pt labels keep their words whole in the middle column.
+    paddingHorizontal: space.sm,
   },
 
   statLabel: {
@@ -222,7 +224,7 @@ export const favstyle = StyleSheet.create({
     color: palette.textMuted,
     textAlign: "center",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     marginBottom: space.xs,
   },
 

@@ -97,7 +97,9 @@ module.exports = ({ M, load, test, SRC }) => {
       ['styles/readiness.styles.ts', 'fixButton', 'fixButtonText'],
       ['styles/forgetPassword.styles.ts', 'nextNum', 'nextNumText'],
     ]) {
-      const h = n(box(file, outer), 'height');
+      // fixed height, or (since the larger-text fix) the minimum it grows from
+      const ob = box(file, outer);
+      const h = /(?:^|[\s,])height:/.test(ob) ? n(ob, '(?:^|[\\s,])height') : n(ob, 'minHeight');
       const size = n(box(file, inner), 'fontSize');
       assert.ok(Math.ceil(size * 1.25) <= h, `${outer} ${h}pt holds ${size}pt text (line ${Math.ceil(size * 1.25)})`);
     }

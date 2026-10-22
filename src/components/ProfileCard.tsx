@@ -83,10 +83,12 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                     )}
 
                     {/* ✅ Split into pressable segments for followers/following, races stays plain */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {/* Wraps (2026-10-22): "123 Courses 1234 Abonnés 123 Abonnements" needs
+                        ~260-300pt, the column beside the avatar has 232-302pt, so the
+                        last count ended in "…" on most phones. Each count stays whole. */}
+                    <View style={profileStyles.identityMetaRow}>
                         <Text style={profileStyles.identityMeta} numberOfLines={1}>
                             {`${profile?.races_count ?? 0} ${t('ownProfile:profile.races')}`}
-                            {'   '}
                         </Text>
 
                         <TouchableOpacity
@@ -97,8 +99,6 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                                 {`${profile?.followers_count ?? 0} ${t('ownProfile:profile.followers')}`}
                             </Text>
                         </TouchableOpacity>
-
-                        <Text style={profileStyles.identityMeta}>{'   '}</Text>
 
                         <TouchableOpacity
                             onPress={() =>

@@ -145,6 +145,13 @@ export const profileStyles = StyleSheet.create({
     color: palette.textMuted,
     marginTop: space.xs,
   },
+  // races · followers · following — wraps to a second row rather than "…".
+  identityMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: space.md,
+  },
   avatarImage: { 
     width: "100%", 
     height: "100%" 

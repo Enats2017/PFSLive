@@ -184,7 +184,8 @@ const styles = StyleSheet.create({
     },
     button: {
         width: '100%',
-        height: 48,
+        minHeight: 48,
+        paddingVertical: 8,
         borderRadius: 14,
         backgroundColor: palette.navy,
         alignItems: 'center',

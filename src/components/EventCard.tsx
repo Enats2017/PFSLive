@@ -58,7 +58,8 @@ const EventCard: React.FC<EventCardProps> = ({ item, t }) => {
             </View>
 
             <View style={fanstyle.eventInfo}>
-                <Text style={fanstyle.eventName} numberOfLines={1}>{item.name}</Text>
+                {/* 2 lines (was 1): "Trail Festival…" was cut at larger iOS text sizes */}
+                <Text style={fanstyle.eventName} numberOfLines={2}>{item.name}</Text>
                 <View style={fanstyle.eventDateRow}>
                     <Text style={fanstyle.eventDate}>{formatEventDate(item.race_date, t)}</Text>
                     <Ionicons name="calendar-outline" size={15} color={palette.ink} />
