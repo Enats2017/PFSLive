@@ -26,12 +26,15 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useDimensions } from '../../hooks/useDimensions';
 import { landscapeSideInsets } from '../../utils/landscapeInsets';
+import { filtersOnePerRow } from '../../utils/screenFit';
 import {  ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 const StatItem = ({ label, value, highlight }: { label: string; value: number | string; highlight?: boolean }) => (
     <View style={resultListStyle.statItem}>
-        <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>{label}</Text>
-        <Text style={[resultListStyle.statValue, highlight && resultListStyle.statValueHighlight]}>
+        {/* one word, one line: at 320pt nl "Gepasseerd" needs ~76pt of a ~66pt box —
+            shrinks there (≥ 0.8) instead of breaking mid-word; full size from 360pt */}
+        <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
+        <Text style={[resultListStyle.statValue, highlight && resultListStyle.statValueHighlight]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
             {value}
         </Text>
     </View>
@@ -41,7 +44,9 @@ const Divider = () => <View style={resultListStyle.divider} />;
 
 const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     const { t } = useTranslation(['allrace', 'common']);
-    const { width, height, isLandscape: isLandscapeView } = useDimensions();
+    const { width, height, fontScale, isLandscape: isLandscapeView } = useDimensions();
+    const filtersStacked = filtersOnePerRow(width, fontScale);
+    const stackedTab = filtersStacked ? resultListStyle.filterTabStacked : undefined;
     const insets = useSafeAreaInsets();
     // Side padding for the content under the header in landscape on a notch /
     // Dynamic Island phone (0 in portrait) — see utils/landscapeInsets.
@@ -220,28 +225,30 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                 ~45pt on a 360-375pt phone: "Results", "Checkpoint", "Point de
                 contrôle", "Suivi en direct" all ended in "…". Distance takes the
                 larger share of row 1 (names are long, the type is one word). */}
-            <View style={resultListStyle.filterRow1}>
+            <View style={[resultListStyle.filterRow1, filtersStacked && resultListStyle.filterRowStacked]}>
                 <Dropdown
                     label={selectedDistanceLabel}
                     options={distanceOptions}
                     selected={{ label: selectedDistanceLabel, value: String(selectedPovId) }}
                     onSelect={onDistanceSelect}
-                    style={resultListStyle.filterTabWide}
+                    style={[resultListStyle.filterTabWide, stackedTab]}
                 />
                 <Dropdown
                     label={t(selectedType.label)}
                     options={TYPE_OPTIONS}
                     selected={selectedType}
                     onSelect={onTypeSelect}
+                    style={stackedTab}
                 />
             </View>
 
-            <View style={resultListStyle.filterRow2}>
+            <View style={[resultListStyle.filterRow2, filtersStacked && resultListStyle.filterRowStacked]}>
                 <Dropdown
                     label={selectedCategoryLabel}
                     options={categoryOptions}
                     selected={{ label: selectedCategoryLabel, value: selectedCategory }}
                     onSelect={onCategorySelect}
+                    style={stackedTab}
                 />
                 {(raceStatus === 'in_progress' || raceStatus === 'finished') && (
                     <Dropdown
@@ -254,6 +261,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                             }
                         }
                         onSelect={onCheckpointSelect}
+                        style={stackedTab}
                     />
                 )}
             </View>

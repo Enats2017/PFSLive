@@ -47,6 +47,14 @@ export const resultListStyle = StyleSheet.create({
   filterTabWide: {
     flex: 1.6,
   },
+  // One filter per row (filtersOnePerRow, utils/screenFit.ts). flex 1 in a
+  // column with no fixed height would not size the button by its label.
+  filterRowStacked: {
+    flexDirection: "column",
+  },
+  filterTabStacked: {
+    flex: 0,
+  },
   tabrow: {
     flex: 1,
     flexDirection: "row",
@@ -167,6 +175,16 @@ divider: {
     marginHorizontal: space.xl,
     borderRadius: radii.md,
     padding: space.lg,
+  },
+  // Below 360pt (isNarrowWidth, utils/screenFit.ts): 12 + 12 instead of 20 + 16
+  // and a gap of 8 between the stat columns — at 320pt "CLASSEMENT" /
+  // "KLASSEMENT" (~79pt) needed more than the ~75pt column and broke mid-word.
+  cardNarrow: {
+    marginHorizontal: space.md,
+    padding: space.md,
+  },
+  statsRowNarrow: {
+    gap: space.sm,
   },
 
   // ── Row head: rank circle | name + meta | star ────────────────────────

@@ -22,11 +22,14 @@ import { useScreenError } from '../../hooks/useApiError';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import { useDimensions } from '../../hooks/useDimensions';
+import { distanceButtonsBelow } from '../../utils/screenFit';
 
 const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }) => {
   const { product_app_id, event_name, event_image } = route.params;
   const { t } = useTranslation(['result', 'details', 'common']);
-  const { width: windowWidth, height } = useDimensions();
+  const { width: windowWidth, height, fontScale } = useDimensions();
+  // Card: margin spacing.md + padding space.lg each side.
+  const buttonsBelow = distanceButtonsBelow(windowWidth - 2 * spacing.md - 2 * spacing.lg, fontScale);
   const insets = useSafeAreaInsets();
   const [containerWidth, setContainerWidth] = useState(0);
   const isGestureNav = insets.bottom > 0;
@@ -144,8 +147,8 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     return (
       <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.md, marginHorizontal: spacing.md }]}>
-        <View style={detailsStyles.distance}>
-          <View style={detailsStyles.distanceInfo}>
+        <View style={[detailsStyles.distance, buttonsBelow && detailsStyles.distanceStacked]}>
+          <View style={[detailsStyles.distanceInfo, buttonsBelow && detailsStyles.distanceInfoStacked]}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
               {item.distance_name}
             </Text>
@@ -186,10 +189,11 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
               </View>
             )}
           </View>
-          <View style={detailsStyles.verticalDivider} />
+          {!buttonsBelow && <View style={detailsStyles.verticalDivider} />}
           {showResults && (
             <TouchableOpacity
-              style={detailsStyles.resultsButton}
+              style={[detailsStyles.resultsButton, buttonsBelow && detailsStyles.distanceButtonFull,
+                buttonsBelow && detailsStyles.distanceButtonsBelow]}
               onPress={() =>
                 navigation.navigate('ResultList', {
                   product_app_id,
@@ -211,7 +215,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         </View>
       </View>
     );
-  }, [navigation, product_app_id, t,  showResults,showResultsStats,event_name,event_image]);
+  }, [navigation, product_app_id, t,  showResults,showResultsStats,event_name,event_image, buttonsBelow]);
 
   // ✅ LOADING STATE
   if (loading) {

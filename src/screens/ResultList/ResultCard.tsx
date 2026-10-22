@@ -1,10 +1,11 @@
 import React, { memo, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { resultListStyle } from '../../styles/ResultList.styles';
+import { isNarrowWidth } from '../../utils/screenFit';
 import { formatWave } from '../../utils/waveLabel';
 import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
@@ -47,6 +48,8 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
+    // compact spacing below 360pt — re-renders on rotation / Display Zoom despite memo
+    const narrow = isNarrowWidth(useWindowDimensions().width);
 
     const hasUtmbIndex = showUtmbIndex &&
         item.utmb_index &&
@@ -107,7 +110,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     return (
         // The whole card opens the athlete — see ResultCardLive (client 2026-10-22).
         <TouchableOpacity
-            style={[resultListStyle.cardWithLeftBorder, isWomen && { backgroundColor: categoryColors.womenSurface }]}
+            style={[resultListStyle.cardWithLeftBorder, narrow && resultListStyle.cardNarrow, isWomen && { backgroundColor: categoryColors.womenSurface }]}
             onPress={handleCardPress}
             activeOpacity={0.7}
         >
@@ -195,18 +198,19 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 
                 <View style={[
                     resultListStyle.statsRow,
+                    narrow && resultListStyle.statsRowNarrow,
                     isWomen && { borderTopColor: categoryColors.womenDivider },
                 ]}>
                     <View style={resultListStyle.statCol}>
                         <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>{t('allrace:race.raceTime')}</Text>
-                        <Text style={resultListStyle.statVal}>{item.time || "-"}</Text>
+                        <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{item.time || "-"}</Text>
                     </View>
 
                     {fromLive === 0 ? (
                         <>
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                 <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>{t('allrace:race.diffFirst')}</Text>
-                                <Text style={resultListStyle.statVal}> {item.position === 'DNF' ? '-' : displayDiff}</Text>
+                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}> {item.position === 'DNF' ? '-' : displayDiff}</Text>
                             </View>
                             <View style={resultListStyle.statCol}>
                                 {/* One label, wrapped naturally — the hard \n made this
@@ -218,7 +222,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                                 </Text>
                                 {/* The women's gender rank used to be stacked inside the
                                     rank circle. It belongs here, where it has a label. */}
-                                <Text style={resultListStyle.statVal}>
+                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                                     {[displayAgeGroupRank, genderRank].filter(Boolean).join(' · ')}
                                 </Text>
                             </View>
@@ -240,7 +244,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                                                         {t('allrace:race.utmbIndex')}
                                                     </Text>
                                                 </View>
-                                                <Text style={resultListStyle.statVal}>{item.utmb_index}</Text>
+                                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{item.utmb_index}</Text>
                                             </View>
                                         </View>
                                     ) : (

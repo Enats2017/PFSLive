@@ -358,6 +358,25 @@ export const detailsStyles = StyleSheet.create({
     backgroundColor: palette.border,
   },
 
+  // Buttons full width UNDER the details instead of in the 130-140pt column
+  // beside them — distanceButtonsBelow (utils/screenFit.ts): 320pt screens and
+  // larger iOS text, where "September" / "Participants" broke mid-word.
+  distanceStacked: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
+  // flex 1 in a column with no fixed height would size the details to 0
+  distanceInfoStacked: {
+    flex: 0,
+  },
+  distanceButtonsBelow: {
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  distanceButtonFull: {
+    maxWidth: '100%',
+  },
+
   infoBox: {
   flexDirection: 'row',
   alignItems: 'center',

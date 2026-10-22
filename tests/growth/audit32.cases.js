@@ -126,7 +126,7 @@ module.exports = ({ test, SRC }) => {
       'screens/EventDetails/ParticipantCard.tsx:183', 'screens/EventDetails/ParticipantResult.tsx:325',
       'screens/FavouriteScreen/FavouriteCard.tsx:139', 'screens/ResultDetailsScreen/ResultDetails.tsx:262',
       'screens/ResultList/ParticipantCard.tsx:54',
-      'screens/ResultList/ResultCardBeforeRace.tsx:114', 'screens/ResultList/ResultCardLive.tsx:213',
+      'screens/ResultList/ResultCardBeforeRace.tsx:117', 'screens/ResultList/ResultCardLive.tsx:216',
       // a checkpoint's km or name in a label / value row
       'screens/ResultDetailsScreen/RaceInfoTab.tsx:255',
       // status value ("In progress" / "Bezig" / "En cours") in a full-width row

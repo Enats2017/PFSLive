@@ -195,7 +195,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                                         ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
                                         : t('allrace:race.raceTime')}
                                 </Text>
-                                <Text style={[favstyle.statVal, { color: lastCrossed?.race_time ? palette.lime : palette.placeholder }]}>
+                                <Text style={[favstyle.statVal, { color: lastCrossed?.race_time ? palette.lime : palette.placeholder }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                                     {lastCrossed?.race_time || item.time || '-'}
                                 </Text>
                             </View>
@@ -209,7 +209,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                                             ? truncateCheckpointName(lastCrossed.name)
                                             : t('allrace:race.eta')}
                                 </Text>
-                                <Text style={favstyle.statVal}>
+                                <Text style={favstyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                                     {formatClockTime(nextCp?.actual_time || lastCrossed?.actual_time) || '-'}
                                 </Text>
                             </View>
@@ -219,7 +219,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                                 <Text style={favstyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
-                                <Text style={favstyle.statVal}>
+                                <Text style={favstyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                                     {formatClockTime(finishCp?.actual_time) || '-'}
                                 </Text>
                             </View>

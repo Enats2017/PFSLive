@@ -95,7 +95,7 @@ module.exports = ({ test, SRC }) => {
     const word = (gender) => expr(s, 'genderWord', ['item', 't'], [{ gender }, tt]);
     assert.deepStrictEqual(['female', 'male', ''].map(word), ['Women', 'Men', '']);
     assert.ok(/\{finishedGenderRank \? \(\n\s*<View style=\{\[resultListStyle\.statCol, resultListStyle\.statColMid\]\}>\n\s*<Text style=\{resultListStyle\.statLabel\}[^>]*numberOfLines=\{2\}>\n\s*\{\[t\('allrace:race\.rank'\), genderWord\]\.filter\(Boolean\)\.join\(' '\)\}/.test(s), 'RANK WOMEN / MEN label (short word: fits the middle column — audit27)');
-    assert.ok(/<Text style=\{resultListStyle\.statVal\}>\{finishedGenderRank\}<\/Text>/.test(s), 'rank value');
+    assert.ok(/<Text style=\{resultListStyle\.statVal\}[^>]*>\{finishedGenderRank\}<\/Text>/.test(s), 'rank value (one line, shrinks to fit — audit33)');
     assert.ok(/prev\.item\.finish_rank_gender === next\.item\.finish_rank_gender/.test(s), 'repaints when the rank arrives');
   });
 
@@ -121,7 +121,7 @@ module.exports = ({ test, SRC }) => {
     assert.strictEqual(inList(true, true, false, 0), false, 'loading: filters stay on top');
     assert.strictEqual(inList(true, false, true, 5), false, 'error');
     assert.strictEqual(inList(true, false, false, 0), false, 'empty: filters stay so they can be changed');
-    assert.ok(/const \{ width, height, isLandscape: isLandscapeView \} = useDimensions\(\);/.test(s), 'real orientation (width > height)');
+    assert.ok(/const \{ width, height, (?:fontScale, )?isLandscape: isLandscapeView \} = useDimensions\(\);/.test(s), 'real orientation (width > height)');
     assert.ok(/\n            \{!filtersInList && filterHeader\}\n/.test(s), 'fixed above the list otherwise');
     assert.ok(/ListHeaderComponent=\{filtersInList \? filterHeader : null\}/.test(s), 'inside the list in landscape');
     const hdr = s.slice(s.indexOf('const filterHeader = ('), s.indexOf('    return (\n        <SafeAreaView'));

@@ -105,9 +105,9 @@ module.exports = ({ test, SRC }) => {
   // ── result-list filters ────────────────────────────────────────────────
   test('result-list filters: two per row (distance + type, then category + checkpoint)', () => {
     const s = read('screens/ResultList/ResultList.tsx');
-    const r1 = s.slice(s.indexOf('<View style={resultListStyle.filterRow1}>'), s.indexOf('<View style={resultListStyle.filterRow2}>'));
-    const r2 = s.slice(s.indexOf('<View style={resultListStyle.filterRow2}>'), s.indexOf('<View style={resultListStyle.statisticsContainer}>'));
-    assert.ok(/onSelect=\{onDistanceSelect\}\s*style=\{resultListStyle\.filterTabWide\}/.test(r1) && /onSelect=\{onTypeSelect\}/.test(r1), 'row 1');
+    const r1 = s.slice(s.indexOf('resultListStyle.filterRow1,'), s.indexOf('resultListStyle.filterRow2,'));   // rows may stack (audit33)
+    const r2 = s.slice(s.indexOf('resultListStyle.filterRow2,'), s.indexOf('<View style={resultListStyle.statisticsContainer}>'));
+    assert.ok(/onSelect=\{onDistanceSelect\}\s*style=\{\[resultListStyle\.filterTabWide, stackedTab\]\}/.test(r1) && /onSelect=\{onTypeSelect\}/.test(r1), 'row 1');
     assert.ok(/onSelect=\{onCategorySelect\}/.test(r2) && /onSelect=\{onCheckpointSelect\}/.test(r2) && !/onTypeSelect/.test(r2), 'row 2');
     const d = read('components/FilterDropdown.tsx');
     assert.ok(/style=\{\[resultListStyle\.filterTab, style\]\}/.test(d), 'dropdown takes a style');

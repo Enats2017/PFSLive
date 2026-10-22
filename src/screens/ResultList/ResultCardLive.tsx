@@ -1,10 +1,11 @@
 import React, { memo, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { resultListStyle } from '../../styles/ResultList.styles';
+import { isNarrowWidth } from '../../utils/screenFit';
 import { formatWave } from '../../utils/waveLabel';
 import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
@@ -76,6 +77,8 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
+    // compact spacing below 360pt — re-renders on rotation / Display Zoom despite memo
+    const narrow = isNarrowWidth(useWindowDimensions().width);
 
     const isLive = item.live_tracking_activated === 1;
     const activeCheckpoints = getActiveCheckpoints(item.checkpoints);
@@ -152,7 +155,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
             <Text style={[
                 resultListStyle.statVal,
                 { color: cp?.is_crossed ? palette.ink : palette.placeholder }
-            ]}>
+            ]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                 {cp?.race_time || '-'}
             </Text>
         </View>
@@ -174,7 +177,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
         // "sometimes took several taps" (client 2026-10-22). The star is a
         // nested touchable and keeps its own press.
         <TouchableOpacity
-            style={[resultListStyle.cardWithLeftBorder, isWomen && { backgroundColor: categoryColors.womenSurface }]}
+            style={[resultListStyle.cardWithLeftBorder, narrow && resultListStyle.cardNarrow, isWomen && { backgroundColor: categoryColors.womenSurface }]}
             onPress={handleCardPress}
             activeOpacity={0.7}
         >
@@ -262,6 +265,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
 
                 <View style={[
                     resultListStyle.statsRow,
+                    narrow && resultListStyle.statsRowNarrow,
                     isWomen && { borderTopColor: categoryColors.womenDivider },
                 ]}>
                     {isCheckpointMode ? (
@@ -276,7 +280,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
                                     : t('allrace:race.raceTime')}
                             </Text>
-                            <Text style={[resultListStyle.statVal, { color: lastCrossed?.race_time ? palette.lime : palette.placeholder }]}>
+                            <Text style={[resultListStyle.statVal, { color: lastCrossed?.race_time ? palette.lime : palette.placeholder }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                                 {lastCrossed?.race_time || item.time || '-'}
                             </Text>
                         </View>
@@ -289,7 +293,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     {[t('allrace:race.ranking'), cp1 ? truncateCheckpointName(cp1.name) : '']
                                         .filter(Boolean).join(' ')}
                                 </Text>
-                                <Text style={resultListStyle.statVal}>
+                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                                     {cp1?.is_crossed ? (cp1?.ranking || '-') : '-'}
                                 </Text>
                             </View>
@@ -299,7 +303,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     {[t('allrace:race.ranking'), item.category_name]
                                         .filter(Boolean).join(' ')}
                                 </Text>
-                                <Text style={resultListStyle.statVal}>
+                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                                     {[item.finish_rank_agegroup, genderRank].filter(Boolean).join(' · ')}
                                 </Text>
                             </View>
@@ -312,7 +316,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                 <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
-                                <Text style={resultListStyle.statVal}>
+                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                                     {formatClockTime(finishCp?.actual_time) || '-'}
                                 </Text>
                             </View>
@@ -324,7 +328,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                         {[t('allrace:race.rank'), genderWord].filter(Boolean).join(' ')}
                                     </Text>
-                                    <Text style={resultListStyle.statVal}>{finishedGenderRank}</Text>
+                                    <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{finishedGenderRank}</Text>
                                 </View>
                             ) : (
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
@@ -335,7 +339,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                             ? truncateCheckpointName(lastCrossed.name)
                                             : t('allrace:race.eta')}
                                 </Text>
-                                <Text style={resultListStyle.statVal}>
+                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                                     {formatClockTime(nextCp?.actual_time || lastCrossed?.actual_time) || '-'}
                                 </Text>
                             </View>
@@ -345,7 +349,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                 <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={2}>
                                     {finishCp?.is_crossed ? t('allrace:race.finish') : t('allrace:race.etaFinish')}
                                 </Text>
-                                <Text style={resultListStyle.statVal}>
+                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                                     {formatClockTime(finishCp?.actual_time) || '-'}
                                 </Text>
                             </View>

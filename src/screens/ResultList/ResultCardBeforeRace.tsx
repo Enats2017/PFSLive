@@ -1,9 +1,10 @@
 import React, { memo, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { resultListStyle } from '../../styles/ResultList.styles';
+import { isNarrowWidth } from '../../utils/screenFit';
 import { formatWave } from '../../utils/waveLabel';
 import { RaceResult } from '../../services/resultList';
 import { useNavigation } from '@react-navigation/native';
@@ -41,6 +42,8 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
     analyticsRaceName,
 }) => {
     const { t } = useTranslation(['allrace', 'common']);
+    // compact spacing below 360pt — re-renders on rotation / Display Zoom despite memo
+    const narrow = isNarrowWidth(useWindowDimensions().width);
     const navigation = useNavigation<any>();
 
     const isLive = item.live_tracking_activated === 1;
@@ -79,7 +82,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
 
     return (
         <TouchableOpacity
-            style={[resultListStyle.cardWithLeftBorder, isWomen && { backgroundColor: categoryColors.womenSurface }]}
+            style={[resultListStyle.cardWithLeftBorder, narrow && resultListStyle.cardNarrow, isWomen && { backgroundColor: categoryColors.womenSurface }]}
             onPress={handlePress}
         >
             {/* Row head — bib circle, identity, follow star. Matches
@@ -159,6 +162,7 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                 {showUtmbIndex && (
                     <View style={[
                         resultListStyle.statsRow,
+                        narrow && resultListStyle.statsRowNarrow,
                         isWomen && { borderTopColor: categoryColors.womenDivider },
                     ]}>
                         <View style={resultListStyle.statCol}>

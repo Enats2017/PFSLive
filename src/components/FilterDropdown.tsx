@@ -110,9 +110,11 @@ const Dropdown: React.FC<DropdownProps> = ({
         onPress={open ? closeMenu : openMenu}
       >
         <View style={resultListStyle.tabrow}>
+          {/* 2 lines (was 1): at 320pt / larger iOS text "Point de contrôle"
+              ended in "…"; the button has a minHeight, so it grows. */}
           <Text
             style={resultListStyle.filterTabText}
-            numberOfLines={1}
+            numberOfLines={2}
           >
             {label}
           </Text>

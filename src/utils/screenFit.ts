@@ -1,0 +1,48 @@
+// Layout decisions for narrow screens and larger iOS text (confirmation pass,
+// 2026-10-22). 320pt is a real width, not a theoretical one: iPhone SE 2/3 and
+// 12/13 mini with Display Zoom, the first iPhone SE, and small Android phones
+// or a large Android "Display size" all report it.
+
+/** Below this the result cards use their compact spacing (resultListStyle.*Narrow):
+ *  at 320pt "CLASSEMENT" / "KLASSEMENT" no longer fit a stat column whole. */
+export const NARROW_WIDTH = 360;
+export const isNarrowWidth = (width: number | undefined): boolean => !!width && width < NARROW_WIDTH;
+
+// Distance cards (event details, follower distances, past races): the details
+// on the left, buttons in a 130-140pt column on the right. On a 320pt screen
+// that leaves the date ~70pt ("September" broke mid-word), and two steps of
+// larger iOS text no longer fit "Participants" inside the 140pt button. When
+// either side cannot keep its longest word whole, the buttons go full width
+// under the details instead.
+export const DISTANCE_BUTTON_COLUMN = 140;      // detailsStyles.resultsButton maxWidth
+const DISTANCE_BUTTON_INSET = 2 * 16 + 3;       // paddingHorizontal space.lg + 1.5 border, both sides
+const DISTANCE_ROW_CHROME = 12 + 1 + 12 + 16 + 8;   // gap · divider · gap, meta icon + gap
+/** Widest single button word at 100%: "Participants", 14pt display (~87pt). */
+export const DISTANCE_LONGEST_BUTTON_WORD = 87;
+/** Widest date chunk kept on one line at 100%: "25 September", 14pt (~95pt). */
+export const DISTANCE_LONGEST_META = 95;
+
+export const distanceButtonsBelow = (cardInner: number, fontScale: number | undefined): boolean => {
+  const s = Math.max(1, fontScale || 1);
+  return DISTANCE_LONGEST_BUTTON_WORD * s > DISTANCE_BUTTON_COLUMN - DISTANCE_BUTTON_INSET
+    || cardInner - DISTANCE_ROW_CHROME - DISTANCE_BUTTON_COLUMN < DISTANCE_LONGEST_META * s;
+};
+
+// Result-list filters: two per row, the type filter the narrowest (1 : 1.6 with
+// the distance). At 320pt with larger text "Résultats" no longer fit the type
+// filter and "Controlepunt" a half-width one (and at 360pt from ×1.35): words
+// broke mid-word. Then each filter gets its own full-width row.
+const FILTER_ROW_CHROME = 2 * 20 + 8;            // gutters space.xl, gap space.sm
+const FILTER_TAB_CHROME = 2 * 8 + 2 + 18 + 4;    // padding space.sm, border, chevron 18 + margin xs
+/** Widest word of a type label at 100%: "Résultats", 14pt (~62pt). */
+export const FILTER_LONGEST_TYPE_WORD = 62;
+/** Widest word of the other fixed labels: "Controlepunt", 14pt (~88pt). */
+export const FILTER_LONGEST_WORD = 88;
+
+export const filtersOnePerRow = (width: number | undefined, fontScale: number | undefined): boolean => {
+  if (!width) return false;
+  const s = Math.max(1, fontScale || 1);
+  const row = width - FILTER_ROW_CHROME;
+  return row / 2.6 - FILTER_TAB_CHROME < FILTER_LONGEST_TYPE_WORD * s
+    || row / 2 - FILTER_TAB_CHROME < FILTER_LONGEST_WORD * s;
+};

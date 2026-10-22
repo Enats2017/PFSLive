@@ -6,7 +6,8 @@ import {
   FlatList,
   ActivityIndicator,
   StatusBar,
-  Linking
+  Linking,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
@@ -30,6 +31,7 @@ import { AppHeader } from '../../components/common/AppHeader';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { distanceButtonsBelow } from '../../utils/screenFit';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
@@ -278,6 +280,9 @@ const DistanceTab = ({
 
   // ✅ PRESELECT (deep link) — scroll to the distance once, never register.
   const listRef = useRef<FlatList<Distance>>(null);
+  // Card: margin space.xl + padding space.lg each side.
+  const { width: windowWidth, fontScale } = useWindowDimensions();
+  const buttonsBelow = distanceButtonsBelow(windowWidth - 2 * space.xl - 2 * space.lg, fontScale);
   const preselectDoneRef = useRef(false);
   // onScrollToIndexFailed retries the real index ONCE per preselect scroll
   // (a retry that fails again must not loop).
@@ -496,8 +501,8 @@ const handleExternalRegister = useCallback((url: string) => {
           },
         ]}
       >
-        <View style={detailsStyles.distance}>
-          <View style={detailsStyles.distanceInfo}>
+        <View style={[detailsStyles.distance, buttonsBelow && detailsStyles.distanceStacked]}>
+          <View style={[detailsStyles.distanceInfo, buttonsBelow && detailsStyles.distanceInfoStacked]}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
               {item.distance_name}
             </Text>
@@ -553,11 +558,11 @@ const handleExternalRegister = useCallback((url: string) => {
               />
             </View>
           </View>
-          <View style={detailsStyles.verticalDivider} />
+          {!buttonsBelow && <View style={detailsStyles.verticalDivider} />}
 
-          <View style={{ gap: spacing.sm }} >
+          <View style={buttonsBelow ? detailsStyles.distanceButtonsBelow : { gap: spacing.sm }}>
             <TouchableOpacity
-                style={[detailsStyles.resultsButton]}
+                style={[detailsStyles.resultsButton, buttonsBelow && detailsStyles.distanceButtonFull]}
                 onPress={() => {
                   if (isRegisterMode) {
                     handleExternalRegister(eventRegisterUrl);
@@ -587,7 +592,7 @@ const handleExternalRegister = useCallback((url: string) => {
                 tab and the follower one cannot drift apart. */}
             {canShowGpxButton(item, undefined, showGpx) && (
               <TouchableOpacity
-                style={detailsStyles.routeButton}
+                style={[detailsStyles.routeButton, buttonsBelow && detailsStyles.distanceButtonFull]}
                 //onPress={() => handleGpxClick(item)}
                 onPress={() => handleDownloadGpx(item)}
                 activeOpacity={0.8}
@@ -600,7 +605,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
             {/* ✅ MAP button — live tracking map for this distance */}
             <TouchableOpacity
-              style={detailsStyles.routeButton}
+              style={[detailsStyles.routeButton, buttonsBelow && detailsStyles.distanceButtonFull]}
               onPress={() => handleMapClick(item)}
               activeOpacity={0.8}
             >
@@ -612,7 +617,7 @@ const handleExternalRegister = useCallback((url: string) => {
         </View>
       </View>
     );
-  }, [navigation, product_app_id, event_name, event_image, CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, registeringItemId, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode, showGpx, preselect_pov_id]);
+  }, [navigation, product_app_id, event_name, event_image, CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, registeringItemId, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode, showGpx, preselect_pov_id, buttonsBelow]);
 
   if (loading) {
     return (

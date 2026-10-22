@@ -3,7 +3,8 @@ import {
   View, Text, FlatList, ActivityIndicator,
   TouchableOpacity,
   StatusBar,
-  Dimensions
+  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
@@ -17,6 +18,7 @@ import { useScreenError } from '../../hooks/useApiError';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { distanceButtonsBelow } from '../../utils/screenFit';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
@@ -150,14 +152,18 @@ const DistanceTab = ({
     </>
   ), [event_image, imageLoading]);
 
+  // Card: margin spacing.md + padding space.lg each side.
+  const { width: windowWidth, fontScale } = useWindowDimensions();
+  const buttonsBelow = distanceButtonsBelow(windowWidth - 2 * spacing.md - 2 * spacing.lg, fontScale);
+
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isPast = sourceTab === 'past';
     const isLiveOrUpcoming = sourceTab === 'live' || sourceTab === 'upcoming';
     
     return (
       <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.md }]}>
-        <View style={[detailsStyles.distance]}>
-          <View style={detailsStyles.distanceInfo}>
+        <View style={[detailsStyles.distance, buttonsBelow && detailsStyles.distanceStacked]}>
+          <View style={[detailsStyles.distanceInfo, buttonsBelow && detailsStyles.distanceInfoStacked]}>
             <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
               {item.distance_name}
             </Text>
@@ -209,12 +215,12 @@ const DistanceTab = ({
               </View>
             )}
           </View>
-          <View style={detailsStyles.verticalDivider} />
+          {!buttonsBelow && <View style={detailsStyles.verticalDivider} />}
 
-          <View style={{ gap: spacing.md }}>
+          <View style={buttonsBelow ? detailsStyles.distanceButtonsBelow : { gap: spacing.md }}>
             {showResults && (
               <TouchableOpacity
-                style={detailsStyles.resultsButton}
+                style={[detailsStyles.resultsButton, buttonsBelow && detailsStyles.distanceButtonFull]}
                   onPress={async () => {
                     analyticsService.logInteraction(
                       ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,      // was: not logged
@@ -246,7 +252,7 @@ const DistanceTab = ({
             )}
             {isLiveOrUpcoming && (
               <TouchableOpacity
-                style={detailsStyles.routeButton}
+                style={[detailsStyles.routeButton, buttonsBelow && detailsStyles.distanceButtonFull]}
                 onPress={async () => {
                   analyticsService.logInteraction(
                     ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,      // was: EVENT_DETAILS
@@ -277,7 +283,7 @@ const DistanceTab = ({
                 tab and the participant one cannot drift apart. */}
             {canShowGpxButton(item, sourceTab, showGpx) && (
               <TouchableOpacity
-                style={detailsStyles.routeButton}
+                style={[detailsStyles.routeButton, buttonsBelow && detailsStyles.distanceButtonFull]}
                 onPress={() => handleDownloadGpx(item)}
                 activeOpacity={0.8}
               >
@@ -290,7 +296,7 @@ const DistanceTab = ({
         </View>
       </View>
     );
-  }, [navigation, product_app_id, event_name, event_image, sourceTab, t, showResults, showResultsStats, handleDownloadGpx, showGpx]);
+  }, [navigation, product_app_id, event_name, event_image, sourceTab, t, showResults, showResultsStats, handleDownloadGpx, showGpx, buttonsBelow]);
 
   if (loading) {
     return (
