@@ -1,5 +1,5 @@
 // Cases added 2026-10-22 (confirmation pass, screen sizes): every place that was
-// measured at 360-430pt is measured again at 320pt (iPhone SE 2/3 and 12/13 mini
+// measured at 360-1024pt is measured again at 320pt (iPhone SE 2/3 and 12/13 mini
 // with Display Zoom, the first SE, small Android phones) and at 100-135% iOS
 // text (Settings → Accessibility → Larger Text: ×1.12 / ×1.24 / ×1.35 per step).
 // "Fits" = no word broken in the middle and nothing cut, measured with the app's
@@ -9,7 +9,9 @@ const fs = require('fs');
 const path = require('path');
 const { textWidth } = require('../../scripts/text-width.cjs');
 
-const WIDTHS = [320, 360, 375, 393, 430];
+// phones 320-1024pt, then large phones (iPhone Pro Max 440, big Android 480),
+// small tablets / foldables (600) and iPads in portrait (744 mini, 834 Air, 1024 Pro)
+const WIDTHS = [320, 360, 375, 393, 430, 440, 480, 600, 744, 834, 1024];
 const SCALES = [1, 1.12, 1.24, 1.35];
 const LANGS = ['en', 'fr', 'nl'];
 const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 };
@@ -104,7 +106,7 @@ module.exports = ({ M, load, test, SRC }) => {
     assert.ok(/\n  card: \{\n\s*backgroundColor: palette\.surface,\n\s*borderRadius: radii\.md,\n\s*padding: space\.lg,/.test(read('styles/common.styles.ts')), 'card padding 16 (the old model said 12)');
   });
 
-  test('distance cards at 320-430pt and 100-135% text: no button label and no date / athlete count breaks mid-word, in either layout (en / fr / nl)', () => {
+  test('distance cards at 320-1024pt and 100-135% text: no button label and no date / athlete count breaks mid-word, in either layout (en / fr / nl)', () => {
     const { distanceButtonsBelow } = fit();
     const btnFont = font(block(d, 'resultsButtonText'));
     const bad = [];
@@ -182,7 +184,7 @@ module.exports = ({ M, load, test, SRC }) => {
     ];
   };
 
-  test('result cards at 320-430pt: every heading keeps its words whole in ≤ 2 lines — at 320pt with the compact spacing (en / fr / nl)', () => {
+  test('result cards at 320-1024pt: every heading keeps its words whole in ≤ 2 lines — at 320pt with the compact spacing (en / fr / nl)', () => {
     const bad = [];
     for (const W of WIDTHS) for (const l of LANGS) for (const [n, kind, labels] of columns(l)) {
       const w = cardCols(W, n)[kind];
@@ -254,7 +256,7 @@ module.exports = ({ M, load, test, SRC }) => {
     }
   });
 
-  test('stat values at 320-430pt and 100-135% text: the worst value needs ≥ 0.5 shrink (so it is never cut); without the fix "10:23:45" broke one step up on a 375pt phone', () => {
+  test('stat values at 320-1024pt and 100-135% text: the worst value needs ≥ 0.5 shrink (so it is never cut); without the fix "10:23:45" broke one step up on a 375pt phone', () => {
     const vs = block(st, 'statVal');
     const fav = read('styles/favourite.style.ts');
     const fv = block(fav, 'statVal');
@@ -321,7 +323,7 @@ module.exports = ({ M, load, test, SRC }) => {
     assert.strictEqual(filtersOnePerRow(undefined, 1.35), false);
   });
 
-  test('result-list filters at 320-430pt and 100-135% text: every fixed label fits in its 2 lines with no broken word, in either layout (en / fr / nl)', () => {
+  test('result-list filters at 320-1024pt and 100-135% text: every fixed label fits in its 2 lines with no broken word, in either layout (en / fr / nl)', () => {
     const { filtersOnePerRow } = fit();
     assert.ok(/numberOfLines=\{2\}/.test(read('components/FilterDropdown.tsx').match(/<Text\s+style=\{resultListStyle\.filterTabText\}[^>]*>/)[0]));
     const inner = (w) => w - 2 * SPACE.sm - 2 - 18 - SPACE.xs;

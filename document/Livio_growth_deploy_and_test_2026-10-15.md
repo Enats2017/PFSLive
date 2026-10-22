@@ -185,7 +185,7 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 433 · 188 · 19 passed · exit 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 443 · 188 · 19 passed · exit 0 |
 | Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 435 passed, 0 failed (1 skipped on a local web build), leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
@@ -399,6 +399,9 @@ larger text and FR/NL; ~100 issues fixed. Check on an iPhone with a notch (lands
     the name and birth-date pairs stack); with the keyboard open (also landscape) the field stays visible.
     Contact form: the message label floats when tapped.
 76. Header images (event details, follower distances, past races) in landscape take under half the screen.
+77. Large phones and tablets (iPhone Pro Max 440pt, a big Android, an iPad in portrait and landscape): every screen
+    uses the width without stretched or cut text; popups stay card-sized (max 400pt wide) and centred.
+78. Membership plans and Settings → Notifications in portrait: the cards keep their 20pt side margin.
 
 ---
 
@@ -464,7 +467,7 @@ The sequencing request is moot — the free session is already off on live (2026
 - `wp_endpoint` index — **already exists** (`idx_wp_endpoint`, 191-char prefix) on the live copy.
 
 ### Known, not done
-- Test suites are local only (all green 2026-10-22, run twice): app 433 (+ tracking 188, activation 19, distance button 20),
+- Test suites are local only (all green 2026-10-22, run twice): app 443 (+ tracking 188, activation 19, distance button 20),
   server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
   DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 106 vitest + type-check + lint.
 - The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`

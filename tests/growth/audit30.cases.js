@@ -7,7 +7,9 @@ const fs = require('fs');
 const path = require('path');
 const { textWidth } = require('../../scripts/text-width.cjs');
 
-const WIDTHS = [360, 375, 393, 430];
+// phones 320-1024pt, then large phones (iPhone Pro Max 440, big Android 480),
+// small tablets / foldables (600) and iPads in portrait (744 mini, 834 Air, 1024 Pro)
+const WIDTHS = [360, 375, 393, 430, 440, 480, 600, 744, 834, 1024];
 const LANGS = ['en', 'fr', 'nl'];
 const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 };
 
@@ -47,7 +49,7 @@ module.exports = ({ test, SRC }) => {
     for (const name of ['resultsButtonText', 'routeButtonText']) assert.ok(/textAlign: 'center'/.test(block(d, name)), name);
   });
 
-  test('distance cards at 360-430pt: every button label fits in ≤ 2 lines, every date / athlete-count line beside them too — none ends in "…" (en / fr / nl)', () => {
+  test('distance cards at 360-1024pt: every button label fits in ≤ 2 lines, every date / athlete-count line beside them too — none ends in "…" (en / fr / nl)', () => {
     const d = read('styles/details.styles.ts');
     const rb = block(d, 'resultsButton');
     const pad = num(rb, 'paddingHorizontal');
@@ -113,7 +115,7 @@ module.exports = ({ test, SRC }) => {
     assert.ok(/style=\{\[resultListStyle\.filterTab, style\]\}/.test(d), 'dropdown takes a style');
   });
 
-  test('result-list filters at 360-430pt: every fixed filter label fits on its one line (en / fr / nl)', () => {
+  test('result-list filters at 360-1024pt: every fixed filter label fits on its one line (en / fr / nl)', () => {
     const st = read('styles/ResultList.styles.ts');
     const tab = block(st, 'filterTab');
     const pad = num(tab, 'paddingHorizontal');

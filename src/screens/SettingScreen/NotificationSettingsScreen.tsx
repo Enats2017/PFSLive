@@ -101,7 +101,11 @@ const NotificationSettingsScreen: React.FC = () => {
   return (
     <SafeAreaView style={commonStyles.container} edges={safeEdges}>
       <AppHeader title={t('readiness:notifications.band')} showLogo showBack />
-      <ScrollView contentContainerStyle={[s.screen, sidePadding]} showsVerticalScrollIndicator={false}>
+      {/* notch inset ADDED to the 20pt padding (paddingLeft/Right beat padding) */}
+      <ScrollView
+        contentContainerStyle={[s.screen, { paddingLeft: space.xl + sidePadding.paddingLeft, paddingRight: space.xl + sidePadding.paddingRight }]}
+        showsVerticalScrollIndicator={false}
+      >
         {perm && (
           <View style={s.card}>
             <View style={s.statusRow}>

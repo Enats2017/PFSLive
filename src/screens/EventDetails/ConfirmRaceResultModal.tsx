@@ -71,11 +71,11 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
       </View>
 
       {/* Card */}
-      {/* The whole card body (icon → buttons) now scrolls as ONE ScrollView.
-          Before, only the data rows scrolled inside a maxHeight '75%' card with
-          paddingBottom 72: in landscape the buttons sat ~200pt off-screen and on
-          a 667pt phone the rows' ScrollView got ~0pt, so bib/name were invisible.
-          paddingBottom is now the real bottom inset (audit 2026-10-22). */}
+      {/* The body (icon → details) scrolls; Confirm / Cancel sit in a footer
+          below it that is always on screen. Before, only the data rows scrolled
+          inside a maxHeight '75%' card with paddingBottom 72: in landscape the
+          buttons sat ~200pt off-screen and on a 667pt phone the rows got ~0pt.
+          The footer carries the real bottom inset (audit 2026-10-22). */}
       <View style={styles.wrapper} pointerEvents="box-none">
         <View
           style={[
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 36,
     // was paddingBottom 72 + maxHeight '75%' — see the comment on the card;
-    // the bottom inset now lives on the body ScrollView's content.
+    // the bottom inset now lives on the footer under the scroll.
     maxHeight: '90%',
     ...shadows.overlay,
   },

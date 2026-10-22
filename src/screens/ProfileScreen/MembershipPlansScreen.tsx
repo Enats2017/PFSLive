@@ -13,7 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { commonStyles, palette } from '../../styles/common.styles';
+import { commonStyles, palette, space } from '../../styles/common.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { Button } from '../../components/ui';
@@ -444,7 +444,12 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
             <ScrollView
                 style={styles.scroll}
-                contentContainerStyle={[styles.scrollContent, sidePadding]}
+                contentContainerStyle={[styles.scrollContent, {
+                    // notch inset ADDED to the 20pt gutter: paddingLeft/Right beat
+                    // paddingHorizontal, so a bare {paddingLeft: 0} removed it
+                    paddingLeft: space.xl + sidePadding.paddingLeft,
+                    paddingRight: space.xl + sidePadding.paddingRight,
+                }]}
                 showsVerticalScrollIndicator={false}
             >
                 <Text style={styles.headerTitle}>{t('membership:header.title')}</Text>

@@ -10,7 +10,9 @@ const { textWidth } = require('../../scripts/text-width.cjs');
 
 // Portrait widths of the phones in use: 360 (small Android), 375 (iPhone SE 2/3,
 // 12/13 mini), 393 (iPhone 14-16, Pixel), 430 (Plus / Pro Max).
-const WIDTHS = [360, 375, 393, 430];
+// phones 320-1024pt, then large phones (iPhone Pro Max 440, big Android 480),
+// small tablets / foldables (600) and iPads in portrait (744 mini, 834 Air, 1024 Pro)
+const WIDTHS = [360, 375, 393, 430, 440, 480, 600, 744, 834, 1024];
 // Landscape heights: iPhone SE 375, iPhone 15 393, Pro Max 430, Android 360.
 const LANDSCAPE = [
   { h: 360, bottomInset: 0, name: 'Android 360' },
@@ -130,7 +132,7 @@ module.exports = ({ M, load, test, SRC }) => {
     return { mid, side, label: [font(lb), num(lb, 'fontSize'), { letterSpacing: num(lb, 'letterSpacing'), upper: true }] };
   };
 
-  test('result cards at 360-430pt: every fixed column label fits in its 2 lines without breaking a word (en / fr / nl)', () => {
+  test('result cards at 360-1024pt: every fixed column label fits in its 2 lines without breaking a word (en / fr / nl)', () => {
     const bad = [];
     for (const W of WIDTHS) {
       const { mid, side, label } = cardCols(W);
@@ -146,7 +148,7 @@ module.exports = ({ M, load, test, SRC }) => {
     assert.deepStrictEqual(bad, []);
   });
 
-  test('result list statistics strip at 360-430pt: each label on one line (4 boxes in checkpoint mode)', () => {
+  test('result list statistics strip at 360-1024pt: each label on one line (4 boxes in checkpoint mode)', () => {
     const st = read('styles/ResultList.styles.ts');
     const box = block(st, 'statisticsContainer');
     const lb = block(st, 'statLabel');
@@ -171,7 +173,7 @@ module.exports = ({ M, load, test, SRC }) => {
     assert.strictEqual(lineCount('KLASSEMENT', side, ...label), 1);
   });
 
-  test('bottom bar at 360-430pt: every tab label fits its quarter of the width (en / fr / nl)', () => {
+  test('bottom bar at 360-1024pt: every tab label fits its quarter of the width (en / fr / nl)', () => {
     const lb = block(read('styles/bottomNav.styles.ts'), 'label');
     const bad = [];
     for (const W of WIDTHS) for (const l of LANGS) {
@@ -184,7 +186,7 @@ module.exports = ({ M, load, test, SRC }) => {
     assert.deepStrictEqual(bad, []);
   });
 
-  test('home at 360-430pt: band "LIVE TRACKING & RESULTS" on one line, hero title lines fit, logo inside the 44pt row', () => {
+  test('home at 360-1024pt: band "LIVE TRACKING & RESULTS" on one line, hero title lines fit, logo inside the 44pt row', () => {
     const bt = block(read('styles/header.styles.ts'), 'bandText');
     const hs = read('styles/home.styles.ts');
     const title = block(hs, 'title');

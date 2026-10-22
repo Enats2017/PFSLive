@@ -236,7 +236,7 @@ export const favstyle = StyleSheet.create({
     // Fixed line height; no two-line minimum (it made every card taller when
     // all labels fit one line) — statCol's space-between already puts the
     // values on one baseline when a label wraps.
-    lineHeight: 14,
+    lineHeight: 16,   // Poppins 11pt needs ~16: 14 could clip accented capitals (É) on Android
     marginBottom: space.xs,
   },
 
