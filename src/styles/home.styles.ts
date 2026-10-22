@@ -388,10 +388,10 @@ export const homeStyles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   notifBodyCompact: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   notifKeepOpenCompact: {
-    marginTop: -spacing.sm,   // 4pt under the body (its compact marginBottom is 12)
+    marginTop: -spacing.xs,   // 4pt under the body (its compact marginBottom is 8)
     marginBottom: spacing.md,
     paddingVertical: spacing.sm,
   },

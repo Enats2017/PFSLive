@@ -106,9 +106,9 @@ module.exports = ({ M, load, test, SRC }) => {
         const sc = lang('HomeScreen', l).startConfirm;
         const h = 2 * num(cardC, 'paddingVertical')
           + lines(sc.title, width, 'fonts.bodySemi', num(title, 'fontSize')) * Math.ceil(num(title, 'fontSize') * 1.35) + num(title, 'marginBottom')
-          + lines(sc.message, width, 'fonts.body', num(body, 'fontSize')) * num(body, 'lineHeight') + SPACE.md
+          + lines(sc.message, width, 'fonts.body', num(body, 'fontSize')) * num(body, 'lineHeight') + num(block(st, 'notifBodyCompact'), 'marginBottom')
           + lines(sc.keepOpen, width - 2 * num(keep, 'paddingHorizontal'), 'fonts.bodySemi', num(keepT, 'fontSize')) * num(keepT, 'lineHeight')
-          + 2 * num(block(st, 'notifKeepOpenCompact'), 'paddingVertical') - SPACE.sm + SPACE.md
+          + 2 * num(block(st, 'notifKeepOpenCompact'), 'paddingVertical') - SPACE.xs + SPACE.md
           + 48;                                                          // one row of buttons (minHeight 48)
         if (h > cap) bad.push(`${name} ${l}: ${h} > ${cap}`);
       }

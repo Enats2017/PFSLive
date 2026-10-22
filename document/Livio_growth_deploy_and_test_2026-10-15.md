@@ -185,7 +185,7 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 475 · 188 · 19 passed · exit 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 480 · 188 · 19 passed · exit 0 |
 | Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 435 passed, 0 failed (1 skipped on a local web build), leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
@@ -408,7 +408,9 @@ gesture navigation), landscape, EN / FR / NL:
 79. Home popups — Start confirmation, Stop confirmation, Location permission (incl. the precise-location one with
     three buttons), Power saving, the in-app notification, the fan e-mail popup: compact (no big icon, buttons side
     by side), fully on screen, clear of the status bar, home indicator and camera; all buttons reachable. If one is
-    still taller than the screen it scrolls and the scroll bar shows. Portrait: unchanged.
+    still taller than the screen it scrolls and the scroll bar shows. Portrait: unchanged. Measured: every popup
+    fits without scrolling on landscape iPhones and 411dp Androids; on a 360dp Android only the 3-button
+    precise-location popup scrolls (by up to ~30pt).
 80. Sheets in landscape — follow-notifications prompt, tracking password, "Is this you?", country picker, iOS
     date / time picker (Cancel / Done): nothing under the camera or the Android navigation bar.
 81. Result detail loading / error state in landscape on Android 3-button: header icons clear of the camera; a long
@@ -478,7 +480,7 @@ The sequencing request is moot — the free session is already off on live (2026
 - `wp_endpoint` index — **already exists** (`idx_wp_endpoint`, 191-char prefix) on the live copy.
 
 ### Known, not done
-- Test suites are local only (all green 2026-10-22, run twice): app 475 (+ tracking 188, activation 19, distance button 20),
+- Test suites are local only (all green 2026-10-22, run twice): app 480 (+ tracking 188, activation 19, distance button 20),
   server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
   DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 106 vitest + type-check + lint.
 - The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`
