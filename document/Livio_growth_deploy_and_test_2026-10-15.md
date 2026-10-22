@@ -417,7 +417,7 @@ The sequencing request is moot — the free session is already off on live (2026
 Four full audits; every medium and low item that code can fix is fixed, each with a test that fails on the old code, plus one review pass per batch (its findings fixed and tested too).
 Main fixes of the fourth audit: phone and web on one account can no longer erase each other's follows (server `follow_conflict` + merge), a follow made right after a web login can't replace the account's list, offline follows on the phone are sent as soon as the network returns, Start can't run twice, the 48 h push goes once per phone per race (multi-day), rate limits can't be bypassed with a forged IP header and no longer lose hits.
 Not code — your action / decision:
-- Step 0.5: how live receives requests (Cloudflare / proxy) — one check.
+- Step 0.5: DONE 2026-10-22 — live REMOTE_ADDR = the visitor's own public IP (checked against the tester's IP): no proxy, no Cloudflare → no `LIVIO_TRUSTED_PROXIES` needed. Re-check only if a proxy / CDN is ever put in front of live.
 - `LIVIO_MERGE_SECRET` in the live `config.php` (step 0.4) — recommended.
 - Check on live: `SELECT COUNT(*) FROM oc_tracking_logs_app WHERE customer_app_id IS NULL OR customer_app_id = 0;` (stop detection ignores those rows).
 - Confirm the live root path (`<LIVE>`), and open one share link on live (S1).
