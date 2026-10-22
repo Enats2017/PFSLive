@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontFamily: fonts.bodySemi,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.navy,
     letterSpacing: 0.5,
   },

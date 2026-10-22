@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
 	},
 	label: {
 		fontFamily: fonts.bodySemi,
-        fontSize: 11,
+        fontSize: 12,
 		color: palette.textBody,
 		marginBottom: 2,
 		textTransform: 'uppercase',

@@ -7,6 +7,7 @@ import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/re
 import { formatClockTime } from '../../utils/timeFormat';
 import { Button } from '../../components/ui';
 import { stripWavePrefix } from '../../utils/waveLabel';
+import { buildResultLink } from '../../utils/resultLink';
 
 // participant_status is open-ended: the API passes through whatever non-numeric
 // text the timing feed puts in `pos`, uppercased, alongside its own
@@ -51,8 +52,10 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
     };
 
     // 29_RaceInfo.png closes the performance card with a full-width outlined
-    // "Share result" button. There is no public result URL to link to yet, so
-    // this shares the result as text - name, event, distance, time and place.
+    // "Share result" button. It shares the result as one line of text - name,
+    // event, distance, time and place - followed by the link to this runner's
+    // public result page on my.liviolive.com (see utils/resultLink), so whoever
+    // receives it can open the full result in a browser, no app needed.
     const handleShare = async () => {
         const position = fmtRankTotal(raceInfo?.position, raceInfo?.position_total);
         const params = {
@@ -62,15 +65,17 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
             time: raceInfo?.time ?? '',
             position,
         };
+        const text = t(
+            position === '—'
+                ? 'raceInfo.shareBodyNoPosition'
+                : 'raceInfo.shareBody',
+            params,
+        );
+        const url = buildResultLink(event?.product_app_id, event?.product_option_value_app_id, raceInfo?.bib);
         try {
-            await Share.share({
-                message: t(
-                    position === '—'
-                        ? 'raceInfo.shareBodyNoPosition'
-                        : 'raceInfo.shareBody',
-                    params,
-                ),
-            });
+            // The URL goes in `message` only: iOS appends `url` to the message
+            // a second time (same as ShareTrackingLink).
+            await Share.share({ message: url ? `${text}\n${url}` : text });
         } catch {
             // The user dismissed the sheet, or the platform refused it. Nothing
             // to recover - never surface an error for a cancelled share.

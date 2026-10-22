@@ -20,7 +20,9 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
-const RAMP = ['10', '11', '12', '13', '15', '20', '26', '40'];
+// 14 added 2026-10-22: every size up to 13 moved up 1pt (readability). 10 stays
+// for the elevation-chart marker, a fixed 22pt badge.
+const RAMP = ['10', '11', '12', '13', '14', '15', '20', '26', '40'];
 const RADII = [10, 14, 16];
 
 // Style objects come in two shapes. A StyleSheet entry is keyed (`card: { … }`),

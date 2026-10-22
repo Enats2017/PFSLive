@@ -53,7 +53,7 @@ export const headerStyles = StyleSheet.create({
   },
   bandText: {
     fontFamily: fonts.bodySemi,
-    fontSize: 12,
+    fontSize: 13,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     color: palette.ink,

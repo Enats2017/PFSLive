@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginLeft: 4,
     fontFamily: fonts.bodyMedium,
-        fontSize: 11,
+        fontSize: 12,
     color: palette.danger,
     },
   modalOverlay: {
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   selectedBannerFlag: { fontFamily: fonts.body,
         fontSize: 26, marginRight: 12 },
   selectedBannerLabel: { fontFamily: fonts.bodySemi,
-        fontSize: 11, color: palette.navy, marginBottom: 2 },
+        fontSize: 12, color: palette.navy, marginBottom: 2 },
   selectedBannerName: { fontFamily: fonts.display,
         fontSize: 15, color: palette.ink, },
   clearButton: {
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     borderColor: palette.inputBorder,
   },
   clearButtonText: { fontFamily: fonts.bodyMedium,
-        fontSize: 13, color: palette.textMuted, },
+        fontSize: 14, color: palette.textMuted, },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
         fontSize: 15, color: palette.ink },
   resultCount: {
     fontFamily: fonts.body,
-        fontSize: 12,
+        fontSize: 13,
     color: palette.placeholder,
     paddingHorizontal: 20,
     paddingVertical: 8,
@@ -486,10 +486,10 @@ const styles = StyleSheet.create({
   countryName: { fontFamily: fonts.body,
         fontSize: 15, color: palette.navy, },
   countryNameSelected: { color: palette.navy, fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         },
   isoCode: { fontFamily: fonts.body,
-        fontSize: 11, color: palette.placeholder, marginTop: 2 },
+        fontSize: 12, color: palette.placeholder, marginTop: 2 },
   separator: { height: 1, backgroundColor: palette.fill, marginLeft: 72 },
   selectedBadge: {
     flexDirection: 'row',
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   selectedBadgeText: { fontFamily: fonts.bodySemi,
-        fontSize: 12, color: palette.surface, },
+        fontSize: 13, color: palette.surface, },
   unselectedBadge: {
     borderRadius: radii.pill,
     paddingHorizontal: space.xl,
@@ -510,13 +510,13 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
   },
   unselectedBadgeText: { fontFamily: fonts.body,
-        fontSize: 12, color: palette.placeholder, },
+        fontSize: 13, color: palette.placeholder, },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 },
   emptyText: { fontFamily: fonts.body,
-        fontSize: 13, color: palette.placeholder, marginTop: 12, textAlign: 'center', paddingHorizontal: 32 },
+        fontSize: 14, color: palette.placeholder, marginTop: 12, textAlign: 'center', paddingHorizontal: 32 },
   retryButton: { marginTop: 16, paddingHorizontal: 24, paddingVertical: 8, backgroundColor: palette.navy, borderRadius: 10 },
   retryText: { color: palette.surface, fontFamily: fonts.bodySemi,
-        fontSize: 13 },
+        fontSize: 14 },
 });
 
 export default CountrySelector;

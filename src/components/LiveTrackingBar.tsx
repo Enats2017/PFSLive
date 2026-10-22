@@ -20,7 +20,7 @@ import { useTranslation } from 'react-i18next';
         <Text style={{
             color: palette.danger,
             fontFamily: fonts.bodySemi,
-        fontSize: 12,
+        fontSize: 13,
             letterSpacing: 1.5,
             textAlign:"center",
         }}>

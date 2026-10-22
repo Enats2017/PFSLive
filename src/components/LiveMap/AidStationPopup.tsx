@@ -121,14 +121,14 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                                 showsVerticalScrollIndicator
                             >
                                 <Text style={{ fontFamily: fonts.body,
-        fontSize: 13, lineHeight: 19, color: palette.textBody }}>
+        fontSize: 14, lineHeight: 20, color: palette.textBody }}>
                                     {description}
                                 </Text>
                             </ScrollView>
                         ) : (
                             <Text
                                 style={{ fontFamily: fonts.body,
-        fontSize: 13, lineHeight: 19, color: palette.textBody }}
+        fontSize: 14, lineHeight: 20, color: palette.textBody }}
                                 numberOfLines={4}
                             >
                                 {description}
@@ -142,7 +142,7 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
                                 <Text style={{ fontFamily: fonts.bodySemi,
-        fontSize: 12, color: palette.navy }}>
+        fontSize: 13, color: palette.navy }}>
                                     {descExpanded ? t('livetracking:readLess') : t('livetracking:readMore')}
                                 </Text>
                             </TouchableOpacity>
@@ -173,7 +173,7 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                         <View style={{ paddingTop: 8 }}>
                             <Text style={{
                                 fontFamily: fonts.bodySemi,
-        fontSize: 11,
+        fontSize: 12,
                                 color: palette.textMuted,
                                 letterSpacing: 0.6,
                                 textTransform: 'uppercase',
@@ -220,10 +220,10 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
                     alignItems: 'flex-end',
                 }}>
                     <Text style={{ fontFamily: fonts.body,
-        fontSize: 12, color: palette.textBody }}>
+        fontSize: 13, color: palette.textBody }}>
                         {t('livetracking:poweredBy')}{' '}
                         <Text style={{ fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.ink }}> {t('livetracking:livio')}</Text>
                     </Text>
                 </View>

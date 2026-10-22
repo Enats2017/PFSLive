@@ -80,6 +80,7 @@ const ReactStub = {
   useMemo: (f) => f(),
   useEffect: () => {},
   useRef: (v) => ({ current: v }),
+  memo: (c) => c,            // memo(Component) renders Component itself
   Fragment: 'Fragment',
 };
 ReactStub.default = ReactStub;
@@ -167,6 +168,14 @@ const overrides = {
     addEventListener: (cb) => { M.netListeners.push(cb); return () => {}; },
     fetch: async () => ({ isConnected: true, isInternetReachable: true }),
   } },
+  // useNavigation().navigate records into M.nav.navigations (same list as
+  // navigationRef); everything else on the module stays an inert stub.
+  '@react-navigation/native': new Proxy({
+    useNavigation: () => ({
+      navigate: (name, params) => { M.nav.navigations.push({ name, params }); },
+      goBack: () => {}, canGoBack: () => true, reset: () => {},
+    }),
+  }, { get(tg, p) { return p in tg ? tg[p] : anyStub('navigation.' + String(p)); } }),
   zustand: require(path.resolve(__dirname, '../../node_modules/zustand')),
 };
 

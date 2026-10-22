@@ -61,7 +61,7 @@ export const routeStyles = StyleSheet.create({
   dropdownItemTextActive: {
     color: palette.surface,
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         },
   
   // Map Container

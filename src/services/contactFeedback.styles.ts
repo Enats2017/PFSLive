@@ -91,7 +91,7 @@ export const contactStyles = StyleSheet.create({
     charCount: {
         alignSelf: 'flex-end',
         fontFamily: fonts.body,
-        fontSize: 11,
+        fontSize: 12,
         color: palette.textMuted,
         marginTop: -4,
     },

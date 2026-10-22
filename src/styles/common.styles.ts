@@ -191,7 +191,10 @@ export const fonts = {
 } as const;
 
 /**
- * The type ramp — exactly the 14 combinations used in the approved artboards.
+ * The type ramp — the 14 combinations used in the approved artboards, with
+ * every size up to 13pt raised by 1pt for readability (client, 2026-10-22:
+ * "text might be too small for users with poorer eyesight"). 10pt was below
+ * Apple's 11pt minimum. Sizes from 15pt up are unchanged.
  * Spread these; do not hand-roll a fontSize/fontWeight pair.
  */
 export const type: Record<string, TextStyle> = {
@@ -201,18 +204,18 @@ export const type: Record<string, TextStyle> = {
   h2:         { fontFamily: fonts.display, fontSize: 20, color: palette.ink },
   h3:         { fontFamily: fonts.display, fontSize: 15, color: palette.ink },
   h3Medium:   { fontFamily: fonts.displayMedium, fontSize: 15, color: palette.ink },
-  numeral:    { fontFamily: fonts.display, fontSize: 12, color: palette.ink },
+  numeral:    { fontFamily: fonts.display, fontSize: 13, color: palette.ink },
 
   // Inter — body and UI
-  body:       { fontFamily: fonts.body, fontSize: 13, color: palette.textBody, lineHeight: 20 },
-  bodyMedium: { fontFamily: fonts.bodyMedium, fontSize: 13, color: palette.textBody, lineHeight: 20 },
-  small:      { fontFamily: fonts.body, fontSize: 12, color: palette.textMuted, lineHeight: 18 },
-  smallMedium:{ fontFamily: fonts.bodyMedium, fontSize: 12, color: palette.textMuted, lineHeight: 18 },
-  smallSemi:  { fontFamily: fonts.bodySemi, fontSize: 12, color: palette.ink },
-  caption:    { fontFamily: fonts.bodyMedium, fontSize: 11, color: palette.textMuted },
-  microMedium:{ fontFamily: fonts.bodyMedium, fontSize: 10, color: palette.textMuted },
+  body:       { fontFamily: fonts.body, fontSize: 14, color: palette.textBody, lineHeight: 21 },
+  bodyMedium: { fontFamily: fonts.bodyMedium, fontSize: 14, color: palette.textBody, lineHeight: 21 },
+  small:      { fontFamily: fonts.body, fontSize: 13, color: palette.textMuted, lineHeight: 19 },
+  smallMedium:{ fontFamily: fonts.bodyMedium, fontSize: 13, color: palette.textMuted, lineHeight: 19 },
+  smallSemi:  { fontFamily: fonts.bodySemi, fontSize: 13, color: palette.ink },
+  caption:    { fontFamily: fonts.bodyMedium, fontSize: 12, color: palette.textMuted },
+  microMedium:{ fontFamily: fonts.bodyMedium, fontSize: 11, color: palette.textMuted },
   // Section labels and badges. Uppercase via textTransform so fr/nl capitalise correctly.
-  label:      { fontFamily: fonts.bodySemi, fontSize: 10, letterSpacing: 0.7, textTransform: 'uppercase' },
+  label:      { fontFamily: fonts.bodySemi, fontSize: 11, letterSpacing: 0.7, textTransform: 'uppercase' },
 };
 
 /**
@@ -328,7 +331,7 @@ export const commonStyles = StyleSheet.create({
 
   date: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
     marginLeft: space.xs,
   },
@@ -336,9 +339,9 @@ export const commonStyles = StyleSheet.create({
   // Text
   text: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textBody,
-    lineHeight: 20,
+    lineHeight: 21,
   },
   title: {
     fontFamily: fonts.display,
@@ -354,21 +357,21 @@ export const commonStyles = StyleSheet.create({
   },
   subtitle: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
-    lineHeight: 18,
+    lineHeight: 19,
   },
   subtitlered: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.danger,
-    lineHeight: 18,
+    lineHeight: 19,
   },
 
   // Loading
   loadingText: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
     marginTop: space.md,
   },
@@ -432,7 +435,7 @@ export const commonStyles = StyleSheet.create({
   },
   menuSub: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
     marginTop: 2,
   },

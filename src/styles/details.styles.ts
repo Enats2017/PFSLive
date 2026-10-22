@@ -78,7 +78,7 @@ export const detailsStyles = StyleSheet.create({
   },
   cardActionPrimaryText: {
     fontFamily: fonts.display,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.surface,
   },
   cardActionSecondary: {
@@ -93,7 +93,7 @@ export const detailsStyles = StyleSheet.create({
   },
   cardActionSecondaryText: {
     fontFamily: fonts.display,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.navy,
   },
 
@@ -112,7 +112,7 @@ export const detailsStyles = StyleSheet.create({
   },
   cardActionDangerText: {
     fontFamily: fonts.display,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.danger,
   },
 
@@ -197,17 +197,17 @@ export const detailsStyles = StyleSheet.create({
 
   metaText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
-    lineHeight: 20,                       // FIX: added — matches metaIcon lineHeight
+    lineHeight: 21,                       // FIX: added — matches metaIcon lineHeight
     flexShrink: 1,
   },
 
   metaTextRed: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.danger,
-    lineHeight: 20,                       // FIX: added — matches metaIcon lineHeight
+    lineHeight: 21,                       // FIX: added — matches metaIcon lineHeight
     flexShrink: 1,
   },
   // ✅ AVATAR CONTAINER
@@ -269,7 +269,7 @@ export const detailsStyles = StyleSheet.create({
   },
   rowMeta: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
     marginTop: space.xs,
   },
@@ -297,7 +297,7 @@ export const detailsStyles = StyleSheet.create({
   
   liveTrackingText: {
     fontFamily: fonts.bodySemi,
-        fontSize: 12,
+        fontSize: 13,
     color: palette.lime,
     textTransform: 'uppercase',
   },
@@ -335,12 +335,12 @@ export const detailsStyles = StyleSheet.create({
   },
   routeButtonText: {
     fontFamily: fonts.display,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.navy,
   },
   resultsButtonText: {
     fontFamily: fonts.display,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.surface,
   },
   verticalDivider: {
@@ -375,9 +375,9 @@ infoIconWrapper: {
 infoBoxText: {
   flex: 1,
   fontFamily: fonts.bodySemi,
-        fontSize: 12,
+        fontSize: 13,
   color: palette.navyLift,
 
-        lineHeight: 18,
+        lineHeight: 19,
 },
 });

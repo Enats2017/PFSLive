@@ -18,7 +18,7 @@ const CountdownBadge: React.FC<CountdownBadgeProps> = ({ days, hours, minutes, s
 
     const badge = (label: string, color: string) => (
         <Text style={[detailsStyles.metaText, { color, fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         flexShrink: 1 }]} numberOfLines={2}>
             {label}
         </Text>

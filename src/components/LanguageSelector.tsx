@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontFamily: fonts.bodyMedium,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.textBody,
     },
   activeText: {

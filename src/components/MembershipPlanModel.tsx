@@ -173,10 +173,10 @@ const styles = StyleSheet.create({
     },
     description: {
         fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.textBody,
         textAlign: 'center',
-        lineHeight: 20,
+        lineHeight: 21,
         marginBottom: 24,
     },
     // Buttons come from commonStyles now; the local copies were a filled-grey

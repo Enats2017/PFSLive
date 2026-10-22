@@ -66,7 +66,7 @@ export const ownProfile = StyleSheet.create({
   },
   statLabel: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
   },
   whiteBody: {
@@ -102,9 +102,9 @@ export const ownProfile = StyleSheet.create({
 
   subtitle: {
     fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.textBody,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   menuRow: {
     flexDirection: "row",
@@ -157,7 +157,7 @@ export const ownProfile = StyleSheet.create({
         marginLeft: 8,
         color: palette.textOnNavy,
         fontFamily: fonts.bodySemi,
-        fontSize: 11,
+        fontSize: 12,
         letterSpacing: 0.5,
         textTransform: 'uppercase'
     },

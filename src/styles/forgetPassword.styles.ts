@@ -42,17 +42,17 @@ export const forgotStyles = StyleSheet.create({
   },
   nextNumText: {
     fontFamily: fonts.bodySemi,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.navy,
   },
   nextStepTitle: {
     fontFamily: fonts.display,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.ink,
   },
   nextStepSub: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
     marginTop: 2,
   },
@@ -200,7 +200,7 @@ export const forgotStyles = StyleSheet.create({
   },
   resendLink: {
     fontFamily: fonts.bodySemi,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.navy,
   },
   countdown: {

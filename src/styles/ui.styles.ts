@@ -70,7 +70,7 @@ export const ui = StyleSheet.create({
   },
   badgeText: {
     fontFamily: fonts.bodySemi,
-    fontSize: 12,
+    fontSize: 13,
   },
   // Status badges (LIVE, TODAY) are drawn in caps. The uppercasing lives here
   // rather than in the string so fr/nl capitalise by their own rules — and so a

@@ -37,7 +37,7 @@ export const styles = StyleSheet.create({
     },
     languagePillText: {
         fontFamily: fonts.bodyMedium,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.textBody,
     },
     languagePillTextActive: {
@@ -148,7 +148,7 @@ export const styles = StyleSheet.create({
     },
     closeBtnText: {
         fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.surface,
     },
     // The close button is absolutely positioned 14pt inside the content box

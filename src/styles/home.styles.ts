@@ -15,7 +15,7 @@ export const homeStyles = StyleSheet.create({
   // fetched (`followed_participants`) but nothing rendered it.
   followLabel: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.7,
     textTransform: "uppercase",
     color: palette.textMuted,
@@ -37,23 +37,23 @@ export const homeStyles = StyleSheet.create({
   },
   followAvatarText: {
     fontFamily: fonts.bodySemi,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.navy,
   },
   followName: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.ink,
     flexShrink: 1,
   },
   followBib: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
   },
   followCaption: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
     textAlign: "center",
     marginTop: space.sm,
@@ -86,7 +86,7 @@ export const homeStyles = StyleSheet.create({
   },
   activeStatusText: {
     fontFamily: fonts.bodySemi,
-    fontSize: 12,
+    fontSize: 13,
     letterSpacing: 0.7,
     textTransform: "uppercase",
     color: palette.textBody,
@@ -130,15 +130,15 @@ export const homeStyles = StyleSheet.create({
   },
   sendText: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
   },
   keepOpenNote: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 21,
     paddingHorizontal: space.lg,
     marginBottom: space.xl,
   },
@@ -159,7 +159,7 @@ export const homeStyles = StyleSheet.create({
 
   sectionLabel: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.7,
     textTransform: 'uppercase',
     color: palette.textMuted,
@@ -192,7 +192,7 @@ export const homeStyles = StyleSheet.create({
   // Subtitle
   subtitle: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
     marginTop: space.sm,
   },
@@ -245,15 +245,15 @@ export const homeStyles = StyleSheet.create({
 
   centeredText: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
     textAlign: "center",
   },
   tagline: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
-    lineHeight: 20,
+    lineHeight: 21,
     marginTop: space.sm,
   },
 
@@ -283,7 +283,7 @@ export const homeStyles = StyleSheet.create({
         marginBottom: 4,
   },
   trackingLocationText: {
-    fontSize: 12,
+    fontSize: 13,
     color: palette.lime,
     fontFamily: "monospace",
     marginBottom: 4,
@@ -291,7 +291,7 @@ export const homeStyles = StyleSheet.create({
         },
   trackingCountText: {
     fontFamily: fonts.bodyMedium,
-        fontSize: 12,
+        fontSize: 13,
     color: palette.lime,
 
         marginTop: 2,
@@ -308,7 +308,7 @@ export const homeStyles = StyleSheet.create({
   },
   permissionWarningText: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.warning,
 
         textAlign: "center",
@@ -344,7 +344,7 @@ export const homeStyles = StyleSheet.create({
   },
   footerText: {
     fontFamily: fonts.bodyMedium,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.placeholder,
 
         },
@@ -389,10 +389,10 @@ export const homeStyles = StyleSheet.create({
   },
   notifBody: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textBody,
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 23,
     marginBottom: spacing.xxl,
   },
   notifButtonContainer: {
@@ -427,10 +427,10 @@ export const homeStyles = StyleSheet.create({
   },
   notifKeepOpenText: {
     fontFamily: fonts.bodySemi,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.warningText,
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 21,
   },
   logosSection: {
     marginTop: spacing.md,
@@ -438,7 +438,7 @@ export const homeStyles = StyleSheet.create({
   },
   logosTitle: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 12,
+    fontSize: 13,
     fontStyle: "italic",
     color: palette.page,
     textTransform: "capitalize",
@@ -516,7 +516,7 @@ export const homeStyles = StyleSheet.create({
   },
   liveText: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.danger,
     letterSpacing: 0.5,
   },

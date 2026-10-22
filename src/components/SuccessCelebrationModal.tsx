@@ -211,10 +211,10 @@ const styles = StyleSheet.create({
   },
   message: {
     fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.textBody,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 25,
     marginBottom: 28,
     paddingHorizontal: 8,
   },

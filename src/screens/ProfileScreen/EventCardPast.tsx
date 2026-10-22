@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     },
     resultButtonText: {
         fontFamily: fonts.display,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.navy,
     },
 });

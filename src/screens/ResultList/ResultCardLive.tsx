@@ -322,7 +322,7 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                             {finishedGenderRank ? (
                                 <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
                                     <Text style={resultListStyle.statLabel} numberOfLines={2}>
-                                        {[t('allrace:race.ranking'), genderWord].filter(Boolean).join(' ')}
+                                        {[t('allrace:race.rank'), genderWord].filter(Boolean).join(' ')}
                                     </Text>
                                     <Text style={resultListStyle.statVal}>{finishedGenderRank}</Text>
                                 </View>

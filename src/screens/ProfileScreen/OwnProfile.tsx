@@ -93,7 +93,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                                         style={{
                                             color: palette.lime,
                                             fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
                                             }}
                                     >
                                         {t('ownProfile:membershipCard.refresh')}

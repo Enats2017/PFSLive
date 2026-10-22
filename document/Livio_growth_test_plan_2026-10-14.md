@@ -10,7 +10,7 @@ App branch `growth_v0.1` (PFSLive) · API branch `growth_api_v0.1` (larssie) · 
 | Design / i18n audit | `npm run design-check` | exit 0 |
 | Tracking engine (regression) | `npm run test:tracking` | 188 / 188 |
 | Profile activation (regression) | `npm run test:activation` | 19 / 19 |
-| **Growth — app** | `npm run test:growth` | **341 / 341** |
+| **Growth — app** | `npm run test:growth` | **364 / 364** |
 | **Growth — API + crons + web** | `php tests/growth/growth_api_test.php` (larssie, local only) | **425 / 425** |
 | **Growth — web follow/login** | `npm run test:follow` (livio_web) | **96 / 96** |
 | Web (other) | `npx vitest run` (livio_web) | 77 / 77 |

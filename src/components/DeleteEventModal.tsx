@@ -141,6 +141,6 @@ const styles = StyleSheet.create({
     title: { fontFamily: fonts.display,
         fontSize: 20, color: palette.ink, marginBottom: space.sm, textAlign: 'center' },
     message: { fontFamily: fonts.body,
-        fontSize: 13, color: palette.textBody, textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
+        fontSize: 14, color: palette.textBody, textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
     actions: { width: '100%', gap: 12 },
 });

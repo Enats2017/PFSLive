@@ -197,8 +197,8 @@ const styles = StyleSheet.create({
     handle:       { width: 40, height: 4, backgroundColor: palette.border, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
     closeBtn:     { position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: 15, backgroundColor: palette.navy, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
     closeBtnText: { fontFamily: fonts.bodySemi,
-        fontSize: 13, color: palette.surface },
+        fontSize: 14, color: palette.surface },
     divider:      { height: 1, backgroundColor: palette.border, marginVertical: 16 },
     errorText:    { fontFamily: fonts.body,
-        fontSize: 13, color: palette.danger, marginBottom: space.md, marginTop: 4 },
+        fontSize: 14, color: palette.danger, marginBottom: space.md, marginTop: 4 },
 });

@@ -156,10 +156,10 @@ const styles = StyleSheet.create({
   },
   message: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textBody,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 23,
     marginBottom: spacing.lg,
   },
   versionInfo: {
@@ -176,13 +176,13 @@ const styles = StyleSheet.create({
   },
   versionLabel: {
     fontFamily: fonts.bodyMedium,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.textBody,
 
         },
   versionValue: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.ink,
 
         },
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
         },
   forcedText: {
     fontFamily: fonts.bodyMedium,
-        fontSize: 12,
+        fontSize: 13,
     color: palette.danger,
     textAlign: 'center',
     marginTop: spacing.md,

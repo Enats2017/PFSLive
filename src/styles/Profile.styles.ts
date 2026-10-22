@@ -49,7 +49,7 @@ export const profileStyles = StyleSheet.create({
   },
   consentError: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.danger,
     marginTop: 2,
     paddingHorizontal: spacing.xs,
@@ -85,7 +85,7 @@ export const profileStyles = StyleSheet.create({
   },
   badgeText: { 
     fontFamily: fonts.bodySemi,
-        fontSize: 11, 
+        fontSize: 12, 
     letterSpacing: 0.5 
   },
   empty: {
@@ -135,13 +135,13 @@ export const profileStyles = StyleSheet.create({
   // 20_OtherProfile.png: "<place> - <country>" under the athlete's name.
   identityPlace: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
     marginTop: 2,
   },
   identityMeta: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
     marginTop: space.xs,
   },
@@ -218,7 +218,7 @@ export const profileStyles = StyleSheet.create({
   },
   removeBtnText: { 
     fontFamily: fonts.bodySemi,
-        fontSize: 13, 
+        fontSize: 14, 
     color: palette.navy, 
     },
   // Introduces a new block of fields, so it needs air ABOVE it as well as below.
@@ -230,13 +230,13 @@ export const profileStyles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: fonts.bodySemi,
-        fontSize: 12,
+        fontSize: 13,
     color: palette.textMuted,
     letterSpacing: 1.5,
   },
   sectionSubtitle: { 
     fontFamily: fonts.body,
-        fontSize: 12, 
+        fontSize: 13, 
     color: palette.placeholder, 
     marginTop: 2 
   },
@@ -257,7 +257,7 @@ export const profileStyles = StyleSheet.create({
 
   readOnlyHint: {
     fontFamily: fonts.body,
-        fontSize: 12,
+        fontSize: 13,
     color: palette.placeholder,
     marginTop: -4,
     marginBottom: spacing.sm,
@@ -284,7 +284,7 @@ export const profileStyles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     fontFamily: fonts.bodySemi,
-        fontSize: 13, 
+        fontSize: 14, 
     color: palette.lime, 
     },
 
@@ -310,8 +310,8 @@ export const profileStyles = StyleSheet.create({
   emailChangeHintText: {
     flex: 1,
     fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 18,
     color: palette.textMuted,
   },
   // ✅ The save commits pending_email server-side *before* the OTP screen
@@ -330,12 +330,12 @@ export const profileStyles = StyleSheet.create({
   },
   pendingEmailAction: {
     fontFamily: fonts.bodySemi,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.navy,
   },
   pendingEmailActionMuted: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
   },
 });

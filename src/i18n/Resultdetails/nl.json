@@ -55,7 +55,7 @@
     "elevation": "Hoogte",
     "availableServices": "Beschikbare diensten",
     "toNextPoint": "Tot volgend punt",
-    "segmentDistance": "Sinds vorig punt",
+    "segmentDistance": "Sinds vorige punt",
     "segmentElevation": "Hoogtemeters sinds vorige punt"
   },
   "runnerInfo": {

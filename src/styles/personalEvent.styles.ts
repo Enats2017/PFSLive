@@ -30,20 +30,20 @@ export const personalStyles = StyleSheet.create({
     marginTop: spacing.md,
     paddingHorizontal: spacing.lg,
     fontFamily: fonts.bodyMedium,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.textBody,
 
-        lineHeight: 20,
+        lineHeight: 21,
   },
 
   errorText: {
     fontFamily: fonts.bodyMedium,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.danger,
     marginTop: spacing.xs,
     marginLeft: spacing.xs,
 
-        lineHeight: 18,
+        lineHeight: 19,
   },
 
   // ✅ FORM CONTAINER
@@ -86,10 +86,10 @@ export const personalStyles = StyleSheet.create({
   uploadSubtitle: {
     marginTop: spacing.xs,
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textBody,
     textAlign: "center",
-    lineHeight: 18,
+    lineHeight: 19,
   },
 
   // ✅ FILE CARD (SELECTED FILE)
@@ -138,7 +138,7 @@ export const personalStyles = StyleSheet.create({
 
   fileSize: {
     fontFamily: fonts.body,
-        fontSize: 12,
+        fontSize: 13,
     color: palette.textMuted,
 
         },
@@ -170,7 +170,7 @@ export const personalStyles = StyleSheet.create({
   fileSection: { marginTop: spacing.md },
   undoBtn: { alignSelf: "flex-end", marginBottom: spacing.xs },
   undoText: { color: palette.navy, fontFamily: fonts.body,
-        fontSize: 13 },
+        fontSize: 14 },
   submitBtn: { marginTop: spacing.xxxl, marginBottom: spacing.xl },
   disabled: { opacity: 0.6 },
 });

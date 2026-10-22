@@ -45,7 +45,7 @@ export const loginStyles = StyleSheet.create({
   },
   forgotText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.navy,
   },
 

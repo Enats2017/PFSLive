@@ -93,7 +93,7 @@ module.exports = ({ test, SRC }) => {
     const tt = (k) => ({ 'common:gender.women': 'Women', 'common:gender.men': 'Men' }[k]);
     const word = (gender) => expr(s, 'genderWord', ['item', 't'], [{ gender }, tt]);
     assert.deepStrictEqual(['female', 'male', ''].map(word), ['Women', 'Men', '']);
-    assert.ok(/\{finishedGenderRank \? \(\n\s*<View style=\{\[resultListStyle\.statCol, resultListStyle\.statColMid\]\}>\n\s*<Text style=\{resultListStyle\.statLabel\} numberOfLines=\{2\}>\n\s*\{\[t\('allrace:race\.ranking'\), genderWord\]\.filter\(Boolean\)\.join\(' '\)\}/.test(s), 'RANKING WOMEN / MEN label');
+    assert.ok(/\{finishedGenderRank \? \(\n\s*<View style=\{\[resultListStyle\.statCol, resultListStyle\.statColMid\]\}>\n\s*<Text style=\{resultListStyle\.statLabel\} numberOfLines=\{2\}>\n\s*\{\[t\('allrace:race\.rank'\), genderWord\]\.filter\(Boolean\)\.join\(' '\)\}/.test(s), 'RANK WOMEN / MEN label (short word: fits the middle column — audit27)');
     assert.ok(/<Text style=\{resultListStyle\.statVal\}>\{finishedGenderRank\}<\/Text>/.test(s), 'rank value');
     assert.ok(/prev\.item\.finish_rank_gender === next\.item\.finish_rank_gender/.test(s), 'repaints when the rank arrives');
   });
@@ -108,7 +108,7 @@ module.exports = ({ test, SRC }) => {
     assert.ok(/<Text style=\{resultListStyle\.utmbInlineValue\}>\{item\.utmb_index\}<\/Text>/.test(s));
     assert.ok(!/utmbValue/.test(s) && !/fontSize: 15 \}\]\}>\{item\.utmb_index\}/.test(s), 'old prominent value gone');
     const st = read('styles/ResultList.styles.ts');
-    assert.ok(/fontSize: 12,/.test(block(st, 'utmbInlineValue')), 'body-size value');
+    assert.ok(/fontSize: 13,/.test(block(st, 'utmbInlineValue')), 'small-text size (12 + the 1pt readability bump)');
   });
 
   test('result list, landscape: filters + statistics scroll with the list (the list had ~no height left)', () => {

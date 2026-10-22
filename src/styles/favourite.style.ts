@@ -89,7 +89,7 @@ export const favstyle = StyleSheet.create({
   // ✅ Header label text (status + distance)
   headerText: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
@@ -124,7 +124,7 @@ export const favstyle = StyleSheet.create({
   cornerGenderRank: {
     color: palette.textMuted,
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 11,
   },
 
   // ── Body ─────────────────────────────────────────────────
@@ -150,7 +150,7 @@ export const favstyle = StyleSheet.create({
 
   bibText: {
     fontFamily: fonts.body,
-        fontSize: 12,
+        fontSize: 13,
     color: palette.textMuted,
     marginTop: 4,
   },
@@ -170,8 +170,8 @@ export const favstyle = StyleSheet.create({
 
   nationText: {
     fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 18,
     color: palette.textMuted,
     flexShrink: 1,
   },
@@ -218,7 +218,7 @@ export const favstyle = StyleSheet.create({
 
   statLabel: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 11,
     color: palette.textMuted,
     textAlign: "center",
     textTransform: "uppercase",
@@ -323,7 +323,7 @@ export const favstyle = StyleSheet.create({
   },
   participantMeta: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
     marginTop: 2,
   },

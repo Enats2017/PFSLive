@@ -37,7 +37,7 @@ export const bottomNavStyles = StyleSheet.create({
   },
   label: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 10,
+    fontSize: 11,
     color: palette.textMuted,
   },
   labelActive: {

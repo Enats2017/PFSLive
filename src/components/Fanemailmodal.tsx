@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     errorText: {
         marginTop: spacing.xs,
         fontFamily: fonts.body,
-        fontSize: 12,
+        fontSize: 13,
         color: palette.danger,
     },
 });

@@ -51,7 +51,7 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 					style={{
 						axis: { stroke: chartColors.axis },
 						tickLabels: { fontFamily: fonts.body,
-        fontSize: 10, fill: palette.textBody },
+        fontSize: 11, fill: palette.textBody },
 						grid: { stroke: palette.border, strokeDasharray: '3,3' },
 					}}
 					tickFormat={(t) => `${Math.round(t)}km`}
@@ -64,7 +64,7 @@ export const ElevationProfile: React.FC<ElevationProfileProps> = ({
 					style={{
 						axis: { stroke: chartColors.axis },
 						tickLabels: { fontFamily: fonts.body,
-        fontSize: 10, fill: palette.textBody },
+        fontSize: 11, fill: palette.textBody },
 						grid: { stroke: palette.border, strokeDasharray: '3,3' },
 					}}
 					tickFormat={(t) => `${Math.round(t)}m`}
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
 	},
 	title: {
 		fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
 		color: palette.textBody,
 		marginLeft: 16,
 		marginBottom: 8,

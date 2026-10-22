@@ -185,7 +185,7 @@ export const liveTrackingStyles = StyleSheet.create({
     },
     lastUpdateText: {
         fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
         color: palette.textMuted,
         fontStyle: 'italic',
     },
@@ -218,7 +218,7 @@ export const liveTrackingStyles = StyleSheet.create({
     },
     aidStationSubtitle: {
         fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
         color: palette.textBody,
     },
     aidStationInfoRow: {
@@ -239,7 +239,7 @@ export const liveTrackingStyles = StyleSheet.create({
     warningText: {
         flex: 1,
         fontFamily: fonts.bodyMedium,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.warning,
 
         },
@@ -313,7 +313,7 @@ export const liveTrackingStyles = StyleSheet.create({
     },
     mapLiveText: {
         fontFamily: fonts.bodySemi,
-        fontSize: 12,
+        fontSize: 13,
         color: palette.ink,
     },
     // A finished race is over and an upcoming one has not begun: neither should
@@ -383,7 +383,7 @@ export const liveTrackingStyles = StyleSheet.create({
     },
     dropdownItemTextActive: {
         fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.navy,
     },
 
@@ -413,7 +413,7 @@ export const liveTrackingStyles = StyleSheet.create({
     },
     bibText: {
         fontFamily: fonts.bodySemi,
-        fontSize: 12,
+        fontSize: 13,
 
         color: palette.surface,
     },

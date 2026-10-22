@@ -48,7 +48,7 @@ export const resultListStyle = StyleSheet.create({
   filterTabText: {
     flex: 1,
     fontFamily: fonts.bodyMedium,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.ink,
   },
   statisticsContainer: {
@@ -82,13 +82,15 @@ statValueHighlight: {
 
 statLabel: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 11,
     color: palette.textMuted,
     textAlign: "center",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
-    lineHeight: 13,
-    minHeight: 26,        // two lines — keeps all three values on one baseline
+    // 0.3 (was 0.5) with the 1pt bigger size: keeps "GEPASSEERD" / "CLASSEMENT"
+    // whole on a 360pt-wide phone (tests/growth/audit27 measures it).
+    letterSpacing: 0.3,
+    lineHeight: 14,
+    minHeight: 28,        // two lines (2 x lineHeight 14) — keeps all three values on one baseline
     marginBottom: 4,
 },
 
@@ -100,7 +102,7 @@ divider: {
 
 
   filterArrow: { fontFamily: fonts.body,
-        fontSize: 13, color: palette.ink, marginLeft: 8 },
+        fontSize: 14, color: palette.ink, marginLeft: 8 },
   filterArrowOpen: { color: palette.lime },
 
   popup: {
@@ -128,13 +130,13 @@ divider: {
   },
   popupRowText: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.ink,
     },
   popupRowTextActive: {
     color: palette.ink,
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         },
 
   card: {
@@ -186,7 +188,7 @@ divider: {
   rankTextFinished: {},
   rankGender: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 11,
     color: palette.ink,
   },
   // The whole card opens the athlete; this says so (client 2026-10-22: "not
@@ -209,7 +211,7 @@ divider: {
   },
   utmbInlineValue: {
     fontFamily: fonts.bodySemi,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.ink,
   },
 
@@ -231,7 +233,7 @@ divider: {
   cornerGenderRank: {
     color: palette.textMuted,
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 11,
   },
 
   // Keep for backward compat
@@ -308,8 +310,8 @@ divider: {
 
   bibText: {
     fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 18,
     color: palette.textMuted,
     marginTop: space.xs,
     flexShrink: 1,
@@ -319,8 +321,8 @@ divider: {
   // the gap to the NAME; between two meta lines a hairline is enough.
   bibTextTight: {
     fontFamily: fonts.body,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 18,
     color: palette.textMuted,
     marginTop: 2,
     flexShrink: 1,
@@ -351,12 +353,12 @@ divider: {
 
   teamText: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
   },
   waveText: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
   },
 
@@ -390,17 +392,20 @@ divider: {
   // Separators between the stat columns. These carried borders with NO
   // horizontal padding: `statCol` sets no alignItems, so the text started at
   // x=0 and sat directly on the rule. The padding is what makes them work.
+  // space.sm, not space.md (2026-10-22): with the labels at 11pt the middle
+  // column was ~62pt on a 360pt-wide phone, too narrow for "RANK WOMEN" /
+  // "PLAATS VROUWEN" without breaking a word. 8pt still clears the rule.
   statColMid: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderColor: palette.placeholder,
-    paddingHorizontal: space.md,
+    paddingHorizontal: space.sm,
   },
 
   statColLeft: {
     borderLeftWidth: 1,
     borderColor: palette.placeholder,
-    paddingLeft: space.md,
+    paddingLeft: space.sm,
   },
 
   statFlagMid: {
@@ -408,7 +413,7 @@ divider: {
     borderColor: palette.placeholder,
     alignItems: "center",
     justifyContent: "center",
-    paddingLeft: space.md,
+    paddingLeft: space.sm,
   },
 
   // Flag is the only remaining column (UTMB was to its left) → no divider.
@@ -451,7 +456,7 @@ divider: {
   utmbBadgeTextTop: {
     color: palette.surface,
     fontFamily: fonts.bodySemi,
-        fontSize: 10,
+        fontSize: 11,
     letterSpacing: 0.5,
   },
 
@@ -462,7 +467,7 @@ divider: {
     paddingVertical: 1,
     color: palette.surface,
     fontFamily: fonts.bodySemi,
-        fontSize: 11,
+        fontSize: 12,
     letterSpacing: 0.5,
   },
 
@@ -488,7 +493,7 @@ divider: {
   loadingText: {
     color: palette.textBody,
     fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
     marginTop: 8,
     textAlign: "center",
   },
@@ -496,7 +501,7 @@ divider: {
   errorText: {
     color: palette.textMuted,
     fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
     textAlign: "center",
   },
 
@@ -511,7 +516,7 @@ divider: {
   retryText: {
     color: palette.surface,
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
   },
 
   filterOverlay: {
@@ -535,7 +540,7 @@ divider: {
 
   statValSmall: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
 
         color: palette.ink,
     flexShrink: 1,

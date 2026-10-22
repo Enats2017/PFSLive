@@ -114,13 +114,13 @@ const styles = StyleSheet.create({
     },
     name: {
         fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.ink,
         marginBottom: 2,
     },
     date: {
         fontFamily: fonts.body,
-        fontSize: 12,
+        fontSize: 13,
         color: palette.textMuted,
     },
     separator: {
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     loaderText: {
         marginLeft: 8,
         fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.textMuted,
     },
     centeredRow: {
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.placeholder,
     },
 });

@@ -16,7 +16,7 @@ export const resultInfoStyles = StyleSheet.create({
   },
   text: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.4,
     textTransform: "uppercase",
     color: palette.navy,
@@ -178,7 +178,7 @@ export const resultInfoStyles = StyleSheet.create({
   // Small-caps section label at the head of a card (29_RaceInfo.png).
   sectionLabel: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.7,
     textTransform: "uppercase",
     color: palette.textMuted,
@@ -195,7 +195,7 @@ export const resultInfoStyles = StyleSheet.create({
 
   rowLabel: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textBody,
     flexShrink: 1,
   },
@@ -207,7 +207,7 @@ export const resultInfoStyles = StyleSheet.create({
 
   statLabel: {
     fontFamily: fonts.bodySemi,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.7,
     textTransform: "uppercase",
     color: palette.textMuted,
@@ -224,7 +224,7 @@ export const resultInfoStyles = StyleSheet.create({
   },
   timingPointDate: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
   },
 
@@ -244,7 +244,7 @@ export const resultInfoStyles = StyleSheet.create({
   // label that wrapped to two lines sat ragged under a centred value.
   rankingLabel: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textBody,
     textAlign: "center",
     marginBottom: space.xs,
@@ -331,7 +331,7 @@ export const resultInfoStyles = StyleSheet.create({
   },
   cpSub: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
     marginTop: 2,
   },
@@ -345,7 +345,7 @@ export const resultInfoStyles = StyleSheet.create({
   },
   cpRank: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
     marginTop: 2,
   },
@@ -477,7 +477,7 @@ export const resultInfoStyles = StyleSheet.create({
   utmbText: {
     color: palette.surface,
     fontFamily: fonts.bodySemi,
-        fontSize: 12,
+        fontSize: 13,
     letterSpacing: 0.5,
   },
   utmbIndexTag: {
@@ -489,7 +489,7 @@ export const resultInfoStyles = StyleSheet.create({
   utmbIndexText: {
     color: palette.surface,
     fontFamily: fonts.bodySemi,
-        fontSize: 11,
+        fontSize: 12,
     letterSpacing: 0.5,
   },
   utmbValue: {
@@ -503,13 +503,13 @@ export const resultInfoStyles = StyleSheet.create({
   },
   utmbSeriesTitle: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.ink,
     letterSpacing: 1,
   },
   utmbSeriesSub: {
     fontFamily: fonts.bodySemi,
-        fontSize: 10,
+        fontSize: 11,
     color: palette.ink,
     letterSpacing: 1,
   },

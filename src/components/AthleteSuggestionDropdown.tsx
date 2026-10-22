@@ -175,12 +175,12 @@ const styles = StyleSheet.create({
     },
     avatarInitials: {
         fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.navy,
     },
     name: {
         fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.ink,
         marginBottom: 2,
     },
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     },
     city: {
         fontFamily: fonts.body,
-        fontSize: 12,
+        fontSize: 13,
         color: palette.textMuted,
     },
     separator: {
@@ -213,12 +213,12 @@ const styles = StyleSheet.create({
     },
     loaderText: {
         fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.textMuted,
     },
     emptyText: {
         fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.placeholder,
     },
     footerLoader: {

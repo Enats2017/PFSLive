@@ -107,7 +107,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                     }}>
                         <Ionicons name="cloud-offline-outline" size={16} color={palette.textBody} />
                         <Text style={{ flex: 1, color: palette.textBody, fontFamily: fonts.body,
-        fontSize: 12 }}>
+        fontSize: 13 }}>
                             {t('livetracking:offlineNotice', {
                                 time: formatLastUpdate(participant.last_update_time, participant.last_update_type),
                             })}
@@ -121,7 +121,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                     }}>
                         <Ionicons name="cellular-outline" size={14} color={palette.warning} />
                         <Text style={{ flex: 1, color: palette.warning, fontFamily: fonts.body,
-        fontSize: 12 }}>
+        fontSize: 13 }}>
                             {t('livetracking:estimatedNotice')}
                         </Text>
                     </View>
@@ -135,7 +135,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                     }}>
                         <Ionicons name="battery-dead-outline" size={18} color={palette.danger} />
                         <Text style={{ color: palette.danger, fontFamily: fonts.bodySemi,
-        fontSize: 13, flex: 1 }}>
+        fontSize: 14, flex: 1 }}>
                             {t('livetracking:lowBattery', { level: battery })}
                         </Text>
                     </View>

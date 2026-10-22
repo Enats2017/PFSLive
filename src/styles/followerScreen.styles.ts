@@ -45,7 +45,7 @@ import { spacing, palette, space, type, radii, fonts } from './common.styles';
     },
     viewChipText: {
         fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         color: palette.ink,
     },
 

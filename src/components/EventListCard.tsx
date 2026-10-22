@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   thumbFallbackText: {
     fontFamily: fonts.display,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.lime,
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.textMuted,
     flex: 1,
   },

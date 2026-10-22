@@ -2998,7 +2998,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       return (
                         <Text
                           key={`${entry.ts}-${origIdx}`}
-                          style={{ fontFamily: 'monospace', fontSize: 10, color: palette.border, marginBottom: 2 }}
+                          style={{ fontFamily: 'monospace', fontSize: 11, color: palette.border, marginBottom: 2 }}
                         >
                           {time} {entry.icon} {entry.msg}
                         </Text>

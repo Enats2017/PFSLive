@@ -94,10 +94,10 @@ export const membershipPlansStyle = StyleSheet.create({
     },
     popularBadgeText: {
         fontFamily: fonts.bodySemi,
-        fontSize: 10,
+        fontSize: 11,
         // Pinned so the badge's height does not drift with the platform's default
         // line height — the card's paddingTop above is calculated against it.
-        lineHeight: 12,
+        lineHeight: 14,
         letterSpacing: 0.4,
         // The string stays sentence case; the CAPS are a display choice, so
         // French and Dutch capitalise by their own rules.
@@ -142,7 +142,7 @@ export const membershipPlansStyle = StyleSheet.create({
     },
     sessionsBadgeText: {
         fontFamily: fonts.bodySemi,
-        fontSize: 10,
+        fontSize: 11,
         letterSpacing: 0.4,
         color: palette.navy,
     },
@@ -286,7 +286,7 @@ export const membershipPlansStyle = StyleSheet.create({
     },
     restoreButtonText: {
         fontFamily: fonts.bodySemi,
-        fontSize: 12,
+        fontSize: 13,
         color: palette.navy,
         textDecorationLine: 'underline',
     },
@@ -299,7 +299,7 @@ export const membershipPlansStyle = StyleSheet.create({
     },
     legalLinkText: {
         fontFamily: fonts.bodySemi,
-        fontSize: 12,
+        fontSize: 13,
         color: palette.navy,
         textDecorationLine: 'underline',
     },

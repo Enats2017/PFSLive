@@ -47,7 +47,7 @@ import { spacing, palette, radii, space, type, fonts } from './common.styles';
     },
     dividerLabel: {
         fontFamily: fonts.bodySemi,
-        fontSize: 12,
+        fontSize: 13,
         color: palette.placeholder,
         letterSpacing: 1,
     },

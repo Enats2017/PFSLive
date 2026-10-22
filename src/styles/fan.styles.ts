@@ -43,9 +43,9 @@ export const fanstyle = StyleSheet.create({
   },
   navSub: {
     fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
     color: "rgba(255,255,255,0.65)",
-    lineHeight: 18,
+    lineHeight: 19,
   },
   nextEventsSection: {
     paddingHorizontal: space.xl,
@@ -72,7 +72,7 @@ export const fanstyle = StyleSheet.create({
   },
   viewAllText: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.navy,
   },
 
@@ -115,7 +115,7 @@ export const fanstyle = StyleSheet.create({
   },
   eventName: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.ink,
     marginBottom: 4,
   },
@@ -127,7 +127,7 @@ export const fanstyle = StyleSheet.create({
   },
   eventDate: {
     fontFamily: fonts.body,
-        fontSize: 12,
+        fontSize: 13,
     color: palette.textMuted,
   },
 });

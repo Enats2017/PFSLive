@@ -88,7 +88,7 @@ export const registerStyles = StyleSheet.create({
     marginTop: spacing.sm,
     color: palette.textBody,
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     textAlign: 'center',
   },
 
@@ -145,7 +145,7 @@ export const registerStyles = StyleSheet.create({
   dividerText: {
     marginHorizontal: space.xl,
     fontFamily: fonts.bodyMedium,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.textMuted,
 
         },
@@ -169,13 +169,13 @@ export const registerStyles = StyleSheet.create({
   registerLink: {
     color: palette.navy,
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         },
 
   // ✅ ERROR TEXT
   errorText: {
     fontFamily: fonts.bodyMedium,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.danger,
     marginTop: spacing.xs,
     marginLeft: spacing.xs,

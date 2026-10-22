@@ -130,10 +130,10 @@ const styles = StyleSheet.create({
   },
   message: {
     fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.textBody,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 23,
     marginBottom: 24,
     paddingHorizontal: 8,
   },

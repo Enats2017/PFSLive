@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   },
   closeBtnText: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.surface,
   },
   iconWrapper: {
@@ -262,17 +262,17 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontFamily: fonts.bodySemi,
-        fontSize: 11,
+        fontSize: 12,
     color: palette.navy,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   subtitle: {
     fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.textMuted,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 21,
     paddingHorizontal: 8,
   },
   divider: {
@@ -297,13 +297,13 @@ const rowStyles = StyleSheet.create({
   },
   label: {
     fontFamily: fonts.bodyMedium,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.textMuted,
     flex: 1,
   },
   value: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.ink,
     flex: 1,
     textAlign: 'right',

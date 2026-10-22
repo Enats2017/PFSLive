@@ -29,9 +29,9 @@ export const optStyles = StyleSheet.create({
   },
   notArrivedBody: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
-    lineHeight: 20,
+    lineHeight: 21,
   },
   notArrivedRow: {
     flexDirection: 'row',
@@ -44,7 +44,7 @@ export const optStyles = StyleSheet.create({
   },
   notArrivedLink: {
     fontFamily: fonts.display,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.navy,
   },
 
@@ -136,7 +136,7 @@ export const optStyles = StyleSheet.create({
   // ✅ ERROR MESSAGE
   errorText: {
     fontFamily: fonts.bodyMedium,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.danger,
     textAlign: 'center',
     marginBottom: spacing.lg,
@@ -159,20 +159,20 @@ export const optStyles = StyleSheet.create({
 
   resendLabel: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textBody,
   },
 
   resendLink: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.navy,
 
         },
 
   countdown: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.textMuted,
 
         },

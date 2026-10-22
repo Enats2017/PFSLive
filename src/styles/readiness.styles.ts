@@ -53,7 +53,7 @@ export const readinessStyles = StyleSheet.create({
   },
   laterText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.textMuted,
   },
   doneNote: {
@@ -109,7 +109,7 @@ export const readinessStyles = StyleSheet.create({
   },
   fixButtonText: {
     fontFamily: fonts.bodySemi,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.surface,
   },
   allSetRow: {
@@ -136,7 +136,7 @@ export const readinessStyles = StyleSheet.create({
   },
   countdownText: {
     fontFamily: fonts.bodySemi,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.noticeText,
   },
   shareButton: {

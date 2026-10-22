@@ -408,7 +408,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                     text={`${distance} km`}
                                     style={{
                                         fontFamily: fonts.bodySemi,
-        fontSize: 10,
+        fontSize: 11,
                                         fill: palette.textBody,
                                         }}
                                     textAnchor="start"

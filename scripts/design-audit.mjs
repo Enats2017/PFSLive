@@ -49,7 +49,7 @@ const BLOCK_CHECKS = [
     name: 'font size off the ramp',
     test: (b) => {
       const m = b.match(/fontSize:\s*([\d.]+)/);
-      return !!m && !['10', '11', '12', '13', '15', '20', '26', '40'].includes(m[1]);
+      return !!m && !['10', '11', '12', '13', '14', '15', '20', '26', '40'].includes(m[1]);
     },
   },
   {

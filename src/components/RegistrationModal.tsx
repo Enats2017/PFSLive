@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   },
   closeBtnText: {
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
     color: palette.surface,
   },
   iconWrapper: {
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   },
   distanceName: {
     fontFamily: fonts.bodySemi,
-        fontSize: 12,
+        fontSize: 13,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 8,
@@ -356,8 +356,8 @@ const styles = StyleSheet.create({
   },
   description: {
     fontFamily: fonts.body,
-        fontSize: 13,
-    lineHeight: 22,
+        fontSize: 14,
+    lineHeight: 23,
     color: palette.textBody,
     textAlign: 'center',
     paddingHorizontal: 4,

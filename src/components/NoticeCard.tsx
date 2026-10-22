@@ -50,14 +50,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.display,
-    fontSize: 13,
+    fontSize: 14,
     color: palette.warningTitle,
   },
   message: {
     fontFamily: fonts.body,
-    fontSize: 12,
+    fontSize: 13,
     color: palette.warningText,
-    lineHeight: 19,   // deck: 1.55
+    lineHeight: 20,   // deck: 1.55
     marginTop: space.xs,
   },
 });

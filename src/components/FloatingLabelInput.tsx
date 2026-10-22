@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginLeft: 4,
     fontFamily: fonts.bodyMedium,
-        fontSize: 11,
+        fontSize: 12,
     color: COLORS.ERROR,
     },
   dropdown: {
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontFamily: fonts.body,
-        fontSize: 13,
+        fontSize: 14,
     color: COLORS.GRAY_DARK,
   },
   selectedItem: {
@@ -804,7 +804,7 @@ const styles = StyleSheet.create({
   selectedText: {
     color: COLORS.PRIMARY,
     fontFamily: fonts.bodySemi,
-        fontSize: 13,
+        fontSize: 14,
         },
 
   // ✅ iOS picker bottom-sheet

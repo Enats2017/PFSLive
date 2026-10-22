@@ -8,12 +8,13 @@
     "age": "Leeftijd",
     "raceTime": "Race tijd",
     "diffFirst": "Verschil 1e",
-    "ranking": "RANGSCHIKKING",
+    "ranking": "KLASSEMENT",
     "retry": "Opnieuw proberen",
     "errorLoad": "Kan resultaten niet laden. Tik om opnieuw te proberen.",
     "utmbIndex": "INDEX",
     "eta": "ETA",
     "etaFinish": "ETA finish",
+    "rank": "Plaats",
     "finish": "FINISH"
   },
   "time": {

@@ -17,23 +17,29 @@
 //   WIDTH        strings in width-constrained places that will truncate
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { createRequire } from 'node:module';
+
+// Real glyph widths from the app's own font files (scripts/text-width.cjs).
+const { textWidth } = createRequire(import.meta.url)('./text-width.cjs');
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const I18N = join(ROOT, 'src', 'i18n');
 const LANGS = ['en', 'fr', 'nl'];
 const PLACEHOLDER = /\{\{\s*([\w.]+)\s*\}\}/g;
 
-// Width budgets in points, measured off the artboards.
+// Width budgets in points, measured off the artboards. font / px / spacing are
+// the slot's real style (2026-10-22: sizes up to 13pt went up 1pt) and the
+// width is measured with that font file, not estimated per character.
 const BUDGETS = [
-  { name: 'bottom nav label', match: /^common:nav\./, px: 10, budget: 89 },
-  { name: 'lime band title', match: /^common:band\./, px: 12, budget: 350, weight: 0.62 },
-  { name: 'result-detail tab', match: /^Resultdetails:tabs\./, px: 15, budget: 150 },
+  { name: 'bottom nav label', match: /^common:nav\./, font: 'fonts.bodySemi', px: 11, budget: 89 },
+  { name: 'lime band title', match: /^common:band\./, font: 'fonts.bodySemi', px: 13, budget: 350, letterSpacing: 1.2, upper: true },
+  { name: 'result-detail tab', match: /^Resultdetails:tabs\./, font: 'fonts.displayMedium', px: 15, budget: 150 },
   // The distance-row action buttons (detailsStyles.routeButton /
   // .resultsButton) are minWidth 130 less space.xl of padding each side, so
-  // about 90pt of room at 13px display. They sit in a row beside a flexible
+  // about 90pt of room at 14px display. They sit in a row beside a flexible
   // distance name, so an over-long label does not clip - the button grows
   // and squeezes the name instead, which is just as wrong and less visible.
-  { name: 'distance action button', match: /^(EventDetails:(gpx|map)$|RaceResult:button\.)/, px: 13, budget: 90, weight: 0.6 },
+  { name: 'distance action button', match: /^(EventDetails:(gpx|map)$|RaceResult:button\.)/, font: 'fonts.display', px: 14, budget: 90 },
 ];
 
 // Accepted over-budget labels: exact namespace:key + language, each with the
@@ -54,7 +60,7 @@ const flatten = (obj, prefix = '', out = {}) => {
   return out;
 };
 
-const width = (text, px, weight = 0.55) => text.length * px * weight;
+const width = (text, b) => textWidth(text, b.font, b.px, { letterSpacing: b.letterSpacing ?? 0, upper: !!b.upper });
 
 // Literal copy between JSX tags. Screaming constants are excluded.
 const JSX_TEXT = />\s*([A-Z][A-Za-z][A-Za-z '&,.!?-]{4,60})\s*</g;
@@ -79,7 +85,8 @@ if (process.argv.includes('--selftest')) {
     ['WHITESPACE fires', ' x '.trim() !== ' x '],
     ['SPELLING fires', /\bfavorite/i.test('Add to favorite')],
     ['SPELLING quiet', /\bfavorite/i.test('Add to favourite') === false],
-    ['WIDTH fires', width('Persoonlijk evenement bewerken', 12, 0.62) > 200],
+    ['WIDTH fires', width('Persoonlijk evenement bewerken', { font: 'fonts.display', px: 14 }) > 200],
+    ['WIDTH quiet', width('Route', { font: 'fonts.display', px: 14 }) < 90],
     ['WIDTH allow-list is exact (key + language)', widthAllowed('RaceResult:button.participants', 'en')
       && !widthAllowed('RaceResult:button.participants', 'fr')
       && !widthAllowed('RaceResult:button.participants', 'nl')
@@ -185,7 +192,7 @@ for (const ns of namespaces) {
       if (/\bfavorite/i.test(v)) findings.SPELLING.push(`${ns}:${k} [${lang}]`);
       for (const b of BUDGETS) {
         if (!b.match.test(`${ns}:${k}`)) continue;
-        const est = width(v, b.px, b.weight);
+        const est = width(v, b);
         if (est > b.budget && !widthAllowed(`${ns}:${k}`, lang)) {
           findings.WIDTH.push(`${b.name} ${ns}:${k} [${lang}] ~${Math.round(est)}pt > ${b.budget}pt ${JSON.stringify(v)}`);
         }
