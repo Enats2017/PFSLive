@@ -22,6 +22,7 @@ import { AppHeader } from '../../components/common/AppHeader';
 import { useDimensions } from '../../hooks/useDimensions';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { resultDetailRaceStatus, resultDetailView, effectiveParticipantStatus } from './resultDetailView';
 
 type TabKey = 'raceInfo' | 'timingPoint' | 'runnerInfo';
 const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo'];
@@ -35,7 +36,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     const isGestureNav = insets.bottom > 0;
     const isLandscape = windowWidth
     const {
-        raceStatus,
+        raceStatus: raceStatusParam,
         product_app_id,
         product_option_value_app_id,
         bib,
@@ -48,6 +49,10 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
         bib,
         from_live ?? 0,
     );
+
+    // ✅ The live distance status from each (polled) response; the navigation
+    // param is only the tapped screen's snapshot (see resultDetailView.ts).
+    const raceStatus = resultDetailRaceStatus(raceStatusParam, data?.event?.race_status);
 
     const {
         isFollowed, isLoading, refreshFollowedUsers,
@@ -169,15 +174,18 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     }, [width]);
 
     const renderTabPage = useCallback(({ item }: { item: TabKey }) => {
-        const participantStatus = data?.race_info?.participant_status;
+        const view = resultDetailView(
+            raceStatus,
+            effectiveParticipantStatus(data?.race_info?.participant_status, data?.race_info?.has_started),
+        );
         return (
             <View style={[s.page, { width }]}>
                 {item === 'raceInfo' && (
-                    raceStatus === 'in_progress' && (participantStatus === 'in_progress' || participantStatus === 'not_started') ? (
+                    view === 'live' ? (
                         <RaceLive raceInfo={data?.race_info} event={data?.event} checkpoints={data?.checkpoints} />
-                    ) : raceStatus === 'finished' || (raceStatus === 'in_progress' && participantStatus !== 'not_started' && participantStatus !== 'in_progress') ? (
+                    ) : view === 'final' ? (
                         <RaceInfoTab raceInfo={data?.race_info} event={data?.event} checkpoints={data?.checkpoints} />
-                    ) : raceStatus === 'not_started' || participantStatus === 'not_started' ? (
+                    ) : view === 'upcoming' ? (
                         <UpcomingRace raceInfo={data?.race_info} event={data?.event} />
                     ) : null
                 )}

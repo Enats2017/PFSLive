@@ -6,6 +6,7 @@ import { commonStyles, typography } from '../../styles/common.styles';
 import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/resultDetailsService';
 import { formatClockTime } from '../../utils/timeFormat';
 import { formatWave } from '../../utils/waveLabel';
+import { effectiveParticipantStatus } from './resultDetailView';
 
 // participant_status is open-ended: the API passes through whatever non-numeric
 // text the timing feed puts in `pos`, uppercased, alongside its own
@@ -66,7 +67,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                 <View style={resultInfoStyles.headerBar}>
                     <View style={resultInfoStyles.headerGreen}>
                         <Text style={resultInfoStyles.text}>
-                            {statusText(raceInfo?.participant_status)}
+                            {statusText(effectiveParticipantStatus(raceInfo?.participant_status, raceInfo?.has_started))}
                         </Text>
                     </View>
                     <View style={resultInfoStyles.diagLeft} />
