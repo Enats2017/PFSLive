@@ -185,7 +185,7 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 497 · 188 · 19 passed · exit 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 499 · 188 · 19 passed · exit 0 |
 | Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 435 passed, 0 failed (1 skipped on a local web build), leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
@@ -328,7 +328,7 @@ Island), one Android; app language EN, NL and FR.
     is a small line under the name.
 46. Rank of 1000+ or "DNF" shows in full inside a wider green pill; 1-3 digits stay a circle.
 47. Dutch results: column label "KLASSEMENT …", nothing in the stat columns split mid-word (small phone too).
-48. Result detail → Timing points (Dutch): "Sinds vorige punt" / "Hoogtemeters sinds vorige punt"; distances
+48. Result detail → Timing points (Dutch): "Sinds vorig punt" / "Hoogtemeters sinds vorig punt" (step 84); distances
     add up point to point (none counted from the start again after a point without km).
 49. Result detail → Race info → "Share result" → send to yourself (WhatsApp / Mail):
     message = result line + ONE link `https://my.liviolive.com/livio_website/result_detail/?product_app_id=…&product_option_value_app_id=…&bib=…`;
@@ -396,7 +396,8 @@ larger text and FR/NL; ~100 issues fixed. Check on an iPhone with a notch (lands
 74. Larger text: bottom-bar labels, event tabs (Verleden / Live / Binnenkort) and the language pills never split a
     word; the Home clock / distance stay on one line.
 75. Forms: register / edit profile field labels are not hidden under the right icon (at 320pt or with larger text
-    the name and birth-date pairs stack); with the keyboard open (also landscape) the field stays visible.
+    the name pair stacks; on register the birth date and gender are always on their own lines — step 84); with the
+    keyboard open (also landscape) the field stays visible.
     Contact form: the message label floats when tapped.
 76. Header images (event details, follower distances, past races) in landscape take under half the screen.
 77. Large phones and tablets (iPhone Pro Max 440pt, a big Android, an iPad in portrait and landscape): every screen
@@ -444,6 +445,10 @@ gesture navigation), landscape, EN / FR / NL:
     the screen), nothing under the camera / status bar. Portrait: the icon is back and the popup looks as before.
 86. Profile → Training sessions: Delete / Edit / View sit on their own row at the bottom right of every card — on a
     small phone, a large phone (Pro Max), in landscape and on a tablet.
+87. Own profile → Events (Live / Past) and Training sessions, in landscape, with 3+ events: scroll the profile card
+    away — the list then fills the screen under the header, whole cards, and the last card ends just above the bottom
+    (no big blank band, nothing below the screen edge). Open the profile in landscape first, then rotate: the
+    training list is never empty-looking / tiny. Portrait: as before.
 
 ---
 
@@ -523,7 +528,7 @@ The sequencing request is moot — the free session is already off on live (2026
 - `wp_endpoint` index — **already exists** (`idx_wp_endpoint`, 191-char prefix) on the live copy.
 
 ### Known, not done
-- Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 497 (+ tracking 188, activation 19, distance button 20),
+- Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 499 (+ tracking 188, activation 19, distance button 20),
   server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
   DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 108 vitest + type-check + lint.
 - The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`

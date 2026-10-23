@@ -18,6 +18,7 @@ import { AthleteEvent, AthleteProfile, eventService } from '../../services/athle
 import { API_CONFIG } from '../../constants/config';
 import { ownProfile } from '../../styles/ownProfile.styles';
 import { useDimensions } from '../../hooks/useDimensions';
+import { profileListLandscapeHeight } from '../../utils/screenFit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Tab = 'Past' | 'Live';
@@ -66,7 +67,11 @@ const EventsContent: React.FC<EventsContentProps> = ({
     // ✅ At least 360pt (layout audit 2026-10-22): in landscape this left
     // ~174-197pt - less than one card in the nested list. OwnProfile's outer
     // ScrollView scrolls to the rest.
-    const TAB_CONTENT_HEIGHT = Math.max(windowHeight * 0.56 - insets.bottom, 360);
+    // Landscape: exactly the visible area under the header (screenFit) — 360
+    // was taller than a landscape screen, the bottom cards sat off it.
+    const TAB_CONTENT_HEIGHT = windowWidth > windowHeight
+        ? profileListLandscapeHeight(windowHeight, insets.top, insets.bottom)
+        : Math.max(windowHeight * 0.56 - insets.bottom, 360);
     const flatListRef = useRef<FlatList>(null);
     const activeTabRef = useRef<Tab>('Live');
     const [activeTab, setActiveTab] = React.useState<Tab>('Live');

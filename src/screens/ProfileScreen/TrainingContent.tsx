@@ -6,7 +6,10 @@ import {
     FlatList,
     ActivityIndicator,
     StyleSheet,
+    useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { profileListLandscapeHeight } from '../../utils/screenFit';
 import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
@@ -40,6 +43,14 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
     const hasMore = pagination.live.page < pagination.live.total_pages;
     const { t } = useTranslation(['profile', "ownProfile"]);
     const [listHeight, setListHeight] = React.useState(0);
+    // ✅ Landscape (device test 2026-10-23): the list's height was measured once
+    // from what was left under the profile card — ~0 when opened in landscape,
+    // and kept after rotating. Landscape: the visible area under the header
+    // (scroll the card away, the list fills the screen); portrait: measured,
+    // and only in portrait, as before.
+    const { width: winW, height: winH } = useWindowDimensions();
+    const insets = useSafeAreaInsets();
+    const isLandscape = winW > winH;
     // Add this line before the return
 
     const navigation = useNavigation();
@@ -99,7 +110,7 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
         <View
             style={{ flex: 1 }}
             onLayout={(e) => {
-                if (listHeight === 0) {
+                if (listHeight === 0 && !isLandscape) {
                     setListHeight(e.nativeEvent.layout.height);
                 }
             }}
@@ -120,7 +131,9 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
                 </TouchableOpacity>
             )}
 
-            <View style={{ flex: 1, height: listHeight }}>
+            <View style={isLandscape
+                ? { height: profileListLandscapeHeight(winH, insets.top, insets.bottom) }
+                : { flex: 1, height: listHeight }}>
                 <FlatList
                     data={liveEvents}
                     keyExtractor={keyExtractor}
@@ -133,7 +146,8 @@ const TrainingContent: React.FC<TrainingContentProps> = ({
                     contentContainerStyle={{
                         paddingHorizontal: spacing.xl,
                         paddingTop: spacing.xs,
-                        paddingBottom: spacing.xxxxl,
+                        // landscape: 16, not the 90pt nav-bar pad (a blank band on a ~280pt list)
+                        paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
                         flexGrow: 1,
                     }}
                     ListFooterComponent={ListFooterComponent}

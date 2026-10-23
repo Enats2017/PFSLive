@@ -79,3 +79,16 @@ export const dropPosition = (
   }
   return { top: 0, bottom: screenH - y, left, width, maxHeight: Math.min(POPUP_MAX, above) };
 };
+
+/**
+ * ✅ Height of a list that sits inside the profile page's ScrollView, in
+ * landscape (device test 2026-10-23): the visible area under the header. The
+ * user scrolls the profile card away and the list then fills the screen —
+ * whole cards, the list's end on screen. A fixed 360pt (events) was taller
+ * than that area (~278pt on an iPhone 15), so the bottom cards sat below the
+ * screen edge; the training list measured once and could be ~0 in landscape.
+ * Landscape AppHeader: 8 + 44 + 8, band 8 + 18 + 8 = 94 (+ status bar).
+ */
+export const LANDSCAPE_HEADER = 94;
+export const profileListLandscapeHeight = (windowH: number, insetTop: number, insetBottom: number): number =>
+  Math.max(200, windowH - insetTop - insetBottom - LANDSCAPE_HEADER);

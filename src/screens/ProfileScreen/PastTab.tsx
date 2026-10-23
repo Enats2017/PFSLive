@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, palette } from '../../styles/common.styles';
@@ -19,6 +19,10 @@ interface PastTabProps {
 }
 
 const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasMore, profile }) => {
+    // ✅ Landscape (device test 2026-10-23): 16pt under the last card, not the
+    // 90pt nav-bar pad — a blank band on a ~280pt-tall list.
+    const { width: winW, height: winH } = useWindowDimensions();
+    const isLandscape = winW > winH;
     const { t } = useTranslation(['profile']);
 
     
@@ -94,7 +98,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
             contentContainerStyle={{
                 paddingHorizontal: spacing.xl,
                 paddingTop: spacing.md,
-                paddingBottom: spacing.xxxxl,
+                paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
                 flexGrow: 1,
             }}
             ListFooterComponent={ListFooterComponent}

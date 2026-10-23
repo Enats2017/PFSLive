@@ -42,6 +42,63 @@ module.exports = ({ M, load, test }) => {
     assert.deepStrictEqual(bad, []);
   });
 
+  // ── own profile: event lists (Live / Past) and training sessions ───────
+  // Device check 2026-10-23: inside the profile ScrollView the events list was
+  // a fixed ≥ 360pt — taller than the visible area of a landscape phone, the
+  // bottom cards sat off the screen; the training list was measured once (≈0
+  // when opened in landscape). Landscape: both = the area under the header.
+  const LAND = {
+    'iPhone 15': [{ width: 852, height: 393 }, { top: 0, bottom: 21, left: 59, right: 59 }],
+    'iPhone SE': [{ width: 667, height: 375 }, { top: 0, bottom: 0, left: 0, right: 0 }],
+    'Android 360dp gesture': [{ width: 800, height: 360 }, { top: 24, bottom: 16, left: 0, right: 0 }],
+    'Android 360dp 3-button': [{ width: 800, height: 360 }, { top: 24, bottom: 0, left: 0, right: 48 }],
+  };
+  const withScreen = (win, ins, fn) => {
+    const prev = [M.window, M.insets];
+    try { M.window = win; M.insets = ins; return fn(); } finally { [M.window, M.insets] = prev; }
+  };
+  // A training card at ×1.35 text with a 2-line name and the button row under it
+  const OWN_CARD = 2 * 16 + 2 * Math.ceil(20 * 1.35 * 1.25) + Math.ceil(13 * 1.35 * 1.4) + 12 + 44;
+
+  test('own profile in landscape: the events and training lists are exactly the visible area under the header (whole cards, the end on screen) — not 360pt / measured once', () => {
+    const { profileListLandscapeHeight, LANDSCAPE_HEADER } = load('utils/screenFit');
+    assert.strictEqual(typeof profileListLandscapeHeight, 'function');
+    const EventsContent = load('screens/ProfileScreen/EventsContent').default;
+    const TrainingContent = load('screens/ProfileScreen/TrainingContent').default;
+    const common = { onBack() {}, liveEvents: [], pastEvents: [], profile: { is_own_profile: 1 }, loadMoreLive() {}, loadMorePast() {}, loadingMoreLive: false, loadingMorePast: false,
+      pagination: { live: { page: 1, total_pages: 1 }, past: { page: 1, total_pages: 1 } }, onDeleteEvent() {} };
+    const bad = [];
+    for (const [name, [win, ins]] of Object.entries(LAND)) {
+      const want = profileListLandscapeHeight(win.height, ins.top, ins.bottom);
+      if (want + ins.top + ins.bottom + LANDSCAPE_HEADER > win.height) bad.push(`${name}: list taller than the screen`);
+      if (want < OWN_CARD) bad.push(`${name}: ${want} < one card ${OWN_CARD}`);
+      withScreen(win, ins, () => {
+        const ev = walk(EventsContent(common)).filter((n) => n.props && flat(n.props.style).height !== undefined).map((n) => flat(n.props.style).height);
+        if (!ev.includes(want)) bad.push(`${name} events: ${ev} ≠ ${want}`);
+        const tr = walk(TrainingContent(common)).filter((n) => n.props && typeof flat(n.props.style).height === 'number' && flat(n.props.style).height > 0).map((n) => flat(n.props.style).height);
+        if (!tr.includes(want)) bad.push(`${name} training: ${tr} ≠ ${want}`);
+      });
+    }
+    // portrait: events keep ≥ 360, training keeps its measured flex 1
+    withScreen({ width: 393, height: 852 }, { top: 59, bottom: 34, left: 0, right: 0 }, () => {
+      const ev = walk(EventsContent(common)).map((n) => flat(n.props && n.props.style).height).filter((h) => typeof h === 'number');
+      if (!ev.some((h) => h >= 360)) bad.push('portrait events < 360');
+      const tr = walk(TrainingContent(common)).find((n) => n.props && flat(n.props.style).flex === 1 && 'height' in flat(n.props.style));
+      if (!tr) bad.push('portrait training not flex 1 + measured height');
+    });
+    assert.deepStrictEqual(bad, []);
+  });
+
+  test('own profile lists in landscape end 16pt under the last card (not the 90pt nav-bar pad); portrait keeps 90', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const SRC = path.resolve(__dirname, '../../src');
+    for (const f of ['LiveTab', 'PastTab', 'TrainingContent']) {
+      const s = fs.readFileSync(path.join(SRC, 'screens/ProfileScreen', f + '.tsx'), 'utf8');
+      assert.ok(/paddingBottom: isLandscape \? spacing\.lg : spacing\.xxxxl,/.test(s), f);
+    }
+  });
+
   // ── every popup, rendered, landscape and portrait ──────────────────────
   // Device test 2026-10-23 (event Distance screen): the Undo registration card
   // showed its 90pt icon in landscape and its buttons were cut off. Each popup
