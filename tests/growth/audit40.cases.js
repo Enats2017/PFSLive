@@ -12,7 +12,7 @@ const { textWidth } = require('../../scripts/text-width.cjs');
 
 const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32, xxxxl: 90 };
 
-module.exports = ({ load, test, SRC }) => {
+module.exports = ({ M, load, test, SRC }) => {
   const read = (rel) => fs.readFileSync(path.join(SRC, rel), 'utf8').replace(/\r/g, '');
   const lang = (ns, l) => JSON.parse(fs.readFileSync(path.join(SRC, 'i18n', ns, `${l}.json`), 'utf8'));
   const soft = (src, name) => {
@@ -52,6 +52,59 @@ module.exports = ({ load, test, SRC }) => {
     for (const [f, s] of [['HomeScreen', h], ['Fanemailmodal', fe], ['FollowNotificationPrompt', fp]]) {
       assert.ok(!/isShortScreen\(/.test(s), f + ': no height-only rule left');
     }
+  });
+
+  // Rendered, not read: the whole Home screen with EVERY popup open (each boolean
+  // state flipped: loading off, every show* on), iOS and Android (the battery
+  // popup is Android only), phone + tablet, landscape and portrait.
+  const walk = (n, out = []) => {
+    if (!n || typeof n !== 'object') return out;
+    if (Array.isArray(n)) { n.forEach((c) => walk(c, out)); return out; }
+    out.push(n);
+    (n.children || []).forEach((c) => walk(c, out));
+    return out;
+  };
+  const names = (st) => (Array.isArray(st) ? st.flat(Infinity) : [st]).filter(Boolean)
+    .map((x) => { try { return String(x); } catch (e) { return JSON.stringify(x); } });
+  const SCREENS = {
+    'iPhone 15 landscape': [{ width: 852, height: 393 }, { top: 0, bottom: 21, left: 59, right: 59 }, true],
+    'Android 360dp landscape': [{ width: 800, height: 360 }, { top: 24, bottom: 0, left: 0, right: 48 }, true],
+    'iPad landscape': [{ width: 1194, height: 834 }, { top: 24, bottom: 20, left: 0, right: 0 }, true],
+    'iPhone 15 portrait': [{ width: 393, height: 852 }, { top: 59, bottom: 34, left: 0, right: 0 }, false],
+    'Android 360dp portrait': [{ width: 360, height: 800 }, { top: 24, bottom: 0, left: 0, right: 0 }, false],
+    'iPad portrait': [{ width: 834, height: 1194 }, { top: 24, bottom: 20, left: 0, right: 0 }, false],
+  };
+  const rendered = (fn) => {
+    const prev = [M.window, M.insets, M.os, M.useStateMap, global.__DEV__];
+    try { return fn(); } finally { [M.window, M.insets, M.os, M.useStateMap, global.__DEV__] = prev; }
+  };
+
+  test('Home (rendered, every popup open): the icon section is hidden in landscape on phones AND tablets, shown in portrait — all 9 popups + the fan e-mail popup, iOS and Android', () => {
+    const mod = load('screens/HomeScreen');
+    const Home = mod.default || mod.HomeScreen;
+    const bad = [];
+    for (const os of ['ios', 'android']) {
+      for (const [name, [win, ins, land]] of Object.entries(SCREENS)) {
+        rendered(() => {
+          M.os = os; M.window = win; M.insets = ins; global.__DEV__ = false;
+          M.useStateMap = (x) => (x === true ? false : x === false ? true : x);
+          const all = walk(Home({ navigation: { navigate() {}, addListener: () => () => {}, setOptions() {} }, route: { params: {} } }));
+          const popups = all.filter((n) => n.type === 'Modal' && n.props.supportedOrientations);
+          const icons = all.filter((n) => n.props && names(n.props.style).some((s) => /notifIconWrapper$/.test(s)));
+          const hidden = icons.filter((n) => names(n.props.style).some((s) => /hideCompact$/.test(s)));
+          const want = os === 'android' ? 9 : 8;                 // battery popup: Android only
+          if (popups.length !== want || icons.length !== want) bad.push(`${os} ${name}: ${popups.length} popups, ${icons.length} icons (want ${want})`);
+          if (hidden.length !== (land ? icons.length : 0)) bad.push(`${os} ${name}: ${hidden.length}/${icons.length} icons hidden`);
+          // the fan e-mail popup sits on Home as its own component — render it too
+          const fan = all.find((n) => typeof n.type === 'function' && n.type.name === 'FanEmailModal');
+          if (!fan) { bad.push(`${os} ${name}: no fan e-mail popup`); return; }
+          const fanIcon = walk(fan.type(fan.props)).filter((n) => n.props && names(n.props.style).some((s) => /notifIconWrapper$/.test(s)));
+          const fanHidden = fanIcon.filter((n) => names(n.props.style).some((s) => /hideCompact$/.test(s))).length;
+          if (fanIcon.length !== 1 || fanHidden !== (land ? 1 : 0)) bad.push(`${os} ${name}: fan e-mail icon ${fanHidden}/${fanIcon.length} hidden`);
+        });
+      }
+    }
+    assert.deepStrictEqual(bad, []);
   });
 
   // ── 2. event tabs ─────────────────────────────────────────────────────

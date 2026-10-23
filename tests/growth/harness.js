@@ -78,13 +78,22 @@ function anyStub(name) {
 // ── minimal React stand-in ───────────────────────────────────────────────
 const ReactStub = {
   createElement: (type, props, ...children) => ({ type, props: props || {}, children: children.flat() }),
-  useState: (v) => [typeof v === 'function' ? v() : v, () => {}],
+  // M.useStateMap (optional) maps every initial state — e.g. open every popup of a screen
+  useState: (v) => { const x = typeof v === 'function' ? v() : v; return [M.useStateMap ? M.useStateMap(x) : x, () => {}]; },
   useCallback: (f) => f,
   useMemo: (f) => f(),
   useEffect: () => {},
   useRef: (v) => ({ current: v }),
   memo: (c) => c,            // memo(Component) renders Component itself
   Fragment: 'Fragment',
+  // for rendering a whole screen (HomeScreen): contexts give their default value
+  createContext: (v) => ({ _value: v, Provider: 'Provider', Consumer: 'Consumer' }),
+  useContext: (c) => (c ? c._value : undefined),
+  forwardRef: (c) => (props) => c(props, null),
+  useLayoutEffect: () => {},
+  useReducer: (r, v) => [v, () => {}],
+  useImperativeHandle: () => {},
+  useId: () => 'id',
 };
 ReactStub.default = ReactStub;
 
@@ -131,6 +140,7 @@ const overrides = {
     },
     StyleSheet: { create: (x) => x, hairlineWidth: 1 },
     useWindowDimensions: () => ({ ...M.window, scale: 3, fontScale: 1 }),
+    Dimensions: { get: () => ({ ...M.window, scale: 3, fontScale: 1 }), addEventListener: () => ({ remove() {} }) },
     StatusBar: 'StatusBar',
     Text: 'Text', View: 'View', TouchableOpacity: 'TouchableOpacity', Pressable: 'Pressable', Modal: 'Modal',
   },
