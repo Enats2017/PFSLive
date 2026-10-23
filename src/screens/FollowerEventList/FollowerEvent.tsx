@@ -420,7 +420,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                         keyExtractor={(item) => item}
                         onMomentumScrollEnd={handleSwipe}
                         initialScrollIndex={TABS.indexOf('Live')}
-                        contentContainerStyle={{ paddingBottom: isLandscape ? 0 : spacing.xxxxl }}
+                        contentContainerStyle={{ flexGrow: 1 }}
                         scrollEnabled={true}
                         getItemLayout={(_, index) => ({
                             length: width,
@@ -428,7 +428,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                             index,
                         })}
                         renderItem={({ item }) => (
-                            <View style={{ width }}>
+                            <View style={{ width,  flex: 1 }}>
                                 {item === 'Past' && (
                                     <PastTab
                                         events={pastEvents}

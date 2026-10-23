@@ -398,7 +398,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                         initialScrollIndex={TABS.indexOf('Live')}
                         contentContainerStyle={{
                             // landscape: no 90pt pad under the pages (device test 2026-10-23)
-                            paddingBottom: isLandscape ? 0 : spacing.xxxxl,
+                           
                             flexGrow: 1,
                         }}
                         scrollEnabled={true}
@@ -408,7 +408,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                             index,
                         })}
                         renderItem={({ item }) => (
-                            <View style={{ width }}>
+                            <View style={{ width: width, flex: 1 }}>
                                 {item === 'Past' && (
                                     <PastTab
                                         events={pastEvents}
