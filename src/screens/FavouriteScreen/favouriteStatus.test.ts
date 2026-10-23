@@ -28,8 +28,8 @@ function test(name: string, fn: () => void) {
 const cp = (o: { start?: boolean; finish?: boolean; crossed: boolean }) => ({
   name: o.start ? 'START' : o.finish ? 'FIN' : '8,3km', is_crossed: o.crossed, is_start: !!o.start, is_finish: !!o.finish,
 });
-const item = (ps: string | undefined, race: 'not_started' | 'in_progress' | 'finished'): FavouriteStatusInput =>
-  ({ participant_status: ps as string, race_status: race,
+const item = (ps: string | undefined, race: 'not_started' | 'in_progress' | 'finished', hasStarted?: boolean): FavouriteStatusInput =>
+  ({ participant_status: ps as string, race_status: race, has_started: hasStarted,
      checkpoints: [cp({ start: true, crossed: true }), cp({ crossed: false }), cp({ finish: true, crossed: false })] } as FavouriteStatusInput);
 
 console.log('== runner status on the Favourites card ==');
@@ -47,7 +47,16 @@ test('between the start and CP1 (API says not_started) → In progress while the
   assert.strictEqual(favouriteRunnerStatus(item('not_started', 'in_progress')), 'in_progress');
 });
 test('no-show after the distance ended, START filled with the gun time by RR → Not started, not "In progress"', () => {
-  assert.strictEqual(favouriteRunnerStatus(item('not_started', 'finished')), 'not_started');
+  assert.strictEqual(favouriteRunnerStatus(item('not_started', 'finished', false)), 'not_started');
+});
+test('STARTED (RR Started=1) but no split yet → never "Not started", in every distance state', () => {
+  for (const race of ['not_started', 'in_progress', 'finished'] as const) {
+    assert.strictEqual(favouriteRunnerStatus(item('not_started', race, true)), 'in_progress', race);
+  }
+});
+test('has_started never overrides a real status (finished / DNF stay as they are)', () => {
+  assert.strictEqual(favouriteRunnerStatus(item('finished', 'in_progress', true)), 'finished');
+  assert.strictEqual(favouriteRunnerStatus(item('DNF', 'finished', true)), 'DNF');
 });
 test('before the gun with START pre-filled → Not started (START is never trusted)', () => {
   assert.strictEqual(favouriteRunnerStatus(item('not_started', 'not_started')), 'not_started');
@@ -80,6 +89,8 @@ test('FavouriteCard uses it for the badge colour, label and the not-started swit
   assert.ok(/const isNotStarted = runnerStatus === 'not_started'/.test(src), 'not-started switch');
   assert.ok(!/getStatusColors\(item\.race_status\)|status\.\$\{item\.race_status\}/.test(src), 'no distance-status badge left');
   assert.ok(/prev\.item\.participant_status === next\.item\.participant_status/.test(src), 'memo re-renders on a status change');
+  assert.ok(/prev\.item\.has_started === next\.item\.has_started/.test(src), 'memo re-renders when the runner starts');
+  assert.ok(/\[item\.participant_status, item\.race_status, item\.has_started\]/.test(src), 'status recomputed when has_started changes');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

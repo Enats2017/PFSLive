@@ -16,6 +16,17 @@
 
 export type ResultDetailView = 'live' | 'final' | 'upcoming' | null;
 
+// The runner status every rule below and both cards use. participant_status
+// stays 'not_started' until CP1, so someone between the start and CP1 — or who
+// stopped before it — read "Not Started" on the final card once the distance
+// ended. race_info.has_started is RR's own start-line flag (the START time cell
+// is not: RR fills it with the gun for every entrant). Someone who started is
+// never shown "Not started".
+export function effectiveParticipantStatus(participantStatus: string | undefined | null, hasStarted: boolean | undefined | null): string | undefined {
+  if (participantStatus === 'not_started' && hasStarted === true) return 'in_progress';
+  return participantStatus ?? undefined;
+}
+
 export function resultDetailRaceStatus(paramStatus: string | undefined, eventStatus: string | undefined | null): string | undefined {
   const live = String(eventStatus ?? '').trim();
   return live !== '' ? live : paramStatus;

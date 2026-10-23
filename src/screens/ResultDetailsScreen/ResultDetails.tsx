@@ -22,7 +22,7 @@ import { AppHeader } from '../../components/common/AppHeader';
 import { useDimensions } from '../../hooks/useDimensions';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
-import { resultDetailRaceStatus, resultDetailView } from './resultDetailView';
+import { resultDetailRaceStatus, resultDetailView, effectiveParticipantStatus } from './resultDetailView';
 
 type TabKey = 'raceInfo' | 'timingPoint' | 'runnerInfo';
 const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo'];
@@ -174,7 +174,10 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     }, [width]);
 
     const renderTabPage = useCallback(({ item }: { item: TabKey }) => {
-        const view = resultDetailView(raceStatus, data?.race_info?.participant_status);
+        const view = resultDetailView(
+            raceStatus,
+            effectiveParticipantStatus(data?.race_info?.participant_status, data?.race_info?.has_started),
+        );
         return (
             <View style={[s.page, { width }]}>
                 {item === 'raceInfo' && (

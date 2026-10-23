@@ -10,7 +10,7 @@ import ElevationChart from '../../components/ElevationChart';
 import { useGpxElevation } from '../../hooks/useGpxElevation';
 import { formatClockTime } from '../../utils/timeFormat';
 import { formatWave } from '../../utils/waveLabel';
-import { raceLiveStatus } from './resultDetailView';
+import { raceLiveStatus, effectiveParticipantStatus } from './resultDetailView';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 
@@ -46,7 +46,10 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
     // them In progress, not the distance's Finished. The server sends no elapsed
     // clock then (server_time '' outside in_progress), so the race time reads '—'
     // instead of 00:00:00 or the value frozen from the last in-progress poll.
-    const liveStatus = raceLiveStatus(event?.race_status, raceInfo?.participant_status);
+    const liveStatus = raceLiveStatus(
+        event?.race_status,
+        effectiveParticipantStatus(raceInfo?.participant_status, raceInfo?.has_started),
+    );
     const hasClock = !!raceInfo?.server_time;
 
     useEffect(() => {

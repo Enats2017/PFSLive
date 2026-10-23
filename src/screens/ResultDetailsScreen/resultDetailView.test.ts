@@ -6,7 +6,7 @@
 import assert from 'assert';
 import fs from 'fs';
 import path from 'path';
-import { resultDetailRaceStatus, resultDetailView, shouldPollResultDetail, raceLiveStatus } from './resultDetailView';
+import { resultDetailRaceStatus, resultDetailView, shouldPollResultDetail, raceLiveStatus, effectiveParticipantStatus } from './resultDetailView';
 
 let passed = 0;
 let failed = 0;
@@ -72,24 +72,47 @@ test('every other status pair gives exactly the old inline rule (only the two in
   assert.deepStrictEqual(changed, ['finished/in_progress']);
 });
 
+test('started (has_started) but no split → In progress, never Not started', () => {
+  assert.strictEqual(effectiveParticipantStatus('not_started', true), 'in_progress');
+  assert.strictEqual(effectiveParticipantStatus('not_started', false), 'not_started');
+  assert.strictEqual(effectiveParticipantStatus('not_started', undefined), 'not_started', 'older API without the field');
+  for (const s of ['finished', 'in_progress', 'DNF', 'DNS', 'DSQ']) assert.strictEqual(effectiveParticipantStatus(s, true), s, s);
+});
+test('started runner with no split after the distance ended → live card + polling (was: final card "Not Started")', () => {
+  const ps = effectiveParticipantStatus('not_started', true);
+  assert.strictEqual(resultDetailView('finished', ps), 'live');
+  assert.strictEqual(shouldPollResultDetail('finished', ps), true);
+  assert.strictEqual(raceLiveStatus('finished', ps), 'in_progress');
+});
+test('real no-show (Started=0) after the end keeps the final card, no polling (unchanged)', () => {
+  const ps = effectiveParticipantStatus('not_started', false);
+  assert.strictEqual(resultDetailView('finished', ps), 'final');
+  assert.strictEqual(shouldPollResultDetail('finished', ps), false);
+});
+
 const read = (...p: string[]) => fs.readFileSync(path.join(process.cwd(), 'src', ...p), 'utf8');
 test('ResultDetails picks the card through these helpers with the LIVE race status', () => {
   const src = read('screens', 'ResultDetailsScreen', 'ResultDetails.tsx');
   assert.ok(/raceStatus: raceStatusParam/.test(src), 'param renamed, not used directly');
   assert.ok(/const raceStatus = resultDetailRaceStatus\(raceStatusParam, data\?\.event\?\.race_status\)/.test(src));
-  assert.ok(/resultDetailView\(raceStatus, data\?\.race_info\?\.participant_status\)/.test(src));
+  assert.ok(/resultDetailView\(\s*raceStatus,\s*effectiveParticipantStatus\(data\?\.race_info\?\.participant_status, data\?\.race_info\?\.has_started\)/.test(src));
   assert.ok(!/raceStatus === 'in_progress' && \(participantStatus/.test(src), 'old inline rule gone');
 });
 test('useResultDetail polls through shouldPollResultDetail and re-evaluates on a runner status change', () => {
   const src = read('hooks', 'useResultDetail.ts');
-  assert.ok(/shouldPollResultDetail\(data\?\.event\?\.race_status, data\?\.race_info\?\.participant_status\)/.test(src));
-  assert.ok(/\[data\?\.event\?\.race_status, data\?\.race_info\?\.participant_status, fetchDetail\]/.test(src));
+  assert.ok(/shouldPollResultDetail\(\s*data\?\.event\?\.race_status,\s*effectiveParticipantStatus\(data\?\.race_info\?\.participant_status, data\?\.race_info\?\.has_started\)/.test(src));
+  assert.ok(/\[data\?\.event\?\.race_status, data\?\.race_info\?\.participant_status, data\?\.race_info\?\.has_started, fetchDetail\]/.test(src));
 });
 test('RaceLive labels a runner on course after end_time In progress and shows — without a server clock', () => {
   const src = read('screens', 'ResultDetailsScreen', 'RaceLive.tsx');
-  assert.ok(/raceLiveStatus\(event\?\.race_status, raceInfo\?\.participant_status\)/.test(src));
+  assert.ok(/raceLiveStatus\(\s*event\?\.race_status,\s*effectiveParticipantStatus\(raceInfo\?\.participant_status, raceInfo\?\.has_started\)/.test(src));
   assert.ok(/status\.\$\{liveStatus\}/.test(src));
   assert.ok(/hasClock \? formatSeconds\(elapsedSeconds\) : '—'/.test(src));
+});
+
+test('RaceInfoTab (final card) labels through effectiveParticipantStatus — a started runner never reads "Not Started"', () => {
+  const src = read('screens', 'ResultDetailsScreen', 'RaceInfoTab.tsx');
+  assert.ok(/statusText\(effectiveParticipantStatus\(raceInfo\?\.participant_status, raceInfo\?\.has_started\)\)/.test(src));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

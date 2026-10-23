@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { resultDetail, ResultDetailResponse } from '../services/resultDetailsService';
 import { useScreenError } from "../hooks/useApiError";
-import { shouldPollResultDetail } from '../screens/ResultDetailsScreen/resultDetailView';
+import { shouldPollResultDetail, effectiveParticipantStatus } from '../screens/ResultDetailsScreen/resultDetailView';
 
 const POLL_INTERVAL_MS = 60_000; // 1 minute
 
@@ -45,7 +45,10 @@ export const useResultDetail = (
     // (a page opened early used to stay on the upcoming card all race), and
     // after end_time for a runner still on course (see resultDetailView.ts).
     useEffect(() => {
-        const isLive = shouldPollResultDetail(data?.event?.race_status, data?.race_info?.participant_status);
+        const isLive = shouldPollResultDetail(
+            data?.event?.race_status,
+            effectiveParticipantStatus(data?.race_info?.participant_status, data?.race_info?.has_started),
+        );
 
         if (isLive) {
             pollRef.current = setInterval(() => {
@@ -59,7 +62,7 @@ export const useResultDetail = (
                 pollRef.current = null;
             }
         };
-    }, [data?.event?.race_status, data?.race_info?.participant_status, fetchDetail]);
+    }, [data?.event?.race_status, data?.race_info?.participant_status, data?.race_info?.has_started, fetchDetail]);
 
     return { data, loading, hasError, error, clearError, retry: fetchDetail };
 };

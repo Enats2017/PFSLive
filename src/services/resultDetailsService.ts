@@ -66,6 +66,8 @@ export interface RaceInfo {
     diff: string;
     position: string;
     participant_status: string;
+    /** RR "Started" flag: true once the runner crossed the start line (participant_status stays 'not_started' until CP1). */
+    has_started?: boolean;
     category_name: string;
     category_rank: string;
     gender_ranking: string;
