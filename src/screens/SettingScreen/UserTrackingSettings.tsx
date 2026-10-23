@@ -20,6 +20,7 @@ import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
 import { useLandscapeSidePadding, useModalSideInsets } from '../../hooks/useLandscapeSidePadding';
+import { fieldScrollY } from '../../utils/screenFit';
 
 type Visibility = 'public' | 'private';
 
@@ -92,7 +93,7 @@ export const UserTrackingSettings: React.FC = () => {
             // after the sheet has re-laid out at its smaller maxHeight; clamped
             // to the overflow, so a body that fits (portrait) never moves
             setTimeout(() => {
-                const y = Math.min(inputY.current - 8, sheetBodyBox.current.content - sheetBodyBox.current.box);
+                const y = fieldScrollY(inputY.current, sheetBodyBox.current.content, sheetBodyBox.current.box);
                 if (y > 0) sheetBodyRef.current?.scrollTo({ y, animated: true });
             }, 300);
             Animated.timing(keyboardOffset, {

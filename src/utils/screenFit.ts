@@ -92,3 +92,11 @@ export const dropPosition = (
 export const LANDSCAPE_HEADER = 94;
 export const profileListLandscapeHeight = (windowH: number, insetTop: number, insetBottom: number): number =>
   Math.max(200, windowH - insetTop - insetBottom - LANDSCAPE_HEADER);
+
+/**
+ * ✅ How far a sheet's body scrolls so the field being typed in shows when the
+ * keyboard opens (device test 2026-10-23, landscape): to the field (8pt above
+ * it), never past the end. ≤ 0 → no scroll — a body that fits (portrait).
+ */
+export const fieldScrollY = (fieldY: number, contentH: number, boxH: number): number =>
+  Math.min(fieldY - 8, contentH - boxH);

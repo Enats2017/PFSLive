@@ -19,6 +19,7 @@ import FloatingLabelInput from './FloatingLabelInput';
 import { commonStyles, palette, fonts, space, shadows, withAlpha } from '../styles/common.styles';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 import { useModalSideInsets } from '../hooks/useLandscapeSidePadding';
+import { fieldScrollY } from '../utils/screenFit';
 
 interface Props {
     visible: boolean;
@@ -100,7 +101,7 @@ export const TrackingPasswordModal: React.FC<Props> = ({
             // after the sheet has re-laid out at its smaller maxHeight; clamped
             // to the overflow, so a body that fits (portrait) never moves
             setTimeout(() => {
-                const y = Math.min(inputY.current - 8, bodyBox.current.content - bodyBox.current.box);
+                const y = fieldScrollY(inputY.current, bodyBox.current.content, bodyBox.current.box);
                 if (y > 0) bodyRef.current?.scrollTo({ y, animated: true });
             }, 300);
             Animated.timing(keyboardOffset, {
