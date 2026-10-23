@@ -119,10 +119,11 @@ module.exports = ({ M, load, test, SRC }) => {
 
   test('every popup whose wrapper pads more than 20pt tells the cap (reserve 48); the fan e-mail popup adds the keyboard', () => {
     for (const f of ['components/RegistrationModal.tsx', 'components/MembershipPlanModel.tsx', 'components/FeedbackSuccessModal.tsx', 'screens/EventDetails/ParticipantResult.tsx']) {
-      assert.ok(/<ModalScroll contentStyle=\{\{ alignItems: 'center' \}\} reserve=\{48\}>/.test(read(f)), f);
+      // 48 in portrait; 16 in compact landscape (wrapper padding 8 + 8) — device test 2026-10-23
+      assert.ok(/<ModalScroll contentStyle=\{\{ alignItems: 'center' \}\} style=\{cd\.s\.scroll\} reserve=\{cd\.compact \? 16 : 48\}>/.test(read(f)), f);
     }
     const fe = read('components/Fanemailmodal.tsx');
-    assert.ok(/reserve=\{\(compact \? 16 : 40\) \+ keyboardHeight\}/.test(fe));
+    assert.ok(/reserve=\{\(compact \? 16 : 40\) \+ keyboardHeight - keyboardGiveBack\}/.test(fe));
     assert.ok(/homeStyles\.notifCard, compact && homeStyles\.notifCardCompact/.test(fe) && /homeStyles\.notifIconWrapper, compact && homeStyles\.hideCompact/.test(fe));
     assert.ok(!/notifWrapperCompact, modalSides/.test(fe), 'the centred card keeps its 20pt gutter (a bare paddingLeft: 0 removed it)');
   });

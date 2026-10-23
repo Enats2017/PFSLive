@@ -150,10 +150,10 @@ module.exports = ({ M, load, test, SRC }) => {
     const reg = read('components/RegistrationModal.tsx');
     const outer = reg.indexOf('transform: [{ translateY: cardTranslateY }]');
     assert.ok(outer > 0 && outer < reg.indexOf('<ModalScroll'), 'animated wrapper around ModalScroll');
-    assert.ok(/<Animated\.View style=\{styles\.card\}>/.test(reg), 'card itself not transformed (the ScrollView clipped it)');
+    assert.ok(/<Animated\.View style=\{(?:styles\.card|\[styles\.card, cd\.s\.card, cd\.compact && styles\.cardCompact\])\}>/.test(reg), 'card itself not transformed (the ScrollView clipped it)');
     assert.ok(/setKeyboardHeight\(Keyboard\.isVisible\(\) \? Keyboard\.metrics\(\)\?\.height \?\? 0 : 0\);/.test(read('components/CountrySelector.tsx')));
     for (const f of ['screens/SettingScreen/UserTrackingSettings.tsx', 'components/TrackingPasswordModal.tsx']) {
-      assert.ok(/paddingBottom: \(keyboardHeight > 0 \? 0 : insets\.bottom\) \+ 24,/.test(read(f)), f);
+      assert.ok(/paddingBottom: keyboardHeight > 0 && isLandscape \? 8 : \(keyboardHeight > 0 \? 0 : insets\.bottom\) \+ 24,/.test(read(f)), f);
     }
   });
 

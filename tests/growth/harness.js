@@ -141,6 +141,15 @@ const overrides = {
     StyleSheet: { create: (x) => x, hairlineWidth: 1 },
     useWindowDimensions: () => ({ ...M.window, scale: 3, fontScale: 1 }),
     Dimensions: { get: () => ({ ...M.window, scale: 3, fontScale: 1 }), addEventListener: () => ({ remove() {} }) },
+    // Animated / Easing stand-ins so popups with an entrance animation render (2026-10-23)
+    Animated: (() => {
+      const anim = () => ({ start(cb) { if (cb) cb({ finished: true }); }, stop() {}, reset() {} });
+      class Value { constructor(v) { this._v = v; } setValue(v) { this._v = v; } interpolate() { return this; } addListener() { return 'l'; } removeListener() {} stopAnimation() {} }
+      return { Value, ValueXY: Value, View: 'Animated.View', Text: 'Animated.Text', Image: 'Animated.Image', ScrollView: 'Animated.ScrollView',
+        timing: anim, spring: anim, decay: anim, sequence: anim, parallel: anim, stagger: anim, loop: anim, delay: anim,
+        multiply: (a) => a, add: (a) => a, diffClamp: (a) => a, event: () => () => {}, createAnimatedComponent: (c) => c };
+    })(),
+    Easing: new Proxy(function () {}, { get: () => (x) => x, apply: () => (x) => x }),
     StatusBar: 'StatusBar',
     Text: 'Text', View: 'View', TouchableOpacity: 'TouchableOpacity', Pressable: 'Pressable', Modal: 'Modal',
   },

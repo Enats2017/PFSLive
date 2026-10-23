@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, palette, fonts, radii, withAlpha } from '../styles/common.styles';
-import { dialogStyles, dialogTone } from './ui';
+import { dialogStyles, dialogTone, useCompactDialog } from './ui';
 import ModalScroll from './ui/ModalScroll';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
@@ -28,6 +28,9 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation(['undoModal']);
+  // ✅ Landscape: no icon, buttons side by side (device test 2026-10-23 — this
+  // card's buttons were cut off on a landscape phone). Portrait: unchanged.
+  const cd = useCompactDialog();
 
   return (
     <Modal supportedOrientations={MODAL_ORIENTATIONS}
@@ -49,16 +52,16 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
       {/* Card */}
       {/* ModalScroll: the card (~444pt) was taller than a landscape screen —
           icon off the top, Cancel off the bottom (audit 2026-10-22) */}
-      <View style={dialogStyles.wrapper}>
-        <ModalScroll contentStyle={{ alignItems: 'center' }}>
-          <View style={dialogStyles.card}>
+      <View style={[dialogStyles.wrapper, cd.s.wrapper]}>
+        <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
+          <View style={[dialogStyles.card, cd.s.card]}>
             {/* Icon */}
-            <View style={[dialogStyles.iconWrapper, { backgroundColor: dialogTone.warning.ring }]}>
+            <View style={[dialogStyles.iconWrapper, { backgroundColor: dialogTone.warning.ring }, cd.s.hide]}>
               <Ionicons name="alert-circle-outline" size={56} color={dialogTone.warning.icon} />
             </View>
 
             {/* Title */}
-            <Text style={dialogStyles.title}>{t('undoModal:title')}</Text>
+            <Text style={[dialogStyles.title, cd.s.title]}>{t('undoModal:title')}</Text>
 
             {/* Distance name */}
             {distanceName ? (
@@ -70,12 +73,12 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
             ) : null}
 
             {/* Message */}
-            <Text style={dialogStyles.message}>{t('undoModal:message')}</Text>
+            <Text style={[dialogStyles.message, cd.s.message]}>{t('undoModal:message')}</Text>
 
             {/* Buttons */}
-            <View style={dialogStyles.buttons}>
+            <View style={[dialogStyles.buttons, cd.s.buttonsRow]}>
               <TouchableOpacity
-                style={[commonStyles.primaryButton, dialogStyles.fullWidthButton]}
+                style={[commonStyles.primaryButton, dialogStyles.fullWidthButton, cd.s.button]}
                 onPress={onConfirm}
                 activeOpacity={0.8}
               >
@@ -85,7 +88,7 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={commonStyles.secondaryButton}
+                style={[commonStyles.secondaryButton, cd.s.button]}
                 onPress={onClose}
                 activeOpacity={0.7}
               >

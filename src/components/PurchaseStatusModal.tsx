@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, palette, radii, shadows, space, type, withAlpha } from '../styles/common.styles';
-import { dialogTone, RING_TINT } from './ui';
+import { dialogTone, RING_TINT, useCompactDialog } from './ui';
 import { useTranslation } from 'react-i18next';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 import ModalScroll from './ui/ModalScroll';
@@ -31,6 +31,9 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
     onClose,
 }) => {
   const { t } = useTranslation();
+    // ✅ Compact in landscape (device test 2026-10-23): no icon in any of the
+    // three states, tighter card. Portrait: unchanged.
+    const cd = useCompactDialog();
     const scale = useRef(new Animated.Value(0.85)).current;
     const opacity = useRef(new Animated.Value(0)).current;
 
@@ -58,10 +61,15 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
         if (status === 'processing') {
             return (
                 <>
-                    <View style={styles.iconHalo}>
+                    <View style={[styles.iconHalo, cd.s.hide]}>
                         <ActivityIndicator size="large" color={palette.navy} />
                     </View>
-                    <Text style={styles.title}>{t('membership:purchase.processingTitle')}</Text>
+                    {/* the spinner IS the processing state: kept small, inline, when
+                        the halo is hidden (device test 2026-10-23) */}
+                    {cd.compact && (
+                        <ActivityIndicator size="small" color={palette.navy} style={styles.compactSpinner} />
+                    )}
+                    <Text style={[styles.title, cd.s.title]}>{t('membership:purchase.processingTitle')}</Text>
                     <Text style={styles.description}>
                         {t('membership:purchase.processingBody')}
                     </Text>
@@ -72,10 +80,10 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
         if (status === 'success') {
             return (
                 <>
-                    <View style={styles.iconHalo}>
+                    <View style={[styles.iconHalo, cd.s.hide]}>
                         <Ionicons name="checkmark-circle" size={56} color={dialogTone.success.icon} />
                     </View>
-                    <Text style={styles.title}>{t('membership:purchase.successTitle')}</Text>
+                    <Text style={[styles.title, cd.s.title]}>{t('membership:purchase.successTitle')}</Text>
                     <Text style={styles.description}>
                         {t('membership:purchase.successBody')}
                     </Text>
@@ -85,15 +93,15 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
 
         return (
             <>
-                <View style={styles.iconHalo}>
+                <View style={[styles.iconHalo, cd.s.hide]}>
                     <Ionicons name="close-circle" size={56} color={dialogTone.danger.icon} />
                 </View>
-                <Text style={styles.title}>{t('membership:purchase.errorTitle')}</Text>
+                <Text style={[styles.title, cd.s.title]}>{t('membership:purchase.errorTitle')}</Text>
                 <Text style={styles.description}>
                     {errorMessage || t('membership:purchase.errorBody')}
                 </Text>
                 <TouchableOpacity
-                    style={[commonStyles.primaryButton, styles.closeButton]}
+                    style={[commonStyles.primaryButton, styles.closeButton, cd.compact && { marginTop: space.lg }]}
                     onPress={onClose}
                     activeOpacity={0.85}
                 >
@@ -111,20 +119,25 @@ const PurchaseStatusModal: React.FC<PurchaseStatusModalProps> = ({
             onRequestClose={status === 'error' ? onClose : undefined}
             statusBarTranslucent
         >
-            <View style={styles.backdrop}>
+            <View style={[styles.backdrop, cd.s.wrapper]}>
                 {/* ModalScroll: with larger text in landscape the error card (icon +
                     copy + Close) was taller than the screen (audit 2026-10-22) */}
-                <ModalScroll contentStyle={{ alignItems: 'center' }}>
+                <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
                     <Animated.View
                         style={[
                             styles.card,
+                            cd.s.card,
                             { opacity, transform: [{ scale }] },
                         ]}
                     >
                         <TouchableOpacity style={styles.iconclose} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                             <Ionicons name="close" size={20} color={palette.textMuted} />
                         </TouchableOpacity>
-                        <View style={styles.body}>
+                        {/* The padding lives on the body, not the card. Compact: with the
+                            icon gone the title is level with the ✕ (right 16, 32 wide), so
+                            the body clears it on both sides to keep the copy centred
+                            (device test 2026-10-23) */}
+                        <View style={[styles.body, cd.compact && styles.bodyCompact]}>
                             {renderContent()}
                         </View>
                     </Animated.View>
@@ -156,6 +169,14 @@ const styles = StyleSheet.create({
         paddingBottom: 28,
         paddingHorizontal: 24,
         alignItems: 'center',
+    },
+    bodyCompact: {
+        paddingTop: space.lg,
+        paddingBottom: space.lg,
+        paddingHorizontal: 52,
+    },
+    compactSpinner: {
+        marginBottom: space.sm,
     },
     // One 90/45 RING_TINT halo for all three states, like every other modal.
     // It used to be a coloured halo wrapping a second coloured core — a lime

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 import ModalScroll from './ui/ModalScroll';
+import { useCompactDialog } from './ui';
 
 interface UpdateRequiredModalProps {
   visible: boolean;
@@ -29,6 +30,9 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
   onLater,
 }) => {
   const { t } = useTranslation(['common']);
+  // ✅ Compact in landscape (device test 2026-10-23): no icon, buttons side by
+  // side, so Update Now is on screen. Called before the early return (hooks rule).
+  const cd = useCompactDialog();
 
   // Early return if not visible
   if (!visible) {
@@ -43,24 +47,24 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
       statusBarTranslucent
       hardwareAccelerated={true}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, cd.s.wrapper]}>
         {/* ModalScroll: icon + API message + versions + two buttons is taller
             than a landscape screen — Update Now was off the bottom (audit 2026-10-22) */}
-        <ModalScroll contentStyle={{ alignItems: 'center' }}>
-          <View style={styles.container}>
+        <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
+          <View style={[styles.container, cd.s.card]}>
             {/* Icon */}
-            <View style={styles.iconContainer}>
+            <View style={[styles.iconContainer, cd.s.hide]}>
               <Ionicons name="refresh" size={56} color={palette.navy} />
             </View>
 
             {/* Title from API */}
             {title ? (
-              <Text style={styles.title}>{title}</Text>
+              <Text style={[styles.title, cd.s.title]}>{title}</Text>
             ) : null}
 
             {/* Message from API */}
             {message ? (
-              <Text style={styles.message}>{message}</Text>
+              <Text style={[styles.message, cd.s.message]}>{message}</Text>
             ) : null}
 
             {/* Version Info */}
@@ -80,10 +84,10 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
             </View>
 
             {/* Buttons */}
-            <View style={styles.buttonContainer}>
+            <View style={[styles.buttonContainer, cd.s.buttonsRow]}>
               {/* Update Button */}
               <TouchableOpacity
-                style={[styles.button, styles.updateButton]}
+                style={[styles.button, styles.updateButton, cd.s.button]}
                 onPress={onUpdate}
                 activeOpacity={0.8}
               >
@@ -95,7 +99,7 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
               {/* Later Button */}
               {!isForced && onLater && (
                 <TouchableOpacity
-                  style={[styles.button, styles.laterButton]}
+                  style={[styles.button, styles.laterButton, cd.s.button]}
                   onPress={onLater}
                   activeOpacity={0.8}
                 >

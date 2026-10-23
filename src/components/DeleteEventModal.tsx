@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, palette, fonts, space, shadows, withAlpha } from '../styles/common.styles';
-import { dialogTone, RING_TINT } from './ui';
+import { dialogTone, RING_TINT, useCompactDialog } from './ui';
 import { AthleteEvent } from '../services/athleteProfileService';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 import ModalScroll from './ui/ModalScroll';
@@ -26,6 +26,9 @@ interface Props {
 
 export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, onCancel, onConfirm }) => {
     const { t } = useTranslation(['ownProfile']);
+    // ✅ Landscape: no icon, buttons side by side (device test 2026-10-23).
+    // Portrait: unchanged. Called before the early return below (hooks rule).
+    const cd = useCompactDialog();
     const scaleAnim = useRef(new Animated.Value(0.85)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
     const [internalVisible, setInternalVisible] = useState(visible);
@@ -66,30 +69,31 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
 
     return (
         <Modal supportedOrientations={MODAL_ORIENTATIONS} statusBarTranslucent transparent visible={internalVisible} animationType="none" onRequestClose={onCancel}>
-            <View style={styles.overlay}>
+            <View style={[styles.overlay, cd.s.wrapper]}>
                 <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onCancel} />
 
                 {/* ModalScroll: in landscape the card was taller than the screen —
                     icon off the top, Cancel off the bottom (audit 2026-10-22) */}
-                <ModalScroll contentStyle={{ alignItems: 'center' }}>
+                <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
                     <Animated.View
                         style={[
                             styles.sheet,
+                            cd.s.card,
                             { opacity: opacityAnim, transform: [{ scale: scaleAnim }] },
                         ]}
                     >
-                        <View style={styles.iconWrap}>
+                        <View style={[styles.iconWrap, cd.s.hide]}>
                             <Ionicons name="trash-outline" size={56} color={dialogTone.danger.icon} />
                         </View>
 
-                        <Text style={styles.title}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
-                        <Text style={styles.message}>
+                        <Text style={[styles.title, cd.s.title]}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
+                        <Text style={[styles.message, cd.s.message]}>
                             {t('ownProfile:deleteEvent.confirmMessage', { name: event?.name ?? '' })}
                         </Text>
 
-                        <View style={styles.actions}>
+                        <View style={[styles.actions, cd.s.buttonsRow]}>
                             <TouchableOpacity
-                                style={[commonStyles.primaryButton, isDeleting && { opacity: 0.7 }]}
+                                style={[commonStyles.primaryButton, cd.s.button, isDeleting && { opacity: 0.7 }]}
                                 onPress={onConfirm}
                                 activeOpacity={0.85}
                                 disabled={isDeleting}
@@ -99,7 +103,7 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
                                     : <Text style={commonStyles.primaryButtonText}>{t('ownProfile:deleteEvent.confirm')}</Text>}
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[commonStyles.secondaryButton]}
+                                style={[commonStyles.secondaryButton, cd.s.button]}
                                 onPress={onCancel}
                                 activeOpacity={0.85}
                                 disabled={isDeleting}

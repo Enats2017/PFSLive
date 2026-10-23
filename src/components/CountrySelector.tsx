@@ -21,6 +21,7 @@ import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { palette, fonts, shadows, radii, space, withAlpha } from '../styles/common.styles';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 import { useModalSideInsets } from '../hooks/useLandscapeSidePadding';
+import { useCompactDialog } from './ui';
 
 // ─── Types ───────────────────────────────────────────────────────
 export interface Country {
@@ -121,6 +122,15 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   const modalSides = useModalSideInsets();
   const isLandscape = windowWidth > windowHeight;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // ✅ Compact sheet in landscape (device test 2026-10-23): with the keyboard
+  // up on a 393pt-tall iPhone the sheet is ~176pt (393 − ~209 keyboard − 8),
+  // and header 63 + search 66 + result count 36 + bottom padding 20 = 185 left
+  // NO room for the list. Compact: header / search gaps 8 (not 16), and while
+  // the keyboard is up no result count and no bottom padding (the keyboard
+  // covers the home indicator) — ~70pt, one full row, stays for the list.
+  // Empty / error states lose their 40pt icon. Portrait: unchanged.
+  const cd = useCompactDialog();
+  const kbCompact = cd.compact && keyboardHeight > 0;
 
   useEffect(() => {
     if (!showModal) return;
@@ -309,11 +319,12 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
             style={[
               styles.modalContainer,
               { height: Math.min(windowHeight * 0.85, windowHeight - keyboardHeight - insets.top - 8) },
+              kbCompact && { paddingBottom: 0 },
             ]}
           >
 
             {/* Header */}
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, cd.compact && { paddingVertical: 8 }]}>
               <Text style={styles.modalTitle}>{i18n.title}</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
                 <Ionicons name="close-circle-outline" size={26} color={palette.navy} />
@@ -321,7 +332,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
             </View>
 
             {/* Search */}
-            <View style={styles.searchContainer}>
+            <View style={[styles.searchContainer, cd.compact && { marginTop: 8 }]}>
               <Ionicons name="search-outline" size={18} color={palette.placeholder} style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
@@ -340,23 +351,23 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
             </View>
 
             {/* Result count */}
-            {!loading && !fetchError && (
+            {!loading && !fetchError && !kbCompact && (
               <Text style={styles.resultCount}>{resultCountText}</Text>
             )}
 
             {loading ? (
               <ActivityIndicator size="large" color={palette.navy} style={{ marginTop: 40 }} />
             ) : fetchError ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="wifi-outline" size={40} color={palette.inputBorder} />
+              <View style={[styles.emptyContainer, cd.compact && { paddingBottom: 0 }]}>
+                <Ionicons name="wifi-outline" size={40} color={palette.inputBorder} style={cd.s.hide} />
                 <Text style={styles.emptyText}>{fetchError}</Text>
                 <TouchableOpacity style={styles.retryButton} onPress={fetchCountries}>
                   <Text style={styles.retryText}>{i18n.retry}</Text>
                 </TouchableOpacity>
               </View>
             ) : filtered.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={40} color={palette.inputBorder} />
+              <View style={[styles.emptyContainer, cd.compact && { paddingBottom: 0 }]}>
+                <Ionicons name="search-outline" size={40} color={palette.inputBorder} style={cd.s.hide} />
                 <Text style={styles.emptyText}>{emptyResultText}</Text>
               </View>
             ) : (

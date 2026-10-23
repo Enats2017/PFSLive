@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
-import { RING_TINT } from './ui';
+import { RING_TINT, useCompactDialog } from './ui';
 import ModalScroll from './ui/ModalScroll';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
@@ -30,6 +30,9 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
   onRetry,
 }) => {
   const { t } = useTranslation();
+  // ✅ Landscape: no icon, buttons side by side (device test 2026-10-23).
+  // Portrait: unchanged.
+  const cd = useCompactDialog();
 
   return (
     <Modal supportedOrientations={MODAL_ORIENTATIONS}
@@ -50,23 +53,23 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
       {/* box-none: this full-screen wrapper sits over the backdrop touchable and
           swallowed every outside tap, so tap-to-close never fired. ModalScroll:
           in landscape the card was taller than the screen (audit 2026-10-22). */}
-      <View style={styles.wrapper} pointerEvents="box-none">
-        <ModalScroll contentStyle={{ alignItems: 'center' }}>
-          <View style={styles.card}>
-            <View style={styles.iconWrapper}>
+      <View style={[styles.wrapper, cd.s.wrapper]} pointerEvents="box-none">
+        <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
+          <View style={[styles.card, cd.s.card]}>
+            <View style={[styles.iconWrapper, cd.s.hide]}>
               <Ionicons name="alert-circle" size={56} color={palette.danger} />
             </View>
 
-            <Text style={styles.title}>
+            <Text style={[styles.title, cd.s.title]}>
               {titleKey ? t(titleKey) : t('common:errors.generic')}
             </Text>
 
-            <Text style={styles.message}>{t(messageKey)}</Text>
+            <Text style={[styles.message, cd.s.message]}>{t(messageKey)}</Text>
 
-            <View style={styles.buttonContainer}>
+            <View style={[styles.buttonContainer, cd.s.buttonsRow]}>
               {onRetry && (
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, styles.retryButton]}
+                  style={[commonStyles.primaryButton, styles.retryButton, cd.s.button]}
                   onPress={() => {
                     onClose();
                     onRetry();
@@ -80,7 +83,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
               )}
 
               <TouchableOpacity
-                style={commonStyles.secondaryButton}
+                style={[commonStyles.secondaryButton, cd.s.button]}
                 onPress={onClose}
                 activeOpacity={0.7}
               >

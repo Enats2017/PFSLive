@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
-import { RING_TINT } from './ui';
+import { RING_TINT, useCompactDialog } from './ui';
 import { useTranslation } from 'react-i18next';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 import ModalScroll from './ui/ModalScroll';
@@ -49,6 +49,9 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
   const { t } = useTranslation();
     const scale = useRef(new Animated.Value(0.85)).current;
     const opacity = useRef(new Animated.Value(0)).current;
+    // ✅ Landscape: no icon, buttons side by side (device test 2026-10-23).
+    // Portrait: unchanged. Called before the early return below (hooks rule).
+    const cd = useCompactDialog();
 
     useEffect(() => {
         if (visible) {
@@ -77,14 +80,16 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
     return (
         <Modal supportedOrientations={MODAL_ORIENTATIONS} statusBarTranslucent visible={visible} transparent animationType="fade" onRequestClose={onClose}>
             <TouchableWithoutFeedback onPress={onClose}>
-                <View style={styles.backdrop}>
+                <View style={[styles.backdrop, cd.s.wrapper]}>
                     {/* ModalScroll: in landscape the card was taller than the screen —
                         icon off the top, buttons off the bottom (audit 2026-10-22) */}
-                    <ModalScroll contentStyle={{ alignItems: 'center' }} reserve={48}>
+                    <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.compact ? 16 : 48}>
                         <TouchableWithoutFeedback onPress={() => {}}>
                             <Animated.View
                                 style={[
                                     styles.card,
+                                    cd.s.card,
+                                    cd.compact && styles.cardCompact,
                                     { opacity, transform: [{ scale }] },
                                 ]}
                             >
@@ -92,18 +97,18 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
                                     <Ionicons name="close" size={20} color={palette.textMuted} />
                                 </TouchableOpacity>
 
-                                <View style={styles.iconWrapper}>
+                                <View style={[styles.iconWrapper, cd.s.hide]}>
                                     <Ionicons name={icon.name} size={56} color={icon.color} />
                                 </View>
 
-                                <Text style={styles.title}>{title}</Text>
-                                <Text style={styles.description}>{description}</Text>
+                                <Text style={[styles.title, cd.s.title, cd.compact && styles.clearClose]}>{title}</Text>
+                                <Text style={[styles.description, cd.s.message]}>{description}</Text>
 
                                 {/* Stacked, primary on top — the shape ErrorModal,
                                     UndoConfirmModal and DeleteEventModal all use. */}
-                                <View style={styles.buttons}>
+                                <View style={[styles.buttons, cd.s.buttonsRow]}>
                                     <TouchableOpacity
-                                        style={[commonStyles.primaryButton, styles.fullWidth]}
+                                        style={[commonStyles.primaryButton, styles.fullWidth, cd.s.button]}
                                         onPress={showConfirm ? onConfirm : onClose}
                                         activeOpacity={0.85}
                                     >
@@ -112,7 +117,7 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
 
                                     {showConfirm && (
                                         <TouchableOpacity
-                                            style={[commonStyles.secondaryButton, styles.fullWidth]}
+                                            style={[commonStyles.secondaryButton, styles.fullWidth, cd.s.button]}
                                             onPress={onClose}
                                             activeOpacity={0.85}
                                         >
@@ -152,6 +157,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         alignItems: 'center',
   },
+    // ✅ Compact (device test 2026-10-23): paddingTop/Bottom beat the shared
+    // compact paddingVertical (an edge wins over its shorthand), so they are
+    // tightened here too.
+    cardCompact: {
+        paddingTop: 16,
+        paddingBottom: 16,
+    },
+    // ✅ Compact: the icon is hidden, so the title is level with the X — keep a
+    // long title out from under it.
+    clearClose: {
+        paddingHorizontal: 32,
+    },
     closeButton: {
         position: 'absolute',
         top: 16,

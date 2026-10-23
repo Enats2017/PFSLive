@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
-import { dialogTone } from './ui';
+import { dialogTone, useCompactDialog } from './ui';
 import { useTranslation } from 'react-i18next';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 import ModalScroll from './ui/ModalScroll';
@@ -22,8 +22,6 @@ interface SuccessCelebrationModalProps {
   title:string,
 }
 
-const { width } = Dimensions.get('window');
-
 const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
   visible,
   message,
@@ -31,6 +29,12 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
+  // ✅ The live window width, not Dimensions at import time (device test
+  // 2026-10-23): in landscape the confetti only fell over the left part of the
+  // screen (the portrait width).
+  const { width } = useWindowDimensions();
+  // ✅ Landscape: no icon, tighter card (device test 2026-10-23). Portrait: unchanged.
+  const cd = useCompactDialog();
   const confettiAnims = useRef(
     Array.from({ length: 20 }, () => ({
       translateY: new Animated.Value(0),
@@ -120,9 +124,9 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
       {/* Content */}
       {/* ModalScroll: at 320pt tall (landscape) the card was taller than the
           screen — the X (top 16) and Got it were off-screen (audit 2026-10-22) */}
-      <View style={styles.wrapper}>
-        <ModalScroll contentStyle={{ alignItems: 'center' }}>
-          <View style={styles.card}>
+      <View style={[styles.wrapper, cd.s.wrapper]}>
+        <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
+          <View style={[styles.card, cd.s.card]}>
             {/* ✅ CLOSE BUTTON (TOP RIGHT X) */}
             <TouchableOpacity
               style={styles.closeButton}
@@ -133,15 +137,17 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
             </TouchableOpacity>
 
             {/* Success Icon */}
-            <View style={[styles.iconWrapper, { backgroundColor: dialogTone.success.ring }]}>
+            <View style={[styles.iconWrapper, { backgroundColor: dialogTone.success.ring }, cd.s.hide]}>
               <Ionicons name="checkmark-circle" size={56} color={dialogTone.success.icon} />
             </View>
 
             {/* Title */}
-            <Text style={styles.title}>{title}</Text>
+            {/* ✅ Compact: with the icon hidden the title is the top line, level with
+                the X — clearClose keeps a long title out from under it (2026-10-23) */}
+            <Text style={[styles.title, cd.s.title, cd.compact && styles.clearClose]}>{title}</Text>
 
             {/* Message */}
-            <Text style={styles.message}>{message}</Text>
+            <Text style={[styles.message, cd.s.message]}>{message}</Text>
 
             {/* ✅ GOT IT BUTTON */}
             {/* Primary, not secondary: across this app secondary means "the OTHER
@@ -226,6 +232,9 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
+  },
+  clearClose: {
+    paddingHorizontal: 32,
   },
   confetti: {
     position: 'absolute',

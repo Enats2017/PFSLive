@@ -31,6 +31,7 @@ import { useScreenError } from '../../hooks/useApiError';
 import { ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
 import ModalScroll from '../../components/ui/ModalScroll';
+import { useCompactDialog } from '../../components/ui';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
 interface ParticipantResultRouteParams {
@@ -50,6 +51,9 @@ const ParticipantResult = () => {
   const route = useRoute<any>();
   const sidePadding = useLandscapeSidePadding();
   const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
+  // ✅ Mail-sent popup compact in landscape (device test 2026-10-23): no icon,
+  // tighter card. Up here, before the early returns (hooks rule).
+  const cd = useCompactDialog();
 
   const params = route.params as ParticipantResultRouteParams | undefined;
   const product_app_id = params?.product_app_id;
@@ -525,16 +529,16 @@ const ParticipantResult = () => {
       >
         {/* ModalScroll: the card (~494-520pt) was taller than a landscape
             screen — the button was off the bottom (audit 2026-10-22) */}
-        <View style={mailStyles.backdrop}>
-          <ModalScroll contentStyle={{ alignItems: 'center' }} reserve={48}>
-            <View style={mailStyles.card}>
-              <View style={mailStyles.iconWrapper}>
+        <View style={[mailStyles.backdrop, cd.s.wrapper]}>
+          <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.compact ? 16 : 48}>
+            <View style={[mailStyles.card, cd.s.card]}>
+              <View style={[mailStyles.iconWrapper, cd.s.hide]}>
                 <Ionicons name="mail" size={28} color={palette.navy} />
               </View>
-              <Text style={mailStyles.title}>{t('participantResult:mailSent.title')}</Text>
+              <Text style={[mailStyles.title, cd.s.title]}>{t('participantResult:mailSent.title')}</Text>
               <Text style={mailStyles.message}>{t('participantResult:mailSent.message')}</Text>
               <TouchableOpacity
-                style={[commonStyles.primaryButton, { marginTop: 24 }]}
+                style={[commonStyles.primaryButton, { marginTop: cd.compact ? space.lg : 24 }]}
                 onPress={() => {
                   setMailSentVisible(false);
                   navigation.goBack();

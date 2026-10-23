@@ -42,7 +42,7 @@ const generateStrongPassword = (): string => {
 export const UserTrackingSettings: React.FC = () => {
     const insets = useSafeAreaInsets();
     const { t } = useTranslation(['setting']);
-    const { height: windowHeight } = useWindowDimensions();
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     // landscape: the parent screen's SafeAreaView only pads the bottom, so the
     // cards and the sheet sat under the notch (audit 2026-10-22)
     const side = useLandscapeSidePadding();
@@ -54,6 +54,16 @@ export const UserTrackingSettings: React.FC = () => {
     // ✕ and input went off the top with nothing to scroll. The sheet is now at
     // most (window − keyboard − top inset) and its body scrolls (audit 2026-10-22).
     const [keyboardHeight, setKeyboardHeight] = useState(0);
+    // ✅ Landscape + keyboard (device test 2026-10-23): the sheet is ~176pt on a
+    // 393pt iPhone (393 − ~209 keyboard − 8), its body ~112pt — title, subtitle,
+    // divider and field label filled it and the focused password field sat
+    // below, out of view while typing. Now the body scrolls the field into view
+    // when the keyboard opens, and in landscape the bottom padding while typing
+    // is 8 (not 24). Portrait: content fits, so nothing moves.
+    const isLandscape = windowWidth > windowHeight;
+    const sheetBodyRef = useRef<ScrollView>(null);
+    const inputY = useRef(0);
+    const sheetBodyBox = useRef({ box: 0, content: 0 });
 
     const [visibility, setVisibility] = useState<Visibility>('public');
     const [password, setPassword] = useState('');
@@ -79,6 +89,12 @@ export const UserTrackingSettings: React.FC = () => {
 
         const onShow = (e: KeyboardEvent) => {
             setKeyboardHeight(e.endCoordinates.height);
+            // after the sheet has re-laid out at its smaller maxHeight; clamped
+            // to the overflow, so a body that fits (portrait) never moves
+            setTimeout(() => {
+                const y = Math.min(inputY.current - 8, sheetBodyBox.current.content - sheetBodyBox.current.box);
+                if (y > 0) sheetBodyRef.current?.scrollTo({ y, animated: true });
+            }, 300);
             Animated.timing(keyboardOffset, {
                 toValue: e.endCoordinates.height,
                 duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
@@ -326,7 +342,7 @@ export const UserTrackingSettings: React.FC = () => {
                     <Animated.View style={[
                         styles.bottomSheet,
                         {
-                            paddingBottom: (keyboardHeight > 0 ? 0 : insets.bottom) + 24,   // home-indicator inset is behind the keyboard while typing
+                            paddingBottom: keyboardHeight > 0 && isLandscape ? 8 : (keyboardHeight > 0 ? 0 : insets.bottom) + 24,   // home-indicator inset is behind the keyboard while typing
                             maxHeight: windowHeight - keyboardHeight - insets.top - 8,
                             paddingLeft: space.xxl + sheetSide.paddingLeft,
                             paddingRight: space.xxl + sheetSide.paddingRight,
@@ -339,6 +355,9 @@ export const UserTrackingSettings: React.FC = () => {
                         </TouchableOpacity>
 
                         <ScrollView
+                            ref={sheetBodyRef}
+                            onLayout={(e) => { sheetBodyBox.current.box = e.nativeEvent.layout.height; }}
+                            onContentSizeChange={(_w, h) => { sheetBodyBox.current.content = h; }}
                             style={styles.sheetBody}
                             keyboardShouldPersistTaps="handled"
                             showsVerticalScrollIndicator={false}
@@ -349,6 +368,7 @@ export const UserTrackingSettings: React.FC = () => {
                             <View style={styles.divider} />
                             <Text style={styles.fieldLabel}>{t('setting:liveTrackingSettings.passwordLabel')}</Text>
 
+                            <View onLayout={(e) => { inputY.current = e.nativeEvent.layout.y; }}>
                             <FloatingLabelInput
                                 label={t('setting:liveTrackingSettings.passwordPlaceholder')}
                                 value={password}
@@ -357,6 +377,7 @@ export const UserTrackingSettings: React.FC = () => {
                                 isPassword
                                 required
                             />
+                            </View>
 
                             {!!passwordError && <Text style={commonStyles.errorText}>⚠️ {passwordError}</Text>}
 

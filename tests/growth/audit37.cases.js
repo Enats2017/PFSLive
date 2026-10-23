@@ -99,8 +99,8 @@ module.exports = ({ test, SRC }) => {
     assert.ok(textWidth('Créer un événement personnel', 'fonts.display', 15) * 1.2 > 280 - 28 - 32);
   });
 
-  test('own event cards and membership plans: below 400pt or with larger text the buttons / sessions badge get their own line', () => {
-    assert.ok(/const actionsBelow = isOwnProfile && \(windowWidth < 400 \|\| fontScale > 1\);/.test(read('screens/ProfileScreen/EventCardLive.tsx')));
+  test('own event cards: the buttons always get their own bottom-right line (every width, device test 2026-10-23); membership plans: below 400pt or with larger text the sessions badge does', () => {
+    assert.ok(/const actionsBelow = isOwnProfile;/.test(read('screens/ProfileScreen/EventCardLive.tsx')));
     const m = read('screens/ProfileScreen/MembershipPlansScreen.tsx');
     assert.ok(/const badgeOwnLine = windowWidth < 400 \|\| fontScale > 1;/.test(m));
     assert.ok(/\{!badgeOwnLine && sessionsBadge\}/.test(m) && /\{badgeOwnLine && <View style=\{styles\.sessionsBadgeLine\}>\{sessionsBadge\}<\/View>\}/.test(m));

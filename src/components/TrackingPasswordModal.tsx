@@ -38,7 +38,7 @@ export const TrackingPasswordModal: React.FC<Props> = ({
     const { t } = useTranslation(['setting']);
     const insets = useSafeAreaInsets();
     const [password, setPassword] = useState('');
-    const { height: windowHeight } = useWindowDimensions();
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     // a Modal is outside any SafeAreaView: pad by the side insets in landscape on every
     // platform (the screen rule returned 0 on Android 3-button — sheet under the nav bar)
     const side = useModalSideInsets();
@@ -48,6 +48,16 @@ export const TrackingPasswordModal: React.FC<Props> = ({
     // scroll. Now the sheet is at most (window − keyboard − top inset) and its
     // body scrolls (audit 2026-10-22).
     const [keyboardHeight, setKeyboardHeight] = useState(0);
+    // ✅ Landscape + keyboard (device test 2026-10-23): the sheet is ~176pt on a
+    // 393pt iPhone (393 − ~209 keyboard − 8), its body ~112pt — title, subtitle
+    // and divider (~84pt) filled it and the focused password field sat below,
+    // out of view while typing. Now the body scrolls the field into view when
+    // the keyboard opens, and in landscape the bottom padding while typing is 8
+    // (not 24). Portrait: content fits, so nothing moves.
+    const isLandscape = windowWidth > windowHeight;
+    const bodyRef = useRef<ScrollView>(null);
+    const inputY = useRef(0);
+    const bodyBox = useRef({ box: 0, content: 0 });
 
     // slideAnim     — sheet entrance/exit (400=off-screen, 0=resting)
     // keyboardOffset — additional upward lift when keyboard is visible
@@ -87,6 +97,12 @@ export const TrackingPasswordModal: React.FC<Props> = ({
 
         const onShow = (e: KeyboardEvent) => {
             setKeyboardHeight(e.endCoordinates.height);
+            // after the sheet has re-laid out at its smaller maxHeight; clamped
+            // to the overflow, so a body that fits (portrait) never moves
+            setTimeout(() => {
+                const y = Math.min(inputY.current - 8, bodyBox.current.content - bodyBox.current.box);
+                if (y > 0) bodyRef.current?.scrollTo({ y, animated: true });
+            }, 300);
             Animated.timing(keyboardOffset, {
                 toValue: e.endCoordinates.height,
                 duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
@@ -146,7 +162,7 @@ export const TrackingPasswordModal: React.FC<Props> = ({
                 <Animated.View style={[
                     styles.sheet,
                     {
-                        paddingBottom: (keyboardHeight > 0 ? 0 : insets.bottom) + 24,   // home-indicator inset is behind the keyboard while typing
+                        paddingBottom: keyboardHeight > 0 && isLandscape ? 8 : (keyboardHeight > 0 ? 0 : insets.bottom) + 24,   // home-indicator inset is behind the keyboard while typing
                         maxHeight: windowHeight - keyboardHeight - insets.top - 8,
                         // landscape: keep the input clear of the notch
                         paddingLeft: 24 + side.paddingLeft,
@@ -169,6 +185,9 @@ export const TrackingPasswordModal: React.FC<Props> = ({
                     </TouchableOpacity>
 
                     <ScrollView
+                        ref={bodyRef}
+                        onLayout={(e) => { bodyBox.current.box = e.nativeEvent.layout.height; }}
+                        onContentSizeChange={(_w, h) => { bodyBox.current.content = h; }}
                         style={styles.body}
                         keyboardShouldPersistTaps="handled"
                         showsVerticalScrollIndicator={false}
@@ -183,6 +202,7 @@ export const TrackingPasswordModal: React.FC<Props> = ({
 
                         <View style={styles.divider} />
 
+                        <View onLayout={(e) => { inputY.current = e.nativeEvent.layout.y; }}>
                         <FloatingLabelInput
                             label={t('setting:passwordModal.placeholder')}
                             value={password}
@@ -191,6 +211,7 @@ export const TrackingPasswordModal: React.FC<Props> = ({
                             isPassword
                             required
                         />
+                        </View>
 
                         {!!passwordError && (
                             <Text style={styles.errorText}>{passwordError}</Text>

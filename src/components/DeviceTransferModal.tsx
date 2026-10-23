@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Dialog, dialogStyles } from './ui';
+import { Dialog, dialogStyles, useCompactDialog } from './ui';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface DeviceTransferModalProps {
@@ -31,6 +31,9 @@ const DeviceTransferModal: React.FC<DeviceTransferModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation(['login']);
+  // ✅ Dialog is compact inside; the wrapper's padding shrinks with it in
+  // landscape (Dialog's ModalScroll reserves 16 there) (device test 2026-10-23)
+  const cd = useCompactDialog();
 
   return (
     <Modal supportedOrientations={MODAL_ORIENTATIONS}
@@ -49,7 +52,7 @@ const DeviceTransferModal: React.FC<DeviceTransferModalProps> = ({
         />
       </View>
 
-      <View style={dialogStyles.wrapper}>
+      <View style={[dialogStyles.wrapper, cd.s.wrapper]}>
         <Dialog
           tone="warning"
           icon="phone-portrait-outline"

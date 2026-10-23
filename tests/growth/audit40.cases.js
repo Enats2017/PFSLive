@@ -116,7 +116,19 @@ module.exports = ({ M, load, test, SRC }) => {
     const ev = read('styles/event.ts');
     const subL = soft(ev, 'subHeaderLandscape');
     const pager = {};
-    for (const [k, f] of Object.entries(PAGERS)) pager[k] = /paddingBottom: isLandscape \? 0 : spacing\.xxxxl/.test(read(f)) ? 0 : 90;
+    // the pager's own contentContainerStyle (the FlatList that pages the tabs)
+    const pagerStyle = (f) => {
+      const s = read(f);
+      const at = s.indexOf("initialScrollIndex={TABS.indexOf('Live')}");
+      return s.slice(at, s.indexOf('getItemLayout', at)).replace(/\/\/[^\n]*/g, '');
+    };
+    const pagerPortrait = {};
+    for (const [k, f] of Object.entries(PAGERS)) {
+      const ps = pagerStyle(f);
+      // landscape pad: 0 when it is conditional on isLandscape or gone altogether (developer fix 2026-10-23: gone in portrait too)
+      pager[k] = /paddingBottom: isLandscape \? 0 :/.test(ps) || !/paddingBottom/.test(ps) ? 0 : 90;
+      pagerPortrait[k] = /paddingBottom/.test(ps) ? 90 : 0;
+    }
     const listPad = {};
     const searchScrolls = {};
     for (const f of TABS) {
@@ -130,7 +142,7 @@ module.exports = ({ M, load, test, SRC }) => {
       headerBottom: hb ? Number(hb[1]) : 16,
       subPad: num(subL, 'paddingVertical') ?? 16,
       subRow: /flexDirection: 'row'/.test(subL),
-      pager, listPad, searchScrolls,
+      pager, pagerPortrait, listPad, searchScrolls,
     };
   };
   const BAND = 8 + 8 + Math.ceil(13 * 1.35);                 // lime band: 8pt padding, one 13pt line
@@ -199,11 +211,12 @@ module.exports = ({ M, load, test, SRC }) => {
     assert.deepStrictEqual(bad, []);
   });
 
-  test('portrait unchanged: header 16pt, list and pager 90pt nav-bar pads, the Past search band fixed above the list', () => {
+  test('portrait: header 16pt, the list keeps its 90pt end pad, the Past search band fixed above the list; the pager has no pad in either orientation and each page fills it (developer fix 2026-10-23)', () => {
     const hd = read('components/common/AppHeader.tsx');
     assert.ok(/paddingTop: insets\.top \+ \(width > height \? 8 : 16\)/.test(hd) && /width > height && \{ paddingBottom: 8 \}/.test(hd), 'header: portrait 16 / landscape 8');
     for (const f of TABS) assert.ok(/paddingBottom: isLandscape \? spacing\.lg : spacing\.xxxxl/.test(read(f)), f);
-    for (const f of Object.values(PAGERS)) assert.ok(/paddingBottom: isLandscape \? 0 : spacing\.xxxxl/.test(read(f)), f);
+    assert.deepStrictEqual(layout().pagerPortrait, { follower: 0, participant: 0 }, 'no blank band under the pages in portrait either');
+    for (const f of Object.values(PAGERS)) assert.ok(/renderItem=\{\(\{ item \}\) => \(\s*<View style=\{\{ width:? ?(width)?, +flex: 1 \}\}>/.test(read(f)), f + ': page fills the pager');
     for (const f of TABS.filter((x) => /PastTab/.test(x))) assert.ok(/\{!isLandscape && searchBand\}/.test(read(f)), f);
   });
 };

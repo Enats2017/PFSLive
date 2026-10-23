@@ -132,7 +132,9 @@ module.exports = ({ load, test, SRC }) => {
 
   test('filter popup: the dropdown uses the computed position (top or bottom, maxHeight), not the old fixed 420 below', () => {
     const s = read('components/FilterDropdown.tsx');
-    assert.ok(/const \{ width: screenW, height: screenH \} = Dimensions\.get\('window'\);\n\s*const p = dropPosition\(x, y, w, h, screenW, screenH\);\n\s*setPos\(p\);/.test(s));
+    assert.ok(/const \{ width: screenW, height: screenH \} = Dimensions\.get\('window'\);\n\s*const p = dropPosition\(x, y, w, h, screenW, screenH\);/.test(s));
+    // + capped at the status bar / home indicator (the popup is in a Modal) — device test 2026-10-23
+    assert.ok(/setPos\(\{\s*\.\.\.p,\s*maxHeight: Math\.max\(0, Math\.min\(\s*p\.maxHeight,\s*p\.bottom !== undefined \? y - insets\.top - 8 : screenH - \(y \+ h\) - insets\.bottom - 8,/.test(s), 'clear of the system bars');
     assert.ok(/\.\.\.\(pos\.bottom !== undefined \? \{ bottom: pos\.bottom \} : \{ top: pos\.top \}\),/.test(s));
     assert.ok(/maxHeight: pos\.maxHeight,/.test(s) && !/maxHeight: 420/.test(s));
   });

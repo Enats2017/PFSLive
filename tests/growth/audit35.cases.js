@@ -68,7 +68,7 @@ module.exports = ({ M, load, test, SRC }) => {
 
   test('tap outside closes: the full-screen wrappers let touches through to their backdrop (pointerEvents box-none)', () => {
     assert.ok(/pointerEvents: 'box-none'/.test(block(files['components/ui/Dialog.tsx'], 'wrapper')), 'Dialog wrapper');
-    assert.ok(/<View style=\{styles\.wrapper\} pointerEvents="box-none">/.test(files['components/ErrorModal.tsx']), 'ErrorModal');
+    assert.ok(/<View style=\{(?:styles\.wrapper|\[styles\.wrapper, cd\.s\.wrapper\])\} pointerEvents="box-none">/.test(files['components/ErrorModal.tsx']), 'ErrorModal');
     assert.ok(/pointerEvents="box-none"/.test(files['screens/HomeScreen.tsx']), 'Home foreground notification');
   });
 

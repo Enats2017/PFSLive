@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { palette } from '../styles/common.styles';
 import { dropPosition, DropPos, POPUP_MAX } from '../utils/screenFit';
 import { useModalSideInsets } from '../hooks/useLandscapeSidePadding';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type { DropPos };
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
@@ -46,6 +47,7 @@ const Dropdown: React.FC<DropdownProps> = ({
 }) => {
   const { t } = useTranslation(['allrace', 'common']);
   const modalSides = useModalSideInsets();
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<DropPos>({ top: 0, left: 0, width: 0, maxHeight: POPUP_MAX });
   // Room to the right of the popup's left edge, measured at open time. The
@@ -61,7 +63,17 @@ const Dropdown: React.FC<DropdownProps> = ({
     btnRef.current.measureInWindow((x, y, w, h) => {
       const { width: screenW, height: screenH } = Dimensions.get('window');
       const p = dropPosition(x, y, w, h, screenW, screenH);
-      setPos(p);
+      // ✅ dropPosition keeps 8pt from the WINDOW edge, but the popup is in a
+      // Modal (outside any SafeAreaView): opened upwards in landscape on Android
+      // its first option sat under the 24dp status bar (device test 2026-10-23).
+      // Cap the list at the status bar / home indicator too.
+      setPos({
+        ...p,
+        maxHeight: Math.max(0, Math.min(
+          p.maxHeight,
+          p.bottom !== undefined ? y - insets.top - 8 : screenH - (y + h) - insets.bottom - 8,
+        )),
+      });
       // never past a right-side camera / nav bar in landscape (popup is outside any SafeAreaView)
       setMaxW(Math.max(p.width, screenW - p.left - 8 - modalSides.paddingRight));
 

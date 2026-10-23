@@ -12,7 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { RaceResultData } from '../../services/eventDetailService';
 import { commonStyles, palette, fonts, shadows, radii, space, withAlpha } from '../../styles/common.styles';
-import { RING_TINT } from '../../components/ui';
+import { RING_TINT, useCompactDialog } from '../../components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,6 +43,11 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
   // a Modal is outside any SafeAreaView: pad by the side insets in landscape on every
   // platform (the screen rule returned 0 on Android 3-button — sheet under the nav bar)
   const side = useModalSideInsets();
+  // ✅ Compact in landscape (device test 2026-10-23): the sheet keeps its design
+  // (scrolling details, footer always on screen) but drops the 90pt flag and
+  // puts Confirm / Cancel side by side — the stacked footer alone took ~190 of
+  // a ~354pt sheet, leaving the details a sliver. Before the early return (hooks).
+  const cd = useCompactDialog();
 
   if (!data) return null;
 
@@ -108,12 +113,12 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
             bounces={false}
           >
             {/* Icon */}
-            <View style={styles.iconWrapper}>
+            <View style={[styles.iconWrapper, cd.s.hide]}>
               <Ionicons name="flag" size={56} color={palette.navy} />
             </View>
 
             {/* Title */}
-            <Text style={styles.title}>{t('confirmModal:title')}</Text>
+            <Text style={[styles.title, cd.s.title]}>{t('confirmModal:title')}</Text>
 
             {/* Distance name */}
             {distanceName ? (
@@ -159,11 +164,15 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
             {/* Divider */}
             <View style={styles.divider} />
 
+            {/* Plain column in portrait (cd.s.buttonsRow undefined); a row with a
+                gap in compact, so Confirm drops its marginBottom there */}
+            <View style={[cd.s.buttonsRow, cd.compact && { gap: space.md }]}>
             {/* ✅ Confirm button — label changes based on mode */}
             <TouchableOpacity
               style={[
                 commonStyles.primaryButton,
-                { marginBottom: space.md },
+                { marginBottom: cd.compact ? 0 : space.md },
+                cd.s.button,
                 registerLoading && { opacity: 0.7 },
               ]}
               onPress={onConfirm}
@@ -183,7 +192,7 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
 
             {/* Cancel button */}
             <TouchableOpacity
-              style={commonStyles.secondaryButton}
+              style={[commonStyles.secondaryButton, cd.s.button]}
               onPress={onClose}
               activeOpacity={0.7}
             >
@@ -191,6 +200,7 @@ const ConfirmRaceResultModal: React.FC<ConfirmRaceResultModalProps> = ({
                 {t('confirmModal:buttons.cancel')}
               </Text>
             </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>

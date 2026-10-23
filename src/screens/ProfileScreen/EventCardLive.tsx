@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,10 +23,11 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
     const navigation = useNavigation<NavigationProp>();
     // ✅ Own profile: three 48pt icon buttons beside the info left it ~88pt at
     // 320pt, so the 20pt event name broke mid-word and the 2-line date lost the
-    // time (layout audit 2026-10-22). Below 400pt, or with larger text, the
-    // buttons go on their own row under the info.
-    const { width: windowWidth, fontScale } = useWindowDimensions();
-    const actionsBelow = isOwnProfile && (windowWidth < 400 || fontScale > 1);
+    // time (layout audit 2026-10-22). The buttons go on their own row under
+    // the info, bottom-right — on EVERY width (device test 2026-10-23: from
+    // 400pt, in landscape and on tablets they sat beside the name, centred,
+    // so cards on one screen did not line up).
+    const actionsBelow = isOwnProfile;
 
 
     const handleEditPress = useCallback(() => {

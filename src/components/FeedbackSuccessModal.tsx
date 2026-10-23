@@ -9,8 +9,8 @@ import {
     Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { commonStyles, spacing, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
-import { RING_TINT } from './ui';
+import { commonStyles, spacing, space, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
+import { RING_TINT, useCompactDialog } from './ui';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 import ModalScroll from './ui/ModalScroll';
 
@@ -29,6 +29,9 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
     buttonLabel = 'Back to profile',
     onClose,
 }) => {
+    // ✅ Compact in landscape (device test 2026-10-23): no icon, tighter card
+    // so the button is on screen without scrolling. Portrait: unchanged.
+    const cd = useCompactDialog();
 
     const cardScale = useRef(new Animated.Value(0.85)).current;
     const cardOpacity = useRef(new Animated.Value(0)).current;
@@ -92,13 +95,17 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
 
     return (
         <Modal supportedOrientations={MODAL_ORIENTATIONS} visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-            <View style={styles.backdrop}>
+            <View style={[styles.backdrop, cd.s.wrapper]}>
                 {/* ModalScroll: keeps the button reachable when the card is taller
                     than a landscape screen (audit 2026-10-22) */}
-                <ModalScroll contentStyle={{ alignItems: 'center' }} reserve={48}>
+                <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.compact ? 16 : 48}>
                     <Animated.View
                         style={[
                             styles.card,
+                            cd.s.card,
+                            // paddingTop/Bottom beat cd.s.card's paddingVertical,
+                            // so compact sets them itself (device test 2026-10-23)
+                            cd.compact && { paddingTop: space.lg, paddingBottom: space.lg },
                             { opacity: cardOpacity, transform: [{ scale: cardScale }] },
                         ]}
                     >
@@ -106,6 +113,7 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
                             style={[
                                 styles.iconCircle,
                                 { transform: [{ scale: iconScale }] },
+                                cd.s.hide,
                             ]}
                         >
                             <Animated.View
@@ -119,7 +127,7 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
                         </Animated.View>
 
                         <Text style={[commonStyles.title, { textAlign: 'center' }]}>{title}</Text>
-                        <Text style={styles.subtitle}>{subtitle}</Text>
+                        <Text style={[styles.subtitle, cd.s.message]}>{subtitle}</Text>
 
                         <TouchableOpacity
                             style={[commonStyles.primaryButton, { minWidth: '100%' }]}

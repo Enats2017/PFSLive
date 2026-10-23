@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ModalScroll from './ModalScroll';
+import { isCompactPopup } from '../../hooks/useLandscapeSidePadding';
 import {
   palette,
   fonts,
@@ -115,6 +116,45 @@ export const dialogStyles = StyleSheet.create({
   },
 });
 
+/**
+ * ✅ Compact popups in landscape (device test 2026-10-23, event Distance screen:
+ * the Undo registration card was taller than a landscape phone — icon on top,
+ * the buttons cut off at the bottom). The same rule as the Home popups
+ * (isCompactPopup: any landscape window, or under 500pt tall): no icon, a
+ * wider card with tighter gaps, buttons side by side (a third wraps), the
+ * wrapper's padding 8 not 20 (ModalScroll reserve 16). Portrait: unchanged.
+ *
+ *   const cd = useCompactDialog();
+ *   <View style={[wrapper, cd.s.wrapper]}>
+ *     <ModalScroll style={cd.s.scroll} reserve={cd.reserve}>
+ *       <View style={[card, cd.s.card]}>
+ *         <View style={[icon, cd.s.hide]} />
+ *         <View style={[buttons, cd.s.buttonsRow]}>
+ *           <TouchableOpacity style={[button, cd.s.button]} />
+ *
+ * `s` is empty (every entry undefined) when not compact, so the arrays are
+ * exactly the portrait styles there.
+ */
+export const compactDialogStyles = StyleSheet.create({
+  wrapper: { paddingVertical: space.sm },
+  scroll: { maxWidth: 520 },
+  card: { maxWidth: 520, paddingVertical: space.lg, paddingHorizontal: space.xl },
+  hide: { display: 'none' },
+  title: { marginBottom: space.sm },
+  message: { marginBottom: space.sm },
+  buttonsRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  // `width: 'auto'` undoes fullWidthButton's 100% so two buttons share the row
+  button: { flexGrow: 1, flexBasis: 160, width: 'auto' },
+});
+type CompactDialogStyles = { [K in keyof typeof compactDialogStyles]?: (typeof compactDialogStyles)[K] };
+const NOT_COMPACT: CompactDialogStyles = {};
+
+export const useCompactDialog = (): { compact: boolean; s: CompactDialogStyles; reserve: number } => {
+  const { width, height } = useWindowDimensions();
+  const compact = isCompactPopup(width, height);
+  return { compact, s: compact ? compactDialogStyles : NOT_COMPACT, reserve: compact ? 16 : 40 };
+};
+
 interface DialogProps {
   tone?: DialogTone;
   icon: keyof typeof Ionicons.glyphMap;
@@ -151,30 +191,32 @@ export const Dialog: React.FC<DialogProps> = ({
   loading = false,
 }) => {
   const { icon: iconColor, ring } = dialogTone[tone];
+  const cd = useCompactDialog();
 
   // ModalScroll: in landscape / larger text the card (90pt icon + copy + two
   // buttons) was taller than the screen — icon off the top, Cancel off the
   // bottom. Fixed here so every <Dialog> user is covered (audit 2026-10-22).
   return (
-    <ModalScroll contentStyle={{ alignItems: 'center' }}>
-      <View style={dialogStyles.card}>
-        <View style={[dialogStyles.iconWrapper, { backgroundColor: ring }]}>
+    <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
+      <View style={[dialogStyles.card, cd.s.card]}>
+        <View style={[dialogStyles.iconWrapper, { backgroundColor: ring }, cd.s.hide]}>
           <Ionicons name={icon} size={56} color={iconColor} />
         </View>
 
-        <Text style={dialogStyles.title}>{title}</Text>
-        {!!message && <Text style={dialogStyles.message}>{message}</Text>}
+        <Text style={[dialogStyles.title, cd.s.title]}>{title}</Text>
+        {!!message && <Text style={[dialogStyles.message, cd.s.message]}>{message}</Text>}
         {!!note && <Text style={dialogStyles.note}>{note}</Text>}
 
         {children}
 
         {(confirmLabel || cancelLabel) && (
-          <View style={dialogStyles.buttons}>
+          <View style={[dialogStyles.buttons, cd.s.buttonsRow]}>
             {!!confirmLabel && (
               <TouchableOpacity
                 style={[
                   commonStyles.primaryButton,
                   dialogStyles.fullWidthButton,
+                  cd.s.button,
                   loading && { opacity: 0.7 },
                 ]}
                 onPress={onConfirm}
@@ -193,7 +235,7 @@ export const Dialog: React.FC<DialogProps> = ({
 
             {!!cancelLabel && (
               <TouchableOpacity
-                style={commonStyles.secondaryButton}
+                style={[commonStyles.secondaryButton, cd.s.button]}
                 onPress={onCancel}
                 disabled={loading}
                 activeOpacity={0.7}

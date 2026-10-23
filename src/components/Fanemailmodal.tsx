@@ -10,6 +10,7 @@ import ModalScroll from './ui/ModalScroll';
 import { fanEmailApi } from '../services/Fanemailservice';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 import { isCompactPopup } from '../hooks/useLandscapeSidePadding';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 
@@ -29,6 +30,7 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
     // landscape: compact card, clear of the camera (device test 2026-10-22)
     const popupWindow = useWindowDimensions();
     const compact = isCompactPopup(popupWindow.width, popupWindow.height);
+    const insets = useSafeAreaInsets();
     const [email, setEmail] = useState('');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -55,6 +57,16 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
             hideSub.remove();
         };
     }, []);
+
+    // ✅ Landscape while typing (device test 2026-10-23): ~126pt was left above
+    // the keyboard, and the description filled it — the e-mail field being typed
+    // in sat out of view. While the keyboard is up in compact mode the
+    // description is hidden (title, field and buttons stay), and ModalScroll gets
+    // back the home-indicator inset it reserves twice: the keyboard covers it.
+    // The status bar (insets.top) is still kept clear.
+    const typingCompact = compact && keyboardHeight > 0;
+    const keyboardGiveBack = keyboardHeight > 0 ? 2 * (Math.max(insets.top, insets.bottom) - insets.top) : 0;
+    const wrapperPad = compact ? spacing.sm : spacing.xl;
 
     const handleChangeText = useCallback((value: string) => {
         setEmail(value);
@@ -100,10 +112,10 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
     return (
         <Modal supportedOrientations={MODAL_ORIENTATIONS} transparent visible={visible} animationType="fade" statusBarTranslucent onRequestClose={handleSkipPress}>
             <View style={homeStyles.notifBackdrop}>
-                <View style={[homeStyles.notifWrapper, compact && homeStyles.notifWrapperCompact, keyboardHeight > 0 && { paddingBottom: spacing.xl + keyboardHeight }]}>
+                <View style={[homeStyles.notifWrapper, compact && homeStyles.notifWrapperCompact, keyboardHeight > 0 && { paddingBottom: wrapperPad + keyboardHeight }]}>
                     {/* ModalScroll: the card is taller than a landscape screen —
                         icon / buttons were unreachable (audit 2026-10-22) */}
-                    <ModalScroll contentStyle={{ alignItems: 'center' }} style={compact ? homeStyles.notifScrollCompact : undefined} reserve={(compact ? 16 : 40) + keyboardHeight}>
+                    <ModalScroll contentStyle={{ alignItems: 'center' }} style={compact ? homeStyles.notifScrollCompact : undefined} reserve={(compact ? 16 : 40) + keyboardHeight - keyboardGiveBack}>
                         <View style={[homeStyles.notifCard, compact && homeStyles.notifCardCompact]}>
 
                             <View style={[homeStyles.notifIconWrapper, compact && homeStyles.hideCompact]}>
@@ -111,7 +123,7 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
                             </View>
 
                             <Text style={homeStyles.notifTitle}>{t('home:fanEmail.title')}</Text>
-                            <Text style={[homeStyles.notifBody, { marginBottom: spacing.md, }]}>{t('home:fanEmail.description')}</Text>
+                            <Text style={[homeStyles.notifBody, { marginBottom: spacing.md, }, compact && homeStyles.notifBodyCompact, typingCompact && homeStyles.hideCompact]}>{t('home:fanEmail.description')}</Text>
 
                             <View style={styles.inputWrapper}>
                                 <FloatingLabelInput
@@ -127,9 +139,10 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
                                 />
                             </View>
 
-                            <View style={homeStyles.notifButtonContainer}>
+                            {/* landscape: the two buttons side by side, like the Home popups */}
+                            <View style={[homeStyles.notifButtonContainer, compact && homeStyles.notifButtonRowCompact]}>
                                 <TouchableOpacity
-                                    style={[commonStyles.primaryButton, homeStyles.notifViewButton, isSaving && { opacity: 0.6 }]}
+                                    style={[commonStyles.primaryButton, homeStyles.notifViewButton, compact && homeStyles.notifButtonCompact, isSaving && { opacity: 0.6 }]}
                                     onPress={handleSavePress}
                                     activeOpacity={0.8}
                                     disabled={isSaving}
@@ -140,7 +153,7 @@ export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, o
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
-                                    style={commonStyles.secondaryButton}
+                                    style={[commonStyles.secondaryButton, compact && homeStyles.notifButtonCompact]}
                                     onPress={handleSkipPress}
                                     activeOpacity={0.7}
                                     disabled={isSaving}

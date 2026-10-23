@@ -13,6 +13,7 @@ import { commonStyles, spacing, palette, fonts, shadows, space, withAlpha } from
 import { useNavigation } from '@react-navigation/native';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 import ModalScroll from './ui/ModalScroll';
+import { useCompactDialog } from './ui';
 
 type RegistrationStatus =
   | 'registered'
@@ -59,6 +60,11 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   const cardTranslateY = useRef(new Animated.Value(80)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const iconScale = useRef(new Animated.Value(0)).current;
+  // ✅ Landscape: no icon, tighter card (device test 2026-10-23 — the event
+  // Distance popups were cut off on a landscape phone). Every status shares the
+  // one layout below, so this covers them all. Portrait: unchanged. Called
+  // before the early return below (hooks rule).
+  const cd = useCompactDialog();
 
   // ✅ GET MODAL CONFIG FROM i18n
   const getModalConfig = (status: RegistrationStatus): ModalConfig => {
@@ -187,15 +193,15 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
       {/* Card */}
       {/* ModalScroll: the card (~450-485pt in fr) was taller than a landscape
           screen — icon off the top, buttons off the bottom (audit 2026-10-22) */}
-      <View style={styles.wrapper} pointerEvents="box-none">
+      <View style={[styles.wrapper, cd.s.wrapper]} pointerEvents="box-none">
         {/* The slide-in sits OUTSIDE the scroll (verify pass): inside it the
             ScrollView clipped the card while it moved up 80pt — a wipe, not a slide. */}
         <Animated.View
           pointerEvents="box-none"
           style={{ width: '100%', maxHeight: '100%', alignItems: 'center', transform: [{ translateY: cardTranslateY }], opacity: cardOpacity }}
         >
-        <ModalScroll contentStyle={{ alignItems: 'center' }} reserve={48}>
-          <Animated.View style={styles.card}>
+        <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.compact ? 16 : 48}>
+          <Animated.View style={[styles.card, cd.s.card, cd.compact && styles.cardCompact]}>
             {/* Top accent bar */}
 
             {/* Close button */}
@@ -215,6 +221,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
                   backgroundColor: palette.fill,
                   transform: [{ scale: iconScale }],
                 },
+                cd.s.hide,
               ]}
             >
               <Text style={styles.iconText}>{config.icon}</Text>
@@ -224,7 +231,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
             {distanceName ? (
               // 2 lines, centred (was 1): long caps distance names were cut (audit 2026-10-22)
               <Text
-                style={[styles.distanceName, { color: config.accentColor }]}
+                style={[styles.distanceName, { color: config.accentColor }, cd.compact && styles.clearClose]}
                 numberOfLines={2}
               >
                 {distanceName}
@@ -232,7 +239,9 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
             ) : null}
 
             {/* Title */}
-            <Text style={styles.title}>{config.title}</Text>
+            {/* ✅ Compact: with the icon hidden the first line sits level with the X —
+                clearClose keeps long copy out from under it (2026-10-23) */}
+            <Text style={[styles.title, cd.s.title, cd.compact && styles.clearClose]}>{config.title}</Text>
 
             {/* Description */}
             <Text style={styles.description}>{config.description}</Text>
@@ -306,6 +315,16 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     alignItems: 'center',
     ...shadows.overlay,
+  },
+  // ✅ Compact (device test 2026-10-23): paddingTop/Bottom beat the shared
+  // compact paddingVertical (an edge wins over its shorthand), so they are
+  // tightened here too.
+  cardCompact: {
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  clearClose: {
+    paddingHorizontal: 32,
   },
   // palette.navy (#0F2447), not colors.primary (#0f2a3f): those are two
   // different navies, and commonStyles.primaryButton — which every other modal
