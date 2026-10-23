@@ -97,7 +97,8 @@ module.exports = ({ test, SRC }) => {
         const before = s.slice(0, i).trimEnd();
         return before.slice(before.lastIndexOf('<Text'));
       };
-      assert.strictEqual(openTag('{item.race_date_formatted}'), '<Text style={' + st + '}>', f + ' date');
+      // the date line now carries a one-line comment before the value (translated month)
+      assert.strictEqual(openTag('{formatEventDate(item.race_date_formatted, t)}').replace(/\s*\{\/\*[^*]*\*\/\}$/, ''), '<Text style={' + st + '}>', f + ' date');
       assert.strictEqual(openTag("{item.participant_started_count} {t('details:athletes')}"), '<Text style={' + st + '}>', f + ' started');
       assert.strictEqual(openTag("{item.finished_count} {t('details:finished')}"), '<Text style={' + st + '}>', f + ' finished');
       assert.strictEqual(openTag("{item.dnf_count} {t('details:dnf')}"), '<Text style={' + red + '}>', f + ' dnf');

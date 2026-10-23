@@ -6,6 +6,11 @@ import { TFunction } from 'i18next';
  * @param t - Translation function
  * @returns Formatted date string (e.g., "15-January-2026")
  */
+const ENGLISH_MONTHS = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december',
+];
+
 export const formatEventDate = (dateString: string, t: TFunction): string => {
   try {
     // Parse the date string
@@ -33,8 +38,14 @@ export const formatEventDate = (dateString: string, t: TFunction): string => {
         date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
       }
     } else {
-      // Try to parse as is
-      date = new Date(dateString);
+      // "25 September 2026" — the API's English 'd F Y' (race_date_formatted).
+      // Read by hand: Hermes does not reliably parse month names, and the
+      // client asked for the month in the app's language (2026-10-23).
+      const m = dateString.trim().match(/^(\d{1,2}) ([A-Za-z]+) (\d{4})$/);
+      const named = m ? ENGLISH_MONTHS.indexOf(m[2].toLowerCase()) : -1;
+      date = named >= 0
+        ? new Date(Number(m![3]), named, Number(m![1]))
+        : new Date(dateString);   // Try to parse as is
     }
     
     // Check if date is valid

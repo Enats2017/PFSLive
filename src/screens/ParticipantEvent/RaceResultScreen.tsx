@@ -21,6 +21,7 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { formatEventDate } from '../../utils/dateFormatter';
 import { useDimensions } from '../../hooks/useDimensions';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { distanceButtonsBelow } from '../../utils/screenFit';
@@ -167,7 +168,8 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
               <Text style={detailsStyles.metaText}>
-                {item.race_date_formatted}
+                {/* translated month (the API sends English) — client 2026-10-23 */}
+                {formatEventDate(item.race_date_formatted, t)}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>

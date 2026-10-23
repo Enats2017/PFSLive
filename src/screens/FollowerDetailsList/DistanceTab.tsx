@@ -18,6 +18,7 @@ import { useScreenError } from '../../hooks/useApiError';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { formatEventDate } from '../../utils/dateFormatter';
 import { distanceButtonsBelow } from '../../utils/screenFit';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
@@ -181,7 +182,8 @@ const DistanceTab = ({
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
               <Text style={commonStyles.subtitle}>
-                {item.race_date_formatted}
+                {/* translated month (the API sends English) — client 2026-10-23 */}
+                {formatEventDate(item.race_date_formatted, t)}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>

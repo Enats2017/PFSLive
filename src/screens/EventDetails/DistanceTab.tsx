@@ -31,6 +31,7 @@ import { AppHeader } from '../../components/common/AppHeader';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { formatEventDate } from '../../utils/dateFormatter';
 import { distanceButtonsBelow } from '../../utils/screenFit';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
 import { analyticsService } from '../../services/analyticsService';
@@ -522,7 +523,8 @@ const handleExternalRegister = useCallback((url: string) => {
             <View style={detailsStyles.metaRow}>
               <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
               <Text style={detailsStyles.metaText}>
-                {item.race_date_formatted}
+                {/* translated month (the API sends English) — client 2026-10-23 */}
+                {formatEventDate(item.race_date_formatted, t)}
               </Text>
             </View>
 

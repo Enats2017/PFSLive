@@ -9,6 +9,7 @@ import { profileStyles } from '../../styles/Profile.styles';
 import { AthleteEvent } from '../../services/athleteProfileService';
 import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { formatEventDate } from '../../utils/dateFormatter';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -36,7 +37,8 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
                 ? `${item.race_distance.trim()} ${t('resultdetails:units.km')}`
                 : item.race_distance.trim())
             : null,
-        item.race_date_formatted,
+        // translated month (the API sends English) — client 2026-10-23
+        item.race_date_formatted ? formatEventDate(item.race_date_formatted, t) : null,
         formatClockTime(item.race_time),
     ].filter(Boolean).join(' · ');
 

@@ -225,10 +225,10 @@ module.exports = ({ M, load, test, SRC }) => {
     }
   });
 
-  test('Dutch: the two "since last point" labels side by side read the same way (client\'s "vorige")', () => {
+  test('Dutch: the two "since last point" labels side by side read the same way (standard "vorig punt", 2026-10-23)', () => {
     const tp = lang('Resultdetails', 'nl').timingPoint;
-    assert.strictEqual(tp.segmentDistance, 'Sinds vorige punt');
-    assert.strictEqual(tp.segmentElevation, 'Hoogtemeters sinds vorige punt');
+    assert.strictEqual(tp.segmentDistance, 'Sinds vorig punt');
+    assert.strictEqual(tp.segmentElevation, 'Hoogtemeters sinds vorig punt');
   });
 
   // ── 5. landscape ───────────────────────────────────────────────────────
