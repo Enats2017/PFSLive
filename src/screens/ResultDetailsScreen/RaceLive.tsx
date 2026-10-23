@@ -11,6 +11,7 @@ import ElevationChart from '../../components/ElevationChart';
 import { useGpxElevation } from '../../hooks/useGpxElevation';
 import { formatClockTime } from '../../utils/timeFormat';
 import { stripWavePrefix } from '../../utils/waveLabel';
+import { raceLiveStatus, effectiveParticipantStatus } from './resultDetailView';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 
@@ -43,6 +44,16 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
     const { points: gpxPoints, loading: gpxLoading } = useGpxElevation(event?.gpx_url);
+
+    // After end_time this card is shown only for a runner still on course: label
+    // them In progress, not the distance's Finished. The server sends no elapsed
+    // clock then (server_time '' outside in_progress), so the race time reads '—'
+    // instead of 00:00:00 or the value frozen from the last in-progress poll.
+    const liveStatus = raceLiveStatus(
+        event?.race_status,
+        effectiveParticipantStatus(raceInfo?.participant_status, raceInfo?.has_started),
+    );
+    const hasClock = !!raceInfo?.server_time;
 
     useEffect(() => {
         if (!raceInfo?.server_time) return;
@@ -103,7 +114,7 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.status')}</Text>
                     <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={1}>
-                        {t(`status.${event?.race_status ?? 'in_progress'}`)}
+                        {t(`status.${liveStatus}`)}
                     </Text>
                 </View>
 
@@ -140,7 +151,7 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.raceTime')}</Text>
                     <Text style={resultInfoStyles.raceTimeText}>
-                        {formatSeconds(elapsedSeconds)}
+                        {hasClock ? formatSeconds(elapsedSeconds) : '—'}
                     </Text>
                 </View>
 

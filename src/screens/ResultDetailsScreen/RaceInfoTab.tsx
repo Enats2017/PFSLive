@@ -7,6 +7,7 @@ import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/re
 import { formatClockTime } from '../../utils/timeFormat';
 import { Button } from '../../components/ui';
 import { stripWavePrefix } from '../../utils/waveLabel';
+import { effectiveParticipantStatus } from './resultDetailView';
 import { buildResultLink } from '../../utils/resultLink';
 
 // participant_status is open-ended: the API passes through whatever non-numeric
@@ -64,7 +65,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
             distance: event?.distance_name ?? '',
             // No finish time (DNF / DNS / DSQ): the status, not an empty
             // "25km: " with nothing after it.
-            time: raceInfo?.time || (raceInfo?.participant_status ? statusText(raceInfo.participant_status) : ''),
+            time: raceInfo?.time || (raceInfo?.participant_status ? statusText(effectiveParticipantStatus(raceInfo.participant_status, raceInfo.has_started)) : ''),
             position,
         };
         const text = t(
@@ -144,7 +145,7 @@ const RaceInfoTab: React.FC<Props> = ({ raceInfo, event, checkpoints }) => {
                 <View style={resultInfoStyles.bibCard}>
                     <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.status')}</Text>
                     <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={1}>
-                        {statusText(raceInfo?.participant_status)}
+                        {statusText(effectiveParticipantStatus(raceInfo?.participant_status, raceInfo?.has_started))}
                     </Text>
                 </View>
 

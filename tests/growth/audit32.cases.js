@@ -123,14 +123,14 @@ module.exports = ({ test, SRC }) => {
       // each count is its own item in a wrapping row — the row wraps, the item never needs "…"
       'components/ProfileCard.tsx:90', 'components/ProfileCard.tsx:98', 'components/ProfileCard.tsx:112',
       // nation · age under the favourite's name (the name / bib lines take 2 since the full audit)
-      'screens/FavouriteScreen/FavouriteCard.tsx:151',
+      'screens/FavouriteScreen/FavouriteCard.tsx:157',
       // one line that SHRINKS to fit (adjustsFontSizeToFit), never "…": tab pills, the distance figure
       'screens/FollowerEventList/FollowerEvent.tsx:403', 'screens/ParticipantEvent/ParticipantEvent.tsx:367',
       'screens/HomeScreen.tsx:2982',
       // a checkpoint's km or name in a label / value row
-      'screens/ResultDetailsScreen/RaceInfoTab.tsx:263',
+      'screens/ResultDetailsScreen/RaceInfoTab.tsx:264',
       // status value ("In progress" / "Bezig" / "En cours") in a full-width row
-      'screens/ResultDetailsScreen/RaceLive.tsx:105', 'screens/ResultDetailsScreen/UpcomingRace.tsx:30',
+      'screens/ResultDetailsScreen/RaceLive.tsx:116', 'screens/ResultDetailsScreen/UpcomingRace.tsx:30',
     ];
     assert.deepStrictEqual(found.sort(), reviewed.sort());
   });

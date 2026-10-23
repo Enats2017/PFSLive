@@ -91,7 +91,7 @@ module.exports = ({ M, load, test, SRC }) => {
       }
     }
     // RaceInfoTab: a checkpoint's km or name as the LABEL of a value row (reviewed in audit32)
-    assert.deepStrictEqual(bad, ['screens/ResultDetailsScreen/RaceInfoTab.tsx:263']);
+    assert.deepStrictEqual(bad, ['screens/ResultDetailsScreen/RaceInfoTab.tsx:264']);
   });
 
   test('header band (often the only place the event name shows) and bottom-bar labels: 2 lines / one line that shrinks — never cut or split mid-word', () => {

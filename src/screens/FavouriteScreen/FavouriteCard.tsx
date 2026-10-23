@@ -10,6 +10,7 @@ import { favstyle } from '../../styles/favourite.style';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { FavouriteItem, FavouriteCheckpoint } from '../../services/favourites';
 import { formatClockTime } from '../../utils/timeFormat';
+import { favouriteRunnerStatus } from './favouriteStatus';
 import { isNarrowWidth } from '../../utils/screenFit';
 
 const getStatusColors = (status: string) => {
@@ -75,11 +76,16 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
         [item.name, item.firstname, item.lastname]
     );
 
-    const statusColors = useMemo(() => getStatusColors(item.race_status), [item.race_status]);
+    // ✅ The RUNNER's status, not the distance's (see favouriteStatus.ts).
+    const runnerStatus = useMemo(
+        () => favouriteRunnerStatus(item),
+        [item.participant_status, item.race_status, item.has_started]
+    );
+    const statusColors = useMemo(() => getStatusColors(runnerStatus), [runnerStatus]);
 
     const isLive = item.live_tracking_activated === 1;
     const isFemale = item.gender === 'female';
-    const isNotStarted = item.race_status === 'not_started';
+    const isNotStarted = runnerStatus === 'not_started';
 
     const { lastCrossed, nextCp, finishCp } = useMemo(
         () => getLiveStats(item.checkpoints),
@@ -113,7 +119,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
     const statusChip = (
         <View style={[favstyle.headerLeft, narrow && favstyle.headerLeftUnderName, { backgroundColor: statusColors.backgroundColor }]}>
             <Text style={[favstyle.headerText, { color: statusColors.textColor }]}>
-                {t(`resultdetails:status.${item.race_status}`)}
+                {t(`resultdetails:status.${runnerStatus}`, { defaultValue: runnerStatus })}
             </Text>
         </View>
     );
@@ -247,6 +253,8 @@ export default React.memo(FavouriteCard, (prev, next) =>
     prev.item.bib_number === next.item.bib_number &&
     prev.item.position === next.item.position &&
     prev.item.race_status === next.item.race_status &&
+    prev.item.participant_status === next.item.participant_status &&
+    prev.item.has_started === next.item.has_started &&
     prev.item.live_tracking_activated === next.item.live_tracking_activated &&
     prev.isFollowed === next.isFollowed &&
     prev.isLoading === next.isLoading &&
