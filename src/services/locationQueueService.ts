@@ -4,7 +4,13 @@ import { LocationData } from './locationService';
 import { API_CONFIG } from '../constants/config';
 
 const QUEUE_STORAGE_KEY = '@PFSLive:locationQueue';
-const MAX_QUEUE_SIZE = 500;
+// ✅ 1500, was 500. Offline fixes are spaced 0.75 × interval (45 s at the usual
+// 1-minute interval), so 500 held only ~6 h, and an overflow deletes the OLDEST
+// fix: a phone with data roaming off for a whole 18 h ultra (Grizzly100,
+// 2026-10-24, on the NL border) would lose the first ~11 h of its track.
+// 1500 ≈ 18.75 h at ~450 B a fix ≈ 0.7 MB — below the 2000-entry orphan list
+// and inside Android's 2 MB per-value read limit. The drain reads it once a batch.
+const MAX_QUEUE_SIZE = 1500;
 
 // ✅ Exported so HomeScreen can subscribe to queue count changes via AsyncStorage.
 export const QUEUE_COUNT_KEY = '@PFSLive:locationQueueCount';
@@ -200,8 +206,8 @@ export const locationQueueService = {
         // Overflow DELETES the runner's oldest unsent fix. The console.warn above
         // is DEBUG-gated and Metro strips console.* from release builds, so in a
         // real race this happened with no trace whatsoever. At the 30s interval
-        // the 500-slot buffer is ~4h; at the 5s finish-approach interval it is
-        // only ~42 minutes, so this is reachable on a long outage near the line.
+        // the 1500-slot buffer is ~12h (was 500 = ~4h); at the 5s finish-approach interval it is
+        // only ~1.5 hours, so this is reachable on a long outage near the line.
         try {
           const { addLog } = require('./gpsService');
           await addLog('🗑️', `Queue FULL (${MAX_QUEUE_SIZE}) — oldest fix discarded to make room`);

@@ -377,7 +377,21 @@ const L = () => load('services/locationService').locationService;
     await G().maybeUploadInterimLog();
     assert.ok(!M.store.has('@PFSLive:interimLogUploaded'));
     M.api.handler = null; await G().maybeUploadInterimLog();
+    assert.strictEqual(logUploads().length, 0, 'no retry inside the 5-min spacing');
+    M.clock += 5 * 60000; await G().maybeUploadInterimLog();
     assert.strictEqual(logUploads().length, 1);
+  });
+  test('Grizzly100: offline phone (no radio) → no interim attempt, no 🩺 line, key not claimed', async () => {
+    arm();
+    M.net = { isConnected: false, isInternetReachable: false };
+    for (let i = 0; i < 10; i++) { await G().maybeUploadInterimLog(); M.clock += 60000; }
+    assert.ok(!M.store.has('@PFSLive:interimLogUploaded'));
+    assert.strictEqual(M.axios.calls.length + M.api.posted.length, 0, 'nothing posted');
+    const log = await G().getFullTrackingLog();
+    assert.strictEqual(log.filter((e) => e.icon === '🩺').length, 0);
+    M.net = { isConnected: true, isInternetReachable: true };
+    await G().maybeUploadInterimLog();
+    assert.strictEqual(logUploads().length, 1, 'uploads once the network is back');
   });
   results.push(await run('6. interim log upload for silent sessions (issue 4)'));
 
@@ -1335,6 +1349,7 @@ const L = () => load('services/locationService').locationService;
     M.api.handler = () => Promise.reject(Object.assign(new Error('x'), { type: 'network' }));
     await Promise.all([G().maybeUploadInterimLog(), G().maybeUploadInterimLog()]);
     M.api.handler = null;
+    M.clock += 5 * 60000;   // past the failed-upload retry spacing (2026-10-23)
     await G().maybeUploadInterimLog();
     assert.strictEqual(logUploads().length, 1);
   });
@@ -1809,6 +1824,46 @@ const L = () => load('services/locationService').locationService;
     assert.strictEqual([...code.matchAll(/_trackTransistorSub\(BackgroundGeolocation\.on(Location|Heartbeat|MotionChange|ProviderChange)\(/g)].length, 4, 'every listener tracked');
   });
   results.push(await run('13. event 19 review (silent iOS starts, persisted start ping, pre-gun wake, zombie sessions, interim race, log dup)'));
+
+  // ════════════ 14. Grizzly100 pre-race (2026-10-24): 18 h sessions ════════════
+  test('Grizzly100: 18 h offline at 45 s spacing (1440 fixes) keeps every fix, the first one included', async () => {
+    const { locationQueueService: q } = Q();
+    for (let i = 0; i < 1440; i++) await q.addToQueue(fix(2, 20, 1440 - i), false);
+    const kept = getQ();
+    assert.strictEqual(kept.length, 1440, 'nothing discarded');
+    assert.strictEqual(kept[0].timestamp, fix(2, 20, 1440).timestamp, 'the race start is still there');
+    assert.strictEqual(M.store.get(QCK), '1440');
+  });
+  test('Grizzly100: past 1500 the OLDEST fix still makes room (cap kept, newest last)', async () => {
+    setQ(Array.from({ length: 1500 }, (_, i) => fix(2, 20, 2000 - i)));
+    const { locationQueueService: q } = Q();
+    await q.addToQueue(fix(2, 20, 0), false);
+    const kept = getQ();
+    assert.strictEqual(kept.length, 1500);
+    assert.strictEqual(kept[0].timestamp, fix(2, 20, 1999).timestamp);
+    assert.strictEqual(kept[kept.length - 1].timestamp, fix(2, 20, 0).timestamp);
+  });
+  test('Grizzly100: once the 40 log segments are full, a backgrounded app writes the log at most once per 15 s (was: every entry)', async () => {
+    const RN = require('react-native');
+    const AS = require('@react-native-async-storage/async-storage').default;
+    const g = load('services/gpsService');
+    const saved = RN.AppState.currentState; RN.AppState.currentState = 'background';
+    try {
+      for (let i = 0; i < 40 * 500 + 10; i++) await g.addLog('🧪', 'fill-' + i);   // 40 segments sealed, ceiling reached
+      assert.strictEqual(M.store.get('@PFSLive:trackingLogSegCount'), '40');
+      const real = AS.setItem; let writes = 0;
+      AS.setItem = async (k, v) => { if (k === '@PFSLive:trackingLog') writes++; return real(k, v); };
+      try {
+        for (let i = 0; i < 800; i++) { await g.addLog('🧪', 'late-' + i); M.clock += 1000; }   // 800 entries over ~13 min: the last ~300 hit the rolling window
+      } finally { AS.setItem = real; }
+      assert.ok(writes <= 56, `background writes throttled: ${writes} for 800 entries`);
+      await g.flushTrackingLog();
+      const cur = JSON.parse(M.store.get('@PFSLive:trackingLog'));
+      assert.strictEqual(cur[cur.length - 1].msg, 'late-799', 'the newest entry is persisted by the next flush');
+      assert.ok(cur.length <= 500, 'rolling window stays one segment');
+    } finally { RN.AppState.currentState = saved; }
+  });
+  results.push(await run('14. Grizzly100 pre-race: 18 h offline queue, full-log write throttle'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);

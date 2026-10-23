@@ -614,14 +614,15 @@ export const addLog = async (icon: string, msg: string): Promise<void> => {
   if (_logBuffer.length >= LOG_SEGMENT_SIZE) {
     if (_logSegCount < MAX_LOG_SEGMENTS) {
       await _sealCurrentSegment();
-    } else {
-      // Retention ceiling reached (very long session): keep the current segment
-      // as a rolling window of the most recent entries. Earlier segments stay.
-      _logBuffer.splice(0, _logBuffer.length - LOG_SEGMENT_SIZE);
-      if (AppState.currentState !== 'active') await _flushLogsNow();
-      else _scheduleLogFlush();
+      return;
     }
-    return;
+    // Retention ceiling reached (very long session): keep the current segment
+    // as a rolling window of the most recent entries. Earlier segments stay.
+    // ✅ Then fall through to the throttled persist below. Flushing here on
+    // EVERY entry rewrote the ~50 KB segment about once a second in background
+    // for the rest of the session once the 40 segments were full (~6.5 h on
+    // iOS, half of an 18 h ultra) — the AsyncStorage write storm the header warns about.
+    _logBuffer.splice(0, _logBuffer.length - LOG_SEGMENT_SIZE);
   }
 
   // ✅ Background persistence. The 2s setTimeout flush only fires while the JS
@@ -2138,6 +2139,16 @@ const INTERIM_LOG_AFTER_MS = 5 * 60 * 1000;
 // the interim log 7 times in one second.
 let _interimInFlight = false;
 
+// ✅ Retry spacing for a FAILED interim upload (2026-10-23, Grizzly100 pre-race).
+// A phone that never gets a live send through (data roaming off on the NL border)
+// keeps sent=0, so every heartbeat (60 s) and HomeScreen's 10 s timer re-claimed,
+// added a 🩺 line, re-assembled the whole log (up to ~2 MB) and POSTed into no
+// network — ~1000 times over an 18 h race. Now: no attempt while offline, and at
+// most one per INTERIM_LOG_RETRY_MS after a failure. In-memory on purpose: a fresh
+// context (relaunch) may try once straight away.
+const INTERIM_LOG_RETRY_MS = 5 * 60 * 1000;
+let _interimLastFailAt = 0;
+
 export const maybeUploadInterimLog = async (): Promise<void> => {
   if (_interimInFlight) return;
   _interimInFlight = true;
@@ -2170,6 +2181,11 @@ const _maybeUploadInterimLogInner = async (): Promise<void> => {
       return;
     }
 
+    const { locationService } = require('./locationService');
+    const { locationQueueService } = require('./locationQueueService');
+    if (_interimLastFailAt && Date.now() - _interimLastFailAt < INTERIM_LOG_RETRY_MS) return;
+    if (!(await locationQueueService.hasNetwork({ allowProbe: false }))) return;
+
     // Claim first so the heartbeat and the foreground timer cannot both upload.
     await AsyncStorage.setItem(INTERIM_LOG_KEY, '1');
     const perm = await gpsService.getPermissionState();
@@ -2181,13 +2197,14 @@ const _maybeUploadInterimLogInner = async (): Promise<void> => {
     await addLog('🩺', `No fix sent ${Math.round((Date.now() - anchor) / 60000)}min after start — perm:${perm.level} ${provider} transistorActive:${await AsyncStorage.getItem(TRANSISTOR_ACTIVE_KEY)}`);
     await _flushLogsNow();
 
-    const { locationService } = require('./locationService');
-    const { locationQueueService } = require('./locationQueueService');
     const ok = await locationService.saveTrackingLog(
       String(p.participantId), String(p.eventId),
       await _readFullLog(), 0, await locationQueueService.getQueueSize(),
     );
-    if (!ok) await AsyncStorage.removeItem(INTERIM_LOG_KEY);   // retry on a later call
+    if (!ok) {
+      _interimLastFailAt = Date.now();
+      await AsyncStorage.removeItem(INTERIM_LOG_KEY);   // retry on a later call
+    }
   } catch { /* diagnostics must never affect tracking */ }
 };
 
