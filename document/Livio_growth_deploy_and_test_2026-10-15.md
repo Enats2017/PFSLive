@@ -185,7 +185,7 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 488 · 188 · 19 passed · exit 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 493 · 188 · 19 passed · exit 0 |
 | Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 435 passed, 0 failed (1 skipped on a local web build), leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
@@ -426,6 +426,13 @@ gesture navigation), landscape, EN / FR / NL:
     (and "OFFICIAL PARTNER EVENTS" beside it) is one slim row; the header is slightly slimmer in landscape only.
     Portrait: unchanged.
 
+**Client questions decided while the client is on leave (2026-10-23)** — FR and NL:
+84. Event details → distance cards, follower distance list, participant hub → race results, and Profile → your
+    events (live and past): the date reads "25 septembre 2026" (FR) / "25 september 2026" (NL), not English.
+    The event lists show lower-case months too. Race result → timing point (NL): "Sinds vorig punt" /
+    "Hoogtemeters sinds vorig punt". Register (FR): birth date and gender each on their own full-width line, the
+    empty birth-date label reads "Date de naissance" in full (no "…").
+
 ---
 
 ## 7. Status of everything discussed (client "livio improvements" message + plan)
@@ -473,6 +480,20 @@ Legend: ✅ done in these branches · 🟡 done, needs your confirmation/action 
 | Proper web links (universal / app links) | ⛔ S5 needs a store release + Apple Team ID + Android SHA-256 + files on my.liviolive.com root — not started |
 | Email the refused users (the 31) | 🟡 S4 — mail already exists (`tracking_access_upgrade_mail.php`); prices come from live `snippet_config.php` → confirm (step 0.3) and that it is scheduled on live |
 
+### The 8 client questions — decided in code while the client is on leave (2026-10-23)
+Each is a one-line change to revert if the client answers differently.
+
+| # | Question | In the code now |
+|---|---|---|
+| 1 | NL ranking word | "KLASSEMENT" kept (fits every phone; "RANGSCHIKKING" split over two lines) |
+| 2 | Gender rank label | "RANK WOMEN 7" / "RANG FEMMES 7" / "PLAATS VROUWEN 7" kept (the long word does not fit) |
+| 3 | English terms in NL / FR | kept: client's "Live Tracking" / "Results" names in NL; sentences and actions in Dutch; French stays French |
+| 4 | Font size +1pt | kept; larger text follows the phone's own text-size setting |
+| 5 | Line under the home title | kept ("And keep up with the athletes you follow") |
+| 6 | "vorige" / "vorig" | standard Dutch "Sinds vorig punt" / "Hoogtemeters sinds vorig punt" (`Resultdetails/nl.json`) |
+| 7 | FR / NL dates | translated IN THE APP, no server change: "25 septembre 2026" / "25 september 2026" (`utils/dateFormatter.ts` reads the API's English date; FR / NL month names lower case in `common/*.json`) |
+| 8 | FR birth date label | register: birth date and gender always on their own full-width line (edit profile already was) |
+
 ### Corrections to send the client (from the plan) — 🟡 yours to send
 "199 tracked" = connected (77 tracked); connected > clicked; open rate inflated by Apple Mail privacy; refusal mail exists;
 "31 refused" is a floor; permission screen only the icon is red; email deep link needed a new preselect param.
@@ -490,7 +511,7 @@ The sequencing request is moot — the free session is already off on live (2026
 - `wp_endpoint` index — **already exists** (`idx_wp_endpoint`, 191-char prefix) on the live copy.
 
 ### Known, not done
-- Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 488 (+ tracking 188, activation 19, distance button 20),
+- Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 493 (+ tracking 188, activation 19, distance button 20),
   server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
   DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 106 vitest + type-check + lint.
 - The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`

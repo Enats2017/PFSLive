@@ -534,9 +534,12 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               errorMessage={errors.city}
             />
 
-            {/* Birth date and gender share a row, per the mockup. */}
-            <View style={pairRowStyle}>
-              <View style={pairHalfStyle}>
+            {/* ✅ Birth date and gender each take the full width (client
+                question 2026-10-23): side by side, the empty field's label
+                ("Date de naissance") ended in "…" in French. Edit profile
+                already shows the birth date full width. */}
+            <View>
+              <View>
                 <FloatingLabelInput
                   label={t('dateOfBirth')}
                   value={formData.dob}
@@ -556,7 +559,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
                   errorMessage={errors.dob}
                 />
               </View>
-              <View style={pairHalfStyle}>
+              <View>
                 {/* ✅ Gender — displays translated label, stores English key for API */}
                 <FloatingLabelInput
                   label={t('register:Gender.gender')}

@@ -9,6 +9,7 @@ import { commonStyles, spacing, palette, radii, space } from '../../styles/commo
 import { profileStyles } from '../../styles/Profile.styles';
 import { Feather, MaterialCommunityIcons,Ionicons} from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { formatEventDate } from '../../utils/dateFormatter';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditPersonalEvent'>;
 interface EventCardProps {
@@ -89,7 +90,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
                         items to flexShrink: 0, so without this the Text keeps its intrinsic width
                         and overflows the flex:1 info column. Matches the title Text above. */}
                     <Text style={[commonStyles.date, { flexShrink: 1 }]} numberOfLines={2}>
-                        {item.race_date_formatted} {formatClockTime(item.race_time)}
+                        {formatEventDate(item.race_date_formatted, t)} {formatClockTime(item.race_time)}
                     </Text>
                 </View>
             </View>

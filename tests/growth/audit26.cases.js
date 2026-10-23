@@ -50,8 +50,8 @@ module.exports = ({ test, SRC }) => {
     assert.strictEqual(lang('HomeScreen', 'fr').hero.title, 'Suivez votre course\nen temps réel');
   });
 
-  test('Dutch: elevation since last point reads "Hoogtemeters sinds vorige punt"', () => {
-    assert.strictEqual(lang('Resultdetails', 'nl').timingPoint.segmentElevation, 'Hoogtemeters sinds vorige punt');
+  test('Dutch: elevation since last point reads "Hoogtemeters sinds vorig punt" (standard Dutch, 2026-10-23)', () => {
+    assert.strictEqual(lang('Resultdetails', 'nl').timingPoint.segmentElevation, 'Hoogtemeters sinds vorig punt');
   });
 
   test('rank circle grows with the rank (1000+ / DNF): minWidth, no fixed width, pill radius', () => {

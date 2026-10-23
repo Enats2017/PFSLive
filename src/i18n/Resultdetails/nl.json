@@ -56,8 +56,8 @@
     "elevation": "Hoogte",
     "availableServices": "Beschikbare diensten",
     "toNextPoint": "Tot volgend punt",
-    "segmentDistance": "Sinds vorige punt",
-    "segmentElevation": "Hoogtemeters sinds vorige punt"
+    "segmentDistance": "Sinds vorig punt",
+    "segmentElevation": "Hoogtemeters sinds vorig punt"
   },
   "runnerInfo": {
     "club": "CLUB",
