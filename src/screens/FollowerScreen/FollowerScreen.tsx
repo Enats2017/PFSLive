@@ -1,15 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Platform,
     ScrollView,
     Text,
     TouchableOpacity,
     View,
-    Keyboard,
-    KeyboardEvent,
     useWindowDimensions,
     FlatList,
 } from 'react-native';
+import { useSearchFieldKeyboard } from '../../hooks/useKeyboardHeight';
 import { SafeAreaView,useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
@@ -56,46 +54,18 @@ const FollowerScreen = () => {
     const athleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const athleteQueryRef = useRef('');
 
-    const participantSearchFocused = useRef(false);
-    // ✅ Athlete search vs the keyboard: scroll the field into view instead of
-    // translating the whole page up by the full keyboard height. The translate
-    // ignored where the field already was, so it could leave the screen at the
-    // top and, in landscape, paint over AppHeader. Now the list gets bottom
-    // padding equal to the keyboard (so the offset is reachable) and scrolls
-    // to the athlete section's measured y.
+    // ✅ Search fields vs the keyboard: the focused search scrolls to the top
+    // and the list gets room for the keyboard, so its suggestions open above
+    // it (useKeyboardHeight.ts). Was the athlete search only; the upcoming and
+    // past searches opened their suggestions behind the keyboard (audit
+    // 2026-10-23). Each section's y is measured in the list content.
     const listRef = useRef<FlatList<never>>(null);
+    const upcomingSectionY = useRef(0);
+    const pastSectionY = useRef(0);
     const athleteSectionY = useRef(0);
-    const [keyboardPad, setKeyboardPad] = useState(0);
-
-    useEffect(() => {
-        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-        const onShow = (e: KeyboardEvent) => {
-            if (!participantSearchFocused.current) return;
-            setKeyboardPad(e.endCoordinates.height);
-        };
-
-        const onHide = () => {
-            setKeyboardPad(0);
-        };
-
-        const showSub = Keyboard.addListener(showEvent, onShow);
-        const hideSub = Keyboard.addListener(hideEvent, onHide);
-        return () => {
-            showSub.remove();
-            hideSub.remove();
-        };
-    }, []);
-
-    // Runs after the padding has rendered, so the target offset exists.
-    useEffect(() => {
-        if (keyboardPad <= 0 || !participantSearchFocused.current) return;
-        listRef.current?.scrollToOffset({
-            offset: Math.max(0, athleteSectionY.current - spacing.sm),
-            animated: true,
-        });
-    }, [keyboardPad]);
+    const { keyboardPad, focusAt, blur } = useSearchFieldKeyboard((y) => {
+        listRef.current?.scrollToOffset({ offset: y, animated: true });
+    });
 
     const handleUpcomingSelect = useCallback((item: SuggestionItem) => {
         upcoming.clearSuggestions();
@@ -182,7 +152,10 @@ const FollowerScreen = () => {
 
     const renderContent = () => (
         <>
-            <View style={{ zIndex: 30, elevation: 30 }}>
+            <View
+                style={{ zIndex: 30, elevation: 30 }}
+                onLayout={(e) => { upcomingSectionY.current = e.nativeEvent.layout.y; }}
+            >
                 <View style={follow.sectionLabel}>
                     <Feather name="radio" size={14} color={palette.lime} />
                     <Text style={follow.sectionLabelText}>{t('follow:upcomingrace')}</Text>
@@ -194,6 +167,8 @@ const FollowerScreen = () => {
                         value={upcoming.query}
                         onChangeText={upcoming.handleSearch}
                         icon="search"
+                        onFocus={() => focusAt(upcomingSectionY.current)}
+                        onBlur={blur}
                     />
                     <SuggestionDropdown
                         suggestions={upcoming.suggestions}
@@ -212,7 +187,10 @@ const FollowerScreen = () => {
                 </View>
             </View>
             <Divider />
-            <View style={{ zIndex: 20, elevation: 20 }}>
+            <View
+                style={{ zIndex: 20, elevation: 20 }}
+                onLayout={(e) => { pastSectionY.current = e.nativeEvent.layout.y; }}
+            >
                 <View style={follow.sectionLabel}>
                     <Feather name="radio" size={14} color={palette.lime} />
                     <Text style={follow.sectionLabelText}>{t('follow:pastrace')}</Text>
@@ -224,6 +202,8 @@ const FollowerScreen = () => {
                         value={past.query}
                         onChangeText={past.handleSearch}
                         icon="search"
+                        onFocus={() => focusAt(pastSectionY.current)}
+                        onBlur={blur}
                     />
                     <SuggestionDropdown
                         suggestions={past.suggestions}
@@ -257,8 +237,8 @@ const FollowerScreen = () => {
                         value={athleteQuery}
                         onChangeText={handleAthleteSearch}
                         icon="search"
-                        onFocus={() => { participantSearchFocused.current = true; }}
-                        onBlur={() => { participantSearchFocused.current = false; }}
+                        onFocus={() => focusAt(athleteSectionY.current)}
+                        onBlur={blur}
                     />
                     <AthleteSuggestionDropdown
                         suggestions={athleteSuggestions}

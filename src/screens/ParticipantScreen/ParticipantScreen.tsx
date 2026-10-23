@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ScrollView,
     Text,
@@ -10,6 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, palette, space } from '../../styles/common.styles';
+import { useSearchFieldKeyboard } from '../../hooks/useKeyboardHeight';
 import { particpant } from '../../styles/participantscreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
@@ -35,6 +36,14 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
     // Notched iPhones in landscape get edges ['bottom'] below — keep the body
     // clear of the notch (audit 2026-10-22)
     const sidePadding = useLandscapeSidePadding();
+    // ✅ The search's suggestions opened behind the keyboard (audit 2026-10-23):
+    // room for the keyboard at the end, the search scrolled to the top
+    // (useKeyboardHeight.ts).
+    const scrollRef = useRef<ScrollView>(null);
+    const searchSectionY = useRef(0);
+    const { keyboardPad, focusAt, blur } = useSearchFieldKeyboard((y) => {
+        scrollRef.current?.scrollTo({ y, animated: true });
+    });
     const [events, setEvents] = useState<EventItem[]>([]);
     const [visibleCount, setVisibleCount] = useState(3);
 
@@ -101,11 +110,15 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
             <AppHeader title={t('common:band.participantHub')} showBack />
             <ScrollView
+                ref={scrollRef}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={[{ paddingBottom: spacing.xxxxl }, sidePadding]}
+                contentContainerStyle={[{ paddingBottom: spacing.xxxxl + keyboardPad }, sidePadding]}
             >
-                <View style={{ zIndex: 50, elevation: 30 }}>
+                <View
+                    style={{ zIndex: 50, elevation: 30 }}
+                    onLayout={(e) => { searchSectionY.current = e.nativeEvent.layout.y; }}
+                >
                     <View style={particpant.sectionLabel}>
                         <Feather name="radio" size={14} color={palette.lime} />
                         <Text style={particpant.sectionLabelText}>
@@ -120,6 +133,8 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                                 onChangeText={liveUpcoming.handleSearch}
                                 icon="search"
                                 framed={false}
+                                onFocus={() => focusAt(searchSectionY.current)}
+                                onBlur={blur}
                             />
                             <SuggestionDropdown
                                 suggestions={liveUpcoming.suggestions}

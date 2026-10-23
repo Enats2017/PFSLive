@@ -128,7 +128,9 @@ module.exports = ({ M, load, test, SRC }) => {
     const st = read('styles/ResultList.styles.ts');
     assert.strictEqual(num(block(st, 'stateInScroll'), 'minHeight'), 260);
     assert.ok(/flexGrow: 1/.test(block(st, 'stateScroll')));
-    for (const [name, [w, i]] of Object.entries(LANDSCAPE)) {
+    // landscape, and short portrait phones (iPhone SE 568 / 667; filtersScrollWithList)
+    const SCROLLS = { ...LANDSCAPE, '320×568 portrait (SE 1)': SMALL_P, '375×667 portrait (SE 2/3)': [{ width: 375, height: 667 }, { top: 20, bottom: 0, left: 0, right: 0 }] };
+    for (const [name, [w, i]] of Object.entries(SCROLLS)) {
       const all = render(w, i);
       const scroll = all.find((x) => x.n.props && has(x.n.props.contentContainerStyle, /stateScroll$/));
       assert.ok(scroll, name + ': one scroll');
@@ -138,7 +140,8 @@ module.exports = ({ M, load, test, SRC }) => {
       const box = inside.find((x) => x.n.props && has(x.n.props.style, /stateInScroll$/));
       assert.ok(box && texts(box.n).includes('allrace:race.noResults'), name + ': the message in its box');
     }
-    for (const [name, [w, i]] of Object.entries(PORTRAIT)) {
+    const TALL = { 'iPhone 15 portrait': IPHONE_P, 'iPhone 12 mini portrait': [{ width: 375, height: 812 }, { top: 50, bottom: 34, left: 0, right: 0 }], 'Android 800 portrait': [{ width: 360, height: 800 }, { top: 24, bottom: 48, left: 0, right: 0 }] };
+    for (const [name, [w, i]] of Object.entries(TALL)) {
       const all = render(w, i);
       assert.ok(!all.some((x) => x.n.props && has(x.n.props.contentContainerStyle, /stateScroll$/)), name);
       const f1 = all.find((x) => x.n.props && has(x.n.props.style, /filterRow1$/));
@@ -263,13 +266,18 @@ module.exports = ({ M, load, test, SRC }) => {
   });
 
   // ── Membership + athlete suggestions ──────────────────────────────────────
-  test('membership checkout bar (rendered): in landscape 20pt under the button (the bottom inset was added twice: 62pt) and the button clear of the notch; portrait unchanged', () => {
+  test('membership checkout bar (rendered): the bottom inset ONCE — the bar pads it (white to the edge), the screen no longer does (it was added twice: 34+34+20 portrait, 21+21+20 landscape); the button clear of the notch in landscape', () => {
     const bar = (win, ins) => quiet(() => screen(win, ins, () => {
       const all = walk(load('screens/ProfileScreen/MembershipPlansScreen').default({ route: { params: {} }, navigation: nav }));
       return pts(flat(all.find((x) => x.n.props && has(x.n.props.style, /ctaWrapper$/)).n.props.style));
     }, loaded));
-    assert.deepStrictEqual(bar(...IPHONE_L), { paddingBottom: 20, paddingLeft: 79, paddingRight: 79 });
-    assert.deepStrictEqual(bar(...IPHONE_P), { paddingBottom: 34 + 20 });
+    assert.deepStrictEqual(bar(...IPHONE_L), { paddingBottom: 21 + 20, paddingLeft: 79, paddingRight: 79 });
+    assert.deepStrictEqual(bar(...IPHONE_P), { paddingBottom: 34 + 20, paddingLeft: 20, paddingRight: 20 });
+    // the screen's SafeAreaView: never the bottom edge (in every orientation)
+    for (const [win, ins] of [IPHONE_L, IPHONE_P, ANDROID_L]) {
+      const root = quiet(() => screen(win, ins, () => load('screens/ProfileScreen/MembershipPlansScreen').default({ route: { params: {} }, navigation: nav }), loaded));
+      assert.ok(!root.props.edges.includes('bottom'), JSON.stringify(root.props.edges));
+    }
   });
 
   test('athlete suggestions (rendered): in landscape the list ends 16pt under the last name (90 of its 260pt were blank, over the keyboard); portrait 90 as before', () => {

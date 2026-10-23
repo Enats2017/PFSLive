@@ -62,8 +62,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     // on one row left the badge empty / "5 sess…" at 320-360pt, and at ×1.35
     // the row ran ~50pt past the card. Wider phones keep the one-row layout
     // (see the layout note in membershipPlans.styles.ts).
-    const { width: windowWidth, height: windowHeight, fontScale } = useWindowDimensions();
-    const ctaLandscape = windowWidth > windowHeight;
+    const { width: windowWidth, fontScale } = useWindowDimensions();
     const badgeOwnLine = windowWidth < 400 || fontScale > 1;
 
 
@@ -438,7 +437,10 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+        // No 'bottom' edge here: the checkout bar below pads the bottom inset
+        // itself (white to the screen edge). Both padded it - 34+34+20pt under
+        // the button in portrait, 21+21+20 in landscape (audit 2026-10-23).
+        <SafeAreaView style={commonStyles.container} edges={safeEdges.filter((e) => e !== 'bottom')}>
             {/* The screen name now lives in the header's lime band, so
                 membership:header.label is no longer rendered here. */}
             <AppHeader title={t('common:band.membership')} showBack />
@@ -550,11 +552,11 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 </View>
             </ScrollView>
 
-            {/* Landscape (audit 2026-10-23): the SafeAreaView already pads the
-                bottom inset (it was added twice, 62pt under the button), and the
-                button kept clear of the notch. Portrait unchanged. */}
-            <View style={[styles.ctaWrapper, { paddingBottom: insets.bottom + 20 }, ctaLandscape && {
-                paddingBottom: 20,
+            {/* The bottom inset once (the SafeAreaView above has no bottom
+                edge), and the button clear of the notch in landscape (0 in
+                portrait). */}
+            <View style={[styles.ctaWrapper, {
+                paddingBottom: insets.bottom + 20,
                 paddingLeft: space.xl + sidePadding.paddingLeft,
                 paddingRight: space.xl + sidePadding.paddingRight,
             }]}>

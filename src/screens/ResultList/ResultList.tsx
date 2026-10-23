@@ -15,6 +15,7 @@ import { commonStyles, palette, fonts } from '../../styles/common.styles';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { ResultListprops } from '../../types/navigation';
 import Dropdown from '../../components/FilterDropdown';
+import { filtersScrollWithList } from '../../utils/screenFit';
 import ResultCard from './ResultCard';
 import { useResultList, TYPE_OPTIONS } from '../../hooks/useResultList';
 import { RaceResult } from '../../services/resultList';
@@ -211,7 +212,9 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
 
     // Only once there is a list to scroll: loading / error / empty states keep
     // the filters fixed above them, so a filter can still be changed.
-    const filtersInList = isLandscapeView && !initialLoad && !hasError && displayResults.length > 0;
+    // Landscape, or a short portrait phone (screenFit.filtersScrollWithList).
+    const filtersScroll = filtersScrollWithList(width, height);
+    const filtersInList = filtersScroll && !initialLoad && !hasError && displayResults.length > 0;
 
     const keyExtractor = useCallback(
         (item: RaceResult, index: number) => `${item.bib}_${item.position}_${index}`,
@@ -321,7 +324,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
     // a state left it 0pt of a ~160-200pt body - "No results" spilled over the
     // statistics and the error's Retry could not be reached. There the filters
     // and the state scroll together, the state with a usable height.
-    const stateScrolls = isLandscapeView && !initialLoad && stateView !== null;
+    const stateScrolls = filtersScroll && !initialLoad && stateView !== null;
 
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>

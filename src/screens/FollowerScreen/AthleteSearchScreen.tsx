@@ -12,6 +12,7 @@ import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
+import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
 import ErrorScreen from '../../components/ErrorScreen';
 import FanEventCard from '../FollowerEventList/FollowerCard';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
@@ -39,6 +40,9 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
     const isLandscape = width > height;
     // ✅ Notch clearance for the body in landscape (edges fall back to ['bottom']).
     const sidePadding = useLandscapeSidePadding();
+    // ✅ The end of the results could not scroll above the keyboard (audit
+    // 2026-10-23): the list gets the keyboard's height as extra end padding.
+    const keyboardHeight = useKeyboardHeight();
 
     const [searchText, setSearchText] = useState('');
     const [participants, setParticipants] = useState<ParticipantItem[]>([]);
@@ -274,7 +278,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
                     // The search band above is full-bleed white; the list needs
                     // its own top inset so the first card is not welded to it.
                     paddingTop: spacing.lg,
-                    paddingBottom: spacing.xxxxl,
+                    paddingBottom: spacing.xxxxl + keyboardHeight,
                 }}
                 ListEmptyComponent={renderEmpty}
                 ListFooterComponent={

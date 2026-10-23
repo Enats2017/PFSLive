@@ -976,6 +976,11 @@ export const LiveRouteMap: React.FC<LiveRouteMapProps> = ({
                 style={{ flex: 1 }}
                 styleURL={Mapbox.StyleURL.Outdoors}
                 compassEnabled={true}
+                // ✅ Top-LEFT (audit 2026-10-23): on a small portrait phone the
+                // elevation panel's ⌄ button (right: 16) sits 8pt from the top of
+                // the map - over the default top-right compass, taking its taps.
+                // The top-left corner is empty (logo / attribution are off).
+                compassPosition={{ top: 8, left: 8 }}
                 scaleBarEnabled={false}
                 logoEnabled={false}
                 attributionEnabled={false}

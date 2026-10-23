@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -13,6 +13,7 @@ import { palette, fonts, shadows, space } from '../styles/common.styles';
 import { SuggestionItem } from '../services/followerScreenService';
 import { formatEventDate } from '../utils/dateFormatter';
 import { useTranslation } from 'react-i18next';
+import { useDropdownMaxHeight } from '../hooks/useKeyboardHeight';
 
 
 interface SuggestionDropdownProps {
@@ -29,6 +30,9 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
     onSelect,
 }) => {
     const { t } = useTranslation(['event', 'common']);
+    // Never taller than the room above the keyboard (it scrolls inside); 220 otherwise.
+    const listRef = useRef<View>(null);
+    const listMax = useDropdownMaxHeight(listRef, 220, visible && !loading && suggestions.length > 0);
     if (!visible) return null;
 
 
@@ -56,9 +60,9 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
     }
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} ref={listRef}>
              <ScrollView
-                style={{ maxHeight: 220 }}
+                style={{ maxHeight: listMax }}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled

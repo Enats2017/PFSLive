@@ -185,7 +185,7 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 524 · 188 · 19 passed · exit 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 530 · 188 · 19 passed · exit 0 |
 | Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 435 passed, 0 failed (1 skipped on a local web build), leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
@@ -478,6 +478,16 @@ gesture navigation), landscape, EN / FR / NL:
     of two).
 98. Membership plans, landscape: the "Continue" button bar has a normal gap under it and the button is clear of the
     camera. Athlete search suggestions, landscape: no big empty space at the end of the list.
+99. Small phone in PORTRAIT (iPhone SE or an Android under ~740pt tall), Results tab: the filters and statistics
+    scroll away with the results (more than one card visible after a scroll). A normal phone (iPhone 12 and up):
+    filters stay fixed, as before.
+100. Follow a race screen (upcoming / past / athlete searches), the fan screen search and the participant hub search,
+    in landscape AND portrait: tap a search and type — the field moves to the top and the suggestions show above the
+    keyboard (the list scrolls inside if long). Find athlete: the last results can be scrolled above the keyboard.
+101. Live map: rotate the map with two fingers — the compass now shows at the top LEFT; on a small phone in portrait it
+    no longer sits under the ⌄ button.
+102. Membership plans (portrait and landscape): the white Continue bar reaches the bottom edge with a normal gap under
+    the button (it had a double gap).
 
 ---
 
@@ -557,7 +567,7 @@ The sequencing request is moot — the free session is already off on live (2026
 - `wp_endpoint` index — **already exists** (`idx_wp_endpoint`, 191-char prefix) on the live copy.
 
 ### Known, not done
-- Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 524 (+ tracking 188, activation 19, distance button 20),
+- Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 530 (+ tracking 188, activation 19, distance button 20),
   server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
   DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 108 vitest + type-check + lint.
 - The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`

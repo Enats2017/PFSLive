@@ -108,3 +108,15 @@ export const fieldScrollY = (fieldY: number, contentH: number, boxH: number): nu
  * 30% (~108-118pt on a phone, 250 on an iPad) leaves room for a card.
  */
 export const detailsHeaderImageLandscape = (windowH: number): number => Math.round(windowH * 0.3);
+
+/**
+ * ✅ Result List filters + statistics inside the list (they scroll away with
+ * it): in landscape (2026-10-22) and on a SHORT portrait phone (2026-10-23).
+ * Fixed above the list they take ~230pt; with the header and the bottom bar
+ * that left ~120pt on a 568pt iPhone SE (less than one ~184pt card) and ~1.2
+ * cards on a 667pt SE. Under 740pt they scroll; standard phones (812pt+) keep
+ * them fixed, as before.
+ */
+export const RESULT_FILTERS_SCROLL_BELOW = 740;
+export const filtersScrollWithList = (width: number, height: number): boolean =>
+  width > height || height < RESULT_FILTERS_SCROLL_BELOW;

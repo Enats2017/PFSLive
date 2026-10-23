@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { spacing, palette, fonts, shadows, space } from '../styles/common.styles';
 import { ParticipantItem } from '../services/followerEvent';
 import { useTranslation } from 'react-i18next';
+import { useDropdownMaxHeight } from '../hooks/useKeyboardHeight';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,9 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
   const { t } = useTranslation();
   const { width: winW, height: winH } = useWindowDimensions();   // before the early return (hooks rule)
   const isLandscape = winW > winH;
+  // Never taller than the room above the keyboard (it scrolls inside); 260 otherwise.
+  const listRef = useRef<View>(null);
+  const listMax = useDropdownMaxHeight(listRef, 260, visible && !loading && suggestions.length > 0);
     if (!visible) return null;
 
     if (loading) {
@@ -65,7 +69,7 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
     }
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} ref={listRef}>
             <FlatList
                 data={suggestions}
                 keyExtractor={(item) => String(item.customer_app_id)}
@@ -77,7 +81,7 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
                     paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
                     flexGrow: 1,
                 }}
-                style={{ maxHeight: 260 }}
+                style={{ maxHeight: listMax }}
                 onEndReached={hasMore ? onLoadMore : undefined}
                 onEndReachedThreshold={0.5}
                 ItemSeparatorComponent={() => <View style={styles.separator} />}

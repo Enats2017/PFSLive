@@ -5,6 +5,7 @@ import {
     View,
     ScrollView,
     } from 'react-native';
+import { useSearchFieldKeyboard } from '../../hooks/useKeyboardHeight';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
@@ -67,6 +68,14 @@ const FanScreen = () => {
     const [searchLoading, setSearchLoading] = useState(false);
     const [dropdownVisible, setDropdownVisible] = useState(false);
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // ✅ The search's suggestions opened behind the keyboard (audit 2026-10-23):
+    // room for the keyboard at the end, the search scrolled to the top
+    // (useKeyboardHeight.ts).
+    const scrollRef = useRef<ScrollView>(null);
+    const searchSectionY = useRef(0);
+    const { keyboardPad, focusAt, blur } = useSearchFieldKeyboard((y) => {
+        scrollRef.current?.scrollTo({ y, animated: true });
+    });
     const [events, setEvents] = useState<EventItem[]>([]);
     const [visibleCount, setVisibleCount] = useState(3);
 
@@ -151,17 +160,23 @@ const FanScreen = () => {
             <AppHeader title={t('common:band.followRace')} logoimg={true} showBack />
 
             <ScrollView
-                contentContainerStyle={[fanstyle.scrollContent, sidePadding]}
+                ref={scrollRef}
+                contentContainerStyle={[fanstyle.scrollContent, sidePadding, keyboardPad > 0 && { paddingBottom: spacing.xxxxl + keyboardPad }]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-                <View style={fanstyle.section}>
+                <View
+                    style={fanstyle.section}
+                    onLayout={(e) => { searchSectionY.current = e.nativeEvent.layout.y; }}
+                >
                     <SearchInput
                         framed={false}
                         placeholder={t('follow:search.upcomingSearch', 'Find an event by name…')}
                         value={searchQuery}
                         onChangeText={handleSearch}
                         icon="search"
+                        onFocus={() => focusAt(searchSectionY.current)}
+                        onBlur={blur}
                     />
                     <SuggestionDropdown
                         suggestions={suggestions}

@@ -114,8 +114,10 @@ module.exports = ({ test, SRC }) => {
 
   test('result list, landscape: filters + statistics scroll with the list (the list had ~no height left)', () => {
     const s = read('screens/ResultList/ResultList.tsx');
-    const inList = (isLandscapeView, initialLoad, hasError, n) =>
-      expr(s, 'filtersInList', ['isLandscapeView', 'initialLoad', 'hasError', 'displayResults'], [isLandscapeView, initialLoad, hasError, new Array(n)]);
+    // filtersScroll = landscape, or a short portrait phone (screenFit.filtersScrollWithList, audit45)
+    const inList = (filtersScroll, initialLoad, hasError, n) =>
+      expr(s, 'filtersInList', ['filtersScroll', 'initialLoad', 'hasError', 'displayResults'], [filtersScroll, initialLoad, hasError, new Array(n)]);
+    assert.ok(/const filtersScroll = filtersScrollWithList\(width, height\);/.test(s));
     assert.strictEqual(inList(true, false, false, 5), true, 'landscape with results');
     assert.strictEqual(inList(false, false, false, 5), false, 'portrait unchanged');
     assert.strictEqual(inList(true, true, false, 0), false, 'loading: filters stay on top');

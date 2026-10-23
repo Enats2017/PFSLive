@@ -206,7 +206,8 @@ module.exports = ({ M, load, test, SRC }) => {
         const s = fs.readFileSync(p, 'utf8').replace(/\r/g, '');
         if (!/useLandscapeSidePadding\(\)/.test(s)) continue;
         for (const m of s.matchAll(/<SafeAreaView\b[^>]*edges=\{([^}]*\}?)\}/g)) {
-          if (!/^safeEdges$|isLandscape && !isGestureNav \? \[\s*'left',\s*'right'\s*\] : \['bottom'\]/.test(m[1])) bad.push(`${path.relative(SRC, p)}: ${m[1]}`);
+          // the membership screen leaves out 'bottom': its checkout bar pads the inset itself (audit45)
+          if (!/^safeEdges$|^safeEdges\.filter\(\(e\) => e !== 'bottom'\)$|isLandscape && !isGestureNav \? \[\s*'left',\s*'right'\s*\] : \['bottom'\]/.test(m[1])) bad.push(`${path.relative(SRC, p)}: ${m[1]}`);
         }
         if (/edges=\{safeEdges\}/.test(s) && !/const safeEdges = useSafeAreaEdges\(\);/.test(s)) bad.push(path.relative(SRC, p) + ' no const');
       }
