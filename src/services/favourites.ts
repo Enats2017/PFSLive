@@ -51,6 +51,7 @@ export interface FavouriteItem {
   age: string; // ✅ added
   position: string; // ✅ added (overall rank)
   participant_status: "not_started" | "in_progress" | "finished" | string; // ✅ added (DNF/DNS/DSQ possible)
+  has_started?: boolean; // ✅ RR "Started" flag (2026-10-23 API); participant_status stays not_started until CP1
   time: string; // ✅ added
   diff: string; // ✅ added
   category_name: string; // ✅ added

@@ -1,0 +1,132 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * Tests for activationCard.ts. Run: npm run test:activation
+ *
+ * The cases are the combinations checked against the live DB copy on
+ * 2026-10-08 (customer ids in brackets), plus the ones that did not exist yet.
+ * No test framework in this repo - plain asserts, exit code 1 on failure.
+ */
+const assert_1 = __importDefault(require("assert"));
+const activationCard_1 = require("./activationCard");
+let passed = 0;
+let failed = 0;
+function test(name, fn) {
+    try {
+        fn();
+        passed++;
+        console.log(`  PASS  ${name}`);
+    }
+    catch (e) {
+        failed++;
+        console.log(`  FAIL  ${name}\n        ${e.message}`);
+    }
+}
+const act = (event_name, remaining) => ({ event_name, remaining });
+// A capped plan (Lite / Pro). Its remaining count does not change where the
+// activation goes - 'extra' either way - so it is not an input.
+const capped = (extra = {}) => ({ unlimited: false, event_only: 0, ...extra });
+console.log('== activation card ==');
+test('no membership info → nothing', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)(null), { placement: null, eventNames: null });
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)(undefined), { placement: null, eventNames: null });
+});
+test('plan without activations → nothing (C, D, E, F)', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)({ unlimited: true }), { placement: null, eventNames: null });
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)(capped()), { placement: null, eventNames: null });
+});
+test('A. one activation, all their cover → primary with its event [3803]', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)({ unlimited: false, event_only: 1, event_activations: [act('Limburg Wine Trail', 2)] }), { placement: 'primary', eventNames: 'Limburg Wine Trail' });
+});
+test('B. two activations for two events → BOTH named [3795]', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)({ event_only: 1, event_activations: [act('Trail de Bruxelles', 1), act('GTLC Winter', 1)] }), { placement: 'primary', eventNames: 'Trail de Bruxelles & GTLC Winter' });
+});
+test('B2. one of two activations used → only the unused one named', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)({ event_only: 1, event_activations: [act('Trail de Bruxelles', 0), act('GTLC Winter', 1)] }), { placement: 'primary', eventNames: 'GTLC Winter' });
+});
+test('activation used, nothing else → nothing (card falls through to "no sessions left")', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)({ event_only: 1, event_activations: [act('Limburg Wine Trail', 0)] }), { placement: null, eventNames: null });
+});
+test('two activations for the SAME event → named once', () => {
+    assert_1.default.strictEqual((0, activationCard_1.resolveActivation)({ event_only: 1, event_activations: [act('Limburg Wine Trail', 1), act('Limburg Wine Trail', 1)] }).eventNames, 'Limburg Wine Trail');
+});
+test('blank event name is skipped, not rendered as " & "', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)({ event_only: 1, event_activations: [act('  ', 1), act('GTLC Winter', 1)] }), { placement: 'primary', eventNames: 'GTLC Winter' });
+});
+test('G. unlimited + activation → nothing extra (unlimited already covers that event)', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)({ unlimited: true, event_only: 0, event_activations: [act('Limburg Wine Trail', 1)] }), { placement: null, eventNames: null });
+});
+test('H. Pro with sessions left + activation → extra line', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)(capped({ event_activations: [act('Limburg Wine Trail', 1)] })), { placement: 'extra', eventNames: 'Limburg Wine Trail' });
+});
+test('I. Pro USED UP + activation → extra line, so the card does not stop at "no sessions left"', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)(capped({ event_activations: [act('Limburg Wine Trail', 1)] })), { placement: 'extra', eventNames: 'Limburg Wine Trail' });
+});
+test('older API without event_only / event_activations → nothing', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)({ unlimited: false }), { placement: null, eventNames: null });
+});
+// ── The copy the card renders (row 8 of the device test plan) ──────────────
+// Read from the real en/fr/nl files with i18next's {{placeholder}} rule, so a
+// missing key or an unsubstituted placeholder fails here, not on a phone. Paths
+// from the project root: `npm run` sets cwd there and the compiled copy of this
+// file runs from .cardtest/.
+console.log('\n== activation card copy (en / fr / nl) ==');
+/* eslint-disable @typescript-eslint/no-var-requires */
+const fs = require('fs');
+const path = require('path');
+const dict = (l) => JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src', 'i18n', 'OwnProfile', `${l}.json`), 'utf8'));
+const tr = (l, key, vars = {}) => {
+    let node = dict(l);
+    for (const seg of key.split('.'))
+        node = node === null || node === void 0 ? void 0 : node[seg];
+    if (typeof node !== 'string')
+        return key;
+    return node.replace(/\{\{(\w+)\}\}/g, (m, n) => (n in vars ? vars[n] : m));
+};
+// What OwnProfile.tsx renders for a decision: iOS card line, Android banner line.
+const copy = (l, mi) => {
+    const d = (0, activationCard_1.resolveActivation)(mi);
+    if (d.placement === 'primary') {
+        return { ios: tr(l, 'membershipCard.eventOnly', { event: d.eventNames }),
+            android: tr(l, 'tracking.eventOnly', { event: d.eventNames }) };
+    }
+    if (d.placement === 'extra') {
+        const line = tr(l, 'membershipCard.alsoActivation', { event: d.eventNames });
+        return { ios: line, android: line };
+    }
+    return { ios: null, android: null };
+};
+const ONE = { event_only: 1, event_activations: [act('Limburg Wine Trail', 2)] };
+const TWO = { event_only: 1, event_activations: [act('Trail de Bruxelles', 1), act('GTLC Winter', 1)] };
+const PRO = capped({ event_activations: [act('Limburg Wine Trail', 1)] });
+test('plan row "activation only" → "Valid for Limburg Wine Trail only."', () => {
+    assert_1.default.deepStrictEqual(copy('en', ONE), {
+        ios: 'Valid for Limburg Wine Trail only.',
+        android: 'Your Livio activation is valid for Limburg Wine Trail.'
+    });
+});
+test('plan row "two activations" → both events in the line', () => {
+    assert_1.default.strictEqual(copy('en', TWO).ios, 'Valid for Trail de Bruxelles & GTLC Winter only.');
+});
+test('plan row "Pro (+ used up) + activation" → "Also valid: …" line', () => {
+    assert_1.default.strictEqual(copy('en', PRO).ios, 'Also valid: your Livio activation for Limburg Wine Trail.');
+});
+for (const l of ['en', 'fr', 'nl']) {
+    test(`${l}: every activation line resolves (no raw key, no {{placeholder}})`, () => {
+        for (const mi of [ONE, TWO, PRO]) {
+            for (const v of Object.values(copy(l, mi))) {
+                assert_1.default.ok(v && !/^[a-zA-Z]+\.[a-zA-Z.]+$/.test(v) && !v.includes('{{'), `${l}: ${v}`);
+            }
+        }
+    });
+}
+test('fr and nl are translated, not copies of en', () => {
+    const en = copy('en', PRO).ios, fr = copy('fr', PRO).ios, nl = copy('nl', PRO).ios;
+    assert_1.default.ok(fr !== en && nl !== en && fr !== nl, `${fr} | ${nl}`);
+});
+console.log(`\nACTIVATION TOTAL: ${passed} passed, ${failed} failed`);
+if (failed > 0)
+    process.exit(1);
