@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { resultDetail, ResultDetailResponse } from '../services/resultDetailsService';
 import { useScreenError } from "../hooks/useApiError";
+import { shouldPollResultDetail } from '../screens/ResultDetailsScreen/resultDetailView';
 
 const POLL_INTERVAL_MS = 60_000; // 1 minute
 
@@ -40,9 +41,11 @@ export const useResultDetail = (
         fetchDetail();
     }, [fetchDetail]);
 
-    // ✅ Poll every minute when race is in progress
+    // ✅ Poll every minute while the distance is in progress, BEFORE its gun too
+    // (a page opened early used to stay on the upcoming card all race), and
+    // after end_time for a runner still on course (see resultDetailView.ts).
     useEffect(() => {
-        const isLive = data?.event?.race_status === 'in_progress';
+        const isLive = shouldPollResultDetail(data?.event?.race_status, data?.race_info?.participant_status);
 
         if (isLive) {
             pollRef.current = setInterval(() => {
@@ -56,7 +59,7 @@ export const useResultDetail = (
                 pollRef.current = null;
             }
         };
-    }, [data?.event?.race_status, fetchDetail]);
+    }, [data?.event?.race_status, data?.race_info?.participant_status, fetchDetail]);
 
     return { data, loading, hasError, error, clearError, retry: fetchDetail };
 };
