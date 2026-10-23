@@ -431,7 +431,8 @@ gesture navigation), landscape, EN / FR / NL:
     events (live and past): the date reads "25 septembre 2026" (FR) / "25 september 2026" (NL), not English.
     The event lists show lower-case months too. Race result → timing point (NL): "Sinds vorig punt" /
     "Hoogtemeters sinds vorig punt". Register (FR): birth date and gender each on their own full-width line, the
-    empty birth-date label reads "Date de naissance" in full (no "…").
+    empty birth-date label reads "Date de naissance" in full (no "…"). Web (FR / NL, also Safari): event page header
+    date in the page language.
 
 ---
 
@@ -491,7 +492,7 @@ Each is a one-line change to revert if the client answers differently.
 | 4 | Font size +1pt | kept; larger text follows the phone's own text-size setting |
 | 5 | Line under the home title | kept ("And keep up with the athletes you follow") |
 | 6 | "vorige" / "vorig" | standard Dutch "Sinds vorig punt" / "Hoogtemeters sinds vorig punt" (`Resultdetails/nl.json`) |
-| 7 | FR / NL dates | translated IN THE APP, no server change: "25 septembre 2026" / "25 september 2026" (`utils/dateFormatter.ts` reads the API's English date; FR / NL month names lower case in `common/*.json`) |
+| 7 | FR / NL dates | translated IN THE APP, no server change: "25 septembre 2026" / "25 september 2026" (`utils/dateFormatter.ts` reads the API's English date; FR / NL month names lower case in `common/*.json`). Web: already localised; the event header now reads the API's English date itself (`src/lib/dateLocale.ts` parseRaceDate) so Safari shows it too |
 | 8 | FR birth date label | register: birth date and gender always on their own full-width line (edit profile already was) |
 
 ### Corrections to send the client (from the plan) — 🟡 yours to send
@@ -513,7 +514,7 @@ The sequencing request is moot — the free session is already off on live (2026
 ### Known, not done
 - Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 493 (+ tracking 188, activation 19, distance button 20),
   server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
-  DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 106 vitest + type-check + lint.
+  DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 108 vitest + type-check + lint.
 - The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`
   holds a local build; it passes on a build made with `NEXT_PUBLIC_BASE_PATH=/livio_website` (step 3).
 - Closed 2026-10-22 (now tested, no longer "read only"):
