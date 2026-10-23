@@ -11,21 +11,20 @@
 //
 // That last case is also every runner between the start line and CP1 (up to
 // ~1.5 h on the 100 km, CP1 at 8.3 km), so 'not_started' is not trusted alone:
-// a crossed START mat, or a distance that is in progress, still reads
-// "In progress" — what the card showed before for that stretch.
-// The three FavouriteItem fields it reads, declared here so the test compiles
+// while the distance is in progress it still reads "In progress" — what the card
+// showed before for that stretch. The START checkpoint is NOT used: RR fills its
+// time with the gun for every entrant (rr_result_3_18: 52 runners with Started=0
+// all carry "16:00:00"), so it would turn no-shows into "In progress" for good.
+// The two FavouriteItem fields it reads, declared here so the test compiles
 // this file alone (importing services/favourites pulls in the api + i18n setup).
 export interface FavouriteStatusInput {
   participant_status?: string | null;
   race_status: string;
-  checkpoints?: ReadonlyArray<{ is_start?: boolean; is_crossed?: boolean }> | null;
 }
 
 export function favouriteRunnerStatus(item: FavouriteStatusInput): string {
   const ps = String(item.participant_status ?? '').trim();
   if (ps === '') return item.race_status;          // older API / local row without the field
   if (ps !== 'not_started') return ps;              // finished | in_progress | DNF | DNS | DSQ | other feed code
-  const startCrossed = (item.checkpoints ?? []).some((cp) => cp.is_start === true && cp.is_crossed === true);
-  if (startCrossed || item.race_status === 'in_progress') return 'in_progress';
-  return 'not_started';
+  return item.race_status === 'in_progress' ? 'in_progress' : 'not_started';
 }

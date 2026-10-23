@@ -74,7 +74,7 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
     // ✅ The RUNNER's status, not the distance's (see favouriteStatus.ts).
     const runnerStatus = useMemo(
         () => favouriteRunnerStatus(item),
-        [item.participant_status, item.race_status, item.checkpoints]
+        [item.participant_status, item.race_status]
     );
     const statusColors = useMemo(() => getStatusColors(runnerStatus), [runnerStatus]);
 

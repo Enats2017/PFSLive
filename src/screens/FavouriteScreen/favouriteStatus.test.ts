@@ -23,16 +23,14 @@ function test(name: string, fn: () => void) {
   }
 }
 
+// The card passes the whole FavouriteItem; START always "crossed" with the gun
+// time, as RR fills it for every entrant (rr_result_3_18: Started=0, "16:00:00").
 const cp = (o: { start?: boolean; finish?: boolean; crossed: boolean }) => ({
-  name: o.start ? 'START' : o.finish ? 'FIN' : '8,3km', day_name: 'Sat', distance: '', segment_distance: '',
-  race_time: '', actual_time: o.crossed ? '06:00:12' : '', ranking: '', rank_gender: '', rank_agegroup: '',
-  speed: '', pace: '', is_crossed: o.crossed, is_start: !!o.start, is_finish: !!o.finish,
+  name: o.start ? 'START' : o.finish ? 'FIN' : '8,3km', is_crossed: o.crossed, is_start: !!o.start, is_finish: !!o.finish,
 });
-const item = (ps: string | undefined, race: 'not_started' | 'in_progress' | 'finished', startCrossed = false): FavouriteStatusInput => ({
-  participant_status: ps as string,
-  race_status: race,
-  checkpoints: [cp({ start: true, crossed: startCrossed }), cp({ crossed: false }), cp({ finish: true, crossed: false })],
-});
+const item = (ps: string | undefined, race: 'not_started' | 'in_progress' | 'finished'): FavouriteStatusInput =>
+  ({ participant_status: ps as string, race_status: race,
+     checkpoints: [cp({ start: true, crossed: true }), cp({ crossed: false }), cp({ finish: true, crossed: false })] } as FavouriteStatusInput);
 
 console.log('== runner status on the Favourites card ==');
 
@@ -45,11 +43,14 @@ test('runner still on course after end_time (distance "finished") → In progres
 test('DNF / DNS / DSQ mid-race → shown as such (was: In progress)', () => {
   for (const s of ['DNF', 'DNS', 'DSQ']) assert.strictEqual(favouriteRunnerStatus(item(s, 'in_progress')), s);
 });
-test('between the start and CP1: API says not_started, START mat crossed → In progress', () => {
-  assert.strictEqual(favouriteRunnerStatus(item('not_started', 'in_progress', true)), 'in_progress');
+test('between the start and CP1 (API says not_started) → In progress while the distance runs (unchanged)', () => {
+  assert.strictEqual(favouriteRunnerStatus(item('not_started', 'in_progress')), 'in_progress');
 });
-test('between the start and CP1 with no START mat → In progress while the distance runs (unchanged)', () => {
-  assert.strictEqual(favouriteRunnerStatus(item('not_started', 'in_progress', false)), 'in_progress');
+test('no-show after the distance ended, START filled with the gun time by RR → Not started, not "In progress"', () => {
+  assert.strictEqual(favouriteRunnerStatus(item('not_started', 'finished')), 'not_started');
+});
+test('before the gun with START pre-filled → Not started (START is never trusted)', () => {
+  assert.strictEqual(favouriteRunnerStatus(item('not_started', 'not_started')), 'not_started');
 });
 test('before the gun → Not started (unchanged)', () => {
   assert.strictEqual(favouriteRunnerStatus(item('not_started', 'not_started')), 'not_started');
@@ -61,8 +62,8 @@ test('participant_status missing or blank (older API, local row) → falls back 
   assert.strictEqual(favouriteRunnerStatus(item(undefined, 'in_progress')), 'in_progress');
   assert.strictEqual(favouriteRunnerStatus(item('  ', 'finished')), 'finished');
 });
-test('no checkpoints array → no crash, START treated as not crossed', () => {
-  assert.strictEqual(favouriteRunnerStatus({ participant_status: 'not_started', race_status: 'not_started', checkpoints: undefined as any }), 'not_started');
+test('no checkpoints array → no crash', () => {
+  assert.strictEqual(favouriteRunnerStatus({ participant_status: 'not_started', race_status: 'not_started' }), 'not_started');
 });
 test('every status it can return has a label in resultdetails en/fr/nl', () => {
   const dir = path.join(process.cwd(), 'src', 'i18n', 'Resultdetails');   // folder is capitalised (case-sensitive on macOS/Linux)
