@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -23,6 +23,10 @@ interface UpcomingTabProps {
 }
 
 const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
+    // ✅ Landscape (device test 2026-10-23): the 90pt nav-bar pad left a
+    // large blank band under the last card on a ~390pt-tall screen.
+    const { width: winW, height: winH } = useWindowDimensions();
+    const isLandscape = winW > winH;
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { t } = useTranslation(['event', 'common']);
 
@@ -118,7 +122,7 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
             contentContainerStyle={{
                 paddingHorizontal: spacing.xl,
                 paddingTop: spacing.md,
-                paddingBottom: spacing.xxxxl,
+                paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
                 flexGrow: 1,
             }}
             ListFooterComponent={ListFooterComponent}

@@ -34,7 +34,7 @@ module.exports = ({ M, load, test, SRC }) => {
   test('landscape side insets reach the header row + band, the results list content and the result detail pages', () => {
     const h = read('components/common/AppHeader.tsx');
     assert.ok(/const side = landscapeSideInsets\(insets, width, height\);/.test(h));
-    assert.ok(/style=\{\[headerStyles\.bar, \{ paddingTop: insets\.top \+ 16, paddingLeft: space\.xl \+ side\.left, paddingRight: space\.xl \+ side\.right \}\]\}/.test(h), 'icon row');
+    assert.ok(/style=\{\[headerStyles\.bar, \{ paddingTop: insets\.top \+ \(width > height \? 8 : 16\), paddingLeft: space\.xl \+ side\.left, paddingRight: space\.xl \+ side\.right \}, width > height && \{ paddingBottom: 8 \}\]\}/.test(h), 'icon row');
     assert.ok(/<View style=\{\[headerStyles\.band, \{ paddingLeft: space\.xl \+ side\.left, paddingRight: space\.xl \+ side\.right \}\]\}>/.test(h), 'band');
     // the header's own padding is still the 20pt gutter when side is 0
     assert.ok(/bar: \{\s*paddingHorizontal: space\.xl,/.test(read('styles/header.styles.ts')));

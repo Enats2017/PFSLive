@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -22,6 +22,10 @@ interface PastTabProps {
 }
 
 const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
+    // ✅ Landscape (device test 2026-10-23): the 90pt nav-bar pad left a
+    // large blank band under the last card on a ~390pt-tall screen.
+    const { width: winW, height: winH } = useWindowDimensions();
+    const isLandscape = winW > winH;
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['event', 'common']);
     const [searchText, setSearchText] = useState('');
@@ -205,12 +209,11 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
         [t, searchText]
     );
 
-    return (
+    // ✅ Landscape (device test 2026-10-23): the search band sits in the
+    // list header and scrolls away, so a ~390pt-tall screen shows whole
+    // cards instead of a sliver under a fixed band.
+    const searchBand = (
         <>
-            {/* Full-bleed, like every other search screen. SearchInput draws
-                its own white sub-header band with its own padding; the wrapper
-                here inset that band 20pt from each edge and doubled the padding
-                before the field. */}
             <SearchInput
                 placeholder={t('event:search')}
                 value={searchText}
@@ -223,6 +226,16 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                     <ActivityIndicator size="small" color={palette.navy} />
                 </View>
             )}
+        </>
+    );
+
+    return (
+        <>
+            {/* Full-bleed, like every other search screen. SearchInput draws
+                its own white sub-header band with its own padding; the wrapper
+                here inset that band 20pt from each edge and doubled the padding
+                before the field. */}
+            {!isLandscape && searchBand}
 
             <FlatList
                 data={displayEvents}
@@ -234,9 +247,12 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 contentContainerStyle={{
                     paddingTop: spacing.sm,
                     paddingHorizontal: spacing.xl,
-                    paddingBottom: spacing.xxxxl,
+                    paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
                     flexGrow: 1,
                 }}
+                ListHeaderComponent={isLandscape ? searchBand : null}
+                // full-bleed band: undo the list's side / top padding
+                ListHeaderComponentStyle={isLandscape ? { marginHorizontal: -spacing.xl, marginTop: -spacing.sm, marginBottom: spacing.sm } : undefined}
                 ListFooterComponent={ListFooterComponent}
                 ListEmptyComponent={ListEmptyComponent}
                 keyboardShouldPersistTaps="handled"

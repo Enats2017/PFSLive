@@ -43,3 +43,9 @@ export const useModalSideInsets = () => {
 /** Landscape on a phone (or any window under 500pt tall): popups go compact. */
 export const SHORT_SCREEN_HEIGHT = 500;
 export const isShortScreen = (height: number | undefined): boolean => !!height && height < SHORT_SCREEN_HEIGHT;
+
+/** Compact popups (icon hidden, buttons side by side): any landscape window —
+ *  a tablet in landscape too, not only a phone (device test 2026-10-23: "icon
+ *  hidden in landscape") — or any window under 500pt tall. */
+export const isCompactPopup = (width: number | undefined, height: number | undefined): boolean =>
+  (!!width && !!height && width > height) || isShortScreen(height);

@@ -376,7 +376,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                 {/* ✅ Sub-header — deck: one white band under the AppHeader holding
                     the page label and its filter tabs. Was a full-width lime
                     strip with a centred title. */}
-                <View style={eventStyles.subHeader}>
+                <View style={[eventStyles.subHeader, isLandscape && eventStyles.subHeaderLandscape]}>
                     {/* TAB BAR */}
                     <View style={eventStyles.tabBar}>
                     {TABS.map((tab) => (
@@ -420,7 +420,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                         keyExtractor={(item) => item}
                         onMomentumScrollEnd={handleSwipe}
                         initialScrollIndex={TABS.indexOf('Live')}
-                        contentContainerStyle={{ paddingBottom: spacing.xxxxl }}
+                        contentContainerStyle={{ paddingBottom: isLandscape ? 0 : spacing.xxxxl }}
                         scrollEnabled={true}
                         getItemLayout={(_, index) => ({
                             length: width,

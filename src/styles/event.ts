@@ -26,6 +26,15 @@ export const eventStyles = StyleSheet.create({
     borderBottomColor: palette.border,
     gap: space.md,
   },
+  // ✅ Landscape (device test 2026-10-23): label and tabs share one row with
+  // 8pt padding — the stacked band took ~110pt of a ~390pt-tall screen.
+  subHeaderLandscape: {
+    paddingVertical: space.sm,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   sectionLabel: {
     ...type.label,
     color: palette.textMuted,

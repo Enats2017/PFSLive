@@ -77,7 +77,7 @@ module.exports = ({ M, load, test, SRC }) => {
     assert.strictEqual(p.title, 'Live tracking & results');
     M.window = { width: 852, height: 393 }; M.insets = { top: 0, bottom: 21, left: 59, right: 59 };
     const l = pad(AppHeader({ title: 'x' }));
-    assert.strictEqual(l.top, 16);
+    assert.strictEqual(l.top, 8, 'landscape: 8pt above the row, not 16 (device test 2026-10-23)');
     assert.ok(/59$/.test(l.left) && /59$/.test(l.right) && /59$/.test(l.bandLeft), JSON.stringify(l));
     M.window = { width: 800, height: 360 }; M.insets = { top: 0, bottom: 0, left: 0, right: 48 };   // Android 3-button
     const a = pad(AppHeader({ title: 'x' }));

@@ -126,7 +126,7 @@ module.exports = ({ test, SRC }) => {
       'screens/FavouriteScreen/FavouriteCard.tsx:151',
       // one line that SHRINKS to fit (adjustsFontSizeToFit), never "…": tab pills, the distance figure
       'screens/FollowerEventList/FollowerEvent.tsx:392', 'screens/ParticipantEvent/ParticipantEvent.tsx:367',
-      'screens/HomeScreen.tsx:2981',
+      'screens/HomeScreen.tsx:2982',
       // a checkpoint's km or name in a label / value row
       'screens/ResultDetailsScreen/RaceInfoTab.tsx:263',
       // status value ("In progress" / "Bezig" / "En cours") in a full-width row

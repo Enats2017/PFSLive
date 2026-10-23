@@ -65,7 +65,7 @@ import { spacing, typography, commonStyles, palette, fonts } from '../styles/com
 import { homeStyles } from '../styles/home.styles';
 import FollowingLiveEventsSection from './FollowingLiveEventsSection';
 import { useDimensions } from '../hooks/useDimensions';
-import { useLandscapeSidePadding, useSafeAreaEdges, isShortScreen } from '../hooks/useLandscapeSidePadding';
+import { useLandscapeSidePadding, useSafeAreaEdges, isCompactPopup } from '../hooks/useLandscapeSidePadding';
 import ModalScroll from '../components/ui/ModalScroll';
 import { FanEmailModal } from '../components/Fanemailmodal';
 import { fanEmailStorage } from '../utils/fanEmailStorage';
@@ -187,8 +187,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Notched iPhones in landscape resolve to edges ['bottom'] below, so the
   // body sat under the notch — pad it here (audit 2026-10-22).
   const sidePadding = useLandscapeSidePadding();
-  // landscape on a phone: compact popups (home.styles notif*Compact)
-  const compactPopups = isShortScreen(useWindowDimensions().height);
+  // landscape (phone or tablet) or a short window: compact popups (home.styles notif*Compact)
+  const popupWindow = useWindowDimensions();
+  const compactPopups = isCompactPopup(popupWindow.width, popupWindow.height);
   const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
   const [showFanEmailModal, setShowFanEmailModal] = useState(false);
 

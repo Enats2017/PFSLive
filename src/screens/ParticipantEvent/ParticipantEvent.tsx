@@ -349,7 +349,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                 {/* ✅ Sub-header — deck: one white band under the AppHeader holding
                     the page label and its filter tabs. Was a full-width lime
                     strip with a centred title. */}
-                <View style={eventStyles.subHeader}>
+                <View style={[eventStyles.subHeader, isLandscape && eventStyles.subHeaderLandscape]}>
                     <Text style={eventStyles.sectionLabel}>{t('event:official.title')}</Text>
 
                     {/* TAB BAR */}
@@ -397,8 +397,8 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                         onMomentumScrollEnd={handleSwipe}
                         initialScrollIndex={TABS.indexOf('Live')}
                         contentContainerStyle={{
-
-                            paddingBottom: spacing.xxxxl,
+                            // landscape: no 90pt pad under the pages (device test 2026-10-23)
+                            paddingBottom: isLandscape ? 0 : spacing.xxxxl,
                             flexGrow: 1,
                         }}
                         scrollEnabled={true}

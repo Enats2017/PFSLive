@@ -16,7 +16,7 @@ import { notificationPermissionService } from '../services/notificationPermissio
 import { analyticsService } from '../services/analyticsService';
 import { watchForOsPrompt } from '../utils/permissionPrompt';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
-import { useModalSideInsets, isShortScreen } from '../hooks/useLandscapeSidePadding';
+import { useModalSideInsets, isCompactPopup } from '../hooks/useLandscapeSidePadding';
 
 /** iOS: wait for a closing modal (password modal ~300 ms animation) first. */
 export const FOLLOW_SHEET_IOS_DELAY_MS = 600;
@@ -28,8 +28,8 @@ export const FollowNotificationPrompt: React.FC = () => {
   const { t } = useTranslation(['readiness']);
   const insets = useSafeAreaInsets();
   const modalSides = useModalSideInsets();
-  const { height: windowHeight } = useWindowDimensions();
-  const compact = isShortScreen(windowHeight);
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const compact = isCompactPopup(windowWidth, windowHeight);
   const visible = useFollowPromptStore((st) => st.visible);
   const hide = useFollowPromptStore((st) => st.hide);
 

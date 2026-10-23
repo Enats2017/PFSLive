@@ -68,7 +68,8 @@ module.exports = ({ M, load, test, SRC }) => {
     assert.strictEqual(count(/homeStyles\.notifButtonContainer, compactPopups && homeStyles\.notifButtonRowCompact/g), 9);
     assert.strictEqual(count(/compactPopups && homeStyles\.notifButtonCompact\]/g), 19, 'every button');
     assert.ok(/homeStyles\.notifTitle, compactPopups && homeStyles\.notifTitleClearClose/.test(h), 'notification title clear of the ✕');
-    assert.ok(/const compactPopups = isShortScreen\(useWindowDimensions\(\)\.height\);/.test(h));
+    // landscape (phone or tablet) or a short window — device test 2026-10-23
+    assert.ok(/const compactPopups = isCompactPopup\(popupWindow\.width, popupWindow\.height\);/.test(h));
     const st = read('styles/home.styles.ts');
     assert.strictEqual(num(block(st, 'notifWrapperCompact'), 'paddingVertical'), 8);
     assert.strictEqual(num(block(st, 'notifWrapper'), 'padding'), 20);

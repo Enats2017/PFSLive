@@ -103,7 +103,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         // The bar paints behind the status bar, so it carries the top inset.
-        style={[headerStyles.bar, { paddingTop: insets.top + 16, paddingLeft: space.xl + side.left, paddingRight: space.xl + side.right }]}
+        // Landscape: 8pt above / below the row, not 16 (device test 2026-10-23:
+        // on a ~390pt-tall screen the lists under the header showed ~1 card).
+        style={[headerStyles.bar, { paddingTop: insets.top + (width > height ? 8 : 16), paddingLeft: space.xl + side.left, paddingRight: space.xl + side.right }, width > height && { paddingBottom: 8 }]}
       >
         <View style={headerStyles.row}>
           {showBack && (

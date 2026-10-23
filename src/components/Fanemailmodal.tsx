@@ -9,7 +9,7 @@ import FloatingLabelInput from './FloatingLabelInput';
 import ModalScroll from './ui/ModalScroll';
 import { fanEmailApi } from '../services/Fanemailservice';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
-import { isShortScreen } from '../hooks/useLandscapeSidePadding';
+import { isCompactPopup } from '../hooks/useLandscapeSidePadding';
 
 
 
@@ -27,7 +27,8 @@ export const isValidEmail = (value: string): boolean => EMAIL_REGEX.test(value.t
 export const FanEmailModal: React.FC<FanEmailModalProps> = ({ visible, onSave, onSkip }) => {
     const { t } = useTranslation(['home', 'common']);
     // landscape: compact card, clear of the camera (device test 2026-10-22)
-    const compact = isShortScreen(useWindowDimensions().height);
+    const popupWindow = useWindowDimensions();
+    const compact = isCompactPopup(popupWindow.width, popupWindow.height);
     const [email, setEmail] = useState('');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
