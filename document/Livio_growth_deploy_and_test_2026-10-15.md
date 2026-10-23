@@ -185,7 +185,7 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 508 · 188 · 19 passed · exit 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 511 · 188 · 19 passed · exit 0 |
 | Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 435 passed, 0 failed (1 skipped on a local web build), leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
@@ -449,6 +449,13 @@ gesture navigation), landscape, EN / FR / NL:
     away — the list then fills the screen under the header, whole cards, and the last card ends just above the bottom
     (no big blank band, nothing below the screen edge). Open the profile in landscape first, then rotate: the
     training list is never empty-looking / tiny. Portrait: as before.
+88. Live map, in landscape: tap a checkpoint / aid station and a participant marker — the popup is centred over the
+    WHOLE screen (header and bottom bar dimmed), not squeezed into the map strip; the ✕ and the top line are clear of
+    the camera / status bar, Get directions is reachable (scroll the card if it is taller), tap outside closes it.
+    Rotate to portrait: the popup sits over the map as before.
+89. Result List (Results tab), in landscape, race in progress or finished: the STARTED / FINISHED / DNF card has the
+    same small gap above the first result card as in portrait (it was touching), and the filters start right under
+    the event-name band. Portrait: as before.
 
 ---
 
@@ -528,7 +535,7 @@ The sequencing request is moot — the free session is already off on live (2026
 - `wp_endpoint` index — **already exists** (`idx_wp_endpoint`, 191-char prefix) on the live copy.
 
 ### Known, not done
-- Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 508 (+ tracking 188, activation 19, distance button 20),
+- Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 511 (+ tracking 188, activation 19, distance button 20),
   server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
   DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 108 vitest + type-check + lint.
 - The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`

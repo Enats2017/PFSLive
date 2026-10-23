@@ -688,6 +688,33 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         );
     }
 
+    // ✅ Landscape (device test 2026-10-23): the popups sat inside the map area,
+    // ~170pt under the header, distance selector and bottom bar — the card was
+    // a thin scrolling strip with the close button at its edge. In landscape they
+    // cover the whole screen (centred, clear of the notch / status bar / home
+    // indicator); in portrait they stay over the map, as before.
+    const mapPopups = (
+        <>
+            {popupState.type === 'participant' && livePopupParticipant && (
+                <ParticipantPopup
+                    participant={livePopupParticipant}
+                    event_source={event_source}
+                    isRrActive={isRrActive}
+                    onClose={handleClosePopup}
+                    fullScreen={isLandscape}
+                />
+            )}
+
+            {popupState.type === 'aidstation' && popupState.data && (
+                <AidStationPopup
+                    station={popupState.data as AidStationMapMarker}
+                    onClose={handleClosePopup}
+                    fullScreen={isLandscape}
+                />
+            )}
+        </>
+    );
+
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
             <AppHeader title={event_name} showLogo={true} showBack />
@@ -792,21 +819,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     </TouchableOpacity>
                 )}
 
-                {popupState.type === 'participant' && livePopupParticipant && (
-                    <ParticipantPopup
-                        participant={livePopupParticipant}
-                        event_source={event_source}
-                        isRrActive={isRrActive}
-                        onClose={handleClosePopup}
-                    />
-                )}
-
-                {popupState.type === 'aidstation' && popupState.data && (
-                    <AidStationPopup
-                        station={popupState.data as AidStationMapMarker}
-                        onClose={handleClosePopup}
-                    />
-                )}
+                {!isLandscape && mapPopups}
 
             </View>
             </View>
@@ -836,6 +849,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     />
                 )
             )}
+
+            {/* last child: above the header and the bottom bar */}
+            {isLandscape && mapPopups}
         </SafeAreaView>
     );
 };

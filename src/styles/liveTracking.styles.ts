@@ -97,6 +97,12 @@ export const liveTrackingStyles = StyleSheet.create({
         // instead. Without it the X ended up above the overlay (audit 2026-10-22).
         maxHeight: '90%',
   },
+    // Landscape, over the whole screen: wider and less padding, so more of the
+    // card fits the ~330pt height (the body still scrolls past that).
+    popupFullScreen: {
+        padding: spacing.lg,
+        maxWidth: 520,
+    },
     // ScrollView around the popup body: content height until the card hits
     // its maxHeight, then it scrolls.
     popupBody: {

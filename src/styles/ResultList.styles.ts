@@ -519,6 +519,14 @@ divider: {
     paddingTop: 8,
     paddingBottom: 24,
   },
+  // Landscape, filters + statistics inside the list: the 8pt moves from above
+  // the filters to below the statistics — the same layout as portrait.
+  listWithHeader: {
+    paddingTop: 0,
+  },
+  listHeaderInList: {
+    marginBottom: 8,
+  },
 
   center: {
     flex: 1,

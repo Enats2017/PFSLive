@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-nati
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ParticipantMapMarker } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
 import { palette, fonts, space } from '../../styles/common.styles';
@@ -18,6 +19,11 @@ interface ParticipantPopupProps {
      * kinds of partner event report 'partner'.
      */
     isRrActive?: boolean;
+    /**
+     * Landscape: the overlay covers the whole screen (rendered at the screen's
+     * root), so it keeps the card clear of the safe-area insets itself.
+     */
+    fullScreen?: boolean;
 }
 
 export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
@@ -25,8 +31,10 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
     onClose,
     event_source,
     isRrActive,
+    fullScreen,
 }) => {
     const { t } = useTranslation(['livetracking', 'common']);
+    const insets = useSafeAreaInsets();
 
     const formatTime = (seconds: number | null | undefined): string => {
         if (!seconds || seconds === 0) return '00:00:00';
@@ -65,14 +73,17 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
     const showLowBattery = !hasFinished && battery != null && battery <= LOW_BATTERY_THRESHOLD;
 
     return (
-        <View style={liveTrackingStyles.popupOverlay}>
+        <View style={[liveTrackingStyles.popupOverlay, fullScreen && {
+            paddingTop: insets.top, paddingBottom: insets.bottom,
+            paddingLeft: insets.left, paddingRight: insets.right,
+        }]}>
             {/* Backdrop tap closes (there was no way to dismiss except the X) */}
             <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
             {/* popup has maxHeight '90%' of the map overlay and the body scrolls:
                 the card (430-590pt) was taller than the map area (~374-490pt
                 portrait, ~96pt landscape), so the X went above the overlay —
                 untappable on Android (audit 2026-10-22). */}
-            <View style={liveTrackingStyles.popup}>
+            <View style={[liveTrackingStyles.popup, fullScreen && liveTrackingStyles.popupFullScreen]}>
                 <TouchableOpacity style={liveTrackingStyles.popupCloseBtn} onPress={onClose}>
                     <Ionicons name="close" size={24} color={palette.textBody} />
                 </TouchableOpacity>

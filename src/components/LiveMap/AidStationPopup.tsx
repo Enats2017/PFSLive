@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Linking, Alert, Platform, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AidStationMapMarker } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
 import { palette, fonts, space } from '../../styles/common.styles';
@@ -40,13 +41,20 @@ interface AidStationPopupProps {
     station: AidStationMapMarker;
 
     onClose: () => void;
+    /**
+     * Landscape: the overlay covers the whole screen (rendered at the screen's
+     * root), so it keeps the card clear of the safe-area insets itself.
+     */
+    fullScreen?: boolean;
 }
 
 export const AidStationPopup: React.FC<AidStationPopupProps> = ({
     station,
     onClose,
+    fullScreen,
 }) => {
     const { t } = useTranslation(['livetracking', 'common']);
+    const insets = useSafeAreaInsets();
     const features = station.features ?? [];
 
     // Clean the HTML description once per station, and gate the expand toggle.
@@ -85,14 +93,17 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
     };
 
     return (
-        <View style={liveTrackingStyles.popupOverlay}>
+        <View style={[liveTrackingStyles.popupOverlay, fullScreen && {
+            paddingTop: insets.top, paddingBottom: insets.bottom,
+            paddingLeft: insets.left, paddingRight: insets.right,
+        }]}>
             {/* Backdrop tap closes (there was no way to dismiss except the X) */}
             <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
             {/* popup has maxHeight '90%' of the map overlay and the body scrolls:
                 the card was taller than the map area (~96pt in landscape), so
                 the X went above the overlay — untappable on Android, and
                 Get directions was off the bottom (audit 2026-10-22). */}
-            <View style={liveTrackingStyles.popup}>
+            <View style={[liveTrackingStyles.popup, fullScreen && liveTrackingStyles.popupFullScreen]}>
                 <TouchableOpacity style={liveTrackingStyles.popupCloseBtn} onPress={onClose}>
                     <Ionicons name="close" size={24} color={palette.textBody} />
                 </TouchableOpacity>

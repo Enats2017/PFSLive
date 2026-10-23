@@ -342,8 +342,13 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                         data={displayResults}
                         keyExtractor={keyExtractor}
                         ListHeaderComponent={filtersInList ? filterHeader : null}
+                        // ✅ Landscape (device test 2026-10-23): the statistics sat
+                        // flush on the first card, and the list's 8pt top pad went
+                        // above the filters instead. Now as in portrait: filters
+                        // flush under the header, 8pt between statistics and cards.
+                        ListHeaderComponentStyle={filtersInList ? resultListStyle.listHeaderInList : undefined}
                         renderItem={renderItem}
-                        contentContainerStyle={resultListStyle.list}
+                        contentContainerStyle={[resultListStyle.list, filtersInList && resultListStyle.listWithHeader]}
                         showsVerticalScrollIndicator={false}
                         onEndReached={onEndReached}
                         onEndReachedThreshold={0.3}
