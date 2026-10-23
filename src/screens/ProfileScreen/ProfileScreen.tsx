@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { profileListLandscapeHeight } from '../../utils/screenFit';
 import {
     View,
     Text,
@@ -61,8 +62,11 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     // ✅ At least 360pt (layout audit 2026-10-22): in landscape half the window
     // height left ~174-197pt, a nested list showing less than one card. The
     // outer ScrollView scrolls to the rest.
-    const TAB_CONTENT_HEIGHT = windowWidth > height
-        ? Math.max(height * 0.5 - insets.bottom, 360)   // landscape floor (audit 2026-10-22)
+    // Landscape (audit 2026-10-23): exactly the visible area under the header,
+    // as the own profile (EventsContent) - 360 was taller than the screen, the
+    // last cards were never on it together.
+    const TAB_CONTENT_HEIGHT = isLandscape
+        ? profileListLandscapeHeight(height, insets.top, insets.bottom)
         : height * 0.5 - insets.bottom;
     const width = containerWidth || windowWidth;
     const flatListRef = useRef<FlatList>(null);
@@ -85,6 +89,17 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const isFetching = useRef(false);
     const fromEditFetched = useRef(false);
     const activeTabRef = useRef<Tab>('Live');
+
+    // ✅ Re-sync the page after a rotation (audit 2026-10-23), as ParticipantEvent
+    // does: the FlatList's own onLayout scrolled with the OLD page width, so the
+    // pager showed half of one tab and half of the next.
+    useEffect(() => {
+        const index = TABS.indexOf(activeTabRef.current);
+        const timer = setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index, animated: false });
+        }, 80);
+        return () => clearTimeout(timer);
+    }, [width]);
 
     // ✅ SAFELY EXTRACT targetId WITH DEFAULT
     const targetId = route.params?.customer_app_id ?? 0;
@@ -384,7 +399,8 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={[{
                     flexGrow: 1,
-                    paddingBottom: spacing.xxxxl,
+                    // landscape: 16, not the 90pt nav-bar pad (a blank band)
+                    paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
                 }, sidePadding]}
             >
                 <ProfileCard

@@ -24,7 +24,7 @@ import { formatClockTime } from '../../utils/timeFormat';
 import { formatEventDate } from '../../utils/dateFormatter';
 import { useDimensions } from '../../hooks/useDimensions';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
-import { distanceButtonsBelow } from '../../utils/screenFit';
+import { distanceButtonsBelow, detailsHeaderImageLandscape } from '../../utils/screenFit';
 
 const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }) => {
   const { product_app_id, event_name, event_image } = route.params;
@@ -39,7 +39,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
   // ✅ Header image capped in landscape: full width at 612:428 it was ~590pt
   // tall there - taller than the screen. Portrait is unchanged.
-  const headerImageHeight = Math.round(height * 0.45);
+  const headerImageHeight = detailsHeaderImageLandscape(height);
   const [containerWidth, setContainerWidth] = useState(0);
   const isGestureNav = insets.bottom > 0;
   const isLandscape = windowWidth > height;

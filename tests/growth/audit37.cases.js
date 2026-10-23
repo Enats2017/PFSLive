@@ -162,9 +162,9 @@ module.exports = ({ test, SRC }) => {
     assert.ok(textWidth('Recreatieloop', 'fonts.display', 20) > 130);
   });
 
-  test('header images are capped in landscape (45% of the screen height) — full width × 612/428 was taller than the screen', () => {
+  test('header images are capped in landscape (30% of the screen height since audit44, was 45%) — full width × 612/428 was taller than the screen', () => {
     for (const f of ['screens/EventDetails/DistanceTab.tsx', 'screens/EventDetails/ParticipantTab.tsx', 'screens/FollowerDetailsList/DistanceTab.tsx', 'screens/ParticipantEvent/RaceResultScreen.tsx']) {
-      assert.ok(/0\.45/.test(read(f)), f);
+      assert.ok(/const headerImageHeight = detailsHeaderImageLandscape\(\w+\);/.test(read(f)), f);
     }
   });
 

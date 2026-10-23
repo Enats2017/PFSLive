@@ -5,7 +5,8 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { spacing, palette, fonts, shadows, space } from '../styles/common.styles';
@@ -36,6 +37,8 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
     onLoadMore,
 }) => {
   const { t } = useTranslation();
+  const { width: winW, height: winH } = useWindowDimensions();   // before the early return (hooks rule)
+  const isLandscape = winW > winH;
     if (!visible) return null;
 
     if (loading) {
@@ -70,7 +73,8 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled
                 contentContainerStyle={{
-                    paddingBottom: spacing.xxxxl,
+                    // landscape: 16 - 90 of the 260pt list was blank (audit 2026-10-23)
+                    paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
                     flexGrow: 1,
                 }}
                 style={{ maxHeight: 260 }}

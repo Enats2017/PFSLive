@@ -32,7 +32,7 @@ import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import { formatEventDate } from '../../utils/dateFormatter';
-import { distanceButtonsBelow } from '../../utils/screenFit';
+import { distanceButtonsBelow, detailsHeaderImageLandscape } from '../../utils/screenFit';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
@@ -288,7 +288,7 @@ const DistanceTab = ({
   // at 612:428 it was ~590pt tall there - more than the whole screen - and the
   // distances started a full screen down. Portrait is unchanged.
   const headerLandscape = windowWidth > windowHeight;
-  const headerImageHeight = Math.round(windowHeight * 0.45);
+  const headerImageHeight = detailsHeaderImageLandscape(windowHeight);
   const preselectDoneRef = useRef(false);
   // onScrollToIndexFailed retries the real index ONCE per preselect scroll
   // (a retry that fails again must not loop).

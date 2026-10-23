@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { View, TextInput, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { palette, radii, space, fonts } from '../styles/common.styles';
 
@@ -16,10 +16,12 @@ interface SearchInputProps {
    * their own white panel.
    */
   framed?: boolean;
+  /** Extra style for the white band (e.g. full-bleed past a padded parent). */
+  frameStyle?: StyleProp<ViewStyle>;
 }
 
 const SearchInput = forwardRef<TextInput, SearchInputProps>(
-  ({ placeholder, value, onChangeText, icon = 'search', onFocus, onBlur, framed = true }, ref) => {
+  ({ placeholder, value, onChangeText, icon = 'search', onFocus, onBlur, framed = true, frameStyle }, ref) => {
     const field = (
       <View style={styles.field}>
         <Ionicons name={icon} size={18} color={palette.textMuted} />
@@ -38,7 +40,7 @@ const SearchInput = forwardRef<TextInput, SearchInputProps>(
         />
       </View>
     );
-    return framed ? <View style={styles.frame}>{field}</View> : field;
+    return framed ? <View style={[styles.frame, frameStyle]}>{field}</View> : field;
   }
 );
 

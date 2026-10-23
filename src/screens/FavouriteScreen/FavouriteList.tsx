@@ -210,6 +210,45 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         navigation.navigate('AllParticipant', { product_app_id, event_name });
     }, [navigation, product_app_id, event_name]);
 
+    // One bottom bar for every state (the error state had none, and loading
+    // highlighted "Results" on the participant bar).
+    const bottomNav = sectionType === 'follower' ? (
+        <BottomNavigationFollower
+            activeTab='Favorites'
+            product_app_id={product_app_id}
+            event_name={event_name}
+            event_image={event_image}
+            sourceTab={sourceTab}
+            product_option_value_app_id={product_option_value_app_id}
+            showResults={showResults}
+            race_date={raceDate}
+        />
+    ) : (
+        <BottomNavigation
+            activeTab="Favorites"
+            product_app_id={product_app_id}
+            event_name={event_name}
+            event_image={event_image}
+            sourceScreen={sourceScreen}
+            product_option_value_app_id={product_option_value_app_id}
+            showResults={showResults}
+            race_date={raceDate}
+        />
+    );
+    // Gutter + notch inset added together: spreading sidePadding here would
+    // replace the 20pt gutter with 0 in portrait.
+    const subHeaderPad = {
+        paddingLeft: space.xl + sidePadding.paddingLeft,
+        paddingRight: space.xl + sidePadding.paddingRight,
+    };
+    // ✅ Landscape (audit 2026-10-23): the fixed sub-header left ~105-141pt for a
+    // ~175pt card. There it scrolls away with the list. Portrait unchanged.
+    const subHeader = (
+        <View style={[favstyle.subHeader, isLandscape ? { paddingHorizontal: space.xl } : subHeaderPad]}>
+            <Text style={favstyle.subHeaderText}>{t('favourite:subheader')}</Text>
+        </View>
+    );
+
     if (loading) {
         return (
             <SafeAreaView style={commonStyles.container} edges={safeEdges}>
@@ -217,11 +256,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                 <View style={commonStyles.centerContainer}>
                     <ActivityIndicator size="large" color={palette.navy} />
                 </View>
-                {sectionType === 'follower' ? (
-                    <BottomNavigationFollower activeTab='Favorites' event_name={event_name} />
-                ) : (
-                    <BottomNavigation activeTab="Results" event_name={event_name} />
-                )}
+                {bottomNav}
             </SafeAreaView>
         );
     }
@@ -231,15 +266,18 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
             <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={event_name} showBack />
                 {/* 25_Favourites.png: one line saying what the list is. */}
-                <View style={favstyle.subHeader}>
+                <View style={[favstyle.subHeader, subHeaderPad]}>
                     <Text style={favstyle.subHeaderText}>{t('favourite:subheader')}</Text>
                 </View>
-                <ErrorScreen
-                    type={error!.type}
-                    title={error!.title}
-                    message={error!.message}
-                    onRetry={() => { clearError(); fetchFavourites(); }}
-                />
+                <View style={[{ flex: 1 }, sidePadding]}>
+                    <ErrorScreen
+                        type={error!.type}
+                        title={error!.title}
+                        message={error!.message}
+                        onRetry={() => { clearError(); fetchFavourites(); }}
+                    />
+                </View>
+                {bottomNav}
             </SafeAreaView>
         );
     }
@@ -252,14 +290,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                 rendered in the error branch, so the populated list - the state
                 people actually see - had nothing between the lime band and the
                 first card, and the cards read as glued to the header. */}
-            {/* Gutter + notch inset added together: spreading sidePadding here
-                would replace the 20pt gutter with 0 in portrait. */}
-            <View style={[favstyle.subHeader, {
-                paddingLeft: space.xl + sidePadding.paddingLeft,
-                paddingRight: space.xl + sidePadding.paddingRight,
-            }]}>
-                <Text style={favstyle.subHeaderText}>{t('favourite:subheader')}</Text>
-            </View>
+            {!isLandscape && subHeader}
 
             {/* Body between the sub-header and the bottom bar. The FAB is
                 anchored to THIS box (bottom-right, above the bottom bar) instead
@@ -284,6 +315,9 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                             paddingBottom: fabClearance(fabBottom),
                             flexGrow: 1,
                         }}
+                        ListHeaderComponent={isLandscape ? subHeader : null}
+                        // full-bleed inside the list's 20pt gutter, flush on top
+                        ListHeaderComponentStyle={isLandscape ? { marginHorizontal: -space.xl, marginTop: -spacing.lg, marginBottom: spacing.lg } : undefined}
                         ListFooterComponent={renderFooter}
                         ListEmptyComponent={renderEmptyComponent}
                     />
@@ -302,31 +336,7 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
                 </View>
             </View>
 
-            {sectionType === 'follower' ? (
-                <BottomNavigationFollower
-                    activeTab='Favorites'
-                    product_app_id={product_app_id}
-                    event_name={event_name}
-                    event_image={event_image}
-                    sourceTab={sourceTab}
-                    product_option_value_app_id={product_option_value_app_id}
-                    showResults={showResults}
-                    race_date={raceDate}
-                />
-            ) : (
-                <BottomNavigation
-                    activeTab="Favorites"
-                    product_app_id={product_app_id}
-                    event_name={event_name}
-                    event_image={event_image}
-                    sourceScreen={sourceScreen}
-                    product_option_value_app_id={product_option_value_app_id}
-                    showResults={showResults}
-                    race_date={raceDate}
-
-                    
-                />
-            )}
+            {bottomNav}
 
             <TrackingPasswordModal
                 visible={passwordModalVisible}

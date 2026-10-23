@@ -359,6 +359,20 @@ export const liveTrackingStyles = StyleSheet.create({
         backgroundColor: palette.fill,
         borderRadius: 10,
     },
+    // Landscape: title + pill + selector on one row (DistanceDropdown).
+    dropdownContainerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.md,
+    },
+    mapHeadRowInline: {
+        marginBottom: 0,
+        gap: space.sm,
+    },
+    dropdownButtonInline: {
+        flex: 1,
+        paddingVertical: spacing.sm,
+    },
     dropdownButtonText: {
         fontFamily: fonts.bodySemi,
         fontSize: 15,

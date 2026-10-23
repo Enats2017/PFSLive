@@ -62,7 +62,8 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     // on one row left the badge empty / "5 sess…" at 320-360pt, and at ×1.35
     // the row ran ~50pt past the card. Wider phones keep the one-row layout
     // (see the layout note in membershipPlans.styles.ts).
-    const { width: windowWidth, fontScale } = useWindowDimensions();
+    const { width: windowWidth, height: windowHeight, fontScale } = useWindowDimensions();
+    const ctaLandscape = windowWidth > windowHeight;
     const badgeOwnLine = windowWidth < 400 || fontScale > 1;
 
 
@@ -549,7 +550,14 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 </View>
             </ScrollView>
 
-            <View style={[styles.ctaWrapper, { paddingBottom: insets.bottom + 20 }]}>
+            {/* Landscape (audit 2026-10-23): the SafeAreaView already pads the
+                bottom inset (it was added twice, 62pt under the button), and the
+                button kept clear of the notch. Portrait unchanged. */}
+            <View style={[styles.ctaWrapper, { paddingBottom: insets.bottom + 20 }, ctaLandscape && {
+                paddingBottom: 20,
+                paddingLeft: space.xl + sidePadding.paddingLeft,
+                paddingRight: space.xl + sidePadding.paddingRight,
+            }]}>
                 <Button
                     label={t('membership:cta.continueWith', { planName: getPlan(selected).name })}
                     onPress={handleContinue}

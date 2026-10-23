@@ -301,6 +301,17 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
         flatListRef.current?.scrollToIndex({ index, animated: false });
     }, []);
 
+    // ✅ Re-sync the page after a rotation (audit 2026-10-23), as ParticipantEvent
+    // does: the FlatList's own onLayout scrolled with the OLD page width, so the
+    // pager showed half of one tab and half of the next.
+    useEffect(() => {
+        const index = TABS.indexOf(activeTabRef.current);
+        const timer = setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index, animated: false });
+        }, 80);
+        return () => clearTimeout(timer);
+    }, [width]);
+
     useEffect(() => {
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
         if (searchText.trim().length === 0) {

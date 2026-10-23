@@ -527,6 +527,15 @@ divider: {
   listHeaderInList: {
     marginBottom: 8,
   },
+  // Landscape, error / empty: filters and the state scroll together; the state
+  // keeps room for its icon, text and Retry.
+  stateScroll: {
+    flexGrow: 1,
+    paddingBottom: 16,
+  },
+  stateInScroll: {
+    minHeight: 260,
+  },
 
   center: {
     flex: 1,

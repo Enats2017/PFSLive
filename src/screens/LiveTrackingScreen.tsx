@@ -628,6 +628,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         ))
         : ELEVATION_PANEL_HEIGHT;
     const showElevationProfile = hasGpx && panelHeight >= MIN_PANEL;
+    const popupOpen = popupState.type !== null;
     // Relative to the panel's top, always inside the map container.
     const collapseBtnBottom = profileCollapsed ? 16 : panelHeight + 8;
     const hasValidCoords = participantMarkers.some(p => p.lat !== 0 && p.lon !== 0);
@@ -769,7 +770,10 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                                 right: 0,
                                 height: panelHeight,   // capped to the map area (see panelHeight)
                                 backgroundColor: 'transparent',
-                                elevation: 5,
+                                // 0 while a popup is open: Android draws by elevation
+                                // before zIndex, so the panel (5) and the chevron (10)
+                                // were painted over the portrait popup (audit 2026-10-23).
+                                elevation: popupOpen ? 0 : 5,
                             },
                         ]}
                         pointerEvents="box-none"
@@ -798,7 +802,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                             {
                                 bottom: collapseBtnBottom,
                                 
-                                zIndex: 10, elevation: 10
+                                zIndex: 10, elevation: popupOpen ? 0 : 10
                             },   // just above the panel's top (or near the bottom when collapsed)
                         ]}
                         onPress={() => {

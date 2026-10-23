@@ -5,6 +5,7 @@ import {
     FlatList,
     ActivityIndicator,
     RefreshControl,
+    ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -293,6 +294,35 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
         </>
     );
 
+    // Error / no favourites / no results (null when there is a list).
+    const stateView = hasError ? (
+        <ErrorScreen
+            type={error!.type}
+            title={error!.title}
+            message={error!.message}
+            onRetry={() => { clearError(); retry(); }}
+        />
+    ) : isFavTab && displayResults.length === 0 ? (
+        <View style={resultListStyle.center}>
+            <Text style={{ fontFamily: fonts.body,
+        fontSize: 40 }}>☆</Text>
+            <Text style={resultListStyle.loadingText}>
+                {t('allrace:filter.noFavourites')}
+            </Text>
+        </View>
+    ) : displayResults.length === 0 ? (
+        <View style={resultListStyle.center}>
+            <Text style={resultListStyle.errorText}>
+                {t('allrace:race.noResults')}
+            </Text>
+        </View>
+    ) : null;
+    // ✅ Landscape (audit 2026-10-23): filters + statistics (~230pt) fixed above
+    // a state left it 0pt of a ~160-200pt body - "No results" spilled over the
+    // statistics and the error's Retry could not be reached. There the filters
+    // and the state scroll together, the state with a usable height.
+    const stateScrolls = isLandscapeView && !initialLoad && stateView !== null;
+
     return (
         <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
 
@@ -307,7 +337,7 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
             />
 
             <View style={{ flex: 1, paddingLeft: side.left, paddingRight: side.right }}>
-            {!filtersInList && filterHeader}
+            {!filtersInList && !stateScrolls && filterHeader}
             {initialLoad ? (
                 <View style={resultListStyle.center}>
                     <ActivityIndicator size="large" color={palette.navy} />
@@ -315,27 +345,13 @@ const ResultListScreen: React.FC<ResultListprops> = ({ route }) => {
                         {t('common:loading.loading')}
                     </Text>
                 </View>
-            ) : hasError ? (
-                <ErrorScreen
-                    type={error!.type}
-                    title={error!.title}
-                    message={error!.message}
-                    onRetry={() => { clearError(); retry(); }}
-                />
-            ) : isFavTab && displayResults.length === 0 ? (
-                <View style={resultListStyle.center}>
-                    <Text style={{ fontFamily: fonts.body,
-        fontSize: 40 }}>☆</Text>
-                    <Text style={resultListStyle.loadingText}>
-                        {t('allrace:filter.noFavourites')}
-                    </Text>
-                </View>
-            ) : displayResults.length === 0 ? (
-                <View style={resultListStyle.center}>
-                    <Text style={resultListStyle.errorText}>
-                        {t('allrace:race.noResults')}
-                    </Text>
-                </View>
+            ) : stateScrolls ? (
+                <ScrollView contentContainerStyle={resultListStyle.stateScroll}>
+                    {filterHeader}
+                    <View style={resultListStyle.stateInScroll}>{stateView}</View>
+                </ScrollView>
+            ) : stateView ? (
+                stateView
             ) : (
                 <View style={{ flex: 1 }}>
                     <FlatList

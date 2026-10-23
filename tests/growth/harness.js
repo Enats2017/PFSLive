@@ -82,7 +82,8 @@ const ReactStub = {
   useState: (v) => { const x = typeof v === 'function' ? v() : v; return [M.useStateMap ? M.useStateMap(x) : x, () => {}]; },
   useCallback: (f) => f,
   useMemo: (f) => f(),
-  useEffect: () => {},
+  // M.effects (optional array) records every effect + deps, so a test can run one
+  useEffect: (fn, deps) => { if (M.effects) M.effects.push({ fn, deps }); },
   useRef: (v) => ({ current: v }),
   memo: (c) => c,            // memo(Component) renders Component itself
   Fragment: 'Fragment',

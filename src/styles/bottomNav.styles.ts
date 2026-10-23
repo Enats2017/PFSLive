@@ -12,6 +12,15 @@ export const bottomNavStyles = StyleSheet.create({
     // screen's SafeAreaView, not here — adding it in both places double-pads.
     paddingBottom: space.lg,
   },
+  // Landscape: icon and label side by side, 4pt top and bottom (~43pt bar).
+  containerSlim: {
+    paddingTop: space.xs,
+    paddingBottom: space.xs,
+  },
+  tabSlim: {
+    flexDirection: 'row',
+    gap: space.sm,
+  },
   tab: {
     flex: 1,
     alignItems: 'center',

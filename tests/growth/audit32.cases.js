@@ -125,7 +125,7 @@ module.exports = ({ test, SRC }) => {
       // nation · age under the favourite's name (the name / bib lines take 2 since the full audit)
       'screens/FavouriteScreen/FavouriteCard.tsx:151',
       // one line that SHRINKS to fit (adjustsFontSizeToFit), never "…": tab pills, the distance figure
-      'screens/FollowerEventList/FollowerEvent.tsx:392', 'screens/ParticipantEvent/ParticipantEvent.tsx:367',
+      'screens/FollowerEventList/FollowerEvent.tsx:403', 'screens/ParticipantEvent/ParticipantEvent.tsx:367',
       'screens/HomeScreen.tsx:2982',
       // a checkpoint's km or name in a label / value row
       'screens/ResultDetailsScreen/RaceInfoTab.tsx:263',

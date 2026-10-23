@@ -100,3 +100,11 @@ export const profileListLandscapeHeight = (windowH: number, insetTop: number, in
  */
 export const fieldScrollY = (fieldY: number, contentH: number, boxH: number): number =>
   Math.min(fieldY - 8, contentH - boxH);
+
+/**
+ * ✅ Event / follower details header image in landscape (audit 2026-10-23):
+ * 45% of the window (~162-177pt) was as tall as the whole visible list on a
+ * phone, so the first distance / participant card started below the screen.
+ * 30% (~108-118pt on a phone, 250 on an iPad) leaves room for a card.
+ */
+export const detailsHeaderImageLandscape = (windowH: number): number => Math.round(windowH * 0.3);

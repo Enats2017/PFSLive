@@ -146,6 +146,9 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
 
                 {raceInfo?.next_cp && (
                     <View style={[resultListStyle.card, {
+                        // the list card's 20pt side margin pulled it in inside
+                        // this card; full width like every row above it
+                        marginHorizontal: 0,
                         borderWidth: 0.28,
                         borderLeftWidth: 0.28,
                         borderColor: palette.danger,

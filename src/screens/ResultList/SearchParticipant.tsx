@@ -8,7 +8,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, spacing, palette } from '../../styles/common.styles';
+import { commonStyles, spacing, space, palette } from '../../styles/common.styles';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
@@ -252,6 +252,15 @@ const SearchParticipant: React.FC<SearchParticipantpops> = ({ route, navigation 
                 value={searchText}
                 onChangeText={setSearchText}
                 icon="search"
+                // ✅ Landscape: the band reaches the screen edges (it was inset
+                // by the notch padding, grey strips each side); the field
+                // keeps clear of the notch. 0 in portrait.
+                frameStyle={{
+                    marginLeft: -sidePadding.paddingLeft,
+                    marginRight: -sidePadding.paddingRight,
+                    paddingLeft: space.xl + sidePadding.paddingLeft,
+                    paddingRight: space.xl + sidePadding.paddingRight,
+                }}
             />
 
             {searchText.trim().length > 0 && participants.length > 0 && (

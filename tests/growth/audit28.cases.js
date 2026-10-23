@@ -42,7 +42,7 @@ module.exports = ({ M, load, test, SRC }) => {
     const l = read('screens/ResultList/ResultList.tsx');
     assert.ok(/const side = landscapeSideInsets\(insets, width, height\);/.test(l));
     const wrap = l.indexOf('<View style={{ flex: 1, paddingLeft: side.left, paddingRight: side.right }}>');
-    assert.ok(wrap > l.indexOf('<AppHeader') && wrap < l.indexOf('{!filtersInList && filterHeader}'), 'wraps filters + list, below the header');
+    assert.ok(wrap > l.indexOf('<AppHeader') && wrap < l.indexOf('{!filtersInList && !stateScrolls && filterHeader}'), 'wraps filters + list, below the header');
     assert.ok(l.indexOf('</View>\n\n            {sectionType === \'follower\' ? (') > wrap, 'closes before the bottom bar (bar stays full width)');
 
     const d = read('screens/ResultDetailsScreen/ResultDetails.tsx');

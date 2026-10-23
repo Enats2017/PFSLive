@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, palette, space } from '../../styles/common.styles';
+import { detailsHeaderImageLandscape } from '../../utils/screenFit';
 import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
 import { API_CONFIG } from '../../constants/config';
@@ -37,7 +38,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
   // unchanged.
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const headerLandscape = windowWidth > windowHeight;
-  const headerImageHeight = Math.round(windowHeight * 0.45);
+  const headerImageHeight = detailsHeaderImageLandscape(windowHeight);
 
   const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
   const {

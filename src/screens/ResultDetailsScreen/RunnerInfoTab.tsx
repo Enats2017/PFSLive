@@ -9,6 +9,7 @@ import { RunnerInfo, RaceInfo } from '../../services/resultDetailsService';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { SvgUri } from 'react-native-svg';
 import { getImageUrl } from '../../constants/config';
+import { stripWavePrefix } from '../../utils/waveLabel';
 
 interface RunnerInfoProps {
     runnerInfo?: RunnerInfo;
@@ -192,8 +193,10 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUt
 
                     {!!raceInfo.wave && (
                         <View style={resultInfoStyles.bibCard}>
-                            <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.wavelabel')}</Text>
-                            <Text style={resultInfoStyles.rowValue}>{raceInfo.wave}</Text>
+                            <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.wavelabel')}</Text>
+                            {/* as RaceInfoTab: value only, wraps right-aligned (a long
+                                wave pushed past the card edge at 320pt) */}
+                            <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]}>{stripWavePrefix(raceInfo.wave)}</Text>
                         </View>
                     )}
                 </View>

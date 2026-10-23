@@ -185,7 +185,7 @@ This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store bui
 ### Automated tests — run locally BEFORE deploying (all must pass)
 | Repo | Command | Expected |
 |---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 511 · 188 · 19 passed · exit 0 |
+| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 524 · 188 · 19 passed · exit 0 |
 | Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 435 passed, 0 failed (1 skipped on a local web build), leftover rows 0 |
 | Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
 | Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
@@ -456,6 +456,28 @@ gesture navigation), landscape, EN / FR / NL:
 89. Result List (Results tab), in landscape, race in progress or finished: the STARTED / FINISHED / DNF card has the
     same small gap above the first result card as in portrait (it was touching), and the filters start right under
     the event-name band. Portrait: as before.
+90. Any screen with the bottom bar (Home / Favourites / Results / Map), in landscape: the bar is slim, icon and label
+    side by side; every label readable. Portrait: icon over label, as before.
+91. Live map, landscape: "Live map", the status pill and the distance selector are on ONE row; the map gets clearly
+    more height. Android, PORTRAIT: open a checkpoint popup with the elevation chart showing — the whole card is on
+    top (the chart and its ⌄ button no longer show through over the lower part of the card).
+92. Event details / follower distance list / participants tab / your race results, landscape: the header image is
+    shorter, the first card shows under it without scrolling.
+93. Results tab, landscape, a filter with NO results (e.g. type Favourites with nobody followed, or a checkpoint
+    nobody passed): filters, statistics and the message scroll together, nothing overlaps the bar. With the network
+    off: the error and its Retry button are reachable by scrolling.
+94. Favourites, landscape: the "your favourites" line scrolls away with the cards; with an event not started yet the
+    cards have no empty line + gap at the bottom (portrait too). Favourites error (network off): the bar is there and
+    "Favourites" is highlighted, also while loading.
+95. Search participants and Add favourite, landscape: the white search band runs edge to edge; the field is clear of
+    the camera.
+96. Result detail: the "Next timing point" box is as wide as the rows above it; Runner info "Wave" shows the value
+    without the repeated "Wave 1:" prefix, wrapping on the right (both orientations).
+97. Another athlete's profile, landscape: the events list ends just above the bottom, whole cards, no blank band.
+    Followed events and athlete profile: rotate on the Live tab, then back — the page shows exactly one tab (never half
+    of two).
+98. Membership plans, landscape: the "Continue" button bar has a normal gap under it and the button is clear of the
+    camera. Athlete search suggestions, landscape: no big empty space at the end of the list.
 
 ---
 
@@ -535,7 +557,7 @@ The sequencing request is moot — the free session is already off on live (2026
 - `wp_endpoint` index — **already exists** (`idx_wp_endpoint`, 191-char prefix) on the live copy.
 
 ### Known, not done
-- Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 511 (+ tracking 188, activation 19, distance button 20),
+- Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 524 (+ tracking 188, activation 19, distance button 20),
   server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
   DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 108 vitest + type-check + lint.
 - The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`

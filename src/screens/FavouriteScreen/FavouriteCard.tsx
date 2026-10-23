@@ -191,8 +191,9 @@ const FavouriteCard: React.FC<FavouriteCardProps> = ({
                             <LiveTrackingBar />
                         </View>
                     )}
-                    {/* ── Separator ── */}
-                    <View style={favstyle.separator} />
+                    {/* ── Separator ── (only above the stats row: before the race
+                        it was a rule over ~32pt of empty card) */}
+                    {!isNotStarted && <View style={favstyle.separator} />}
 
                     {/* ── Bottom stats: CP race time / ETA next / ETA finish (always when started) ── */}
                     {/* Labels 3 lines (was 2): "<checkpoint> (TEMPS DE COURSE)" needs 3

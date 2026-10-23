@@ -158,7 +158,8 @@ module.exports = ({ M, load, test, SRC }) => {
   });
 
   test('portrait unchanged where the fix is only for landscape / narrow: profile tab height floor, favourites button spot, ranking headings, participant names', () => {
-    assert.ok(/const TAB_CONTENT_HEIGHT = windowWidth > height\n\s*\? Math\.max/.test(files['screens/ProfileScreen/ProfileScreen.tsx']));
+    // landscape: the visible area under the header (audit44); portrait: half the window, as before
+    assert.ok(/const TAB_CONTENT_HEIGHT = isLandscape\n\s*\? profileListLandscapeHeight\(height, insets\.top, insets\.bottom\)\n\s*: height \* 0\.5 - insets\.bottom;/.test(files['screens/ProfileScreen/ProfileScreen.tsx']));
     assert.ok(/const fabBottom = isLandscape \? space\.lg : FAB_BOTTOM_PORTRAIT;/.test(files['screens/FavouriteScreen/FavouriteList.tsx']));
     assert.ok(/narrow && resultInfoStyles\.rankingLabelSmall/.test(files['screens/ResultDetailsScreen/RaceLive.tsx']));
     for (const f of ['screens/FavouriteScreen/AllParticipantCard.tsx', 'screens/ResultList/ParticipantCard.tsx']) {

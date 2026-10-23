@@ -19,7 +19,7 @@ import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import { formatEventDate } from '../../utils/dateFormatter';
-import { distanceButtonsBelow } from '../../utils/screenFit';
+import { distanceButtonsBelow, detailsHeaderImageLandscape } from '../../utils/screenFit';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
@@ -117,7 +117,7 @@ const DistanceTab = ({
   // unchanged.
   const { width: headerWinWidth, height: headerWinHeight } = useWindowDimensions();
   const headerLandscape = headerWinWidth > headerWinHeight;
-  const headerImageHeight = Math.round(headerWinHeight * 0.45);
+  const headerImageHeight = detailsHeaderImageLandscape(headerWinHeight);
 
   const renderListHeader = useCallback(() => (
     <>
