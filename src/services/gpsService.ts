@@ -2143,9 +2143,13 @@ let _interimInFlight = false;
 // A phone that never gets a live send through (data roaming off on the NL border)
 // keeps sent=0, so every heartbeat (60 s) and HomeScreen's 10 s timer re-claimed,
 // added a 🩺 line, re-assembled the whole log (up to ~2 MB) and POSTed into no
-// network — ~1000 times over an 18 h race. Now: no attempt while offline, and at
-// most one per INTERIM_LOG_RETRY_MS after a failure. In-memory on purpose: a fresh
-// context (relaunch) may try once straight away.
+// network — ~1000 times over an 18 h race. Now: at most one attempt per
+// INTERIM_LOG_RETRY_MS after a failure, and none while hasNetwork() says no.
+// hasNetwork() WITH its probe, not allowProbe:false: NetInfo can stick at
+// "unreachable" in background on a working network (p2595, 10-04), and a silent
+// session (sent=0) never earns the post-send trust — without the probe its
+// diagnostic log would never go out, which is the case it exists for. In-memory on
+// purpose: a fresh context (relaunch) may try once straight away.
 const INTERIM_LOG_RETRY_MS = 5 * 60 * 1000;
 let _interimLastFailAt = 0;
 
@@ -2184,7 +2188,7 @@ const _maybeUploadInterimLogInner = async (): Promise<void> => {
     const { locationService } = require('./locationService');
     const { locationQueueService } = require('./locationQueueService');
     if (_interimLastFailAt && Date.now() - _interimLastFailAt < INTERIM_LOG_RETRY_MS) return;
-    if (!(await locationQueueService.hasNetwork({ allowProbe: false }))) return;
+    if (!(await locationQueueService.hasNetwork())) return;
 
     // Claim first so the heartbeat and the foreground timer cannot both upload.
     await AsyncStorage.setItem(INTERIM_LOG_KEY, '1');

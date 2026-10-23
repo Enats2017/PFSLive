@@ -381,17 +381,44 @@ const L = () => load('services/locationService').locationService;
     M.clock += 5 * 60000; await G().maybeUploadInterimLog();
     assert.strictEqual(logUploads().length, 1);
   });
-  test('Grizzly100: offline phone (no radio) → no interim attempt, no 🩺 line, key not claimed', async () => {
+  // ── Grizzly100 pre-race (2026-10-23): offline phones over an 18 h race ──
+  const interimAttempts = () => { const a = { n: 0 }; M.api.handler = (url) => { if (url.includes('save_tracking_log')) a.n++; return Promise.reject(Object.assign(new Error('Network Error'), { type: 'network' })); }; return a; };
+  test('Grizzly100: dead network for 1 h (heartbeat 60 s + Home 10 s timer) → ≤ 1 attempt per 5 min, not one per call', async () => {
     arm();
     M.net = { isConnected: false, isInternetReachable: false };
-    for (let i = 0; i < 10; i++) { await G().maybeUploadInterimLog(); M.clock += 60000; }
-    assert.ok(!M.store.has('@PFSLive:interimLogUploaded'));
-    assert.strictEqual(M.axios.calls.length + M.api.posted.length, 0, 'nothing posted');
+    const a = interimAttempts();
+    for (let s = 0; s < 3600; s += 10) { await G().maybeUploadInterimLog(); M.clock += 10000; }   // 360 calls
+    assert.ok(a.n >= 1 && a.n <= 13, `bounded attempts: ${a.n} in 1 h (was one per call)`);
     const log = await G().getFullTrackingLog();
-    assert.strictEqual(log.filter((e) => e.icon === '🩺').length, 0);
-    M.net = { isConnected: true, isInternetReachable: true };
+    assert.strictEqual(log.filter((e) => e.icon === '🩺').length, a.n, 'one 🩺 line per real attempt, no more');
+    assert.ok(!M.store.has('@PFSLive:interimLogUploaded'), 'never claimed for good while it fails');
+  });
+  test('Grizzly100: network back after the outage → the interim log goes out within the 5-min spacing', async () => {
+    arm();
+    M.net = { isConnected: false, isInternetReachable: false };
+    interimAttempts();
+    await G().maybeUploadInterimLog();                  // fails, spacing starts
+    M.net = { isConnected: true, isInternetReachable: true }; M.api.handler = null;
     await G().maybeUploadInterimLog();
-    assert.strictEqual(logUploads().length, 1, 'uploads once the network is back');
+    assert.strictEqual(logUploads().length, 0, 'still inside the spacing');
+    M.clock += 5 * 60000; await G().maybeUploadInterimLog();
+    assert.strictEqual(logUploads().length, 1);
+    M.clock += 5 * 60000; await G().maybeUploadInterimLog();
+    assert.strictEqual(logUploads().length, 1, 'once only');
+  });
+  test('p2595 pattern: NetInfo stuck "unreachable" in background on a WORKING network → a silent session still uploads its interim log', async () => {
+    arm();
+    M.net = { isConnected: true, isInternetReachable: false };
+    await G().maybeUploadInterimLog();
+    assert.strictEqual(logUploads().length, 1, 'the probe lets the diagnostic through');
+  });
+  test('healthy session (sent > 0) offline → no network check, no attempt, marked done (unchanged)', async () => {
+    arm({ sent: 5 });
+    M.net = { isConnected: false, isInternetReachable: false };
+    const a = interimAttempts();
+    await G().maybeUploadInterimLog();
+    assert.strictEqual(a.n, 0);
+    assert.strictEqual(M.store.get('@PFSLive:interimLogUploaded'), '1');
   });
   results.push(await run('6. interim log upload for silent sessions (issue 4)'));
 
@@ -1862,6 +1889,48 @@ const L = () => load('services/locationService').locationService;
       assert.strictEqual(cur[cur.length - 1].msg, 'late-799', 'the newest entry is persisted by the next flush');
       assert.ok(cur.length <= 500, 'rolling window stays one segment');
     } finally { RN.AppState.currentState = saved; }
+  });
+  // The bigger queue through every other flow that reads it (Stop, orphans, restart, drain).
+  const full = () => Array.from({ length: 1500 }, (_, i) => fix(2, 20, 1125 - i * 0.75));   // 18.75 h at 45 s, oldest first
+  test('Grizzly100: Stop while offline with 1500 queued → nothing lost; all uploaded later, oldest first, is_queued=1', async () => {
+    setQ(full());
+    M.net = { isConnected: false, isInternetReachable: false }; M.api.mode = 'down';
+    assert.strictEqual(await L().drainForStop('2', '20', 30000, FAST), 0);
+    assert.strictEqual(await L().drainOrphans(), 0);
+    assert.strictEqual(getO().length + getQ().length, 1500, 'all parked (orphan cap is 2000)');
+    M.net = { isConnected: true, isInternetReachable: true }; M.api.mode = 'ok'; M.clock += 3600000;
+    let sent = 0; for (let i = 0; i < 40 && (getO().length || getQ().length); i++) sent += await L().drainOrphans(45000);
+    assert.strictEqual(sent, 1500); assert.strictEqual(M.api.posted.length, 1500);
+    const ts = M.api.posted.map((p) => new Date(p.body.timestamp).getTime());
+    assert.ok(ts.every((t) => t > 0), 'every body carries its timestamp');
+    assert.ok(ts.every((t, i) => i === 0 || t > ts[i - 1]), 'strictly ascending — oldest first');
+    assert.ok(M.api.posted.every((p) => p.body.is_queued === 1));
+  });
+  test('Grizzly100: Start again on the same race with 1500 parked → all 1500 back in the queue, none trimmed', async () => {
+    M.store.set(OK_, JSON.stringify(full()));
+    await startSession('2', '20');
+    assert.strictEqual(getQ().length, 1500); assert.strictEqual(getO().length, 0);
+  });
+  test('Grizzly100: back online with 1500 queued → drained 50 a pass, every fix once, in order, queue empty', async () => {
+    setQ(full());
+    const svc = L(); let passes = 0;
+    while (getQ().length && passes < 60) { const n = await svc.processQueue('2', '20'); assert.ok(n > 0, 'progress each pass'); passes++; }
+    assert.strictEqual(getQ().length, 0); assert.strictEqual(M.store.get(QCK), '0');
+    assert.strictEqual(passes, 30, '1500 / 50');
+    assert.strictEqual(M.api.posted.length, 1500, 'no duplicates');
+    const sentTs = M.api.posted.map((p) => JSON.stringify(p.body));
+    assert.strictEqual(new Set(sentTs).size, 1500);
+  });
+  test('Grizzly100: a full queue of realistic fixes stays well under the 2 MB AsyncStorage read limit', async () => {
+    const real = { latitude: 50.7712345678901, longitude: 5.7623456789012, altitude: 187.4000015258789, accuracy: 4.743000030517578,
+      altitudeAccuracy: 3.0999999046325684, timestamp: new Date(M.clock).toISOString(), speed: 2.6100001335144043, heading: 184.3800048828125,
+      isMock: false, isMoving: true, elevationGain: 1234.5678, batteryLevel: 57, batteryCharging: false, participantId: '4789', eventId: '20',
+      queuedAt: new Date(M.clock).toISOString(), retryCount: 0 };
+    const { locationQueueService: q } = Q();
+    for (let i = 0; i < 1500; i++) await q.addToQueue({ ...real, timestamp: new Date(M.clock + i).toISOString() }, false);
+    const bytes = M.store.get(QK).length;
+    assert.ok(bytes < 1024 * 1024, `queue value ${(bytes / 1048576).toFixed(2)} MB`);
+    assert.strictEqual((await q.getQueue()).length, 1500, 'reads back whole');
   });
   results.push(await run('14. Grizzly100 pre-race: 18 h offline queue, full-log write throttle'));
 
