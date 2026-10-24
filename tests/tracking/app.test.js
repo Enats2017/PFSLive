@@ -2079,6 +2079,25 @@ const L = () => load('services/locationService').locationService;
     const h = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
     assert.ok(/Platform\.OS === 'ios' \? 'home:startConfirm\.dontCloseIos' : 'home:startConfirm\.dontCloseAndroid'/.test(h));
   });
+  // growth_v0.1 has its own Start-popup scroll (ModalScroll, device-tested
+  // 2026-10-22, plus compactPopups on short screens): master's ScrollView /
+  // startPopupScrollMax (0cc711b, 1b72ead) is NOT carried over — same guarantee.
+  test('Start popup can never push Start off-screen: the card, buttons included, sits in ModalScroll (capped in points)', async () => {
+    const h = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    const a = h.indexOf('visible={showStartConfirmModal}');
+    const modal = h.slice(a, h.indexOf('</Modal>', a));
+    assert.ok(a > 0 && modal.length > 0);
+    const inScroll = modal.slice(modal.indexOf('<ModalScroll'), modal.indexOf('</ModalScroll>'));
+    assert.ok(inScroll.length > 0, 'ModalScroll wraps the Start popup');
+    assert.ok(/<ModalScroll[^>]*>\s*<View style=\{\[homeStyles\.notifCard/.test(modal), 'the card is its child');
+    for (const k of ['startConfirm.title', 'startConfirm.message', 'startConfirm.keepOpen', 'dontCloseIos', 'startConfirm.yes', 'startConfirm.no', 'handleStartConfirmYes', 'handleStartConfirmNo'])
+      assert.ok(inScroll.includes(k), `${k} inside ModalScroll`);
+    assert.ok(!/startPopupScrollMax/.test(h), "master's separate cap is not carried over");
+    const ms = fs.readFileSync(`${SRC}/components/ui/ModalScroll.tsx`, 'utf8');
+    assert.ok(/maxHeight: maxBoxHeight/.test(ms) && /useWindowDimensions/.test(ms), 'ModalScroll caps in points from the window');
+    const st = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8');
+    assert.strictEqual((st.match(/\bnotifScroll: \{/g) || []).length, 1, 'one notifScroll style (no duplicate key from a merge)');
+  });
   results.push(await run('15. tracking safety net: not-tracking check, watchdog, early reminder, start diag, start popup'));
 
   // ════════════ 16. "Recording but not sending" (2026-10-24 08:20 review) ════════════
