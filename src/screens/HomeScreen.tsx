@@ -2169,7 +2169,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       >
         <View style={homeStyles.notifBackdrop}>
           <View style={homeStyles.notifWrapper}>
-            <View style={homeStyles.notifCard}>
+            {/* Scrolls only when taller than the screen (2026-10-24): the platform
+                line left the French popup only ~7-14 pt to spare on a 360x640 Android /
+                an iPhone SE 2, so a larger text size, a 3-button nav bar or a first-gen
+                SE pushes the Start button off-screen. Fits → nothing moves. */}
+            <View style={[homeStyles.notifCard, homeStyles.notifCardScrollable]}>
+              <ScrollView
+                style={homeStyles.notifScroll}
+                contentContainerStyle={homeStyles.notifScrollContent}
+                bounces={false}
+                keyboardShouldPersistTaps="handled"
+              >
               <View style={homeStyles.notifIconWrapper}>
                 <Ionicons name="navigate-circle-outline" size={36} color={colors.primary} />
               </View>
@@ -2204,6 +2214,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   <Text style={commonStyles.secondaryButtonText}>{t('home:startConfirm.no')}</Text>
                 </TouchableOpacity>
               </View>
+              </ScrollView>
             </View>
           </View>
         </View>

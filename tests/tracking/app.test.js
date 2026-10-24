@@ -2067,6 +2067,21 @@ const L = () => load('services/locationService').locationService;
     const h = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
     assert.ok(/Platform\.OS === 'ios' \? 'home:startConfirm\.dontCloseIos' : 'home:startConfirm\.dontCloseAndroid'/.test(h));
   });
+  test('Start popup can never push Start off-screen: card capped at the screen, the whole content (buttons too) in a ScrollView', async () => {
+    const h = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    const a = h.indexOf('visible={showStartConfirmModal}');
+    const modal = h.slice(a, h.indexOf('</Modal>', a));
+    assert.ok(a > 0 && modal.length > 0);
+    assert.ok(/<View style=\{\[homeStyles\.notifCard, homeStyles\.notifCardScrollable\]\}>\s*<ScrollView/.test(modal), 'the ScrollView is the card\'s only child');
+    const inScroll = modal.slice(modal.indexOf('<ScrollView'), modal.indexOf('</ScrollView>'));
+    for (const k of ['startConfirm.title', 'startConfirm.message', 'startConfirm.keepOpen', 'dontCloseIos', 'startConfirm.yes', 'startConfirm.no', 'handleStartConfirmYes', 'handleStartConfirmNo'])
+      assert.ok(inScroll.includes(k), `${k} inside the ScrollView`);
+    assert.ok(/<\/ScrollView>\s*<\/View>\s*<\/View>\s*<\/View>\s*$/.test(modal), 'nothing after the ScrollView in the card');
+    const st = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(/notifCardScrollable: \{\s*maxHeight: "100%",\s*\}/.test(st), 'card never taller than the screen area');
+    assert.ok(/notifScroll: \{\s*width: "100%",\s*flexGrow: 0,\s*\}/.test(st), 'ScrollView: full card width, only the height it needs');
+    assert.ok(/notifScrollContent: \{\s*alignItems: "center",\s*\}/.test(st), 'content still centred like the card');
+  });
   results.push(await run('15. tracking safety net: not-tracking check, watchdog, early reminder, start diag, start popup'));
 
   // ════════════ 16. "Recording but not sending" (2026-10-24 08:20 review) ════════════

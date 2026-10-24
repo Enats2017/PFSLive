@@ -234,6 +234,19 @@ export const homeStyles = StyleSheet.create({
       android: { elevation: 8 },
     }),
   },
+  // Start popup: the card never grows past the screen; its content scrolls.
+  // The ScrollView takes the card's width (the card centres its children) and
+  // only the height it needs (flexGrow 0), so a popup that fits is unchanged.
+  notifCardScrollable: {
+    maxHeight: "100%",
+  },
+  notifScroll: {
+    width: "100%",
+    flexGrow: 0,
+  },
+  notifScrollContent: {
+    alignItems: "center",
+  },
   notifIconWrapper: {
     width: 72,
     height: 72,
