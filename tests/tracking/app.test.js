@@ -2107,6 +2107,28 @@ const L = () => load('services/locationService').locationService;
     const h = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
     assert.ok(/Platform\.OS === 'ios' \? 'home:startConfirm\.dontCloseIos' : 'home:startConfirm\.dontCloseAndroid'/.test(h));
   });
+  test('Start popup can never push Start off-screen: card capped at the screen, the whole content (buttons too) in a ScrollView', async () => {
+    const h = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    const a = h.indexOf('visible={showStartConfirmModal}');
+    const modal = h.slice(a, h.indexOf('</Modal>', a));
+    assert.ok(a > 0 && modal.length > 0);
+    assert.ok(/<View style=\{homeStyles\.notifCard\}>\s*<ScrollView\s+style=\{\[homeStyles\.notifScroll, \{ maxHeight: startPopupScrollMax \}\]\}/.test(modal), 'the ScrollView, capped in points, is the card\'s only child');
+    const inScroll = modal.slice(modal.indexOf('<ScrollView'), modal.indexOf('</ScrollView>'));
+    for (const k of ['startConfirm.title', 'startConfirm.message', 'startConfirm.keepOpen', 'dontCloseIos', 'startConfirm.yes', 'startConfirm.no', 'handleStartConfirmYes', 'handleStartConfirmNo'])
+      assert.ok(inScroll.includes(k), `${k} inside the ScrollView`);
+    assert.ok(/<\/ScrollView>\s*<\/View>\s*<\/View>\s*<\/View>\s*$/.test(modal), 'nothing after the ScrollView in the card');
+    const st = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(!/maxHeight: "100%"/.test(st), 'no percentage cap (unreliable inside a Modal)');
+    assert.ok(/notifScroll: \{\s*width: "100%",\s*flexGrow: 0,\s*flexShrink: 1,\s*\}/.test(st), 'ScrollView: full card width, only the height it needs');
+    // The cap: window minus twice the larger bar, the wrapper (2 x 20) and the card padding (2 x 32).
+    assert.ok(/const startPopupScrollMax = Math\.max\(120, windowHeight - 2 \* Math\.max\(insets\.top, insets\.bottom\) - 2 \* spacing\.xl - 2 \* spacing\.xxxl\);/.test(h));
+    assert.ok(/const \{ width, height: windowHeight \} = useDimensions\(\);/.test(h), 'follows rotation');
+    const cap = (H, top, bottom) => Math.max(120, H - 2 * Math.max(top, bottom) - 40 - 64);
+    assert.strictEqual(cap(667, 20, 0), 523, 'iPhone SE 2/3: 523 pt of content before it scrolls');
+    assert.strictEqual(cap(640, 24, 48), 440, '360x640 Android with a 3-button bar');
+    assert.strictEqual(cap(320, 0, 21), 174, 'landscape iPhone SE');
+    assert.ok(/notifScrollContent: \{\s*alignItems: "center",\s*\}/.test(st), 'content still centred like the card');
+  });
   results.push(await run('15. tracking safety net: not-tracking check, watchdog, early reminder, start diag, start popup'));
 
   // ════════════ 16. "Recording but not sending" (2026-10-24 08:20 review) ════════════

@@ -370,6 +370,17 @@ export const homeStyles = StyleSheet.create({
     alignItems: "center",
     ...shadows.overlay,
   },
+  // Start popup content: the ScrollView takes the card's width (the card centres
+  // its children) and only the height it needs (flexGrow 0); HomeScreen caps it
+  // in points (startPopupScrollMax), so a popup that fits is unchanged.
+  notifScroll: {
+    width: "100%",
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  notifScrollContent: {
+    alignItems: "center",
+  },
   notifIconWrapper: {
     width: 90,
     height: 90,
