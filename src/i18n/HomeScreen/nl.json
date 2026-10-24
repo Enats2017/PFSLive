@@ -121,7 +121,9 @@
     "message": "Je live locatie wordt tijdens de wedstrijd met je volgers gedeeld. Houd Livio actief en je telefoon bij je tot je finisht. Klaar om te starten?",
     "yes": "Ja, start tracking",
     "no": "Nog niet",
-    "keepOpen": "Houd Livio na het tikken op Start 5 seconden op het scherm tot je \"GPS Geactiveerd\" ziet. Vergrendel daarna je telefoon en berg hem op."
+    "keepOpen": "Houd Livio na het tikken op Start 5 seconden op het scherm tot je \"GPS Geactiveerd\" ziet. Vergrendel daarna je telefoon en berg hem op.",
+    "dontCloseIos": "Veeg Livio niet weg in de app-switcher — dan stopt de tracking tot je de app weer opent.",
+    "dontCloseAndroid": "Sluit Livio niet en zorg dat je telefoon de app niet in slaap zet (batterij: onbeperkt)."
   },
   "fanEmail": {
     "title": "Blijf op de hoogte",
@@ -183,5 +185,15 @@
     "preBody": "Open Livio en tik op Start tracking zodat je volgers je live kunnen volgen.",
     "postTitle": "Je wedstrijd is gestart",
     "postBody": "Je tracking staat nog niet aan. Open Livio en tik op Start tracking."
+  },
+  "safety": {
+    "checkTitle": "Livio trackt je wedstrijd niet",
+    "checkBody": "Je wedstrijd is gestart maar Livio heeft je positie niet geregistreerd. Tik om Livio te openen — de tracking gaat meteen verder.",
+    "watchdogTitle": "Livio is gestopt met tracken",
+    "watchdogBody": "Livio heeft je positie al 15 minuten niet geregistreerd. Tik om Livio te openen en verder te tracken.",
+    "earlyTitle": "Je wedstrijd start over 10 minuten",
+    "earlyBody": "Open Livio nu één keer zodat de tracking klaar is bij de start. Vergrendel daarna je telefoon weer.",
+    "notSendingTitle": "Livio kan je positie niet versturen",
+    "notSendingBody": "Je wedstrijd wordt opgenomen, maar Livio heeft al 20 minuten geen internetverbinding, dus je volgers zien je niet. Controleer of mobiele data (en dataroaming in het buitenland) aan staat. Alles wat is opgenomen wordt verstuurd zodra de verbinding terug is."
   }
 }
