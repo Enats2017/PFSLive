@@ -118,7 +118,9 @@
     "message": "Votre position en direct sera partagée avec vos abonnés pendant toute la course. Gardez Livio ouvert et votre téléphone avec vous jusqu'à l'arrivée. Prêt à démarrer ?",
     "yes": "Oui, démarrer le suivi",
     "no": "Pas encore",
-    "keepOpen": "Après avoir appuyé sur Démarrer, gardez Livio à l'écran pendant 5 secondes jusqu'à voir « GPS Activé ». Ensuite, verrouillez votre téléphone et rangez-le."
+    "keepOpen": "Après avoir appuyé sur Démarrer, gardez Livio à l'écran pendant 5 secondes jusqu'à voir « GPS Activé ». Ensuite, verrouillez votre téléphone et rangez-le.",
+    "dontCloseIos": "Ne fermez pas Livio en le balayant dans le sélecteur d'apps : le suivi s'arrête jusqu'à ce que vous le rouvriez.",
+    "dontCloseAndroid": "Ne fermez pas Livio et vérifiez que votre téléphone ne le met pas en veille (batterie : sans restriction)."
   },
   "fanEmail": {
     "title": "Restez informé",
@@ -153,5 +155,15 @@
     "preBody": "Ouvrez Livio et appuyez sur Démarrer le suivi pour que vos abonnés vous suivent en direct.",
     "postTitle": "Votre course a commencé",
     "postBody": "Le suivi n'est pas encore actif. Ouvrez Livio et appuyez sur Démarrer le suivi."
+  },
+  "safety": {
+    "checkTitle": "Livio ne suit pas votre course",
+    "checkBody": "Votre course a commencé mais Livio n'a pas enregistré votre position. Touchez pour ouvrir Livio — le suivi reprend aussitôt.",
+    "watchdogTitle": "Livio a arrêté le suivi",
+    "watchdogBody": "Livio n'a pas enregistré votre position depuis 15 minutes. Touchez pour ouvrir Livio et reprendre le suivi.",
+    "earlyTitle": "Votre course commence dans 10 minutes",
+    "earlyBody": "Ouvrez Livio une fois maintenant pour que le suivi soit prêt au départ. Verrouillez ensuite votre téléphone.",
+    "notSendingTitle": "Livio ne peut pas envoyer votre position",
+    "notSendingBody": "Votre course est enregistrée, mais Livio n'a plus de connexion internet depuis 20 minutes : vos suiveurs ne vous voient pas. Vérifiez que les données mobiles (et l'itinérance à l'étranger) sont activées. Tout ce qui a été enregistré est envoyé dès que la connexion revient."
   }
 }

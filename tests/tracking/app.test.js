@@ -821,7 +821,10 @@ const L = () => load('services/locationService').locationService;
     const iBox = jsx.indexOf('<View style={homeStyles.notifKeepOpenBox}>');
     const iButtons = jsx.indexOf('homeStyles.notifButtonContainer');
     assert.ok(iBody > 0 && iBox > iBody && iKeep > iBox && iButtons > iKeep, 'message → amber box → buttons');
-    assert.ok(!/Platform\.OS/.test(jsx), 'shown on both platforms');
+    // The keep-open line itself is unconditional; only the 2026-10-24 extra line
+    // under it (do not swipe away / do not let it sleep) differs per platform.
+    const withoutPlatformLine = jsx.replace(/\{t\(Platform\.OS === 'ios' \? 'home:startConfirm\.dontCloseIos' : 'home:startConfirm\.dontCloseAndroid'\)\}/, '');
+    assert.ok(!/Platform\.OS/.test(withoutPlatformLine), 'shown on both platforms');
     const st = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8').replace(/\r/g, '');
     assert.ok(/notifKeepOpenBox: \{\s*backgroundColor: colors\.warning \+ "15",/.test(st), 'amber tint');
     assert.ok(/notifKeepOpenText: \{[^}]*color: "#B45309",/.test(st), 'dark amber text');
@@ -1788,7 +1791,8 @@ const L = () => load('services/locationService').locationService;
     await M.bg.heartbeat({}); await M.bg.heartbeat({});
     M.battery.power = { batteryLevel: 0.18, lowPowerMode: false, batteryState: 1 };
     await M.bg.heartbeat({});
-    const notes = M.notif.log.filter((x) => x[0] === 'schedule');
+    // Not counting the tracking safety net's own notifications (section 15).
+    const notes = M.notif.log.filter((x) => x[0] === 'schedule' && !String(x[1]).startsWith('livio-'));
     assert.strictEqual(notes.length, 1, 'once');
     const n = M.notif.pending.find((r) => r.content && r.content.data && r.content.data.type === 'battery_saver');
     assert.ok(n && n.trigger === null && n.content.title === 'home:powerSaving.midRaceTitle', 'immediate, translated');
@@ -1933,6 +1937,352 @@ const L = () => load('services/locationService').locationService;
     assert.strictEqual((await q.getQueue()).length, 1500, 'reads back whole');
   });
   results.push(await run('14. Grizzly100 pre-race: 18 h offline queue, full-log write throttle'));
+
+  // ════════════ 15. Tracking safety net (2026-10-24: 5 silent starts, phones killed Livio) ════════════
+  const SAF = () => load('services/trackingSafetyService');
+  const pending = (id) => M.notif.pending.find((r) => r.identifier === id);
+  const at = (id) => { const p = pending(id); return p ? new Date(p.trigger.date).getTime() : null; };
+  const schedules = (id) => M.notif.log.filter(([k, i]) => k === 'schedule' && i === id).length;
+  const settleS = () => new Promise((r) => setTimeout(r, 40));
+  let latS = 50.75;
+  const fireFix = async () => {
+    latS += 0.001;   // ~111 m — clears the movement gate
+    M.bg.location({ coords: { latitude: latS, longitude: 5.75, speed: 3, accuracy: 5, altitude: 200, heading: 0 }, timestamp: new Date(M.clock).toISOString(), is_moving: true });
+    await settleS();
+  };
+  test('plan: Start 50 min before the gun → check at gun + 4 min, "open Livio" reminder at gun - 10 min', async () => {
+    const { planSafetyArm } = SAF(); const now = 1_000_000_000_000, gun = now + 50 * 60000;
+    assert.deepStrictEqual(planSafetyArm(gun, now, false), { checkAt: gun + 4 * 60000, earlyAt: gun - 10 * 60000 });
+  });
+  test('plan: Start 20 min before → check only (no early reminder); Start after the gun → now + 4 min; manual → now + 4 min; no gun → nothing', async () => {
+    const { planSafetyArm } = SAF(); const now = 1_000_000_000_000;
+    assert.deepStrictEqual(planSafetyArm(now + 20 * 60000, now, false), { checkAt: now + 24 * 60000, earlyAt: null });
+    assert.deepStrictEqual(planSafetyArm(now - 30 * 60000, now, false), { checkAt: now + 4 * 60000, earlyAt: null });
+    assert.deepStrictEqual(planSafetyArm(null, now, true), { checkAt: now + 4 * 60000, earlyAt: null });
+    assert.deepStrictEqual(planSafetyArm(null, now, false), { checkAt: null, earlyAt: null });
+  });
+  test('watchdog reschedule: at most once a minute; a stamp in the future re-arms', async () => {
+    const { shouldRescheduleWatchdog } = SAF(); const now = 1_000_000_000_000;
+    assert.strictEqual(shouldRescheduleWatchdog(null, now), true);
+    assert.strictEqual(shouldRescheduleWatchdog(now - 30000, now), false);
+    assert.strictEqual(shouldRescheduleWatchdog(now - 60000, now), true);
+    assert.strictEqual(shouldRescheduleWatchdog(now + 5000, now), true);
+  });
+  test('real Start 50 min before the gun → "not tracking" check at gun + 4 and early reminder at gun - 10 are scheduled', async () => {
+    const gun = M.clock + 50 * 60000;
+    await startSession('2', '20', new Date(gun).toISOString());
+    assert.strictEqual(at('livio-tracking-check'), gun + 4 * 60000);
+    assert.strictEqual(at('livio-early-start-reminder'), gun - 10 * 60000);
+    assert.ok(!pending('livio-tracking-watchdog'), 'no watchdog before the race');
+  });
+  test('the phone is killed after Start (no heartbeat, no fix) → the check stays scheduled, so the OS still delivers it', async () => {
+    await startSession('2', '20', new Date(M.clock + 20 * 60000).toISOString());
+    M.clock += 30 * 60000;   // past the gun, the app never woke again
+    assert.ok(pending('livio-tracking-check'), 'still pending — nothing alive cancelled it');
+  });
+  test('heartbeat BEFORE the gun (engine alive) → the check is NOT cancelled (alive before the race is not the race)', async () => {
+    await startSession('2', '20', new Date(M.clock + 20 * 60000).toISOString());
+    await M.bg.heartbeat({});
+    assert.ok(pending('livio-tracking-check'));
+  });
+  test('start crowd: heartbeat after the gun with no GPS fix yet → check cancelled, watchdog at now + 15 min (no false alarm)', async () => {
+    await startSession('2', '20', new Date(M.clock - 2 * 60000).toISOString());
+    M.clock += 60000;
+    await M.bg.heartbeat({});
+    assert.ok(!pending('livio-tracking-check'), 'check cancelled');
+    assert.strictEqual(at('livio-tracking-watchdog'), M.clock + 15 * 60000);
+  });
+  test('a GPS fix after the gun → check cancelled and watchdog armed (send path)', async () => {
+    await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    await fireFix();
+    assert.ok(!pending('livio-tracking-check'));
+    assert.ok(pending('livio-tracking-watchdog'));
+  });
+  test('watchdog moves on with every sign of life, but at most once a minute (no notification churn on 1 Hz fixes)', async () => {
+    await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    await fireFix();
+    const first = schedules('livio-tracking-watchdog');
+    for (let i = 0; i < 5; i++) { M.clock += 5000; await fireFix(); }   // 25 s of fixes
+    assert.strictEqual(schedules('livio-tracking-watchdog'), first, 'not rescheduled within the minute');
+    M.clock += 40000; await fireFix();
+    assert.strictEqual(schedules('livio-tracking-watchdog'), first + 1);
+    assert.strictEqual(at('livio-tracking-watchdog'), M.clock + 15 * 60000, 'pushed to 15 min after the latest sign of life');
+  });
+  test('the app dies mid-race → the last watchdog (15 min after the last sign of life) stays scheduled for the OS', async () => {
+    await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    await fireFix(); const lastAlive = M.clock;
+    M.clock += 20 * 60000;   // no more fixes or heartbeats
+    assert.strictEqual(at('livio-tracking-watchdog'), lastAlive + 15 * 60000);
+  });
+  test('Stop → check, watchdog and early reminder all cancelled', async () => {
+    await startSession('2', '20', new Date(M.clock + 50 * 60000).toISOString());
+    await load('services/gpsService').stopWatching();
+    for (const id of ['livio-tracking-check', 'livio-tracking-watchdog', 'livio-early-start-reminder']) assert.ok(!pending(id), id);
+  });
+  test('stopWatching (finish / stale / any full stop) disarms too', async () => {
+    await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    await fireFix();
+    await load('services/gpsService').stopWatching();
+    assert.ok(!pending('livio-tracking-watchdog') && !pending('livio-tracking-check'));
+  });
+  test('notifications denied / unavailable → Start still works and tracking is unaffected', async () => {
+    M.notif.fail = true;
+    const h = await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    assert.ok(h && typeof h.remove === 'function', 'session started');
+    await fireFix(); M.clock += 60000; await fireFix();   // the second fix, after moving, is sent
+    assert.ok(M.api.posted.some((p) => p.url.includes('insert_participant_location')), 'the fix was still sent');
+  });
+  test('a tap only opens Livio: the notifications carry no race_id / event_name (no result-detail navigation)', async () => {
+    await startSession('2', '20', new Date(M.clock + 50 * 60000).toISOString());
+    for (const id of ['livio-tracking-check', 'livio-early-start-reminder']) {
+      const d = pending(id).content.data;
+      assert.deepStrictEqual(d, { type: 'tracking_check' }, id);
+    }
+  });
+  test('start ping diag: battery level, Battery Saver, Android optimisation, charging and Android brand.model', async () => {
+    const RN = require('react-native'); const o = RN.Platform.OS, c = RN.Platform.constants;
+    RN.Platform.OS = 'android'; RN.Platform.constants = { Brand: 'samsung', Model: 'SM-S918B' };
+    M.battery = { ...M.battery, power: { batteryLevel: 0.87, lowPowerMode: false, batteryState: 1 }, optimized: true };
+    try {
+      const d = await load('services/trackingStartService').buildStartDiag(false);
+      assert.strictEqual(d.batt, '87'); assert.strictEqual(d.saver, false); assert.strictEqual(d.opt, true);
+      assert.strictEqual(d.chg, false); assert.strictEqual(d.dev, 'samsung.SM-S918B');
+      assert.strictEqual(d.platform, 'android'); assert.ok('perm' in d, 'existing keys kept');
+    } finally { RN.Platform.OS = o; RN.Platform.constants = c; }
+  });
+  test('start ping diag on iOS / battery unreadable → only the existing keys, never an error', async () => {
+    M.battery = { ...M.battery, fail: true };
+    const d = await load('services/trackingStartService').buildStartDiag(false);
+    assert.ok(!('batt' in d) && !('dev' in d) && !('opt' in d));
+    assert.strictEqual(d.platform, 'ios');
+  });
+  test('texts: safety notifications and the Start popup lines exist in en / fr / nl', async () => {
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      for (const k of ['checkTitle', 'checkBody', 'watchdogTitle', 'watchdogBody', 'earlyTitle', 'earlyBody']) assert.ok(j.safety && j.safety[k], `${l} safety.${k}`);
+      for (const k of ['dontCloseIos', 'dontCloseAndroid']) assert.ok(j.startConfirm[k], `${l} startConfirm.${k}`);
+    }
+  });
+  test('Start popup shows the platform line (iOS: do not swipe away; Android: do not let it sleep)', async () => {
+    const h = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
+    assert.ok(/Platform\.OS === 'ios' \? 'home:startConfirm\.dontCloseIos' : 'home:startConfirm\.dontCloseAndroid'/.test(h));
+  });
+  results.push(await run('15. tracking safety net: not-tracking check, watchdog, early reminder, start diag, start popup'));
+
+  // ════════════ 16. "Recording but not sending" (2026-10-24 08:20 review) ════════════
+  // Timelines from the prod copy: bib 1269 (iOS) recorded from the gun and sent
+  // nothing until 08:45 (190 fixes in one burst); bib 410 sent normally, then
+  // nothing 06:47-07:49 (68 fixes delivered at 07:49); 50 runners lost 5-15 min in
+  // the km 5-8 dead zone, bibs 392 / 825 / 964 16-18 min — those must stay silent.
+  const NS = 'livio-not-sending';
+  const LAST_SENT = '@PFSLive:safetyLastSentAt', WARNED = '@PFSLive:safetyNotSendingWarnedFor';
+  const shows = () => schedules(NS);
+  const offline = () => { M.api.mode = 'down'; M.net = { isConnected: true, isInternetReachable: false }; };
+  const online = () => { M.api.mode = 'ok'; M.net = { isConnected: true, isInternetReachable: true }; };
+  const minutes = async (n) => { for (let i = 0; i < n; i++) { M.clock += 60000; await fireFix(); } };
+  const qCount = () => parseInt(M.store.get('@PFSLive:locationQueueCount') || '0', 10);
+  test('rule: needs fixes waiting; 20 min from the last send (or first sign of life); once per outage', async () => {
+    const { shouldWarnNotSending: w, NOT_SENDING_MS } = SAF(); const now = 1_000_000_000_000;
+    assert.strictEqual(NOT_SENDING_MS, 20 * 60000);
+    assert.strictEqual(w(0, now - 60 * 60000, null, null, now), false, 'nothing queued (standing still) → never');
+    assert.strictEqual(w(5, now - 19 * 60000, null, null, now), false, '19 min since the last send');
+    assert.strictEqual(w(5, now - 20 * 60000, null, null, now), true, '20 min since the last send');
+    assert.strictEqual(w(5, null, now - 20 * 60000, null, now), true, 'never sent: from the first sign of life (bib 1269)');
+    assert.strictEqual(w(5, null, now - 19 * 60000, null, now), false);
+    assert.strictEqual(w(5, null, null, null, now), false, 'no sign of life recorded → no clock');
+    assert.strictEqual(w(5, now - 30 * 60000, null, String(now - 30 * 60000), now), false, 'already warned for this outage');
+    assert.strictEqual(w(5, null, now - 30 * 60000, '0', now), false, 'already warned (nothing ever sent)');
+    assert.strictEqual(w(5, now - 25 * 60000, null, String(now - 90 * 60000), now), true, 'a send since the last warning = a new outage');
+  });
+  test('bib 1269: no data from the gun → one notification ~20 min after the first sign of life, not repeated for an hour', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline();
+    await minutes(18);
+    assert.ok(qCount() > 0, 'fixes are queued');
+    assert.strictEqual(shows(), 0, 'not yet at 18 min');
+    await minutes(3);
+    assert.strictEqual(shows(), 1, 'shown once by 21 min');
+    const n = pending(NS);
+    assert.strictEqual(n.trigger, null, 'shown now (a local notification needs no network)');
+    assert.deepStrictEqual(n.content.data, { type: 'tracking_check' }, 'a tap only opens Livio');
+    assert.ok(/send/i.test(n.content.title), 'en title: ' + n.content.title);
+    await minutes(40);
+    assert.strictEqual(shows(), 1, 'still once after an hour offline');
+    assert.ok(!M.api.posted.some((p) => p.url.includes('insert_participant_location')), 'nothing reached the server');
+  });
+  test('bib 1269 continued: the connection comes back → the backlog drains, the warning is withdrawn; a second outage warns again', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline(); await minutes(22);
+    assert.strictEqual(shows(), 1);
+    online(); await minutes(3); await settleS();
+    assert.ok(M.api.posted.some((p) => p.url.includes('insert_participant_location')), 'fixes reached the server');
+    assert.ok(!pending(NS), 'withdrawn');
+    assert.ok(M.notif.log.some(([k, i]) => k === 'dismiss' && i === NS), 'dismissed from the notification centre');
+    assert.ok(!M.store.has(WARNED));
+    offline(); await minutes(19);
+    assert.strictEqual(shows(), 1, 'second outage: not yet at 19 min');
+    await minutes(3);
+    assert.strictEqual(shows(), 2, 'second outage warned once');
+  });
+  test('bib 410: sends normally, then 62 min without data → warned 20 min after the last accepted send, once', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(5); await settleS();
+    const lastSent = parseInt(M.store.get(LAST_SENT), 10);
+    assert.ok(lastSent > 0, 'accepted sends are stamped');
+    offline();
+    while (M.clock < lastSent + 19 * 60000) await minutes(1);
+    assert.strictEqual(shows(), 0, 'not before 20 min');
+    await minutes(2);
+    assert.strictEqual(shows(), 1);
+    await minutes(41);
+    assert.strictEqual(shows(), 1, 'once for the whole 62 min');
+  });
+  test('the km 5-8 dead zone: 15 min without data, then back → no notification', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(5); offline(); await minutes(15); online(); await minutes(5);
+    assert.strictEqual(shows(), 0);
+  });
+  test('bibs 392 / 825 / 964: 16-18 min outages → no notification (15 min would have flagged them)', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(3); await settleS();
+    const lastSent = parseInt(M.store.get(LAST_SENT), 10);
+    offline();
+    while (M.clock < lastSent + 18 * 60000) await minutes(1);
+    online(); await minutes(3);
+    assert.strictEqual(shows(), 0);
+  });
+  test('standing still at an aid station, online, nothing queued, no send for 30 min → no notification', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(3); await settleS();
+    for (let i = 0; i < 30; i++) { M.clock += 60000; await M.bg.heartbeat({}); }
+    assert.strictEqual(qCount(), 0);
+    assert.strictEqual(shows(), 0);
+  });
+  test('standing still IN a dead zone with fixes waiting → the heartbeat alone raises it at 20 min', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(2); await settleS();
+    offline(); await minutes(3);
+    assert.ok(qCount() > 0);
+    for (let i = 0; i < 20; i++) { M.clock += 60000; await M.bg.heartbeat({}); }
+    assert.strictEqual(shows(), 1);
+  });
+  test('before the gun nothing is sent, by design → no notification however long', async () => {
+    await startSession('2', '20', new Date(M.clock + 60 * 60000).toISOString());
+    offline(); await minutes(40);
+    for (let i = 0; i < 5; i++) { M.clock += 60000; await M.bg.heartbeat({}); }
+    assert.strictEqual(shows(), 0);
+  });
+  test('a rejected send (server error) does not count as sent', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    M.api.mode = 'softfail'; await minutes(3); await settleS();
+    assert.ok(!M.store.has(LAST_SENT));
+  });
+  test('Stop while warned → withdrawn and the state cleared', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline(); await minutes(22);
+    assert.ok(pending(NS));
+    await load('services/gpsService').stopWatching();
+    assert.ok(!pending(NS));
+    assert.ok(!M.store.has(WARNED) && !M.store.has(LAST_SENT));
+  });
+  test('a new Start clears the last session\'s warning and clock', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline(); await minutes(22);
+    assert.ok(pending(NS));
+    online();
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    assert.ok(!pending(NS) && !M.store.has(WARNED));
+  });
+  test('notifications denied → nothing shown, tracking unaffected', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    M.notif.fail = true;
+    offline(); await minutes(25);
+    assert.ok(qCount() > 0, 'still recording into the queue');
+    assert.strictEqual(shows(), 0);
+    online(); await minutes(3); await settleS();
+    assert.ok(M.api.posted.some((p) => p.url.includes('insert_participant_location')), 'and sends resume');
+  });
+  test('only the not-sending notification failing → marked once, not retried every minute', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline(); await minutes(18);
+    const N = require('expo-notifications'); const orig = N.scheduleNotificationAsync; let tries = 0;
+    N.scheduleNotificationAsync = async (req) => { if (req.identifier === NS) { tries++; throw new Error('unsupported'); } return orig(req); };
+    try { await minutes(10); } finally { N.scheduleNotificationAsync = orig; }
+    assert.strictEqual(tries, 1, 'attempted once for this outage');
+    assert.strictEqual(M.store.get(WARNED), '0');
+  });
+  test('send stamp: written at most every 30 s (5 s fixes near the finish)', async () => {
+    const { trackingSafetyService: s } = SAF(); const t = 1_800_000_000_000;
+    await s.disarm();
+    await s.onSent(t);
+    for (let k = 5; k <= 25; k += 5) await s.onSent(t + k * 1000);
+    assert.strictEqual(M.store.get(LAST_SENT), String(t));
+    await s.onSent(t + 31000);
+    assert.strictEqual(M.store.get(LAST_SENT), String(t + 31000));
+  });
+  test('texts: notSending title + body in en / fr / nl', async () => {
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      for (const k of ['notSendingTitle', 'notSendingBody']) assert.ok(j.safety[k], `${l} safety.${k}`);
+      assert.ok(/20/.test(j.safety.notSendingBody), `${l}: the body names the 20 minutes`);
+    }
+  });
+  results.push(await run('16. recording but not sending: no-data warning (bib 1269 / 410), dead zones stay silent'));
+
+  // ════════════ 17. The safety net does not change other flows ════════════
+  test('start ping: a hung battery read cannot lose the ping — sent within the 1.5 s bound, without battery keys', async () => {
+    M.battery = { ...M.battery, hang: true };
+    const ts = load('services/trackingStartService');
+    const real0 = process.hrtime.bigint();
+    const d = await ts.buildStartDiag(false);
+    const ms = Number(process.hrtime.bigint() - real0) / 1e6;
+    assert.ok(ms >= ts.START_DIAG_BATTERY_TIMEOUT_MS - 50 && ms < ts.START_DIAG_BATTERY_TIMEOUT_MS + 1000, `took ${Math.round(ms)} ms`);
+    assert.ok(!('batt' in d) && !('saver' in d), 'battery keys left out');
+    assert.ok('perm' in d && 'platform' in d, 'the existing diag is intact');
+  });
+  test('heartbeat liveness ping and orphan drain never count as "sent" (only accepted fixes do)', async () => {
+    const src = fs.readFileSync(`${SRC}/services/locationService.ts`, 'utf8');
+    assert.strictEqual((src.match(/trackingSafetyService\.onSent\(/g) || []).length, 1, 'one call site');
+    const at = src.indexOf('trackingSafetyService.onSent(');
+    const fnStart = src.lastIndexOf('async sendLocation(', at);
+    const nextFn = src.indexOf('async processQueue(', fnStart);
+    assert.ok(fnStart > 0 && at < nextFn, 'inside sendLocation, after the accepted response');
+    assert.ok(/if \(normalizedResponse\.success\) \{\s*locationQueueService\.markSendSucceeded\(\);\s*void trackingSafetyService\.onSent\(\);/.test(src));
+  });
+  test('Start / Stop leave the start reminders (livio-start-reminder-pre/post) alone', async () => {
+    M.notif.pending.push({ identifier: 'livio-start-reminder-post', content: {}, trigger: { date: new Date(M.clock + 3600e3) } });
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    await load('services/gpsService').stopWatching();
+    assert.ok(pending('livio-start-reminder-post'), 'still scheduled');
+    assert.ok(!M.notif.log.some(([k, i]) => i && i.startsWith('livio-start-reminder')), 'never cancelled by the safety net');
+  });
+  test('every safety notification opens Livio only: data is exactly { type: tracking_check } (no result popup, no navigation)', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline(); await minutes(22);
+    for (const id of ['livio-tracking-watchdog', NS]) assert.deepStrictEqual(pending(id).content.data, { type: 'tracking_check' }, id);
+    const h = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
+    assert.ok(/if \(data\?\.race_id && data\?\.event_name\) \{\s*setNotificationPopup/.test(h), 'foreground popup still needs race_id AND event_name');
+    const u = fs.readFileSync(`${SRC}/hooks/useNotifications.ts`, 'utf8');
+    assert.ok(/if \(data\?\.race_id && data\?\.event_name && onNotificationTapRef\.current\)/.test(u), 'tap navigation still needs both');
+  });
+  test('a send outside a session (e.g. a parked fix) leaves no clock behind for the next race', async () => {
+    const { trackingSafetyService: s } = SAF();
+    await s.disarm(); await s.onSent(M.clock - 3 * 3600e3);
+    assert.ok(M.store.has(LAST_SENT));
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    assert.ok(!M.store.has(LAST_SENT), 'Start cleared it');
+    offline(); await minutes(5);
+    assert.strictEqual(shows(), 0, 'no instant warning from the old stamp');
+  });
+  test('normal race online end to end: no safety notification is ever shown, every fix reaches the server', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(90);
+    assert.strictEqual(shows(), 0);
+    assert.ok(pending('livio-tracking-watchdog') && at('livio-tracking-watchdog') > M.clock, 'only the (future) watchdog is pending');
+    assert.ok(!pending('livio-tracking-check'), 'check cancelled by the first fix');
+    assert.ok(M.api.posted.filter((p) => p.url.includes('insert_participant_location')).length >= 80, 'fixes sent');
+  });
+  results.push(await run('17. no side effects: start ping bound, send stamp only on fixes, reminders untouched, taps open Livio only'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);

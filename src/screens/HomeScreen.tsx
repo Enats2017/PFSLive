@@ -2181,6 +2181,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   not feel a notification mid-race, so say it before they start. */}
               <View style={homeStyles.notifKeepOpenBox}>
                 <Text style={homeStyles.notifKeepOpenText}>{t('home:startConfirm.keepOpen')}</Text>
+                {/* 2026-10-24: 5 silent starts — the phone killed Livio after Start.
+                    iOS never relaunches an app swiped away from the switcher;
+                    Android pauses it when battery use is restricted. */}
+                <Text style={[homeStyles.notifKeepOpenText, { marginTop: 6 }]}>
+                  {t(Platform.OS === 'ios' ? 'home:startConfirm.dontCloseIos' : 'home:startConfirm.dontCloseAndroid')}
+                </Text>
               </View>
               <View style={homeStyles.notifButtonContainer}>
                 <TouchableOpacity

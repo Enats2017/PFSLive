@@ -77,7 +77,7 @@ const overrides = {
     BatteryState: { UNKNOWN: 0, UNPLUGGED: 1, CHARGING: 2, FULL: 3 },
     getBatteryLevelAsync: async () => M.battery.level,
     getBatteryStateAsync: async () => M.battery.state,
-    getPowerStateAsync: async () => { if (M.battery.fail) throw new Error('battery n/a'); return M.battery.power; },
+    getPowerStateAsync: async () => { if (M.battery.hang) return new Promise(() => {}); if (M.battery.fail) throw new Error('battery n/a'); return M.battery.power; },
     isBatteryOptimizationEnabledAsync: async () => { if (M.battery.fail) throw new Error('battery n/a'); return M.battery.optimized; },
     isLowPowerModeEnabledAsync: async () => !!(M.battery.power && M.battery.power.lowPowerMode),
   },
@@ -93,6 +93,10 @@ const overrides = {
     },
     cancelScheduledNotificationAsync: async (id) => {
       M.notif.pending = M.notif.pending.filter((r) => r.identifier !== id); M.notif.log.push(['cancel', id]);
+    },
+    // A shown (trigger: null) notification is withdrawn from the notification centre.
+    dismissNotificationAsync: async (id) => {
+      M.notif.pending = M.notif.pending.filter((r) => r.identifier !== id); M.notif.log.push(['dismiss', id]);
     },
   },
   'expo-location': {
