@@ -1,6 +1,7 @@
 import { apiClient } from './api';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { locationQueueService, QueuedLocation } from './locationQueueService';
+import { trackingSafetyService } from './trackingSafetyService';
 import { Platform } from 'react-native';
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
@@ -273,7 +274,12 @@ export const locationService = {
       };
 
       // A real accepted send proves the network works, whatever NetInfo says.
-      if (normalizedResponse.success) locationQueueService.markSendSucceeded();
+      // It also restarts the safety net's "recording but not sending" clock and
+      // withdraws that warning if it was shown (trackingSafetyService, 7).
+      if (normalizedResponse.success) {
+        locationQueueService.markSendSucceeded();
+        void trackingSafetyService.onSent();
+      }
 
       if (API_CONFIG.DEBUG) {
         if (normalizedResponse.success) {

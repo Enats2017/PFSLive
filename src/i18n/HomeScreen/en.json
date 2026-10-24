@@ -121,7 +121,9 @@
     "message": "Your live location will be shared with your followers throughout the race. Keep Livio running and your phone with you until you finish. Ready to go?",
     "yes": "Yes, start tracking",
     "no": "Not yet",
-    "keepOpen": "After you tap Start, keep Livio on screen for 5 seconds until you see \"GPS activated\". Then lock your phone and put it away."
+    "keepOpen": "After you tap Start, keep Livio on screen for 5 seconds until you see \"GPS activated\". Then lock your phone and put it away.",
+    "dontCloseIos": "Do not swipe Livio away in the app switcher — that stops tracking until you open it again.",
+    "dontCloseAndroid": "Do not close Livio, and make sure your phone does not put it to sleep (battery: Unrestricted)."
   },
   "fanEmail": {
     "title": "Stay in the loop",
@@ -173,5 +175,15 @@
     "preBody": "Open Livio and tap Start tracking so your followers can follow you live.",
     "postTitle": "Your race has started",
     "postBody": "You are not tracking yet. Open Livio and tap Start tracking."
+  },
+  "safety": {
+    "checkTitle": "Livio is not tracking your race",
+    "checkBody": "Your race has started but Livio has not recorded your position. Tap to open Livio — tracking resumes straight away.",
+    "watchdogTitle": "Livio stopped tracking",
+    "watchdogBody": "Livio has not recorded your position for 15 minutes. Tap to open Livio and resume tracking.",
+    "earlyTitle": "Your race starts in 10 minutes",
+    "earlyBody": "Open Livio once now so tracking is ready at the start. Then lock your phone again.",
+    "notSendingTitle": "Livio can't send your position",
+    "notSendingBody": "Your race is being recorded, but Livio has had no internet connection for 20 minutes, so your followers can't see you. Check that mobile data (and data roaming abroad) is on. Everything recorded is sent as soon as the connection is back."
   }
 }

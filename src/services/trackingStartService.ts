@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import * as Application from 'expo-application';
 import * as Updates from 'expo-updates';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
-import { gpsService } from './gpsService';
+import { gpsService, readBatteryState } from './gpsService';
 
 // ✅ START PING — notify the backend that tracking started, the instant the
 // user taps start. Written to oc_tracking_starts_app independently of
@@ -48,6 +48,40 @@ export const START_PING_DELAYS_MS = [0, 3000, 10000, 30000];
 
 export type StartPingResult = 'sent' | 'rejected' | 'stopped' | 'gave_up' | 'skipped';
 
+// Battery and device at Start (2026-10-24): the server log showed five silent
+// starts with every permission right and nothing else to go on — battery
+// optimisation, Battery Saver and the phone make are the usual Android suspects.
+// batt = %, saver = Battery Saver / Low Power Mode, opt = Android battery
+// optimisation (1 = on, Android may pause Livio), chg = charging,
+// dev = Android "brand.model" (core RN constants — no expo-device import in an OTA).
+// Missing values are left out; the server whitelists and cleans every key.
+// Bounded: the diag is built BEFORE the ping is persisted, so a hung battery
+// read would lose the ping altogether (and with it the server's tracking watch).
+export const START_DIAG_BATTERY_TIMEOUT_MS = 1500;
+export const startDiagBatteryAndDevice = async (): Promise<Record<string, string | boolean>> => {
+  const out: Record<string, string | boolean> = {};
+  try {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const b = await Promise.race([
+      readBatteryState(),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('battery timeout')), START_DIAG_BATTERY_TIMEOUT_MS); }),
+    ]).finally(() => { if (timer) clearTimeout(timer); });
+    if (b.level !== null) out.batt = String(b.level);
+    if (b.saver !== null) out.saver = b.saver;
+    if (b.optimized !== null) out.opt = b.optimized;
+    if (b.charging !== null) out.chg = b.charging;
+  } catch { /* silent */ }
+  try {
+    if (Platform.OS === 'android') {
+      const c: any = (Platform as any).constants ?? {};
+      const brand = String(c.Brand ?? c.Manufacturer ?? '').trim();
+      const model = String(c.Model ?? '').trim();
+      if (brand || model) out.dev = [brand, model].filter(Boolean).join('.');
+    }
+  } catch { /* silent */ }
+  return out;
+};
+
 export const buildStartDiag = async (
   startedAfterGun: boolean,
 ): Promise<Record<string, string | boolean>> => {
@@ -63,6 +97,7 @@ export const buildStartDiag = async (
       bg_perm: perm.background,
       precise: fg?.ios?.accuracy ?? fg?.android?.accuracy ?? 'unknown',
       started_after_gun: startedAfterGun,
+      ...(await startDiagBatteryAndDevice()),
     };
   } catch {
     return {};   // diagnostics must never block the ping
