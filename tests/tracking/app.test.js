@@ -2229,6 +2229,61 @@ const L = () => load('services/locationService').locationService;
   });
   results.push(await run('16. recording but not sending: no-data warning (bib 1269 / 410), dead zones stay silent'));
 
+  // ════════════ 17. The safety net does not change other flows ════════════
+  test('start ping: a hung battery read cannot lose the ping — sent within the 1.5 s bound, without battery keys', async () => {
+    M.battery = { ...M.battery, hang: true };
+    const ts = load('services/trackingStartService');
+    const real0 = process.hrtime.bigint();
+    const d = await ts.buildStartDiag(false);
+    const ms = Number(process.hrtime.bigint() - real0) / 1e6;
+    assert.ok(ms >= ts.START_DIAG_BATTERY_TIMEOUT_MS - 50 && ms < ts.START_DIAG_BATTERY_TIMEOUT_MS + 1000, `took ${Math.round(ms)} ms`);
+    assert.ok(!('batt' in d) && !('saver' in d), 'battery keys left out');
+    assert.ok('perm' in d && 'platform' in d, 'the existing diag is intact');
+  });
+  test('heartbeat liveness ping and orphan drain never count as "sent" (only accepted fixes do)', async () => {
+    const src = fs.readFileSync(`${SRC}/services/locationService.ts`, 'utf8');
+    assert.strictEqual((src.match(/trackingSafetyService\.onSent\(/g) || []).length, 1, 'one call site');
+    const at = src.indexOf('trackingSafetyService.onSent(');
+    const fnStart = src.lastIndexOf('async sendLocation(', at);
+    const nextFn = src.indexOf('async processQueue(', fnStart);
+    assert.ok(fnStart > 0 && at < nextFn, 'inside sendLocation, after the accepted response');
+    assert.ok(/if \(normalizedResponse\.success\) \{\s*locationQueueService\.markSendSucceeded\(\);\s*void trackingSafetyService\.onSent\(\);/.test(src));
+  });
+  test('Start / Stop leave the start reminders (livio-start-reminder-pre/post) alone', async () => {
+    M.notif.pending.push({ identifier: 'livio-start-reminder-post', content: {}, trigger: { date: new Date(M.clock + 3600e3) } });
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    await load('services/gpsService').stopWatching();
+    assert.ok(pending('livio-start-reminder-post'), 'still scheduled');
+    assert.ok(!M.notif.log.some(([k, i]) => i && i.startsWith('livio-start-reminder')), 'never cancelled by the safety net');
+  });
+  test('every safety notification opens Livio only: data is exactly { type: tracking_check } (no result popup, no navigation)', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline(); await minutes(22);
+    for (const id of ['livio-tracking-watchdog', NS]) assert.deepStrictEqual(pending(id).content.data, { type: 'tracking_check' }, id);
+    const h = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
+    assert.ok(/if \(data\?\.race_id && data\?\.event_name\) \{\s*setNotificationPopup/.test(h), 'foreground popup still needs race_id AND event_name');
+    const u = fs.readFileSync(`${SRC}/hooks/useNotifications.ts`, 'utf8');
+    assert.ok(/if \(data\?\.race_id && data\?\.event_name && onNotificationTapRef\.current\)/.test(u), 'tap navigation still needs both');
+  });
+  test('a send outside a session (e.g. a parked fix) leaves no clock behind for the next race', async () => {
+    const { trackingSafetyService: s } = SAF();
+    await s.disarm(); await s.onSent(M.clock - 3 * 3600e3);
+    assert.ok(M.store.has(LAST_SENT));
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    assert.ok(!M.store.has(LAST_SENT), 'Start cleared it');
+    offline(); await minutes(5);
+    assert.strictEqual(shows(), 0, 'no instant warning from the old stamp');
+  });
+  test('normal race online end to end: no safety notification is ever shown, every fix reaches the server', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(90);
+    assert.strictEqual(shows(), 0);
+    assert.ok(pending('livio-tracking-watchdog') && at('livio-tracking-watchdog') > M.clock, 'only the (future) watchdog is pending');
+    assert.ok(!pending('livio-tracking-check'), 'check cancelled by the first fix');
+    assert.ok(M.api.posted.filter((p) => p.url.includes('insert_participant_location')).length >= 80, 'fixes sent');
+  });
+  results.push(await run('17. no side effects: start ping bound, send stamp only on fixes, reminders untouched, taps open Livio only'));
+
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);
   process.exit(tot.fail ? 1 : 0);

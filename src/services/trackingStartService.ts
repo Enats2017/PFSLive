@@ -55,10 +55,17 @@ export type StartPingResult = 'sent' | 'rejected' | 'stopped' | 'gave_up' | 'ski
 // optimisation (1 = on, Android may pause Livio), chg = charging,
 // dev = Android "brand.model" (core RN constants — no expo-device import in an OTA).
 // Missing values are left out; the server whitelists and cleans every key.
+// Bounded: the diag is built BEFORE the ping is persisted, so a hung battery
+// read would lose the ping altogether (and with it the server's tracking watch).
+export const START_DIAG_BATTERY_TIMEOUT_MS = 1500;
 export const startDiagBatteryAndDevice = async (): Promise<Record<string, string | boolean>> => {
   const out: Record<string, string | boolean> = {};
   try {
-    const b = await readBatteryState();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const b = await Promise.race([
+      readBatteryState(),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('battery timeout')), START_DIAG_BATTERY_TIMEOUT_MS); }),
+    ]).finally(() => { if (timer) clearTimeout(timer); });
     if (b.level !== null) out.batt = String(b.level);
     if (b.saver !== null) out.saver = b.saver;
     if (b.optimized !== null) out.opt = b.optimized;

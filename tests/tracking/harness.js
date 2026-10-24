@@ -77,7 +77,7 @@ const overrides = {
     BatteryState: { UNKNOWN: 0, UNPLUGGED: 1, CHARGING: 2, FULL: 3 },
     getBatteryLevelAsync: async () => M.battery.level,
     getBatteryStateAsync: async () => M.battery.state,
-    getPowerStateAsync: async () => { if (M.battery.fail) throw new Error('battery n/a'); return M.battery.power; },
+    getPowerStateAsync: async () => { if (M.battery.hang) return new Promise(() => {}); if (M.battery.fail) throw new Error('battery n/a'); return M.battery.power; },
     isBatteryOptimizationEnabledAsync: async () => { if (M.battery.fail) throw new Error('battery n/a'); return M.battery.optimized; },
     isLowPowerModeEnabledAsync: async () => !!(M.battery.power && M.battery.power.lowPowerMode),
   },
