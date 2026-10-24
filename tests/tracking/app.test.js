@@ -2069,6 +2069,166 @@ const L = () => load('services/locationService').locationService;
   });
   results.push(await run('15. tracking safety net: not-tracking check, watchdog, early reminder, start diag, start popup'));
 
+  // ════════════ 16. "Recording but not sending" (2026-10-24 08:20 review) ════════════
+  // Timelines from the prod copy: bib 1269 (iOS) recorded from the gun and sent
+  // nothing until 08:45 (190 fixes in one burst); bib 410 sent normally, then
+  // nothing 06:47-07:49 (68 fixes delivered at 07:49); 50 runners lost 5-15 min in
+  // the km 5-8 dead zone, bibs 392 / 825 / 964 16-18 min — those must stay silent.
+  const NS = 'livio-not-sending';
+  const LAST_SENT = '@PFSLive:safetyLastSentAt', WARNED = '@PFSLive:safetyNotSendingWarnedFor';
+  const shows = () => schedules(NS);
+  const offline = () => { M.api.mode = 'down'; M.net = { isConnected: true, isInternetReachable: false }; };
+  const online = () => { M.api.mode = 'ok'; M.net = { isConnected: true, isInternetReachable: true }; };
+  const minutes = async (n) => { for (let i = 0; i < n; i++) { M.clock += 60000; await fireFix(); } };
+  const qCount = () => parseInt(M.store.get('@PFSLive:locationQueueCount') || '0', 10);
+  test('rule: needs fixes waiting; 20 min from the last send (or first sign of life); once per outage', async () => {
+    const { shouldWarnNotSending: w, NOT_SENDING_MS } = SAF(); const now = 1_000_000_000_000;
+    assert.strictEqual(NOT_SENDING_MS, 20 * 60000);
+    assert.strictEqual(w(0, now - 60 * 60000, null, null, now), false, 'nothing queued (standing still) → never');
+    assert.strictEqual(w(5, now - 19 * 60000, null, null, now), false, '19 min since the last send');
+    assert.strictEqual(w(5, now - 20 * 60000, null, null, now), true, '20 min since the last send');
+    assert.strictEqual(w(5, null, now - 20 * 60000, null, now), true, 'never sent: from the first sign of life (bib 1269)');
+    assert.strictEqual(w(5, null, now - 19 * 60000, null, now), false);
+    assert.strictEqual(w(5, null, null, null, now), false, 'no sign of life recorded → no clock');
+    assert.strictEqual(w(5, now - 30 * 60000, null, String(now - 30 * 60000), now), false, 'already warned for this outage');
+    assert.strictEqual(w(5, null, now - 30 * 60000, '0', now), false, 'already warned (nothing ever sent)');
+    assert.strictEqual(w(5, now - 25 * 60000, null, String(now - 90 * 60000), now), true, 'a send since the last warning = a new outage');
+  });
+  test('bib 1269: no data from the gun → one notification ~20 min after the first sign of life, not repeated for an hour', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline();
+    await minutes(18);
+    assert.ok(qCount() > 0, 'fixes are queued');
+    assert.strictEqual(shows(), 0, 'not yet at 18 min');
+    await minutes(3);
+    assert.strictEqual(shows(), 1, 'shown once by 21 min');
+    const n = pending(NS);
+    assert.strictEqual(n.trigger, null, 'shown now (a local notification needs no network)');
+    assert.deepStrictEqual(n.content.data, { type: 'tracking_check' }, 'a tap only opens Livio');
+    assert.ok(/send/i.test(n.content.title), 'en title: ' + n.content.title);
+    await minutes(40);
+    assert.strictEqual(shows(), 1, 'still once after an hour offline');
+    assert.ok(!M.api.posted.some((p) => p.url.includes('insert_participant_location')), 'nothing reached the server');
+  });
+  test('bib 1269 continued: the connection comes back → the backlog drains, the warning is withdrawn; a second outage warns again', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline(); await minutes(22);
+    assert.strictEqual(shows(), 1);
+    online(); await minutes(3); await settleS();
+    assert.ok(M.api.posted.some((p) => p.url.includes('insert_participant_location')), 'fixes reached the server');
+    assert.ok(!pending(NS), 'withdrawn');
+    assert.ok(M.notif.log.some(([k, i]) => k === 'dismiss' && i === NS), 'dismissed from the notification centre');
+    assert.ok(!M.store.has(WARNED));
+    offline(); await minutes(19);
+    assert.strictEqual(shows(), 1, 'second outage: not yet at 19 min');
+    await minutes(3);
+    assert.strictEqual(shows(), 2, 'second outage warned once');
+  });
+  test('bib 410: sends normally, then 62 min without data → warned 20 min after the last accepted send, once', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(5); await settleS();
+    const lastSent = parseInt(M.store.get(LAST_SENT), 10);
+    assert.ok(lastSent > 0, 'accepted sends are stamped');
+    offline();
+    while (M.clock < lastSent + 19 * 60000) await minutes(1);
+    assert.strictEqual(shows(), 0, 'not before 20 min');
+    await minutes(2);
+    assert.strictEqual(shows(), 1);
+    await minutes(41);
+    assert.strictEqual(shows(), 1, 'once for the whole 62 min');
+  });
+  test('the km 5-8 dead zone: 15 min without data, then back → no notification', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(5); offline(); await minutes(15); online(); await minutes(5);
+    assert.strictEqual(shows(), 0);
+  });
+  test('bibs 392 / 825 / 964: 16-18 min outages → no notification (15 min would have flagged them)', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(3); await settleS();
+    const lastSent = parseInt(M.store.get(LAST_SENT), 10);
+    offline();
+    while (M.clock < lastSent + 18 * 60000) await minutes(1);
+    online(); await minutes(3);
+    assert.strictEqual(shows(), 0);
+  });
+  test('standing still at an aid station, online, nothing queued, no send for 30 min → no notification', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(3); await settleS();
+    for (let i = 0; i < 30; i++) { M.clock += 60000; await M.bg.heartbeat({}); }
+    assert.strictEqual(qCount(), 0);
+    assert.strictEqual(shows(), 0);
+  });
+  test('standing still IN a dead zone with fixes waiting → the heartbeat alone raises it at 20 min', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    online(); await minutes(2); await settleS();
+    offline(); await minutes(3);
+    assert.ok(qCount() > 0);
+    for (let i = 0; i < 20; i++) { M.clock += 60000; await M.bg.heartbeat({}); }
+    assert.strictEqual(shows(), 1);
+  });
+  test('before the gun nothing is sent, by design → no notification however long', async () => {
+    await startSession('2', '20', new Date(M.clock + 60 * 60000).toISOString());
+    offline(); await minutes(40);
+    for (let i = 0; i < 5; i++) { M.clock += 60000; await M.bg.heartbeat({}); }
+    assert.strictEqual(shows(), 0);
+  });
+  test('a rejected send (server error) does not count as sent', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    M.api.mode = 'softfail'; await minutes(3); await settleS();
+    assert.ok(!M.store.has(LAST_SENT));
+  });
+  test('Stop while warned → withdrawn and the state cleared', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline(); await minutes(22);
+    assert.ok(pending(NS));
+    await load('services/gpsService').stopWatching();
+    assert.ok(!pending(NS));
+    assert.ok(!M.store.has(WARNED) && !M.store.has(LAST_SENT));
+  });
+  test('a new Start clears the last session\'s warning and clock', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline(); await minutes(22);
+    assert.ok(pending(NS));
+    online();
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    assert.ok(!pending(NS) && !M.store.has(WARNED));
+  });
+  test('notifications denied → nothing shown, tracking unaffected', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    M.notif.fail = true;
+    offline(); await minutes(25);
+    assert.ok(qCount() > 0, 'still recording into the queue');
+    assert.strictEqual(shows(), 0);
+    online(); await minutes(3); await settleS();
+    assert.ok(M.api.posted.some((p) => p.url.includes('insert_participant_location')), 'and sends resume');
+  });
+  test('only the not-sending notification failing → marked once, not retried every minute', async () => {
+    await startSession('2', '20', new Date(M.clock - 60000).toISOString());
+    offline(); await minutes(18);
+    const N = require('expo-notifications'); const orig = N.scheduleNotificationAsync; let tries = 0;
+    N.scheduleNotificationAsync = async (req) => { if (req.identifier === NS) { tries++; throw new Error('unsupported'); } return orig(req); };
+    try { await minutes(10); } finally { N.scheduleNotificationAsync = orig; }
+    assert.strictEqual(tries, 1, 'attempted once for this outage');
+    assert.strictEqual(M.store.get(WARNED), '0');
+  });
+  test('send stamp: written at most every 30 s (5 s fixes near the finish)', async () => {
+    const { trackingSafetyService: s } = SAF(); const t = 1_800_000_000_000;
+    await s.disarm();
+    await s.onSent(t);
+    for (let k = 5; k <= 25; k += 5) await s.onSent(t + k * 1000);
+    assert.strictEqual(M.store.get(LAST_SENT), String(t));
+    await s.onSent(t + 31000);
+    assert.strictEqual(M.store.get(LAST_SENT), String(t + 31000));
+  });
+  test('texts: notSending title + body in en / fr / nl', async () => {
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
+      for (const k of ['notSendingTitle', 'notSendingBody']) assert.ok(j.safety[k], `${l} safety.${k}`);
+      assert.ok(/20/.test(j.safety.notSendingBody), `${l}: the body names the 20 minutes`);
+    }
+  });
+  results.push(await run('16. recording but not sending: no-data warning (bib 1269 / 410), dead zones stay silent'));
+
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);
   process.exit(tot.fail ? 1 : 0);

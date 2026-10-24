@@ -162,6 +162,8 @@
     "watchdogTitle": "Livio a arrêté le suivi",
     "watchdogBody": "Livio n'a pas enregistré votre position depuis 15 minutes. Touchez pour ouvrir Livio et reprendre le suivi.",
     "earlyTitle": "Votre course commence dans 10 minutes",
-    "earlyBody": "Ouvrez Livio une fois maintenant pour que le suivi soit prêt au départ. Verrouillez ensuite votre téléphone."
+    "earlyBody": "Ouvrez Livio une fois maintenant pour que le suivi soit prêt au départ. Verrouillez ensuite votre téléphone.",
+    "notSendingTitle": "Livio ne peut pas envoyer votre position",
+    "notSendingBody": "Votre course est enregistrée, mais Livio n'a plus de connexion internet depuis 20 minutes : vos suiveurs ne vous voient pas. Vérifiez que les données mobiles (et l'itinérance à l'étranger) sont activées. Tout ce qui a été enregistré est envoyé dès que la connexion revient."
   }
 }

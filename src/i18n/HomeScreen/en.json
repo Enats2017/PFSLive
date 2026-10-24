@@ -162,6 +162,8 @@
     "watchdogTitle": "Livio stopped tracking",
     "watchdogBody": "Livio has not recorded your position for 15 minutes. Tap to open Livio and resume tracking.",
     "earlyTitle": "Your race starts in 10 minutes",
-    "earlyBody": "Open Livio once now so tracking is ready at the start. Then lock your phone again."
+    "earlyBody": "Open Livio once now so tracking is ready at the start. Then lock your phone again.",
+    "notSendingTitle": "Livio can't send your position",
+    "notSendingBody": "Your race is being recorded, but Livio has had no internet connection for 20 minutes, so your followers can't see you. Check that mobile data (and data roaming abroad) is on. Everything recorded is sent as soon as the connection is back."
   }
 }

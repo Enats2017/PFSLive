@@ -162,6 +162,8 @@
     "watchdogTitle": "Livio is gestopt met tracken",
     "watchdogBody": "Livio heeft je positie al 15 minuten niet geregistreerd. Tik om Livio te openen en verder te tracken.",
     "earlyTitle": "Je wedstrijd start over 10 minuten",
-    "earlyBody": "Open Livio nu één keer zodat de tracking klaar is bij de start. Vergrendel daarna je telefoon weer."
+    "earlyBody": "Open Livio nu één keer zodat de tracking klaar is bij de start. Vergrendel daarna je telefoon weer.",
+    "notSendingTitle": "Livio kan je positie niet versturen",
+    "notSendingBody": "Je wedstrijd wordt opgenomen, maar Livio heeft al 20 minuten geen internetverbinding, dus je volgers zien je niet. Controleer of mobiele data (en dataroaming in het buitenland) aan staat. Alles wat is opgenomen wordt verstuurd zodra de verbinding terug is."
   }
 }

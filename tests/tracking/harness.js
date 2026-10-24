@@ -94,6 +94,10 @@ const overrides = {
     cancelScheduledNotificationAsync: async (id) => {
       M.notif.pending = M.notif.pending.filter((r) => r.identifier !== id); M.notif.log.push(['cancel', id]);
     },
+    // A shown (trigger: null) notification is withdrawn from the notification centre.
+    dismissNotificationAsync: async (id) => {
+      M.notif.pending = M.notif.pending.filter((r) => r.identifier !== id); M.notif.log.push(['dismiss', id]);
+    },
   },
   'expo-location': {
     getForegroundPermissionsAsync: async () => ({ status: M.perm.fg, canAskAgain: true, ios: { accuracy: M.perm.iosAccuracy } }),
