@@ -219,8 +219,15 @@ const openLocationSettingsFor = async (reason: PermissionBlockReason): Promise<v
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['home', 'common']);
-  const { width } = useDimensions();
+  const { width, height: windowHeight } = useDimensions();
   const insets = useSafeAreaInsets();
+  // Start popup: the most its content may take before it scrolls, in POINTS.
+  // A percentage maxHeight is not reliable inside a Modal (growth_v0.1 device
+  // test 2026-10-22: popups "did not scroll" in landscape), so — like its
+  // ModalScroll — window height minus twice the larger system bar (the box is
+  // centred), the wrapper's padding (2 x spacing.xl) and the card's own
+  // vertical padding (2 x spacing.xxxl). Follows rotation (useDimensions).
+  const startPopupScrollMax = Math.max(120, windowHeight - 2 * Math.max(insets.top, insets.bottom) - 2 * spacing.xl - 2 * spacing.xxxl);
   const isGestureNav = insets.bottom > 0;
   const isLandscape = width
   const [showFanEmailModal, setShowFanEmailModal] = useState(false);
@@ -2172,10 +2179,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             {/* Scrolls only when taller than the screen (2026-10-24): the platform
                 line left the French popup only ~7-14 pt to spare on a 360x640 Android /
                 an iPhone SE 2, so a larger text size, a 3-button nav bar or a first-gen
-                SE pushes the Start button off-screen. Fits → nothing moves. */}
-            <View style={[homeStyles.notifCard, homeStyles.notifCardScrollable]}>
+                SE pushes the Start button off-screen. Fits → nothing moves. The cap is
+                in points (startPopupScrollMax), not a percentage. */}
+            <View style={homeStyles.notifCard}>
               <ScrollView
-                style={homeStyles.notifScroll}
+                style={[homeStyles.notifScroll, { maxHeight: startPopupScrollMax }]}
                 contentContainerStyle={homeStyles.notifScrollContent}
                 bounces={false}
                 keyboardShouldPersistTaps="handled"
