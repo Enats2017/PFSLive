@@ -2,8 +2,8 @@
  * Tests for favouriteStatus.ts. Run: npm run test:favourite-status
  *
  * No test framework in this repo - plain asserts, exit code 1 on failure.
- * The participant_status values are the ones get_favourite_all_events_api.php
- * emits: DNF/DNS/DSQ from Pos., 'finished', 'in_progress', 'not_started'.
+ * The participant_status values are the ones get_favourite_api.php (the app's
+ * GET_FAVOURITES) emits: DNF/DNS/DSQ from Pos., 'finished', 'in_progress', 'not_started'.
  */
 import assert from 'assert';
 import fs from 'fs';
@@ -91,6 +91,17 @@ test('FavouriteCard uses it for the badge colour, label and the not-started swit
   assert.ok(/prev\.item\.participant_status === next\.item\.participant_status/.test(src), 'memo re-renders on a status change');
   assert.ok(/prev\.item\.has_started === next\.item\.has_started/.test(src), 'memo re-renders when the runner starts');
   assert.ok(/\[item\.participant_status, item\.race_status, item\.has_started\]/.test(src), 'status recomputed when has_started changes');
+});
+
+// has_started must come from the endpoint the card is actually fed by. The
+// 2026-10-23 server fix went into get_favourite_all_events_api.php (the web's),
+// so the app card never received it (re-check 2026-10-24, larssie df4426e11).
+test('the card is fed by GET_FAVOURITES = get_favourite_api.php — the PHP file that must send has_started', () => {
+  const read = (...p: string[]) => fs.readFileSync(path.join(process.cwd(), 'src', ...p), 'utf8');
+  assert.ok(/favouritesApi\.getFavourites\(/.test(read('screens', 'FavouriteScreen', 'FavouriteList.tsx')), 'FavouriteList loads through favouritesApi');
+  assert.ok(/getApiEndpoint\(API_CONFIG\.ENDPOINTS\.GET_FAVOURITES\)/.test(read('services', 'favourites.ts')), 'favouritesApi posts to GET_FAVOURITES');
+  assert.ok(/GET_FAVOURITES:\s*"\/get_favourite_api\.php"/.test(read('constants', 'config.ts')), 'GET_FAVOURITES is get_favourite_api.php');
+  assert.ok(/has_started\?: boolean/.test(read('services', 'favourites.ts')), 'FavouriteItem declares has_started');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
