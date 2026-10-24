@@ -5,7 +5,8 @@
 // Grizzly100 pre-race): a runner who had finished read "In progress" until the
 // distance's end_time, a DNF read "In progress", and at end_time every runner
 // still on course flipped to "Finished". participant_status is the runner's own
-// (get_favourite_all_events_api.php): DNF/DNS/DSQ from Pos., 'finished' once the
+// (get_favourite_api.php — the app's GET_FAVOURITES; the web reads
+// get_favourite_all_events_api.php, same rules): DNF/DNS/DSQ from Pos., 'finished' once the
 // finish is crossed, 'in_progress' once a checkpoint AFTER the start is crossed,
 // else 'not_started'.
 //
