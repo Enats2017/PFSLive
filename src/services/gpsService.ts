@@ -7,6 +7,7 @@ import * as Battery from 'expo-battery';
 import { LocationData } from './locationService';
 import { API_CONFIG } from '../constants/config';
 import i18n from '../i18n'; // adjust to wherever your configured i18next instance lives
+import { trackingSafetyService } from './trackingSafetyService';
 import { isStaleSession } from './trackingSessionRules';
 
 export interface GPSPosition {
@@ -379,6 +380,11 @@ const _readBatteryState = async (): Promise<{ level: number | null; saver: boole
   }
   return { level, saver, optimized, charging };
 };
+
+// Same reading for the start ping (trackingStartService) — the server log then
+// shows battery state for every Start at once, not only after the phone's log
+// arrives (2026-10-24: five silent starts, cause unknown until after the race).
+export const readBatteryState = _readBatteryState;
 
 export const logBatteryState = async (context: string): Promise<void> => {
   try {
@@ -910,6 +916,11 @@ const _processLocationForSendInternal = async (
         return;
       }
     }
+
+    // ✅ Sign of life in the race: cancels the "not tracking yet" check and moves
+    // the 15-min watchdog on (see trackingSafetyService). Every fix that gets
+    // this far counts — sent, queued or throttled — because the app is alive.
+    void trackingSafetyService.onAlive(now);
 
     // ── BOUNDED MULTI-BATCH DRAIN ──────────────────────────────────────────
     // processQueue drains at most batchSize (50) per call. After a long outage
@@ -1889,6 +1900,10 @@ const _registerTransistorListeners = (): void => {
         return;
       }
 
+      // Race is on: the engine is alive even when standing still (start crowd,
+      // aid station) — keep the safety notifications from firing.
+      await trackingSafetyService.onAlive();
+
       // Race is on: if this session still has not sent anything, ship the log.
       await maybeUploadInterimLog();
 
@@ -1955,6 +1970,8 @@ const _registerTransistorListeners = (): void => {
 // and indirectly by the remove() handle returned from startWatchingPosition.
 // Idempotent — safe to call multiple times.
 const _doFullStop = async (): Promise<void> => {
+  // Session over: no "not tracking" / watchdog notification may follow it.
+  await trackingSafetyService.disarm();
   if (_fgAppStateSubscription) {
     _fgAppStateSubscription.remove();
     _fgAppStateSubscription = null;
@@ -2910,6 +2927,11 @@ export const gpsService = {
       _uiIntervalMs = Math.min(intervalSeconds * 1000, 5000);
       await _startFgWatch();
       _registerFgAppStateListener();
+
+      // ✅ Safety net for a phone that kills Livio after Start (2026-10-24: five
+      // silent starts, all with every permission right). Scheduled only now that
+      // the engine really runs; see trackingSafetyService.
+      await trackingSafetyService.arm({ raceStartTime, manualStart: manualStart === 1 });
 
       return {
         remove: async () => {
