@@ -3164,6 +3164,19 @@ export const headlessTask = async (event: { name: string; params: any }): Promis
  *  Deliberately additive — no existing logic is touched, and nothing happens at
  *  all unless a live session is present in storage.
  * ════════════════════════════════════════════════════════════════════════ */
+// [#ANDROID-HEADLESS-READY] One-shot: run the rehydrate (and so ready()) the
+// first time the app becomes active after a background cold boot.
+let _readyDeferredSub: { remove: () => void } | null = null;
+const _deferReadyUntilActive = (): void => {
+  if (_readyDeferredSub) return;
+  _readyDeferredSub = AppState.addEventListener('change', (next) => {
+    if (next !== 'active') return;
+    try { _readyDeferredSub?.remove(); } catch { /* silent */ }
+    _readyDeferredSub = null;
+    void _rehydrateTrackingOnBoot();
+  });
+};
+
 const _rehydrateTrackingOnBoot = async (): Promise<void> => {
   try {
     // _doFullStop() removes TRACKING_PARAMS_KEY, so its presence is a reliable
@@ -3196,6 +3209,40 @@ const _rehydrateTrackingOnBoot = async (): Promise<void> => {
         }
       } catch { /* silent */ }
       return;
+    }
+
+    // ✅ [#ANDROID-HEADLESS-READY] (2026-10-25, Grizzly100 post-race) On Android,
+    // never call ready() while Livio is not on screen. A process the OS restarted
+    // in the background (headless: the engine kept tracking after Livio was
+    // killed) evaluates this module and used to call ready() right here. The SDK
+    // (tslocationmanager EventManager) IGNORES ready() while headless
+    // ("ready:ignored(headless)"), yet the RN module marks itself ready and never
+    // forwards another ready() in this process. When the runner then opened
+    // Livio, the SDK left headless mode (headlessEpoch++) and queued EVERY event
+    // until a ready() that never came: location, heartbeat, provider — nothing
+    // reached JS while getState() said enabled. Race day: 4 of 12 Android opens
+    // after a headless phase went deaf for 2.5-4 h (bibs 151, 353, 2, 459);
+    // reopening did not help (HomeScreen's ready() was the ignored repeat), only
+    // the process ending or a fresh JS context did. Headless delivery itself
+    // never needed ready() (HeadlessTask is invoked natively), so the call waits
+    // for the app to become active — HomeScreen's restore runs this again then,
+    // and the one-shot AppState listener below covers any other screen. iOS is
+    // unchanged: its background relaunch has no headless task and needs ready().
+    if (Platform.OS === 'android' && AppState.currentState !== 'active') {
+      _registerTransistorListeners();
+      _deferReadyUntilActive();
+      // An engine found OFF is restarted on the open too (the rehydrate below
+      // runs then): Android refuses a foreground-service start from the
+      // background anyway (START_BACKGROUNDED_CODE in startWatchingPosition).
+      let off = false;
+      try { off = !(await BackgroundGeolocation.getState()).enabled; } catch { /* silent */ }
+      await addLog('🌙', `Cold boot in the background — ready() deferred until Livio is opened${off ? ' (engine off: restart deferred too)' : ''}`);
+      return;
+    }
+    // On screen now: this run does what the deferred listener was waiting for.
+    if (_readyDeferredSub) {
+      try { _readyDeferredSub.remove(); } catch { /* silent */ }
+      _readyDeferredSub = null;
     }
 
     // reset:false — do NOT re-apply the config. The native side still holds this
