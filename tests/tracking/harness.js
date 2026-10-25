@@ -26,6 +26,17 @@ const M = {
   appVersion: '1.0.9',
   updateId: 'abcdef1234567890',
   bg: {},
+  os: 'ios', appState: 'active', appCbs: [],
+  sdk: { headless: false, moduleReady: false, headlessEpoch: 0, clientEpoch: -1, enabled: true },
+};
+// Does an engine event reach the JS listeners right now?
+M.sdkDelivers = () => M.sdk.headless || M.sdk.clientEpoch === M.sdk.headlessEpoch;
+// The runner opens Livio: the activity starts (SDK leaves headless) and RN
+// reports the app active.
+M.openApp = () => {
+  if (M.sdk.headless) { M.sdk.headless = false; M.sdk.headlessEpoch++; }
+  M.appState = 'active';
+  for (const h of [...M.appCbs]) h.cb('active');
 };
 const realNow = Date.now.bind(Date);
 Date.now = () => M.clock;
@@ -68,7 +79,16 @@ const overrides = {
     fetch: () => (M.netHang ? new Promise(() => {}) : Promise.resolve({ ...M.net })),
     addEventListener: () => () => {},
   } },
-  'react-native': { Platform: { OS: 'ios', Version: '26.6', select: (o) => o.ios }, AppState: { addEventListener: () => ({ remove() {} }), currentState: 'active' }, NativeModules: {}, Alert: { alert() {} } },
+  // Platform / AppState are read live from M so a test can be an Android phone
+  // the OS relaunched in the background (2026-10-25, headless ready() gate).
+  'react-native': {
+    Platform: { get OS() { return M.os; }, set OS(v) { M.os = v; }, Version: '26.6', select: (o) => o[M.os] },
+    AppState: {
+      get currentState() { return M.appState; }, set currentState(v) { M.appState = v; },
+      addEventListener: (ev, cb) => { const h = { cb, remove() { M.appCbs = M.appCbs.filter((x) => x !== h); } }; M.appCbs.push(h); return h; },
+    },
+    NativeModules: {}, Alert: { alert() {} },
+  },
   'expo-application': { get nativeApplicationVersion() { return M.appVersion; }, getAndroidId: () => 'aid', getIosIdForVendorAsync: async () => 'vid' },
   'expo-updates': { get updateId() { return M.updateId; } },
   // Battery (2026-10-20 battery logging). Defaults answer `undefined`, exactly
@@ -108,7 +128,20 @@ const overrides = {
   },
   'react-native-background-geolocation': { __esModule: true, default: new Proxy({
     getProviderState: async () => ({ ...M.provider }),
-    getState: async () => ({ enabled: true, isMoving: true }),
+    getState: async () => ({ enabled: M.sdk.enabled, isMoving: true }),
+    start: async () => { M.bg.starts = (M.bg.starts || 0) + 1; M.sdk.enabled = true; return { enabled: true }; },
+    // The SDK's JS-delivery gate as tslocationmanager 4.1.9 implements it
+    // (EventManager / LifecycleManager, read from the bytecode 2026-10-25): the RN
+    // module forwards ready() ONCE per JS context (mReady); while headless that
+    // ready() is ignored; leaving headless bumps headlessEpoch; outside headless,
+    // events reach JS only when clientReadyEpoch === headlessEpoch.
+    ready: async () => {
+      M.bg.readyCalls = (M.bg.readyCalls || []).concat([{ headless: M.sdk.headless }]);
+      if (M.sdk.moduleReady) return { enabled: true };
+      M.sdk.moduleReady = true;
+      if (!M.sdk.headless) M.sdk.clientEpoch = M.sdk.headlessEpoch;
+      return { enabled: true };
+    },
     // Capture the listeners gpsService registers so tests can fire them.
     onHeartbeat: (cb) => { M.bg.heartbeat = cb; return { remove() {} }; },
     onLocation: (cb) => { M.bg.location = cb; return { remove() {} }; },
@@ -181,6 +214,8 @@ function reset() {
   M.perm = { fg: 'granted', bg: 'granted', iosAccuracy: 'full' };
   M.provider = { enabled: true, gps: true, network: true, status: 3 };
   M.bg = {};
+  M.os = 'ios'; M.appState = 'active'; M.appCbs = [];
+  M.sdk = { headless: false, moduleReady: false, headlessEpoch: 0, clientEpoch: -1, enabled: true };
   M.notif = { pending: [], log: [], fail: false };
   M.battery = { level: undefined, state: undefined, power: undefined, optimized: undefined, fail: false };
   M.clock = realNow();

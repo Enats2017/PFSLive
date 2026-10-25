@@ -248,6 +248,21 @@ const L = () => load('services/locationService').locationService;
     const n = await L().drainOrphans(30000);
     assert.strictEqual(n, 2); assert.strictEqual(getO().length, 1);
   });
+  // 2026-10-25: a POST whose body broke off on the way up now answers
+  // request_incomplete (it used to answer participant_id_invalid, a PERMANENT
+  // code). The fix itself is fine, so it must survive and go out next time.
+  test('request_incomplete (upload broke off) → kept, sent on the next pass', async () => {
+    M.store.set(OK_, JSON.stringify([fix(1, 1, 5)]));
+    M.api.mode = 'reject'; M.api.rejectCode = 'request_incomplete';
+    assert.strictEqual(await L().drainOrphans(), 0); assert.strictEqual(getO().length, 1);
+    M.api.mode = 'ok';
+    assert.strictEqual(await L().drainOrphans(), 1); assert.strictEqual(getO().length, 0);
+  });
+  test('participant_id_invalid is still permanent (why the server stopped using it for a broken upload)', async () => {
+    M.store.set(OK_, JSON.stringify([fix(1, 1, 5)]));
+    M.api.mode = 'reject'; M.api.rejectCode = 'participant_id_invalid';
+    assert.strictEqual(await L().drainOrphans(), 0); assert.strictEqual(getO().length, 0);
+  });
   results.push(await run('3. drainOrphans — leftover upload (issue 2)'));
 
   // ════════════ 4. processQueue regression (live drain unchanged) ════════════
@@ -268,6 +283,20 @@ const L = () => load('services/locationService').locationService;
     let total = 0;
     for (let i = 0; i < 10; i++) { const d = await L().processQueue('2', '12'); if (d <= 0) break; total += d; if (getQ().length === 0) break; }
     assert.strictEqual(total, 173); assert.strictEqual(getQ().length, 0);
+  });
+  test('request_incomplete on every pass (more than MAX_FIX_ATTEMPTS) → the fix is never discarded', async () => {
+    setQ([fix(2, 12, 3), fix(2, 12, 2)]);
+    M.api.mode = 'reject'; M.api.rejectCode = 'request_incomplete';
+    for (let i = 0; i < 8; i++) assert.strictEqual(await L().processQueue('2', '12'), 0);
+    assert.strictEqual(getQ().length, 2, 'both fixes kept');
+    M.api.mode = 'ok';
+    assert.strictEqual(await L().processQueue('2', '12'), 2); assert.strictEqual(getQ().length, 0);
+  });
+  test('participant_id_invalid on every pass → head fix discarded after MAX_FIX_ATTEMPTS (unchanged)', async () => {
+    setQ([fix(2, 12, 3), fix(2, 12, 2)]);
+    M.api.mode = 'reject'; M.api.rejectCode = 'participant_id_invalid';
+    for (let i = 0; i < 8; i++) await L().processQueue('2', '12');
+    assert.ok(getQ().length < 2, 'the permanent code still unblocks the queue');
   });
   results.push(await run('4. live queue drain regression'));
 
@@ -2305,6 +2334,118 @@ const L = () => load('services/locationService').locationService;
     assert.ok(M.api.posted.filter((p) => p.url.includes('insert_participant_location')).length >= 80, 'fixes sent');
   });
   results.push(await run('17. no side effects: start ping bound, send stamp only on fixes, reminders untouched, taps open Livio only'));
+
+  // ── 18. Android headless relaunch: ready() waits until Livio is opened ─────
+  // Race day 2026-10-24: 4 of 12 Android phones opened after a headless phase got
+  // no engine event for 2.5-4 h (bibs 151, 353, 2, 459). The harness SDK models
+  // tslocationmanager's gate (harness.js, BG.ready): ready() is forwarded once per
+  // JS context and ignored while headless; leaving headless needs a fresh ready().
+  {
+    const H18 = 3600000;
+    const settle18 = () => new Promise((r) => setTimeout(r, 40));
+    const live = () => M.store.set(PARAMS, JSON.stringify({ participantId: '5441', eventId: '20', intervalSeconds: 30, raceStartTime: new Date(M.clock - 2 * H18).toISOString(), manualStart: 0 }));
+    const headlessBoot = () => { M.os = 'android'; M.appState = 'background'; M.sdk.headless = true; };
+    const logOf = async (g) => (await g.getFullTrackingLog()).map((e) => e.icon + ' ' + e.msg);
+
+    test('Android, OS relaunched Livio headless mid-race: no ready() while headless; opening Livio makes events reach JS', async () => {
+      live(); headlessBoot();
+      const g = load('services/gpsService'); await settle18();
+      assert.strictEqual((M.bg.readyCalls || []).length, 0, 'ready() not called while headless');
+      assert.ok(M.sdkDelivers(), 'headless events still go to the headless task');
+      assert.ok((await logOf(g)).some((l) => /^🌙 Cold boot in the background/.test(l)));
+      M.openApp(); await settle18();
+      assert.deepStrictEqual(M.bg.readyCalls, [{ headless: false }], 'one ready(), after headless ended');
+      assert.ok(M.sdkDelivers(), 'events reach the JS listeners after the open (deaf on race day)');
+      assert.ok((await logOf(g)).some((l) => /^🔁 Cold boot — engine alive/.test(l)));
+    });
+    test('…HomeScreen restore (rehydrateTracking) running before the AppState event: delivering, listener gone', async () => {
+      live(); headlessBoot();
+      const g = load('services/gpsService'); await settle18();
+      M.sdk.headless = false; M.sdk.headlessEpoch++; M.appState = 'active';
+      await g.rehydrateTracking();                       // HomeScreen restore runs first
+      for (const h of [...M.appCbs]) h.cb('active');      // then the AppState event
+      await settle18();
+      assert.ok(M.sdkDelivers());
+      assert.strictEqual(M.appCbs.length, 0, 'the one-shot listener removed itself');
+    });
+    test('Android normal launch (app on screen): ready() at boot as before', async () => {
+      live(); M.os = 'android'; M.appState = 'active';
+      load('services/gpsService'); await settle18();
+      assert.deepStrictEqual(M.bg.readyCalls, [{ headless: false }]);
+      assert.ok(M.sdkDelivers());
+    });
+    test('iOS background relaunch: ready() at boot as before (iOS has no headless task)', async () => {
+      live(); M.os = 'ios'; M.appState = 'background';
+      load('services/gpsService'); await settle18();
+      assert.strictEqual((M.bg.readyCalls || []).length, 1);
+    });
+    test('Android background boot with no live session: nothing armed, no listener left behind', async () => {
+      headlessBoot();
+      load('services/gpsService'); await settle18();
+      assert.strictEqual((M.bg.readyCalls || []).length, 0);
+      assert.strictEqual(M.appCbs.length, 0);
+    });
+    test('Android background boot after the finish: engine still stopped at boot (unchanged), no deferral', async () => {
+      live(); M.store.set('@PFSLive:raceFinished', '1'); headlessBoot();
+      const g = load('services/gpsService'); await settle18();
+      assert.ok((await logOf(g)).some((l) => /race already finished, engine stopped/.test(l)));
+      assert.strictEqual(M.appCbs.length, 0);
+    });
+    test('Android background boot of a >24h-old session: stopped at boot (unchanged), no deferral', async () => {
+      M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '12', intervalSeconds: 30, raceStartTime: new Date(M.clock - 26 * H18).toISOString(), manualStart: 0 }));
+      headlessBoot();
+      load('services/gpsService'); await settle18();
+      assert.ok(!M.store.has(PARAMS), 'old session stopped');
+      assert.strictEqual(M.appCbs.length, 0);
+    });
+    test('headless wake on Android without ready(): the fix in the wake is still sent (headless task path)', async () => {
+      live(); headlessBoot();
+      const g = load('services/gpsService'); await settle18();
+      for (let i = 0; i < 2; i++) {                       // the first fix is the anchor, the moved one is sent
+        await g.headlessTask({ name: 'location', params: { coords: { latitude: 50.74 + i * 0.002, longitude: 5.84, accuracy: 5, speed: 2, altitude: 200 }, timestamp: new Date(M.clock).toISOString(), is_moving: true } });
+        M.clock += 60000;
+      }
+      await settle18();
+      assert.strictEqual((M.bg.readyCalls || []).length, 0, 'still no ready() in the headless context');
+      assert.ok(M.api.posted.some((p) => p.url.includes('insert_participant_location')), 'fix posted from the headless task');
+    });
+    test('restore runs first on the open: exactly ONE rehydrate (the pending listener is dropped, no second ready/log)', async () => {
+      live(); headlessBoot();
+      const g = load('services/gpsService'); await settle18();
+      M.sdk.headless = false; M.sdk.headlessEpoch++; M.appState = 'active';
+      await g.rehydrateTracking();
+      assert.strictEqual(M.appCbs.length, 0, 'listener dropped by the foreground run');
+      for (const h of [...M.appCbs]) h.cb('active');
+      await settle18();
+      assert.strictEqual((await logOf(g)).filter((l) => /^🔁 Cold boot/.test(l)).length, 1);
+      assert.strictEqual(M.bg.readyCalls.length, 1);
+    });
+    test('engine found OFF at a background boot: not started in the background, started once Livio is opened', async () => {
+      live(); headlessBoot(); M.sdk.enabled = false;
+      const g = load('services/gpsService'); await settle18();
+      assert.ok(!M.bg.starts, 'no start from the background');
+      assert.ok((await logOf(g)).some((l) => /engine off: restart deferred too/.test(l)));
+      M.openApp(); await settle18();
+      assert.strictEqual(M.bg.starts, 1, 'started on the open');
+      assert.ok(M.sdkDelivers());
+      assert.ok((await logOf(g)).some((l) => /^🔁 Cold boot — live session found, engine restarted/.test(l)));
+    });
+    test('app backgrounded again before it ever became active: still deferred, one listener (no stacking)', async () => {
+      live(); headlessBoot();
+      const g = load('services/gpsService'); await settle18();
+      await g.rehydrateTracking(); await g.rehydrateTracking();   // e.g. a notification tap that never reached the screen
+      assert.strictEqual(M.appCbs.length, 1);
+      assert.strictEqual((M.bg.readyCalls || []).length, 0);
+    });
+    test('Android warm reopen (process alive, app on screen): rehydrateTracking still arms ready() as before', async () => {
+      live(); M.os = 'android'; M.appState = 'active';
+      const g = load('services/gpsService'); await settle18();
+      await g.rehydrateTracking();
+      assert.ok(M.sdkDelivers());
+      assert.strictEqual(M.appCbs.length, 0);
+    });
+  }
+  results.push(await run('18. Android headless relaunch: ready() deferred until Livio is opened (bibs 151 / 353 / 2 / 459)'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);
