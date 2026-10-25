@@ -248,6 +248,21 @@ const L = () => load('services/locationService').locationService;
     const n = await L().drainOrphans(30000);
     assert.strictEqual(n, 2); assert.strictEqual(getO().length, 1);
   });
+  // 2026-10-25: a POST whose body broke off on the way up now answers
+  // request_incomplete (it used to answer participant_id_invalid, a PERMANENT
+  // code). The fix itself is fine, so it must survive and go out next time.
+  test('request_incomplete (upload broke off) → kept, sent on the next pass', async () => {
+    M.store.set(OK_, JSON.stringify([fix(1, 1, 5)]));
+    M.api.mode = 'reject'; M.api.rejectCode = 'request_incomplete';
+    assert.strictEqual(await L().drainOrphans(), 0); assert.strictEqual(getO().length, 1);
+    M.api.mode = 'ok';
+    assert.strictEqual(await L().drainOrphans(), 1); assert.strictEqual(getO().length, 0);
+  });
+  test('participant_id_invalid is still permanent (why the server stopped using it for a broken upload)', async () => {
+    M.store.set(OK_, JSON.stringify([fix(1, 1, 5)]));
+    M.api.mode = 'reject'; M.api.rejectCode = 'participant_id_invalid';
+    assert.strictEqual(await L().drainOrphans(), 0); assert.strictEqual(getO().length, 0);
+  });
   results.push(await run('3. drainOrphans — leftover upload (issue 2)'));
 
   // ════════════ 4. processQueue regression (live drain unchanged) ════════════
@@ -268,6 +283,20 @@ const L = () => load('services/locationService').locationService;
     let total = 0;
     for (let i = 0; i < 10; i++) { const d = await L().processQueue('2', '12'); if (d <= 0) break; total += d; if (getQ().length === 0) break; }
     assert.strictEqual(total, 173); assert.strictEqual(getQ().length, 0);
+  });
+  test('request_incomplete on every pass (more than MAX_FIX_ATTEMPTS) → the fix is never discarded', async () => {
+    setQ([fix(2, 12, 3), fix(2, 12, 2)]);
+    M.api.mode = 'reject'; M.api.rejectCode = 'request_incomplete';
+    for (let i = 0; i < 8; i++) assert.strictEqual(await L().processQueue('2', '12'), 0);
+    assert.strictEqual(getQ().length, 2, 'both fixes kept');
+    M.api.mode = 'ok';
+    assert.strictEqual(await L().processQueue('2', '12'), 2); assert.strictEqual(getQ().length, 0);
+  });
+  test('participant_id_invalid on every pass → head fix discarded after MAX_FIX_ATTEMPTS (unchanged)', async () => {
+    setQ([fix(2, 12, 3), fix(2, 12, 2)]);
+    M.api.mode = 'reject'; M.api.rejectCode = 'participant_id_invalid';
+    for (let i = 0; i < 8; i++) await L().processQueue('2', '12');
+    assert.ok(getQ().length < 2, 'the permanent code still unblocks the queue');
   });
   results.push(await run('4. live queue drain regression'));
 
