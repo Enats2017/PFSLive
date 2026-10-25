@@ -3176,8 +3176,18 @@ const _rehydrateTrackingOnBoot = async (): Promise<void> => {
     if (Platform.OS === 'android' && AppState.currentState !== 'active') {
       _registerTransistorListeners();
       _deferReadyUntilActive();
-      await addLog('🌙', 'Cold boot in the background — ready() deferred until Livio is opened');
+      // An engine found OFF is restarted on the open too (the rehydrate below
+      // runs then): Android refuses a foreground-service start from the
+      // background anyway (START_BACKGROUNDED_CODE in startWatchingPosition).
+      let off = false;
+      try { off = !(await BackgroundGeolocation.getState()).enabled; } catch { /* silent */ }
+      await addLog('🌙', `Cold boot in the background — ready() deferred until Livio is opened${off ? ' (engine off: restart deferred too)' : ''}`);
       return;
+    }
+    // On screen now: this run does what the deferred listener was waiting for.
+    if (_readyDeferredSub) {
+      try { _readyDeferredSub.remove(); } catch { /* silent */ }
+      _readyDeferredSub = null;
     }
 
     // reset:false — do NOT re-apply the config. The native side still holds this

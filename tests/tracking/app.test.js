@@ -2380,6 +2380,41 @@ const L = () => load('services/locationService').locationService;
       assert.strictEqual((M.bg.readyCalls || []).length, 0, 'still no ready() in the headless context');
       assert.ok(M.api.posted.some((p) => p.url.includes('insert_participant_location')), 'fix posted from the headless task');
     });
+    test('restore runs first on the open: exactly ONE rehydrate (the pending listener is dropped, no second ready/log)', async () => {
+      live(); headlessBoot();
+      const g = load('services/gpsService'); await settle18();
+      M.sdk.headless = false; M.sdk.headlessEpoch++; M.appState = 'active';
+      await g.rehydrateTracking();
+      assert.strictEqual(M.appCbs.length, 0, 'listener dropped by the foreground run');
+      for (const h of [...M.appCbs]) h.cb('active');
+      await settle18();
+      assert.strictEqual((await logOf(g)).filter((l) => /^🔁 Cold boot/.test(l)).length, 1);
+      assert.strictEqual(M.bg.readyCalls.length, 1);
+    });
+    test('engine found OFF at a background boot: not started in the background, started once Livio is opened', async () => {
+      live(); headlessBoot(); M.sdk.enabled = false;
+      const g = load('services/gpsService'); await settle18();
+      assert.ok(!M.bg.starts, 'no start from the background');
+      assert.ok((await logOf(g)).some((l) => /engine off: restart deferred too/.test(l)));
+      M.openApp(); await settle18();
+      assert.strictEqual(M.bg.starts, 1, 'started on the open');
+      assert.ok(M.sdkDelivers());
+      assert.ok((await logOf(g)).some((l) => /^🔁 Cold boot — live session found, engine restarted/.test(l)));
+    });
+    test('app backgrounded again before it ever became active: still deferred, one listener (no stacking)', async () => {
+      live(); headlessBoot();
+      const g = load('services/gpsService'); await settle18();
+      await g.rehydrateTracking(); await g.rehydrateTracking();   // e.g. a notification tap that never reached the screen
+      assert.strictEqual(M.appCbs.length, 1);
+      assert.strictEqual((M.bg.readyCalls || []).length, 0);
+    });
+    test('Android warm reopen (process alive, app on screen): rehydrateTracking still arms ready() as before', async () => {
+      live(); M.os = 'android'; M.appState = 'active';
+      const g = load('services/gpsService'); await settle18();
+      await g.rehydrateTracking();
+      assert.ok(M.sdkDelivers());
+      assert.strictEqual(M.appCbs.length, 0);
+    });
   }
   results.push(await run('18. Android headless relaunch: ready() deferred until Livio is opened (bibs 151 / 353 / 2 / 459)'));
 

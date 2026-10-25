@@ -27,7 +27,7 @@ const M = {
   updateId: 'abcdef1234567890',
   bg: {},
   os: 'ios', appState: 'active', appCbs: [],
-  sdk: { headless: false, moduleReady: false, headlessEpoch: 0, clientEpoch: -1 },
+  sdk: { headless: false, moduleReady: false, headlessEpoch: 0, clientEpoch: -1, enabled: true },
 };
 // Does an engine event reach the JS listeners right now?
 M.sdkDelivers = () => M.sdk.headless || M.sdk.clientEpoch === M.sdk.headlessEpoch;
@@ -128,7 +128,8 @@ const overrides = {
   },
   'react-native-background-geolocation': { __esModule: true, default: new Proxy({
     getProviderState: async () => ({ ...M.provider }),
-    getState: async () => ({ enabled: true, isMoving: true }),
+    getState: async () => ({ enabled: M.sdk.enabled, isMoving: true }),
+    start: async () => { M.bg.starts = (M.bg.starts || 0) + 1; M.sdk.enabled = true; return { enabled: true }; },
     // The SDK's JS-delivery gate as tslocationmanager 4.1.9 implements it
     // (EventManager / LifecycleManager, read from the bytecode 2026-10-25): the RN
     // module forwards ready() ONCE per JS context (mReady); while headless that
@@ -214,7 +215,7 @@ function reset() {
   M.provider = { enabled: true, gps: true, network: true, status: 3 };
   M.bg = {};
   M.os = 'ios'; M.appState = 'active'; M.appCbs = [];
-  M.sdk = { headless: false, moduleReady: false, headlessEpoch: 0, clientEpoch: -1 };
+  M.sdk = { headless: false, moduleReady: false, headlessEpoch: 0, clientEpoch: -1, enabled: true };
   M.notif = { pending: [], log: [], fail: false };
   M.battery = { level: undefined, state: undefined, power: undefined, optimized: undefined, fail: false };
   M.clock = realNow();
