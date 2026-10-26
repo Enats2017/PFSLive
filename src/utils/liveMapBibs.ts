@@ -1,5 +1,6 @@
-// Which followed bibs the live map sends for one event. Pure, so it can be
-// tested without React: npm run test:live-map-bibs
+// Which followed bibs the live map sends for one event, and the request field
+// that carries them. Pure, so it can be tested without React or the API
+// client: npm run test:live-map-bibs
 //
 // [#MAP-BIB-FOLLOWS] (2026-10-26, Grizzly100 feedback #31): a fan who followed a
 // runner BY BIB saw them on Result Details (bib-keyed) but never on the map — the
@@ -28,4 +29,15 @@ export function followedBibsForEvent(
     .map(b => String(b).trim())
     .filter(b => b !== '')
     .sort();
+}
+
+// The `bibs` value for the get_live_tracking_data request, or null to leave the
+// field out. Left out when there are none, so every other request — and its
+// server response-cache key — is exactly what it was before.
+export function liveTrackingBibsParam(
+  followedBibs: string[],
+  eventSource: string | null | undefined,
+): string | null {
+  if (eventSource === 'custom' || followedBibs.length === 0) return null;
+  return followedBibs.join(',');
 }

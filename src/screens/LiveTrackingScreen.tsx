@@ -17,7 +17,7 @@ import { gpxService, GPXRouteData } from '../services/gpxService';
 import { buildChartData } from '../utils/geoUtils';
 import { ParticipantMapMarker, AidStationMapMarker, PopupState, CheckpointData } from '../types/liveTracking';
 import { useFollowManager } from '../hooks/useFollowManager';
-import { followedBibsForEvent } from './liveMapBibs';
+import { followedBibsForEvent } from '../utils/liveMapBibs';
 import { commonStyles, colors } from '../styles/common.styles';
 import { liveTrackingStyles } from '../styles/liveTracking.styles';
 import { ChartDataPoint } from '../types';

@@ -1,6 +1,7 @@
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 import { tokenService } from './tokenService';
 import { getCurrentLanguageId } from '../i18n';
+import { liveTrackingBibsParam } from '../utils/liveMapBibs';
 
 export interface LiveTrackingCheckpoint {
     name: string;
@@ -129,8 +130,9 @@ class LiveTrackingService {
             // resolves them to customers on the distance. Only sent when there are
             // any, so every other request (and its server cache key) is unchanged.
             // Partner only: custom events are a different id space.
-            if (followedBibs.length > 0 && eventSource !== 'custom') {
-                requestBody.bibs = followedBibs.join(',');
+            const bibsParam = liveTrackingBibsParam(followedBibs, eventSource);
+            if (bibsParam !== null) {
+                requestBody.bibs = bibsParam;
             }
 
             console.log('📡 Live tracking request:', requestBody);
