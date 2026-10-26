@@ -52,6 +52,10 @@ test('no follows / bad id → nothing', () => {
   assert.deepStrictEqual(followedBibsForEvent(follows, NaN, 'partner'), []);
   assert.deepStrictEqual(followedBibsForEvent(follows, null, 'partner'), []);
 });
+test('a bib stored as a NUMBER (raw JSON from storage) is sent as text', () => {
+  const raw = new Map([[20, new Set([450 as unknown as string, '1A'])]]);
+  assert.deepStrictEqual(followedBibsForEvent(raw, 20, 'partner'), ['1A', '450']);
+});
 test('blank bibs are dropped', () => {
   assert.deepStrictEqual(followedBibsForEvent(new Map([[20, new Set([' ', '450 '])]]), 20, 'partner'), ['450']);
 });
