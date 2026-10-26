@@ -107,6 +107,7 @@ class LiveTrackingService {
         productOptionValueAppId?: number,
         autoRefresh: boolean = false,
         eventSource?: string,
+        followedBibs: string[] = [],
     ): Promise<LiveTrackingResponse> {
         try {
             const token = await tokenService.getToken();
@@ -122,6 +123,14 @@ class LiveTrackingService {
 
             if (productOptionValueAppId && productOptionValueAppId > 0) {
                 requestBody.product_option_value_app_id = productOptionValueAppId.toString();
+            }
+
+            // ✅ [#MAP-BIB-FOLLOWS] Runners followed BY BIB on this event — the API
+            // resolves them to customers on the distance. Only sent when there are
+            // any, so every other request (and its server cache key) is unchanged.
+            // Partner only: custom events are a different id space.
+            if (followedBibs.length > 0 && eventSource !== 'custom') {
+                requestBody.bibs = followedBibs.join(',');
             }
 
             console.log('📡 Live tracking request:', requestBody);

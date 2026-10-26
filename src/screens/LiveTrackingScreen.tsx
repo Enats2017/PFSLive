@@ -17,6 +17,7 @@ import { gpxService, GPXRouteData } from '../services/gpxService';
 import { buildChartData } from '../utils/geoUtils';
 import { ParticipantMapMarker, AidStationMapMarker, PopupState, CheckpointData } from '../types/liveTracking';
 import { useFollowManager } from '../hooks/useFollowManager';
+import { followedBibsForEvent } from './liveMapBibs';
 import { commonStyles, colors } from '../styles/common.styles';
 import { liveTrackingStyles } from '../styles/liveTracking.styles';
 import { ChartDataPoint } from '../types';
@@ -53,7 +54,16 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const profileBottom = TAB_BAR_HEIGHT + insets.bottom;
     const collapseBtnBottom = profileBottom + 100;
     const isCustomEvent = event_source === 'custom';
-    const { followedUsers } = useFollowManager(t);
+    const { followedUsers, followedBibs } = useFollowManager(t);
+    // ✅ [#MAP-BIB-FOLLOWS] Runners followed BY BIB on this event (feedback #31:
+    // a fan who followed bib 450 saw them on Result Details but an empty map).
+    // The joined key is the effect dependency — followedBibs is a new Map on
+    // every reload even when nothing changed.
+    const eventBibs = useMemo(
+        () => followedBibsForEvent(followedBibs, product_app_id, event_source),
+        [followedBibs, product_app_id, event_source],
+    );
+    const eventBibsKey = eventBibs.join(',');
     const [routeData, setRouteData] = useState<GPXRouteData | null>(null);
     const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
     const [participants, setParticipants] = useState<LiveTrackingParticipant[]>([]);
@@ -227,8 +237,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             const usersArray = Array.from(followedUsers);
             console.log('🔍 Checking followed users:', usersArray);
 
-            if (usersArray.length > 0) {
-                console.log('✅ Followed users ready:', usersArray);
+            if (usersArray.length > 0 || eventBibs.length > 0) {
+                console.log('✅ Followed users ready:', usersArray, 'bibs:', eventBibs);
                 hasLoadedInitialData.current = true;
                 loadLiveTrackingData(false);
             }
@@ -252,7 +262,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             clearTimeout(timer2);
             clearTimeout(finalTimer);
         };
-    }, [followedUsers, product_option_value_app_id]);
+    }, [followedUsers, eventBibsKey, product_option_value_app_id]);
+
+    // A bib followed or unfollowed after the first load (or follows that loaded
+    // late) shows on the map now instead of at the next 60 s refresh.
+    useEffect(() => {
+        if (!hasLoadedInitialData.current || loading) return;
+        loadLiveTrackingData(true);
+    }, [eventBibsKey]);
 
     useEffect(() => {
         if (!hasLoadedInitialData.current || loading) return;
@@ -267,7 +284,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             console.log('🛑 Clearing refresh interval');
             clearInterval(interval);
         };
-    }, [hasLoadedInitialData.current, loading, selectedDistance, followedUsers, refreshMs]);
+    }, [hasLoadedInitialData.current, loading, selectedDistance, followedUsers, eventBibsKey, refreshMs]);
 
     const loadLiveTrackingData = async (autoRefresh: boolean, overrideDistance?: DistanceOption | null) => {
         try {
@@ -311,7 +328,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 customerAppIds,
                 optionValueId,
                 autoRefresh,
-                event_source
+                event_source,
+                eventBibs
             );
 
             console.log('✅ Live tracking data received:', {
