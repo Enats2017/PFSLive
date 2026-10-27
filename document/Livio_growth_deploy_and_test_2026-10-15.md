@@ -13,7 +13,7 @@ The growth branches already contain the design branches and master / main.
 This guide assumes main (larssie) is already live. If it is not, deploy main first the normal way.
 
 `<ROOT>` = the server's larssie folder (live: believed `/var/www/html/larssie/` — confirm).
-You do NOT need to change `config.php` or `snippet_config.php` (step 1.4 is optional).
+`config.php`: no change (step 1.4 is optional). `snippet_config.php`: add ONE line (step 1.6).
 
 ---
 
@@ -26,7 +26,24 @@ You do NOT need to change `config.php` or `snippet_config.php` (step 1.4 is opti
    (`LITE_MEMBERSHIP`, `BASIC_MEMBERSHIP`, `PRO_MEMBERSHIP`).
 4. Optional (recommended): add one line to `config.php`:
    `define('LIVIO_MERGE_SECRET', '<64 random hex characters>');`
-5. Make sure `<ROOT>system/storage/logs/` exists and the cron user can write to it.
+5. The two 48 h crons log to the storage logs folder (`DIR_LOGS`, e.g. `<ROOT>ticketpress_storage/logs/`),
+   next to every other log. Make sure the cron user can write to it.
+6. `service/snippets/snippet_config.php` has no `DIR_LOGS` yet: add it, with this server's path
+   (the same folder as `DIR_LOGS` in `config.php`):
+   `define('DIR_LOGS', '<ROOT>ticketpress_storage/logs/');`
+   Without it the mail cron stops and sends nothing.
+7. The mail log holds email addresses. Create `<ROOT>ticketpress_storage/logs/.htaccess` (that folder is
+   not in git) so the web server never serves a log:
+   ```
+   <IfModule mod_authz_core.c>
+       Require all denied
+   </IfModule>
+   <IfModule !mod_authz_core.c>
+       Order deny,allow
+       Deny from all
+   </IfModule>
+   ```
+   Check: open `https://<site>/ticketpress_storage/logs/api_logs.txt` in a browser → 403 (Forbidden).
 
 ## Step 2 — Database (one SQL file)
 
@@ -110,8 +127,8 @@ Then go back to step 3c.
    php <ROOT>api/send_race_reminder_48h.php test
    php <ROOT>service/snippets/send_race_reminder_48h_mail.php test --all
    ```
-2. Read the logs: `<ROOT>system/storage/logs/race_reminder_48h_cron.txt` (push) and
-   `<ROOT>system/storage/logs/race_reminder_48h_mail.txt` (mail). The names and texts must look right.
+2. Read the logs: `<DIR_LOGS>race_reminder_48h_cron.txt` (push) and
+   `<DIR_LOGS>race_reminder_48h_mail.txt` (mail). The names and texts must look right.
 3. Add to the crontab:
    ```
    0,15,30,45 * * * * /usr/bin/php <ROOT>api/send_race_reminder_48h.php
