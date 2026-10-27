@@ -34,6 +34,8 @@ Run `db_xml/migration_growth_all.sql` once:
 phpMyAdmin → select the database → SQL tab → import the file, or
 `mysql <database> < db_xml/migration_growth_all.sql`.
 It is safe to run twice. Do NOT also run the other `migration_*.sql` files; they are already inside it.
+Already ran it on this server before 2026-10-27 (e.g. demo)? Run it AGAIN: it adds `event_source` to
+`oc_race_reminder_mail_app` (needed since the 48 h reminder also covers custom events).
 
 Check:
 ```sql
@@ -115,7 +117,8 @@ Then go back to step 3c.
    0,15,30,45 * * * * /usr/bin/php <ROOT>api/send_race_reminder_48h.php
    5,20,35,50 * * * * /usr/bin/php <ROOT>service/snippets/send_race_reminder_48h_mail.php
    ```
-They only act 36-50 h before a partner race, between 08:00 and 21:59 event time, once per person per race.
+They only act 36-50 h before a race (partner events and custom events, never training sessions),
+between 08:00 and 21:59 event time, once per person per race.
 
 ## Step 6 — App (PFSLive `growth_v0.1`, version 1.1.1)
 
@@ -130,7 +133,7 @@ They only act 36-50 h before a partner race, between 08:00 and 21:59 event time,
 2. Demo test build: `eas build --profile preview --platform android` (APK for testers) and an iOS build
    for TestFlight. The build's server comes from the Expo dashboard env vars, not your local `.env`:
    check `EXPO_PUBLIC_API_URL` points to the demo server.
-3. Testers run `Growth-test-case.txt` (28 tests: app, web, 48 h reminders).
+3. Testers run `Growth-test-case.txt` (30 tests: app, web, 48 h reminders).
 4. Live: only after steps 2-5 are live,
    `eas build --profile production --platform all`, then submit to both stores.
 
