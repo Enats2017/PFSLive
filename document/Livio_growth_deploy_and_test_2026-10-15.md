@@ -1,622 +1,165 @@
-# Livio growth work — deployment + test guide (2026-10-15)
+# Livio growth release — deploy guide (updated 2026-10-27)
 
-Three branches, all pushed, none deployed:
+Do the whole list on the **demo server first**, test, then repeat it on **live**.
+Never skip a step and keep the order: database → server files → web → crons → app.
 
-| Repo | Branch | Base | Ships as |
-|---|---|---|---|
-| App `D:\react_native\PFSLive` | `growth_v0.1` @ `9aca494` | `design_newv0.2` | store build **1.1.0** (not OTA to 1.0.9) |
-| Server `C:\xampp\htdocs\larssie` | `growth_api_v0.1` @ `4e7df57e8` | `design-api` | file upload + **1 SQL file** + 2 crons |
-| Web `C:\xampp\htdocs\larssie\livio_web` | `growth_web_v0.1` @ `c615850` | `web-design` | rebuilt static export |
+| Part | Repo / branch | What you deploy |
+|---|---|---|
+| Server | larssie `growth_api_v0.1` | 1 SQL file + PHP files + 2 crons |
+| Web | livio_web `growth_web_v0.1` | a new static build at `/livio_website` |
+| App | PFSLive `growth_v0.1` | store build **1.1.1** (not an OTA update) |
 
-All three branches contain their main / master as of 2026-10-20 (app: start reminders, battery checks at Start,
-iOS start window; server: checkpoint catch-up, expired sessions, event-page member price; web: race-day report only).
-Deploying growth therefore also deploys those main changes — if main is already live, nothing extra.
+The growth branches already contain the design branches and master / main.
+This guide assumes main (larssie) is already live. If it is not, deploy main first the normal way.
 
-`<LIVE>` below = the live larssie root (believed `/var/www/html/larssie/` — **confirm**).
-Nothing here needs a change to the live `config.php` / `snippet_config.php`.
+`<ROOT>` = the server's larssie folder (live: believed `/var/www/html/larssie/` — confirm).
+You do NOT need to change `config.php` or `snippet_config.php` (step 1.4 is optional).
 
 ---
 
-## 0. Before you start
+## Step 1 — Before you start
 
-1. **Back up** the live DB tables touched: `oc_follower_app`, `oc_follower_customer_app`, `oc_follower_bib_app`
-   (+ a full dump if that is your routine).
-2. **Back up** every live file listed in step 2 (copy to `*.bak-20261015`).
-3. Confirm the live `service/snippets/snippet_config.php` has the current prices
-   (`LITE_MEMBERSHIP 5.95`, `BASIC_MEMBERSHIP 19.95`, `PRO_MEMBERSHIP 24.95`) — they feed the refusal/upgrade mails.
-4. Optional, recommended: add a dedicated secret to the live `config.php`:
-   `define('LIVIO_MERGE_SECRET', '<64 random hex chars>');`
-   (without it the web merge ticket is signed with a key derived from the DB credentials).
-5. **How do requests reach live PHP?** Rate limits now use the forwarded client IP ONLY from Cloudflare
-   or from a proxy on a private/loopback address (nginx / load balancer in front of Apache). Check once:
-   put `<?php echo $_SERVER['REMOTE_ADDR'];` in a temporary file on live, open it, then delete it.
-   - Your own public IP, or a Cloudflare IP → nothing to do.
-   - A 10.x / 172.16–31.x / 192.168.x / 127.0.0.1 address → nothing to do (trusted proxy).
-   - Any OTHER address (a proxy with a public IP) → add to the live `config.php`:
-     `define('LIVIO_TRUSTED_PROXIES', '<that address>');` — otherwise every visitor shares one rate-limit bucket.
+1. Back up the database tables `oc_follower_app`, `oc_follower_customer_app`, `oc_follower_bib_app`
+   (or make a full dump).
+2. Back up every server file listed in step 3 (copy each to `<name>.bak-<date>`).
+3. Check `service/snippets/snippet_config.php` has the prices 5.95 / 19.95 / 24.95
+   (`LITE_MEMBERSHIP`, `BASIC_MEMBERSHIP`, `PRO_MEMBERSHIP`).
+4. Optional (recommended): add one line to `config.php`:
+   `define('LIVIO_MERGE_SECRET', '<64 random hex characters>');`
+5. Make sure `<ROOT>system/storage/logs/` exists and the cron user can write to it.
 
-## 1. Database — run ONE SQL file (re-runnable; sections 1–4 additive, sections 5 and 6 one-off data fixes)
+## Step 2 — Database (one SQL file)
 
-**`db_xml/migration_growth_all.sql`** — phpMyAdmin: select the live database first, then "SQL" tab → paste/import;
-or CLI: `mysql db_larssie_live < db_xml/migration_growth_all.sql`. Tested through the real `mysql` client, twice.
+Run `db_xml/migration_growth_all.sql` once:
+phpMyAdmin → select the database → SQL tab → import the file, or
+`mysql <database> < db_xml/migration_growth_all.sql`.
+It is safe to run twice. Do NOT also run the other `migration_*.sql` files; they are already inside it.
 
-It contains, in order (the per-feature files stay in the repo for reference — do not run them as well):
-
-| # | Section | What it adds |
-|---|---|---|
-| 1 | readiness | `oc_follower_app`: `location_permission`, `notifications_enabled`, `tracking_ready`, `ready_checked_at` |
-| 2 | 48 h mail | new table `oc_race_reminder_mail_app` (48 h mail dedupe) |
-| 3 | follow order | `oc_follower_app.follow_seq` (order of follow uploads) |
-| 4 | guest proof | `oc_follower_app.guest_secret_hash` (web guest proof) |
-| 5 | data fix | follower rows switched off (`status = 0`) only because their Expo token died, but still holding web push → active again, dead token cleared |
-| 6 | data fix | upcoming registrations (race on/after yesterday) whose copied start date / time / end time differs from their distance's current one, or whose timezone differs from the event's (organiser changed it) → brought in line; past races, cancelled registrations and memberships untouched |
-
-Check afterwards:
+Check:
 ```sql
 SHOW COLUMNS FROM oc_follower_app WHERE Field IN
  ('location_permission','notifications_enabled','tracking_ready','ready_checked_at','follow_seq','guest_secret_hash');  -- 6 rows
 SHOW TABLES LIKE 'oc_race_reminder_mail_app';                                                                        -- 1 row
-SELECT COUNT(*) FROM oc_follower_app WHERE status = 0 AND wp_endpoint IS NOT NULL AND wp_endpoint <> '';             -- 0
--- section 6: counts exactly what that section changes
-SELECT COUNT(*) FROM oc_participant_app p2
-  JOIN oc_product_option_value_app pov ON pov.product_option_value_app_id = p2.product_option_value_app_id
-  JOIN oc_product_option_app po ON po.product_option_app_id = pov.product_option_app_id
-  JOIN oc_product_app ev ON ev.product_app_id = po.product_app_id
- WHERE p2.race_id = po.product_app_id AND p2.status = 1 AND p2.is_membership = 0
-   AND p2.race_date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND pov.race_date > '1000-01-01'
-   AND (NOT (p2.race_date <=> pov.race_date) OR NOT (p2.race_time <=> pov.race_time)
-        OR NOT (p2.end_time <=> pov.end_time)
-        OR (ev.timezone <> '' AND NOT (p2.timezone <=> ev.timezone)));                                             -- 0
 ```
-Rollback lines are at the bottom of each section.
 
-**Every year-end (not now):** right after the yearly archive moves `oc_participant_app` to
-`<db>_<year>.oc_participant_app_<year>`, set `@archive_year` in
-`db_xml/year_rollover_participant_app_ids.sql` to that year and run it — ideally on the new empty table
-before it takes registrations. It continues the participant ids above the archive (never lowers the counter),
-so this year's and last year's participants can never share an id (coordinates and stop detection are keyed
-on participant + race). If the archive table doesn't exist it stops and changes nothing. MySQL 8.
+## Step 3 — Server files (larssie `growth_api_v0.1`), in this order
 
-## 2. Server files (larssie, branch `growth_api_v0.1`) — upload in this order
-
-Every endpoint also works before its migration (it just skips the new behaviour), but run step 1 first anyway.
-
-**2a. New helper + OpenCart controllers (before the new web build):**
+**3a. Upload first:**
 - `api/MergeTicket.php` (new)
 - `catalog/controller/account/whoami.php`
 - `catalog/controller/account/logout.php`
 
-**2b. Web build (step 3 below)** — deploy it now, before the new merge endpoint.
-⚠ **2b and 2c go live together (minutes apart):** the new `register_web_push.php` refuses to attach a browser
-to an account's row unless the request carries the account's `merge_ticket`, which only the NEW web build sends.
-The old server simply ignores the extra field, so web first, then 2c, is safe; the other way round, logged-in web
-users can't turn on push until the web build is up.
-The same order matters for follows: the new `update_follower_favourites_api.php` asks a web guest row that holds a
-secret for that secret, which only the NEW web build sends. (Rows only get a secret from the new web + new server,
-so web first, then 2c, never hits this.) A browser tab left open on the OLD web build after the deploy should be reloaded.
+**3b. Now deploy the web (step 4), then come back for 3c.**
+Web first, then 3c, a few minutes apart: the new server refuses web push and guest follows
+from the OLD web build.
 
-**2c. API endpoints + libraries:**
-- `api/ApiSecurity.php`  (per-device rate limits — upload it FIRST in 2c, the endpoints below use its new options)
-- `api/FollowerGuard.php` (new — upload together with ApiSecurity, before the endpoints below; they include it)
-- `api/Cors.php`  ⚠ `http://localhost:3000` is now only allowed when the backend itself is localhost
-- `api/merge_follower_api.php`
-- `api/register_web_push.php`
-- `api/register_guest_follower.php`
-- `api/register_follower_api.php`
-- `api/update_follower_favourites_api.php`
-- `api/update_follower_email_api.php`, `api/update_follower_language_api.php`
-- `api/update_customer_setting_api.php` (the follower language is now set only on the account's own device)
-- `api/get_follow_data_by_device.php`, `api/get_follower_data_api.php`, `api/get_favourite_all_api.php`
-  (downloads now carry `follow_seq`; `update_follower_favourites_api.php` answers 409 `follow_conflict` when a
-  list is based on an older state — new app/web only; the 1.0.9 app doesn't send `base_seq` and works as before)
-- `api/get_my_favourites_all_api.php`, `api/participant_profile_api.php` (follower lists/counts no longer drop rows whose push died)
-- `api/verify_registration_api.php` (event name encoded in the app deep link)
-- `api/update_device_readiness_api.php` (new)
-- `api/home_api.php`
-- `api/send_checkpoint_notifications.php`, `api/send_custom_checkpoint_notifications.php`, `api/send_race_start_notifications.php`
-  (existing push crons — a dead Expo token now clears only the token, the row keeps its web push)
-- `api/send_checkpoint_notifications_test.php`, `api/send_custom_checkpoint_notifications_test.php`, `api/send_race_start_notifications_test.php`
-  (their test copies — same rule)
+**3c. API — upload these two first:**
+- `api/ApiSecurity.php`
+- `api/FollowerGuard.php` (new)
+
+**Then the rest:**
+- `api/Cors.php`
 - `api/ParticipantYearHelper.php`
-- `api/get_result_detail_api.php`, `api/get_favourite_api.php`, `api/get_favourite_all_events_api.php`,
-  `api/get_live_tracking_data_api.php` + their test copies `api/get_result_detail_test_api.php`,
-  `api/get_live_tracking_data_test_api.php` ("distance since last point": a timing point without km no longer
-  makes the next point count from the start — client feedback 2026-10-22)
 - `api/RaceReminder48hLib.php` (new)
-- `api/send_race_reminder_48h.php` (new — push cron)
+- `api/home_api.php`
+- `api/event_list_api.php`, `api/event_list_web_api.php`
+- `api/merge_follower_api.php`
+- `api/register_web_push.php`, `api/register_guest_follower.php`, `api/register_follower_api.php`
+- `api/update_follower_favourites_api.php`, `api/update_follower_email_api.php`, `api/update_follower_language_api.php`
+- `api/update_customer_setting_api.php`
+- `api/update_device_readiness_api.php` (new)
+- `api/get_follow_data_by_device.php`, `api/get_follower_data_api.php`
+- `api/get_favourite_api.php`, `api/get_favourite_all_api.php`, `api/get_favourite_all_events_api.php`, `api/get_my_favourites_all_api.php`
+- `api/participant_profile_api.php`
+- `api/get_result_detail_api.php`, `api/get_result_detail_test_api.php`
+- `api/get_live_tracking_data_api.php`, `api/get_live_tracking_data_test_api.php`
+- `api/verify_registration_api.php`
+- `api/send_checkpoint_notifications.php`, `api/send_checkpoint_notifications_test.php`
+- `api/send_custom_checkpoint_notifications.php`, `api/send_custom_checkpoint_notifications_test.php`
+- `api/send_race_start_notifications.php`, `api/send_race_start_notifications_test.php`
+- `api/send_race_reminder_48h.php` (new, push cron)
 - `api/language/en/notification.php`, `api/language/fr/notification.php`, `api/language/nl/notification.php`
-- `service/snippets/send_race_reminder_48h_mail.php` (new — email cron)
+- `service/snippets/send_race_reminder_48h_mail.php` (new, mail cron)
 - `service/snippets/language/en/race_reminder_48h_mail.php`, `.../fr/...`, `.../nl/...` (new)
-- `.gitignore` (only matters if live deploys via git; the mail cron also writes `system/storage/logs/race_reminder_48h_mail_skips.json`)
 
-**2d. Organiser panel:**
-- `eventpanel/model/catalog/event_app.php` — saving an event now also moves the start date / time / end time (and the
-  event timezone) of its upcoming registrations when the organiser changed them (section 6 of the SQL did it once for
-  the changes made before this release).
+**3d. Organiser panel:**
+- `eventpanel/model/catalog/event_app.php`
 
-Make sure `<LIVE>system/storage/logs/` exists and is writable by the cron user (both 48 h cron logs go there).
-The 48 h push cron reads `oc_follower_app.notifications_enabled` — run the SQL file (step 1) before enabling it.
+Do not upload: `tests/`, `document/`, `db_xml/` (already run in step 2), `service/snippets/Mail_normal.docx`.
+`.gitignore` matters only if the server deploys with git.
 
-## 3. Web (livio_web, branch `growth_web_v0.1`)
+## Step 4 — Web (livio_web `growth_web_v0.1`)
 
 ```bash
 cd livio_web
 git checkout growth_web_v0.1
 npm ci
-npm run test:follow    # 97 behavioural tests of the follow/login logic — must all pass
-NEXT_PUBLIC_BASE_PATH=/livio_website npm run build   # production base path (a local .env.local may set another)
+npm run test:follow                                  # must all pass
+NEXT_PUBLIC_BASE_PATH=/livio_website npm run build
 ```
-(Windows Git Bash: prefix `MSYS_NO_PATHCONV=1`, or Git Bash turns `/livio_website` into a Windows path.)
-Upload the export the way you normally do (it lives at `my.liviolive.com/livio_website`).
-Changed: `src/hooks/useAuth.tsx`, `src/hooks/useFollowManager.ts`, `src/services/allFavouritesService.ts`,
-`src/services/authService.ts`, `src/services/tokenService.ts`, `src/utils/followAuthSync.ts`, `src/utils/followStorage.ts`,
-`src/services/followService.ts`, `src/utils/webPush.ts`, `package.json` (test script); new `tests/follow.test.js`;
-deleted (unused) `src/utils/guestId.ts`.
+(Windows Git Bash: put `MSYS_NO_PATHCONV=1` in front of the build line.)
+Upload the `out/` folder the way you always do (`my.liviolive.com/livio_website`).
+Then go back to step 3c.
 
-## 4. Crons (both every 15 minutes)
+## Step 5 — Crons (48-hour reminders)
 
-**First a dry run on live** (sends nothing, writes nothing):
-```bash
-php <LIVE>api/send_race_reminder_48h.php test
-php <LIVE>service/snippets/send_race_reminder_48h_mail.php test --all
-```
-Read the logs (push: `<LIVE>system/storage/logs/race_reminder_48h_cron.txt`, rotated monthly to `.<YYYY-MM>`;
-mail: `<LIVE>system/storage/logs/race_reminder_48h_mail.txt`).
-If the people/texts look right, add to crontab:
-```
-0,15,30,45 * * * * /usr/bin/php <LIVE>api/send_race_reminder_48h.php
-5,20,35,50 * * * * /usr/bin/php <LIVE>service/snippets/send_race_reminder_48h_mail.php
-```
-(Both only act 36–50 h before a partner race start, 08:00–21:59 event time; each person gets one push / one mail per race.)
+1. Dry run (sends nothing, writes nothing):
+   ```bash
+   php <ROOT>api/send_race_reminder_48h.php test
+   php <ROOT>service/snippets/send_race_reminder_48h_mail.php test --all
+   ```
+2. Read the logs: `<ROOT>system/storage/logs/race_reminder_48h_cron.txt` (push) and
+   `<ROOT>system/storage/logs/race_reminder_48h_mail.txt` (mail). The names and texts must look right.
+3. Add to the crontab:
+   ```
+   0,15,30,45 * * * * /usr/bin/php <ROOT>api/send_race_reminder_48h.php
+   5,20,35,50 * * * * /usr/bin/php <ROOT>service/snippets/send_race_reminder_48h_mail.php
+   ```
+They only act 36-50 h before a partner race, between 08:00 and 21:59 event time, once per person per race.
 
-## 5. App (PFSLive, branch `growth_v0.1`)
+## Step 6 — App (PFSLive `growth_v0.1`, version 1.1.1)
 
-This branch is cut from `design_newv0.2`, so it ships with the **1.1.0 store build** (no OTA to 1.0.9).
-1. Merge `growth_v0.1` into the branch you release 1.1.0 from (your normal flow).
-2. `npx tsc --noEmit` and `npm run test:growth` / `test:tracking` / `test:activation` — all must pass.
-3. `eas build --profile production --platform all`, then submit to both stores.
-4. Release the app **after** steps 1–4 above are live (the app expects the new home_api fields,
-   readiness endpoint and follow-upload ordering; it degrades safely if they are missing, but you lose the features).
+1. Check locally; all must pass:
+   ```bash
+   npx tsc --noEmit
+   npm run design-check
+   npm run test:growth
+   npm run test:tracking
+   npm run test:activation
+   ```
+2. Demo test build: `eas build --profile preview --platform android` (APK for testers) and an iOS build
+   for TestFlight. The build's server comes from the Expo dashboard env vars, not your local `.env`:
+   check `EXPO_PUBLIC_API_URL` points to the demo server.
+3. Testers run `Growth-test-case.txt` (28 tests: app, web, 48 h reminders).
+4. Live: only after steps 2-5 are live,
+   `eas build --profile production --platform all`, then submit to both stores.
 
----
+## Step 7 — Quick check after each deploy (10 minutes)
 
-## 6. How to test after deploying
-
-### Automated tests — run locally BEFORE deploying (all must pass)
-| Repo | Command | Expected |
-|---|---|---|
-| App | `npx tsc --noEmit` · `npm run test:growth` · `npm run test:tracking` · `npm run test:activation` · `npm run design-check` | clean · 530 · 188 · 19 passed · exit 0 |
-| Server | `php tests/growth/growth_api_test.php` (local DB only — self-cleaning test rows; the local DB needs the step 1 SQL) | 435 passed, 0 failed (1 skipped on a local web build), leftover rows 0 |
-| Server (main's suites, must still pass on growth) | `php tests/rr_unranked/rr_unranked_test.php` · `checkpoint_catchup_test.php` · `audit_2026_10_18_test.php` · `php tests/tracking_api/dbconnect_test.php` · `event19_review_http_test.php` | 68 · 12 · 12 · 4 · 13 passed |
-| Server (segment distance, 2026-10-22) | `php tests/rr_unranked/segment_distance_test.php` | 10 passed |
-| Web | `npm run test:follow` · `npx vitest run` · `node_modules/.bin/tsc --noEmit -p .` · `npx eslint .` | 96 passed · 77 passed · clean · clean |
-
-### Server (quick checks with curl / phpMyAdmin)
 | Check | Expected |
 |---|---|
-| `POST api/merge_follower_api.php` with only `guest_device_id` + `device_id` | HTTP 401 `unauthorized` |
-| `GET index.php?route=account/whoami` while logged in to an **app** account in the browser | JSON contains `merge_ticket` |
-| `POST api/update_follower_favourites_api.php` for a test follower with 1001 ids | `list_too_large` |
-| Same endpoint with `client_seq` 100 then `client_seq` 90 | second answer `data.stale = true`, list unchanged |
-| `php send_race_reminder_48h_mail.php test --all` | log lists people, "mailed" lines, nothing recorded in `oc_race_reminder_mail_app` |
-| `php api/send_race_reminder_48h.php --test` (also `test`) | dry run: log at `system/storage/logs/race_reminder_48h_cron.txt`, tokens shown only as last 6 chars, nothing sent |
-| `GET api/home_api.php` for a runner with an upcoming race | JSON has `next_race_start_ts` (unix seconds of the start) and `server_now_ts` |
-| Test follower row: set `status = 0` in phpMyAdmin, then follow from that phone/browser | follow still saved (status no longer blocks follows); `get_follow_data_by_device` still returns its list |
-| 61 quick requests to `get_follow_data_by_device.php` with ONE `device_id` | that phone gets 429; a request with ANOTHER `device_id` from the same IP still gets 200 |
-| Follower row at `status = 0` (dead push token) with follows | the app/web "Following" list and home "followed live" still show them |
-| 48 h: a runner who was already MAILED the reminder for a race | gets no 48 h push for it as well |
-| FR race-start push title | ends "… %s !" with a real space (no visible "\u00a0") |
-| After a push run that hit a dead Expo token (log line "DeviceNotRegistered") | that row: `expo_token = ''`; `status` stays 1 if the row has a `wp_endpoint` (web push keeps working), 0 otherwise |
-| Merge where the login row doesn't exist yet (relabel) with a guest that had web push | relabelled row has `wp_endpoint` NULL until the browser re-registers it |
-| `oc_follower_app` row of an app account's device created from the web | `guest_secret_hash = 'acct'` → merging it as a "guest" answers `guest_proof_invalid` |
-| 48 h mail: a runner whose 48 h push was delivered (row in `oc_notification_sent_app`, key `race_reminder_48h`) | gets no 48 h mail as well |
-| 48 h: a connected runner whose phone reports `notifications_enabled = 0` | no push; gets the mail instead |
-| `POST api/register_web_push.php` with an app account's `device_id` + a `subscription`, no `merge_ticket` | HTTP 401 `unauthorized`; the row's `wp_endpoint` unchanged |
-| Same with the `merge_ticket` from whoami (logged in as that account) | `success: true`, `wp_endpoint` saved |
-| `update_follower_language_api.php` (get) for a row with `language_id` NULL | `found: false` |
-| `php api/send_race_reminder_48h.php test` on 1 January (or any year whose previous-year archive is missing) | runs to the end (no crash) |
-| Open `api/send_race_reminder_48h.php` in a browser | 404, nothing runs |
-| `update_follower_favourites_api.php` with `base_seq` lower than the row's `follow_seq` | HTTP 409 `follow_conflict` with the row's lists; lists unchanged |
-| Two runs of the 48 h push for a runner with two distances of one race on consecutive days | one push in total |
-| `send_race_reminder_48h.php test` while the live cron runs | the live run is NOT skipped (test run has its own lock) |
-| `register_follower_api.php` with a browser guest's id (a lower-case UUID from the web's Local Storage `guest_id`) + any Expo token | HTTP 401 `unauthorized`; that row keeps `platform = 'web'`, `expo_token` empty |
-| `update_follower_favourites_api.php` for that guest row (its `follower_id` + `device_id`) without `guest_secret` | HTTP 401 `unauthorized`; its follows unchanged (the website itself sends the secret) |
-| Event panel: move the start time of a distance of an upcoming event and save | phpMyAdmin: that distance's upcoming `oc_participant_app` rows show the new `race_time`; past races unchanged |
-| Event panel: change an upcoming event's timezone and save | its upcoming `oc_participant_app` rows show the new `timezone`; the app's countdown moves accordingly |
-| `update_customer_setting_api.php` (logged-in app token) with `language_id` + ANOTHER device's `device_id` | `success: true`, but only the account's own follower row gets the language; the other row is unchanged |
-| 200 quick requests to `register_guest_follower.php` from one IP, each with a new `device_id` | the ones over 180 per minute get 429 with a short `Retry-After`; the IP is not blocked for a whole minute (new devices get through again as soon as the minute rolls) |
-| Registration confirmed for an event whose name has `&` or `#` | the `livio://` link in the answer has the name encoded (`%26`, `%23`) |
+| Open `api/send_race_reminder_48h.php` in a browser | 404 |
+| `POST api/merge_follower_api.php` with only `guest_device_id` + `device_id` | 401 `unauthorized` |
+| Logged in on the website: `index.php?route=account/whoami` | JSON contains `merge_ticket` |
+| Website, logged out: follow 2 athletes, then log in with an account that follows 1 | all 3 in the list |
+| App: fresh install | no notification / location / battery popup |
+| App: follow an athlete | "Know when they pass each checkpoint?" popup |
+| App: runner with an upcoming race | countdown, "Share my live link", "Ready to race?" card |
+| App: "Share my live link" → open the link on another phone | the runner's result page on my.liviolive.com/livio_website |
+| App: one tracking Start → Stop on a test race | works as before |
 
-### Web (browser, logged out first)
-1. Open the site logged out, follow 2 athletes (guest). In DevTools → Application → Local Storage: `guest_id` and `guest_secret` exist.
-2. Log in (OpenCart) with an app account that already follows 1 other athlete.
-3. Back on the site: following list shows **all 3**. `guest_id`, `guest_secret`, `follow_union_owed` are gone.
-4. In phpMyAdmin the guest's `oc_follower_app` row is gone (merged) and the login row has the 3 follows.
-5. Enable web push as guest before logging in → after login the subscription is on the login row only (`wp_endpoint` of the old guest row is NULL).
-6. Log out → follows are cleared locally; log in again → they come back from the server.
-7. Guest follows 1 athlete, then logs in with an app account that has **never followed anything** → the athlete is on the account afterwards (a follower row is created for it).
-8. Guest follows, then the login happens while offline (DevTools → Network → Offline, then back Online and refocus the tab) → the follows arrive on the next refresh; `follow_union_owed` disappears once they did.
-9. Logged in, with follows: block the whoami URL (DevTools → Network → right-click → Block request URL), refocus the tab → you stay logged in and the follows stay (a failed check is not a logout). Unblock.
-10. Account switch: logged in as A in the site tab; in another tab log out of OpenCart and log in as B; come back to the site tab → only B's follows show, none of A's.
-11. Two tabs: tab 1 logs out; in tab 2 follow an athlete as guest; log in as B in tab 2 → the athlete is added to B (not lost, no errors in the console).
-12. Logged in with web push on → in-app logout → DevTools → Application → Service workers / push: no subscription left; the account row's `wp_endpoint` is cleared on the next registration. (An OpenCart session that merely EXPIRES does not unsubscribe — push keeps working after the next login.)
-13. Network throttled to "Slow 3G": reload while logged in and follow an athlete within 1–2 s → after it settles the athlete is still followed (on the server too).
-14. DevTools → Network: every `update_follower_favourites_api.php` request body contains `client_seq` (a rising number).
-15. Logged in, leave the tab open and untouched for 20 min, then follow someone and allow push → push is saved (Network: one `register_web_push` 401, a `whoami`, then a second `register_web_push` 200).
-16. Follow an athlete and close/reload the tab within a second (DevTools → Network → Slow 3G) → after reload the follow is on the server too (`follow_pending_sync` in Local Storage disappears once it is).
-17. Logged in with push on → let the OpenCart session expire (or delete the OpenCart session cookie) and reload → push still arrives (the subscription moved to the guest id); log in again → it moves back to the account row.
-18. Logged in, every `register_web_push` request body contains `merge_ticket`; as a guest it contains `guest_secret` instead.
-19. **Phone + web on one account:** follow athlete A on the website, then (without reopening the app) follow B on the phone → after both sync the account has A and B (web and phone). Same the other way round, and with an unfollow on one side.
-20. Log in on the website and follow someone within 1 second (Slow 3G) → the account's earlier follows are all still there.
-21. Two tabs logged in: follow in tab 1, quickly switch to tab 2 and refocus → the follow stays in both tabs.
-22. Logged out (guest): DevTools → Network → every `update_follower_favourites_api.php` request body contains `guest_secret` (the same value as Local Storage `guest_secret`); logged in it does not.
-23. Guest: in DevTools → Local Storage delete only `guest_secret`, then follow an athlete → after a moment `guest_id` is a NEW value, the follow is saved (Network: one 401, then a `register_web_push` and a 200 upload); the athlete still shows as followed.
+## If something goes wrong
 
-### App (device, on the 1.1.0 build)
-**Notifications / permissions**
-1. Fresh install → **no** notification prompt at first launch.
-2. Follow an athlete as a fan → explanation sheet first, then the OS prompt. Deny it → following still works (athlete stays followed after app restart).
-3. Settings → Notifications screen shows the state and opens the phone's settings page in one tap.
-4. Open a live map as a fan → **no** location prompt.
+- Server: put the `.bak` files back. The SQL only adds columns and a table; old code ignores them,
+  so the database does not need to be rolled back (rollback lines are at the end of each SQL section).
+- Web: upload the previous `out/` folder again.
+- App: do not release the store build; 1.0.9 keeps working with the new server.
 
-**Runner flow**
-5. Connect to an upcoming race → "Get race-ready" opens (location "Always", notifications, battery on Android) with one tap per step.
-6. Home: readiness card for the upcoming race; countdown to your start before you press Start; "Share my tracking link" opens the share sheet with the live result page link (contains `bib=` and `from_live=1`).
-7. Press Start with location denied → popup titled "Let your family and friends follow you live"; grant from the popup → tracking starts once (not twice), popup closes.
-   - iOS with "While using" only: tap the popup button → iOS asks "Change to Always Allow?" → the popup does NOT flash in between; answer "Keep Only While Using" → the Start popup comes back.
-   - iOS where iOS no longer shows that question (declined before): one tap on the popup button goes straight to Settings (not a second tap).
-8. Mid-race switch Location off → popup "Location is switched off"; switch back on → tracking resumes.
-9. No upcoming race → the new idle home (not the empty logo screen).
-10. Open `livio://event?product_app_id=<id>&pov=<pov id>` from Notes/Messages → event opens with that distance selected, **not** registered.
+## Still to do / decide (not code)
 
-**Follow sync (two devices / web)**
-11. Follow on the phone with airplane mode on → turn it off → follow arrives on the server (check web).
-12. Follow quickly 5 athletes on a slow network → server ends with all 5.
+- Confirm the live `<ROOT>` path.
+- Optional `LIVIO_MERGE_SECRET` (step 1.4).
+- The 8 client questions were decided in code while the client is on leave. Check them with him when he is back.
 
-**48 h reminder (staging or a test race)**
-13. Create a partner test race ~44 h ahead (daytime in its timezone); connect with a test phone that has notifications OFF → after the next cron run an email arrives; with notifications ON → a push arrives instead; a web entrant who never connected → email inviting them to connect.
-
-**Final-audit fixes**
-14. iOS: Settings → Privacy → Location Services OFF (whole phone) → press Start → popup says Location is **switched off** (not "permission"); turn it on and come back → tracking starts by itself.
-15. Precise location OFF (Android: app location permission → "Use precise location" off; iOS: Livio → Location → Precise Location off) → readiness card lists "Precise location" (not "all set"); Get race-ready shows that step and its button opens the settings page.
-16. Countdown across the clock change: a test race on/after 25 Oct (EU DST end), viewed before → countdown equals the real time left (not 1 h off).
-17. While tracking runs, make the race drop from home (e.g. past its end time) → no "No race coming up" card over the running session.
-18. Reinstall: phone with follows + notifications was uninstalled, reinstall WITHOUT allowing notifications → Following shows the old follows (no new follow needed first).
-19. Android: restore the app on a NEW phone from a backup (or copy `FOLLOWER_ID` to a fresh install) → after launch the local follows are saved to a new follower row; fan email and language save work.
-20. Notifications blocked at system level (Android: app notifications off in system settings while the permission is granted) → Settings → Notifications "Turn on" opens the phone's settings page (it used to do nothing); same in Get race-ready.
-21. Guest (not logged in) with the app in French or Dutch → open Live tracking settings → the app stays in French/Dutch (it used to switch to English).
-22. Android phone without a battery-optimisation page (some OEMs) → Get race-ready battery step: tapping it never gets stuck (the step is skipped).
-23. Popup copy: Location switched off at Start says tracking starts when you come back (no "press Start again"); mid-race "no GPS" banner says tracking keeps running.
-
-**Third-audit fixes**
-24. Precise location OFF → press Start → popup "precise location" with a settings button and **"Start anyway"**; "Start anyway" starts tracking; turning precise on from Settings and coming back starts it too.
-25. Airplane mode on → follow / unfollow an athlete → the button switches instantly (no spinner waiting for the network); turn airplane mode off → the change reaches the server.
-26. Follow sheet: deny notifications in the OS (iOS "Don't Allow") → follow again later → tapping "Turn on" opens the phone's settings (no dead tap).
-27. Get race-ready → location step when iOS no longer shows the question → the button opens Settings.
-28. Notifications screen on Android 13+ after one "Don't allow" → the text matches the button, and a double tap opens only one dialog.
-29. Press Start while location is missing, leave the app for more than 15 min, come back with location on → tracking does NOT start by itself (press Start again); within 15 min it does.
-30. Countdown: lock the phone for a few minutes, unlock → the countdown shows the right time immediately.
-31. Open `livio://event` without `event_name` → opens with a normal title (no blank header).
-32. French and Dutch text of the new precise-location popup → have a native speaker check it.
-33. Fan follows an athlete with no signal (airplane mode), keeps the app open, turns airplane mode off → within seconds the follow is on the server (no new follow or restart needed).
-34. Double-tap Follow quickly → one toast, followed once.
-35. Press Start, then Start again quickly / double-tap "Start anyway" → tracking starts once.
-36. Pull down Control Center (iOS) while a Start popup is waiting → nothing happens; going to Settings and back does.
-
-**Client feedback on the test build (2026-10-22)** — iPhone SE or mini (small), a recent iPhone (Dynamic
-Island), one Android; app language EN, NL and FR.
-37. Home: the logo in the navy header is clearly bigger, centred, not cut off.
-38. Home in Dutch: the green band reads "LIVE TRACKING & RESULTS" on one line.
-39. Home hero: "Follow your race / in real time" + "And keep up with the athletes you follow"
-    (NL "Volg je wedstrijd / in realtime" + "En blijf op de hoogte van de atleten die je volgt";
-    FR "Suivez votre course / en temps réel" + "Et ne manquez rien des athlètes que vous suivez").
-40. Dutch elsewhere: bottom tab "Results" (from race day; "Deelnemers" before), distance button "Results"
-    (from race day), past race "Result", participant card button "Results" (RaceResult entries), results
-    filter "Results", live bar on result cards "Live tracking".
-41. Text size: walk through every screen (login/register, home, event details, results list, result detail —
-    3 tabs, live map + popups, profile, membership, settings, every popup) → nothing cut off or overlapping.
-    Repeat on an iPhone with Settings → Accessibility → Display & Text Size → Larger Text one or two steps up.
-42. Results list in landscape (iPhone with notch/Dynamic Island AND Android): the list scrolls; filters and
-    statistics scroll away at the top; changing a filter still works; header icons, filters and cards stay
-    clear of the notch on both sides. Back to portrait → filters fixed at the top as before.
-43. Result detail in landscape: tabs and swiping between them work; content clear of the notch.
-44. Tap a result card anywhere (name, rank circle, stats) → athlete opens on the FIRST tap; the star only
-    follows / unfollows; every card shows a › arrow.
-45. Live race (Live events → event → distance → Results, or the bottom-bar Results tab during the race):
-    finished runner shows "FIN (RACE TIME)" · "RANK WOMEN/MEN n" · "FINISH" time of day (once);
-    a runner still racing shows the ETA of the next point in the middle; UTMB index (event with UTMB on)
-    is a small line under the name.
-46. Rank of 1000+ or "DNF" shows in full inside a wider green pill; 1-3 digits stay a circle.
-47. Dutch results: column label "KLASSEMENT …", nothing in the stat columns split mid-word (small phone too).
-48. Result detail → Timing points (Dutch): "Sinds vorig punt" / "Hoogtemeters sinds vorig punt" (step 84); distances
-    add up point to point (none counted from the start again after a point without km).
-49. Result detail → Race info → "Share result" → send to yourself (WhatsApp / Mail):
-    message = result line + ONE link `https://my.liviolive.com/livio_website/result_detail/?product_app_id=…&product_option_value_app_id=…&bib=…`;
-    open the link on another phone/computer → that runner's result page. A DNF runner's message shows "DNF"
-    instead of an empty time.
-50. Live map elevation chart: km labels slightly bigger, never overlapping.
-51. Regression: one normal tracking Start → Stop on a test race.
-
-**Fixes after the first device test (2026-10-22)** — re-check in FR and NL, and on iOS with Larger Text 1-3 steps up:
-52. Event details (runner and follower) and Past race → distance cards: date and "Athletes started / finished" lines
-    are never cut ("…"); they wrap. Long button labels ("Annuler l'inscription", "Suivi en direct") wrap to two
-    centred lines inside the button; the buttons are at most 140pt wide.
-53. Results list filters: now two per row (distance + Results/Live, then category + checkpoint); no label ends in "…"
-    ("Point de contrôle", "Suivi en direct", "Controlepunt").
-54. Profile: "races · followers · following" wraps to a second row instead of ending in "…".
-55. Participant screen (Home → "I am a participant"): "All events" and "Create personal event" — with larger text the
-    button grows; the text stays inside its colour. Next events: event names take up to two lines.
-56. Every other button in the app (login, register, home Start/Stop, membership, readiness, share, map, settings,
-    popups): with larger text the button grows with its label — never text outside the button.
-57. Result cards in French with larger text: the bib line ("Numéro de dossard 1234") and the start wave wrap to a second
-    line — the number is always visible. FINISH / ETA ARRIVÉE never ends in "…".
-58. Result cards, statistics strip and favourites: the small column headings (RANKING, RACE TIME, FINISH…) keep
-    their size on purpose; the times, ranks and names under them grow with the phone's text size. No heading
-    is split mid-word.
-59. Country field (register / edit profile) with larger text: the chosen country is fully visible.
-
-**Small screens (320pt).** On an iPhone SE 2/3 or 12/13 mini: Settings → Display & Brightness → Display Zoom →
-*Larger Text* (the screen becomes 320pt wide). Also once with Larger Text two steps up on a normal iPhone.
-60. Event details, follower distances and past races: the Participants / Results / Route / Map / GPX buttons move
-    UNDER the date and counts, full width. No word is split ("September", "Participants"). On a normal phone at
-    the default text size they stay beside the details as before.
-61. Results list: the filters show one per row when they would not fit two per row (320pt with larger text, or the
-    largest text on a 360pt phone); "Point de contrôle" is never cut. Two per row otherwise, as before.
-62. Results cards at 320pt: slightly narrower margins; CLASSEMENT / KLASSEMENT and "Plaats Vrouwen" are whole.
-    Statistics strip: "Gepasseerd" / "Verwacht" on one line (slightly smaller at 320pt only).
-63. Times and ranks in the result cards, favourites and statistics ("10:23:45", "+1:23:45", "123 · 4567"):
-    always on one line — with larger text a long one gets slightly smaller instead of wrapping inside the number.
-64. Home → "Events you follow" with a long event name: the full name is shown (wraps), nothing ends in "…".
-    Same on Profile → live / past event cards.
-65. Participant and follower screens → "Next events" slider: every card has the same height; the name is at the
-    top and the date at the bottom of each card, whether the name takes one line or two.
-66. Results screen in LANDSCAPE (iPhone and Android): tap each filter — the list opens, inside the screen (above the
-    button when it sits low), scrolls, and a choice applies. Rotate back to portrait: unchanged.
-67. Any popup in landscape (start confirmation, delete event, country picker, error message…): it opens and the
-    phone does not jump back to portrait.
-
-**Full layout audit (2026-10-22).** Every screen file was read against one checklist at 320-430pt, landscape,
-larger text and FR/NL; ~100 issues fixed. Check on an iPhone with a notch (landscape) and one Android with
-3-button navigation (landscape), plus an SE/mini with Display Zoom:
-68. Landscape, every screen: no card, field, list or button under the notch / Dynamic Island or under the Android
-    navigation bar.
-69. Landscape: every popup (start / stop tracking, location permission, registration, delete / undo, error, update,
-    membership, purchase, e-mail change, "Is this you?") — the buttons can be reached (the popup scrolls when it is
-    taller than the screen); tapping beside it closes it where it did before. "Is this you?": Confirm / Cancel are
-    always visible, the details above scroll.
-70. Live map in landscape: the map is usable (the elevation profile hides on a phone when there is no room, comes
-    back in portrait); the distance selector opens. Portrait: the collapse button sits on top of the profile.
-    Tapping a GPX aid station on the profile shows it (it did nothing).
-71. Long names in full or on 2-3 lines, never "…": event names (header band, Home, event lists, sliders), athlete
-    names (result cards, participant lists, "This is me", favourites, profile), checkpoint and distance names.
-72. Rows with text beside an icon or button (Home send status, readiness, share button, Next events title +
-    View all, OTP rows, terms checkbox, pending e-mail actions, membership plan row): nothing runs past the card.
-73. Result details (live / upcoming / race info): timing-point blocks, distance / runner / status rows and the
-    3 rankings stay inside the card at 320pt and in FR.
-74. Larger text: bottom-bar labels, event tabs (Verleden / Live / Binnenkort) and the language pills never split a
-    word; the Home clock / distance stay on one line.
-75. Forms: register / edit profile field labels are not hidden under the right icon (at 320pt or with larger text
-    the name pair stacks; on register the birth date and gender are always on their own lines — step 84); with the
-    keyboard open (also landscape) the field stays visible.
-    Contact form: the message label floats when tapped.
-76. Header images (event details, follower distances, past races) in landscape take under half the screen.
-77. Large phones and tablets (iPhone Pro Max 440pt, a big Android, an iPad in portrait and landscape): every screen
-    uses the width without stretched or cut text; popups stay card-sized (max 400pt wide) and centred.
-78. Membership plans and Settings → Notifications in portrait: the cards keep their 20pt side margin.
-
-**Landscape popups (device test 2026-10-22).** iPhone with notch / Dynamic Island AND Android (3-button and
-gesture navigation), landscape, EN / FR / NL:
-79. Home popups — Start confirmation, Stop confirmation, Location permission (incl. the precise-location one with
-    three buttons), Power saving, the in-app notification, the fan e-mail popup: compact (no big icon, buttons side
-    by side), fully on screen, clear of the status bar, home indicator and camera; all buttons reachable. If one is
-    still taller than the screen it scrolls and the scroll bar shows. Portrait: unchanged. Measured: every popup
-    fits without scrolling on landscape iPhones and 411dp Androids; on a 360dp Android only the 3-button
-    precise-location popup scrolls (by up to ~30pt).
-80. Sheets in landscape — follow-notifications prompt, tracking password, "Is this you?", country picker, iOS
-    date / time picker (Cancel / Done): nothing under the camera or the Android navigation bar.
-81. Result detail loading / error state in landscape on Android 3-button: header icons clear of the camera; a long
-    toast message stays clear of the camera.
-
-**Landscape popups and event tabs (device test 2026-10-23).** Same phones, landscape, plus an iPad / Android tablet:
-82. Home: the fan e-mail popup, Start confirmation, Stop confirmation (before and after the gun), Start tracking
-    early / manual start, the in-app notification — no icon section in landscape on a phone AND on a tablet;
-    rotate to portrait: the icon is back and the popup looks as before.
-83. Events (follower) and the participant hub — Past, Live and Upcoming tabs in landscape: at least one whole event
-    card on screen under the tabs (also with larger text); scrolled to the end, only a small gap under the last card
-    (was a ~180pt blank band). Past: the search field scrolls away with the cards and still searches. The tab row
-    (and "OFFICIAL PARTNER EVENTS" beside it) is one slim row; the header is slightly slimmer in landscape only.
-    Portrait: unchanged.
-
-**Client questions decided while the client is on leave (2026-10-23)** — FR and NL:
-84. Event details → distance cards, follower distance list, participant hub → race results, and Profile → your
-    events (live and past): the date reads "25 septembre 2026" (FR) / "25 september 2026" (NL), not English.
-    The event lists show lower-case months too. Race result → timing point (NL): "Sinds vorig punt" /
-    "Hoogtemeters sinds vorig punt". Register (FR): birth date and gender each on their own full-width line, the
-    empty birth-date label reads "Date de naissance" in full (no "…"). Web (FR / NL, also Safari): event page header
-    date in the page language.
-
-**Every other popup in landscape (device test 2026-10-23)** — phone and tablet, landscape AND portrait:
-85. Event details → a distance: tap the tracking / register button (registration popup in each state you can reach:
-    connect, no membership, limit reached, membership not started yet), then Undo registration, the success popup,
-    an error popup. Also: Profile → delete a training session, Membership plans popup, purchase processing / success /
-    error, "Is this you?", the update-required popup, e-mail change and device transfer, Settings → tracking password,
-    the country picker (with the keyboard up), the result filter dropdowns, the fan e-mail popup while typing.
-    Landscape: no big icon, buttons side by side, everything reachable (a scroll bar shows if it is still taller than
-    the screen), nothing under the camera / status bar. Portrait: the icon is back and the popup looks as before.
-86. Profile → Training sessions: Delete / Edit / View sit on their own row at the bottom right of every card — on a
-    small phone, a large phone (Pro Max), in landscape and on a tablet.
-87. Own profile → Events (Live / Past) and Training sessions, in landscape, with 3+ events: scroll the profile card
-    away — the list then fills the screen under the header, whole cards, and the last card ends just above the bottom
-    (no big blank band, nothing below the screen edge). Open the profile in landscape first, then rotate: the
-    training list is never empty-looking / tiny. Portrait: as before.
-88. Live map, in landscape: tap a checkpoint / aid station and a participant marker — the popup is centred over the
-    WHOLE screen (header and bottom bar dimmed), not squeezed into the map strip; the ✕ and the top line are clear of
-    the camera / status bar, Get directions is reachable (scroll the card if it is taller), tap outside closes it.
-    Rotate to portrait: the popup sits over the map as before.
-89. Result List (Results tab), in landscape, race in progress or finished: the STARTED / FINISHED / DNF card has the
-    same small gap above the first result card as in portrait (it was touching), and the filters start right under
-    the event-name band. Portrait: as before.
-90. Any screen with the bottom bar (Home / Favourites / Results / Map), in landscape: the bar is slim, icon and label
-    side by side; every label readable. Portrait: icon over label, as before.
-91. Live map, landscape: "Live map", the status pill and the distance selector are on ONE row; the map gets clearly
-    more height. Android, PORTRAIT: open a checkpoint popup with the elevation chart showing — the whole card is on
-    top (the chart and its ⌄ button no longer show through over the lower part of the card).
-92. Event details / follower distance list / participants tab / your race results, landscape: the header image is
-    shorter, the first card shows under it without scrolling.
-93. Results tab, landscape, a filter with NO results (e.g. type Favourites with nobody followed, or a checkpoint
-    nobody passed): filters, statistics and the message scroll together, nothing overlaps the bar. With the network
-    off: the error and its Retry button are reachable by scrolling.
-94. Favourites, landscape: the "your favourites" line scrolls away with the cards; with an event not started yet the
-    cards have no empty line + gap at the bottom (portrait too). Favourites error (network off): the bar is there and
-    "Favourites" is highlighted, also while loading.
-95. Search participants and Add favourite, landscape: the white search band runs edge to edge; the field is clear of
-    the camera.
-96. Result detail: the "Next timing point" box is as wide as the rows above it; Runner info "Wave" shows the value
-    without the repeated "Wave 1:" prefix, wrapping on the right (both orientations).
-97. Another athlete's profile, landscape: the events list ends just above the bottom, whole cards, no blank band.
-    Followed events and athlete profile: rotate on the Live tab, then back — the page shows exactly one tab (never half
-    of two).
-98. Membership plans, landscape: the "Continue" button bar has a normal gap under it and the button is clear of the
-    camera. Athlete search suggestions, landscape: no big empty space at the end of the list.
-99. Small phone in PORTRAIT (iPhone SE or an Android under ~740pt tall), Results tab: the filters and statistics
-    scroll away with the results (more than one card visible after a scroll). A normal phone (iPhone 12 and up):
-    filters stay fixed, as before.
-100. Follow a race screen (upcoming / past / athlete searches), the fan screen search and the participant hub search,
-    in landscape AND portrait: tap a search and type — the field moves to the top and the suggestions show above the
-    keyboard (the list scrolls inside if long). Find athlete: the last results can be scrolled above the keyboard.
-101. Live map: rotate the map with two fingers — the compass now shows at the top LEFT; on a small phone in portrait it
-    no longer sits under the ⌄ button.
-102. Membership plans (portrait and landscape): the white Continue bar reaches the bottom edge with a normal gap under
-    the button (it had a double gap).
-
----
-
-## 7. Status of everything discussed (client "livio improvements" message + plan)
-
-Legend: ✅ done in these branches · 🟡 done, needs your confirmation/action on live · ⛔ not done (reason)
-
-### 1. The invitation email
-| Item | Status |
-|---|---|
-| Rewrite campaign email (optional wording, buttons to stores, account contradiction, payoff first, race date) | ⛔ owned by you — campaign template + sending platform are outside the app/API. Copy can be drafted on request (C1). |
-| A/B on the next event | ⛔ same — your sending platform (C2). |
-
-### 2. The 114 who connected and never started
-| Item | Status |
-|---|---|
-| Log Start attempts + permission outcome (measurement first) | ✅ A1 — Start funnel events (tap / permission result / started) in analytics |
-| Readiness card on home (location, battery, notifications, one-tap fix) | ✅ A7 + "Get race-ready" flow A12 |
-| Live countdown before pressing Start | ✅ A6 |
-| Reframe the permission screen ("let your family and friends follow you live") | ✅ A8 (separate mid-race wording) |
-| 48 h reminder — push to connected runners | ✅ S3 `send_race_reminder_48h.php` (needs crontab, step 4) |
-| 48 h reminder — email to entrants not connected | ✅ S3 mail cron, only people allowed to track (needs crontab) |
-| Email for app users with notifications off | ✅ same mail cron, "no push" group (ready / not ready variants via S6) |
-| Race-morning reminder | ✅ already existed (1 h before gun) — unchanged |
-
-### 3. Notifications (45 % off)
-| Item | Status |
-|---|---|
-| Stop asking at first launch; ask when following / registering, explain first | ✅ A3 (fans at first follow, runners in race-ready flow) |
-| Notifications screen with state + one-tap settings link | ✅ A4 |
-| Stop asking fans for location on the live map | ✅ A5 |
-| Defect: denying notifications breaks following | ✅ A2 — follows work without push (token-less follower) |
-| Store each device's notification/location state (KPI) | ✅ S6 readiness endpoint + migration 1 |
-
-### 4. Worth opening / bring an audience
-| Item | Status |
-|---|---|
-| "Share my tracking link" (+ server returns own bib) | ✅ A9 + S2 (home_api bib + distance) |
-| Fill the empty home for users with no upcoming race | ✅ A10 idle home |
-
-### 5. Groundwork
-| Item | Status |
-|---|---|
-| Auto-create Livio account for web customers | ⛔ by your decision (2026-10-10): left as is |
-| Email opens the event with the distance preselected (runner still taps connect) | ✅ A11 `livio://event?...&pov=` — the campaign email must use it |
-| Proper web links (universal / app links) | ⛔ S5 needs a store release + Apple Team ID + Android SHA-256 + files on my.liviolive.com root — not started |
-| Email the refused users (the 31) | 🟡 S4 — mail already exists (`tracking_access_upgrade_mail.php`); prices come from live `snippet_config.php` → confirm (step 0.3) and that it is scheduled on live |
-
-### The 8 client questions — decided in code while the client is on leave (2026-10-23)
-Each is a one-line change to revert if the client answers differently.
-
-| # | Question | In the code now |
-|---|---|---|
-| 1 | NL ranking word | "KLASSEMENT" kept (fits every phone; "RANGSCHIKKING" split over two lines) |
-| 2 | Gender rank label | "RANK WOMEN 7" / "RANG FEMMES 7" / "PLAATS VROUWEN 7" kept (the long word does not fit) |
-| 3 | English terms in NL / FR | kept: client's "Live Tracking" / "Results" names in NL; sentences and actions in Dutch; French stays French |
-| 4 | Font size +1pt | kept; larger text follows the phone's own text-size setting |
-| 5 | Line under the home title | kept ("And keep up with the athletes you follow") |
-| 6 | "vorige" / "vorig" | standard Dutch "Sinds vorig punt" / "Hoogtemeters sinds vorig punt" (`Resultdetails/nl.json`) |
-| 7 | FR / NL dates | translated IN THE APP, no server change: "25 septembre 2026" / "25 september 2026" (`utils/dateFormatter.ts` reads the API's English date; FR / NL month names lower case in `common/*.json`). Web: already localised; the event header now reads the API's English date itself (`src/lib/dateLocale.ts` parseRaceDate) so Safari shows it too |
-| 8 | FR birth date label | register: birth date and gender always on their own full-width line (edit profile already was) |
-
-### Corrections to send the client (from the plan) — 🟡 yours to send
-"199 tracked" = connected (77 tracked); connected > clicked; open rate inflated by Apple Mail privacy; refusal mail exists;
-"31 refused" is a floor; permission screen only the icon is red; email deep link needed a new preselect param.
-The sequencing request is moot — the free session is already off on live (2026-09-18).
-
-### Extra work done along the way (not in the client list)
-- home_api stop detection fixed (year-table id collision) — keyed on participant + race + customer.
-- Follow sync hardened (app): ordered uploads (`client_seq`), no lost follows on slow / timed-out / out-of-order uploads, merge safety, push token re-registration after a lost follower row.
-- Security: `merge_follower_api.php` now requires the logged-in account (app token or web merge ticket) and proof of the guest side; `localhost:3000` CORS only on a local backend; follow list cap 1000.
-- Web: guest follows are kept at login (held, then added to the account).
-
-### Earlier open points — now closed
-- iOS Start popup flash during the two-step permission question — **fixed** (the popup's own request owns the outcome; "did the OS show a dialog" is now read from the app leaving the foreground, not a 700 ms guess).
-- Coordinates of two runners mixing across year tables — **cannot happen today** (the 2025 archive is empty; no shared id + race). Prevented for the future by the year-end SQL file (step 1).
-- `wp_endpoint` index — **already exists** (`idx_wp_endpoint`, 191-char prefix) on the live copy.
-
-### Known, not done
-- Test suites are local only (all green 2026-10-22, run twice; app re-run 2026-10-23): app 530 (+ tracking 188, activation 19, distance button 20),
-  server growth 435 (self-cleaning) + segment distance 10, RaceResult 68 · 12 · 12, language 20, live window 19,
-  DB connect 4, event 19 review 13, 2026-10-18 HTTP audit 18; web 97 (`npm run test:follow`) + 108 vitest + type-check + lint.
-- The server suite's "production build: pages under /livio_website" check is SKIPPED (with the reason) when `livio_web/out/`
-  holds a local build; it passes on a build made with `NEXT_PUBLIC_BASE_PATH=/livio_website` (step 3).
-- Closed 2026-10-22 (now tested, no longer "read only"):
-  - S1 — a share link with `from_live=1` returns exactly the same live race info (previous / next point) as without it
-    (`tests/tracking_api/audit_2026_10_18_http_test.php`, live race fixture); the web picks the live card from the race status.
-    Opening one link on live after the deploy is a normal smoke check, not an open point.
-  - 48 h mail record — run in LIVE mode with a stand-in sender (round 28): the record is an upsert (last edition's row
-    overwritten), and a failing record is logged and the run goes on. Actual delivery by SendGrid / Expo can only be seen on live.
-
-### Audit status (fourth exhaustive audit 2026-10-16 — everything fixable is fixed)
-Four full audits; every medium and low item that code can fix is fixed, each with a test that fails on the old code, plus one review pass per batch (its findings fixed and tested too).
-Main fixes of the fourth audit: phone and web on one account can no longer erase each other's follows (server `follow_conflict` + merge), a follow made right after a web login can't replace the account's list, offline follows on the phone are sent as soon as the network returns, Start can't run twice, the 48 h push goes once per phone per race (multi-day), rate limits can't be bypassed with a forged IP header and no longer lose hits.
-Not code — your action / decision:
-- Step 0.5: DONE 2026-10-22 — live REMOTE_ADDR = the visitor's own public IP (checked against the tester's IP): no proxy, no Cloudflare → no `LIVIO_TRUSTED_PROXIES` needed. Re-check only if a proxy / CDN is ever put in front of live.
-- `LIVIO_MERGE_SECRET` in the live `config.php` (step 0.4) — recommended.
-- Check on live: `SELECT COUNT(*) FROM oc_tracking_logs_app WHERE customer_app_id IS NULL OR customer_app_id = 0;` (stop detection ignores those rows).
-- Confirm the live root path (`<LIVE>`), and open one share link on live (S1).
-- Real-device checks (App steps 1–36, Web 1–23).
-- FR/NL copy of the new precise-location popup — native-speaker check.
-- Locally `config.php` prints "Undefined array key HTTP_HOST" warnings when a cron runs from the command line; check the live crons' mail/output for the same (harmless, but noisy).
-Merge of main into the growth branches — checked 2026-10-21:
-- Every main change is in its growth branch; the merges kept both sides (no lost lines), and every suite of both sides passes.
-- The step 1 SQL was run on a fresh copy of live (imported 2026-10-19, strict sql_mode): 29 statements, no error, 6 columns added,
-  sections 5 and 6 found nothing to change; a second run changed nothing.
-- Fixed where main's new start code met growth rules (app): start reminders skip a placeholder start time (00:00 / 00:01 — they
-  rang at 23:50 the night before); the Start funnel now logs the two new gates (battery-optimisation popup cancelled,
-  Battery Saver on a resumed start) like every other gate. Checked, no change needed: the new local notifications
-  (start reminders, start not started, Battery Saver) never open the race popup or navigate; the new battery popup
-  holds back Get race-ready like the other popups; a dual-transport follower (phone + web on one row) gets one push
-  per transport for the furthest checkpoint only.
-- `tests/tracking_api/audit_2026_10_18_http_test.php` (main) needs event 19 to have a RaceResult URL with
-  race_result_status = 1 in the local DB; switched on for the run only (then back to 0): 18 passed (2026-10-22).
-
-Product-decision items — round 25 (2026-10-18):
-- FIXED: someone who knew a web guest's private id could switch its row to "app" (blocking that guest's merge and web push), put their own Expo token on it, or set its email/language. App-only endpoints now refuse any browser-guest id (`api/FollowerGuard.php`); phones and the website are unaffected (no phone ever has a browser-shaped id — checked on the live copy: 2,139 browser ids, all web rows).
-- FIXED (website half): a web guest's follow list can no longer be replaced with its id alone — its row needs the browser's secret, which the website now sends. If a browser ever lost the secret but kept the id, it starts a fresh guest once and keeps its follows.
-- FIXED: one busy shared IP (race-venue Wi-Fi, carrier NAT) is no longer locked out for 60 s by the per-IP ceiling; only requests above the ceiling are refused, and new phones get through again as the minute rolls. One phone over its own limit is still locked out (unchanged).
-- FIXED: a start moved by the organiser now reaches the registrations already made (event panel save + one-off SQL section 6), so home's countdown, the 1 h race-start push and the 48 h reminder use the new time.
-- STILL OPEN (phone half): anyone who knows a PHONE's device id can replace its Expo push token or follow list. Device ids are never shown or returned to others (checked), so this needs the id to leak first. A real fix needs a per-device secret in a future app release AND a product decision: on Android a reinstall keeps the device id but wipes the secret, so a guest phone would lose access to its own follows after reinstalling (logged-in phones could recover with their login).
-Accepted limits (by design, not bugs):
-- (Closed 2026-10-22) The 48 h mail's group A now uses the entrant's own distance start: order line (`oc_order_option`,
-  distance option) → app distance (`web_product_option_value_id`) — 99 % of web entries since September resolve. Event
-  time only when the distance is unknown or still a 00:00 / 00:01 placeholder.
-  ⚠ `web_product_option_value_id` is NOT added by this branch: it comes with the `gpx-single-source` /
-  `free-event-tracking` release (column + event-panel link + `backfill_web_distance_links.php`). Deploy order does not
-  matter: until that column exists the mail checks for it and uses the event's start exactly as before (tested with
-  the column removed, round 28); once that release is live (column + backfill) the distance start is used by itself.
-- Web: keepalive on tab close may be refused by some browsers for a cross-origin API; the pending change is then sent on the next visit (persisted).
-- Web: a guest list over the 1000 limit reverts only once that browser has had one accepted upload after this release.
-- A row whose `follow_seq` was never set (only old clients ever wrote it) can't raise a conflict until a new client uploads once; the web login union covers that first step.
+The previous long version of this guide (all audit notes and 102 device checks) is in git history,
+commit `ae3c649` (PFSLive).
