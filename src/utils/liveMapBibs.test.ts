@@ -94,15 +94,16 @@ const src = (p: string) => fs.readFileSync(path.join(process.cwd(), 'src', p), '
 
 test('LiveTrackingScreen sends this event\'s followed bibs with every live-tracking request', () => {
   const s = src('screens/LiveTrackingScreen.tsx');
-  assert.ok(/const \{ followedUsers, followedBibs \} = useFollowManager\(t\)/.test(s), 'reads followedBibs from useFollowManager');
+  assert.ok(/const \{ followedUsers, followedBibs, refreshFollowedUsers \} = useFollowManager\(t\)/.test(s), 'reads followedBibs from useFollowManager');
   assert.ok(/followedBibsForEvent\(followedBibs, product_app_id, event_source\)/.test(s), 'filters them to this event');
   assert.ok(/getLiveTrackingData\([^)]*event_source,\s*eventBibs\s*\)/.test(s), 'passes eventBibs to getLiveTrackingData');
   assert.ok(/usersArray\.length > 0 \|\| eventBibs\.length > 0/.test(s), 'first load also starts for a bib-only follower');
   assert.ok(/\}, \[followedUsers, eventBibsKey, product_option_value_app_id\]\)/.test(s), 'first-load effect re-arms when the bibs arrive');
-  assert.ok(/\}, \[eventBibsKey, loading\]\)/.test(s), 'a bib follow change refreshes the map, also once a load in flight ends');
-  assert.ok(/sentBibsKey\.current === eventBibsKey\) return;/.test(s), 'no extra request when the bibs were already sent');
-  const set = s.indexOf('sentBibsKey.current = eventBibsKey;');
-  assert.ok(set > 0 && set < s.indexOf('await liveTrackingService.getLiveTrackingData('), 'every request records the bibs it carries');
+  assert.ok(/liveFollowsKey\(followedUsers, eventBibs\)/.test(s), 'one key for followed accounts + bibs');
+  assert.ok(/\}, \[followsKey, loading\]\)/.test(s), 'a follow change (bib or account) refreshes the map, also once a load in flight ends');
+  assert.ok(/sentFollowsKey\.current === followsKey\) return;/.test(s), 'no extra request when the follows were already sent');
+  const set = s.indexOf('sentFollowsKey.current = followsKey;');
+  assert.ok(set > 0 && set < s.indexOf('await liveTrackingService.getLiveTrackingData('), 'every request records the follows it carries');
 });
 test('liveTrackingService puts the field on the request via liveTrackingBibsParam', () => {
   const s = src('services/liveTrackingService.ts');
