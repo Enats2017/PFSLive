@@ -2118,6 +2118,31 @@ const L = () => load('services/locationService').locationService;
     assert.strictEqual(cap(320, 0, 21), 174, 'landscape iPhone SE');
     assert.ok(/notifScrollContent: \{\s*alignItems: "center",\s*\}/.test(st), 'content still centred like the card');
   });
+  // A finish on the LIVE path (processLocationForSend auto-stop) never runs _doFullStop,
+  // and a runner who finishes with the phone in a pocket never reaches HomeScreen's
+  // stop either: the watchdog must not survive the finish ("Livio stopped tracking"
+  // 15 min after a healthy race).
+  test('live finish (RaceResult finished) → watchdog, check and not-sending all cancelled', async () => {
+    liveAnswers.length = 0; answerLocation();
+    await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    await fireFix();
+    M.clock += 31000; await fireFix();
+    assert.ok(pending('livio-tracking-watchdog'), 'watchdog armed while racing');
+    liveAnswers.push(RR); M.clock += 31000; await fireFix();
+    assert.strictEqual(M.store.get(RACE_FIN), '1', 'finished');
+    for (const id of ['livio-tracking-watchdog', 'livio-tracking-check', 'livio-early-start-reminder', 'livio-not-sending']) assert.ok(!pending(id), id);
+    M.clock += 20 * 60000;
+    assert.ok(!pending('livio-tracking-watchdog'), 'still nothing 20 min later');
+  });
+  test('finish found during a queue drain → disarmed too (finishBackgroundStop)', async () => {
+    await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    await fireFix();
+    assert.ok(pending('livio-tracking-watchdog'), 'watchdog armed while racing');
+    setQ([fix(2, 20, 5)]); drainAnswers([RR]);
+    await L().processQueue('2', '20');
+    assert.strictEqual(M.store.get(RACE_FIN), '1', 'finished');
+    assert.ok(!pending('livio-tracking-watchdog') && !pending('livio-tracking-check'));
+  });
   results.push(await run('15. tracking safety net: not-tracking check, watchdog, early reminder, start diag, start popup'));
 
   // ════════════ 16. "Recording but not sending" (2026-10-24 08:20 review) ════════════

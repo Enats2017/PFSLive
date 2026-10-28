@@ -1579,6 +1579,12 @@ const _processLocationForSendInternal = async (
       } catch { /* silent */ }
       await addLog('🛑', `GPS engines stopped — finish line reached${tag}`);
 
+      // ✅ This path never runs _doFullStop (the only other disarm), and a runner
+      // who finishes with the phone in a pocket never reaches HomeScreen's stop.
+      // Without this the watchdog fires 15 min after the finish: "Livio stopped
+      // tracking" after a healthy race. Never throws.
+      await trackingSafetyService.disarm();
+
       // ✅ Upload the tracking log NOW, in this same background wake, instead of
       // waiting for the app to be foregrounded. Done last so the log includes the
       // 🏆 / 🛑 finish entries above. LOG_UPLOADED_KEY prevents a double upload
