@@ -330,6 +330,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // PENDING_START_MAX_MS: a runner who granted the permission an hour later
   // (or the next morning) did not ask for tracking to start right then.
   const pendingStartAtRef = useRef(0);
+  // ✅ The location popup's "Open settings" already asked the OS once and the
+  // answer was no (2026-10-28). The next tap goes straight to Settings: asking
+  // again either shows nothing or the same "no", and the popup came back
+  // instead of Settings opening — the button looked dead. Cleared by a new
+  // Start tap and by the mid-race banner (a new popup, a new decision).
+  const osAskedFromPopupRef = useRef(false);
   // "Start anyway" on the precise-location popup: the next start skips that
   // check once (an approximate track beats none — never block the runner).
   const allowApproximateRef = useRef(false);
@@ -1336,6 +1342,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // A new tap is a new decision: a start left armed by an earlier blocked
     // attempt must not fire on a later foreground if this one is declined.
     pendingStartRef.current = false;
+    osAskedFromPopupRef.current = false;
     void analyticsService.logStartStep('tap', undefined, raceReadyKey);
     // From here the Start gate owns permissions for this race: Get race-ready
     // must not pop up in the middle of the Start sequence (start line!).
@@ -2611,7 +2618,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       // settings trip become the last resort.
                       // Precise location: no OS request can switch it on from
                       // here — straight to the app's permission page.
-                      if (permissionBlockReason !== 'location_off' && permissionBlockReason !== 'precise') {
+                      // Already asked from this popup and refused: Settings now.
+                      if (permissionBlockReason !== 'location_off' && permissionBlockReason !== 'precise' && !osAskedFromPopupRef.current) {
                         try {
                           // Did the OS show anything? (see utils/permissionPrompt)
                           const promptWatch = watchForOsPrompt();
@@ -2660,6 +2668,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           // read and dismissed cannot come back in a few ms.
                           // Without this the button silently did nothing.
                           if (osShowed) {
+                            osAskedFromPopupRef.current = true;
                             // The runner answered "no". The return listener
                             // stays quiet during this request, so put the
                             // Start popup back here, with the current problem.
@@ -3084,6 +3093,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       );
                       setPermissionModalMidRace(true);
                       setPermissionModalNoFix(gpsHealth === 'no_fix');
+                      osAskedFromPopupRef.current = false;
                       void gpsService.getPermissionState()
                         .then((ps) => setPermissionCanAskAgain(ps.canAskAgain))
                         .catch(() => setPermissionCanAskAgain(false));

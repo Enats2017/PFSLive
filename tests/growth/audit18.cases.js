@@ -9,13 +9,14 @@ module.exports = function register({ test, SRC, load }) {
   // ── "did the OS show anything" (utils/permissionPrompt) ───────────────
   test('iOS no-dialog refusal (expo answers after ~1.5 s, app never left the foreground) → NOT a real "no"', () => {
     const { osShowedPrompt } = load('utils/permissionPrompt');
-    assert.strictEqual(osShowedPrompt(false, 1600), false, '1.5 s timeout is not a dialog');
-    assert.strictEqual(osShowedPrompt(false, 300), false);
+    assert.strictEqual(osShowedPrompt(0, 1600), false, '1.5 s timeout is not a dialog');
+    assert.strictEqual(osShowedPrompt(0, 300), false);
   });
-  test('…a dialog / the Location page (app left the foreground) IS one, however quick', () => {
+  // 2026-10-28: "however quick" no longer — a blink away is Android's silent refusal (audit47).
+  test('…a dialog / the Location page (app left the foreground for a real moment) IS one', () => {
     const { osShowedPrompt } = load('utils/permissionPrompt');
-    assert.strictEqual(osShowedPrompt(true, 200), true);
-    assert.strictEqual(osShowedPrompt(false, 4000), true, 'a long wait still counts (fallback)');
+    assert.strictEqual(osShowedPrompt(900, 950), true);
+    assert.strictEqual(osShowedPrompt(0, 4000), true, 'a long wait still counts (fallback)');
   });
   test('watchForOsPrompt works without AppState (never throws) and both screens use it', () => {
     const { watchForOsPrompt } = load('utils/permissionPrompt');

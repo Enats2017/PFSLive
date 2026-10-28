@@ -77,7 +77,7 @@ module.exports = function register({ M, load, test, SRC }) {
   });
   test('Start tapped → Get race-ready is done for this race (never mid-Start)', async () => {
     const s = read('screens/HomeScreen.tsx');
-    const fn = s.slice(s.indexOf('const confirmStartTracking'), s.indexOf('const confirmStartTracking') + 600);
+    const fn = s.slice(s.indexOf('const confirmStartTracking'), s.indexOf('const confirmStartTracking') + 700);
     assert.ok(/raceReadyService\.markShown\(raceReadyKey\)/.test(fn));
     assert.ok(/stillAllowed: \(\) => !homeModalOpenRef\.current && navigation\.isFocused\(\)/.test(s));
     // behaviour: once marked, the Home trigger does nothing

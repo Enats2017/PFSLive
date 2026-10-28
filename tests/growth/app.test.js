@@ -548,6 +548,9 @@ const posts = (suffix) => M.api.posted.filter((p) => p.url.endsWith(suffix));
   require('./audit44.cases')({ M, load, test, SRC });
   require('./audit45.cases')({ M, load, test, SRC });
   require('./audit46.cases')({ M, load, test, SRC });
+  require('./audit47.cases')({ M, load, test, SRC });
+  require('./audit47.cases').rendered({ M, load, test, SRC });
+  require('./audit47.cases').raceReady({ M, load, test, SRC });
 
   results.push(await run('growth — app'));
   const pass = results.reduce((a, r) => a + r.pass, 0), fail = results.reduce((a, r) => a + r.fail, 0);
