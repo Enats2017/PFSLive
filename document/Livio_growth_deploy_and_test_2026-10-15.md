@@ -1,11 +1,11 @@
-# Livio growth release — deploy guide (updated 2026-10-27)
+# Livio growth release — deploy guide (updated 2026-10-28)
 
 Do the whole list on the **demo server first**, test, then repeat it on **live**.
 Never skip a step and keep the order: database → server files → web → crons → app.
 
 | Part | Repo / branch | What you deploy |
 |---|---|---|
-| Server | larssie `growth_api_v0.1` | 1 SQL file + PHP files + 2 crons |
+| Server | larssie `growth_api_v0.1` | 2 SQL files + PHP files + 2 crons |
 | Web | livio_web `growth_web_v0.1` | a new static build at `/livio_website` |
 | App | PFSLive `growth_v0.1` | store build **1.1.1** (not an OTA update) |
 
@@ -61,6 +61,27 @@ SHOW COLUMNS FROM oc_follower_app WHERE Field IN
 SHOW TABLES LIKE 'oc_race_reminder_mail_app';                                                                        -- 1 row
 ```
 
+## Step 2b — GPS time columns (BEFORE step 3, skip if already there)
+
+The growth branch contains main's Grizzly100 post-race fix (2026-10-25): GPS fix times are sorted on two
+new UTC columns, `device_timestamp_utc` and `recorded_at_utc`, on `oc_participant_coordinates_app`, so the
+autumn clock change (02:00-02:59 twice) no longer makes the distance go back. Without these columns the
+new PHP fails: every GPS fix is refused and profile / home / live tracking stop with
+`Unknown column 'device_timestamp_utc'`.
+
+Check first:
+```sql
+SHOW COLUMNS FROM oc_participant_coordinates_app LIKE '%\_utc';   -- 2 rows = already done, go to step 3
+```
+Otherwise run `db_xml/migration_coordinates_utc.sql` section by section, NOT as one import: it names the
+live databases (`cceubvdzfw`, `cceubvdzfw_2025`, `cceubvdzfw_2024`). On demo, replace those names with
+demo's databases first.
+1. Section 1 (read only): lists every coordinate table. Any year table it shows also gets sections 2 and 3.
+2. Section 2: the `ALTER TABLE`s, once per table ("Duplicate column" on a second run is harmless).
+3. Section 3: the backfill.
+4. After step 3 (PHP uploaded): run section 3 AGAIN; it fills the rows the old code wrote meanwhile.
+5. Section 6: verify; both `*_missing` must be 0.
+
 ## Step 3 — Server files (larssie `growth_api_v0.1`), in this order
 
 **3a. Upload first:**
@@ -101,10 +122,16 @@ from the OLD web build.
 - `service/snippets/send_race_reminder_48h_mail.php` (new, mail cron)
 - `service/snippets/language/en/race_reminder_48h_mail.php`, `.../fr/...`, `.../nl/...` (new)
 
+**Only if main's GPS time fix (step 2b) is not live on this server yet**, also upload:
+- `api/insert_participant_location_api.php`, `api/delete_custom_event_api.php`
+- `api/send_tracking_watch_notifications.php`
+- `service/snippets/tracking_20days_reminder_mail.php`, `service/snippets/tracking_thankyou_mail.php`
+Then run step 2b item 4.
+
 **3d. Organiser panel:**
 - `eventpanel/model/catalog/event_app.php`
 
-Do not upload: `tests/`, `document/`, `db_xml/` (already run in step 2), `service/snippets/Mail_normal.docx`.
+Do not upload: `tests/`, `document/`, `db_xml/` (already run in steps 2 and 2b), `service/snippets/Mail_normal.docx`.
 `.gitignore` matters only if the server deploys with git.
 
 ## Step 4 — Web (livio_web `growth_web_v0.1`)
@@ -150,7 +177,7 @@ between 08:00 and 21:59 event time, once per person per race.
 2. Demo test build: `eas build --profile preview --platform android` (APK for testers) and an iOS build
    for TestFlight. The build's server comes from the Expo dashboard env vars, not your local `.env`:
    check `EXPO_PUBLIC_API_URL` points to the demo server.
-3. Testers run `Growth-test-case.txt` (30 tests: app, web, 48 h reminders).
+3. Testers run `Growth-test-case.txt` (28 tests: app, web, 48 h reminders).
 4. Live: only after steps 2-5 are live,
    `eas build --profile production --platform all`, then submit to both stores.
 
@@ -172,6 +199,7 @@ between 08:00 and 21:59 event time, once per person per race.
 
 - Server: put the `.bak` files back. The SQL only adds columns and a table; old code ignores them,
   so the database does not need to be rolled back (rollback lines are at the end of each SQL section).
+  Never drop the `_utc` columns (step 2b) while the new PHP is up: it needs them.
 - Web: upload the previous `out/` folder again.
 - App: do not release the store build; 1.0.9 keeps working with the new server.
 
