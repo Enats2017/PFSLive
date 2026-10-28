@@ -2143,6 +2143,63 @@ const L = () => load('services/locationService').locationService;
     assert.strictEqual(M.store.get(RACE_FIN), '1', 'finished');
     assert.ok(!pending('livio-tracking-watchdog') && !pending('livio-tracking-check'));
   });
+  // 2026-10-28 second review: a sign of life that lands after the finish must not re-arm.
+  test('heartbeat after a live finish → the watchdog stays off', async () => {
+    liveAnswers.length = 0; answerLocation();
+    await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    await fireFix(); M.clock += 31000; await fireFix();
+    liveAnswers.push(RR); M.clock += 31000; await fireFix();
+    assert.strictEqual(M.store.get(RACE_FIN), '1');
+    M.clock += 2 * 60000;
+    if (typeof M.bg.heartbeat === 'function') await M.bg.heartbeat({});
+    await SAF().trackingSafetyService.onAlive(M.clock);   // a late fix / heartbeat from another context
+    assert.ok(!pending('livio-tracking-watchdog'), 'watchdog not re-armed');
+  });
+  test('onAlive with the race finished, or with no session → nothing scheduled', async () => {
+    const s = SAF().trackingSafetyService;
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '20' })); M.store.set(RACE_FIN, '1');
+    await s.onAlive(M.clock);
+    assert.ok(!pending('livio-tracking-watchdog'), 'finished');
+    M.store.delete(RACE_FIN); M.store.delete(PARAMS);
+    await s.onAlive(M.clock);
+    assert.ok(!pending('livio-tracking-watchdog'), 'no session');
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '20' }));
+    await s.onAlive(M.clock);
+    assert.ok(pending('livio-tracking-watchdog'), 'control: a running session still arms');
+  });
+  test('the finish lands while onAlive is scheduling → the watchdog is taken back', async () => {
+    const s = SAF().trackingSafetyService;
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '20' }));
+    const sched = require('expo-notifications').scheduleNotificationAsync;
+    const N = require('expo-notifications');
+    N.scheduleNotificationAsync = async (req) => { const r = await sched(req); if (req.identifier === 'livio-tracking-watchdog') M.store.set(RACE_FIN, '1'); return r; };
+    try { await s.onAlive(M.clock); } finally { N.scheduleNotificationAsync = sched; }
+    assert.ok(!pending('livio-tracking-watchdog'));
+  });
+  test('cold boot with the race already finished → a watchdog left by the killed app is cancelled', async () => {
+    M.notif.pending.push({ identifier: 'livio-tracking-watchdog', trigger: { date: new Date(M.clock + 5 * 60000) }, content: { data: { type: 'tracking_check' } } });
+    M.store.set(RACE_FIN, '1');
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '20', intervalSeconds: 30, raceStartTime: new Date(M.clock - 2 * HOUR).toISOString(), manualStart: 0 }));
+    load('services/gpsService'); await settleS();
+    assert.ok(!pending('livio-tracking-watchdog'));
+  });
+  test('plan boundaries: Start exactly 30 min before the gun → no early reminder; 1 ms more → reminder at gun - 10', async () => {
+    const { planSafetyArm } = SAF(); const now = 1_000_000_000_000;
+    assert.strictEqual(planSafetyArm(now + 30 * 60000, now, false).earlyAt, null);
+    assert.strictEqual(planSafetyArm(now + 30 * 60000 + 1, now, false).earlyAt, now + 20 * 60000 + 1);
+    assert.deepStrictEqual(planSafetyArm(NaN, now, false), { checkAt: null, earlyAt: null }, 'unparsable gun, not manual');
+  });
+  test('arm with an unparsable gun (not manual) → nothing scheduled, Start unaffected', async () => {
+    await SAF().trackingSafetyService.arm({ raceStartTime: 'garbage', manualStart: false });
+    for (const id of ['livio-tracking-check', 'livio-early-start-reminder', 'livio-tracking-watchdog']) assert.ok(!pending(id), id);
+  });
+  test('cold boot of a stale session (gun > 24 h) → a watchdog left by the dead app is cancelled', async () => {
+    M.notif.pending.push({ identifier: 'livio-tracking-watchdog', trigger: { date: new Date(M.clock + 5 * 60000) }, content: { data: { type: 'tracking_check' } } });
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '20', intervalSeconds: 30, raceStartTime: new Date(M.clock - 26 * HOUR).toISOString(), manualStart: 0 }));
+    load('services/gpsService'); await settleS();
+    assert.ok(!M.store.has(PARAMS), 'stale session stopped');
+    assert.ok(!pending('livio-tracking-watchdog'), 'watchdog cancelled');
+  });
   results.push(await run('15. tracking safety net: not-tracking check, watchdog, early reminder, start diag, start popup'));
 
   // ════════════ 16. "Recording but not sending" (2026-10-24 08:20 review) ════════════

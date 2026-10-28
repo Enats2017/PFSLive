@@ -1554,6 +1554,13 @@ const _processLocationForSendInternal = async (
         );
 
     if (shouldStop) {
+      // ✅ Safety notifications off FIRST. This path never runs _doFullStop (the
+      // only other disarm), and a runner who finishes with the phone in a pocket
+      // never reaches HomeScreen's stop: without it the watchdog fired "Livio
+      // stopped tracking" 15 min after a healthy race. First, so a throw below
+      // or the OS suspending the app once the engine stops cannot skip it.
+      // Never throws.
+      await trackingSafetyService.disarm();
       await AsyncStorage.setItem(RACE_FINISHED_KEY, '1');
       // Stash the IDs so the log can still be uploaded after we clear the session
       // below. Clearing TRACKING_PARAMS_KEY makes isTracking() correctly return
@@ -1578,12 +1585,6 @@ const _processLocationForSendInternal = async (
         _removeTransistorListeners();
       } catch { /* silent */ }
       await addLog('🛑', `GPS engines stopped — finish line reached${tag}`);
-
-      // ✅ This path never runs _doFullStop (the only other disarm), and a runner
-      // who finishes with the phone in a pocket never reaches HomeScreen's stop.
-      // Without this the watchdog fires 15 min after the finish: "Livio stopped
-      // tracking" after a healthy race. Never throws.
-      await trackingSafetyService.disarm();
 
       // ✅ Upload the tracking log NOW, in this same background wake, instead of
       // waiting for the app to be foregrounded. Done last so the log includes the
@@ -3152,6 +3153,9 @@ const _rehydrateTrackingOnBoot = async (): Promise<void> => {
     if (finished === '1') {
       // Race over. With startOnBoot:true the engine can come up running after a
       // reboot that interrupted a stop — shut it down rather than just bailing.
+      // Also clear the safety notifications: a kill between the finish flag and
+      // the disarm (drain path) left the watchdog armed. Never throws.
+      await trackingSafetyService.disarm();
       try {
         const st = await BackgroundGeolocation.getState();
         if (st.enabled) {
