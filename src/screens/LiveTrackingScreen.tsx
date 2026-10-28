@@ -345,16 +345,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             setParticipantsLoading(true);
             console.log('📡 Fetching live tracking data...', { autoRefresh });
 
-            // ✅ Include the logged-in user's own customer ID so they can
-            // track themselves on the map, in addition to followed users.
-            const selfId = await tokenService.getCustomerId();
-            const customerAppIds = selfId
-                ? Array.from(new Set([selfId, ...Array.from(followedUsers)]))
-                : Array.from(followedUsers);
-
-            console.log('👥 Customer IDs (self + followed):', customerAppIds);
-
-            // ✅ Determine which product_option_value_app_id to use
+            // ✅ Determine which product_option_value_app_id to use. Before the
+            // first await, so a request that fails early is still judged by the
+            // distance it was for (catch below).
             const activeDistance = overrideDistance !== undefined ? overrideDistance : selectedDistance;
 
             let optionValueId: number | undefined;
@@ -364,6 +357,17 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             } else if (product_option_value_app_id && product_option_value_app_id > 0) {
                 optionValueId = product_option_value_app_id;
             }
+            requestedDistanceId = optionValueId ?? null;
+            inFlightDistance.current.set(seq, requestedDistanceId);
+
+            // ✅ Include the logged-in user's own customer ID so they can
+            // track themselves on the map, in addition to followed users.
+            const selfId = await tokenService.getCustomerId();
+            const customerAppIds = selfId
+                ? Array.from(new Set([selfId, ...Array.from(followedUsers)]))
+                : Array.from(followedUsers);
+
+            console.log('👥 Customer IDs (self + followed):', customerAppIds);
 
             console.log('📊 Request params:', {
                 product_app_id,
@@ -372,8 +376,6 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 event_source
             });
 
-            requestedDistanceId = optionValueId ?? null;
-            inFlightDistance.current.set(seq, requestedDistanceId);
             sentFollowsKey.current = followsKey;
             const response = await liveTrackingService.getLiveTrackingData(
                 product_app_id,
@@ -450,8 +452,21 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                                 console.log('✅ Setting distance from route params:', matchedDistance.distance_name);
                                 setSelectedDistance(matchedDistance);
                                 wantedDistanceId.current = matchedDistance.product_option_value_app_id;
-                                // This answer IS for that distance (the API's pick):
-                                // its GPX check below must not drop it.
+                                // Which distance did this answer really carry? The
+                                // bottom tab bar sends id 0 + the label, so the API
+                                // answers with ITS default — possibly another
+                                // distance than the label's (2026-10-28 review: the
+                                // default's runners and route were drawn under the
+                                // label's name until a manual switch).
+                                const answeredId = response.data.selected_distance?.product_option_value_app_id ?? requestedDistanceId;
+                                if (answeredId !== null && answeredId !== matchedDistance.product_option_value_app_id) {
+                                    console.log('🔁 Answer was for another distance — loading the labelled one');
+                                    void loadLiveTrackingData(false, matchedDistance);
+                                    dropStale();   // that load is in flight, so the spinner stays
+                                    return;
+                                }
+                                // This answer IS for that distance: its GPX check
+                                // below must not drop it.
                                 requestedDistanceId = matchedDistance.product_option_value_app_id;
                                 inFlightDistance.current.set(seq, requestedDistanceId);
                             }
@@ -509,16 +524,21 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
             setTimeout(() => {
                 console.log('✅ Participants rendering complete');
-                setParticipantsLoading(false);
+                // Not while another request (e.g. a follow refresh) still loads:
+                // that one ends the spinner itself.
+                if (inFlightDistance.current.size === 0) setParticipantsLoading(false);
             }, 200);
 
         } catch (err) {
             console.error('❌ Error loading live tracking data:', err);
-            // A newer request is under way: it owns the screen (and its error).
             const others = [...inFlightDistance.current.entries()]
                 .filter(([s]) => s !== seq)
                 .map(([s, d]) => ({ seq: s, distanceId: d }));
-            if (!ownsError(seq, others, wantedDistanceId.current)) {
+            // Overtaken (a newer answer is on screen) or for a distance the user
+            // left: its failure says nothing about the map shown now — never put
+            // the error screen over it. Otherwise a newer request still under
+            // way owns the screen (and its error).
+            if (!isCurrent() || !ownsError(seq, others, wantedDistanceId.current)) {
                 if (dropClearsLoading(others.length)) { setLoading(false); setParticipantsLoading(false); }
                 return;
             }

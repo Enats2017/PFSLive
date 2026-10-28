@@ -80,12 +80,28 @@ class Screen {
   private current(r: Req) { return isCurrentLiveResponse({ seq: r.seq, distanceId: r.distanceId }, { lastAppliedSeq: this.lastApplied, wantedDistanceId: this.wanted }); }
   private drop() { if (dropClearsLoading(this.inFlight.size - 1)) { this.loading = false; this.participantsLoading = false; } }
   /** The answer arrives. gpxDuring runs while this request downloads its GPX. */
-  answer(r: Req, opts: { apiPicks?: number; gpxDuring?: () => void } = {}) {
+  /** The label's distance reload a tab-bar open starts (see answer, labelPicks). */
+  reload: Req | null = null;
+  /**
+   * The answer arrives. apiPicks = the distance the API answered with when the
+   * request had none; labelPicks = the route-param label's distance (tab bar).
+   * gpxDuring runs while this request downloads its GPX.
+   */
+  answer(r: Req, opts: { apiPicks?: number; labelPicks?: number; gpxDuring?: () => void } = {}) {
     try {
       if (!this.current(r)) { this.drop(); return; }
       this.lastApplied = r.seq;
       this.shownDistance = r.distanceId ?? opts.apiPicks ?? null; this.shownSeq = r.seq;
-      if (r.manual && r.distanceId === null && opts.apiPicks !== undefined && this.wanted === null) {
+      if (r.manual && this.wanted === null && opts.labelPicks !== undefined) {
+        // as the screen: the label wins; an answer for another distance reloads it
+        this.wanted = opts.labelPicks;
+        const answered = opts.apiPicks ?? r.distanceId;
+        if (answered !== null && answered !== opts.labelPicks) {
+          this.reload = this.start(opts.labelPicks, true, true);
+          this.drop(); return;
+        }
+        r.distanceId = opts.labelPicks; this.inFlight.set(r.seq, opts.labelPicks);
+      } else if (r.manual && r.distanceId === null && opts.apiPicks !== undefined && this.wanted === null) {
         // as the screen: the API's pick becomes the wanted distance AND this answer's own
         this.wanted = opts.apiPicks; r.distanceId = opts.apiPicks; this.inFlight.set(r.seq, opts.apiPicks);
       }
@@ -94,13 +110,14 @@ class Screen {
         if (!this.current(r)) { this.drop(); return; }
         this.route = this.shownDistance;
       }
-      this.loading = false; this.participantsLoading = false;
+      this.loading = false;
+      if (this.inFlight.size === 1) this.participantsLoading = false;   // the 200 ms timer: only when nothing else loads
     } finally { this.inFlight.delete(r.seq); }
   }
   fail(r: Req) {
     try {
       const others = [...this.inFlight.entries()].filter(([s]) => s !== r.seq).map(([s, d]) => ({ seq: s, distanceId: d }));
-      if (!ownsError(r.seq, others, this.wanted)) { if (dropClearsLoading(others.length)) { this.loading = false; this.participantsLoading = false; } return; }
+      if (!this.current(r) || !ownsError(r.seq, others, this.wanted)) { if (dropClearsLoading(others.length)) { this.loading = false; this.participantsLoading = false; } return; }
       this.errors++; this.loading = false; this.participantsLoading = false;
     } finally { this.inFlight.delete(r.seq); }
   }
@@ -112,6 +129,41 @@ test('open without a distance in the link (BottomNavigation passes 0): the API p
   assert.strictEqual(s.wanted, 85);
   assert.strictEqual(s.route, 85, 'route drawn on the first answer');
   assert.strictEqual(s.loading, false);
+});
+test('tab bar open (id 0 + label 86), the API answers with its default 85 → 86 is loaded, its route drawn', () => {
+  const s = new Screen();
+  s.answer(s.start(null, true, true), { apiPicks: 85, labelPicks: 86 });
+  assert.ok(s.reload, 'the labelled distance is loaded');
+  assert.strictEqual(s.route, null, 'no 85 route drawn under the 86 name');
+  assert.strictEqual(s.loading, true, 'spinner stays while 86 loads');
+  s.answer(s.reload!);
+  assert.strictEqual(s.shownDistance, 86); assert.strictEqual(s.route, 86); assert.strictEqual(s.loading, false);
+});
+test('tab bar open, the API answered with the labelled distance itself → no extra load', () => {
+  const s = new Screen();
+  s.answer(s.start(null, true, true), { apiPicks: 86, labelPicks: 86 });
+  assert.strictEqual(s.reload, null); assert.strictEqual(s.route, 86); assert.strictEqual(s.loading, false);
+});
+test('an overtaken request fails AFTER a newer answer is shown → no error screen over the good map', () => {
+  const s = opened();
+  const slow = s.start(85, false), fast = s.start(85, false);
+  s.answer(fast); s.fail(slow);
+  assert.strictEqual(s.errors, 0); assert.strictEqual(s.shownSeq, fast.seq);
+});
+test('a request for a distance the user left fails with nothing else running → no error screen', () => {
+  const s = opened();
+  const staleAuto = s.start(85, false);
+  const sw = s.switchTo(86); s.answer(sw);
+  s.fail(staleAuto);
+  assert.strictEqual(s.errors, 0); assert.strictEqual(s.shownDistance, 86); assert.strictEqual(s.loading, false);
+});
+test('an applied refresh does not end the runner spinner of another request still loading', () => {
+  const s = opened();
+  const a = s.start(85, false), b = s.start(85, false);
+  s.answer(a);
+  assert.strictEqual(s.participantsLoading, true, 'b still loading');
+  s.answer(b);
+  assert.strictEqual(s.participantsLoading, false);
 });
 test('a switch fails while the 60 s timer (old distance, newer) runs → the error is still shown', () => {
   const s = opened();
@@ -207,9 +259,20 @@ test('when the API picks the distance, this answer becomes an answer FOR that di
   for (const v of ['matchedDistance', 'apiSelectedDistance']) {
     const w = at(`wantedDistanceId.current = ${v}.product_option_value_app_id;`);
     const r = at(`requestedDistanceId = ${v}.product_option_value_app_id;`);
-    assert.ok(r > w && r - w < 300, v);
+    assert.ok(r > w && r - w < 1500, v);
   }
   assert.ok(at('requestedDistanceId = apiSelectedDistance.product_option_value_app_id;') < at('const applied = await loadGPX(newGpxUrl, isCurrent);'));
+});
+test('a label match for another distance than the one answered loads the labelled distance instead', () => {
+  const ans = at('const answeredId = response.data.selected_distance?.product_option_value_app_id ?? requestedDistanceId;');
+  const re = at('void loadLiveTrackingData(false, matchedDistance);');
+  assert.ok(ans < re && re < at('requestedDistanceId = matchedDistance.product_option_value_app_id;'));
+});
+test('the distance a request is for is known before its first wait', () => {
+  assert.ok(at('inFlightDistance.current.set(seq, requestedDistanceId);') < at('const selfId = await tokenService.getCustomerId();'));
+});
+test('the runner spinner ends after an answer only when nothing else loads', () => {
+  at('if (inFlightDistance.current.size === 0) setParticipantsLoading(false);');
 });
 test('the answer is checked before anything is set, then marked applied', () => {
   const req = at('await liveTrackingService.getLiveTrackingData(');
@@ -232,7 +295,7 @@ test('the wanted distance is set synchronously on a switch and when the API pick
   at('wantedDistanceId.current = apiSelectedDistance.product_option_value_app_id;');
 });
 test('an error is hidden only behind a newer request that can still be shown', () => {
-  assert.ok(at('if (!ownsError(seq, others, wantedDistanceId.current)) {') < at('handleApiError(err);'));
+  assert.ok(at('if (!isCurrent() || !ownsError(seq, others, wantedDistanceId.current)) {') < at('handleApiError(err);'), 'an overtaken / left-distance failure never shows its error');
 });
 test('follows are re-read on focus (not on the first one), and a change refreshes the map', () => {
   at('useFocusEffect(');
