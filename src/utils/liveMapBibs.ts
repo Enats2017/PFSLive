@@ -24,9 +24,9 @@ export function followedBibsForEvent(
   const bibs = followedBibs.get(id);
   if (!bibs) return [];
   // Sorted, so the joined string is a stable effect dependency and the API's
-  // response-cache key does not change with Set order.
-  return [...bibs]
-    .map(b => String(b).trim())
+  // response-cache key does not change with Set order. Deduped after the trim:
+  // '450' and ' 450' are one runner.
+  return [...new Set([...bibs].map(b => String(b).trim()))]
     .filter(b => b !== '')
     .sort();
 }

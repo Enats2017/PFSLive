@@ -87,6 +87,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [followerLocation, setFollowerLocation] = useState<{ lat: number; lon: number } | null>(null);
 
     const hasLoadedInitialData = useRef(false);
+    // eventBibsKey of the last live-tracking request (see the bib refresh effect).
+    const sentBibsKey = useRef('');
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
     const participantMarkers: ParticipantMapMarker[] = useMemo(() => {
@@ -266,10 +268,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
     // A bib followed or unfollowed after the first load (or follows that loaded
     // late) shows on the map now instead of at the next 60 s refresh.
+    // `loading` is a dep and sentBibsKey remembers what the last request carried:
+    // bibs that arrive WHILE the first load is in flight are sent as soon as it
+    // ends (the effect used to return on `loading` and never re-run).
     useEffect(() => {
         if (!hasLoadedInitialData.current || loading) return;
+        if (sentBibsKey.current === eventBibsKey) return;
         loadLiveTrackingData(true);
-    }, [eventBibsKey]);
+    }, [eventBibsKey, loading]);
 
     useEffect(() => {
         if (!hasLoadedInitialData.current || loading) return;
@@ -323,6 +329,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 event_source
             });
 
+            sentBibsKey.current = eventBibsKey;
             const response = await liveTrackingService.getLiveTrackingData(
                 product_app_id,
                 customerAppIds,

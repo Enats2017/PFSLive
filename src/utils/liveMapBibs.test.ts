@@ -59,6 +59,9 @@ test('a bib stored as a NUMBER (raw JSON from storage) is sent as text', () => {
 test('blank bibs are dropped', () => {
   assert.deepStrictEqual(followedBibsForEvent(new Map([[20, new Set([' ', '450 '])]]), 20, 'partner'), ['450']);
 });
+test('the same bib with and without spaces is sent once', () => {
+  assert.deepStrictEqual(followedBibsForEvent(new Map([[20, new Set([' 450', '450', '450 ', '12'])]]), 20, 'partner'), ['12', '450']);
+});
 
 console.log('== the `bibs` request field ==');
 
@@ -85,7 +88,10 @@ test('LiveTrackingScreen sends this event\'s followed bibs with every live-track
   assert.ok(/getLiveTrackingData\([^)]*event_source,\s*eventBibs\s*\)/.test(s), 'passes eventBibs to getLiveTrackingData');
   assert.ok(/usersArray\.length > 0 \|\| eventBibs\.length > 0/.test(s), 'first load also starts for a bib-only follower');
   assert.ok(/\}, \[followedUsers, eventBibsKey, product_option_value_app_id\]\)/.test(s), 'first-load effect re-arms when the bibs arrive');
-  assert.ok(/\}, \[eventBibsKey\]\)/.test(s), 'a bib follow change refreshes the map');
+  assert.ok(/\}, \[eventBibsKey, loading\]\)/.test(s), 'a bib follow change refreshes the map, also once a load in flight ends');
+  assert.ok(/sentBibsKey\.current === eventBibsKey\) return;/.test(s), 'no extra request when the bibs were already sent');
+  const set = s.indexOf('sentBibsKey.current = eventBibsKey;');
+  assert.ok(set > 0 && set < s.indexOf('await liveTrackingService.getLiveTrackingData('), 'every request records the bibs it carries');
 });
 test('liveTrackingService puts the field on the request via liveTrackingBibsParam', () => {
   const s = src('services/liveTrackingService.ts');
