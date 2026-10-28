@@ -189,6 +189,15 @@ export const trackingSafetyService = {
       if (plan.earlyAt !== null) {
         await schedule(SAFETY_EARLY_ID, plan.earlyAt, i18n.t('home:safety.earlyTitle'), i18n.t('home:safety.earlyBody'));
       }
+      // The engine already runs: a fix after the gun can reach onAlive while
+      // this was scheduling. It then set ALIVE_SEEN and cancelled a check that
+      // did not exist yet, and no later onAlive cancels it any more ("not
+      // tracking yet" for a healthy runner, 2026-10-28 review). Alive → take
+      // both back now.
+      if ((await AsyncStorage.getItem(ALIVE_SEEN_KEY)) !== null) {
+        await cancel(SAFETY_CHECK_ID);
+        await cancel(SAFETY_EARLY_ID);
+      }
     } catch { /* notifications denied / unavailable — never block tracking */ }
     return plan;
   },

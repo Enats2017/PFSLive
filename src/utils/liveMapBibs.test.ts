@@ -59,6 +59,17 @@ test('a bib stored as a NUMBER (raw JSON from storage) is sent as text', () => {
 test('blank bibs are dropped', () => {
   assert.deepStrictEqual(followedBibsForEvent(new Map([[20, new Set([' ', '450 '])]]), 20, 'partner'), ['450']);
 });
+test('an event with an empty bib set → nothing, and the field is left out', () => {
+  const none = followedBibsForEvent(new Map([[20, new Set<string>()]]), 20, 'partner');
+  assert.deepStrictEqual(none, []);
+  assert.strictEqual(liveTrackingBibsParam(none, 'partner'), null);
+});
+test('bibs that only look numeric stay as typed: "0450" and "450" are two runners', () => {
+  assert.deepStrictEqual(followedBibsForEvent(new Map([[20, new Set(['450', '0450'])]]), 20, 'partner'), ['0450', '450']);
+});
+test('sort is by text, so the key is stable: "1269" before "410"', () => {
+  assert.deepStrictEqual(followedBibsForEvent(new Map([[20, new Set(['410', '1269'])]]), 20, 'partner'), ['1269', '410']);
+});
 test('the same bib with and without spaces is sent once', () => {
   assert.deepStrictEqual(followedBibsForEvent(new Map([[20, new Set([' 450', '450', '450 ', '12'])]]), 20, 'partner'), ['12', '450']);
 });

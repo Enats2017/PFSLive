@@ -1994,6 +1994,11 @@ const _doFullStop = async (): Promise<void> => {
   } catch { /* silent */ }
   // Clean up all session-scoped keys.
   await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
+  // Again, now that the params are gone: a fix or heartbeat that was already in
+  // flight between the first disarm and here (5 s fixes at the line) could
+  // re-arm the watchdog, and a Stop never sets raceFinished. From here on
+  // onAlive sees no session and does nothing. Never throws.
+  await trackingSafetyService.disarm();
   await AsyncStorage.removeItem(LAST_SENT_KEY);
   await AsyncStorage.removeItem(LAST_POSITION_KEY);
   await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
@@ -3044,6 +3049,12 @@ export const headlessTask = async (event: { name: string; params: any }): Promis
         await addLog('⚠️', 'Headless wake — location payload missing valid lat/lon, skipped');
       }
     } else if (event.name === 'heartbeat') {
+      // The engine is alive even without a fix (aid station indoors, under
+      // cover): counts as a sign of life after the gun, as the foreground
+      // heartbeat does. Without it a killed-Livio runner standing still got the
+      // 15-min watchdog (2026-10-28 review). onAlive ignores a finished/stopped
+      // session; never throws.
+      if (!(await isRaceNotStarted())) await trackingSafetyService.onAlive();
       // Heartbeat carries no coords in event.params — fetch one. Same options as
       // the foreground heartbeat. Wrapped so a fetch failure (no fix in a dead
       // zone) can't throw out of the headless task. getCurrentPosition does NOT

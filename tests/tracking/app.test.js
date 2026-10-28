@@ -2183,6 +2183,46 @@ const L = () => load('services/locationService').locationService;
     load('services/gpsService'); await settleS();
     assert.ok(!pending('livio-tracking-watchdog'));
   });
+  // 2026-10-28 third review.
+  test('Stop with a fix landing while the engine stops → no watchdog left (a Stop never sets raceFinished)', async () => {
+    await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    await fireFix();
+    const BG = require('react-native-background-geolocation').default;
+    BG.stop = async () => { M.clock += 70000; await SAF().trackingSafetyService.onAlive(M.clock); return {}; };
+    try { await load('services/gpsService').stopWatching(); } finally { delete BG.stop; }
+    assert.ok(!pending('livio-tracking-watchdog'), 'watchdog');
+    assert.ok(!pending('livio-tracking-check'), 'check');
+  });
+  test('a fix reaching onAlive while Start is still scheduling → the "not tracking yet" check is taken back', async () => {
+    const s = SAF().trackingSafetyService;
+    const gunIso = new Date(M.clock - 2 * 60000).toISOString();
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '20', intervalSeconds: 30, raceStartTime: gunIso, manualStart: 0 }));
+    const N = require('expo-notifications'); const orig = N.cancelScheduledNotificationAsync; let fired = false;
+    N.cancelScheduledNotificationAsync = async (id) => { const r = await orig(id); if (!fired) { fired = true; await s.onAlive(M.clock); } return r; };
+    try { await s.arm({ raceStartTime: gunIso, manualStart: false }); } finally { N.cancelScheduledNotificationAsync = orig; }
+    assert.ok(!pending('livio-tracking-check'), 'check cancelled');
+    assert.ok(pending('livio-tracking-watchdog'), 'watchdog armed by the sign of life');
+  });
+  test('control: Start with no sign of life yet → the check stays scheduled', async () => {
+    const gunIso = new Date(M.clock - 2 * 60000).toISOString();
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '20', intervalSeconds: 30, raceStartTime: gunIso, manualStart: 0 }));
+    await SAF().trackingSafetyService.arm({ raceStartTime: gunIso, manualStart: false });
+    assert.ok(pending('livio-tracking-check'));
+  });
+  test('Android headless heartbeat with no GPS fix (Livio killed, standing indoors) → counts as alive', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '20', intervalSeconds: 30, raceStartTime: new Date(M.clock - 30 * 60000).toISOString(), manualStart: 0 }));
+    const BG = require('react-native-background-geolocation').default;
+    BG.getCurrentPosition = async () => { throw new Error('timeout'); };
+    try { await load('services/gpsService').headlessTask({ name: 'heartbeat', params: {} }); } finally { delete BG.getCurrentPosition; }
+    assert.strictEqual(at('livio-tracking-watchdog'), M.clock + 15 * 60000);
+  });
+  test('control: headless heartbeat BEFORE the gun → no watchdog (alive before the race is not the race)', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '2', eventId: '20', intervalSeconds: 30, raceStartTime: new Date(M.clock + 30 * 60000).toISOString(), manualStart: 0 }));
+    const BG = require('react-native-background-geolocation').default;
+    BG.getCurrentPosition = async () => { throw new Error('timeout'); };
+    try { await load('services/gpsService').headlessTask({ name: 'heartbeat', params: {} }); } finally { delete BG.getCurrentPosition; }
+    assert.ok(!pending('livio-tracking-watchdog'));
+  });
   test('plan boundaries: Start exactly 30 min before the gun → no early reminder; 1 ms more → reminder at gun - 10', async () => {
     const { planSafetyArm } = SAF(); const now = 1_000_000_000_000;
     assert.strictEqual(planSafetyArm(now + 30 * 60000, now, false).earlyAt, null);
