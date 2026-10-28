@@ -2223,6 +2223,30 @@ const L = () => load('services/locationService').locationService;
     try { await load('services/gpsService').headlessTask({ name: 'heartbeat', params: {} }); } finally { delete BG.getCurrentPosition; }
     assert.ok(!pending('livio-tracking-watchdog'));
   });
+  test("live finish: the finishing fix's own onAlive schedules the watchdog AFTER the first disarm → still cleared", async () => {
+    liveAnswers.length = 0; answerLocation();
+    await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    await fireFix(); M.clock += 31000; await fireFix();
+    const N = require('expo-notifications');
+    const origS = N.scheduleNotificationAsync, origC = N.cancelScheduledNotificationAsync;
+    let release = null, held = false;
+    N.scheduleNotificationAsync = async (req) => {
+      if (req.identifier === 'livio-tracking-watchdog' && !held) { held = true; await new Promise((r) => { release = r; }); }
+      return origS(req);
+    };
+    N.cancelScheduledNotificationAsync = async (id) => {
+      const r = await origC(id);
+      if (id === 'livio-tracking-watchdog' && release) { const go = release; release = null; go(); }
+      return r;
+    };
+    try {
+      liveAnswers.push(RR); M.clock += 70000; await fireFix();   // > 1 min: this fix reschedules the watchdog
+      await settleS();
+    } finally { N.scheduleNotificationAsync = origS; N.cancelScheduledNotificationAsync = origC; }
+    assert.ok(held, 'the watchdog schedule was held past the first disarm');
+    assert.strictEqual(M.store.get(RACE_FIN), '1');
+    assert.ok(!pending('livio-tracking-watchdog'), 'watchdog cleared');
+  });
   test('plan boundaries: Start exactly 30 min before the gun → no early reminder; 1 ms more → reminder at gun - 10', async () => {
     const { planSafetyArm } = SAF(); const now = 1_000_000_000_000;
     assert.strictEqual(planSafetyArm(now + 30 * 60000, now, false).earlyAt, null);

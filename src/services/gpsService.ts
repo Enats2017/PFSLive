@@ -1562,6 +1562,11 @@ const _processLocationForSendInternal = async (
       // Never throws.
       await trackingSafetyService.disarm();
       await AsyncStorage.setItem(RACE_FINISHED_KEY, '1');
+      // Again, now that the flag is set: this fix's own onAlive runs without
+      // await (void, above) and its schedule can land after the first disarm
+      // but before the flag, when sessionOver() still said "running". From here
+      // on onAlive sees the finish and does nothing. Same as _doFullStop.
+      await trackingSafetyService.disarm();
       // Stash the IDs so the log can still be uploaded after we clear the session
       // below. Clearing TRACKING_PARAMS_KEY makes isTracking() correctly return
       // false for a finished race, so restore() won't resurrect it on relaunch.
