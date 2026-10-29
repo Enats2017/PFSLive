@@ -193,6 +193,27 @@ const MOVEMENT_THRESHOLD: Record<number, number> = {
 };
 const DEFAULT_MOVEMENT_METRES = 5;
 
+// ✅ A move must also be bigger than the GPS's own uncertainty (2026-10-29, growth).
+// A phone lying still reports positions that wander inside their accuracy
+// circles: developer test p4656 (iPhone, walking = 3m threshold) sat still with
+// 8-22m accuracy, its fixes wandered 3-21m from the start position and counted
+// as movement — 6 drift points stored, 38m added to a runner who never moved.
+// iOS gives no usable speed when still (-1), so the accuracy is the signal: two
+// fixes closer than their two accuracy radii together are indistinguishable.
+// Capped so poor fixes (forest, 60m+) cannot hold real progress back for long:
+// walking covers ~40m per 30s send window, running and cycling far more. Not
+// applied in the finish approach (its 1m floor stays — every metre counts there).
+// The anchor's accuracy is stored with LAST_POSITION_KEY; one saved by an older
+// version has none, and then only the new fix's accuracy counts.
+const ACCURACY_FLOOR_CAP_M = 25;
+const validAcc = (a: unknown): number => {
+  const n = Number(a);
+  return a === null || a === undefined || !isFinite(n) || n <= 0 ? 0 : n;
+};
+export function accuracyFloorMetres(accuracy: number | null | undefined, anchorAccuracy?: number | null): number {
+  return Math.min(validAcc(accuracy) + validAcc(anchorAccuracy), ACCURACY_FLOOR_CAP_M);
+}
+
 // ✅ The same thresholds expressed as a PACE, for use where the gap between
 // fixes is not the configured interval.
 //
@@ -1188,7 +1209,7 @@ const _processLocationForSendInternal = async (
           const movedM = distanceMetres(anchor.lat, anchor.lon, raw.latitude, raw.longitude);
           const needM = finishApproach === '1'
             ? FINISH_APPROACH_MIN_MOVE_METRES
-            : requiredMoveMetres(Number(categoryId), elapsedMs);
+            : Math.max(requiredMoveMetres(Number(categoryId), elapsedMs), accuracyFloorMetres(raw.accuracy, anchor.acc));
 
           if (movedM < needM) {
             await addLog('🚶', `Skipped — backlog fix moved only ${movedM.toFixed(1)}m (need ${needM.toFixed(1)}m)${tag}`);
@@ -1201,6 +1222,7 @@ const _processLocationForSendInternal = async (
           await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
             lat: raw.latitude,
             lon: raw.longitude,
+            acc: raw.accuracy ?? null,
           }));
         }
 
@@ -1340,17 +1362,22 @@ const _processLocationForSendInternal = async (
       await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
         lat: raw.latitude,
         lon: raw.longitude,
+        acc: raw.accuracy ?? null,
       }));
       await addLog('📌', `First position recorded — waiting for movement${tag}`);
       return;
     }
     const lastPos = JSON.parse(lastPosStr);
     const moved = distanceMetres(lastPos.lat, lastPos.lon, raw.latitude, raw.longitude);
-    const movementFloor = (finishApproach === '1') ? FINISH_APPROACH_MIN_MOVE_METRES : minMovementMetres;
+    // The category threshold, or the two fixes' accuracy when that is larger
+    // (accuracyFloorMetres — GPS drift while standing still is not a move).
+    const movementFloor = (finishApproach === '1')
+      ? FINISH_APPROACH_MIN_MOVE_METRES
+      : Math.max(minMovementMetres, accuracyFloorMetres(raw.accuracy, lastPos.acc));
     if (moved < movementFloor) {
       const label = (finishApproach === '1')
         ? `Skipped — identical position in finish approach (${moved.toFixed(1)}m)`
-        : `Skipped — moved only ${moved.toFixed(1)}m (need ${minMovementMetres}m)`;
+        : `Skipped — moved only ${moved.toFixed(1)}m (need ${Math.round(movementFloor * 10) / 10}m)`;
       await addLog('🚶', `${label}${tag}`);
       return;
     }
@@ -1402,6 +1429,7 @@ const _processLocationForSendInternal = async (
     await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
       lat: location.latitude,
       lon: location.longitude,
+      acc: raw.accuracy ?? null,
     }));
 
     // ✅ FIX 4: Send-gap diagnostic, now with false-positive suppression.

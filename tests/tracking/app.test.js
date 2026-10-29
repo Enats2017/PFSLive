@@ -964,6 +964,71 @@ const L = () => load('services/locationService').locationService;
     assert.ok(M.store.has(PARAMS)); assert.notStrictEqual(M.store.get(RACE_FIN), '1');
   });
 
+  // ── GPS drift while standing still (developer test 2026-10-29, p4656) ──
+  // iPhone, app 1.0.5, a WALKING session (3m threshold), phone lying still: the
+  // stored points wandered 3-18m inside their own ~14-22m accuracy and counted as
+  // movement. Real positions / accuracies from that session (coordinates
+  // 372184-372191), in order, after the start position.
+  const P4656_START = [19.42375, 72.8076333];
+  const P4656_DRIFT = [
+    [19.4238896, 72.8077194, 21.77], [19.4239244, 72.8077208, 14.25], [19.4238751, 72.8077558, 14.25],
+    [19.4238783, 72.8076817, 14.25], [19.4238874, 72.8077409, 14.25], [19.4237780, 72.8076333, 7.69],
+  ];
+  const walkStart = async () => {
+    liveAnswers.length = 0; answerLocation();
+    const { gpsService } = load('services/gpsService');
+    // category 64 = walking (MOVEMENT_THRESHOLD 3m), as p4656's session
+    await gpsService.startWatchingPosition(() => {}, () => {}, 30, '2', '12', 't', 'b', 64, new Date(M.clock - HOUR).toISOString(), 0, 'Walk');
+    M.clock += 1000; await fireAt(P4656_START[0], P4656_START[1], 7.69);   // start position: recorded, not sent
+  };
+  const fireAt = async (la, lo, acc, spd = -1) => {
+    M.bg.location({ coords: { latitude: la, longitude: lo, speed: spd, accuracy: acc, altitude: 8, heading: -1 }, timestamp: new Date(M.clock).toISOString(), is_moving: true });
+    await settle();
+  };
+  test('drift: p4656\'s still phone (walking, 6 fixes 3-21m from the start, accuracy 8-22m) sends NOTHING online — each "move" is inside the two accuracy circles', async () => {
+    await walkStart();
+    const n = locPosts();
+    for (const [la, lo, acc] of P4656_DRIFT) { M.clock += 31000; await fireAt(la, lo, acc); }
+    assert.strictEqual(locPosts() - n, 0, 'drift sent');
+    const log = await load('services/gpsService').getFullTrackingLog();
+    assert.ok(log.some((e) => /Skipped — moved only 18\.\dm \(need 25m\)/.test(e.msg)), 'the bar shown: 7.7 + 21.8 capped at 25');
+    assert.ok(log.some((e) => /Skipped — moved only 21\.\dm \(need 21\.9m\)/.test(e.msg)), '21m from the start at 7.7 + 14.3');
+  });
+  test('…a real walk with the SAME accuracy still sends every window (~40m per 31s at 14m accuracy)', async () => {
+    await walkStart();
+    const n = locPosts();
+    let la = P4656_START[0];
+    for (let i = 0; i < 4; i++) { M.clock += 31000; la += 0.00036; await fireAt(la, P4656_START[1], 14.25, 1.3); }   // ~40m north each
+    assert.strictEqual(locPosts() - n, 4);
+  });
+  test('…a very poor fix (60m) does not hold real progress back beyond 25m: 30m sent, 20m skipped', async () => {
+    await walkStart();
+    let n = locPosts();
+    M.clock += 31000; await fireAt(P4656_START[0] + 0.00018, P4656_START[1], 60);   // ~20m
+    assert.strictEqual(locPosts() - n, 0, '20m at 60m accuracy');
+    n = locPosts();
+    M.clock += 31000; await fireAt(P4656_START[0] + 0.00027, P4656_START[1], 60);   // ~30m from the start
+    assert.strictEqual(locPosts() - n, 1, '30m at 60m accuracy (cap 25m)');
+  });
+  test('…OFFLINE with a backlog (p4656\'s case): the drift fixes are not queued; a real move is', async () => {
+    await walkStart();
+    setQ([fix(2, 12, 5)]);                                   // the first fix is already waiting
+    // No radio: NetInfo says so and every request fails (the probe included).
+    M.net = { isConnected: false, isInternetReachable: false, type: 'none' };
+    M.api.handler = () => Promise.reject(Object.assign(new Error('Network Error'), { type: 'network' }));
+    for (const [la, lo, acc] of P4656_DRIFT) { M.clock += 31000; await fireAt(la, lo, acc); }
+    assert.strictEqual(getQ().length, 1, 'no drift queued behind it');
+    M.clock += 31000; await fireAt(P4656_START[0] + 0.00045, P4656_START[1], 14.25, 1.3);   // ~50m: real
+    assert.strictEqual(getQ().length, 2, 'the real move is queued');
+  });
+  test('accuracyFloorMetres: both fixes\' accuracy together, capped at 25m; no / bad accuracy → no floor (the category threshold alone, as before)', () => {
+    const { accuracyFloorMetres } = load('services/gpsService');
+    assert.strictEqual(accuracyFloorMetres(14.25, 7.69), 21.94);
+    assert.strictEqual(accuracyFloorMetres(14.25), 14.25, 'anchor saved by an older version (no acc)');
+    assert.strictEqual(accuracyFloorMetres(60, 5), 25);
+    for (const bad of [null, undefined, 0, -1, NaN]) assert.strictEqual(accuracyFloorMetres(bad, bad), 0, String(bad));
+  });
+
   // Drain path: locationService.processQueue (offline backlog flushed on reconnect).
   const drainAnswers = (answers) => {
     let i = 0;
