@@ -11,7 +11,7 @@ import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { commonStyles, spacing, palette, space } from '../../styles/common.styles';
-import { detailsHeaderImageLandscape } from '../../utils/screenFit';
+import { detailsHeaderImageLandscape, detailsHeaderImageFit } from '../../utils/screenFit';
 import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
 import { API_CONFIG } from '../../constants/config';
@@ -262,7 +262,7 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
 
           <Image
             source={{ uri: event_image }}
-            contentFit="cover"
+            contentFit={detailsHeaderImageFit(headerLandscape)}
               cachePolicy="memory-disk"
             style={[{
               width: '100%',

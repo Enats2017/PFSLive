@@ -24,7 +24,7 @@ import { formatClockTime } from '../../utils/timeFormat';
 import { formatEventDate } from '../../utils/dateFormatter';
 import { useDimensions } from '../../hooks/useDimensions';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
-import { distanceButtonsBelow, detailsHeaderImageLandscape } from '../../utils/screenFit';
+import { distanceButtonsBelow, detailsHeaderImageLandscape, detailsHeaderImageFit } from '../../utils/screenFit';
 
 const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }) => {
   const { product_app_id, event_name, event_image } = route.params;
@@ -134,7 +134,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
           )}
           <Image
             source={{ uri: event_image }}
-            contentFit="cover"
+            contentFit={detailsHeaderImageFit(isLandscape)}
               cachePolicy="memory-disk"
             style={{
               width: '100%',

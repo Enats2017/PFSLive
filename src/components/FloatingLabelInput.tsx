@@ -71,6 +71,9 @@ const COLORS = {
 
 const ANIMATION_DURATION = 200;
 const INPUT_HEIGHT = 56;
+// Read-only text fields: cursor (and so the scroll) at the start. One object, so
+// the prop is stable across renders.
+export const READ_ONLY_SELECTION = { start: 0, end: 0 };
 
 // ✅ Pure value <-> Date helpers (module-level — no component state needed)
 // Stored string formats: date = "YYYY-MM-DD", time = "HH:MM".
@@ -747,6 +750,15 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
         placeholderTextColor={COLORS.GRAY_LIGHT}
         editable={editable}
         multiline={multiline}
+        // ✅ A READ-ONLY field shows the START of its text (developer report
+        // 2026-10-29: Contact & Feedback's e-mail lost its first letter). Android
+        // puts the cursor of a value set from code at the END and scrolls to keep
+        // it visible; with the app's font the line measures a little wider than
+        // it draws, so the scroll overshoots and clips the first character — and
+        // a read-only field cannot be scrolled back by hand. Pinning the
+        // selection to 0 keeps it at the start. Only while not editable, so
+        // typing and the cursor are untouched; a caller's own selection wins.
+        selection={!editable && !multiline && props.selection === undefined ? READ_ONLY_SELECTION : props.selection}
         {...props}
         placeholder={isFocused ? props.placeholder : undefined}
       />

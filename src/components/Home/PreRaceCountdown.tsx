@@ -109,3 +109,37 @@ export const computeRaceStartMs = (
   const diff = raceFakeMs - serverFakeMs;
   return isNaN(diff) ? null : fetchedAtMs + diff;
 };
+
+/**
+ * ✅ Time to the gun AT THE MOMENT Start is tapped (developer report
+ * 2026-10-29: the "Race not started yet" popup said 11 minutes for a race 5-10
+ * minutes away). It used home_api's next_race_in_hours, a figure the server
+ * worked out when Home last loaded (plus up to ~45 s of API cache) and never
+ * moved on — tap Start six minutes after Home loaded and it was six minutes
+ * out. Measured from the same start instant as the card's countdown
+ * (startAtMs), so popup and card agree. No start instant (a placeholder
+ * 00:00 start): the server's hours, as before.
+ */
+export const msUntilStart = (
+  startAtMs: number | null,
+  nowMs: number,
+  fallbackHours?: number,
+): number => {
+  if (startAtMs != null && isFinite(startAtMs)) return startAtMs - nowMs;
+  return (Number(fallbackHours) || 0) * 60 * MIN;
+};
+
+/**
+ * "2d 4h" / "1h 5m" / "7m" for the early-start popup. Whole minutes rounded
+ * DOWN, like the card's countdown ("Starts in 5 min" for 5 min 40 s — the
+ * popup used to round up and say 6); never below 1m before the gun.
+ */
+export const formatTimeToStart = (ms: number): string => {
+  const totalMin = Math.max(1, Math.floor(ms / MIN));
+  const days = Math.floor(totalMin / (24 * 60));
+  const hours = Math.floor((totalMin % (24 * 60)) / 60);
+  const minutes = totalMin % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+};

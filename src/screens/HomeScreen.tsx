@@ -46,7 +46,7 @@ import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { useNotifications, NotificationData } from '../hooks/useNotifications';
 import { followerApi } from '../services/registerFollowerServices';
 import { syncFollowDataFromAPI, restoreFollowsWithoutToken, getFollowWriteSeq, adoptIfOtherRow } from '../utils/followStorage';
-import { PreRaceCountdown, computeRaceStartMs, startMsFromServer } from '../components/Home/PreRaceCountdown';
+import { PreRaceCountdown, computeRaceStartMs, startMsFromServer, msUntilStart, formatTimeToStart } from '../components/Home/PreRaceCountdown';
 import { ReadinessCard } from '../components/Home/ReadinessCard';
 import { ShareTrackingLink } from '../components/Home/ShareTrackingLink';
 import { IdleHome } from '../components/Home/IdleHome';
@@ -281,6 +281,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // ✅ Early tracking warning modal — shown when race is more than 24h away
   const [showEarlyTrackingModal, setShowEarlyTrackingModal] = useState(false);
+  // Time to the gun measured when Start was tapped — what that popup says.
+  const [earlyMsLeft, setEarlyMsLeft] = useState(0);
 
   const [showStartConfirmModal, setShowStartConfirmModal] = useState(false);
 
@@ -1326,15 +1328,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // that cost 8 participants their entire track: they started early, saw a green
     // "tracking" banner, waited, gave up and closed the app before the start. One
     // was 4.4 minutes from the gun.
-    const hoursUntilRace = homeData?.next_race_in_hours ?? 0;
-    if (homeData?.manual_start !== 1 && hoursUntilRace > 0) {
+    // Measured NOW, from the card countdown's start instant — not
+    // next_race_in_hours, which is as old as the last Home load (developer
+    // report 2026-10-29: "11 minutes" for a race 5-10 min away; and a tap just
+    // after the gun still got "not started yet"). See msUntilStart.
+    const msLeft = msUntilStart(raceStartMs, Date.now(), homeData?.next_race_in_hours);
+    if (homeData?.manual_start !== 1 && msLeft > 0) {
       void analyticsService.logStartStep('blocked', 'early_modal', raceReadyKey);
+      setEarlyMsLeft(msLeft);
       setShowEarlyTrackingModal(true);
       return;
     }
 
     await doStartGPSTracking();
-  }, [participantId, eventId, homeData, doStartGPSTracking, raceReadyKey, t]);
+  }, [participantId, eventId, homeData, raceStartMs, doStartGPSTracking, raceReadyKey, t]);
 
   // Opens the confirm popup (button now calls this instead of startGPSTracking)
   const confirmStartTracking = useCallback(() => {
@@ -2269,15 +2276,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
   }
 
-  // ✅ Format hours for early tracking modal message
-  const hoursUntilRace = homeData?.next_race_in_hours ?? 0;
-  // Sub-hour starts are now the common case for this modal, so minutes matter:
-  // Math.round() alone rendered "0h" for a runner 4 minutes from the gun.
-  const hoursDisplay = hoursUntilRace >= 24
-    ? `${Math.floor(hoursUntilRace / 24)}d ${Math.round(hoursUntilRace % 24)}h`
-    : hoursUntilRace >= 1
-      ? `${Math.floor(hoursUntilRace)}h ${Math.round((hoursUntilRace % 1) * 60)}m`
-      : `${Math.max(1, Math.round(hoursUntilRace * 60))}m`;
+  // ✅ Early tracking modal: the time to the gun measured when Start was
+  // tapped (earlyMsLeft). Sub-hour starts are the common case, so minutes
+  // matter ("0h" used to show for a runner 4 minutes from the gun).
+  const hoursDisplay = formatTimeToStart(earlyMsLeft);
 
   // Location-permission popup: the Close button and Android back share this.
   const closeLocationPermissionModal = () => {

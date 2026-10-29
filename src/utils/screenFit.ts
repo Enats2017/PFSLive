@@ -110,6 +110,17 @@ export const fieldScrollY = (fieldY: number, contentH: number, boxH: number): nu
 export const detailsHeaderImageLandscape = (windowH: number): number => Math.round(windowH * 0.3);
 
 /**
+ * ✅ How that header image FITS its box (developer report 2026-10-29: "the
+ * image gets cut off in landscape"). In landscape the box is the full width
+ * (~800pt) but only 30% of the height (~118pt), so `cover` — right in
+ * portrait, where the box has the image's own 612:428 shape — scaled the
+ * banner to the width and cut away all but a band through its middle.
+ * `contain` shows the whole image at the capped height, centred.
+ */
+export const detailsHeaderImageFit = (landscape: boolean): 'cover' | 'contain' =>
+  landscape ? 'contain' : 'cover';
+
+/**
  * ✅ Result List filters + statistics inside the list (they scroll away with
  * it): in landscape (2026-10-22) and on a SHORT portrait phone (2026-10-23).
  * Fixed above the list they take ~230pt; with the header and the bottom bar

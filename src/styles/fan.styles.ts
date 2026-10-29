@@ -85,6 +85,20 @@ export const fanstyle = StyleSheet.create({
     paddingRight: 4,
     paddingBottom: 4,
   },
+  // "Next events" failed to load: message + Try again (NextEventsPlaceholder)
+  nextEventsError: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: space.sm,
+    paddingVertical: spacing.md,
+  },
+  nextEventsErrorText: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: palette.textMuted,
+    flexShrink: 1,
+  },
 
   eventCard: {
     width: 160,

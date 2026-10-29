@@ -32,7 +32,7 @@ import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import { formatEventDate } from '../../utils/dateFormatter';
-import { distanceButtonsBelow, detailsHeaderImageLandscape } from '../../utils/screenFit';
+import { distanceButtonsBelow, detailsHeaderImageLandscape, detailsHeaderImageFit } from '../../utils/screenFit';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
@@ -462,7 +462,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
             <Image
               source={{ uri: headerImage }}
-              contentFit="cover"
+              contentFit={detailsHeaderImageFit(headerLandscape)}
               cachePolicy="memory-disk"
               style={[{
                 width: '100%',

@@ -19,7 +19,7 @@ import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import { formatEventDate } from '../../utils/dateFormatter';
-import { distanceButtonsBelow, detailsHeaderImageLandscape } from '../../utils/screenFit';
+import { distanceButtonsBelow, detailsHeaderImageLandscape, detailsHeaderImageFit } from '../../utils/screenFit';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
@@ -141,7 +141,7 @@ const DistanceTab = ({
 
             <Image
               source={{ uri: event_image }}
-              contentFit="cover"
+              contentFit={detailsHeaderImageFit(headerLandscape)}
               cachePolicy="memory-disk"
               style={{
                 width: '100%',

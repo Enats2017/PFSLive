@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { palette, withAlpha } from '../styles/common.styles';
+import { palette, radii, withAlpha } from '../styles/common.styles';
 import { fanstyle } from '../styles/fan.styles';
 import { EventItem } from '../services/followerEvent';
 import { formatEventDate } from '../utils/dateFormatter';
@@ -70,7 +70,45 @@ const EventCard: React.FC<EventCardProps> = ({ item, t }) => {
     );
 };
 
+/**
+ * ✅ Stand-in for an EventCard while the "Next events" row loads (developer
+ * report 2026-10-29: on a slow network the row was blank). Same card, same
+ * 160 x 112 image box and the image box's own spinner, so the row keeps its
+ * size and nothing jumps when the real cards arrive; grey bars where the
+ * name and date go.
+ */
+export const EventCardSkeleton: React.FC<{ label?: string }> = ({ label }) => (
+    <View
+        style={fanstyle.eventCard}
+        accessible
+        accessibilityRole="progressbar"
+        accessibilityLabel={label}
+    >
+        <View style={[fanstyle.eventImg, styles.skeletonFill]}>
+            <View style={styles.overlay}>
+                <ActivityIndicator size="small" color={palette.navy} />
+            </View>
+        </View>
+        <View style={fanstyle.eventInfo}>
+            <View>
+                <View style={[styles.skeletonBar, { width: '90%' }]} />
+                <View style={[styles.skeletonBar, { width: '60%' }]} />
+            </View>
+            <View style={[styles.skeletonBar, { width: '70%', marginTop: 12, marginBottom: 0 }]} />
+        </View>
+    </View>
+);
+
 const styles = StyleSheet.create({
+    skeletonFill: {
+        backgroundColor: palette.fill,
+    },
+    skeletonBar: {
+        height: 12,
+        borderRadius: radii.pill,
+        backgroundColor: palette.fill,
+        marginBottom: 8,
+    },
     overlay: {
         ...StyleSheet.absoluteFillObject,
         alignItems: 'center',
