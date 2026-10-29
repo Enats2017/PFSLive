@@ -1554,7 +1554,19 @@ const _processLocationForSendInternal = async (
         );
 
     if (shouldStop) {
+      // ✅ Safety notifications off FIRST. This path never runs _doFullStop (the
+      // only other disarm), and a runner who finishes with the phone in a pocket
+      // never reaches HomeScreen's stop: without it the watchdog fired "Livio
+      // stopped tracking" 15 min after a healthy race. First, so a throw below
+      // or the OS suspending the app once the engine stops cannot skip it.
+      // Never throws.
+      await trackingSafetyService.disarm();
       await AsyncStorage.setItem(RACE_FINISHED_KEY, '1');
+      // Again, now that the flag is set: this fix's own onAlive runs without
+      // await (void, above) and its schedule can land after the first disarm
+      // but before the flag, when sessionOver() still said "running". From here
+      // on onAlive sees the finish and does nothing. Same as _doFullStop.
+      await trackingSafetyService.disarm();
       // Stash the IDs so the log can still be uploaded after we clear the session
       // below. Clearing TRACKING_PARAMS_KEY makes isTracking() correctly return
       // false for a finished race, so restore() won't resurrect it on relaunch.
@@ -1987,6 +1999,11 @@ const _doFullStop = async (): Promise<void> => {
   } catch { /* silent */ }
   // Clean up all session-scoped keys.
   await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
+  // Again, now that the params are gone: a fix or heartbeat that was already in
+  // flight between the first disarm and here (5 s fixes at the line) could
+  // re-arm the watchdog, and a Stop never sets raceFinished. From here on
+  // onAlive sees no session and does nothing. Never throws.
+  await trackingSafetyService.disarm();
   await AsyncStorage.removeItem(LAST_SENT_KEY);
   await AsyncStorage.removeItem(LAST_POSITION_KEY);
   await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
@@ -3037,6 +3054,12 @@ export const headlessTask = async (event: { name: string; params: any }): Promis
         await addLog('⚠️', 'Headless wake — location payload missing valid lat/lon, skipped');
       }
     } else if (event.name === 'heartbeat') {
+      // The engine is alive even without a fix (aid station indoors, under
+      // cover): counts as a sign of life after the gun, as the foreground
+      // heartbeat does. Without it a killed-Livio runner standing still got the
+      // 15-min watchdog (2026-10-28 review). onAlive ignores a finished/stopped
+      // session; never throws.
+      if (!(await isRaceNotStarted())) await trackingSafetyService.onAlive();
       // Heartbeat carries no coords in event.params — fetch one. Same options as
       // the foreground heartbeat. Wrapped so a fetch failure (no fix in a dead
       // zone) can't throw out of the headless task. getCurrentPosition does NOT
@@ -3146,6 +3169,9 @@ const _rehydrateTrackingOnBoot = async (): Promise<void> => {
     if (finished === '1') {
       // Race over. With startOnBoot:true the engine can come up running after a
       // reboot that interrupted a stop — shut it down rather than just bailing.
+      // Also clear the safety notifications: a kill between the finish flag and
+      // the disarm (drain path) left the watchdog armed. Never throws.
+      await trackingSafetyService.disarm();
       try {
         const st = await BackgroundGeolocation.getState();
         if (st.enabled) {
