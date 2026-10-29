@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { View, Text, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +18,9 @@ import { gpxService, GPXRouteData } from '../services/gpxService';
 import { buildChartData } from '../utils/geoUtils';
 import { ParticipantMapMarker, AidStationMapMarker, PopupState, CheckpointData } from '../types/liveTracking';
 import { useFollowManager } from '../hooks/useFollowManager';
+import { followedBibsForEvent } from '../utils/liveMapBibs';
+import { isCurrentLiveResponse, dropClearsLoading, ownsError, liveFollowsKey } from '../utils/liveMapRequests';
+import { useFocusEffect } from '@react-navigation/native';
 import { commonStyles, palette } from '../styles/common.styles';
 import { liveTrackingStyles, ELEVATION_PANEL_HEIGHT } from '../styles/liveTracking.styles';
 import { useLandscapeSidePadding, useSafeAreaEdges } from '../hooks/useLandscapeSidePadding';
@@ -65,7 +68,19 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     // same button covered the panel's ELEVATION / D+ header.
     const [mapAreaHeight, setMapAreaHeight] = useState(0);
     const isCustomEvent = event_source === 'custom';
-    const { followedUsers } = useFollowManager(t);
+    const { followedUsers, followedBibs, refreshFollowedUsers } = useFollowManager(t);
+    // ✅ [#MAP-BIB-FOLLOWS] Runners followed BY BIB on this event (feedback #31:
+    // a fan who followed bib 450 saw them on Result Details but an empty map).
+    // The joined key is the effect dependency — followedBibs is a new Map on
+    // every reload even when nothing changed.
+    const eventBibs = useMemo(
+        () => followedBibsForEvent(followedBibs, product_app_id, event_source),
+        [followedBibs, product_app_id, event_source],
+    );
+    const eventBibsKey = eventBibs.join(',');
+    // Accounts + bibs as one stable key: a follow or unfollow of either kind
+    // (also one made on another screen, picked up on focus below) refreshes the map.
+    const followsKey = useMemo(() => liveFollowsKey(followedUsers, eventBibs), [followedUsers, eventBibs]);
     const [routeData, setRouteData] = useState<GPXRouteData | null>(null);
     const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
     const [participants, setParticipants] = useState<LiveTrackingParticipant[]>([]);
@@ -126,6 +141,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [followerLocation, setFollowerLocation] = useState<{ lat: number; lon: number } | null>(null);
 
     const hasLoadedInitialData = useRef(false);
+    // followsKey of the last live-tracking request (see the follow refresh effect).
+    const sentFollowsKey = useRef('');
+    // Which answer may still be applied — see utils/liveMapRequests.
+    const requestSeq = useRef(0);
+    const lastAppliedSeq = useRef(0);
+    const wantedDistanceId = useRef<number | null>(null);
+    // Running requests: seq → the distance each asks for (null until known).
+    const inFlightDistance = useRef(new Map<number, number | null>());
     const { error, hasError, handleApiError, clearError } = useScreenError();
 
     const participantMarkers: ParticipantMapMarker[] = useMemo(() => {
@@ -291,8 +314,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             const usersArray = Array.from(followedUsers);
             console.log('🔍 Checking followed users:', usersArray);
 
-            if (usersArray.length > 0) {
-                console.log('✅ Followed users ready:', usersArray);
+            if (usersArray.length > 0 || eventBibs.length > 0) {
+                console.log('✅ Followed users ready:', usersArray, 'bibs:', eventBibs);
                 hasLoadedInitialData.current = true;
                 loadLiveTrackingData(false);
             }
@@ -316,7 +339,31 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             clearTimeout(timer2);
             clearTimeout(finalTimer);
         };
-    }, [followedUsers, product_option_value_app_id]);
+    }, [followedUsers, eventBibsKey, product_option_value_app_id]);
+
+    // A runner followed or unfollowed after the first load — by bib or by
+    // account, here or on another screen (focus below), or follows that loaded
+    // late — shows on the map now instead of at the next 60 s refresh.
+    // `loading` is a dep and sentFollowsKey remembers what the last request
+    // carried: follows that arrive WHILE a load is in flight are sent as soon as
+    // it ends (the effect used to return on `loading` and never re-run).
+    useEffect(() => {
+        if (!hasLoadedInitialData.current || loading) return;
+        if (sentFollowsKey.current === followsKey) return;
+        loadLiveTrackingData(true);
+    }, [followsKey, loading]);
+
+    // Back on this screen (e.g. from Result Details, where a runner was just
+    // followed): re-read the follows. useFollowManager only loads them on
+    // mount, so the map kept the list it opened with (2026-10-28 review). The
+    // first focus is the mount itself, which already loads them.
+    const focusedOnce = useRef(false);
+    useFocusEffect(
+        useCallback(() => {
+            if (!focusedOnce.current) { focusedOnce.current = true; return; }
+            void refreshFollowedUsers();
+        }, [refreshFollowedUsers])
+    );
 
     useEffect(() => {
         if (!hasLoadedInitialData.current || loading) return;
@@ -331,9 +378,28 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
             console.log('🛑 Clearing refresh interval');
             clearInterval(interval);
         };
-    }, [hasLoadedInitialData.current, loading, selectedDistance, followedUsers, refreshMs]);
+    // followsKey, not the followedUsers Set: the focus reload makes a new Set every
+    // time, which would restart the 60 s countdown on each return to the screen.
+    }, [hasLoadedInitialData.current, loading, selectedDistance, followsKey, refreshMs]);
 
     const loadLiveTrackingData = async (autoRefresh: boolean, overrideDistance?: DistanceOption | null) => {
+        // Tag this request (utils/liveMapRequests): its answer is only applied
+        // when it is still for the distance on screen and nothing newer is shown.
+        const seq = ++requestSeq.current;
+        let requestedDistanceId: number | null = null;
+        const isCurrent = () => isCurrentLiveResponse(
+            { seq, distanceId: requestedDistanceId },
+            { lastAppliedSeq: lastAppliedSeq.current, wantedDistanceId: wantedDistanceId.current },
+        );
+        // A dropped answer still clears the spinners when nothing else is loading.
+        const dropStale = () => {
+            console.log('⏭️ Live tracking answer dropped (older or for another distance)', { seq, requestedDistanceId });
+            if (dropClearsLoading(inFlightDistance.current.size - 1)) {
+                setLoading(false);
+                setParticipantsLoading(false);
+            }
+        };
+        inFlightDistance.current.set(seq, null);
         try {
             if (!autoRefresh) {
                 setLoading(true);
@@ -342,6 +408,21 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
             setParticipantsLoading(true);
             console.log('📡 Fetching live tracking data...', { autoRefresh });
+
+            // ✅ Determine which product_option_value_app_id to use. Before the
+            // first await, so a request that fails early is still judged by the
+            // distance it was for (catch below).
+            const activeDistance = overrideDistance !== undefined ? overrideDistance : selectedDistance;
+
+            let optionValueId: number | undefined;
+
+            if (activeDistance) {
+                optionValueId = activeDistance.product_option_value_app_id;
+            } else if (product_option_value_app_id && product_option_value_app_id > 0) {
+                optionValueId = product_option_value_app_id;
+            }
+            requestedDistanceId = optionValueId ?? null;
+            inFlightDistance.current.set(seq, requestedDistanceId);
 
             // ✅ Include the logged-in user's own customer ID so they can
             // track themselves on the map, in addition to followed users.
@@ -352,17 +433,6 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
             console.log('👥 Customer IDs (self + followed):', customerAppIds);
 
-            // ✅ Determine which product_option_value_app_id to use
-            const activeDistance = overrideDistance !== undefined ? overrideDistance : selectedDistance;
-
-            let optionValueId: number | undefined;
-
-            if (activeDistance) {
-                optionValueId = activeDistance.product_option_value_app_id;
-            } else if (product_option_value_app_id && product_option_value_app_id > 0) {
-                optionValueId = product_option_value_app_id;
-            }
-
             console.log('📊 Request params:', {
                 product_app_id,
                 product_option_value_app_id: optionValueId,
@@ -370,13 +440,17 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 event_source
             });
 
+            sentFollowsKey.current = followsKey;
             const response = await liveTrackingService.getLiveTrackingData(
                 product_app_id,
                 customerAppIds,
                 optionValueId,
                 autoRefresh,
-                event_source
+                event_source,
+                eventBibs
             );
+            if (!isCurrent()) { dropStale(); return; }
+            lastAppliedSeq.current = seq;
 
             console.log('✅ Live tracking data received:', {
                 participants: response.data.participants.length,
@@ -441,6 +515,24 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                             if (matchedDistance) {
                                 console.log('✅ Setting distance from route params:', matchedDistance.distance_name);
                                 setSelectedDistance(matchedDistance);
+                                wantedDistanceId.current = matchedDistance.product_option_value_app_id;
+                                // Which distance did this answer really carry? The
+                                // bottom tab bar sends id 0 + the label, so the API
+                                // answers with ITS default — possibly another
+                                // distance than the label's (2026-10-28 review: the
+                                // default's runners and route were drawn under the
+                                // label's name until a manual switch).
+                                const answeredId = response.data.selected_distance?.product_option_value_app_id ?? requestedDistanceId;
+                                if (answeredId !== null && answeredId !== matchedDistance.product_option_value_app_id) {
+                                    console.log('🔁 Answer was for another distance — loading the labelled one');
+                                    void loadLiveTrackingData(false, matchedDistance);
+                                    dropStale();   // that load is in flight, so the spinner stays
+                                    return;
+                                }
+                                // This answer IS for that distance: its GPX check
+                                // below must not drop it.
+                                requestedDistanceId = matchedDistance.product_option_value_app_id;
+                                inFlightDistance.current.set(seq, requestedDistanceId);
                             }
                             // ✅ Priority 2: API default
                         } else if (response.data.selected_distance) {
@@ -450,6 +542,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                             if (apiSelectedDistance) {
                                 console.log('✅ Setting distance from API:', apiSelectedDistance.distance_name);
                                 setSelectedDistance(apiSelectedDistance);
+                                wantedDistanceId.current = apiSelectedDistance.product_option_value_app_id;
+                                requestedDistanceId = apiSelectedDistance.product_option_value_app_id;
+                                inFlightDistance.current.set(seq, requestedDistanceId);
                             }
                         }
                     }
@@ -465,7 +560,10 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     console.log('✅ Using cached GPX data', newGpxUrl);
                     if (loadedGpxUrl !== newGpxUrl) {
                         console.log('📂 GPX URL changed, loading new GPX');
-                        await loadGPX(newGpxUrl);
+                        // The GPX download is a second wait: a newer answer
+                        // (another distance) may have been shown meanwhile.
+                        const applied = await loadGPX(newGpxUrl, isCurrent);
+                        if (!applied) { dropStale(); return; }
                         setLoadedGpxUrl(newGpxUrl);
                     } else {
                         console.log('✅ Using cached GPX data');
@@ -491,11 +589,24 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
             setTimeout(() => {
                 console.log('✅ Participants rendering complete');
-                setParticipantsLoading(false);
+                // Not while another request (e.g. a follow refresh) still loads:
+                // that one ends the spinner itself.
+                if (inFlightDistance.current.size === 0) setParticipantsLoading(false);
             }, 200);
 
         } catch (err) {
             console.error('❌ Error loading live tracking data:', err);
+            const others = [...inFlightDistance.current.entries()]
+                .filter(([s]) => s !== seq)
+                .map(([s, d]) => ({ seq: s, distanceId: d }));
+            // Overtaken (a newer answer is on screen) or for a distance the user
+            // left: its failure says nothing about the map shown now — never put
+            // the error screen over it. Otherwise a newer request still under
+            // way owns the screen (and its error).
+            if (!isCurrent() || !ownsError(seq, others, wantedDistanceId.current)) {
+                if (dropClearsLoading(others.length)) { setLoading(false); setParticipantsLoading(false); }
+                return;
+            }
             handleApiError(err);
             setLoading(false);
             setParticipantsLoading(false);
@@ -506,10 +617,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     t('livetracking:errorLoadingData')
                 );
             }
+        } finally {
+            inFlightDistance.current.delete(seq);
         }
     };
 
-    const loadGPX = async (gpxUrl: string) => {
+    // Returns false (and changes nothing) when stillCurrent() says the answer
+    // that asked for this route is no longer the one on screen.
+    const loadGPX = async (gpxUrl: string, stillCurrent: () => boolean = () => true): Promise<boolean> => {
         try {
             console.log('📂 Loading GPX from:', gpxUrl);
             const gpxData = await gpxService.fetchAndParseGPX(gpxUrl);
@@ -547,10 +662,15 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 lastPoint: chart[chart.length - 1],
             });
 
+            if (!stillCurrent()) {
+                console.log('⏭️ GPX dropped: another distance is on screen now');
+                return false;
+            }
             setRouteData(gpxData);
             setChartData(chart);
 
             console.log('✅ GPX loaded successfully');
+            return true;
         } catch (err) {
             console.error('❌ Error loading GPX:', err);
             throw err;
@@ -581,6 +701,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         }
 
         setSelectedDistance(distance);
+        // Synchronously, before any request: an auto refresh still holding the
+        // old distance in its closure is dropped from here on.
+        wantedDistanceId.current = distance.product_option_value_app_id;
         setLoading(true);
         await loadLiveTrackingData(false, distance);
     };
