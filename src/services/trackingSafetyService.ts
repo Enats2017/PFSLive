@@ -77,6 +77,19 @@ const NOT_SENDING_WARNED_KEY = '@PFSLive:safetyNotSendingWarnedFor';
 // Same literal as locationQueueService's QUEUE_COUNT_KEY — re-declared, not
 // imported, like the other cross-service keys (no import cycles).
 const QUEUE_COUNT_KEY = '@PFSLive:locationQueueCount';
+// gpsService's RACE_FINISHED_KEY / TRACKING_PARAMS_KEY, re-declared the same way.
+const RACE_FINISHED_KEY = '@PFSLive:raceFinished';
+const TRACKING_PARAMS_KEY = '@PFSLive:trackingParams';
+
+// Session over (finished, or stopped: params removed)? A sign of life that
+// lands after that must not re-arm the watchdog (2026-10-28: a heartbeat in
+// flight while the finish disarmed rescheduled "Livio stopped tracking").
+const sessionOver = async (): Promise<boolean> => {
+  try {
+    return (await AsyncStorage.getItem(RACE_FINISHED_KEY)) === '1'
+        || (await AsyncStorage.getItem(TRACKING_PARAMS_KEY)) === null;
+  } catch { return false; }
+};
 
 let _lastSentWriteAt = 0;   // per JS context; only throttles the write
 
@@ -176,6 +189,15 @@ export const trackingSafetyService = {
       if (plan.earlyAt !== null) {
         await schedule(SAFETY_EARLY_ID, plan.earlyAt, i18n.t('home:safety.earlyTitle'), i18n.t('home:safety.earlyBody'));
       }
+      // The engine already runs: a fix after the gun can reach onAlive while
+      // this was scheduling. It then set ALIVE_SEEN and cancelled a check that
+      // did not exist yet, and no later onAlive cancels it any more ("not
+      // tracking yet" for a healthy runner, 2026-10-28 review). Alive → take
+      // both back now.
+      if ((await AsyncStorage.getItem(ALIVE_SEEN_KEY)) !== null) {
+        await cancel(SAFETY_CHECK_ID);
+        await cancel(SAFETY_EARLY_ID);
+      }
     } catch { /* notifications denied / unavailable — never block tracking */ }
     return plan;
   },
@@ -183,6 +205,7 @@ export const trackingSafetyService = {
   /** A sign of life after the gun (send path or heartbeat). Cheap on every fix. Never throws. */
   async onAlive(now: number = Date.now()): Promise<void> {
     try {
+      if (await sessionOver()) return;
       if ((await AsyncStorage.getItem(ALIVE_SEEN_KEY)) === null) {
         await AsyncStorage.setItem(ALIVE_SEEN_KEY, String(now));
         await cancel(SAFETY_CHECK_ID);
@@ -193,6 +216,8 @@ export const trackingSafetyService = {
       if (!shouldRescheduleWatchdog(last === null || isNaN(last) ? null : last, now)) return;
       await AsyncStorage.setItem(WATCHDOG_AT_KEY, String(now));
       await schedule(SAFETY_WATCHDOG_ID, now + WATCHDOG_MS, i18n.t('home:safety.watchdogTitle'), i18n.t('home:safety.watchdogBody'));
+      // The finish may have disarmed while we were scheduling: take it back.
+      if (await sessionOver()) { await cancel(SAFETY_WATCHDOG_ID); return; }
       // Same once-a-minute cadence as the watchdog (fixes and the 60 s heartbeat).
       await checkNotSending(now);
     } catch { /* never affect tracking */ }

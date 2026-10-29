@@ -122,30 +122,39 @@ export function useFollowManager(
   const loadFollowedData = useCallback(async () => {
     try {
       const customers = await getFollowedUsers();
-      setFollowedUsers(new Set(customers));
 
       const bibMap = new Map<number, Set<string>>();
 
-      const allBibsRaw = await AsyncStorage.getItem("followed_bibs_by_product");
-      if (allBibsRaw) {
-        const allBibsParsed = JSON.parse(allBibsRaw) as Record<
-          string,
-          string[]
-        >;
+      try {
+        const allBibsRaw = await AsyncStorage.getItem("followed_bibs_by_product");
+        if (allBibsRaw) {
+          const allBibsParsed = JSON.parse(allBibsRaw) as Record<
+            string,
+            string[]
+          >;
 
-        Object.entries(allBibsParsed).forEach(([prodId, bibs]) => {
-          const numProdId = Number(prodId);
-          if (
-            !isNaN(numProdId) &&
-            numProdId > 0 &&
-            Array.isArray(bibs) &&
-            bibs.length > 0
-          ) {
-            bibMap.set(numProdId, new Set(bibs));
-          }
-        });
+          Object.entries(allBibsParsed).forEach(([prodId, bibs]) => {
+            const numProdId = Number(prodId);
+            if (
+              !isNaN(numProdId) &&
+              numProdId > 0 &&
+              Array.isArray(bibs) &&
+              bibs.length > 0
+            ) {
+              bibMap.set(numProdId, new Set(bibs));
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load followed bibs:", error);
       }
 
+      // ✅ Set BOTH in the same tick so they land in one render. Users used to
+      // be set before the bib read (an await in between), so the live map's
+      // first load could fire with the users and no bibs yet — a fan who
+      // follows by bib then saw an empty map until the next 60 s refresh
+      // ([#MAP-BIB-FOLLOWS], 2026-10-26).
+      setFollowedUsers(new Set(customers));
       setFollowedBibs(bibMap);
     } catch (error) {
       console.error("Failed to load follow data:", error);

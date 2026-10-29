@@ -1,0 +1,120 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * Tests for liveMapBibs.ts. Run: npm run test:live-map-bibs
+ *
+ * No test framework in this repo - plain asserts, exit code 1 on failure.
+ * The map is the shape useFollowManager builds from followStorage's
+ * 'followed_bibs_by_product' (product_app_id → bibs).
+ */
+const assert_1 = __importDefault(require("assert"));
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
+const liveMapBibs_1 = require("./liveMapBibs");
+let passed = 0;
+let failed = 0;
+function test(name, fn) {
+    try {
+        fn();
+        passed++;
+        console.log(`  PASS  ${name}`);
+    }
+    catch (e) {
+        failed++;
+        console.log(`  FAIL  ${name}\n        ${e.message}`);
+    }
+}
+const follows = new Map([
+    [20, new Set(['450', '1A', '170C'])], // Grizzly100: feedback #31 followed bib 450
+    [13, new Set(['450'])],
+]);
+console.log('== followed bibs sent by the live map ==');
+test('partner event: its own bibs, sorted (stable cache key / effect dep)', () => {
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(follows, 20, 'partner'), ['170C', '1A', '450']);
+});
+test('event_source missing = partner (the route param is optional)', () => {
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(follows, 20, undefined), ['170C', '1A', '450']);
+});
+test('only this event: bib 450 on event 13 is not sent for event 20 and vice versa', () => {
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(follows, 13, 'partner'), ['450']);
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(new Map([[13, new Set(['9'])]]), 20, 'partner'), []);
+});
+test('custom event with the same number → nothing (other id space)', () => {
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(follows, 20, 'custom'), []);
+});
+test('string product id from a route param still matches', () => {
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(follows, '20', 'partner'), ['170C', '1A', '450']);
+});
+test('no follows / bad id → nothing', () => {
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(new Map(), 20, 'partner'), []);
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(follows, 0, 'partner'), []);
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(follows, NaN, 'partner'), []);
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(follows, null, 'partner'), []);
+});
+test('a bib stored as a NUMBER (raw JSON from storage) is sent as text', () => {
+    const raw = new Map([[20, new Set([450, '1A'])]]);
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(raw, 20, 'partner'), ['1A', '450']);
+});
+test('blank bibs are dropped', () => {
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(new Map([[20, new Set([' ', '450 '])]]), 20, 'partner'), ['450']);
+});
+test('an event with an empty bib set → nothing, and the field is left out', () => {
+    const none = (0, liveMapBibs_1.followedBibsForEvent)(new Map([[20, new Set()]]), 20, 'partner');
+    assert_1.default.deepStrictEqual(none, []);
+    assert_1.default.strictEqual((0, liveMapBibs_1.liveTrackingBibsParam)(none, 'partner'), null);
+});
+test('bibs that only look numeric stay as typed: "0450" and "450" are two runners', () => {
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(new Map([[20, new Set(['450', '0450'])]]), 20, 'partner'), ['0450', '450']);
+});
+test('sort is by text, so the key is stable: "1269" before "410"', () => {
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(new Map([[20, new Set(['410', '1269'])]]), 20, 'partner'), ['1269', '410']);
+});
+test('the same bib with and without spaces is sent once', () => {
+    assert_1.default.deepStrictEqual((0, liveMapBibs_1.followedBibsForEvent)(new Map([[20, new Set([' 450', '450', '450 ', '12'])]]), 20, 'partner'), ['12', '450']);
+});
+console.log('== the `bibs` request field ==');
+test('bibs followed → comma list (what the API sanitises and resolves)', () => {
+    assert_1.default.strictEqual((0, liveMapBibs_1.liveTrackingBibsParam)(['170C', '1A', '450'], 'partner'), '170C,1A,450');
+    assert_1.default.strictEqual((0, liveMapBibs_1.liveTrackingBibsParam)(['450'], undefined), '450');
+});
+test('none followed → field left out, so the request is exactly the old one', () => {
+    assert_1.default.strictEqual((0, liveMapBibs_1.liveTrackingBibsParam)([], 'partner'), null);
+});
+test('custom event → field left out even if bibs were passed', () => {
+    assert_1.default.strictEqual((0, liveMapBibs_1.liveTrackingBibsParam)(['450'], 'custom'), null);
+});
+// The screen and the hook need React / Expo to run, so their wiring is checked
+// in the source: a refactor that drops it fails here, not silently on a race day.
+console.log('== wiring (source) ==');
+const src = (p) => fs_1.default.readFileSync(path_1.default.join(process.cwd(), 'src', p), 'utf8');
+test('LiveTrackingScreen sends this event\'s followed bibs with every live-tracking request', () => {
+    const s = src('screens/LiveTrackingScreen.tsx');
+    assert_1.default.ok(/const \{ followedUsers, followedBibs, refreshFollowedUsers \} = useFollowManager\(t\)/.test(s), 'reads followedBibs from useFollowManager');
+    assert_1.default.ok(/followedBibsForEvent\(followedBibs, product_app_id, event_source\)/.test(s), 'filters them to this event');
+    assert_1.default.ok(/getLiveTrackingData\([^)]*event_source,\s*eventBibs\s*\)/.test(s), 'passes eventBibs to getLiveTrackingData');
+    assert_1.default.ok(/usersArray\.length > 0 \|\| eventBibs\.length > 0/.test(s), 'first load also starts for a bib-only follower');
+    assert_1.default.ok(/\}, \[followedUsers, eventBibsKey, product_option_value_app_id\]\)/.test(s), 'first-load effect re-arms when the bibs arrive');
+    assert_1.default.ok(/liveFollowsKey\(followedUsers, eventBibs\)/.test(s), 'one key for followed accounts + bibs');
+    assert_1.default.ok(/\}, \[followsKey, loading\]\)/.test(s), 'a follow change (bib or account) refreshes the map, also once a load in flight ends');
+    assert_1.default.ok(/sentFollowsKey\.current === followsKey\) return;/.test(s), 'no extra request when the follows were already sent');
+    const set = s.indexOf('sentFollowsKey.current = followsKey;');
+    assert_1.default.ok(set > 0 && set < s.indexOf('await liveTrackingService.getLiveTrackingData('), 'every request records the follows it carries');
+});
+test('liveTrackingService puts the field on the request via liveTrackingBibsParam', () => {
+    const s = src('services/liveTrackingService.ts');
+    assert_1.default.ok(/followedBibs: string\[\] = \[\]/.test(s), 'optional last parameter, old callers unchanged');
+    assert_1.default.ok(/liveTrackingBibsParam\(followedBibs, eventSource\)/.test(s));
+    assert_1.default.ok(/requestBody\.bibs = bibsParam/.test(s));
+});
+test('useFollowManager sets followed users AFTER the bib read (one render with both)', () => {
+    const s = src('hooks/useFollowManager.ts');
+    const read = s.indexOf('AsyncStorage.getItem("followed_bibs_by_product")');
+    const setUsers = s.indexOf('setFollowedUsers(new Set(customers))');
+    const setBibs = s.indexOf('setFollowedBibs(bibMap)');
+    assert_1.default.ok(read > 0 && setUsers > read && setBibs > setUsers, `read ${read} < setUsers ${setUsers} < setBibs ${setBibs}`);
+});
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);
