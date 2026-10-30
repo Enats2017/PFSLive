@@ -22,6 +22,7 @@
     "test:favourite-status": "tsc src/screens/FavouriteScreen/favouriteStatus.ts src/screens/FavouriteScreen/favouriteStatus.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/screens/FavouriteScreen/favouriteStatus.test.js",
     "test:live-map-bibs": "tsc src/utils/liveMapBibs.ts src/utils/liveMapBibs.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/utils/liveMapBibs.test.js",
     "test:result-detail-view": "tsc src/screens/ResultDetailsScreen/resultDetailView.ts src/screens/ResultDetailsScreen/resultDetailView.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/screens/ResultDetailsScreen/resultDetailView.test.js",
+    "test:profile-load-error": "tsc src/services/profileLoadError.ts src/services/profileLoadError.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/services/profileLoadError.test.js",
     "test:live-map-requests": "tsc src/utils/liveMapRequests.ts src/utils/liveMapRequests.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/utils/liveMapRequests.test.js"
   },
   "dependencies": {

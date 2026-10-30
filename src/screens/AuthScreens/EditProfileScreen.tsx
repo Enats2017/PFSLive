@@ -26,6 +26,9 @@ import { needsParentConsent } from '../../services/validation/authValidation'
 import { fetchProfileApi } from '../../services/profileServices'
 import { tokenService } from '../../services/tokenService'
 import { AppHeader } from '../../components/common/AppHeader'
+import ErrorScreen from '../../components/ErrorScreen'
+import { useScreenError } from '../../hooks/useApiError'
+import { useSessionExpired } from '../../hooks/useSessionExpired'
 import { profileStyles } from '../../styles/Profile.styles'
 import { toastSuccess, toastError } from '../../../utils/toast'
 import { API_CONFIG } from '../../constants/config'
@@ -42,7 +45,7 @@ const GENDER_VALUES = [
 ] as const
 
 const EditProfileScreen = () => {
-    const { t } = useTranslation(['profile', 'common'])
+    const { t } = useTranslation(['profile', 'common', 'errorScreen'])
     // ✅ Notch clearance for the body in landscape (edges are ['bottom'] here).
     const sidePadding = useLandscapeSidePadding()
     const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
@@ -54,7 +57,8 @@ const EditProfileScreen = () => {
     const pairRowStyle = stackPairs ? undefined : profileStyles.fieldRow
     const pairHalfStyle = stackPairs ? undefined : profileStyles.fieldHalf
     const [profileLoading, setProfileLoading] = useState(true)
-    const [profileError, setProfileError] = useState('')
+    const { error: profileError, isAuthError, handleApiError, clearError } = useScreenError()
+    const handleSessionExpired = useSessionExpired()
     const [profile, setProfile] = useState<Awaited<ReturnType<typeof fetchProfileApi>> | null>(null)
     const [showEmailConfirm, setShowEmailConfirm] = useState(false)
     const [pendingBusy, setPendingBusy] = useState(false)
@@ -73,13 +77,24 @@ const EditProfileScreen = () => {
         value
     }))
 
-   const loadProfile = useCallback(async () => {
+    // ✅ Errors go through useScreenError + ErrorScreen, not raw text. The old
+    //    catch printed e.message, which is the bare API code — a deleted account
+    //    showed "account_not_found" with no way out. fetchProfileApi maps that
+    //    code to session_expired, so isAuthError offers Log In (useSessionExpired
+    //    clears the stored token and resets to LoginScreen).
+    //    Stays async: the pending-email confirm/cancel handlers await it.
+    //    No setProfileLoading(true) here: handleApiError changes with the
+    //    language, so this re-runs after a language save (as the old [t] effect
+    //    did) and must refetch quietly, without swapping the form for a spinner
+    //    while handleSave is still navigating. Only the retry button shows it.
+    const loadProfile = useCallback(async () => {
+        clearError()
         try {
             setProfile(await fetchProfileApi())
-        } catch (e: any) {
-            setProfileError(e?.message || t('profile:errors.load_profile_failed'))
+        } catch (e) {
+            handleApiError(e)
         }
-    }, [t])
+    }, [clearError, handleApiError])
 
     useEffect(() => {
         loadProfile().finally(() => setProfileLoading(false))
@@ -354,10 +369,13 @@ const EditProfileScreen = () => {
         return (
             <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={t('common:band.account')} showLogo={true} showBack />
-                <View style={commonStyles.centerContainer}>
-                    <Ionicons name="warning-outline" size={40} color={palette.danger} />
-                    <Text style={commonStyles.errorText}>{profileError}</Text>
-                </View>
+                <ErrorScreen
+                    type={profileError.type}
+                    title={profileError.title}
+                    message={profileError.message}
+                    buttonLabel={isAuthError ? t('errorScreen:codes.session_expired.button') : undefined}
+                    onRetry={isAuthError ? () => { void handleSessionExpired() } : () => { setProfileLoading(true); void loadProfile().finally(() => setProfileLoading(false)) }}
+                />
             </SafeAreaView>
         )
     }
