@@ -24,6 +24,9 @@ import { needsParentConsent } from '../../services/validation/authValidation'
 import { fetchProfileApi } from '../../services/profileServices'
 import { tokenService } from '../../services/tokenService'
 import { AppHeader } from '../../components/common/AppHeader'
+import ErrorScreen from '../../components/ErrorScreen'
+import { useScreenError } from '../../hooks/useApiError'
+import { useSessionExpired } from '../../hooks/useSessionExpired'
 import { profileStyles } from '../../styles/Profile.styles'
 import { toastSuccess, toastError } from '../../../utils/toast'
 import { API_CONFIG } from '../../constants/config'
@@ -39,9 +42,10 @@ const GENDER_VALUES = [
 ] as const
 
 const EditProfileScreen = () => {
-    const { t } = useTranslation(['profile', 'common'])
+    const { t } = useTranslation(['profile', 'common', 'errorScreen'])
     const [profileLoading, setProfileLoading] = useState(true)
-    const [profileError, setProfileError] = useState('')
+    const { error: profileError, isAuthError, handleApiError, clearError } = useScreenError()
+    const handleSessionExpired = useSessionExpired()
     const [profile, setProfile] = useState<Awaited<ReturnType<typeof fetchProfileApi>> | null>(null)
 
     // ✅ Language options — id matches API expectation
@@ -58,12 +62,26 @@ const EditProfileScreen = () => {
         value
     }))
 
-    useEffect(() => {
+    // ✅ Errors go through useScreenError + ErrorScreen, not raw text. The old
+    //    catch printed e.message, which is the bare API code — a deleted account
+    //    showed "account_not_found" with no way out. fetchProfileApi maps that
+    //    code to session_expired, so isAuthError offers Log In (useSessionExpired
+    //    clears the stored token and resets to LoginScreen).
+    //    No setProfileLoading(true) here: handleApiError changes with the
+    //    language, so this re-runs after a language save (as the old [t] effect
+    //    did) and must refetch quietly, without swapping the form for a spinner
+    //    while handleSave is still navigating. Only the retry button shows it.
+    const loadProfile = useCallback(() => {
+        clearError()
         fetchProfileApi()
             .then(setProfile)
-            .catch((e) => setProfileError(e.message || t('profile:errors.load_profile_failed')))
+            .catch(handleApiError)
             .finally(() => setProfileLoading(false))
-    }, [t])
+    }, [clearError, handleApiError])
+
+    useEffect(() => {
+        loadProfile()
+    }, [loadProfile])
 
     const {
         form, setField,
@@ -232,10 +250,13 @@ const EditProfileScreen = () => {
             <SafeAreaView style={commonStyles.container} edges={['top']}>
                 <StatusBar barStyle="dark-content" />
                 <AppHeader showLogo={true} showBack />
-                <View style={commonStyles.centerContainer}>
-                    <Ionicons name="warning-outline" size={40} color="#e8341a" />
-                    <Text style={commonStyles.errorText}>{profileError}</Text>
-                </View>
+                <ErrorScreen
+                    type={profileError.type}
+                    title={profileError.title}
+                    message={profileError.message}
+                    buttonLabel={isAuthError ? t('errorScreen:codes.session_expired.button') : undefined}
+                    onRetry={isAuthError ? () => { void handleSessionExpired() } : () => { setProfileLoading(true); loadProfile() }}
+                />
             </SafeAreaView>
         )
     }
