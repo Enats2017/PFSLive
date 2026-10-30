@@ -190,6 +190,10 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
           case 'no_changes':
             toastError(t('common:errors.generic'), t('personal:errors.noChanges'));
             break;
+          // Server lock (2026-10-30): > 10 min tracked — same rule that hides Edit on Profile.
+          case 'tracking_already_started':
+            toastError(t('common:errors.generic'), t('personal:errors.trackingStarted'));
+            break;
           case 'product_custom_app_id_invalid':
             toastError(t('common:errors.generic'), t('personal:errors.invalidEventId'));
             break;

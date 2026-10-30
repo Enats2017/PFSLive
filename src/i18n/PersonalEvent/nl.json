@@ -45,6 +45,7 @@
     "participantInsertFailed": "Evenement aangemaakt maar registratie mislukt. Probeer opnieuw.",
     "eventNotFound": "Evenement niet gevonden. Het is mogelijk verwijderd.",
     "noChanges": "Er zijn geen wijzigingen aangebracht.",
+    "trackingStarted": "Dit evenement kan niet meer worden bewerkt omdat de tracking al is gestart.",
     "invalidEventId": "Ongeldig evenement. Ga terug en probeer opnieuw.",
     "categoryRequired": "Selecteer een categorietype",
     "categoryInvalid": "Selecteer een geldige categorie"

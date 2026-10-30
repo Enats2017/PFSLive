@@ -500,9 +500,12 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                 await fetchProfile(true);
                 toastSuccess(t('ownProfile:deleteEvent.deleteSuccess'));
             } else if (action === 'tracking_already_started') {
+                // ✅ Not deleted (2026-10-30): this said "Event deleted successfully"
+                // and kept the stale list. Say why, and refetch so the card loses
+                // Delete and Edit as the server now reports it.
                 setDeleteTarget(null);
-                handleApiError(t('ownProfile:deleteEvent.trackingStartedError'));
-                toastSuccess(t('ownProfile:deleteEvent.deleteSuccess'));
+                toastError(t('ownProfile:deleteEvent.trackingStartedError'));
+                await fetchProfile(true);
             }
         } catch (err) {
             handleApiError(err);

@@ -40,6 +40,19 @@ module.exports = ({ M, load, test, SRC }) => {
     const s = read('screens/ProfileScreen/EventCardLive.tsx');
     assert.ok(/disabled=\{isEditDisabled\}/.test(s), 'finished partner event: still disabled');
   });
+  test('…the server lock reaches the user: edit screen names it (en/fr/nl); a refused delete no longer says "deleted", it refetches', () => {
+    const e = read('screens/PersonalEventScreen/EditPersonalEvent.tsx');
+    assert.ok(/case 'tracking_already_started':\s*toastError\(t\('common:errors\.generic'\), t\('personal:errors\.trackingStarted'\)\);/.test(e));
+    for (const l of ['en', 'fr', 'nl']) {
+      const j = JSON.parse(read(`i18n/PersonalEvent/${l}.json`));
+      assert.ok(j.errors && typeof j.errors.trackingStarted === 'string' && j.errors.trackingStarted.length > 20, l);
+    }
+    const o = read('screens/ProfileScreen/OwnProfile.tsx');
+    const branch = o.slice(o.indexOf("} else if (action === 'tracking_already_started') {"), o.indexOf('} catch (err) {', o.indexOf("action === 'tracking_already_started'")));
+    assert.ok(/toastError\(t\('ownProfile:deleteEvent\.trackingStartedError'\)\);/.test(branch), 'says why');
+    assert.ok(/await fetchProfile\(true\);/.test(branch), 'refetch: the card loses Delete and Edit');
+    assert.ok(!/deleteSuccess/.test(branch) && !/handleApiError/.test(branch), 'no "Event deleted successfully", no error screen');
+  });
   test('…someone else\'s profile: View only, as before', () => {
     assert.deepStrictEqual(icons(ev({}), false), ['eye-outline']);
   });

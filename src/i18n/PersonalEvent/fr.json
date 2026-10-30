@@ -45,6 +45,7 @@
     "participantInsertFailed": "Événement créé mais l'inscription a échoué. Veuillez réessayer.",
     "eventNotFound": "Événement introuvable. Il a peut-être été supprimé.",
     "noChanges": "Aucune modification n'a été apportée à l'événement.",
+    "trackingStarted": "Cet événement ne peut plus être modifié, car le suivi a déjà commencé.",
     "invalidEventId": "Événement invalide. Veuillez revenir en arrière et réessayer.",
     "categoryRequired": "Veuillez sélectionner un type de catégorie",
     "categoryInvalid": "Veuillez sélectionner une catégorie valide"

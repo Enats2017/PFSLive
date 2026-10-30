@@ -45,6 +45,7 @@
     "participantInsertFailed": "Event was created but registration failed. Please try again.",
     "eventNotFound": "Event not found. It may have been deleted.",
     "noChanges": "No changes were made to the event.",
+    "trackingStarted": "This event can no longer be edited because tracking has already started.",
     "invalidEventId": "Invalid event. Please go back and try again.",
     "categoryInvalid": "Please select a valid category",
     "categoryRequired": "Please select a category type"
