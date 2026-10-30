@@ -12,6 +12,16 @@ import { formatClockTime } from '../../utils/timeFormat';
 import { formatEventDate } from '../../utils/dateFormatter';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditPersonalEvent'>;
+
+/**
+ * ✅ A tracked personal event loses Edit exactly as it loses Delete (developer
+ * report 2026-10-30): the server's can_delete is 0 once more than 10 minutes
+ * were tracked. Changing the date, time or route after that would rewrite a
+ * race that already happened. Partner events keep the button (it opens the
+ * event page; greyed out once finished, as before).
+ */
+export const showEditButton = (item: Pick<AthleteEvent, 'event_source' | 'can_delete'>): boolean =>
+    item.event_source !== 'custom' || item.can_delete === 1;
 interface EventCardProps {
     item: AthleteEvent;
     isOwnProfile?: boolean;
@@ -63,6 +73,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
     }, [item, onDelete]);
 
     const canDelete = item.event_source === 'custom' && item.can_delete === 1 && !!onDelete;
+    const showEdit = showEditButton(item);
 
     const trackingLabel = useCallback((): string => {
         switch (item.race_status) {
@@ -111,6 +122,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
                             <Ionicons name="trash-outline" size={22} color={palette.danger} />
                         </TouchableOpacity>
                     )}
+                    {showEdit && (
                     <TouchableOpacity
                         style={[styles.iconBtn, isEditDisabled && styles.disabledBtn]}
                         onPress={isEditDisabled ? undefined : handleEditPress}
@@ -119,6 +131,7 @@ export const EventCard = React.memo(({ item, isOwnProfile = true, onDelete }: Ev
                     >
                     <Ionicons name="pencil-outline" size={22} color={palette.navy} />
                     </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                         style={styles.iconBtn}
                         onPress={handleTrackingPress}

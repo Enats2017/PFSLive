@@ -72,6 +72,7 @@ import { fanEmailStorage } from '../utils/fanEmailStorage';
 import { formatClockTime, formatEventDate } from '../utils/timeFormat';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../constants/analyticsScreens';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import { formatElapsed, formatSessionKm } from '../utils/sessionDisplay';
 
 interface StandardApiResponse<T = any> {
   success: boolean;
@@ -228,12 +229,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // "00:42:18" since the session began, and "12 sec ago" since the last accepted
   // position. Both recompute from `nowTick`, which only runs while tracking is on.
-  const elapsedLabel = useMemo(() => {
-    if (!sessionStats.startedAt) return '00:00:00';
-    const secs = Math.max(0, Math.floor((nowTick - sessionStats.startedAt) / 1000));
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${pad(Math.floor(secs / 3600))}:${pad(Math.floor((secs % 3600) / 60))}:${pad(secs % 60)}`;
-  }, [sessionStats.startedAt, nowTick]);
+  const elapsedLabel = useMemo(
+    () => formatElapsed(sessionStats.startedAt, nowTick),
+    [sessionStats.startedAt, nowTick],
+  );
 
   const lastSentLabel = useMemo(() => {
     if (!sessionStats.lastSentAt) return t('home:active.justNow');
@@ -412,18 +411,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ✅ While tracking is on, refresh the clock every second and the session
   // stats every five. Stops dead when tracking stops — nothing polls at rest.
   useEffect(() => {
-    if (!isGPSActive) return;
+    // ✅ Stopped: forget the session (developer report 2026-10-30). Kept, the
+    // next Start drew the last race's clock and distance until the first read.
+    if (!isGPSActive) {
+      setSessionStats({ startedAt: null, distanceKm: null, lastSentAt: null });
+      return;
+    }
 
     let cancelled = false;
+    let stamped = false;
     const readStats = async () => {
       try {
         const stats = await gpsService.getSessionStats();
-        if (!cancelled) setSessionStats(stats);
+        if (cancelled) return;
+        stamped = stats.startedAt !== null;
+        setSessionStats(stats);
       } catch { /* display only */ }
     };
 
+    setNowTick(Date.now());
     void readStats();
-    const tick = setInterval(() => setNowTick(Date.now()), 1000);
+    // Until the engine stamps the new start (a second or three into Start),
+    // re-read every tick, so the clock starts at 00:00:01, not at the 5 s poll.
+    const tick = setInterval(() => {
+      setNowTick(Date.now());
+      if (!stamped) void readStats();
+    }, 1000);
     const stats = setInterval(() => { void readStats(); }, 5000);
     return () => { cancelled = true; clearInterval(tick); clearInterval(stats); };
   }, [isGPSActive]);
@@ -2998,7 +3011,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       {/* One line, shrinks: wrapped mid-number at 320 with larger text (audit 2026-10-22) */}
                       <Text style={homeStyles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                         {sessionStats.distanceKm != null
-                          ? `${sessionStats.distanceKm.toFixed(1)} ${t('units.km', 'km')}`
+                          ? `${formatSessionKm(sessionStats.distanceKm)} ${t('units.km', 'km')}`
                           : '—'}
                       </Text>
 

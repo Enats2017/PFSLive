@@ -2040,6 +2040,11 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(LAST_SENT_KEY);
   await AsyncStorage.removeItem(LAST_POSITION_KEY);
   await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
+  // ✅ The clock belongs to the session (developer report 2026-10-30): kept, the
+  // next Start showed the LAST race's elapsed time for the 2-3 s until the new
+  // start was stamped. Every reader also needs TRACKING_PARAMS_KEY, removed above,
+  // and a resume after an OS kill never comes through here.
+  await AsyncStorage.removeItem(SESSION_START_KEY);
   // Preserve the final total before clearing — the stop toast (and any late
   // reader) runs AFTER this teardown on the background-finish path, and would
   // otherwise read null and fall back to stale React state (showed 10, not 12).
@@ -2344,11 +2349,17 @@ export const getSessionStats = async (): Promise<{
     if (Number.isFinite(n) && n > 0) startedAt = n;
   } catch { /* display only */ }
 
-  try {
-    // Transistor's own accumulator — no distance maths of ours on the GPS path.
-    const metres = await BackgroundGeolocation.getOdometer();
-    if (Number.isFinite(metres) && metres >= 0) distanceKm = metres / 1000;
-  } catch { /* display only */ }
+  if (startedAt === null) {
+    // No session stamped yet (a Start still on its way): 00:00:00 and 0 km, not
+    // whatever the odometer kept from the last race.
+    distanceKm = 0;
+  } else {
+    try {
+      // Transistor's own accumulator — no distance maths of ours on the GPS path.
+      const metres = await BackgroundGeolocation.getOdometer();
+      if (Number.isFinite(metres) && metres >= 0) distanceKm = metres / 1000;
+    } catch { /* display only */ }
+  }
 
   try {
     const raw = await AsyncStorage.getItem(LAST_SENT_KEY);
@@ -2838,12 +2849,15 @@ export const gpsService = {
       if (!_isSameRaceResume) {
         // A new race starts the clock and the odometer from zero. On a resume
         // both are left alone so the elapsed time and distance survive an OS kill.
-        await AsyncStorage.setItem(SESSION_START_KEY, String(Date.now()));
+        // ✅ Odometer FIRST (developer report 2026-10-30): Home polls getSessionStats
+        // while this runs, and a new start time beside the last race's odometer
+        // showed that race's distance on the new clock.
         try {
           await BackgroundGeolocation.setOdometer(0);
         } catch {
           // Odometer is display-only; never let it break the start path.
         }
+        await AsyncStorage.setItem(SESSION_START_KEY, String(Date.now()));
         await AsyncStorage.removeItem(TRACKING_LOG_KEY);
         await _resetLogBuffer();
         // New session → arm the one-shot interim log upload (maybeUploadInterimLog).

@@ -2667,6 +2667,54 @@ const L = () => load('services/locationService').locationService;
   }
   results.push(await run('18. Android headless relaunch: ready() deferred until Livio is opened (bibs 151 / 353 / 2 / 459)'));
 
+  // ════════════ 19. a new Start shows 00:00:00, not the last race's clock (developer report 2026-10-30) ════════════
+  {
+    const START = '@PFSLive:sessionStartedAt';
+    const withOdometer = async (fn) => {
+      const BG = require('react-native-background-geolocation').default;
+      const odo = { m: 0, calls: [] };
+      BG.setOdometer = async (v) => { odo.calls.push(['set', v, M.store.get(START) ?? null]); odo.m = v; return {}; };
+      BG.getOdometer = async () => odo.m;
+      try { return await fn(odo); } finally { delete BG.setOdometer; delete BG.getOdometer; }
+    };
+    const begin = (pid = '2', eid = '12') => load('services/gpsService').gpsService.startWatchingPosition(
+      () => {}, () => {}, 30, pid, eid, 't', 'b', 59, new Date(M.clock - 60 * 60000).toISOString(), 0, 'Test race');
+    test('Stop clears the session clock: the stats read 00:00:00 / 0 km until the next Start stamps its own', async () => {
+      await withOdometer(async (odo) => {
+        const g = load('services/gpsService').gpsService;
+        const h = await begin();
+        M.clock += 42 * 60000; odo.m = 5230;
+        assert.deepStrictEqual(await g.getSessionStats().then((s) => [s.startedAt !== null, s.distanceKm]), [true, 5.23], 'race 1 running');
+        await h.remove();
+        assert.ok(!M.store.has(START), 'start time cleared on Stop');
+        const s = await g.getSessionStats();
+        assert.deepStrictEqual([s.startedAt, s.distanceKm], [null, 0], 'what a new Start shows until it is stamped (was race 1\'s 42 min, 5.23 km)');
+      });
+    });
+    test('…a new race zeroes the odometer BEFORE stamping its start (no old distance on the new clock), then stamps now', async () => {
+      await withOdometer(async (odo) => {
+        const h = await begin(); await h.remove();
+        M.clock += 3 * 3600000; odo.m = 9999; odo.calls.length = 0;
+        await begin('3', '13');
+        assert.deepStrictEqual(odo.calls, [['set', 0, null]], 'odometer zeroed while no start was stamped');
+        assert.strictEqual(M.store.get(START), String(M.clock));
+        assert.strictEqual((await load('services/gpsService').gpsService.getSessionStats()).distanceKm, 0);
+      });
+    });
+    test('…a resume of the SAME race (relaunch after an OS kill, no Stop) keeps its clock and distance', async () => {
+      await withOdometer(async (odo) => {
+        await begin();
+        const t0 = M.store.get(START);
+        M.clock += 20 * 60000; odo.m = 3100; odo.calls.length = 0;
+        await begin();
+        assert.strictEqual(M.store.get(START), t0);
+        assert.deepStrictEqual(odo.calls, [], 'odometer untouched');
+        assert.strictEqual((await load('services/gpsService').gpsService.getSessionStats()).distanceKm, 3.1);
+      });
+    });
+  }
+  results.push(await run('19. a new Start shows 00:00:00, not the last race\'s clock (developer report 2026-10-30)'));
+
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);
   process.exit(tot.fail ? 1 : 0);
