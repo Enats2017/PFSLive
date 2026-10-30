@@ -2208,6 +2208,18 @@ const L = () => load('services/locationService').locationService;
     M.clock += 20 * 60000;
     assert.ok(!pending('livio-tracking-watchdog'), 'still nothing 20 min later');
   });
+  // 2026-10-30: this path never runs _doFullStop, so it must drop the clock itself,
+  // or the next race's Start shows this race's elapsed time (Livio closed at the finish).
+  test('live finish → the session clock is cleared too (next Start begins at 00:00:00)', async () => {
+    liveAnswers.length = 0; answerLocation();
+    await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    await fireFix();
+    assert.ok(M.store.has('@PFSLive:sessionStartedAt'), 'clock running');
+    liveAnswers.push(RR); M.clock += 31000; await fireFix();
+    assert.strictEqual(M.store.get(RACE_FIN), '1', 'finished');
+    assert.ok(!M.store.has('@PFSLive:sessionStartedAt'), 'clock cleared at the finish');
+    assert.strictEqual((await load('services/gpsService').gpsService.getSessionStats()).startedAt, null);
+  });
   test('finish found during a queue drain → disarmed too (finishBackgroundStop)', async () => {
     await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
     await fireFix();

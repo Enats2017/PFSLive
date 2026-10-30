@@ -1606,6 +1606,10 @@ const _processLocationForSendInternal = async (
       try {
         await AsyncStorage.setItem(PENDING_FINISH_KEY, JSON.stringify({ participantId, eventId }));
         await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
+        // The session's clock goes with it, as in _doFullStop (developer report
+        // 2026-10-30): a runner who finishes with Livio closed never reaches that
+        // teardown, and the next race's Start showed this race's elapsed time.
+        await AsyncStorage.removeItem(SESSION_START_KEY);
       } catch { /* silent — upload paths fall back to any surviving params */ }
       await addLog(
         '🏆',
