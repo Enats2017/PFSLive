@@ -31,6 +31,7 @@ import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
+import { canShowConnectButton } from './distanceConnect';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
@@ -499,6 +500,7 @@ const handleExternalRegister = useCallback((url: string) => {
           <View style={detailsStyles.verticalDivider} />
 
           <View style={{ gap: spacing.sm }} >
+            {canShowConnectButton(item) && (
             <TouchableOpacity
                 style={[detailsStyles.resultsButton]}
                 onPress={() => {
@@ -525,6 +527,7 @@ const handleExternalRegister = useCallback((url: string) => {
               </Text>
               )}
             </TouchableOpacity>
+            )}
 
             {/* Visibility rule lives in useGpxDownload.canShowGpxButton so this
                 tab and the follower one cannot drift apart. */}
@@ -601,6 +604,7 @@ const handleExternalRegister = useCallback((url: string) => {
       <RegistrationModal
         visible={modalVisible}
         status={selectedItem?.registration_status ?? null}
+        registrationClosed={selectedItem?.registration_closed === 1}
         distanceName={selectedItem?.distance_name ?? ''}
         membershipLimit={selectedItem?.membership_limit}
         membershipStartDate={selectedItem?.membership_start_date}

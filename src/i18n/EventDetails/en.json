@@ -102,6 +102,11 @@
       "title": "Not Available",
       "description": "Registration for this distance is not yet configured. Please check back soon."
     },
+    "closed": {
+      "icon": "⊘",
+      "title": "Registration Closed",
+      "description": "Registration is not open for this distance. Please register on the main distance."
+    },
     "available": {
       "icon": "→",
       "title": "Ready to Race?",
