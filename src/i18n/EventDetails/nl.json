@@ -16,10 +16,11 @@
     "days": "D",
     "hours": "U",
     "minutes": "M",
-    "seconds": "S" 
+    "seconds": "S"
   },
   "athletes": "Gestarte atleten",
   "finished": "Gefinishte atleten",
+  "freeTrackingIncluded": "Live tracking inbegrepen",
   "dnf": "DNF",
   "distance": {
     "empty": "Geen afstanden beschikbaar"
@@ -82,7 +83,7 @@
       "title": "Abonnement vereist",
       "description": "Je hebt een actief abonnement nodig om je in te schrijven en dit evenement live te volgen.",
       "iosDescription": "Je hebt een actief abonnement nodig om je in te schrijven en dit evenement live te volgen. Kies een abonnement om verder te gaan.",
-       "button": "Abonnementen bekijken"
+      "button": "Abonnementen bekijken"
     },
     "limit_reached": {
       "icon": "↑",
@@ -90,6 +91,13 @@
       "description": "U heeft alle momenteel beschikbare live trackingsessies gebruikt.",
       "iosDescription": "Je hebt al je live trackingsessies gebruikt. Upgrade je abonnement om je voor dit evenement in te schrijven.",
       "button": "Meer sessies kopen"
+    },
+    "free_not_registered": {
+      "icon": "🔎",
+      "title": "We vinden je inschrijving niet",
+      "description": "Live tracking is inbegrepen bij de inschrijving voor deze wedstrijd, maar we vinden je inschrijving voor deze afstand niet. Heb je je met een ander e-mailadres ingeschreven? Meld je dan aan met dat adres. Neem anders contact met ons op, dan koppelen wij het aan je account.",
+      "button": "Neem contact op",
+      "notNowButton": "Niet nu"
     },
     "membership_upcoming": {
       "icon": "⏳",
@@ -115,12 +123,12 @@
       "icon": "🔗",
       "title": "Live Tracking",
       "description": "Live Tracking is optioneel en vereist een actief abonnement. Wil je het niet gebruiken? Geen probleem. Je hoeft Livio niet aan je startnummer te koppelen. Je volgers blijven de officiële RFID-updates ontvangen wanneer je een checkpoint of de finish passeert.",
+      "description_free": "Live Tracking is inbegrepen bij je inschrijving voor deze wedstrijd, dus je hoeft niets te kopen en het gebruikt geen van je Livio-sessies. Het blijft optioneel: wil je het niet gebruiken, dan hoef je Livio niet aan je startnummer te koppelen en blijven je volgers de officiële RFID-updates ontvangen wanneer je een checkpoint of de finish passeert.",
       "button": "Ja",
-      
       "notNowButton": "Niet nu"
     }
   },
-  "connectInfo": "De officiële tijdsregistratie is automatisch actief voor alle deelnemers.\nWil je gebruikmaken van Live Tracking? Koppel dan je Livio-account aan je startnummer voor dit evenement.\nTik op 'Connecteer' om verder te gaan.",
+  "connectInfo": "De officiële tijdsregistratie is automatisch actief voor alle deelnemers.\nWil je gebruikmaken van Live Tracking? Koppel dan je Livio-account aan je startnummer voor dit evenement.\nTik op 'Live Tracking' om verder te gaan.",
   "gpxDownload": {
     "permissionDeniedTitle": "Toestemming geweigerd",
     "permissionDeniedMessage": "Toegang tot de map is vereist om het GPX-bestand op te slaan.",
@@ -130,7 +138,7 @@
     "noFileTitle": "Geen GPX-bestand",
     "noFileMessage": "Geen GPX-bestand beschikbaar."
   },
-  "iosnotnow":"Not Now",
+  "iosnotnow": "Not Now",
   "map": "KAART",
   "wave": "Startwave",
   "duo": {

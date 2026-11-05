@@ -23,6 +23,27 @@ export interface Distance {
   participant_started_count: number;
   dnf_count: number;
   gpx_url: string | null;
+  /**
+   * 1 when Livio tracking is included with the event on this distance, so
+   * registering it costs nothing and uses no session. Nothing renders it yet -
+   * registration_status already reads 'available' for these, which is what the
+   * screen acts on. Typed so the field the API now returns is not invisible to
+   * whoever adds an "included" badge here later.
+   */
+  free_tracking_included?: number;
+
+  /**
+   * Whether THIS signed-in caller is entitled to that free tracking - they hold
+   * a live paid website entry on this distance. Absent for signed-out callers.
+   *
+   * free_tracking_included is a fact about the race and is advertised to
+   * everyone; this is the entitlement, and the two differ for a stranger
+   * looking at a ticked distance. Anything that promises the tracking is free
+   * for the person reading it must use THIS field - the registration gate does,
+   * and so does the 'free_not_registered' modal: included = 1 with entitled = 0
+   * is exactly "this race includes tracking, but we cannot find YOUR entry".
+   */
+  free_tracking_entitled?: number;
 }
 
 export interface RaceResultData {
