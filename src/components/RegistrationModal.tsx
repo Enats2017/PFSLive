@@ -19,7 +19,14 @@ type RegistrationStatus =
   | 'membership_upcoming'  // ✅ NEW
   | 'unavailable'
   | 'available'
-  | 'connect_confirm';
+  | 'connect_confirm'
+  /* The distance includes tracking with the entry, but THIS reader has no
+     entry on it. Not a server value: event_detail_api keeps sending
+     membership_required / limit_reached, and DistanceTab substitutes this
+     when free_tracking_included is 1 and free_tracking_entitled is 0. Kept
+     out of UPGRADE_STATUSES on purpose - there is nothing to buy here, and
+     offering a plan for a race the reader is not in is the bug this fixes. */
+  | 'free_not_registered';
 
 interface RegistrationModalProps {
   visible: boolean;
@@ -84,6 +91,14 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
     }
      const showUpgradeButton = Platform.OS === 'ios' && UPGRADE_STATUSES.includes(status);
 
+    /* free_not_registered gets a button on EVERY platform, and it is not an
+       upgrade: there is nothing to buy, the reader is simply not in the race we
+       can see. It opens the Contact and Feedback screen that already sits on
+       the profile page, so "contact us" is something they can act on rather
+       than a sentence. Kept out of UPGRADE_STATUSES so iOS does not turn it
+       into a plans button. */
+    const isContactButton = status === 'free_not_registered';
+
     const accentColors: Record<Exclude<RegistrationStatus, 'connect_confirm'>, string> = {
       registered:           colors.primaryLight,
       membership_required:  colors.primary,
@@ -91,6 +106,9 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
       membership_upcoming:  colors.warning,   // ✅ NEW — orange/amber for "future"
       unavailable:          '#6b7280',
       available:            '#f4a100',
+      /* Amber, as membership_upcoming is: something to sort out, not a
+         refusal and not an error. */
+      free_not_registered:  colors.warning,
     };
      const descriptionKey = showUpgradeButton
       ? `${baseKey}.iosDescription`
@@ -108,9 +126,16 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
         }),
       }),
       accentColor: accentColors[status],
-      buttonLabel: showUpgradeButton
-        ? t(`${baseKey}.button`, { defaultValue: t('details:registrationModal.viewPlansButton') })
-        : null,
+      buttonLabel: isContactButton
+        ? t(`${baseKey}.button`, { defaultValue: '' }) || null
+        : (showUpgradeButton
+            ? t(`${baseKey}.button`, { defaultValue: t('details:registrationModal.viewPlansButton') })
+            : null),
+      /* A dismiss beside it: nobody should be cornered by a popup whose only
+         button opens another screen. Same label key connect_confirm uses. */
+      notNowLabel: isContactButton
+        ? (t(`${baseKey}.notNowButton`, { defaultValue: '' }) || undefined)
+        : undefined,
     };
   };
 
@@ -169,6 +194,16 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
    const handleUpgradePress = () => {
   if (status === 'connect_confirm') {
     onConfirm?.();
+    return;
+  }
+  /* Not every button here is an upgrade. A reader we cannot find a
+     registration for needs the Contact and Feedback screen, not the plans
+     screen - selling them a membership was the whole bug. Navigated without
+     params: the screen reads route.params?.profile optionally and simply
+     starts with empty fields. */
+  if (status === 'free_not_registered') {
+    onClose();
+    navigation.navigate('ContactFeedbackScreen');
     return;
   }
   onClose();
@@ -246,10 +281,16 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
           <Text style={styles.description}>{config.description}</Text>
           {config.buttonLabel && (
           <View style = {{width:"100%", paddingTop:spacing.md}} >
-            {status === 'connect_confirm' ? (
+            {(status === 'connect_confirm' || (status === 'free_not_registered' && config.notNowLabel)) ? (
               <View style={styles.buttonRow}>
                 <TouchableOpacity
-                  style={[commonStyles.secondaryButton]}
+                  /* free_not_registered shares the width: both labels here are
+                     words rather than "Yes", and two buttons each holding
+                     minWidth 120 plus 48 of padding overflow a 320dp card,
+                     which clips (card has overflow: 'hidden'). connect_confirm
+                     keeps the layout it was approved with. */
+                  style={[commonStyles.secondaryButton,
+                          status === 'free_not_registered' ? styles.confirmBtnRow : null]}
                   activeOpacity={0.7}
                   onPress={onClose}
                 >

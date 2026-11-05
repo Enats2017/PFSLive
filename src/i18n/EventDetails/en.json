@@ -92,6 +92,13 @@
       "iosDescription": "You've used all your live tracking sessions. Upgrade your plan to sign up for this event.",
       "button": "Get more sessions"
     },
+    "free_not_registered": {
+      "icon": "🔎",
+      "title": "We cannot find your registration",
+      "description": "Live tracking is included with entry for this race, but we cannot find your registration for this distance. If you entered using a different e-mail address, sign in with that address. Otherwise contact us and we will link it to your account.",
+      "button": "Contact us",
+      "notNowButton": "Not now"
+    },
     "membership_upcoming": {
       "icon": "⏳",
       "title": "Membership Not Yet Active",

@@ -15,6 +15,10 @@ import { commonStyles, colors, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
 import RegistrationModal from '../../components/RegistrationModal';
+/* included = 1 with entitled = 0 is "this race includes tracking, but we
+   cannot find YOUR entry" - a different message from the membership one.
+   Pure and tested: npm run test:free-tracking-status. */
+import { freeTrackingModalStatus } from './freeTrackingStatus';
 import ConfirmRaceResultModal from './ConfirmRaceResultModal';
 import SuccessCelebrationModal from '../../components/SuccessCelebrationModal';
 import UndoConfirmModal from '../../components/UndoConfirmModal';
@@ -600,7 +604,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
       <RegistrationModal
         visible={modalVisible}
-        status={selectedItem?.registration_status ?? null}
+        status={freeTrackingModalStatus(selectedItem)}
         distanceName={selectedItem?.distance_name ?? ''}
         membershipLimit={selectedItem?.membership_limit}
         membershipStartDate={selectedItem?.membership_start_date}

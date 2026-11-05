@@ -39,7 +39,9 @@ export interface Distance {
    * free_tracking_included is a fact about the race and is advertised to
    * everyone; this is the entitlement, and the two differ for a stranger
    * looking at a ticked distance. Anything that promises the tracking is free
-   * for the person reading it must use THIS field - the registration gate does.
+   * for the person reading it must use THIS field - the registration gate does,
+   * and so does the 'free_not_registered' modal: included = 1 with entitled = 0
+   * is exactly "this race includes tracking, but we cannot find YOUR entry".
    */
   free_tracking_entitled?: number;
 }
