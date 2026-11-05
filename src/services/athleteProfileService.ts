@@ -48,6 +48,8 @@ export interface EventActivation {
     total: number;
     used: number;
     remaining: number;
+    /** Only on a used credit bought without an event: 'partner' or 'custom'. event_id is 0 for custom. */
+    event_source?: string;
 }
 
 export interface AthleteProfile {

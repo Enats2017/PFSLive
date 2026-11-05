@@ -273,5 +273,19 @@ console.log('\nNothing explodes on a server that predates free_events\n');
     const empty = render('en', {});
     ck('an empty profile -> no_membership', empty.state, 'no_membership');
 }
+// the used credit: the card keeps saying what is left, and adds where it went
+{
+    const credit = { event_name: 'Bear Trail', remaining: 0, event_source: 'partner', membership_name: 'Livio single activation' };
+    const used = (0, profileCard_1.resolveProfileCard)({ membership_info: { ...member(0), event_only: 0, event_activations: [credit] } });
+    ck('used credit -> still the exhausted card', used.state, 'exhausted');
+    ck('used credit -> no "Valid for" text', used.activationEventName, null);
+    ck('used credit -> no "Also valid" text', used.activationExtra, null);
+    ck('used credit -> the event for its own line', used.usedCredit, 'Bear Trail');
+    const two = (0, profileCard_1.resolveProfileCard)({ membership_info: { ...member(1), event_only: 0, event_activations: [credit] } });
+    ck('one of two credits used -> sessions still counted', two.state, 'sessions_left');
+    ck('one of two credits used -> the used one is named', two.usedCredit, 'Bear Trail');
+    const plain = (0, profileCard_1.resolveProfileCard)({ membership_info: { ...member(3), event_only: 0 } });
+    ck('no credit lines -> no used line', plain.usedCredit, null);
+}
 console.log('\n  ' + pass + ' passed, ' + fail + ' failed\n');
 process.exit(fail === 0 ? 0 : 1);

@@ -47,7 +47,8 @@
         "freeAlsoIncluded": "{{event}} is inbegrepen — dit gebruikt geen sessie.",
         "freeStillAvailable": "Je kunt {{event}} nog steeds volgen — het is inbegrepen.",
         "freeRacesCount": "{{count}} wedstrijd(en)",
-        "alsoActivation": "Ook geldig: je Livio-activatie voor {{event}}."
+        "alsoActivation": "Ook geldig: je Livio-activatie voor {{event}}.",
+        "usedActivation": "Gebruikt voor {{event}}"
     },
     "training": {
         "create": "PERSOONLIJK EVENEMENT MAKEN"

@@ -47,7 +47,8 @@
         "freeAlsoIncluded": "{{event}} is included — it won't use a session.",
         "freeStillAvailable": "You can still track {{event}} — it's included.",
         "freeRacesCount": "{{count}} race(s)",
-        "alsoActivation": "Also valid: your Livio activation for {{event}}."
+        "alsoActivation": "Also valid: your Livio activation for {{event}}.",
+        "usedActivation": "Used for {{event}}"
     },
     "training": {
         "create": "CREATE PERSONAL EVENT"
