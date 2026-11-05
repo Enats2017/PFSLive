@@ -92,6 +92,13 @@
       "iosDescription": "Je hebt al je live trackingsessies gebruikt. Upgrade je abonnement om je voor dit evenement in te schrijven.",
       "button": "Meer sessies kopen"
     },
+    "free_not_registered": {
+      "icon": "🔎",
+      "title": "We vinden je inschrijving niet",
+      "description": "Live tracking is inbegrepen bij de inschrijving voor deze wedstrijd, maar we vinden je inschrijving voor deze afstand niet. Heb je je met een ander e-mailadres ingeschreven? Meld je dan aan met dat adres. Neem anders contact met ons op, dan koppelen wij het aan je account.",
+      "button": "Neem contact op",
+      "notNowButton": "Niet nu"
+    },
     "membership_upcoming": {
       "icon": "⏳",
       "title": "Lidmaatschap Nog Niet Actief",

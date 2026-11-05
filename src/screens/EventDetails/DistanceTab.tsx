@@ -15,6 +15,10 @@ import { commonStyles, colors, spacing } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
 import RegistrationModal from '../../components/RegistrationModal';
+/* included = 1 with entitled = 0 is "this race includes tracking, but we
+   cannot find YOUR entry" - a different message from the membership one.
+   Pure and tested: npm run test:free-tracking-status. */
+import { freeTrackingModalStatus } from './freeTrackingStatus';
 import ConfirmRaceResultModal from './ConfirmRaceResultModal';
 import SuccessCelebrationModal from '../../components/SuccessCelebrationModal';
 import UndoConfirmModal from '../../components/UndoConfirmModal';
@@ -603,7 +607,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
       <RegistrationModal
         visible={modalVisible}
-        status={selectedItem?.registration_status ?? null}
+        status={freeTrackingModalStatus(selectedItem)}
         registrationClosed={selectedItem?.registration_closed === 1}
         distanceName={selectedItem?.distance_name ?? ''}
         membershipLimit={selectedItem?.membership_limit}
@@ -649,7 +653,13 @@ const handleExternalRegister = useCallback((url: string) => {
         visible={liveTrackingModalVisible}
         status="connect_confirm"
         distanceName={liveTrackingItem?.distance_name ?? ''}
-        isFreeTracking={(liveTrackingItem?.free_tracking_included ?? 0) === 1}
+        /* free_tracking_entitled, not free_tracking_included: the badge on the
+           distance advertises that the race includes tracking and is shown to
+           everyone, but this modal says "included with YOUR entry", which is
+           only true for someone the API confirms has a live paid website entry
+           on this distance. An older API that does not send the field yields 0
+           and the normal membership copy, which is the safe direction. */
+        isFreeTracking={(liveTrackingItem?.free_tracking_entitled ?? 0) === 1}
         onClose={handleLiveTrackingClose}
         onConfirm={handleLiveTrackingConfirm}
       />

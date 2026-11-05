@@ -92,6 +92,13 @@
       "iosDescription": "Vous avez utilisé toutes vos sessions de suivi en direct. Améliorez votre formule pour vous inscrire à cet événement.",
       "button": "Obtenir plus de sessions"
     },
+    "free_not_registered": {
+      "icon": "🔎",
+      "title": "Nous ne trouvons pas votre inscription",
+      "description": "Le suivi en direct est inclus avec l'inscription a cette course, mais nous ne trouvons pas votre inscription pour cette distance. Si vous vous etes inscrit avec une autre adresse e-mail, connectez-vous avec cette adresse. Sinon, contactez-nous et nous la lierons a votre compte.",
+      "button": "Nous contacter",
+      "notNowButton": "Pas maintenant"
+    },
     "membership_upcoming": {
       "icon": "⏳",
       "title": "Abonnement Pas Encore Actif",
