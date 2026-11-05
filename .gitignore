@@ -101,5 +101,5 @@ GoogleService-Info.plist
 # device-check.mjs output (logcat + screenshots)
 .device/
 
-# compiled output of `npm run test:activation`
+# compiled output of `npm run test:activation` and `npm run test:card`
 .cardtest/

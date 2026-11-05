@@ -119,11 +119,19 @@
       "title": "Live Tracking",
       "description": "Live Tracking is optioneel en vereist een actief abonnement. Wil je het niet gebruiken? Geen probleem. Je hoeft Livio niet aan je startnummer te koppelen. Je volgers blijven de officiële RFID-updates ontvangen wanneer je een checkpoint of de finish passeert.",
       "button": "Ja",
-      "notNowButton": "Niet nu"
+      "notNowButton": "Niet nu",
+      "description_free": "Live Tracking is inbegrepen bij je inschrijving voor deze wedstrijd, dus je hoeft niets te kopen en het gebruikt geen van je Livio-sessies. Het blijft optioneel: wil je het niet gebruiken, dan hoef je Livio niet aan je startnummer te koppelen en blijven je volgers de officiële RFID-updates ontvangen wanneer je een checkpoint of de finish passeert."
     },
-    "viewPlansButton": "Bekijk abonnementen"
+    "viewPlansButton": "Bekijk abonnementen",
+    "free_not_registered": {
+      "icon": "🔎",
+      "title": "We vinden je inschrijving niet",
+      "description": "Live tracking is inbegrepen bij de inschrijving voor deze wedstrijd, maar we vinden je inschrijving voor deze afstand niet. Heb je je met een ander e-mailadres ingeschreven? Meld je dan aan met dat adres. Neem anders contact met ons op, dan koppelen wij het aan je account.",
+      "button": "Neem contact op",
+      "notNowButton": "Niet nu"
+    }
   },
-  "connectInfo": "De officiële tijdsregistratie is automatisch actief voor alle deelnemers.\nWil je gebruikmaken van Live Tracking? Koppel dan je Livio-account aan je startnummer voor dit evenement.\nTik op 'Connecteer' om verder te gaan.",
+  "connectInfo": "De officiële tijdsregistratie is automatisch actief voor alle deelnemers.\nWil je gebruikmaken van Live Tracking? Koppel dan je Livio-account aan je startnummer voor dit evenement.\nTik op 'Live Tracking' om verder te gaan.",
   "gpxDownload": {
     "permissionDeniedTitle": "Toestemming geweigerd",
     "permissionDeniedMessage": "Toegang tot de map is vereist om het GPX-bestand op te slaan.",
@@ -144,5 +152,6 @@
     "elevationProfile": "Hoogteprofiel",
     "distance": "Afstand",
     "elevation": "Hoogtemeters"
-  }
+  },
+  "freeTrackingIncluded": "Live tracking inbegrepen"
 }

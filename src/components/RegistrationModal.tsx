@@ -22,7 +22,14 @@ type RegistrationStatus =
   | 'membership_upcoming'  // ✅ NEW
   | 'unavailable'
   | 'available'
-  | 'connect_confirm';
+  | 'connect_confirm'
+  /* The distance includes tracking with the entry, but THIS reader has no
+     entry on it. Not a server value: event_detail_api keeps sending
+     membership_required / limit_reached, and DistanceTab substitutes this
+     when free_tracking_included is 1 and free_tracking_entitled is 0. Kept
+     out of UPGRADE_STATUSES on purpose - there is nothing to buy here, and
+     offering a plan for a race the reader is not in is the bug this fixes. */
+  | 'free_not_registered';
 
 interface RegistrationModalProps {
   visible: boolean;
@@ -30,6 +37,9 @@ interface RegistrationModalProps {
   distanceName: string;
   membershipLimit?: number;
   membershipStartDate?: string;  // ✅ NEW
+  /* This distance includes Livio tracking with the entry, so the connect
+     modal must not tell the participant they need a membership. */
+  isFreeTracking?: boolean;
   onClose: () => void;
    onConfirm?: () => void;
 }
@@ -51,6 +61,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   distanceName,
   membershipLimit,
   membershipStartDate,  // ✅ NEW
+  isFreeTracking,
   onClose,
   onConfirm,
 }) => {
@@ -73,13 +84,28 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
       return {
         icon: t('details:registrationModal.connect_confirm.icon'),
         title: t('details:registrationModal.connect_confirm.title'),
-        description: t('details:registrationModal.connect_confirm.description'),
+        /* The free wording when the entry already covers it. defaultValue
+           keeps a language whose file has not been updated yet on the
+           original sentence rather than printing a raw key. */
+        description: isFreeTracking
+          ? t('details:registrationModal.connect_confirm.description_free', {
+              defaultValue: t('details:registrationModal.connect_confirm.description'),
+            })
+          : t('details:registrationModal.connect_confirm.description'),
         accentColor: palette.navy,
         buttonLabel: t('details:registrationModal.connect_confirm.button'),
         notNowLabel: t('details:registrationModal.connect_confirm.notNowButton'),
       };
     }
      const showUpgradeButton = Platform.OS === 'ios' && UPGRADE_STATUSES.includes(status);
+
+    /* free_not_registered gets a button on EVERY platform, and it is not an
+       upgrade: there is nothing to buy, the reader is simply not in the race we
+       can see. It opens the Contact and Feedback screen that already sits on
+       the profile page, so "contact us" is something they can act on rather
+       than a sentence. Kept out of UPGRADE_STATUSES so iOS does not turn it
+       into a plans button. */
+    const isContactButton = status === 'free_not_registered';
 
     const accentColors: Record<Exclude<RegistrationStatus, 'connect_confirm'>, string> = {
       registered:           palette.navyLift,
@@ -88,6 +114,9 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
       membership_upcoming:  palette.warning,   // ✅ NEW — orange/amber for "future"
       unavailable:          palette.textMuted,
       available:            palette.warning,
+      /* Amber, as membership_upcoming is: something to sort out, not a
+         refusal and not an error. */
+      free_not_registered:  palette.warning,
     };
      const descriptionKey = showUpgradeButton
       ? `${baseKey}.iosDescription`
@@ -105,9 +134,16 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
         }),
       }),
       accentColor: accentColors[status],
-      buttonLabel: showUpgradeButton
-        ? t(`${baseKey}.button`, { defaultValue: t('details:registrationModal.viewPlansButton') })
-        : null,
+      buttonLabel: isContactButton
+        ? t(`${baseKey}.button`, { defaultValue: '' }) || null
+        : (showUpgradeButton
+            ? t(`${baseKey}.button`, { defaultValue: t('details:registrationModal.viewPlansButton') })
+            : null),
+      /* A dismiss beside it: nobody should be cornered by a popup whose only
+         button opens another screen. Same label key connect_confirm uses. */
+      notNowLabel: isContactButton
+        ? (t(`${baseKey}.notNowButton`, { defaultValue: '' }) || undefined)
+        : undefined,
     };
   };
 
@@ -166,6 +202,16 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
    const handleUpgradePress = () => {
   if (status === 'connect_confirm') {
     onConfirm?.();
+    return;
+  }
+  /* Not every button here is an upgrade. A reader we cannot find a
+     registration for needs the Contact and Feedback screen, not the plans
+     screen - selling them a membership was the whole bug. Navigated without
+     params: the screen reads route.params?.profile optionally and simply
+     starts with empty fields. */
+  if (status === 'free_not_registered') {
+    onClose();
+    navigation.navigate('ContactFeedbackScreen');
     return;
   }
   onClose();
@@ -247,10 +293,16 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
             <Text style={styles.description}>{config.description}</Text>
             {config.buttonLabel && (
             <View style = {{width:"100%", paddingTop:spacing.md}} >
-              {status === 'connect_confirm' ? (
+              {(status === 'connect_confirm' || (status === 'free_not_registered' && config.notNowLabel)) ? (
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
-                    style={[commonStyles.secondaryButton]}
+                    /* free_not_registered shares the width: both labels here are
+                       words rather than "Yes", and two buttons each holding
+                       minWidth 120 plus 48 of padding overflow a 320dp card,
+                       which clips (card has overflow: 'hidden'). connect_confirm
+                       keeps the layout it was approved with. */
+                    style={[commonStyles.secondaryButton,
+                            status === 'free_not_registered' ? styles.confirmBtnRow : null]}
                     activeOpacity={0.7}
                     onPress={onClose}
                   >
@@ -277,8 +329,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     <Text style={[commonStyles.primaryButtonText, styles.modalPrimaryText]}>{config.buttonLabel}</Text>
                   </TouchableOpacity>
                   <Text style={[styles.description, { marginTop: spacing.sm }]}>
-                    {t('details:iosnotnow')}
-                  </Text>
+                    {t('details:iosnotnow')}                  </Text>
                 </>
               )}
             </View>

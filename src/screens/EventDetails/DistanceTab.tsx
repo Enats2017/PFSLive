@@ -17,6 +17,10 @@ import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
 import { raceReadyService } from '../../services/raceReadyService';
 import RegistrationModal from '../../components/RegistrationModal';
+/* included = 1 with entitled = 0 is "this race includes tracking, but we
+   cannot find YOUR entry" - a different message from the membership one.
+   Pure and tested: npm run test:free-tracking-status. */
+import { freeTrackingModalStatus } from './freeTrackingStatus';
 import ConfirmRaceResultModal from './ConfirmRaceResultModal';
 import SuccessCelebrationModal from '../../components/SuccessCelebrationModal';
 import UndoConfirmModal from '../../components/UndoConfirmModal';
@@ -535,6 +539,20 @@ const handleExternalRegister = useCallback((url: string) => {
               </Text>
             </View>
 
+            {/* Tracking that comes free with the entry, because the organiser
+                ticked this distance on the website event. Said here, on the
+                distance itself, because this is where someone decides whether
+                to track it — the profile card only tells them afterwards.
+                Published to signed-out callers too, so it reads before login. */}
+            {item.free_tracking_included === 1 && (
+              <View style={detailsStyles.metaRow}>
+                <Ionicons name="navigate-circle-outline" size={15} color={palette.lime} />
+                <Text style={[detailsStyles.metaText, { color: palette.lime, fontWeight: '600' }]} numberOfLines={1}>
+                  {t('details:freeTrackingIncluded')}
+                </Text>
+              </View>
+            )}
+
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
                 <Feather name="users" size={16} color={palette.textMuted} />
@@ -693,7 +711,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
       <RegistrationModal
         visible={modalVisible}
-        status={selectedItem?.registration_status ?? null}
+        status={freeTrackingModalStatus(selectedItem)}
         distanceName={selectedItem?.distance_name ?? ''}
         membershipLimit={selectedItem?.membership_limit}
         membershipStartDate={selectedItem?.membership_start_date}
@@ -738,6 +756,13 @@ const handleExternalRegister = useCallback((url: string) => {
         visible={liveTrackingModalVisible}
         status="connect_confirm"
         distanceName={liveTrackingItem?.distance_name ?? ''}
+        /* free_tracking_entitled, not free_tracking_included: the badge on the
+           distance advertises that the race includes tracking and is shown to
+           everyone, but this modal says "included with YOUR entry", which is
+           only true for someone the API confirms has a live paid website entry
+           on this distance. An older API that does not send the field yields 0
+           and the normal membership copy, which is the safe direction. */
+        isFreeTracking={(liveTrackingItem?.free_tracking_entitled ?? 0) === 1}
         onClose={handleLiveTrackingClose}
         onConfirm={handleLiveTrackingConfirm}
       />
