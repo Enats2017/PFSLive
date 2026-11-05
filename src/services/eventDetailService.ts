@@ -31,6 +31,17 @@ export interface Distance {
    * whoever adds an "included" badge here later.
    */
   free_tracking_included?: number;
+
+  /**
+   * Whether THIS signed-in caller is entitled to that free tracking - they hold
+   * a live paid website entry on this distance. Absent for signed-out callers.
+   *
+   * free_tracking_included is a fact about the race and is advertised to
+   * everyone; this is the entitlement, and the two differ for a stranger
+   * looking at a ticked distance. Anything that promises the tracking is free
+   * for the person reading it must use THIS field - the registration gate does.
+   */
+  free_tracking_entitled?: number;
 }
 
 export interface RaceResultData {

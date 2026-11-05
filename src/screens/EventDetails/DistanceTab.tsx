@@ -645,7 +645,13 @@ const handleExternalRegister = useCallback((url: string) => {
         visible={liveTrackingModalVisible}
         status="connect_confirm"
         distanceName={liveTrackingItem?.distance_name ?? ''}
-        isFreeTracking={(liveTrackingItem?.free_tracking_included ?? 0) === 1}
+        /* free_tracking_entitled, not free_tracking_included: the badge on the
+           distance advertises that the race includes tracking and is shown to
+           everyone, but this modal says "included with YOUR entry", which is
+           only true for someone the API confirms has a live paid website entry
+           on this distance. An older API that does not send the field yields 0
+           and the normal membership copy, which is the safe direction. */
+        isFreeTracking={(liveTrackingItem?.free_tracking_entitled ?? 0) === 1}
         onClose={handleLiveTrackingClose}
         onConfirm={handleLiveTrackingConfirm}
       />
