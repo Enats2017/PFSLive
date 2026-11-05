@@ -58,6 +58,7 @@ test('the closed popup exists in all three languages, with its own text', () => 
 test('the card and the popup use it', () => {
   const tab = fs.readFileSync(path.join(root, 'screens/EventDetails/DistanceTab.tsx'), 'utf8');
   assert.ok(tab.includes('canShowConnectButton(item)'), 'DistanceTab hides the button');
+  assert.ok(tab.includes('item.free_tracking_included === 1 && canShowConnectButton(item)'), 'no included badge on a closed distance');
   assert.ok(tab.includes('registrationClosed={selectedItem?.registration_closed === 1}'), 'DistanceTab passes it to the popup');
   const modal = fs.readFileSync(path.join(root, 'components/RegistrationModal.tsx'), 'utf8');
   assert.ok(modal.includes("details:registrationModal.closed"), 'the popup reads the closed text');

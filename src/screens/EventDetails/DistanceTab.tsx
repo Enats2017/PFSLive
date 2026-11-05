@@ -455,7 +455,7 @@ const handleExternalRegister = useCallback((url: string) => {
                 distance itself, because this is where someone decides whether
                 to track it — the profile card only tells them afterwards.
                 Published to signed-out callers too, so it reads before login. */}
-            {item.free_tracking_included === 1 && (
+            {item.free_tracking_included === 1 && canShowConnectButton(item) && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="navigate-circle-outline" size={15} color={colors.themeiColor} />
                 <Text style={[detailsStyles.metaText, { color: colors.themeiColor, fontWeight: '600' }]} numberOfLines={1}>
