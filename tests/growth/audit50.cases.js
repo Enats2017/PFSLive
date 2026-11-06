@@ -91,4 +91,13 @@ module.exports = ({ M, load, test, SRC }) => {
       assert.ok(!/\r(?!\n)/.test(raw), f + ' has a lone CR');
     }
   });
+
+  // Lime on the white card is 1.57:1, ink 17.3:1. The icon stays lime.
+  test('"Live tracking included" is readable on the white distance card', () => {
+    const s = read('screens/EventDetails/DistanceTab.tsx');
+    const at = s.indexOf("t('details:freeTrackingIncluded')");
+    const label = s.slice(s.lastIndexOf('<Text', at), at);
+    assert.ok(/color: palette\.ink/.test(label), 'label is ink');
+    assert.ok(!/palette\.lime/.test(label), 'no lime text');
+  });
 };
