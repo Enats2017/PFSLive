@@ -17,6 +17,13 @@
  * Every unused activation is named, not just the first: somebody with two
  * (two events) used to see only the soonest one.
  *
+ * A used credit is the other way round. The single activation bought in the
+ * app or on the Livio site names no event when it is bought, so it is an
+ * ordinary session until spent, and only then does the server send a line for
+ * it, marked by event_source. resolveUsedCredits() turns those into "Used for
+ * {event}". A spent activation bought WITH its event carries no event_source
+ * and stays silent, as above.
+ *
  * Deliberately pure and RN-free, like profileCard.ts, so a plain node script
  * can test it (activationCard.test.ts). Keep it that way.
  */
@@ -24,6 +31,10 @@
 export type ActivationLike = {
   event_name: string;
   remaining: number;
+  /** Only on a used credit: 'partner' or 'custom'. */
+  event_source?: string;
+  /** The server falls back to this as event_name when the event is gone. */
+  membership_name?: string;
 };
 
 export type ActivationMembershipInfo = {
@@ -37,6 +48,18 @@ export type ActivationDecision = {
   /** "Trail de Bruxelles & GTLC Winter" - null when placement is null. */
   eventNames: string | null;
 };
+
+/** "A & B" for the credits that have been spent, null when there are none. */
+export function resolveUsedCredits(mi?: ActivationMembershipInfo | null): string | null {
+  const names: string[] = [];
+  for (const a of mi?.event_activations ?? []) {
+    const name = (a?.event_name ?? '').trim();
+    if (!a || !a.event_source || a.remaining > 0 || name === '') continue;
+    if (name === (a.membership_name ?? '').trim()) continue;   // the event is gone: nothing to name
+    if (!names.includes(name)) names.push(name);
+  }
+  return names.length > 0 ? names.join(' & ') : null;
+}
 
 export function resolveActivation(mi?: ActivationMembershipInfo | null): ActivationDecision {
   const names: string[] = [];

@@ -68,6 +68,37 @@ test('I. Pro USED UP + activation → extra line, so the card does not stop at "
 test('older API without event_only / event_activations → nothing', () => {
     assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)({ unlimited: false }), { placement: null, eventNames: null });
 });
+console.log('\n== used credit (bought without an event) ==');
+const PLAN = 'Livio single activation';
+const spent = (event_name, event_source = 'partner') => ({ event_name, remaining: 0, event_source, membership_name: PLAN });
+test('used credit, nothing else left → its event is named', () => {
+    assert_1.default.strictEqual((0, activationCard_1.resolveUsedCredits)(capped({ event_activations: [spent('Bear Trail')] })), 'Bear Trail');
+});
+test('used credit on a custom event → named too', () => {
+    assert_1.default.strictEqual((0, activationCard_1.resolveUsedCredits)(capped({ event_activations: [spent('Sunday run', 'custom')] })), 'Sunday run');
+});
+test('two used credits → both, each once', () => {
+    assert_1.default.strictEqual((0, activationCard_1.resolveUsedCredits)(capped({ event_activations: [spent('A'), spent('B'), spent('B')] })), 'A & B');
+});
+test('a used credit does not become a "Valid for" line', () => {
+    assert_1.default.deepStrictEqual((0, activationCard_1.resolveActivation)(capped({ event_activations: [spent('Bear Trail')] })), { placement: null, eventNames: null });
+});
+test('activation bought WITH its event, spent → still silent (no event_source)', () => {
+    assert_1.default.strictEqual((0, activationCard_1.resolveUsedCredits)({ event_only: 1, event_activations: [act('Limburg Wine Trail', 0)] }), null);
+});
+test('unused activation → not a "Used for" line', () => {
+    assert_1.default.strictEqual((0, activationCard_1.resolveUsedCredits)(capped({ event_activations: [act('GTLC Winter', 1)] })), null);
+});
+test('event gone: the server sends the plan name → nothing, never "Used for Livio single activation"', () => {
+    assert_1.default.strictEqual((0, activationCard_1.resolveUsedCredits)(capped({ event_activations: [spent(PLAN)] })), null);
+});
+test('blank name → nothing', () => {
+    assert_1.default.strictEqual((0, activationCard_1.resolveUsedCredits)(capped({ event_activations: [spent('  ')] })), null);
+});
+test('older API without event_activations → nothing', () => {
+    assert_1.default.strictEqual((0, activationCard_1.resolveUsedCredits)(null), null);
+    assert_1.default.strictEqual((0, activationCard_1.resolveUsedCredits)({ unlimited: false }), null);
+});
 // ── The copy the card renders (row 8 of the device test plan) ──────────────
 // Read from the real en/fr/nl files with i18next's {{placeholder}} rule, so a
 // missing key or an unsubstituted placeholder fails here, not on a phone. Paths
@@ -123,6 +154,11 @@ for (const l of ['en', 'fr', 'nl']) {
         }
     });
 }
+test('used credit copy: exact in en, nl, fr, no raw key or placeholder', () => {
+    assert_1.default.strictEqual(tr('en', 'membershipCard.usedActivation', { event: 'Bear Trail' }), 'Used for Bear Trail');
+    assert_1.default.strictEqual(tr('fr', 'membershipCard.usedActivation', { event: 'Bear Trail' }), 'Utilisée pour Bear Trail');
+    assert_1.default.strictEqual(tr('nl', 'membershipCard.usedActivation', { event: 'Bear Trail' }), 'Gebruikt voor Bear Trail');
+});
 test('fr and nl are translated, not copies of en', () => {
     const en = copy('en', PRO).ios, fr = copy('fr', PRO).ios, nl = copy('nl', PRO).ios;
     assert_1.default.ok(fr !== en && nl !== en && fr !== nl, `${fr} | ${nl}`);

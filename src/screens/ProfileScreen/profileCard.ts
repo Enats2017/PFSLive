@@ -13,7 +13,7 @@
  * way. Keep it that way.
  */
 
-import { resolveActivation } from './activationCard';
+import { resolveActivation, resolveUsedCredits } from './activationCard';
 
 /** Shapes this module needs. Structural, so the real AthleteProfile satisfies
  *  them without this file importing anything that executes. */
@@ -26,6 +26,8 @@ export type CardFreeEvent = {
 export type CardActivation = {
   event_name: string;
   remaining: number;
+  event_source?: string;
+  membership_name?: string;
 };
 
 export type CardMembershipInfo = {
@@ -72,6 +74,8 @@ export type CardDecision = {
   /** The same, when the activation sits BESIDE a capped plan - its own
    *  "Also valid" line, also when the plan is used up. Null beside unlimited. */
   activationExtra: string | null;
+  /** Where a used single-activation credit went: its own "Used for" line. */
+  usedCredit: string | null;
 };
 
 export function resolveProfileCard(profile?: CardProfileInput | null): CardDecision {
@@ -135,5 +139,6 @@ export function resolveProfileCard(profile?: CardProfileInput | null): CardDecis
     extraLine,
     activationEventName: act.placement === 'primary' ? act.eventNames : null,
     activationExtra: act.placement === 'extra' ? act.eventNames : null,
+    usedCredit: resolveUsedCredits(mi),
   };
 }

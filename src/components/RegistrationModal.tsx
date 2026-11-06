@@ -40,6 +40,9 @@ interface RegistrationModalProps {
   /* This distance includes Livio tracking with the entry, so the connect
      modal must not tell the participant they need a membership. */
   isFreeTracking?: boolean;
+  /* With 'unavailable': this distance does not take registrations, as opposed to
+     an event that is not configured yet. */
+  registrationClosed?: boolean;
   onClose: () => void;
    onConfirm?: () => void;
 }
@@ -62,6 +65,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   membershipLimit,
   membershipStartDate,  // ✅ NEW
   isFreeTracking,
+  registrationClosed,
   onClose,
   onConfirm,
 }) => {
@@ -79,7 +83,9 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
   // ✅ GET MODAL CONFIG FROM i18n
   const getModalConfig = (status: RegistrationStatus): ModalConfig => {
-    const baseKey = `details:registrationModal.${status}`;
+    const baseKey = status === 'unavailable' && registrationClosed
+      ? 'details:registrationModal.closed'
+      : `details:registrationModal.${status}`;
     if (status === 'connect_confirm') {
       return {
         icon: t('details:registrationModal.connect_confirm.icon'),

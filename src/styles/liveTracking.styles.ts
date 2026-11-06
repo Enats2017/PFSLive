@@ -140,6 +140,10 @@ export const liveTrackingStyles = StyleSheet.create({
         marginRight: spacing.md,
     },
     initials: {
+        // Holds a bib on an RR event, not just two letters: one line, shrunk to the circle.
+        width: '100%',
+        paddingHorizontal: 6,
+        textAlign: 'center',
         fontFamily: fonts.bodySemi,
         fontSize: 26,
 

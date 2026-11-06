@@ -102,7 +102,7 @@ export const ParticipantPopup: React.FC<ParticipantPopupProps> = ({
                             />
                         ) : (
                             <View style={liveTrackingStyles.avatarPlaceholder}>
-                                <Text style={liveTrackingStyles.initials}>
+                                <Text style={liveTrackingStyles.initials} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.4}>
                                     {participant.initials || '?'}
                                 </Text>
                             </View>

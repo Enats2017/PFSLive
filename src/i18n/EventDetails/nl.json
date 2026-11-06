@@ -104,6 +104,11 @@
       "title": "Niet Beschikbaar",
       "description": "Registratie voor deze afstand is nog niet geconfigureerd. Probeer het later opnieuw."
     },
+    "closed": {
+      "icon": "⊘",
+      "title": "Registratie Gesloten",
+      "description": "Registreren is niet mogelijk voor deze afstand. Registreer je op de hoofdafstand."
+    },
     "available": {
       "icon": "→",
       "title": "Klaar om te Racen?",

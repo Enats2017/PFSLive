@@ -52,6 +52,7 @@
     "refresh": "Vernieuwen",
     "eventOnly": "Alleen geldig voor {{event}}.",
     "alsoActivation": "Ook geldig: je Livio-activatie voor {{event}}.",
+    "usedActivation": "Gebruikt voor {{event}}",
     "freeIncludedTitle": "Tracking inbegrepen",
     "freeIncludedSubtitle": "voor {{event}}",
     "freeAlsoIncluded": "{{event}} is inbegrepen — dit gebruikt geen sessie.",

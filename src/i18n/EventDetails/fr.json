@@ -104,6 +104,11 @@
       "title": "Non Disponible",
       "description": "L'inscription pour cette distance n'est pas encore configurée. Veuillez revenir plus tard."
     },
+    "closed": {
+      "icon": "⊘",
+      "title": "Inscription Fermée",
+      "description": "Les inscriptions ne sont pas ouvertes pour cette distance. Veuillez vous inscrire sur la distance principale."
+    },
     "available": {
       "icon": "→",
       "title": "Prêt à Courir ?",

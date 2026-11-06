@@ -38,6 +38,7 @@ import { formatClockTime } from '../../utils/timeFormat';
 import { formatEventDate } from '../../utils/dateFormatter';
 import { distanceButtonsBelow, detailsHeaderImageLandscape, detailsHeaderImageFit } from '../../utils/screenFit';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
+import { canShowConnectButton } from './distanceConnect';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
@@ -544,7 +545,7 @@ const handleExternalRegister = useCallback((url: string) => {
                 distance itself, because this is where someone decides whether
                 to track it — the profile card only tells them afterwards.
                 Published to signed-out callers too, so it reads before login. */}
-            {item.free_tracking_included === 1 && (
+            {item.free_tracking_included === 1 && canShowConnectButton(item) && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="navigate-circle-outline" size={15} color={palette.lime} />
                 <Text style={[detailsStyles.metaText, { color: palette.lime, fontWeight: '600' }]} numberOfLines={1}>
@@ -593,6 +594,7 @@ const handleExternalRegister = useCallback((url: string) => {
           {!buttonsBelow && <View style={detailsStyles.verticalDivider} />}
 
           <View style={buttonsBelow ? detailsStyles.distanceButtonsBelow : { gap: spacing.sm }}>
+            {canShowConnectButton(item) && (
             <TouchableOpacity
                 style={[detailsStyles.resultsButton, buttonsBelow && detailsStyles.distanceButtonFull]}
                 onPress={() => {
@@ -619,6 +621,7 @@ const handleExternalRegister = useCallback((url: string) => {
               </Text>
               )}
             </TouchableOpacity>
+            )}
 
             {/* Visibility rule lives in useGpxDownload.canShowGpxButton so this
                 tab and the follower one cannot drift apart. */}
@@ -712,6 +715,7 @@ const handleExternalRegister = useCallback((url: string) => {
       <RegistrationModal
         visible={modalVisible}
         status={freeTrackingModalStatus(selectedItem)}
+        registrationClosed={selectedItem?.registration_closed === 1}
         distanceName={selectedItem?.distance_name ?? ''}
         membershipLimit={selectedItem?.membership_limit}
         membershipStartDate={selectedItem?.membership_start_date}

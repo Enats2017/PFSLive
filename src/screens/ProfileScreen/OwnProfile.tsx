@@ -64,6 +64,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
 
     const eventActivation = card.activationEventName;
     const activationExtra = card.activationExtra;
+    const usedCredit = card.usedCredit;
 
     // Name the race when there is one; count them when there are several, so
     // the line cannot grow unbounded as somebody enters a season of them.
@@ -184,6 +185,12 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                     </Text>
                 )}
 
+                {usedCredit && (
+                    <Text style={ownProfile.iosfreeline}>
+                        {t('ownProfile:membershipCard.usedActivation', { event: usedCredit })}
+                    </Text>
+                )}
+
                 <TouchableOpacity
                     style={ownProfile.iosbutton}
                     activeOpacity={0.8}
@@ -249,6 +256,11 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                             {activationExtra && (
                                 <Text style={ownProfile.freeline}>
                                     {t('ownProfile:membershipCard.alsoActivation', { event: activationExtra })}
+                                </Text>
+                            )}
+                            {usedCredit && (
+                                <Text style={ownProfile.freeline}>
+                                    {t('ownProfile:membershipCard.usedActivation', { event: usedCredit })}
                                 </Text>
                             )}
                         </View>

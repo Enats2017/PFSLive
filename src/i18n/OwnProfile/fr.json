@@ -52,6 +52,7 @@
     "refresh": "Actualiser",
     "eventOnly": "Valable uniquement pour {{event}}.",
     "alsoActivation": "Également valable : votre activation Livio pour {{event}}.",
+    "usedActivation": "Utilisée pour {{event}}",
     "freeIncludedTitle": "Suivi inclus",
     "freeIncludedSubtitle": "pour {{event}}",
     "freeAlsoIncluded": "{{event}} est inclus — cela n'utilisera pas de session.",

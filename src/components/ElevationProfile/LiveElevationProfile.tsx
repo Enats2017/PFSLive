@@ -461,6 +461,8 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                 }}
                                 pointerEvents="none"
                                 numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.6}
                             >
                                 {t.point.participant.initials || String(t.point.participant.bib) || '?'}
                             </Text>
