@@ -67,7 +67,8 @@ export interface AthleteProfile {
   races_count: number;
    membership_info: MembershipInfo | null;
    in_process_payment: number | null;
-   device_id: string | null;   /** Upcoming races where tracking is included with the event. [] when none. */
+   device_id: string | null;
+   /** Upcoming races where tracking is included with the event. [] when none. */
    free_events?: FreeEvent[];
 }
 

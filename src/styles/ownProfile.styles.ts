@@ -117,7 +117,7 @@ export const ownProfile = StyleSheet.create({
     fontFamily: fonts.bodySemi,
     color: palette.warningText,
     lineHeight: 17,
-    marginTop: 6,
+    marginTop: spacing.sm,
   },
   menuRow: {
     flexDirection: "row",
@@ -194,8 +194,8 @@ export const ownProfile = StyleSheet.create({
         fontSize: 13,
         fontFamily: fonts.bodySemi,
         lineHeight: 17,
-        marginTop: -6,
-        marginBottom: 14,
+        marginTop: -spacing.sm,
+        marginBottom: spacing.md,
     },
     iosbutton: {
         backgroundColor: palette.lime,

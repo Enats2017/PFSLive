@@ -83,4 +83,12 @@ module.exports = ({ M, load, test, SRC }) => {
     assert.ok(/\$\{formatSessionKm\(sessionStats\.distanceKm\)\} \$\{t\('units\.km', 'km'\)\}/.test(s));
     assert.ok(!/distanceKm\.toFixed\(1\)/.test(s), 'no one-decimal counter left');
   });
+
+  // ── Merge hygiene (3536b19) ──
+  test('merged files: no lone CR gluing two lines into one', () => {
+    for (const f of ['../package.json', 'components/RegistrationModal.tsx', 'services/athleteProfileService.ts']) {
+      const raw = fs.readFileSync(path.join(SRC, f), 'utf8');
+      assert.ok(!/\r(?!\n)/.test(raw), f + ' has a lone CR');
+    }
+  });
 };

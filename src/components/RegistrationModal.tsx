@@ -335,7 +335,8 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
                     <Text style={[commonStyles.primaryButtonText, styles.modalPrimaryText]}>{config.buttonLabel}</Text>
                   </TouchableOpacity>
                   <Text style={[styles.description, { marginTop: spacing.sm }]}>
-                    {t('details:iosnotnow')}                  </Text>
+                    {t('details:iosnotnow')}
+                  </Text>
                 </>
               )}
             </View>

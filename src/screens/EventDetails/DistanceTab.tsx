@@ -548,7 +548,7 @@ const handleExternalRegister = useCallback((url: string) => {
             {item.free_tracking_included === 1 && canShowConnectButton(item) && (
               <View style={detailsStyles.metaRow}>
                 <Ionicons name="navigate-circle-outline" size={15} color={palette.lime} />
-                <Text style={[detailsStyles.metaText, { color: palette.lime, fontWeight: '600' }]} numberOfLines={1}>
+                <Text style={[detailsStyles.metaText, { color: palette.lime, fontFamily: fonts.bodySemi }]}>
                   {t('details:freeTrackingIncluded')}
                 </Text>
               </View>
