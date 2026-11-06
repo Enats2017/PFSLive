@@ -424,6 +424,9 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                     elevation: 20,
                                 }}
                                 pointerEvents="none"
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.6}
                             >
                                 {t.point.participant.initials || String(t.point.participant.bib) || '?'}
                             </Text>

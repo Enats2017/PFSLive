@@ -77,5 +77,6 @@ function resolveProfileCard(profile) {
         extraLine,
         activationEventName: act.placement === 'primary' ? act.eventNames : null,
         activationExtra: act.placement === 'extra' ? act.eventNames : null,
+        usedCredit: (0, activationCard_1.resolveUsedCredits)(mi),
     };
 }

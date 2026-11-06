@@ -31,6 +31,11 @@ export interface Distance {
    * whoever adds an "included" badge here later.
    */
   free_tracking_included?: number;
+  /**
+   * 1 when this distance is only a results list (GT80 BC next to GT80): nobody can
+   * register on it. See canShowConnectButton.
+   */
+  registration_closed?: number;
 
   /**
    * Whether THIS signed-in caller is entitled to that free tracking - they hold
