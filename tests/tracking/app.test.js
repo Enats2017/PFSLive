@@ -2593,6 +2593,153 @@ const L = () => load('services/locationService').locationService;
   }
   results.push(await run('18. Android headless relaunch: ready() deferred until Livio is opened (bibs 151 / 353 / 2 / 459)'));
 
+  // ════════════ 19. GTLC Winter post-race (2026-11-08): p6755's backlog after the finish ════════════
+  // p6755 (Pixel, Android 17): offline 10:54-18:07, RaceResult finish 16:45. From 18:07
+  // the server answered finished:1 src:rr, but the session stayed open until the queue
+  // was empty, and the queue only moved during three short app opens (280 / 52 / 85),
+  // ending at the fix recorded 16:03. No device log, engine left running, three
+  // "Livio stopped tracking" pushes.
+  const locBodies = () => M.api.posted.filter((p) => p.url.includes('insert_participant_location')).map((p) => p.body);
+  const logPosts = () => M.api.posted.filter((p) => p.url.includes('save_tracking_log'));
+  const hbPosts = () => M.api.posted.filter((p) => p.url.includes('heartbeat_ping'));
+  // Every location answer says finished by RaceResult (it was, from 16:45), unless `down` says the network is gone.
+  const rrFinishedServer = (opts = {}) => {
+    let n = 0;
+    M.api.handler = (url, body) => {
+      if (url.includes('insert_participant_location') && opts.downAfter !== undefined && n >= opts.downAfter) {
+        const e = new Error('Network Error'); e.type = 'network'; return Promise.reject(e);
+      }
+      M.api.posted.push({ url, body });
+      if (url.includes('insert_participant_location')) { n++; return Promise.resolve({ success: true, data: { coordinate_id: n, distance_to_finish_km: 4.7, finished: 1, finish_source: 'rr' }, error: null }); }
+      return Promise.resolve({ success: true, data: {}, error: null });
+    };
+  };
+  const backlog = (count) => Array.from({ length: count }, (_, i) => fix(6755, 21, 400 - i));   // oldest first
+
+  test('[#FINISH-PARK-BACKLOG] p6755: finish answer on a 417-fix backlog → session closed in that pass, log uploaded, every fix still sent once, in order', async () => {
+    armSession(); M.store.set(PARAMS, JSON.stringify({ participantId: '6755', eventId: '21', intervalSeconds: 30, raceStartTime: new Date(M.clock - 10 * HOUR).toISOString(), manualStart: 0 }));
+    const q = backlog(417); setQ(q); rrFinishedServer();
+    M.appState = 'background';                              // the phone is in a pocket / on a table
+    await L().processQueue('6755', '21');
+    assert.strictEqual(M.store.get(RACE_FIN), '1', 'race finished');
+    assert.ok(!M.store.has(PARAMS), 'session closed (old code: left open until the queue was empty)');
+    assert.strictEqual(logPosts().length, 1, 'device log uploaded in the same wake');
+    assert.strictEqual(logPosts()[0].body.totalQueued, 417 - 50, 'total_queued counts the parked leftovers');
+    const sent = locBodies();
+    assert.ok(sent.length >= 50, 'the first pass went out');
+    assert.strictEqual(sent.length + getO().length + getQ().length, 417, 'nothing lost');
+    const ts = sent.map((b) => b.timestamp);
+    assert.deepStrictEqual(ts, q.slice(0, sent.length).map((f) => f.timestamp), 'oldest first, no duplicates');
+    assert.ok(sent.every((b) => b.is_queued === 1), 'all as queued fixes (recorded time kept, no finish pin)');
+    const log = (await load('services/gpsService').getFullTrackingLog()).map((e) => e.msg);
+    assert.ok(log.some((m) => /Finish confirmed during drain \(src:rr\) with 367 fix\(es\) still queued/.test(m)), log.join('\n'));
+  });
+  test('[#FINISH-PARK-BACKLOG] background budget runs out → the rest waits as leftovers and goes on the next app open', async () => {
+    M.store.set(PARAMS, JSON.stringify({ participantId: '6755', eventId: '21', intervalSeconds: 30, raceStartTime: new Date(M.clock - 10 * HOUR).toISOString(), manualStart: 0 }));
+    setQ(backlog(200)); rrFinishedServer({ downAfter: 80 });   // signal gone again after 80 fixes
+    M.appState = 'background';
+    await L().processQueue('6755', '21');
+    assert.ok(!M.store.has(PARAMS), 'closed anyway');
+    assert.strictEqual(locBodies().length, 80);
+    assert.strictEqual(getO().length, 120, '120 kept as leftovers');
+    rrFinishedServer();                                     // network back, app opened → HomeScreen's drainOrphans
+    assert.strictEqual(await L().drainOrphans(45000), 120);
+    assert.strictEqual(getO().length, 0);
+  });
+  test('[#FINISH-PARK-BACKLOG] a finish on the LAST queued fix still finishes exactly as before (nothing parked)', async () => {
+    armSession(); setQ([fix(2, 12, 5), fix(2, 12, 4)]); drainAnswers([NOT, RR]);
+    await L().processQueue('2', '12');
+    assert.strictEqual(M.store.get(RACE_FIN), '1'); assert.ok(!M.store.has(PARAMS));
+    assert.strictEqual(getO().length, 0); assert.strictEqual(getQ().length, 0);
+    assert.ok(!(await load('services/gpsService').getFullTrackingLog()).some((e) => /Finish confirmed during drain/.test(e.msg)));
+  });
+  test('[#FINISH-PARK-BACKLOG] a held "distance" finish (not on the line) parks nothing, the session stays open', async () => {
+    armSession(); setQ(Array.from({ length: 60 }, (_, i) => fix(2, 12, 100 - i)));
+    M.api.handler = (url, body) => { M.api.posted.push({ url, body }); return Promise.resolve({ success: true, data: { coordinate_id: 1, distance_to_finish_km: 3.0, finished: 1, finish_source: 'distance' }, error: null }); };
+    await L().processQueue('2', '12');
+    assert.ok(M.store.has(PARAMS)); assert.notStrictEqual(M.store.get(RACE_FIN), '1');
+    assert.strictEqual(getO().length, 0); assert.strictEqual(getQ().length, 10);
+  });
+  test('[#LOC-LOG-QUEUE] queued fixes carry queue_left (n-1 … 0), leftovers too; a live fix never does', async () => {
+    armSession(); setQ([fix(2, 12, 5), fix(2, 12, 4), fix(2, 12, 3)]); drainAnswers([]);
+    await L().processQueue('2', '12');
+    assert.deepStrictEqual(locBodies().map((b) => b.queue_left), [2, 1, 0]);
+    M.api.posted = []; M.store.delete(PARAMS);
+    M.store.set(OK_, JSON.stringify([fix(9, 9, 50), fix(9, 9, 40)]));
+    await L().drainOrphans();
+    assert.deepStrictEqual(locBodies().map((b) => b.queue_left), [1, 0]);
+    M.api.posted = [];
+    await L().sendLocation('2', '12', { latitude: 50, longitude: 4, timestamp: new Date(M.clock).toISOString() });
+    assert.ok(!('queue_left' in locBodies()[0]), 'live fix: no queue_left');
+  });
+  test('[#HB-DRAIN] heartbeat with a backlog and no new fix → the backlog goes out from the beat', async () => {
+    await startSession('6755', '21');
+    setQ(backlog(30)); drainAnswers([]);
+    await M.bg.heartbeat({}); await settle();
+    assert.strictEqual(locBodies().length, 30, 'drained (old code: only via a fresh fix — none indoors)');
+    assert.strictEqual(getQ().length, 0);
+    assert.ok((await load('services/gpsService').getFullTrackingLog()).some((e) => /^Heartbeat — drained 30 queued fix\(es\) without a new fix \(0 still queued\)/.test(e.msg)));
+  });
+  test('[#HB-DRAIN] …the heartbeat closes the session on a finish answer and parks the rest', async () => {
+    await startSession('6755', '21');
+    setQ(backlog(90)); rrFinishedServer({ downAfter: 60 });
+    M.appState = 'background';
+    await M.bg.heartbeat({}); await settle();
+    assert.ok(!M.store.has(PARAMS), 'closed');
+    assert.strictEqual(locBodies().length, 60); assert.strictEqual(getO().length, 30);
+  });
+  test('[#HB-DRAIN] not during the send path\'s offline cooldown, not before the gun, not with an empty queue', async () => {
+    await startSession('6755', '21');
+    setQ(backlog(5)); drainAnswers([]);
+    M.store.set('@PFSLive:offlineCooldownUntil', String(M.clock + 60000));
+    await M.bg.heartbeat({}); await settle();
+    assert.strictEqual(locBodies().length, 0, 'cooldown respected');
+    M.store.delete('@PFSLive:offlineCooldownUntil');
+    await M.bg.heartbeat({}); await settle();
+    assert.strictEqual(locBodies().length, 5, 'after the cooldown');
+  });
+  test('[#HB-DIAG] the heartbeat ping carries queue / orphans / battery / moving / finishPending / online / src', async () => {
+    await startSession('6755', '21');
+    M.battery.power = { batteryLevel: 0.75, lowPowerMode: false, batteryState: 1 };
+    M.store.set(OK_, JSON.stringify([fix(1, 9, 90)]));
+    M.store.set('@PFSLive:offlineCooldownUntil', String(M.clock + 60000));   // keep the queue in place
+    setQ(backlog(7));
+    M.appState = 'background';
+    await M.bg.heartbeat({}); await settle();
+    const b = hbPosts().map((p) => p.body).pop();
+    assert.ok(b, 'pinged');
+    assert.deepStrictEqual({ q: b.queue, o: b.orphans, bat: b.battery, mv: b.moving, fin: b.finishPending, on: b.online, src: b.src },
+      { q: 7, o: 1, bat: 75, mv: true, fin: false, on: true, src: 'bg' });
+  });
+  test('[#HB-DIAG] a battery read that never answers stops neither the ping nor the beat (drain still runs)', async () => {
+    await startSession('6755', '21');
+    setQ(backlog(4)); drainAnswers([]);
+    M.battery.hang = true;
+    // Not awaited on its own: on the old code the beat never finished (Node would just exit).
+    const beat = M.bg.heartbeat({});
+    await Promise.race([beat, new Promise((r) => setTimeout(r, 6000))]);
+    await settle();
+    assert.strictEqual(hbPosts().length, 1, 'pinged');
+    assert.strictEqual(hbPosts()[0].body.battery, undefined, 'no battery value');
+    assert.strictEqual(locBodies().length, 4, 'the rest of the beat ran');
+  });
+  test('[#HB-DIAG] headless heartbeat (UI killed, Android) now pings too, src:headless, and drains', async () => {
+    M.os = 'android';
+    M.store.set(PARAMS, JSON.stringify({ participantId: '6755', eventId: '21', intervalSeconds: 30, raceStartTime: new Date(M.clock - HOUR).toISOString(), manualStart: 0 }));
+    setQ(backlog(12)); drainAnswers([]);
+    const BG = require('react-native-background-geolocation').default;
+    BG.getCurrentPosition = async () => { throw new Error('timeout'); };   // indoors: no fix
+    try { await load('services/gpsService').headlessTask({ name: 'heartbeat', params: {} }); } finally { delete BG.getCurrentPosition; }
+    assert.strictEqual(hbPosts().length, 1); assert.strictEqual(hbPosts()[0].body.src, 'headless');
+    assert.strictEqual(locBodies().length, 12, 'drained with no fix');
+  });
+  test('HomeScreen Stop path hands leftovers to drainOrphans even when the live queue is empty', async () => {
+    const src = fs.readFileSync(SRC + '/screens/HomeScreen.tsx', 'utf8');
+    assert.ok(/\r?\n\s*void locationService\.drainOrphans\(\);\r?\n\s*\}, \[locationUpdateCount/.test(src), 'unconditional call at the end of stopGPSTracking');
+    assert.ok(!/if \(remaining > 0\) void locationService\.drainOrphans\(\);/.test(src));
+  });
+  results.push(await run('19. GTLC Winter post-race: finish with a backlog, heartbeat drain, diagnostics (p6755)'));
+
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);
   process.exit(tot.fail ? 1 : 0);

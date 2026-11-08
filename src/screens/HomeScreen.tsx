@@ -1422,7 +1422,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // (it parks the queue now that the session is over, and keeps retrying on
     // later launches/foregrounds) instead of sitting until the next Start
     // deleted it.
-    if (remaining > 0) void locationService.drainOrphans();
+    // Called even when the live queue is empty: a finish found during a drain
+    // parks the unsent rest as leftovers before this runs [#FINISH-PARK-BACKLOG],
+    // and they must not wait for the next foreground. No-op when nothing is parked;
+    // never sends a live session's own fixes.
+    void locationService.drainOrphans();
   }, [locationUpdateCount, participantId, eventId, sessionRaceName, t]);
 
   // ✅ Stop pressed BEFORE the gun → confirm first. Sep-Oct 2026: 12 runners

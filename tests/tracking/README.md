@@ -33,6 +33,8 @@ What each group guards:
 | 15. tracking safety net (2026-10-24) | silent starts (OS killed Livio after Start): "not tracking" check at gun + 4, 15-min watchdog, early-Start reminder; start ping battery / device diag; Start popup line |
 | 16. recording but not sending (2026-10-24 08:20) | a phone with no working data for hours (bib 1269, bib 410) never told: one local notification 20 min after the last accepted send, withdrawn on the next; dead zones of 15-18 min, standing still and before the gun stay silent |
 | 17. no side effects | a hung battery read losing the start ping; heartbeat / orphan sends counted as "sent"; Start / Stop touching the start reminders; a safety notification opening a result; a stale send stamp warning the next race; a normal online race showing any safety notification |
+| 18. Android headless relaunch | `ready()` called while headless, so no event reached JS until Livio was opened (bibs 151 / 353 / 2 / 459) |
+| 19. GTLC Winter post-race (2026-11-08) | p6755: a finish answer on a backlog leaving the session open until the queue was empty (it only moved while Livio was on screen — no device log, engine left on, "stopped tracking" pushes); the heartbeat draining only through a fresh fix (none indoors); a hung battery read holding the whole beat; no `queue_left` on queued fixes; heartbeat pings without the phone's state, and none at all from a headless beat |
 
 Groups 8-11 fail on the pre-fix commit `ebfec46` (except the DB-outage replay,
 which the app already survived — that fix was server-side — and two group-11
