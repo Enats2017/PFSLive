@@ -2898,6 +2898,46 @@ const L = () => load('services/locationService').locationService;
     const src = fs.readFileSync(SRC + '/services/gpsService.ts', 'utf8');
     assert.ok(/if \(isTrackWakePayload\(data\)\) await wakeFromPush\(\);/.test(src));
   });
+  // [#SAME-FIX-ONCE] p6622 / p6679: a fix queued and sent, then replayed by the engine
+  // (re-assert answers with the last known fix, its own timestamp) and sent again live.
+  const fireAt = async (tsMs, dLat = 0.001) => {
+    lat += dLat;
+    M.bg.location({ coords: { latitude: lat, longitude: 4, speed: 3, accuracy: 5, altitude: 10, heading: 0 }, timestamp: new Date(tsMs).toISOString(), is_moving: true });
+    await settle();
+  };
+  test('[#SAME-FIX-ONCE] the engine replaying a fix already sent live → not sent again (moved or not)', async () => {
+    await liveStart();
+    M.clock += 31000; const t = M.clock; await fireAt(t);
+    const n = locBodies().length;
+    M.clock += 60000; await fireAt(t, 0.002);              // same capture time, "moved" vs the anchor
+    assert.strictEqual(locBodies().length, n, 'not re-sent (old code: sent again)');
+    assert.ok((await GPS().getFullTrackingLog()).some((e) => /^Skipped — same fix as one already sent\/queued/.test(e.msg)));
+  });
+  test('[#SAME-FIX-ONCE] a fix queued behind a backlog, drained, then replayed live → stored once', async () => {
+    await liveStart();
+    setQ([fix(2, 12, 3), fix(2, 12, 2)]);                     // a backlog: the next fix queues behind it
+    M.store.set('@PFSLive:offlineCooldownUntil', String(M.clock + 120000));
+    M.clock += 31000; const t = M.clock; await fireAt(t);
+    assert.ok(getQ().some((f) => f.timestamp === new Date(t).toISOString()), 'queued');
+    M.store.delete('@PFSLive:offlineCooldownUntil');
+    await L().processQueue('2', '12');                       // drained (sent from the queue)
+    const sentT = () => locBodies().filter((b) => b.timestamp === new Date(t).toISOString()).length;
+    assert.strictEqual(sentT(), 1);
+    M.clock += 90000; await fireAt(t, 0.002);                 // the replay
+    assert.strictEqual(sentT(), 1, 'once (p6622: 10:43:18 queued, then live again)');
+  });
+  test('[#SAME-FIX-ONCE] a NEW fix that is merely late (older capture time, never seen) is still sent', async () => {
+    await liveStart();
+    M.clock += 31000; await fireAt(M.clock);
+    const n = locBodies().length;
+    M.clock += 40000; await fireAt(M.clock - 20000);         // captured 20 s ago, first time seen
+    assert.strictEqual(locBodies().length, n + 1);
+  });
+  test('[#SAME-FIX-ONCE] a new session starts with an empty list', async () => {
+    M.store.set('@PFSLive:recentFixTs', JSON.stringify([1, 2, 3]));
+    await startSession('2', '12');
+    assert.ok(!M.store.has('@PFSLive:recentFixTs'));
+  });
   results.push(await run('21. GTLC Winter day 2: liveness from fixes (no heartbeat while moving), server wake push'));
 
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });

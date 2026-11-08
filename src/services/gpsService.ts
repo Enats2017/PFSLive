@@ -836,6 +836,26 @@ let _sendStartedAt = 0;
 // locationService.sendLocation / processQueue).
 const SEND_MUTEX_MAX_MS = 120000;
 
+// [#SAME-FIX-ONCE] Capture times (ms) of the last fixes this session sent or
+// queued. Storage, not memory: the listener and a headless context share it.
+// Cleared at Start and at the full stop, like LAST_POSITION_KEY.
+export const RECENT_FIX_TS_KEY = '@PFSLive:recentFixTs';
+const RECENT_FIX_TS_MAX = 30;
+const _readFixTs = async (): Promise<number[]> => {
+  try {
+    const a = JSON.parse((await AsyncStorage.getItem(RECENT_FIX_TS_KEY)) || '[]');
+    return Array.isArray(a) ? a.filter((x) => typeof x === 'number') : [];
+  } catch { return []; }
+};
+const _fixTsSeen = async (ts: number): Promise<boolean> => (await _readFixTs()).includes(ts);
+const _rememberFixTs = async (ts: number): Promise<void> => {
+  try {
+    const a = (await _readFixTs()).filter((x) => x !== ts);
+    a.push(ts);
+    await AsyncStorage.setItem(RECENT_FIX_TS_KEY, JSON.stringify(a.slice(-RECENT_FIX_TS_MAX)));
+  } catch { /* never let bookkeeping cost a fix */ }
+};
+
 const processLocationForSend = async (
   raw: NormalizedRawLocation,
   source: 'task' | 'transistor',
@@ -930,6 +950,20 @@ const _processLocationForSendInternal = async (
 
     // [#HB-PULSE] What the heartbeat did, from the fix path (at most once a minute).
     void _enginePulse('fix', source === 'task' ? 'headless' : undefined);
+
+    // [#SAME-FIX-ONCE] (2026-11-08, GTLC Winter day 2) A fix whose capture time
+    // was already sent or queued is the engine replaying its last location (a
+    // re-assert to MOVING answers at once with the last known fix, with that
+    // fix's own timestamp; a motion-change carries it too). p6622: 10:43:18 went
+    // out from the queue at 10:43:40, then again as a LIVE post at 10:45:15;
+    // p6679 twice. The movement gate let it through (it compares with the newest
+    // position, and the runner had moved on). Exact capture time only: a new fix
+    // that is merely late is still sent.
+    const fixTs = typeof raw.timestamp === 'number' && isFinite(raw.timestamp) ? Math.round(raw.timestamp) : 0;
+    if (fixTs > 0 && (await _fixTsSeen(fixTs))) {
+      await addLog('♻️', `Skipped — same fix as one already sent/queued (${new Date(fixTs).toISOString().slice(11, 19)})${tag}`);
+      return;
+    }
 
     // ── BOUNDED MULTI-BATCH DRAIN ──────────────────────────────────────────
     // processQueue drains at most batchSize (50) per call. After a long outage
@@ -1296,6 +1330,7 @@ const _processLocationForSendInternal = async (
         // enforced upstream; the queue's job here is ordering, not rate limiting.
         // Only when it really was stored — a throttle drop logged its own line.
         if (stored) await addLog('📥', `Backlog present — current fix queued behind it${tag}`);
+        if (stored && fixTs > 0) await _rememberFixTs(fixTs);   // [#SAME-FIX-ONCE]
       } catch { /* silent */ }
       return;
     }
@@ -1416,6 +1451,8 @@ const _processLocationForSendInternal = async (
       lat: location.latitude,
       lon: location.longitude,
     }));
+    // [#SAME-FIX-ONCE] sent now, or queued by sendLocation if the post fails.
+    if (fixTs > 0) await _rememberFixTs(fixTs);
 
     // ✅ FIX 4: Send-gap diagnostic, now with false-positive suppression.
     //
@@ -2251,6 +2288,7 @@ const _doFullStop = async (): Promise<void> => {
   await trackingSafetyService.disarm();
   await AsyncStorage.removeItem(LAST_SENT_KEY);
   await AsyncStorage.removeItem(LAST_POSITION_KEY);
+  await AsyncStorage.removeItem(RECENT_FIX_TS_KEY);
   await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
   // Preserve the final total before clearing — the stop toast (and any late
   // reader) runs AFTER this teardown on the background-finish path, and would
@@ -3034,6 +3072,7 @@ export const gpsService = {
         await AsyncStorage.setItem(SESSION_STARTED_AT_KEY, String(Date.now()));
       }
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
+      await AsyncStorage.removeItem(RECENT_FIX_TS_KEY);   // [#SAME-FIX-ONCE] new session
       await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
       await AsyncStorage.removeItem(BACKGROUND_SENT_COUNT_KEY);
       await AsyncStorage.removeItem(FINAL_SENT_COUNT_KEY);
