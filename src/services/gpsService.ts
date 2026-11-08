@@ -928,6 +928,9 @@ const _processLocationForSendInternal = async (
     // this far counts — sent, queued or throttled — because the app is alive.
     void trackingSafetyService.onAlive(now);
 
+    // [#HB-PULSE] What the heartbeat did, from the fix path (at most once a minute).
+    void _enginePulse('fix', source === 'task' ? 'headless' : undefined);
+
     // ── BOUNDED MULTI-BATCH DRAIN ──────────────────────────────────────────
     // processQueue drains at most batchSize (50) per call. After a long outage
     // the backlog can be hundreds deep; draining ONE batch per onLocation fire
@@ -1784,7 +1787,7 @@ const _heartbeatDiag = async (src: 'fg' | 'bg' | 'headless'): Promise<import('./
 // onLocation drain (DRAIN_TIME_BUDGET_MS there), and not while the send path's
 // offline cooldown is on (it opened that cooldown because drains were failing).
 const HB_DRAIN_BUDGET_MS = 12000;
-const _drainBacklogOnHeartbeat = async (where: string): Promise<void> => {
+const _drainBacklogOnHeartbeat = async (where: string, budgetMs: number = HB_DRAIN_BUDGET_MS): Promise<void> => {
   try {
     const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
     if (!raw) return;
@@ -1796,12 +1799,173 @@ const _drainBacklogOnHeartbeat = async (where: string): Promise<void> => {
     const cooldownUntil = parseInt((await AsyncStorage.getItem(OFFLINE_UNTIL_KEY)) || '0', 10) || 0;
     if (cooldownUntil > Date.now()) return;
     const { locationService } = require('./locationService');
-    const sent = await locationService.drainForStop(String(participantId), String(eventId), HB_DRAIN_BUDGET_MS);
+    const sent = await locationService.drainForStop(String(participantId), String(eventId), budgetMs);
     if (sent > 0) {
       const left = parseInt((await AsyncStorage.getItem(QUEUE_COUNT_KEY)) || '0', 10) || 0;
       await addLog('📤', `${where} — drained ${sent} queued fix(es) without a new fix (${left} still queued)`);
     }
   } catch { /* never let the beat throw */ }
+};
+
+// [#HB-PULSE] (2026-11-08, GTLC Winter day 2) The engine heartbeat fires only
+// while the engine is STATIONARY (device logs 10-01 → 11-08: 2,207 pre-race-idle
+// + 378 stationary beats on 10-04 against 62 moving). Since 2026-10-20 the
+// engine is kept MOVING through the race (re-asserted on every stationary
+// transition, and from 60 min before the gun), so it hardly ever went
+// stationary again: 2 of 246 device logs had a beat on 10-24, 4 of 228 on
+// 11-07, and the server's heartbeat log got nothing at all on 11-08. With the
+// beat went everything that only ran from it: the liveness ping + [#HB-DIAG],
+// the interim log of a session that never got a fix through, the retry of a
+// lost start ping. Tracking itself was unaffected (each re-assert yields a fix
+// at once — 447 of 447 — and fixes drive the drain).
+//
+// So the fix path does the beat's bookkeeping too: every fix that passes the
+// gun gate in processLocationForSend calls this, and it acts at most once a
+// minute (storage stamp, so the listener and a headless context share it).
+// The heartbeat keeps doing all of it as well; the ping is idempotent.
+export const PULSE_EVERY_MS = 60 * 1000;
+const LAST_PULSE_KEY = '@PFSLive:lastPulseAt';
+let _pulseInFlight = false;
+const _enginePulse = async (via: 'fix' | 'push', srcOverride?: 'headless'): Promise<void> => {
+  if (_pulseInFlight) return;
+  _pulseInFlight = true;
+  try {
+    const now = Date.now();
+    const last = parseInt((await AsyncStorage.getItem(LAST_PULSE_KEY)) || '0', 10) || 0;
+    // A stamp in the future (clock moved back) does not block for ever.
+    if (via === 'fix' && last <= now && now - last < PULSE_EVERY_MS) return;
+    const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!raw) return;
+    const { participantId, eventId } = JSON.parse(raw);
+    if (!participantId || !eventId) return;
+    await AsyncStorage.setItem(LAST_PULSE_KEY, String(now));
+    try { void require('./trackingStartService').flushPendingStartPing(); } catch { /* silent */ }
+    const src = srcOverride ?? (AppState.currentState === 'active' ? 'fg' : 'bg');
+    const diag = await _heartbeatDiag(src);
+    const { locationService } = require('./locationService');
+    await locationService.sendHeartbeatPing(String(participantId), String(eventId), { ...diag, via });
+    // A session that has fixes but none got through yet (no data on the phone):
+    // its diagnostic log, as the heartbeat used to ship it. Rules unchanged.
+    await maybeUploadInterimLog();
+  } catch { /* bookkeeping must never affect a send */ }
+  finally { _pulseInFlight = false; }
+};
+
+// [#TRACK-WAKE] (2026-11-08, GTLC Winter day 2) A phone the server hears nothing
+// from is woken by a silent push from the watch cron (no title, iOS
+// content-available, Android data-only). Seen on day 2: p7136 / p7071 / p7276
+// (iPhones) pressed Start, then not one fix or log in 2.5 h of racing; p7337
+// (Samsung) silent for 40 min, p6468 (Huawei) for 98 min, neither holding a
+// backlog — Livio was not running. A tapped "not tracking" alert was the only
+// way back. A background push can bring Livio up without a tap when the OS ended
+// it (never after a force-quit on iOS, never on a force-stopped Android app, and
+// the OS may hold or drop it — this improves the odds, it guarantees nothing).
+// What it does, cheapest proof of life first (an iOS wake has ~30 s):
+//   1. re-attach to the engine (iOS: the same rehydrate as a cold boot, which
+//      restarts an engine found off; Android: listeners only — no ready() while
+//      off screen, [#ANDROID-HEADLESS-READY]) and keep it MOVING;
+//   2. the liveness ping (via:push);
+//   3. one fresh fix through the normal send path;
+//   4. the backlog;
+//   5. the device log (at most once per WAKE_LOG_EVERY_MS), so the review sees
+//      why the phone went quiet.
+// Never after a Stop or a finish (no session / finish flag): nothing to wake.
+export const TRACK_WAKE_TASK = 'livio-track-wake';
+const WAKE_LOG_EVERY_MS = 30 * 60 * 1000;
+const WAKE_LOG_AT_KEY = '@PFSLive:wakeLogAt';
+const WAKE_FIX_TIMEOUT_S = 10;
+const WAKE_DRAIN_BUDGET_MS = 8000;
+
+// The task payload differs per platform / app state: Android data-only →
+// data.dataString (JSON) or flat data keys; iOS → data.body or the parsed aps
+// payload; a response object → notification.request.content.data.
+export const isTrackWakePayload = (payload: any): boolean => {
+  const isWake = (o: any) => !!o && typeof o === 'object' && o.type === 'track_wake';
+  try {
+    if (!payload || typeof payload !== 'object') return false;
+    const d = payload.data ?? payload;
+    if (isWake(d)) return true;
+    if (typeof d?.dataString === 'string') { try { if (isWake(JSON.parse(d.dataString))) return true; } catch { /* not JSON */ } }
+    if (isWake(d?.body)) return true;
+    if (typeof d?.body === 'string') { try { if (isWake(JSON.parse(d.body))) return true; } catch { /* not JSON */ } }
+    if (isWake(d?.data)) return true;
+    if (isWake(payload?.notification?.request?.content?.data)) return true;
+  } catch { /* fall through */ }
+  return false;
+};
+
+export const wakeFromPush = async (): Promise<void> => {
+  try {
+    const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!raw) return;
+    if ((await AsyncStorage.getItem(RACE_FINISHED_KEY)) === '1') return;
+    if (await _stopIfStale('Wake push')) return;
+    await addLog('📲', `Wake push from the server (app ${AppState.currentState})`);
+
+    if (Platform.OS === 'ios' || AppState.currentState === 'active') {
+      await _rehydrateTrackingOnBoot();
+    } else {
+      _registerTransistorListeners();
+    }
+    if (!(await AsyncStorage.getItem(TRACKING_PARAMS_KEY))) return;   // the rehydrate stopped it
+    try { if (await _shouldStayMoving()) await safeChangePace(true); } catch { /* silent */ }
+
+    await _enginePulse('push', Platform.OS === 'android' && AppState.currentState !== 'active' ? 'headless' : undefined);
+
+    try {
+      const loc = await BackgroundGeolocation.getCurrentPosition({
+        samples: 1, timeout: WAKE_FIX_TIMEOUT_S, desiredAccuracy: 20, persist: false,
+      });
+      const c = loc?.coords;
+      if (c && typeof c.latitude === 'number' && isFinite(c.latitude)
+            && typeof c.longitude === 'number' && isFinite(c.longitude)) {
+        const ts = typeof loc.timestamp === 'string' ? new Date(loc.timestamp).getTime() : (loc.timestamp as unknown as number);
+        await processLocationForSend({
+          latitude: c.latitude, longitude: c.longitude,
+          altitude: c.altitude ?? null, accuracy: c.accuracy ?? null,
+          altitudeAccuracy: (c as any).altitude_accuracy ?? null,
+          speed: c.speed ?? null, heading: c.heading ?? null,
+          timestamp: (typeof ts === 'number' && !isNaN(ts)) ? ts : Date.now(),
+          mocked: false,
+        }, 'task');
+      }
+    } catch { /* no fix in time — the ping above already said "alive" */ }
+
+    await _drainBacklogOnHeartbeat('Wake push', WAKE_DRAIN_BUDGET_MS);
+
+    const p = JSON.parse((await AsyncStorage.getItem(TRACKING_PARAMS_KEY)) || 'null');
+    if (!p?.participantId || !p?.eventId) return;   // finished by that fix / drain
+    const lastLog = parseInt((await AsyncStorage.getItem(WAKE_LOG_AT_KEY)) || '0', 10) || 0;
+    if (lastLog <= Date.now() && Date.now() - lastLog < WAKE_LOG_EVERY_MS) return;
+    await AsyncStorage.setItem(WAKE_LOG_AT_KEY, String(Date.now()));
+    await _flushLogsNow();
+    const { locationService } = require('./locationService');
+    const { locationQueueService } = require('./locationQueueService');
+    const sent = parseInt((await AsyncStorage.getItem(BACKGROUND_SENT_COUNT_KEY)) || '0', 10) || 0;
+    const ok = await locationService.saveTrackingLog(
+      String(p.participantId), String(p.eventId),
+      await _readFullLog(), sent, await locationQueueService.getQueueSize(),
+    );
+    if (!ok) await AsyncStorage.removeItem(WAKE_LOG_AT_KEY);   // the next wake may try again
+  } catch { /* a wake must never throw into the task runner */ }
+};
+
+// Registered from index.ts at module scope (expo-task-manager runs the bundle
+// headless for it). JS only: the build already has remote-notification in
+// UIBackgroundModes and expo-notifications / expo-task-manager. Every other
+// notification passes through untouched.
+export const registerTrackWakeTask = (): void => {
+  try {
+    const TaskManager = require('expo-task-manager');
+    const Notifications = require('expo-notifications');
+    if (!TaskManager.isTaskDefined?.(TRACK_WAKE_TASK)) {
+      TaskManager.defineTask(TRACK_WAKE_TASK, async ({ data, error }: { data: any; error: any }) => {
+        if (error) return;
+        if (isTrackWakePayload(data)) await wakeFromPush();
+      });
+    }
+    void Notifications.registerTaskAsync(TRACK_WAKE_TASK).catch(() => { /* silent */ });
+  } catch { /* no task support: the alert push still works */ }
 };
 
 const _registerTransistorListeners = (): void => {
@@ -1952,7 +2116,7 @@ const _registerTransistorListeners = (): void => {
             if (raceStartedOk) {
               const { locationService } = require('./locationService');
               void _heartbeatDiag(AppState.currentState === 'active' ? 'fg' : 'bg')
-                .then((diag) => locationService.sendHeartbeatPing(String(hbPid), String(hbEid), diag))
+                .then((diag) => locationService.sendHeartbeatPing(String(hbPid), String(hbEid), { ...diag, via: 'hb' }))
                 .catch(() => { /* silent */ });
             }
           }
@@ -3170,7 +3334,7 @@ export const headlessTask = async (event: { name: string; params: any }): Promis
           const hp = JSON.parse(params);
           if (hp?.participantId && hp?.eventId) {
             const { locationService } = require('./locationService');
-            await locationService.sendHeartbeatPing(String(hp.participantId), String(hp.eventId), await _heartbeatDiag('headless'));
+            await locationService.sendHeartbeatPing(String(hp.participantId), String(hp.eventId), { ...(await _heartbeatDiag('headless')), via: 'hb' });
           }
         } catch { /* silent */ }
         // A backlog goes out from the beat itself, fix or no fix [#HB-DRAIN].

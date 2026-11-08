@@ -2765,6 +2765,141 @@ const L = () => load('services/locationService').locationService;
   });
   results.push(await run('19. GTLC Winter post-race: finish with a backlog, heartbeat drain, diagnostics (p6755)'));
 
+  // ════════════ 21. GTLC Winter day 2 (2026-11-08): no heartbeats, silent phones ════════════
+  // The engine heartbeat fires only while STATIONARY; since 2026-10-20 the engine is
+  // kept moving, so it hardly ever fired (0 heartbeat pings on the server on 11-08).
+  // [#HB-PULSE]: the fix path does the beat's bookkeeping. [#TRACK-WAKE]: a silent
+  // push from the watch cron brings a phone the server hears nothing from back.
+  const pulseBodies = () => hbPosts().map((p) => p.body);
+  const GPS = () => load('services/gpsService');
+  test('[#HB-PULSE] a fix after the gun sends the liveness ping (via:fix, with the phone state) — no heartbeat needed', async () => {
+    M.appState = 'background';                              // pocketed from the Start
+    await liveStart(); await settle();
+    const b = pulseBodies();
+    assert.ok(b.length >= 1, 'pinged from a fix (old code: only from a heartbeat that no longer fires)');
+    const last = b[b.length - 1];
+    assert.strictEqual(last.via, 'fix'); assert.strictEqual(last.src, 'bg');
+    assert.strictEqual(last.participantId, '2'); assert.strictEqual(typeof last.queue, 'number');
+  });
+  test('[#HB-PULSE] at most once a minute, whatever the fix rate', async () => {
+    await liveStart();
+    const before = pulseBodies().length;
+    for (let i = 0; i < 5; i++) { M.clock += 10000; await fire(); }   // 5 fixes in 50 s
+    await settle();
+    assert.ok(pulseBodies().length - before <= 1, `${pulseBodies().length - before} pings in 50 s`);
+    M.clock += 61000; await fire(); await settle();
+    assert.ok(pulseBodies().length - before >= 1);
+    const n = pulseBodies().length;
+    M.clock += 61000; await fire(); await settle();
+    assert.strictEqual(pulseBodies().length, n + 1, 'the next minute pings again');
+  });
+  test('[#HB-PULSE] never before the gun (no fix is sent then either)', async () => {
+    liveAnswers.length = 0; lat = 50; answerLocation();
+    await startSession('2', '12', new Date(M.clock + 30 * 60000).toISOString());
+    for (let i = 0; i < 3; i++) { M.clock += 61000; await fire(); }
+    await settle();
+    assert.strictEqual(pulseBodies().length, 0);
+  });
+  test('[#HB-PULSE] a headless fix (Livio killed, Android) pings src:headless', async () => {
+    M.os = 'android'; M.appState = 'background';
+    M.store.set(PARAMS, JSON.stringify({ participantId: '7337', eventId: '21', intervalSeconds: 30, raceStartTime: new Date(M.clock - HOUR).toISOString(), manualStart: 0 }));
+    answerLocation();
+    await GPS().headlessTask({ name: 'location', params: { coords: { latitude: 50.4, longitude: 6.07, speed: 2, accuracy: 8 }, timestamp: new Date(M.clock).toISOString() } });
+    await settle();
+    const b = pulseBodies();
+    assert.strictEqual(b.length, 1); assert.deepStrictEqual([b[0].src, b[0].via], ['headless', 'fix']);
+  });
+  test('[#HB-PULSE] a session whose fixes never get through ships its interim log without any heartbeat', async () => {
+    await startSession('2', '12');
+    lat = 50;
+    M.api.handler = (url, body) => {
+      if (url.includes('insert_participant_location')) { const e = new Error('HTTP 500'); e.type = 'server'; return Promise.reject(e); }
+      M.api.posted.push({ url, body });
+      return Promise.resolve({ success: true, data: {}, error: null });
+    };
+    for (let i = 0; i < 8; i++) { M.clock += 61000; await fire(); }   // 8 min after the gun, 0 sent
+    await settle();
+    assert.strictEqual(M.store.get(SENT) || '0', '0', 'nothing got through');
+    assert.strictEqual(logPosts().length, 1, 'interim log uploaded (old code: only from the heartbeat)');
+    assert.ok(logPosts()[0].body.logs.some((e) => /^No fix sent \d+min after start/.test(e.msg)));
+  });
+
+  const wakeArm = (o = {}) => M.store.set(PARAMS, JSON.stringify({ participantId: '7136', eventId: '21', intervalSeconds: 30, raceStartTime: new Date(M.clock - HOUR).toISOString(), manualStart: 0, ...o }));
+  const BGm = () => require('react-native-background-geolocation').default;
+  const withFix = async (fn, coords = { latitude: 50.47, longitude: 6.1, speed: 2.5, accuracy: 6 }) => {
+    BGm().getCurrentPosition = async () => (coords ? { coords, timestamp: new Date(M.clock).toISOString() } : Promise.reject(new Error('timeout')));
+    try { await fn(); } finally { delete BGm().getCurrentPosition; }
+  };
+  test('[#TRACK-WAKE] payload shapes: Android data-only, iOS body, flat data, response — yes; a checkpoint notification — no', async () => {
+    const isWake = GPS().isTrackWakePayload;
+    const d = { type: 'track_wake', participant_app_id: 7136, race_id: 21 };
+    assert.ok(isWake({ data: { dataString: JSON.stringify(d) } }), 'Android dataString');
+    assert.ok(isWake({ data: { body: d } }), 'iOS body object');
+    assert.ok(isWake({ data: { body: JSON.stringify(d) } }), 'iOS body string');
+    assert.ok(isWake({ data: d }), 'flat');
+    assert.ok(isWake({ notification: { request: { content: { data: d } } } }), 'response');
+    assert.ok(!isWake({ data: { dataString: JSON.stringify({ type: 'tracking_check' }) } }));
+    assert.ok(!isWake({ data: { body: { type: 'checkpoint', race_id: 21 } } }));
+    assert.ok(!isWake(null)); assert.ok(!isWake({ data: { dataString: 'not json' } }));
+  });
+  test('[#TRACK-WAKE] iPhone woken with the engine off: engine restarted, ping via:push, a fresh fix sent, backlog drained, device log uploaded', async () => {
+    wakeArm(); M.sdk.enabled = false; M.appState = 'background';
+    setQ([fix(7136, 21, 9), fix(7136, 21, 8), fix(7136, 21, 7)]);
+    answerLocation();
+    await withFix(() => GPS().wakeFromPush());
+    await settle();
+    assert.strictEqual(M.bg.starts, 1, 'engine restarted (the cold-boot rehydrate)');
+    assert.ok((M.bg.pace || []).includes(true), 'kept moving');
+    assert.ok(pulseBodies().some((b) => b.via === 'push'), 'liveness ping via:push');
+    assert.strictEqual(getQ().length, 0, 'backlog drained');
+    assert.ok(locBodies().length >= 3, 'backlog sent');
+    assert.strictEqual(logPosts().length, 1, 'device log uploaded');
+    const log = (await GPS().getFullTrackingLog()).map((e) => e.msg);
+    assert.ok(log.some((m) => /^Wake push from the server \(app background\)/.test(m)), log.join('\n'));
+  });
+  test('[#TRACK-WAKE] the device log at most once per 30 min; the ping every wake', async () => {
+    wakeArm(); answerLocation();
+    await withFix(() => GPS().wakeFromPush());
+    M.clock += 15 * 60000;
+    await withFix(() => GPS().wakeFromPush());
+    assert.strictEqual(logPosts().length, 1);
+    assert.strictEqual(pulseBodies().filter((b) => b.via === 'push').length, 2);
+    M.clock += 16 * 60000;
+    await withFix(() => GPS().wakeFromPush());
+    assert.strictEqual(logPosts().length, 2);
+  });
+  test('[#TRACK-WAKE] no fix in time (indoors) → the ping and the backlog still go', async () => {
+    wakeArm(); setQ([fix(7136, 21, 3)]); answerLocation();
+    await withFix(() => GPS().wakeFromPush(), null);
+    assert.strictEqual(pulseBodies().length, 1); assert.strictEqual(getQ().length, 0);
+  });
+  test('[#TRACK-WAKE] Android off screen: no ready() (headless gate), listeners attached, ping src:headless', async () => {
+    M.os = 'android'; M.appState = 'background'; M.sdk.headless = true;
+    wakeArm(); answerLocation();
+    await withFix(() => GPS().wakeFromPush());
+    assert.ok(!(M.bg.readyCalls || []).length, 'ready() not called off screen [#ANDROID-HEADLESS-READY]');
+    assert.ok(typeof M.bg.location === 'function', 'listeners attached');
+    assert.strictEqual(pulseBodies()[0].src, 'headless');
+  });
+  test('[#TRACK-WAKE] after a Stop, a finish or a stale session: nothing at all', async () => {
+    answerLocation();
+    await withFix(() => GPS().wakeFromPush());                                   // no session
+    wakeArm(); M.store.set(RACE_FIN, '1');
+    await withFix(() => GPS().wakeFromPush());                                   // finished
+    M.store.delete(RACE_FIN); wakeArm({ raceStartTime: new Date(M.clock - 30 * HOUR).toISOString() });
+    await withFix(() => GPS().wakeFromPush());                                   // gun 30 h ago
+    assert.strictEqual(M.api.posted.filter((p) => !p.url.includes('save_tracking_log')).length, 0, M.api.posted.map((p) => p.url).join(','));
+    assert.ok(!M.store.has(PARAMS), 'the stale session was stopped, not woken');
+  });
+  test('[#TRACK-WAKE] index.ts registers the wake task at module scope; the task only acts on a wake payload', async () => {
+    const idx = fs.readFileSync(SRC + '/../index.ts', 'utf8');
+    assert.ok(/registerTrackWakeTask \}?\s*=\s*require\('\.\/src\/services\/gpsService'\)|registerTrackWakeTask } = require/.test(idx));
+    assert.ok(/\r?\nregisterTrackWakeTask\(\);/.test(idx));
+    const src = fs.readFileSync(SRC + '/services/gpsService.ts', 'utf8');
+    assert.ok(/if \(isTrackWakePayload\(data\)\) await wakeFromPush\(\);/.test(src));
+  });
+  results.push(await run('21. GTLC Winter day 2: liveness from fixes (no heartbeat while moving), server wake push'));
+
   const tot = results.reduce((a, r) => ({ pass: a.pass + r.pass, fail: a.fail + r.fail }), { pass: 0, fail: 0 });
   console.log(`\nAPP TOTAL: ${tot.pass} passed, ${tot.fail} failed`);
   process.exit(tot.fail ? 1 : 0);
