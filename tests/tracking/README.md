@@ -33,6 +33,8 @@ What each group guards:
 | 15. tracking safety net (2026-10-24) | silent starts (OS killed Livio after Start): "not tracking" check at gun + 4, 15-min watchdog, early-Start reminder; start ping battery / device diag; Start popup line |
 | 16. recording but not sending (2026-10-24 08:20) | a phone with no working data for hours (bib 1269, bib 410) never told: one local notification 20 min after the last accepted send, withdrawn on the next; dead zones of 15-18 min, standing still and before the gun stay silent |
 | 17. no side effects | a hung battery read losing the start ping; heartbeat / orphan sends counted as "sent"; Start / Stop touching the start reminders; a safety notification opening a result; a stale send stamp warning the next race; a normal online race showing any safety notification |
+| 18. Android headless relaunch | `ready()` called while headless, so no event reached JS until Livio was opened (bibs 151 / 353 / 2 / 459) |
+| 20. GTLC Winter post-race (2026-11-08) | p6755: a finish answer on a backlog leaving the session open until the queue was empty (it only moved while Livio was on screen — no device log, engine left on, "stopped tracking" pushes); the heartbeat draining only through a fresh fix (none indoors); a hung battery read holding the whole beat; no `queue_left` on queued fixes; heartbeat pings without the phone's state, and none at all from a headless beat |
 
 Groups 8-11 fail on the pre-fix commit `ebfec46` (except the DB-outage replay,
 which the app already survived — that fix was server-side — and two group-11
@@ -64,6 +66,29 @@ git worktree add ../pfs-old <old-commit>
 APP_SRC=../pfs-old/src npm run test:tracking     # expected: failures
 git worktree remove ../pfs-old
 ```
+
+## GT80 end-to-end (2026-11-08, local only)
+
+`e2e_gt80_server.js` runs the REAL app code against the REAL larssie APIs of a
+local checkout, on a copy of the GTLC Winter GT80 distance with its real GPX
+(78.909 km), a fake RaceResult feed the test moves on during the race, and then
+the REAL watch cron (Expo replaced). Seven runners: p6755's offline backlog after
+the RR finish (S1), a phone dead at km 74 after the finish (S2), an RR DNF (S3),
+an indoor backlog with no GPS fix (S4), the network lost during the leftover
+upload (S5), Livio killed during it (S6, no duplicate rows), a live finish (S7).
+
+```bash
+# larssie checkout with a test config.php whose DIR_STORAGE is a scratch folder
+php -S 127.0.0.1:8099 -t <larssie>
+php -S 127.0.0.1:8097 -t <larssie>/tests/tracking_api/fixtures/rr_fake
+LARSSIE_DIR=<larssie> E2E_STORAGE=<that DIR_STORAGE> node tests/tracking/e2e_gt80_server.js
+# ONLY=S1,S6 for some scenarios; APP_SRC / API_BASE + RR_URL for older app / server code
+```
+
+Writes fixtures 99xxxx to the local DB and removes them. About 8 minutes: the API
+allows 600 requests a minute, so the run paces itself. Clear the scratch
+`api_rate_limits` folder between runs. On 2026-11-08: 7/7; Saturday's app
+(`dc7d69a`) fails S1, S4, S5, S6.
 
 These tests do not replace one real tracking session on a preview build — they
 cannot exercise the OS (background limits, permission dialogs, GPS hardware).

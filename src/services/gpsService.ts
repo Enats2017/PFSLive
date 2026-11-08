@@ -735,9 +735,15 @@ const _uploadTrackingLogOnFinish = async (
 
     let remaining = 0;
     try {
-      const { QUEUE_COUNT_KEY } = require('./locationQueueService');
+      const { QUEUE_COUNT_KEY, locationQueueService: lq } = require('./locationQueueService');
       const qStr = await AsyncStorage.getItem(QUEUE_COUNT_KEY);
       remaining = qStr ? (parseInt(qStr) || 0) : 0;
+      // [#FINISH-PARK-BACKLOG] A finish during a drain parks the unsent rest as
+      // leftovers before this upload: count this session's, or total_queued would
+      // read 0 while the phone still holds them.
+      const mine = (await lq.getOrphans()).filter((f: any) =>
+        String(f.participantId) === String(participantId) && String(f.eventId) === String(eventId));
+      remaining += mine.length;
     } catch { /* silent */ }
 
     const { locationService } = require('./locationService');
@@ -1042,7 +1048,8 @@ const _processLocationForSendInternal = async (
           let fin = '0';
           try { fin = (await AsyncStorage.getItem(RACE_FINISHED_KEY)) ?? '0'; } catch {}
           const pendingNote = fin === '1'
-            ? `(${qCount} post-finish fix(es) discarded — race over)`
+            // Never discarded: a finish parks the rest as leftovers [#FINISH-PARK-BACKLOG].
+            ? `(race over — ${qCount} fix(es) left in the queue, the rest parked as leftovers)`
             : `(${qCount} still pending)`;
           await addLog('📤', `Drained ${totalFlushed} queued fix(es) ${pendingNote} before live send${tag}`);
         }
@@ -1073,6 +1080,14 @@ const _processLocationForSendInternal = async (
         _backlogRemains = qCount > 0;
       }
     } catch { /* silent — drain failure must never block the live send */ }
+
+    // [#FINISH-PARK-BACKLOG] The drain above can END the session: a finish answer
+    // closes it and parks the rest (finishBackgroundStop). Nothing below belongs
+    // to a session that is over. Without this return the rest of the path still
+    // sent nothing, but only by accident: _doFullStop clears the last position,
+    // so this fix was taken for a session's first one and only recorded. Since
+    // 2026-11-08 every finish found during a drain ends here, so make it explicit.
+    if (!(await AsyncStorage.getItem(TRACKING_PARAMS_KEY))) return;
 
     let finishApproach = await AsyncStorage.getItem(FINISH_APPROACH_KEY);
 
@@ -1769,6 +1784,63 @@ const _trackTransistorSub = (sub: any): void => {
   if (sub && typeof sub.remove === 'function') _transistorSubs.push(sub);
 };
 
+// [#HB-DIAG] (2026-11-08, GTLC Winter) What the heartbeat ping tells the server
+// besides "alive": the queue, leftovers, battery, engine state, a finish waiting
+// for teardown, the network as the app sees it, and where the beat ran. p6755's
+// phone held the end of its race for hours and nothing on the server showed it.
+// Every read is bounded / caught — the ping must go out even if one read fails
+// (a hung battery read once lost the start ping).
+const HB_DIAG_READ_MS = 2000;
+const _boundedRead = <T,>(p: Promise<T>): Promise<T | undefined> =>
+  Promise.race([p.catch(() => undefined), new Promise<undefined>((r) => setTimeout(() => r(undefined), HB_DIAG_READ_MS))]);
+
+const _heartbeatDiag = async (src: 'fg' | 'bg' | 'headless'): Promise<import('./locationService').HeartbeatDiag> => {
+  const diag: import('./locationService').HeartbeatDiag = { src };
+  try {
+    const { QUEUE_COUNT_KEY, locationQueueService: lq } = require('./locationQueueService');
+    const q = parseInt((await AsyncStorage.getItem(QUEUE_COUNT_KEY)) || '0', 10);
+    if (!isNaN(q)) diag.queue = q;
+    const orphans = await _boundedRead<any[]>(lq.getOrphans());
+    if (Array.isArray(orphans)) diag.orphans = orphans.length;
+    const online = await _boundedRead<boolean>(lq.hasNetwork({ allowProbe: false }));
+    if (typeof online === 'boolean') diag.online = online;
+  } catch { /* silent */ }
+  try { diag.finishPending = (await AsyncStorage.getItem(RACE_FINISHED_KEY)) === '1'; } catch { /* silent */ }
+  const st = await _boundedRead<any>(BackgroundGeolocation.getState());
+  if (typeof st?.isMoving === 'boolean') diag.moving = st.isMoving;
+  const b = await _boundedRead(_readBatteryState());
+  if (b && typeof b.level === 'number') diag.battery = b.level;
+  return diag;
+};
+
+// [#HB-DRAIN] (2026-11-08, GTLC Winter p6755) The heartbeat drained the backlog
+// only THROUGH a fresh fix (getCurrentPosition → onLocation → the send path's
+// drain). Indoors, after the race, that fix times out — and a runner standing
+// still sends no onLocation at all — so a phone that was back online kept its
+// backlog until Livio was opened. Drain directly from the beat, bounded like the
+// onLocation drain (DRAIN_TIME_BUDGET_MS there), and not while the send path's
+// offline cooldown is on (it opened that cooldown because drains were failing).
+const HB_DRAIN_BUDGET_MS = 12000;
+const _drainBacklogOnHeartbeat = async (where: string): Promise<void> => {
+  try {
+    const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
+    if (!raw) return;
+    const { participantId, eventId } = JSON.parse(raw);
+    if (!participantId || !eventId) return;
+    const { QUEUE_COUNT_KEY } = require('./locationQueueService');
+    const queued = parseInt((await AsyncStorage.getItem(QUEUE_COUNT_KEY)) || '0', 10) || 0;
+    if (queued === 0) return;
+    const cooldownUntil = parseInt((await AsyncStorage.getItem(OFFLINE_UNTIL_KEY)) || '0', 10) || 0;
+    if (cooldownUntil > Date.now()) return;
+    const { locationService } = require('./locationService');
+    const sent = await locationService.drainForStop(String(participantId), String(eventId), HB_DRAIN_BUDGET_MS);
+    if (sent > 0) {
+      const left = parseInt((await AsyncStorage.getItem(QUEUE_COUNT_KEY)) || '0', 10) || 0;
+      await addLog('📤', `${where} — drained ${sent} queued fix(es) without a new fix (${left} still queued)`);
+    }
+  } catch { /* never let the beat throw */ }
+};
+
 const _registerTransistorListeners = (): void => {
   _removeTransistorListeners();
 
@@ -1916,13 +1988,17 @@ const _registerTransistorListeners = (): void => {
               (hbRaceStart && Date.now() >= new Date(hbRaceStart).getTime());
             if (raceStartedOk) {
               const { locationService } = require('./locationService');
-              void locationService.sendHeartbeatPing(String(hbPid), String(hbEid));
+              void _heartbeatDiag(AppState.currentState === 'active' ? 'fg' : 'bg')
+                .then((diag) => locationService.sendHeartbeatPing(String(hbPid), String(hbEid), diag))
+                .catch(() => { /* silent */ });
             }
           }
         }
       } catch { /* silent */ }
 
-      await _logPowerSaverChange();
+      // Bounded: a battery read that never answers held the whole beat — the
+      // interim log, the backlog drain and the keepalive below never ran [#HB-DRAIN].
+      await _boundedRead(_logPowerSaverChange());
 
       // ── PRE-RACE LOW-POWER: before the gun, don't re-wake the dense stream and
       // don't pull a keepalive fix. No fix is sent pre-race anyway, so this just
@@ -1955,6 +2031,11 @@ const _registerTransistorListeners = (): void => {
 
       // Race is on: if this session still has not sent anything, ship the log.
       await maybeUploadInterimLog();
+
+      // A backlog goes out from the beat itself, fix or no fix [#HB-DRAIN].
+      await _drainBacklogOnHeartbeat('Heartbeat');
+      // The drain may have closed the session (a finish answer [#FINISH-PARK-BACKLOG]).
+      if (!(await AsyncStorage.getItem(TRACKING_PARAMS_KEY))) return;
 
       const hbState = await BackgroundGeolocation.getState();
 
@@ -2137,7 +2218,10 @@ export const finishBackgroundStop = async (
     await analyticsService.logTrackingCompleted({
       endReason: 'finish_crossed',
       pointsSent: sentCount,
-      queuedRemaining: await locationQueueService.getQueueSize(),
+      // + this session's parked leftovers [#FINISH-PARK-BACKLOG]: still unsent.
+      queuedRemaining: (await locationQueueService.getQueueSize())
+        + (await locationQueueService.getOrphans()).filter((f: any) =>
+            String(f.participantId) === String(participantId ?? '') && String(f.eventId) === String(eventId ?? '')).length,
       eventId: eventId ?? undefined,
       // The race name now travels in the session params, so the BACKGROUND finish
       // is attributed the same way the foreground one is. It used to send the id
@@ -2152,11 +2236,11 @@ export const finishBackgroundStop = async (
   // …existing queue-clear block…
   
   // Clear the queue ONLY when it's already empty (the normal case: the drain
-  // completed, then we stopped). NEVER wipe a non-empty backlog here — those fixes
-  // are the runner's real, PRE-finish race data still waiting to upload after an
-  // outage, and deleting them lost a full 4.5h track. processQueue now defers the
-  // finish until the backlog is drained, so a non-empty queue at this point means
-  // there is still legitimate data to send: leave it for the next drain pass.
+  // completed, or processQueue parked what was left [#FINISH-PARK-BACKLOG]).
+  // NEVER wipe a non-empty backlog here — those fixes are the runner's real,
+  // PRE-finish race data still waiting to upload after an outage, and deleting
+  // them lost a full 4.5h track. A non-empty queue here is parked by drainOrphans
+  // below (no session is live any more).
   try {
     const { locationQueueService } = require('./locationQueueService');
     const remaining = await locationQueueService.getQueueSize();
@@ -2164,6 +2248,22 @@ export const finishBackgroundStop = async (
       await locationQueueService.clearQueue();   // also resets the throttle keys
     } else if (API_CONFIG.DEBUG) {
       console.log(`⚠️ finishBackgroundStop: ${remaining} fixes still queued — NOT clearing`);
+    }
+  } catch { /* silent */ }
+
+  // 4) [#FINISH-PARK-BACKLOG] Upload the leftovers now, in this same wake: the
+  // session is over, so drainOrphans may run (its rule: never beside a live
+  // session). Bounded like the onLocation drain when in the background; the
+  // foreground gets drainOrphans' own 45 s. Whatever is left goes on the next
+  // app open (HomeScreen runs drainOrphans on every foreground when idle).
+  try {
+    const { locationService } = require('./locationService');
+    const sent = await locationService.drainOrphans(AppState.currentState === 'active' ? 45000 : 12000);
+    if (sent > 0) {
+      const { locationQueueService } = require('./locationQueueService');
+      const left = (await locationQueueService.getOrphans()).length;
+      await addLog('📤', `After the finish: ${sent} leftover fix(es) uploaded, ${left} still to go`);
+      await _flushLogsNow();
     }
   } catch { /* silent */ }
 };
@@ -3160,7 +3260,24 @@ export const headlessTask = async (event: { name: string; params: any }): Promis
       // heartbeat does. Without it a killed-Livio runner standing still got the
       // 15-min watchdog (2026-10-28 review). onAlive ignores a finished/stopped
       // session; never throws.
-      if (!(await isRaceNotStarted())) await trackingSafetyService.onAlive();
+      if (!(await isRaceNotStarted())) {
+        await trackingSafetyService.onAlive();
+        // [#HB-DIAG] The liveness ping went out from the listener heartbeat only, so
+        // a phone running headless (Livio's UI killed, Android) never pinged. On
+        // 2026-11-07 only 3 of ~226 phones pinged at all; whether headless beats
+        // explain the rest is not known — this ping is how the next event will
+        // tell. Same ping, marked src:headless.
+        try {
+          const hp = JSON.parse(params);
+          if (hp?.participantId && hp?.eventId) {
+            const { locationService } = require('./locationService');
+            await locationService.sendHeartbeatPing(String(hp.participantId), String(hp.eventId), await _heartbeatDiag('headless'));
+          }
+        } catch { /* silent */ }
+        // A backlog goes out from the beat itself, fix or no fix [#HB-DRAIN].
+        await _drainBacklogOnHeartbeat('Headless heartbeat');
+        if (!(await AsyncStorage.getItem(TRACKING_PARAMS_KEY))) return;   // finished by that drain
+      }
       // Heartbeat carries no coords in event.params — fetch one. Same options as
       // the foreground heartbeat. Wrapped so a fetch failure (no fix in a dead
       // zone) can't throw out of the headless task. getCurrentPosition does NOT

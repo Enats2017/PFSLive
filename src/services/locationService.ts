@@ -138,6 +138,18 @@ export interface SendLocationResponse {
   finish_lon?: number | null;
 }
 
+// [#HB-DIAG] Optional heartbeat fields; the server whitelists them (digits, 0/1,
+// one word for src) and appends them to the HEARTBEAT PING line.
+export interface HeartbeatDiag {
+  queue?: number;          // fixes in the live queue
+  orphans?: number;        // leftovers from ended sessions
+  battery?: number;        // 0-100
+  moving?: boolean;        // engine state (foreground listener only)
+  finishPending?: boolean; // raceFinished set while the session still exists
+  online?: boolean;        // network as the app sees it (no probe)
+  src?: 'fg' | 'bg' | 'headless';
+}
+
 // Standard backend response format
 interface StandardApiResponse<T = any> {
   success: boolean;
@@ -155,6 +167,8 @@ interface StandardApiResponse<T = any> {
 let _isProcessingQueue = false;
 // Separate lock for drainOrphans() — it never runs alongside a live session.
 let _isDrainingOrphans = false;
+// drainOrphans saves its progress this often (see [#FINISH-PARK-BACKLOG] there).
+const ORPHAN_COMMIT_EVERY = 25;
 
 export const locationService = {
   /**
@@ -166,6 +180,10 @@ export const locationService = {
     location: LocationData,
     queueIfOffline: boolean = true,
     isQueued: boolean = false,          // ← NEW: true when drained from the offline queue
+    // [#LOC-LOG-QUEUE] (2026-11-08) Fixes still waiting behind this queued one.
+    // Logged by the server ("queued left:N"): after GTLC Winter nothing showed
+    // whether p6755's phone still held the end of the race (it stopped at km 74).
+    queueLeft?: number,
   ): Promise<SendLocationResponse> {
     // Check network connection
     const hasNetwork = await locationQueueService.hasNetwork();
@@ -222,6 +240,7 @@ export const locationService = {
         battery_charging: location.batteryCharging,
         is_moving: location.isMoving,
         is_queued: isQueued ? 1 : 0,
+        ...(isQueued && typeof queueLeft === 'number' && queueLeft >= 0 ? { queue_left: queueLeft } : {}),
       };
 
       if (API_CONFIG.DEBUG) {
@@ -370,7 +389,8 @@ export const locationService = {
 
     let sentCount = 0;
     let alreadyRemoved = false; // set when the finish-during-drain path removes early
-    let finishDetected = false; // finish seen mid-drain — teardown deferred until the backlog is empty
+    let finishDetected = false; // finish seen mid-drain — teardown at the end of this pass
+    let finishSource: 'rr' | 'distance' = 'distance';
     // 50 (was 10): a multi-minute outage buffers >10 fixes; draining only 10 per
     // call let the live fix overtake the rest, which the server then stale-dropped.
     const batchSize = 50;
@@ -398,6 +418,7 @@ export const locationService = {
             },
             false,
             true,          // ← this fix came from the offline queue
+            queue.length - i - 1,   // still queued behind it (server log only)
           );
 
           // ⚠️ DATA LOSS GUARD — do not remove. PREVENTATIVE, not a past fix.
@@ -506,13 +527,15 @@ export const locationService = {
             // already recorded his finish, so the very FIRST drained fix came back
             // finished=1 and everything behind it was thrown away.
             //
-            // So: remember the finish and KEEP DRAINING. Teardown happens after the
-            // loop, only once the queue is actually empty.
+            // So: remember the finish and KEEP DRAINING this pass. Teardown happens
+            // after the loop; whatever is still queued then is PARKED for the
+            // leftover upload, never cleared [#FINISH-PARK-BACKLOG].
             if (API_CONFIG.DEBUG) console.log('🏆 Finish detected during drain — finishing only AFTER the backlog drains');
             finishDetected = true;
+            finishSource = (qResult!.finish_source ?? 'distance') === 'rr' ? 'rr' : 'distance';
             // RACE_FINISHED_KEY is deliberately NOT set here — setting it now makes
             // the gpsService drain loop break out and the watchdog treat the session
-            // as over while fixes are still pending. It's set at teardown below.
+            // as over mid-pass. It's set at teardown below, after the parking.
           }
         } catch (error: any) {
           if (API_CONFIG.DEBUG) {
@@ -567,22 +590,38 @@ export const locationService = {
         }
       }
 
-      // Finish was seen mid-drain: only tear down once the backlog is fully sent.
-      // If fixes remain, leave the session alive so the next drain pass (the next
-      // onLocation, or the 10s queue processor) keeps flushing them — we finish on
-      // whichever pass finally empties the queue. This is what preserves a long
-      // offline backlog instead of discarding it at the finish.
+      // Finish was seen mid-drain: close the session at the end of THIS pass.
+      //
+      // [#FINISH-PARK-BACKLOG] (2026-11-08, GTLC Winter p6755) It used to wait for
+      // the queue to be empty and leave the session alive until then, expecting
+      // "the next onLocation, or the 10s queue processor" to finish the job. After
+      // a finish neither comes: the runner stands still (no onLocation) and the
+      // 10 s processor only runs while Livio is on screen. p6755 (Pixel, Android
+      // 17) was timed by RaceResult at 16:45 and told finished:1 src:rr at 18:07;
+      // the backlog then moved only during three short app opens (280 / 52 / 85
+      // fixes) and stopped at the fix recorded 16:03 — the session never closed,
+      // no device log was uploaded, the engine kept running, and the server's
+      // "Livio stopped tracking" push fired three times.
+      //
+      // The fixes still queued are kept, not deleted (the 4.5 h-track loss this
+      // block once caused): they are parked as leftovers, which drainOrphans
+      // uploads right after the stop (finishBackgroundStop) and again on every
+      // app open, in order and with is_queued=1 (recorded time kept, no finish
+      // overrides) — the same path a Stop already uses for what it cannot send.
       if (finishDetected) {
         const remaining = await locationQueueService.getQueueSize();
-        if (remaining === 0) {
-          try { await AsyncStorage.setItem(RACE_FINISHED_KEY, '1'); } catch { /* silent */ }
+        if (remaining > 0) {
           try {
-            const { finishBackgroundStop } = require('./gpsService');
-            await finishBackgroundStop(participantId, eventId);
+            const { addLog } = require('./gpsService');
+            await addLog('🏁', `Finish confirmed during drain (src:${finishSource}) with ${remaining} fix(es) still queued — closing the session; they upload as leftovers`);
           } catch { /* silent */ }
-        } else if (API_CONFIG.DEBUG) {
-          console.log(`🏆 Finish pending — ${remaining} fixes still queued, keeping session alive to drain them`);
+          await locationQueueService.parkQueueAsOrphans();
         }
+        try { await AsyncStorage.setItem(RACE_FINISHED_KEY, '1'); } catch { /* silent */ }
+        try {
+          const { finishBackgroundStop } = require('./gpsService');
+          await finishBackgroundStop(participantId, eventId);
+        } catch { /* silent */ }
       }
     } finally {
       // ✅ Always release the lock — even if an unexpected error is thrown.
@@ -680,7 +719,22 @@ export const locationService = {
 
       const startedAt = Date.now();
       let consumed = 0;
+      // [#FINISH-PARK-BACKLOG] Progress is saved every ORPHAN_COMMIT_EVERY fixes,
+      // not only at the end. This now also runs in the background right after a
+      // finish stopped the engine, where the OS may end Livio mid-loop; every fix
+      // already accepted but not yet removed would be sent again on the next run,
+      // and the server only dedupes against the LAST stored fix, so an older
+      // re-sent fix is stored twice. A kill now repeats at most one chunk.
+      let committed = 0;
+      const commit = async () => {
+        if (consumed <= committed) return;
+        // Re-read before writing: parkQueueAsOrphans may have appended meanwhile.
+        const latest = await locationQueueService.getOrphans();
+        await locationQueueService.setOrphans(latest.slice(consumed - committed));
+        committed = consumed;
+      };
       for (const f of list) {
+        if (consumed - committed >= ORPHAN_COMMIT_EVERY) await commit();
         if (Date.now() - startedAt >= timeBudgetMs) break;
         // Never interleave old fixes with the live session's own fixes — those
         // belong in the live queue (parkOtherSessions moves them there at Start).
@@ -705,6 +759,7 @@ export const locationService = {
             },
             false,   // never re-queue into the LIVE queue
             true,    // is_queued
+            list.length - consumed - 1,   // leftovers still behind it (server log only)
           );
           if (!r || r.success !== true) break;
           sent++;
@@ -718,11 +773,7 @@ export const locationService = {
           break;             // transient — keep the rest for next time
         }
       }
-      // Re-read before writing: parkQueueAsOrphans may have appended meanwhile.
-      if (consumed > 0) {
-        const latest = await locationQueueService.getOrphans();
-        await locationQueueService.setOrphans(latest.slice(consumed));
-      }
+      await commit();
       if (sent > 0) {
         try {
           const { addLog } = require('./gpsService');
@@ -781,7 +832,7 @@ export const locationService = {
   // stops writing). Sends NO coordinate and never touches the queue/mutex; it
   // only stamps "this device's heartbeat is alive at T" so a frozen marker can be
   // told apart from a dead heartbeat. Fire-and-forget, hard-timeout-bounded.
-  async sendHeartbeatPing(participantId: string, eventId: string): Promise<void> {
+  async sendHeartbeatPing(participantId: string, eventId: string, diag: HeartbeatDiag = {}): Promise<void> {
     try {
       const url     = getApiEndpoint(API_CONFIG.ENDPOINTS.HEARTBEAT_PING);
       const headers = await API_CONFIG.getHeaders();
@@ -791,6 +842,8 @@ export const locationService = {
           eventId,
           ts: new Date().toISOString(),
           deviceInfo: `${Platform.OS} ${Platform.Version}`,
+          // [#HB-DIAG] (2026-11-08) the phone's own state, logged by the server.
+          ...diag,
         }, { headers, timeout: 8000 }),
         10000,
         'heartbeatPing'
