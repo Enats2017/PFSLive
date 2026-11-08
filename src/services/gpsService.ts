@@ -1055,6 +1055,14 @@ const _processLocationForSendInternal = async (
       }
     } catch { /* silent — drain failure must never block the live send */ }
 
+    // [#FINISH-PARK-BACKLOG] The drain above can END the session: a finish answer
+    // closes it and parks the rest (finishBackgroundStop). Nothing below belongs
+    // to a session that is over. Without this return the rest of the path still
+    // sent nothing, but only by accident: _doFullStop clears the last position,
+    // so this fix was taken for a session's first one and only recorded. Since
+    // 2026-11-08 every finish found during a drain ends here, so make it explicit.
+    if (!(await AsyncStorage.getItem(TRACKING_PARAMS_KEY))) return;
+
     let finishApproach = await AsyncStorage.getItem(FINISH_APPROACH_KEY);
 
     // 🏁 OFFLINE finish-approach fallback — runs ONLY while offline.
@@ -2168,7 +2176,10 @@ export const finishBackgroundStop = async (
     await analyticsService.logTrackingCompleted({
       endReason: 'finish_crossed',
       pointsSent: sentCount,
-      queuedRemaining: await locationQueueService.getQueueSize(),
+      // + this session's parked leftovers [#FINISH-PARK-BACKLOG]: still unsent.
+      queuedRemaining: (await locationQueueService.getQueueSize())
+        + (await locationQueueService.getOrphans()).filter((f: any) =>
+            String(f.participantId) === String(participantId ?? '') && String(f.eventId) === String(eventId ?? '')).length,
       eventId: eventId ?? undefined,
       // The race name now travels in the session params, so the BACKGROUND finish
       // is attributed the same way the foreground one is. It used to send the id

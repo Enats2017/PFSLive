@@ -167,6 +167,8 @@ interface StandardApiResponse<T = any> {
 let _isProcessingQueue = false;
 // Separate lock for drainOrphans() — it never runs alongside a live session.
 let _isDrainingOrphans = false;
+// drainOrphans saves its progress this often (see [#FINISH-PARK-BACKLOG] there).
+const ORPHAN_COMMIT_EVERY = 25;
 
 export const locationService = {
   /**
@@ -717,7 +719,22 @@ export const locationService = {
 
       const startedAt = Date.now();
       let consumed = 0;
+      // [#FINISH-PARK-BACKLOG] Progress is saved every ORPHAN_COMMIT_EVERY fixes,
+      // not only at the end. This now also runs in the background right after a
+      // finish stopped the engine, where the OS may end Livio mid-loop; every fix
+      // already accepted but not yet removed would be sent again on the next run,
+      // and the server only dedupes against the LAST stored fix, so an older
+      // re-sent fix is stored twice. A kill now repeats at most one chunk.
+      let committed = 0;
+      const commit = async () => {
+        if (consumed <= committed) return;
+        // Re-read before writing: parkQueueAsOrphans may have appended meanwhile.
+        const latest = await locationQueueService.getOrphans();
+        await locationQueueService.setOrphans(latest.slice(consumed - committed));
+        committed = consumed;
+      };
       for (const f of list) {
+        if (consumed - committed >= ORPHAN_COMMIT_EVERY) await commit();
         if (Date.now() - startedAt >= timeBudgetMs) break;
         // Never interleave old fixes with the live session's own fixes — those
         // belong in the live queue (parkOtherSessions moves them there at Start).
@@ -756,11 +773,7 @@ export const locationService = {
           break;             // transient — keep the rest for next time
         }
       }
-      // Re-read before writing: parkQueueAsOrphans may have appended meanwhile.
-      if (consumed > 0) {
-        const latest = await locationQueueService.getOrphans();
-        await locationQueueService.setOrphans(latest.slice(consumed));
-      }
+      await commit();
       if (sent > 0) {
         try {
           const { addLog } = require('./gpsService');

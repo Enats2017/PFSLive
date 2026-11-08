@@ -2733,6 +2733,31 @@ const L = () => load('services/locationService').locationService;
     assert.strictEqual(hbPosts().length, 1); assert.strictEqual(hbPosts()[0].body.src, 'headless');
     assert.strictEqual(locBodies().length, 12, 'drained with no fix');
   });
+  test('[#FINISH-PARK-BACKLOG] leftover upload saves its progress every 25 fixes (an app ended mid-loop re-sends at most one chunk)', async () => {
+    M.store.set(OK_, JSON.stringify(backlog(80)));
+    const seen = [];
+    M.api.handler = (url, body) => {
+      M.api.posted.push({ url, body });
+      seen.push(getO().length);                               // what storage holds while fix #n is in flight
+      return Promise.resolve({ success: true, data: { coordinate_id: M.api.posted.length, finished: 0 }, error: null });
+    };
+    assert.strictEqual(await L().drainOrphans(45000), 80);
+    assert.strictEqual(seen[30], 80 - 25, 'after 25 accepted, storage already dropped them (old code: 80 until the end)');
+    assert.strictEqual(seen[60], 80 - 50);
+    assert.strictEqual(getO().length, 0);
+  });
+  // Regression guard, not a past bug: the old path also sent nothing here (the
+  // teardown cleared the last position), the return just makes it explicit.
+  test('[#FINISH-PARK-BACKLOG] the fix whose drain closed the session is not sent (or queued) after the finish', async () => {
+    liveAnswers.length = 0; lat = 50;
+    await startSession('6755', '21');
+    M.clock += 1000; await fire();                            // first fix: position only
+    setQ(backlog(3)); rrFinishedServer();
+    M.clock += 31000; await fire();                           // network back: drain → finish → closed
+    assert.ok(!M.store.has(PARAMS), 'closed by the drain');
+    assert.strictEqual(locBodies().length, 3, 'only the 3 backlog fixes');
+    assert.strictEqual(getQ().length, 0, 'nothing re-queued after the session ended');
+  });
   test('HomeScreen Stop path hands leftovers to drainOrphans even when the live queue is empty', async () => {
     const src = fs.readFileSync(SRC + '/screens/HomeScreen.tsx', 'utf8');
     assert.ok(/\r?\n\s*void locationService\.drainOrphans\(\);\r?\n\s*\}, \[locationUpdateCount/.test(src), 'unconditional call at the end of stopGPSTracking');

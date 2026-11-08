@@ -67,5 +67,28 @@ APP_SRC=../pfs-old/src npm run test:tracking     # expected: failures
 git worktree remove ../pfs-old
 ```
 
+## GT80 end-to-end (2026-11-08, local only)
+
+`e2e_gt80_server.js` runs the REAL app code against the REAL larssie APIs of a
+local checkout, on a copy of the GTLC Winter GT80 distance with its real GPX
+(78.909 km), a fake RaceResult feed the test moves on during the race, and then
+the REAL watch cron (Expo replaced). Seven runners: p6755's offline backlog after
+the RR finish (S1), a phone dead at km 74 after the finish (S2), an RR DNF (S3),
+an indoor backlog with no GPS fix (S4), the network lost during the leftover
+upload (S5), Livio killed during it (S6, no duplicate rows), a live finish (S7).
+
+```bash
+# larssie checkout with a test config.php whose DIR_STORAGE is a scratch folder
+php -S 127.0.0.1:8099 -t <larssie>
+php -S 127.0.0.1:8097 -t <larssie>/tests/tracking_api/fixtures/rr_fake
+LARSSIE_DIR=<larssie> E2E_STORAGE=<that DIR_STORAGE> node tests/tracking/e2e_gt80_server.js
+# ONLY=S1,S6 for some scenarios; APP_SRC / API_BASE + RR_URL for older app / server code
+```
+
+Writes fixtures 99xxxx to the local DB and removes them. About 8 minutes: the API
+allows 600 requests a minute, so the run paces itself. Clear the scratch
+`api_rate_limits` folder between runs. On 2026-11-08: 7/7; Saturday's app
+(`dc7d69a`) fails S1, S4, S5, S6.
+
 These tests do not replace one real tracking session on a preview build — they
 cannot exercise the OS (background limits, permission dialogs, GPS hardware).
