@@ -23,5 +23,11 @@ registerRootComponent(App);
 //
 // Paired with app.enableHeadless:true in the ready() config. Without that runtime
 // flag the SDK never starts a headless context and this handler is never invoked.
-const { headlessTask } = require('./src/services/gpsService');
+const { headlessTask, registerTrackWakeTask } = require('./src/services/gpsService');
 BackgroundGeolocation.registerHeadlessTask(headlessTask);
+
+// ── [#TRACK-WAKE] server wake push (2026-11-08) ─────────────────────────────
+// A silent push from the watch cron to a phone the server hears nothing from.
+// Same rule as above: module scope at the entry point, because expo-task-manager
+// runs this bundle headless when the push arrives and React never mounts.
+registerTrackWakeTask();

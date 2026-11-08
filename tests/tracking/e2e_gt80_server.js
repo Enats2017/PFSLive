@@ -161,7 +161,7 @@ const expectWhole = (r, n, what) => {
     assert.ok(Math.abs(r.max_dist - COURSE_KM) < 0.5 && r.last_dtf < 0.5, `end of course: max ${r.max_dist} km, last dtf ${r.last_dtf}`);
     assert.strictEqual(r.logs.length, 1, 'device log uploaded (prod: none)');
     const hb = logText('api_hearbeat_logs.txt').split('\n').filter((l) => l.includes('p:990601 '));
-    assert.ok(hb.some((l) => / \| q:\d+ .*src:headless$/.test(l.trim())), 'heartbeat line with the queue, src:headless: ' + hb.join(' / '));
+    assert.ok(hb.some((l) => / \| q:\d+ .*src:headless( via:hb)?$/.test(l.trim())), 'heartbeat line with the queue, src:headless: ' + hb.join(' / '));
     const lefts = apiLog().split('\n').filter((l) => l.includes('LOCATION OK | p:990601 ') && / queued left:\d+ /.test(l));
     assert.ok(lefts.length >= backlog.length, `queued left:N on the backlog lines (${lefts.length})`);
     const c = cronNow();

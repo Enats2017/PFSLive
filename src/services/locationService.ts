@@ -148,6 +148,9 @@ export interface HeartbeatDiag {
   finishPending?: boolean; // raceFinished set while the session still exists
   online?: boolean;        // network as the app sees it (no probe)
   src?: 'fg' | 'bg' | 'headless';
+  // [#HB-PULSE] (2026-11-08) what sent the ping: the engine heartbeat, a fix
+  // (the heartbeat hardly fires since the engine is kept moving), or a wake push.
+  via?: 'hb' | 'fix' | 'push';
 }
 
 // Standard backend response format
