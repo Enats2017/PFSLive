@@ -290,6 +290,14 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         return apiPlan.action !== 'subscribe' && apiPlan.action !== 'upgrade' && apiPlan.action !== 'current';
     })();
 
+    // Livio Pro and Unlimited left sale on 2026-11-10 (oc_membership.sale_disabled):
+    // the backend then returns no subscription tier, and the parts of this
+    // screen that only make sense for a subscription stay hidden - the
+    // "Continue with" bar, the "Just one race?" divider, the yearly-renewal
+    // note. Restore and the subscription info stay for existing subscribers.
+    // Hide only: no text on this screen was changed.
+    const sellsSubscriptions = visibleTiers.length > 0;
+
     const getBannerText = (): string => {
         if (!plansData) return t('membership:infoBanner.text') as string;
         const { has_membership, source, status, sessions_remaining } = plansData.entitlement;
@@ -432,13 +440,15 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
                 {singlePlan && (
                     <>
-                        <View style={styles.activationDivider}>
-                            <View style={styles.activationDividerLine} />
-                            <Text style={styles.activationDividerText}>
-                                {t('membership:activation.dividerLabel')}
-                            </Text>
-                            <View style={styles.activationDividerLine} />
-                        </View>
+                        {sellsSubscriptions && (
+                            <View style={styles.activationDivider}>
+                                <View style={styles.activationDividerLine} />
+                                <Text style={styles.activationDividerText}>
+                                    {t('membership:activation.dividerLabel')}
+                                </Text>
+                                <View style={styles.activationDividerLine} />
+                            </View>
+                        )}
 
                         <View style={styles.activationCard}>
                             <View style={styles.activationTopRow}>
@@ -475,9 +485,11 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                     </>
                 )}
 
-                <Text style={styles.footerNote}>
-                    {t('membership:footerNote')}
-                </Text>
+                {sellsSubscriptions && (
+                    <Text style={styles.footerNote}>
+                        {t('membership:footerNote')}
+                    </Text>
+                )}
 
                 {/* ✅ Subscription info + required legal links */}
                 <Text style={styles.subscriptionInfoText}>
@@ -515,14 +527,16 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 </View>
             </ScrollView>
 
-            <View style={[styles.ctaWrapper, { paddingBottom: insets.bottom }]}>
-                <TouchableOpacity style={[styles.ctaButton, isContinueDisabled && { opacity: 0.4 }]} activeOpacity={0.85} onPress={handleContinue} disabled={isContinueDisabled}>
-                    <Text style={styles.ctaButtonText}>
-                        {t('membership:cta.continueWith', { planName: getPlan(selected).name })}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={18} color={COLORS.darkText} />
-                </TouchableOpacity>
-            </View>
+            {sellsSubscriptions && (
+                <View style={[styles.ctaWrapper, { paddingBottom: insets.bottom }]}>
+                    <TouchableOpacity style={[styles.ctaButton, isContinueDisabled && { opacity: 0.4 }]} activeOpacity={0.85} onPress={handleContinue} disabled={isContinueDisabled}>
+                        <Text style={styles.ctaButtonText}>
+                            {t('membership:cta.continueWith', { planName: getPlan(selected).name })}
+                        </Text>
+                        <Ionicons name="chevron-forward" size={18} color={COLORS.darkText} />
+                    </TouchableOpacity>
+                </View>
+            )}
 
             <MembershipPlanModel
                 visible={modalAction !== null}

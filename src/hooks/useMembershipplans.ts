@@ -10,10 +10,11 @@ import {
   VerifyPurchaseResponse,
 } from "../services/appleverifyservice";
 import { analyticsService, SubscriptionState } from "../services/analyticsService";
+import { PlanId, PLAN_IDS, visibleSubscriptionTiers } from "./membershipPlanTiers";
 
-export type PlanId = "lite" | "basic" | "pro";
-
-export const PLAN_IDS: PlanId[] = ["lite", "basic", "pro"];
+// Re-exported so existing imports from this hook keep working.
+export { PLAN_IDS };
+export type { PlanId };
 
 // ✅ Restore result type
 export type RestoreResult = "success" | "none" | null;
@@ -200,6 +201,13 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     if (subSkusRef.current.has(sku)) return false;
     return null;
   }, []);
+
+  // Nothing to price: the catalog came back empty (every plan off sale).
+  // loadingPrices starts true and only the fetch below clears it, so without
+  // this the screen would show its full-page spinner for ever.
+  useEffect(() => {
+    if (plansData && productSkus.length === 0) setLoadingPrices(false);
+  }, [plansData, productSkus]);
 
   // ── Fetch StoreKit prices once connected + SKUs ready ──
   useEffect(() => {
@@ -388,16 +396,13 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     return () => subscription.remove();
   }, []);
 
-  const visibleTiers = useMemo<PlanId[]>(() => {
-    if (!plansData) return [];
-    const returned = plansData.plans
-      .filter((plan) => PLAN_IDS.includes(plan.tier as PlanId))
-      .sort((a, b) => a.rank - b.rank)
-      .map((plan) => plan.tier as PlanId);
-    // Only fall back to the full list if the API gave us nothing usable at
-    // all - an empty plan screen is worse than a stale one.
-    return returned.length > 0 ? returned : PLAN_IDS;
-  }, [plansData]);
+  // No fallback to PLAN_IDS: since Livio Pro and Unlimited left sale the
+  // backend can return only the single activation, or nothing, and a fallback
+  // would draw unbuyable subscription cards. See membershipPlanTiers.ts.
+  const visibleTiers = useMemo<PlanId[]>(
+    () => (plansData ? visibleSubscriptionTiers(plansData.plans) : []),
+    [plansData],
+  );
 
   const singlePlan = useMemo<PlanItem | null>(
     () => plansData?.plans.find((plan) => plan.tier === "single") ?? null,
