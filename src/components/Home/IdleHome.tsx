@@ -19,15 +19,29 @@ import { readinessStyles as s } from '../../styles/readiness.styles';
 import { eventService, EventItem } from '../../services/eventService';
 import { formatEventDate } from '../../utils/timeFormat';
 import { analyticsService } from '../../services/analyticsService';
+import { Badge } from '../ui';
 
 const MAX_EVENTS = 5;
 /** One retry after a failed fetch (a race-day network blip hid the section). */
 export const IDLE_RETRY_MS = 3000;
 
 /** The next few upcoming events; retried once on failure. */
+// ✅ The upcoming tab is `race_date >= today` on event_list_api.php, so a race
+// running TODAY is in it too — and was shown under "Upcoming events" with no
+// hint it is live (EAS simulator tour 2026-11-13). The upcoming tab carries no
+// event_status; the live tab in the SAME response does, so we copy it across
+// by id. Only 'live' is ever badged: a row dated today or later cannot be
+// 'finished' under deriveEventStatus (date-only), and 'upcoming' needs no badge.
 export async function loadUpcomingEvents(retryMs = IDLE_RETRY_MS): Promise<EventItem[]> {
-  const once = async () =>
-    ((await eventService.getEvents({ page_past: 1, page_live: 1, page_upcoming: 1 })).tabs?.upcoming ?? []).slice(0, MAX_EVENTS);
+  const once = async () => {
+    const tabs = (await eventService.getEvents({ page_past: 1, page_live: 1, page_upcoming: 1 })).tabs;
+    const liveIds = new Set(
+      (tabs?.live ?? []).filter((e) => e.event_status === 'live').map((e) => String(e.product_app_id)),
+    );
+    return (tabs?.upcoming ?? []).slice(0, MAX_EVENTS).map((e) =>
+      liveIds.has(String(e.product_app_id)) ? { ...e, event_status: 'live' as const } : e,
+    );
+  };
   try {
     return await once();
   } catch {
@@ -37,7 +51,7 @@ export async function loadUpcomingEvents(retryMs = IDLE_RETRY_MS): Promise<Event
 }
 
 export const IdleHome: React.FC = () => {
-  const { t, i18n } = useTranslation(['readiness', 'common']);
+  const { t, i18n } = useTranslation(['readiness', 'common', 'livetracking']);
   const navigation = useNavigation<any>();
   const [events, setEvents] = useState<EventItem[]>([]);
 
@@ -107,6 +121,11 @@ export const IdleHome: React.FC = () => {
                   <Image source={{ uri: item.event_image }} style={s.eventImage} contentFit="cover" cachePolicy="memory-disk" />
                 )}
                 <View style={s.eventTileBody}>
+                  {item.event_status === 'live' && (
+                    <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+                      <Badge label={t('livetracking:raceState_live')} tone="lime" caps />
+                    </View>
+                  )}
                   {/* 3 lines: 2 cut names at x1.35 text (audit 2026-10-22) */}
                   <Text style={s.eventTileName} numberOfLines={3}>{item.name}</Text>
                   <Text style={s.eventTileMeta} numberOfLines={1}>

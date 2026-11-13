@@ -287,7 +287,10 @@ const ResultCardLive: React.FC<ResultCardLiveProps> = memo(({
                                     ? `${truncateCheckpointName(lastCrossed.name)} (${t('allrace:race.raceTime')})`
                                     : t('allrace:race.raceTime')}
                             </Text>
-                            <Text style={[resultListStyle.statVal, { color: lastCrossed?.race_time ? palette.lime : palette.placeholder }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+                            {/* ✅ ink, not lime: lime text on the white card was hard to read
+                                (EAS simulator tour 2026-11-13). Lime is for bands, pills and
+                                check marks; a crossed checkpoint time above is ink too. */}
+                            <Text style={[resultListStyle.statVal, { color: lastCrossed?.race_time ? palette.ink : palette.placeholder }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                                 {lastCrossed?.race_time || item.time || '-'}
                             </Text>
                         </View>

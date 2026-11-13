@@ -136,7 +136,7 @@
       "notNowButton": "Not now"
     }
   },
-  "connectInfo": "Official timekeeping (results) is automatically enabled for all participants.\nWant to use Live Tracking? Connect your Livio account to your race bib for this event.\nTap \"Live Tracking\" to continue.",
+  "connectInfo": "Official timekeeping (results) is automatically enabled for all participants.\nWant to use Live Tracking? Connect your Livio account to your race bib for this event.\nTap \"Live tracking\" to continue.",
   "gpxDownload": {
     "permissionDeniedTitle": "Permission denied",
     "permissionDeniedMessage": "Folder access is required to save the GPX file.",
