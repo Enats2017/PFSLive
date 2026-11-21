@@ -1,8 +1,9 @@
 {
   "button": {
-    "result": "RESULTAAT",
-    "participants": "DEELNEMERS",
-    "results": "RESULTATEN"
+    "result": "Result",
+    "route": "Route",
+    "participants": "Deelnemers",
+    "results": "Results"
   },
   "noResults": "Nog geen afgelopen evenementen",
   "error": {

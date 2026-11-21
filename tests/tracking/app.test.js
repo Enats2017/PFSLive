@@ -726,11 +726,6 @@ const L = () => load('services/locationService').locationService;
     const m = homeLF.match(new RegExp('<Modal[^>]*?visible=\\{' + esc + '\\}[\\s\\S]*?</Modal>'));
     assert.ok(m, 'Modal bound to ' + visible); return m[0];
   };
-  const liftResolveApprox = (setShown, ref) => {
-    const r = cb('resolveApprox', '');
-    const params = r.params.replace(/:\s*[A-Za-z]+/g, '');   // drop the TS type ("proceed: boolean")
-    return new Function('setShowApproxModal', 'approxResolveRef', 'return (' + params + ') => {' + r.body + '\n};')(setShown, ref);
-  };
   test('#2 popups close by themselves when tracking ends while open (Stop: no second stop; override: no late Start Now)', async () => {
     const m = homeLF.match(/useEffect\(\(\) => \{\n    if \(!isGPSActive\) \{([\s\S]*?)\n    \}\n  \}, \[isGPSActive\]\);/);
     assert.ok(m, 'auto-close effect present');
@@ -748,45 +743,8 @@ const L = () => load('services/locationService').locationService;
   test('Home has no native Alert left (every popup is the notif modal)', async () => {
     assert.ok(!/Alert\.alert\(/.test(homeLF), 'no Alert.alert');
     assert.ok(!/^\s*Alert,$/m.test(homeLF), 'Alert no longer imported');
-    for (const v of ['showStartConfirmModal', 'stopConfirmMode !== null', 'showApproxModal', 'startErrorMessage !== null', 'showOverrideModal', 'showEarlyTrackingModal'])
+    for (const v of ['showStartConfirmModal', 'stopConfirmMode !== null', 'startErrorMessage !== null', 'showOverrideModal', 'showEarlyTrackingModal'])
       assert.ok(modalJsx(v).includes('homeStyles.notifCard'), v + ' uses notifCard');
-  });
-  test('approximate location: Start waits; "Continue anyway" → proceeds; popup closes', async () => {
-    const c = cb('handleApproxContinue', 'resolveApprox');
-    const shown = []; const ref = { current: null };
-    const resolveApprox = liftResolveApprox((x) => shown.push(x), ref);
-    const answer = new Promise((res) => { ref.current = res; });
-    new Function('resolveApprox', c.body)(resolveApprox);
-    assert.strictEqual(await answer, true);
-    assert.deepStrictEqual(shown, [false]);
-    assert.strictEqual(ref.current, null, 'resolver released');
-  });
-  test('approximate location: "Open settings" → start stops here, re-armed for return, Settings opened', async () => {
-    const o = cb('handleApproxOpenSettings', 'resolveApprox');
-    const shown = []; const ref = { current: null }; let settings = 0;
-    const resolveApprox = liftResolveApprox((x) => shown.push(x), ref);
-    const answer = new Promise((res) => { ref.current = res; });
-    const pendingStartRef = { current: false };
-    new Function('pendingStartRef', 'Linking', 'resolveApprox', o.body)(
-      pendingStartRef, { openSettings: () => { settings++; return Promise.resolve(); } }, resolveApprox);
-    assert.strictEqual(await answer, false);
-    assert.strictEqual(pendingStartRef.current, true);
-    assert.strictEqual(settings, 1);
-    assert.deepStrictEqual(shown, [false]);
-  });
-  test('approximate location: a second answer is ignored (resolver used once)', async () => {
-    const ref = { current: null }; let n = 0;
-    const resolveApprox = liftResolveApprox(() => {}, ref);
-    ref.current = () => { n++; };
-    resolveApprox(true); resolveApprox(false);
-    assert.strictEqual(n, 1);
-  });
-  test('approximate location popup: copy, buttons wired, back press does not dismiss (choice required)', async () => {
-    const jsx = modalJsx('showApproxModal');
-    for (const k of ['home:alerts.approximateLocationTitle', 'home:alerts.approximateLocationMessage']) assert.ok(jsx.includes(k), k);
-    assert.ok(/onPress=\{handleApproxOpenSettings\}[\s\S]*?home:alerts\.openSettings/.test(jsx), 'Open settings wired');
-    assert.ok(/onPress=\{handleApproxContinue\}[\s\S]*?home:alerts\.continueAnyway/.test(jsx), 'Continue anyway wired');
-    assert.ok(/onRequestClose=\{\(\) => \{ \/\* a choice is required \*\/ \}\}/.test(jsx), 'back press keeps it open');
   });
   test('start failure: error text shown in the popup with one OK button; OK closes it', async () => {
     assert.ok(/setStartErrorMessage\(error instanceof Error \? error\.message : t\('home:errors\.trackingFailed'\)\);/.test(homeLF), 'error → popup');
@@ -805,22 +763,24 @@ const L = () => load('services/locationService').locationService;
   });
   // The real catch of the start flow, run with stand-ins.
   const runStartCatch = (error, notifyFails = false) => {
-    const m = homeLF.match(/\n    \} catch \(error\) \{\n      setIsGPSActive\(false\);([\s\S]*?)\n    \} finally \{\n      void gpsService\.endStartWindow\(startWindow\);\n    \}\n  \}, \[\n    hasPermission,/);
+    // growth_v0.1: the catch also logs the start step; its finally also releases startingRef
+    const m = homeLF.match(/\n    \} catch \(error\) \{\n      void analyticsService\.logStartStep\('failed', 'exception', raceReadyKey\);\n      setIsGPSActive\(false\);([\s\S]*?)\n    \} finally \{\n      void gpsService\.endStartWindow\(startWindow\);\n      \/\/[^\n]*\n      if \(startingAtRef\.current === startedAt\) startingRef\.current = false;\n    \}\n  \}, \[\n    hasPermission,/);
     assert.ok(m, 'start catch found');
-    const out = { pending: { current: false }, toasts: [], notes: [], errorMsg: undefined, active: [], stored: {} };
+    const out = { pending: { current: false }, pendingAt: { current: 0 }, toasts: [], notes: [], errorMsg: undefined, active: [], stored: {} };
     const Notifications = { scheduleNotificationAsync: (req) => { out.notes.push(req); return notifyFails ? Promise.reject(new Error('x')) : Promise.resolve('id'); } };
     const AsyncStorageStub = { setItem: async (k, v) => { out.stored[k] = v; } };
     new Function('error', 'setIsGPSActive', 'isGPSActiveRef', 'START_BACKGROUNDED_CODE', 'pendingStartRef', 'toastError', 't', 'Notifications', 'setStartErrorMessage',
-      'AsyncStorage', 'PENDING_BG_START_KEY', 'homeData', 'participantId', 'eventId',
+      'AsyncStorage', 'PENDING_BG_START_KEY', 'homeData', 'participantId', 'eventId', 'pendingStartAtRef',
       'setIsGPSActive(false);' + m[1].replace(/\(error as any\)/g, 'error'))(
       error, (x) => out.active.push(x), { current: true }, 'start_backgrounded', out.pending,
       (a, b) => out.toasts.push([a, b]), (k) => k, Notifications, (x) => { out.errorMsg = x; },
-      AsyncStorageStub, '@PFSLive:pendingBgStart', { next_race_participant_app_id: '4807', next_race_id: '19' }, 'x', 'y');
+      AsyncStorageStub, '@PFSLive:pendingBgStart', { next_race_participant_app_id: '4807', next_race_id: '19' }, 'x', 'y', out.pendingAt);
     return out;
   };
   test('start in a pocket (Android backgrounded): re-armed, toast AND a notification, never the error popup', async () => {
     const o = runStartCatch(Object.assign(new Error('App did not return to foreground in time'), { code: 'start_backgrounded' }));
     assert.strictEqual(o.pending.current, true, 'start re-armed for the next foreground');
+    assert.ok(o.pendingAt.current > 0, 'growth: the re-arm is stamped (15-min limit)');
     assert.deepStrictEqual(o.toasts, [['home:errors.trackingFailed', 'home:tracking.reopenToStart']]);
     assert.strictEqual(o.notes.length, 1, 'one notification');
     assert.deepStrictEqual(o.notes[0], { content: { title: 'home:tracking.notStartedTitle', body: 'home:tracking.notStartedBody', data: { type: 'start_backgrounded' } }, trigger: null });
@@ -847,7 +807,7 @@ const L = () => load('services/locationService').locationService;
     const jsx = modalJsx('showStartConfirmModal');
     const iBody = jsx.indexOf("t('home:startConfirm.message')");
     const iKeep = jsx.indexOf("<Text style={homeStyles.notifKeepOpenText}>{t('home:startConfirm.keepOpen')}</Text>");
-    const iBox = jsx.indexOf('<View style={homeStyles.notifKeepOpenBox}>');
+    const iBox = jsx.indexOf('<View style={[homeStyles.notifKeepOpenBox');   // + compact variant in landscape
     const iButtons = jsx.indexOf('homeStyles.notifButtonContainer');
     assert.ok(iBody > 0 && iBox > iBody && iKeep > iBox && iButtons > iKeep, 'message → amber box → buttons');
     // The keep-open line itself is unconditional; only the 2026-10-24 extra line
@@ -855,9 +815,10 @@ const L = () => load('services/locationService').locationService;
     const withoutPlatformLine = jsx.replace(/\{t\(Platform\.OS === 'ios' \? 'home:startConfirm\.dontCloseIos' : 'home:startConfirm\.dontCloseAndroid'\)\}/, '');
     assert.ok(!/Platform\.OS/.test(withoutPlatformLine), 'shown on both platforms');
     const st = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8').replace(/\r/g, '');
-    assert.ok(/notifKeepOpenBox: \{\s*backgroundColor: colors\.warning \+ "15",/.test(st), 'amber tint');
-    assert.ok(/notifKeepOpenText: \{[^}]*color: "#B45309",/.test(st), 'dark amber text');
-    const gps = { en: 'GPS Activated', fr: 'GPS Activé', nl: 'GPS Geactiveerd' };
+    // growth_v0.1: the branch's amber note tokens, not master's hex values
+    assert.ok(/notifKeepOpenBox: \{\s*backgroundColor: palette\.warningBg,\s*borderWidth: 1,\s*borderColor: palette\.warningBorder,/.test(st), 'amber note background + border');
+    assert.ok(/notifKeepOpenText: \{[^}]*color: palette\.warningText,/.test(st), 'readable amber copy');
+    const gps = { en: 'GPS activated', fr: 'GPS Activé', nl: 'GPS Geactiveerd' };
     for (const l of ['en', 'fr', 'nl']) {
       const j = JSON.parse(fs.readFileSync(`${SRC}/i18n/HomeScreen/${l}.json`, 'utf8'));
       const k = j.startConfirm.keepOpen;
@@ -1003,6 +964,71 @@ const L = () => load('services/locationService').locationService;
     assert.ok(M.store.has(PARAMS)); assert.notStrictEqual(M.store.get(RACE_FIN), '1');
   });
 
+  // ── GPS drift while standing still (developer test 2026-10-29, p4656) ──
+  // iPhone, app 1.0.5, a WALKING session (3m threshold), phone lying still: the
+  // stored points wandered 3-18m inside their own ~14-22m accuracy and counted as
+  // movement. Real positions / accuracies from that session (coordinates
+  // 372184-372191), in order, after the start position.
+  const P4656_START = [19.42375, 72.8076333];
+  const P4656_DRIFT = [
+    [19.4238896, 72.8077194, 21.77], [19.4239244, 72.8077208, 14.25], [19.4238751, 72.8077558, 14.25],
+    [19.4238783, 72.8076817, 14.25], [19.4238874, 72.8077409, 14.25], [19.4237780, 72.8076333, 7.69],
+  ];
+  const walkStart = async () => {
+    liveAnswers.length = 0; answerLocation();
+    const { gpsService } = load('services/gpsService');
+    // category 64 = walking (MOVEMENT_THRESHOLD 3m), as p4656's session
+    await gpsService.startWatchingPosition(() => {}, () => {}, 30, '2', '12', 't', 'b', 64, new Date(M.clock - HOUR).toISOString(), 0, 'Walk');
+    M.clock += 1000; await fireAt(P4656_START[0], P4656_START[1], 7.69);   // start position: recorded, not sent
+  };
+  const fireAt = async (la, lo, acc, spd = -1) => {
+    M.bg.location({ coords: { latitude: la, longitude: lo, speed: spd, accuracy: acc, altitude: 8, heading: -1 }, timestamp: new Date(M.clock).toISOString(), is_moving: true });
+    await settle();
+  };
+  test('drift: p4656\'s still phone (walking, 6 fixes 3-21m from the start, accuracy 8-22m) sends NOTHING online — each "move" is inside the two accuracy circles', async () => {
+    await walkStart();
+    const n = locPosts();
+    for (const [la, lo, acc] of P4656_DRIFT) { M.clock += 31000; await fireAt(la, lo, acc); }
+    assert.strictEqual(locPosts() - n, 0, 'drift sent');
+    const log = await load('services/gpsService').getFullTrackingLog();
+    assert.ok(log.some((e) => /Skipped — moved only 18\.\dm \(need 25m\)/.test(e.msg)), 'the bar shown: 7.7 + 21.8 capped at 25');
+    assert.ok(log.some((e) => /Skipped — moved only 21\.\dm \(need 21\.9m\)/.test(e.msg)), '21m from the start at 7.7 + 14.3');
+  });
+  test('…a real walk with the SAME accuracy still sends every window (~40m per 31s at 14m accuracy)', async () => {
+    await walkStart();
+    const n = locPosts();
+    let la = P4656_START[0];
+    for (let i = 0; i < 4; i++) { M.clock += 31000; la += 0.00036; await fireAt(la, P4656_START[1], 14.25, 1.3); }   // ~40m north each
+    assert.strictEqual(locPosts() - n, 4);
+  });
+  test('…a very poor fix (60m) does not hold real progress back beyond 25m: 30m sent, 20m skipped', async () => {
+    await walkStart();
+    let n = locPosts();
+    M.clock += 31000; await fireAt(P4656_START[0] + 0.00018, P4656_START[1], 60);   // ~20m
+    assert.strictEqual(locPosts() - n, 0, '20m at 60m accuracy');
+    n = locPosts();
+    M.clock += 31000; await fireAt(P4656_START[0] + 0.00027, P4656_START[1], 60);   // ~30m from the start
+    assert.strictEqual(locPosts() - n, 1, '30m at 60m accuracy (cap 25m)');
+  });
+  test('…OFFLINE with a backlog (p4656\'s case): the drift fixes are not queued; a real move is', async () => {
+    await walkStart();
+    setQ([fix(2, 12, 5)]);                                   // the first fix is already waiting
+    // No radio: NetInfo says so and every request fails (the probe included).
+    M.net = { isConnected: false, isInternetReachable: false, type: 'none' };
+    M.api.handler = () => Promise.reject(Object.assign(new Error('Network Error'), { type: 'network' }));
+    for (const [la, lo, acc] of P4656_DRIFT) { M.clock += 31000; await fireAt(la, lo, acc); }
+    assert.strictEqual(getQ().length, 1, 'no drift queued behind it');
+    M.clock += 31000; await fireAt(P4656_START[0] + 0.00045, P4656_START[1], 14.25, 1.3);   // ~50m: real
+    assert.strictEqual(getQ().length, 2, 'the real move is queued');
+  });
+  test('accuracyFloorMetres: both fixes\' accuracy together, capped at 25m; no / bad accuracy → no floor (the category threshold alone, as before)', () => {
+    const { accuracyFloorMetres } = load('services/gpsService');
+    assert.strictEqual(accuracyFloorMetres(14.25, 7.69), 21.94);
+    assert.strictEqual(accuracyFloorMetres(14.25), 14.25, 'anchor saved by an older version (no acc)');
+    assert.strictEqual(accuracyFloorMetres(60, 5), 25);
+    for (const bad of [null, undefined, 0, -1, NaN]) assert.strictEqual(accuracyFloorMetres(bad, bad), 0, String(bad));
+  });
+
   // Drain path: locationService.processQueue (offline backlog flushed on reconnect).
   const drainAnswers = (answers) => {
     let i = 0;
@@ -1107,13 +1133,29 @@ const L = () => load('services/locationService').locationService;
     assert.ok(/const sp = await getTrackingParams\(\);\s*const qPid = sp\?\.participantId \?\? participantId;/.test(s), 'processor drains the SESSION\'s ids');
     // Stop drains / uploads under the running session's ids.
     assert.ok(/stopParticipantId = String\(sp\.participantId\);/.test(s) && /drainForStop\(stopParticipantId, stopEventId\)/.test(s), 'Stop uses session ids');
-    // Approximate location: warned (Open settings / Continue anyway), never blocked.
-    assert.ok(/if \(await gpsService\.isApproximateLocation\(\)\)/.test(s), 'approximate check at Start');
-    assert.ok(/approxResolveRef\.current = resolve;\s*setShowApproxModal\(true\);/.test(s), 'Start waits on the approximate-location popup');
-    assert.ok(/const handleApproxContinue = useCallback\(\(\) => \{\s*resolveApprox\(true\);/.test(s), 'Continue anyway proceeds');
+    // Approximate location (growth_v0.1): warned by the precise gate ("Start anyway"
+    // continues), never blocked — and not prompted twice by a second alert.
+    assert.ok(/if \(!allowApproximate && \(await readPrecise\(\)\) === false\)/.test(s), 'precise gate at Start');
+    assert.ok(!/if \(await gpsService\.isApproximateLocation\(\)\)/.test(s), 'no second approximate alert');
     // No captured offset → no gun (session waits), as before when server_datetime was missing.
     assert.ok(/const raceTime = serverTimeOffsetKnownRef\.current\s*\?\s*computeRaceStartTime\(/.test(s), 'gun only from a captured offset');
     assert.ok(/serverTimeOffsetKnownRef\.current = true;/.test(s), 'flag set where the offset is captured');
+  });
+  test('HomeScreen merge (growth_v0.1, 2026-10-18): design card follows the session in the session-only state', async () => {
+    const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    // Card title: the running session's race while tracking, home's race otherwise.
+    assert.ok(/<Text style=\{homeStyles\.eventName\}[^>]*>\s*\{\(isGPSActive && sessionRaceName\) \|\| \(homeData\?\.show_start_track === 1 \? homeData\?\.next_race_name : ''\) \|\| ''\}/.test(s), 'card title from the session');
+    // Date / start time line only while home offers this race.
+    assert.ok(/\{homeData\?\.show_start_track === 1 && !!homeData\?\.next_race_date && \(\s*<View style=\{homeStyles\.eventMetaRow\}>/.test(s), 'date line guarded');
+    assert.ok(!/<Text style=\{homeStyles\.eventName\}[^>]*>\s*\{homeData\.next_race_name\}/.test(s), 'no unguarded homeData.next_race_name title');
+    // "Tracking active" card: the session's race first.
+    assert.ok(/\{sessionRaceName \|\| homeData\?\.next_race_name\}/.test(s), 'active card names the session race');
+    // Stop stays pressable while tracking even if home lost the ids.
+    assert.ok(/disabled=\{!isGPSActive && \(!participantId \|\| !eventId\)\}/.test(s), 'Stop never disabled by missing home ids');
+    // Share link: home's race only — in the session-only state homeData may be absent / another race.
+    assert.ok(/\{homeData\?\.show_start_track === 1 && \(\s*<ShareTrackingLink/.test(s), 'share link only while home offers the race');
+    // Approximate location: growth's precise gate only — no second alert after it.
+    assert.ok(!/if \(await gpsService\.isApproximateLocation\(\)\)/.test(s), 'no duplicate approximate alert');
   });
   results.push(await run('12. 2026-10-18 audit (rr finish authoritative, stale sessions, gun offset, watchdog ids)'));
 
@@ -1178,15 +1220,18 @@ const L = () => load('services/locationService').locationService;
     assert.ok(fnAt > 0 && fnEnd > fnAt, 'doStartGPSTracking found');
     const iDecl = fn.indexOf('let startWindow: number | null = null;');
     const iTry = fn.indexOf('\n    try {');
-    const iApprox = fn.indexOf('if (!proceed) return;');
+    // growth_v0.1: the last thing that waits for the runner is the precise gate
+    // (this branch has no approximate-location popup)
+    const iApprox = fn.indexOf('if (!allowApproximate && (await readPrecise()) === false) {');
     const iTake = fn.indexOf('startWindow = await gpsService.beginStartWindow();');
     const iFetch = fn.indexOf('fetchHomeData(true)');
     const iEngine = fn.indexOf('await gpsService.startWatchingPosition(');
     assert.ok(iDecl > 0 && iDecl < iTry, 'declared before the try');
-    assert.ok(iApprox > 0 && iTake > iApprox, 'after the approximate-location popup (nothing waits for the runner after it)');
+    assert.ok(iApprox > 0 && iTake > iApprox, 'after the precise gate (nothing waits for the runner after it)');
     assert.ok(iFetch > iTake && iEngine > iFetch, 'before the home refetch and the engine start');
     assert.strictEqual((fn.match(/beginStartWindow\(/g) || []).length, 1, 'taken once');
-    assert.ok(/\n    \} finally \{\n      void gpsService\.endStartWindow\(startWindow\);\n    \}$/.test(fn), 'the function-level finally releases it');
+    // the finally also releases startingRef on this branch
+    assert.ok(/\n    \} finally \{\n      void gpsService\.endStartWindow\(startWindow\);\n[\s\S]*?\n    \}$/.test(fn), 'the function-level finally releases it');
   });
   test('HomeScreen wiring: start ping only AFTER the engine started; backgrounded start re-armed; pending ping flushed by the queue timer', async () => {
     const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
@@ -1411,6 +1456,31 @@ const L = () => load('services/locationService').locationService;
     M.clock += 5 * 60000;   // past the failed-upload retry spacing (2026-10-23)
     await G().maybeUploadInterimLog();
     assert.strictEqual(logUploads().length, 1);
+  });
+  // ── merge of master into growth_v0.1 (2026-10-19) ──
+  // This branch has no `colors` palette and folds the session-start key into
+  // SESSION_START_KEY; the merge mapped master's code onto both.
+  test('growth_v0.1 merge (2026-10-19): merged popups use this branch\'s palette, not the old colors', async () => {
+    const s = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
+    const st = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(!/\bcolors\./.test(s), 'no colors.* in HomeScreen');
+    assert.ok(!/\bcolors\./.test(st), 'no colors.* in home.styles');
+    for (const [visible, colour] of [['stopConfirmMode !== null', 'palette.danger'], ['startErrorMessage !== null', 'palette.danger'], ['showOverrideModal', 'palette.navy'], ['showBatteryStartModal', 'palette.navy']]) {
+      const esc = visible.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const m = s.match(new RegExp('<Modal[^>]*?visible=\\{' + esc + '\\}[\\s\\S]*?</Modal>'));
+      assert.ok(m, 'modal ' + visible);
+      assert.ok(m[0].includes('<Ionicons') && m[0].includes('color={' + colour + '}'), visible + ' icon is ' + colour);
+    }
+    assert.ok(/notifIconWrapperDanger: \{\s*backgroundColor: palette\.dangerBg,\s*\}/.test(st), 'danger circle = dangerBg');
+    assert.ok(/notifDangerButton: \{\s*borderColor: palette\.danger,\s*\}/.test(st), 'danger button border');
+    assert.ok(/notifDangerText: \{\s*color: palette\.danger,\s*\}/.test(st), 'danger button text');
+  });
+  test('growth_v0.1 merge (2026-10-19): the stale-session stop reads the one session-start key', async () => {
+    const g = fs.readFileSync(`${SRC}/services/gpsService.ts`, 'utf8').replace(/\r/g, '');
+    assert.ok(/const SESSION_START_KEY = '@PFSLive:sessionStartedAt';/.test(g), 'one constant, same storage key');
+    assert.ok(!/SESSION_STARTED_AT_KEY/.test(g), "master's duplicate constant not carried over");
+    assert.ok(/const _stopIfStale = async[\s\S]{0,400}AsyncStorage\.getItem\(SESSION_START_KEY\)/.test(g), '_stopIfStale reads it');
+    assert.ok(/const bootStartedAt = parseInt\(\(await AsyncStorage\.getItem\(SESSION_START_KEY\)\)/.test(g), 'cold boot reads it');
   });
   // ── 2026-10-20 re-check: logs + DB of races since 09-04, every fix re-traced ──
   const AS = require('@react-native-async-storage/async-storage').default;
@@ -1726,12 +1796,14 @@ const L = () => load('services/locationService').locationService;
   const runBatteryGate = async ({ os = 'android', optimized = true, choice = null }) => {
     const m = homeLF.match(/\n    if \(Platform\.OS === 'android' && \(await gpsService\.isBatteryOptimized\(\)\)\) \{([\s\S]*?)\n    \}\n/);
     assert.ok(m, 'battery gate found in startGPSTracking');
-    const calls = { asked: 0, shown: [], exempt: 0 };
+    const calls = { asked: 0, shown: [], exempt: 0, steps: [] };
     const ref = { current: null };
-    const fn = new Function('Platform', 'gpsService', 'batteryStartResolveRef', 'setShowBatteryStartModal', 'requestBatteryOptimizationExemption',
+    // growth_v0.1: the gate also logs the start funnel (analyticsService, raceReadyKey)
+    const fn = new Function('Platform', 'gpsService', 'batteryStartResolveRef', 'setShowBatteryStartModal', 'requestBatteryOptimizationExemption', 'analyticsService', 'raceReadyKey',
       'return (async () => { if (Platform.OS === \'android\' && (await gpsService.isBatteryOptimized())) {' + m[1].replace(/new Promise<[^>]*>\(/g, 'new Promise(') + '\n} return \'continued\'; })();');
     const p = fn({ OS: os }, { isBatteryOptimized: async () => { calls.asked++; return optimized; } }, ref,
-      (v) => calls.shown.push(v), async () => { calls.exempt++; });
+      (v) => calls.shown.push(v), async () => { calls.exempt++; },
+      { logStartStep: async (...a) => { calls.steps.push(a); } }, '19');
     await new Promise((r) => setTimeout(r, 5));
     if (choice) { assert.ok(typeof ref.current === 'function', 'popup waiting for an answer'); ref.current(choice); }
     return { result: await p, calls };
@@ -1743,6 +1815,8 @@ const L = () => load('services/locationService').locationService;
     assert.deepStrictEqual([r.result, r.calls.exempt], ['continued', 0]);
     r = await runBatteryGate({ choice: 'cancel' });
     assert.deepStrictEqual([r.result, r.calls.exempt], [undefined, 0], 'start abandoned');
+    assert.deepStrictEqual(r.calls.steps, [['blocked', 'battery_optimization', '19']], 'growth_v0.1: the abandoned start is a funnel step');
+    for (const choice of ['allow', 'anyway']) assert.deepStrictEqual((await runBatteryGate({ choice })).calls.steps, [], choice + ': no blocked step');
     r = await runBatteryGate({ optimized: false });
     assert.deepStrictEqual([r.result, r.calls.shown], ['continued', []], 'exempt → no popup');
     r = await runBatteryGate({ os: 'ios' });
@@ -1800,7 +1874,8 @@ const L = () => load('services/locationService').locationService;
   test('Battery Saver gate runs on EVERY start path: first thing in doStartGPSTracking, before the permission gate', async () => {
     const at = homeLF.indexOf('const doStartGPSTracking = useCallback(async () => {');
     const iTry = homeLF.indexOf('\n    try {', at);
-    const iSaver = homeLF.indexOf('if (await checkPowerSavingMode()) {\n        setShowPowerSavingModal(true);\n        return;\n      }', at);
+    // growth_v0.1: the gate logs the blocked start step before the popup
+    const iSaver = homeLF.indexOf("if (await checkPowerSavingMode()) {\n        // growth_v0.1: every gate that stops a start is a funnel step\n        void analyticsService.logStartStep('blocked', 'power_saving', raceReadyKey);\n        setShowPowerSavingModal(true);\n        return;\n      }", at);
     const iPerm = homeLF.indexOf('const perms = await gpsService.getPermissionState();', at);
     assert.ok(iTry > at && iSaver > iTry && iPerm > iSaver, 'saver gate before permissions, inside doStartGPSTracking');
     const end = homeLF.indexOf('\n  }, [\n    hasPermission,', at);
@@ -1869,7 +1944,9 @@ const L = () => load('services/locationService').locationService;
       for (const k of keys) {
         const [n, path] = k.split(':');
         const v = path.split('.').reduce((o, p) => (o && typeof o === 'object' ? o[p] : undefined), j[n]);
-        if (typeof v !== 'string' || !v.trim()) missing.push(`${l} ${k}`);
+        // a string, or a list read with returnObjects (e.g. common:monthsShort)
+        const ok = (typeof v === 'string' && v.trim()) || (Array.isArray(v) && v.length && v.every((x) => typeof x === 'string' && x.trim()));
+        if (!ok) missing.push(`${l} ${k}`);
       }
     }
     assert.deepStrictEqual(missing, []);
@@ -2096,27 +2173,24 @@ const L = () => load('services/locationService').locationService;
     const h = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8');
     assert.ok(/Platform\.OS === 'ios' \? 'home:startConfirm\.dontCloseIos' : 'home:startConfirm\.dontCloseAndroid'/.test(h));
   });
-  test('Start popup can never push Start off-screen: card capped at the screen, the whole content (buttons too) in a ScrollView', async () => {
+  // growth_v0.1 has its own Start-popup scroll (ModalScroll, device-tested
+  // 2026-10-22, plus compactPopups on short screens): master's ScrollView /
+  // startPopupScrollMax (0cc711b, 1b72ead) is NOT carried over — same guarantee.
+  test('Start popup can never push Start off-screen: the card, buttons included, sits in ModalScroll (capped in points)', async () => {
     const h = fs.readFileSync(`${SRC}/screens/HomeScreen.tsx`, 'utf8').replace(/\r/g, '');
     const a = h.indexOf('visible={showStartConfirmModal}');
     const modal = h.slice(a, h.indexOf('</Modal>', a));
     assert.ok(a > 0 && modal.length > 0);
-    assert.ok(/<View style=\{homeStyles\.notifCard\}>\s*<ScrollView\s+style=\{\[homeStyles\.notifScroll, \{ maxHeight: startPopupScrollMax \}\]\}/.test(modal), 'the ScrollView, capped in points, is the card\'s only child');
-    const inScroll = modal.slice(modal.indexOf('<ScrollView'), modal.indexOf('</ScrollView>'));
+    const inScroll = modal.slice(modal.indexOf('<ModalScroll'), modal.indexOf('</ModalScroll>'));
+    assert.ok(inScroll.length > 0, 'ModalScroll wraps the Start popup');
+    assert.ok(/<ModalScroll[^>]*>\s*<View style=\{\[homeStyles\.notifCard/.test(modal), 'the card is its child');
     for (const k of ['startConfirm.title', 'startConfirm.message', 'startConfirm.keepOpen', 'dontCloseIos', 'startConfirm.yes', 'startConfirm.no', 'handleStartConfirmYes', 'handleStartConfirmNo'])
-      assert.ok(inScroll.includes(k), `${k} inside the ScrollView`);
-    assert.ok(/<\/ScrollView>\s*<\/View>\s*<\/View>\s*<\/View>\s*$/.test(modal), 'nothing after the ScrollView in the card');
-    const st = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8').replace(/\r/g, '');
-    assert.ok(!/maxHeight: "100%"/.test(st), 'no percentage cap (unreliable inside a Modal)');
-    assert.ok(/notifScroll: \{\s*width: "100%",\s*flexGrow: 0,\s*flexShrink: 1,\s*\}/.test(st), 'ScrollView: full card width, only the height it needs');
-    // The cap: window minus twice the larger bar, the wrapper (2 x 20) and the card padding (2 x 32).
-    assert.ok(/const startPopupScrollMax = Math\.max\(120, windowHeight - 2 \* Math\.max\(insets\.top, insets\.bottom\) - 2 \* spacing\.xl - 2 \* spacing\.xxxl\);/.test(h));
-    assert.ok(/const \{ width, height: windowHeight \} = useDimensions\(\);/.test(h), 'follows rotation');
-    const cap = (H, top, bottom) => Math.max(120, H - 2 * Math.max(top, bottom) - 40 - 64);
-    assert.strictEqual(cap(667, 20, 0), 523, 'iPhone SE 2/3: 523 pt of content before it scrolls');
-    assert.strictEqual(cap(640, 24, 48), 440, '360x640 Android with a 3-button bar');
-    assert.strictEqual(cap(320, 0, 21), 174, 'landscape iPhone SE');
-    assert.ok(/notifScrollContent: \{\s*alignItems: "center",\s*\}/.test(st), 'content still centred like the card');
+      assert.ok(inScroll.includes(k), `${k} inside ModalScroll`);
+    assert.ok(!/startPopupScrollMax/.test(h), "master's separate cap is not carried over");
+    const ms = fs.readFileSync(`${SRC}/components/ui/ModalScroll.tsx`, 'utf8');
+    assert.ok(/maxHeight: maxBoxHeight/.test(ms) && /useWindowDimensions/.test(ms), 'ModalScroll caps in points from the window');
+    const st = fs.readFileSync(`${SRC}/styles/home.styles.ts`, 'utf8');
+    assert.strictEqual((st.match(/\bnotifScroll: \{/g) || []).length, 1, 'one notifScroll style (no duplicate key from a merge)');
   });
   // A finish on the LIVE path (processLocationForSend auto-stop) never runs _doFullStop,
   // and a runner who finishes with the phone in a pocket never reaches HomeScreen's
@@ -2133,6 +2207,18 @@ const L = () => load('services/locationService').locationService;
     for (const id of ['livio-tracking-watchdog', 'livio-tracking-check', 'livio-early-start-reminder', 'livio-not-sending']) assert.ok(!pending(id), id);
     M.clock += 20 * 60000;
     assert.ok(!pending('livio-tracking-watchdog'), 'still nothing 20 min later');
+  });
+  // 2026-10-30: this path never runs _doFullStop, so it must drop the clock itself,
+  // or the next race's Start shows this race's elapsed time (Livio closed at the finish).
+  test('live finish → the session clock is cleared too (next Start begins at 00:00:00)', async () => {
+    liveAnswers.length = 0; answerLocation();
+    await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
+    await fireFix();
+    assert.ok(M.store.has('@PFSLive:sessionStartedAt'), 'clock running');
+    liveAnswers.push(RR); M.clock += 31000; await fireFix();
+    assert.strictEqual(M.store.get(RACE_FIN), '1', 'finished');
+    assert.ok(!M.store.has('@PFSLive:sessionStartedAt'), 'clock cleared at the finish');
+    assert.strictEqual((await load('services/gpsService').gpsService.getSessionStats()).startedAt, null);
   });
   test('finish found during a queue drain → disarmed too (finishBackgroundStop)', async () => {
     await startSession('2', '20', new Date(M.clock - 5 * 60000).toISOString());
@@ -2593,7 +2679,54 @@ const L = () => load('services/locationService').locationService;
   }
   results.push(await run('18. Android headless relaunch: ready() deferred until Livio is opened (bibs 151 / 353 / 2 / 459)'));
 
-  // ════════════ 19. GTLC Winter post-race (2026-11-08): p6755's backlog after the finish ════════════
+  // ════════════ 19. a new Start shows 00:00:00, not the last race's clock (developer report 2026-10-30) ════════════
+  {
+    const START = '@PFSLive:sessionStartedAt';
+    const withOdometer = async (fn) => {
+      const BG = require('react-native-background-geolocation').default;
+      const odo = { m: 0, calls: [] };
+      BG.setOdometer = async (v) => { odo.calls.push(['set', v, M.store.get(START) ?? null]); odo.m = v; return {}; };
+      BG.getOdometer = async () => odo.m;
+      try { return await fn(odo); } finally { delete BG.setOdometer; delete BG.getOdometer; }
+    };
+    const begin = (pid = '2', eid = '12') => load('services/gpsService').gpsService.startWatchingPosition(
+      () => {}, () => {}, 30, pid, eid, 't', 'b', 59, new Date(M.clock - 60 * 60000).toISOString(), 0, 'Test race');
+    test('Stop clears the session clock: the stats read 00:00:00 / 0 km until the next Start stamps its own', async () => {
+      await withOdometer(async (odo) => {
+        const g = load('services/gpsService').gpsService;
+        const h = await begin();
+        M.clock += 42 * 60000; odo.m = 5230;
+        assert.deepStrictEqual(await g.getSessionStats().then((s) => [s.startedAt !== null, s.distanceKm]), [true, 5.23], 'race 1 running');
+        await h.remove();
+        assert.ok(!M.store.has(START), 'start time cleared on Stop');
+        const s = await g.getSessionStats();
+        assert.deepStrictEqual([s.startedAt, s.distanceKm], [null, 0], 'what a new Start shows until it is stamped (was race 1\'s 42 min, 5.23 km)');
+      });
+    });
+    test('…a new race zeroes the odometer BEFORE stamping its start (no old distance on the new clock), then stamps now', async () => {
+      await withOdometer(async (odo) => {
+        const h = await begin(); await h.remove();
+        M.clock += 3 * 3600000; odo.m = 9999; odo.calls.length = 0;
+        await begin('3', '13');
+        assert.deepStrictEqual(odo.calls, [['set', 0, null]], 'odometer zeroed while no start was stamped');
+        assert.strictEqual(M.store.get(START), String(M.clock));
+        assert.strictEqual((await load('services/gpsService').gpsService.getSessionStats()).distanceKm, 0);
+      });
+    });
+    test('…a resume of the SAME race (relaunch after an OS kill, no Stop) keeps its clock and distance', async () => {
+      await withOdometer(async (odo) => {
+        await begin();
+        const t0 = M.store.get(START);
+        M.clock += 20 * 60000; odo.m = 3100; odo.calls.length = 0;
+        await begin();
+        assert.strictEqual(M.store.get(START), t0);
+        assert.deepStrictEqual(odo.calls, [], 'odometer untouched');
+        assert.strictEqual((await load('services/gpsService').gpsService.getSessionStats()).distanceKm, 3.1);
+      });
+    });
+  }
+  results.push(await run('19. a new Start shows 00:00:00, not the last race\'s clock (developer report 2026-10-30)'));
+  // ════════════ 20. GTLC Winter post-race (2026-11-08): p6755's backlog after the finish ════════════
   // p6755 (Pixel, Android 17): offline 10:54-18:07, RaceResult finish 16:45. From 18:07
   // the server answered finished:1 src:rr, but the session stayed open until the queue
   // was empty, and the queue only moved during three short app opens (280 / 52 / 85),
@@ -2763,7 +2896,7 @@ const L = () => load('services/locationService').locationService;
     assert.ok(/\r?\n\s*void locationService\.drainOrphans\(\);\r?\n\s*\}, \[locationUpdateCount/.test(src), 'unconditional call at the end of stopGPSTracking');
     assert.ok(!/if \(remaining > 0\) void locationService\.drainOrphans\(\);/.test(src));
   });
-  results.push(await run('19. GTLC Winter post-race: finish with a backlog, heartbeat drain, diagnostics (p6755)'));
+  results.push(await run('20. GTLC Winter post-race: finish with a backlog, heartbeat drain, diagnostics (p6755)'));
 
   // ════════════ 21. GTLC Winter day 2 (2026-11-08): no heartbeats, silent phones ════════════
   // The engine heartbeat fires only while STATIONARY; since 2026-10-20 the engine is

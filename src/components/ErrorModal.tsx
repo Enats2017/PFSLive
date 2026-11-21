@@ -9,7 +9,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles } from '../styles/common.styles';
+import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
+import { RING_TINT, useCompactDialog } from './ui';
+import ModalScroll from './ui/ModalScroll';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface ErrorModalProps {
   visible: boolean;
@@ -27,9 +30,12 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
   onRetry,
 }) => {
   const { t } = useTranslation();
+  // ✅ Landscape: no icon, buttons side by side (device test 2026-10-23).
+  // Portrait: unchanged.
+  const cd = useCompactDialog();
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="fade"
@@ -44,45 +50,50 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
         />
       </View>
 
-      <View style={styles.wrapper}>
-        <View style={styles.card}>
-          <View style={styles.iconWrapper}>
-            <Ionicons name="alert-circle" size={60} color={colors.error} />
-          </View>
+      {/* box-none: this full-screen wrapper sits over the backdrop touchable and
+          swallowed every outside tap, so tap-to-close never fired. ModalScroll:
+          in landscape the card was taller than the screen (audit 2026-10-22). */}
+      <View style={[styles.wrapper, cd.s.wrapper]} pointerEvents="box-none">
+        <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
+          <View style={[styles.card, cd.s.card]}>
+            <View style={[styles.iconWrapper, cd.s.hide]}>
+              <Ionicons name="alert-circle" size={56} color={palette.danger} />
+            </View>
 
-          <Text style={styles.title}>
-            {titleKey ? t(titleKey) : t('common:errors.generic')}
-          </Text>
+            <Text style={[styles.title, cd.s.title]}>
+              {titleKey ? t(titleKey) : t('common:errors.generic')}
+            </Text>
 
-          <Text style={styles.message}>{t(messageKey)}</Text>
+            <Text style={[styles.message, cd.s.message]}>{t(messageKey)}</Text>
 
-          <View style={styles.buttonContainer}>
-            {onRetry && (
+            <View style={[styles.buttonContainer, cd.s.buttonsRow]}>
+              {onRetry && (
+                <TouchableOpacity
+                  style={[commonStyles.primaryButton, styles.retryButton, cd.s.button]}
+                  onPress={() => {
+                    onClose();
+                    onRetry();
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={commonStyles.primaryButtonText}>
+                    {t('common:buttons.retry')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
-                style={[commonStyles.primaryButton, styles.retryButton]}
-                onPress={() => {
-                  onClose();
-                  onRetry();
-                }}
-                activeOpacity={0.8}
+                style={[commonStyles.secondaryButton, cd.s.button]}
+                onPress={onClose}
+                activeOpacity={0.7}
               >
-                <Text style={commonStyles.primaryButtonText}>
-                  {t('common:buttons.retry')}
+                <Text style={commonStyles.secondaryButtonText}>
+                  {t('common:buttons.close')}
                 </Text>
               </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={commonStyles.secondaryButton}
-              onPress={onClose}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.secondaryButtonText}>
-                {t('common:buttons.close')}
-              </Text>
-            </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </ModalScroll>
       </View>
     </Modal>
   );
@@ -93,7 +104,7 @@ export default ErrorModal;
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
   },
   wrapper: {
     flex: 1,
@@ -102,44 +113,37 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: palette.surface,
+    borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 32,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: { elevation: 8 },
-    }),
+    ...shadows.overlay,
   },
   iconWrapper: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: colors.error + '15',
+    backgroundColor: RING_TINT,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
     marginBottom: 12,
   },
   message: {
-    fontSize: 14,
-    color: '#64748b',
+    fontFamily: fonts.body,
+        fontSize: 14,
+    color: palette.textBody,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 23,
     marginBottom: 24,
     paddingHorizontal: 8,
   },
@@ -148,6 +152,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   retryButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: palette.navy,
   },
 });

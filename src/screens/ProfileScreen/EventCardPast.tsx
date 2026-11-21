@@ -4,11 +4,12 @@ import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette, radii, fonts } from '../../styles/common.styles';
 import { profileStyles } from '../../styles/Profile.styles';
 import { AthleteEvent } from '../../services/athleteProfileService';
 import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { formatEventDate } from '../../utils/dateFormatter';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -18,12 +19,28 @@ interface EventCardPastProps {
 }
 
 const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastProps) => {
-    const { t } = useTranslation(['profile']);
+    const { t } = useTranslation(['profile', 'ownProfile', 'resultdetails']);
     const navigation = useNavigation<NavigationProp>();
 
     const canShowResultButton = useCallback(() => {
         return item.race_result_status === 1 && !!item.race_result_api_url;
     }, [item.race_result_status, item.race_result_api_url]);
+
+    // 09_YourEvents.png reads "42 km · 25 August 2026" — the distance leads the
+    // meta line. `race_distance` comes straight from the participant row, so its
+    // shape varies across timing feeds ("42", "42 km", "42K"); only append the
+    // unit when the value is a bare number. Parts are joined the way ResultCard
+    // does it, so a missing one leaves no stray separator.
+    const metaLine = [
+        item.race_distance
+            ? (/^[\d.,]+$/.test(item.race_distance.trim())
+                ? `${item.race_distance.trim()} ${t('resultdetails:units.km')}`
+                : item.race_distance.trim())
+            : null,
+        // translated month (the API sends English) — client 2026-10-23
+        item.race_date_formatted ? formatEventDate(item.race_date_formatted, t) : null,
+        formatClockTime(item.race_time),
+    ].filter(Boolean).join(' · ');
 
     const handlePress = useCallback(() => {
         if (isOwnProfile) {
@@ -55,25 +72,27 @@ const EventCardPast = React.memo(({ item, isOwnProfile = true }: EventCardPastPr
     }, [item, isOwnProfile, navigation]);
 
     return (
-        <View style={[commonStyles.card, { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }]}>
+        <View style={[commonStyles.card, { marginBottom: spacing.md }]}>
             <View style={styles.info}>
-                <Text style={[commonStyles.title, { marginBottom: spacing.sm }]} numberOfLines={1}>{item.name}</Text>
+                {/* no line limit (was 1): see EventCardLive */}
+                <Text style={[commonStyles.title, { marginBottom: spacing.sm }]}>{item.name}</Text>
                 <View style={styles.dateRow}>
-                    <MaterialCommunityIcons name="calendar-month-outline" size={16} color="#888" style={{ marginRight: 4 }} />
+                    <MaterialCommunityIcons name="calendar-month-outline" size={16} color={palette.textMuted} style={{ marginRight: 4 }} />
                     {/* ✅ Same overflow guard as EventCardLive — see the note there. */}
-                    <Text style={[commonStyles.date, { flexShrink: 1 }]} numberOfLines={1}>
-                        {item.race_date_formatted} {formatClockTime(item.race_time)}
+                    <Text style={[commonStyles.date, { flexShrink: 1 }]} numberOfLines={2}>
+                        {metaLine}
                     </Text>
                 </View>
             </View>
 
             {canShowResultButton() && (
                 <TouchableOpacity
-                    style={styles.iconButtonBlue}
+                    style={styles.resultButton}
                     onPress={handlePress}
                     activeOpacity={0.8}
+                    accessibilityRole="button"
                 >
-                    <Ionicons name="bar-chart-outline" size={23} color={colors.primaryDark} />
+                    <Text style={styles.resultButtonText}>{t('ownProfile:events.viewResult')}</Text>
                 </TouchableOpacity>
             )}
         </View>
@@ -93,13 +112,20 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
 
-    iconButtonBlue: {
-        backgroundColor: colors.themeiColor,
-        borderRadius: 8,
-        width: 45,
-        height: 40,
+    resultButton: {
+        marginTop: spacing.md,
+        minHeight: 48,
+        borderRadius: radii.md,
+        borderWidth: 1.5,
+        borderColor: palette.navy,
+        backgroundColor: palette.surface,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    resultButtonText: {
+        fontFamily: fonts.display,
+        fontSize: 14,
+        color: palette.navy,
     },
 });
 

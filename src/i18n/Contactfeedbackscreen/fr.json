@@ -51,5 +51,10 @@
     "body": "Vous recevrez un e-mail de confirmation, et nous vous répondrons si nécessaire.",
     "backToProfile": "Retour au profil",
     "toastMessage": "Retour envoyé avec succès !"
+  },
+  "reachUs": {
+    "title": "Autres moyens de nous joindre",
+    "email": "support@liviolive.com",
+    "replyTime": "Nous répondons généralement sous un jour ouvré."
   }
 }

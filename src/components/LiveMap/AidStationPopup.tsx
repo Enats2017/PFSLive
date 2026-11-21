@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Linking, Alert, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, Linking, Alert, Platform, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AidStationMapMarker } from '../../types/liveTracking';
 import { liveTrackingStyles } from '../../styles/liveTracking.styles';
-import { colors } from '../../styles/common.styles';
+import { palette, fonts, space } from '../../styles/common.styles';
 import { getFeatureIcon } from '../../utils/featureIcons';
 
 // GPX <wpt> descriptions arrive as HTML (RouteYou exports use <br/>, <p>, <ul>/<li>,
@@ -40,13 +41,20 @@ interface AidStationPopupProps {
     station: AidStationMapMarker;
 
     onClose: () => void;
+    /**
+     * Landscape: the overlay covers the whole screen (rendered at the screen's
+     * root), so it keeps the card clear of the safe-area insets itself.
+     */
+    fullScreen?: boolean;
 }
 
 export const AidStationPopup: React.FC<AidStationPopupProps> = ({
     station,
     onClose,
+    fullScreen,
 }) => {
     const { t } = useTranslation(['livetracking', 'common']);
+    const insets = useSafeAreaInsets();
     const features = station.features ?? [];
 
     // Clean the HTML description once per station, and gate the expand toggle.
@@ -85,142 +93,164 @@ export const AidStationPopup: React.FC<AidStationPopupProps> = ({
     };
 
     return (
-        <View style={liveTrackingStyles.popupOverlay}>
-            <View style={liveTrackingStyles.popup}>
+        <View style={[liveTrackingStyles.popupOverlay, fullScreen && {
+            paddingTop: insets.top, paddingBottom: insets.bottom,
+            paddingLeft: insets.left, paddingRight: insets.right,
+        }]}>
+            {/* Backdrop tap closes (there was no way to dismiss except the X) */}
+            <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+            {/* popup has maxHeight '90%' of the map overlay and the body scrolls:
+                the card was taller than the map area (~96pt in landscape), so
+                the X went above the overlay — untappable on Android, and
+                Get directions was off the bottom (audit 2026-10-22). */}
+            <View style={[liveTrackingStyles.popup, fullScreen && liveTrackingStyles.popupFullScreen]}>
                 <TouchableOpacity style={liveTrackingStyles.popupCloseBtn} onPress={onClose}>
-                    <Ionicons name="close" size={24} color={colors.gray600} />
+                    <Ionicons name="close" size={24} color={palette.textBody} />
                 </TouchableOpacity>
 
-                <View style={liveTrackingStyles.aidStationHeader}>
-                    <View style={liveTrackingStyles.aidStationIconCircle}>
-                        <Ionicons name="restaurant" size={24} color={colors.white} />
+                <ScrollView
+                    style={liveTrackingStyles.popupBody}
+                    bounces={false}
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={liveTrackingStyles.aidStationHeader}>
+                        <View style={liveTrackingStyles.aidStationIconCircle}>
+                            <Ionicons name="restaurant" size={24} color={palette.surface} />
+                        </View>
+
+                        <View style={liveTrackingStyles.aidStationHeaderText}>
+                            <Text style={liveTrackingStyles.aidStationName}>
+                                {station.name || 'Aid Station'}
+                            </Text>
+                            <Text style={liveTrackingStyles.aidStationSubtitle}>
+                                {t('livetracking:aidStation')}
+                            </Text>
+                        </View>
+
                     </View>
 
-                    <View style={liveTrackingStyles.aidStationHeaderText}>
-                        <Text style={liveTrackingStyles.aidStationName}>
-                            {station.name || 'Aid Station'}
-                        </Text>
-                        <Text style={liveTrackingStyles.aidStationSubtitle}>
-                            {t('livetracking:aidStation')}
-                        </Text>
-                    </View>
-
-                </View>
-
-                {/* ── Description (from GPX <wpt> <desc>) ─────────────────────
-                    Sits right under the name. Collapsed to a few lines by
-                    default; long text expands into a bounded, scrollable area so
-                    the popup never grows past the screen. Hidden when empty
-                    (e.g. Start/Finish or checkpoints without a description). */}
-                {description.length > 0 && (
-                    <View style={{ paddingTop: 15, paddingBottom: 15 }}>
-                        {descExpanded ? (
-                            <ScrollView
-                                style={{ maxHeight: 180 }}
-                                nestedScrollEnabled
-                                showsVerticalScrollIndicator
-                            >
-                                <Text style={{ fontSize: 13, lineHeight: 19, color: '#374151' }}>
+                    {/* ── Description (from GPX <wpt> <desc>) ─────────────────────
+                        Sits right under the name. Collapsed to a few lines by
+                        default; long text expands into a bounded, scrollable area so
+                        the popup never grows past the screen. Hidden when empty
+                        (e.g. Start/Finish or checkpoints without a description). */}
+                    {description.length > 0 && (
+                        <View style={{ paddingTop: 16, paddingBottom: 16 }}>
+                            {descExpanded ? (
+                                <ScrollView
+                                    style={{ maxHeight: 180 }}
+                                    nestedScrollEnabled
+                                    showsVerticalScrollIndicator
+                                >
+                                    <Text style={{ fontFamily: fonts.body,
+            fontSize: 14, lineHeight: 20, color: palette.textBody }}>
+                                        {description}
+                                    </Text>
+                                </ScrollView>
+                            ) : (
+                                <Text
+                                    style={{ fontFamily: fonts.body,
+            fontSize: 14, lineHeight: 20, color: palette.textBody }}
+                                    numberOfLines={4}
+                                >
                                     {description}
                                 </Text>
-                            </ScrollView>
-                        ) : (
-                            <Text
-                                style={{ fontSize: 13, lineHeight: 19, color: '#374151' }}
-                                numberOfLines={4}
-                            >
-                                {description}
-                            </Text>
-                        )}
+                            )}
 
-                        {isLongDesc && (
-                            <TouchableOpacity
-                                onPress={() => setDescExpanded(v => !v)}
-                                style={{ marginTop: 6 }}
-                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            >
-                                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>
-                                    {descExpanded ? t('livetracking:readLess') : t('livetracking:readMore')}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                )}
-
-                <View style={liveTrackingStyles.popupSection}>
-                    <View style={liveTrackingStyles.aidStationInfoRow}>
-                        <Ionicons name="location-outline" size={18} color={colors.gray600} />
-                        <Text style={liveTrackingStyles.popupLabel}>
-                            {t('livetracking:distance')}:
-                        </Text>
-                        <Text style={liveTrackingStyles.popupValue}>
-                            {station.distance_km?.toFixed(1) || '0.0'} km
-                        </Text>
-                    </View>
-                    <View style={liveTrackingStyles.aidStationInfoRow}>
-                        <Ionicons name="trending-up-outline" size={18} color={colors.gray600} />
-                        <Text style={liveTrackingStyles.popupLabel}>
-                            {t('livetracking:elevation')}:
-                        </Text>
-                        <Text style={liveTrackingStyles.popupValue}>
-                            {station.ele ? Math.round(station.ele) : 0} m
-                        </Text>
-                    </View>
-                    {features.length > 0 && (
-                        <View style={{ paddingTop: 10 }}>
-                            <Text style={{
-                                fontSize: 11,
-                                fontWeight: '600',
-                                color: colors.gray500,
-                                letterSpacing: 0.6,
-                                textTransform: 'uppercase',
-                                marginBottom: 7,
-                            }}>
-                                {t('livetracking:availableServices')}
-                            </Text>
-                            <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-                                {features.map(feature => (
-                                    <View key={feature}>
-                                        <Ionicons
-                                            name={getFeatureIcon(feature)}
-                                            size={18}
-                                            color={colors.gray600}
-                                        />
-                                    </View>
-                                ))}
-                            </View>
+                            {isLongDesc && (
+                                <TouchableOpacity
+                                    onPress={() => setDescExpanded(v => !v)}
+                                    style={{ marginTop: 8 }}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <Text style={{ fontFamily: fonts.bodySemi,
+            fontSize: 13, color: palette.navy }}>
+                                        {descExpanded ? t('livetracking:readLess') : t('livetracking:readMore')}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     )}
-                </View>
 
-                {!station.accessible_by_car && (
-                    <View style={liveTrackingStyles.warningBox}>
-                        <Ionicons name="car-outline" size={20} color={colors.warning} />
-                        <Text style={liveTrackingStyles.warningText}>
-                            {t('livetracking:noCarAccess')}
+                    <View style={liveTrackingStyles.popupSection}>
+                        <View style={liveTrackingStyles.aidStationInfoRow}>
+                            <Ionicons name="location-outline" size={18} color={palette.textBody} />
+                            <Text style={liveTrackingStyles.popupLabel}>
+                                {t('livetracking:distance')}:
+                            </Text>
+                            <Text style={liveTrackingStyles.popupValue}>
+                                {station.distance_km?.toFixed(1) || '0.0'} km
+                            </Text>
+                        </View>
+                        <View style={liveTrackingStyles.aidStationInfoRow}>
+                            <Ionicons name="trending-up-outline" size={18} color={palette.textBody} />
+                            <Text style={liveTrackingStyles.popupLabel}>
+                                {t('livetracking:elevation')}:
+                            </Text>
+                            <Text style={liveTrackingStyles.popupValue}>
+                                {station.ele ? Math.round(station.ele) : 0} m
+                            </Text>
+                        </View>
+                        {features.length > 0 && (
+                            <View style={{ paddingTop: 8 }}>
+                                <Text style={{
+                                    fontFamily: fonts.bodySemi,
+            fontSize: 12,
+                                    color: palette.textMuted,
+                                    letterSpacing: 0.6,
+                                    textTransform: 'uppercase',
+                                    marginBottom: 8,
+                                }}>
+                                    {t('livetracking:availableServices')}
+                                </Text>
+                                <View style={{ flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' }}>
+                                    {features.map(feature => (
+                                        <View key={feature}>
+                                            <Ionicons
+                                                name={getFeatureIcon(feature)}
+                                                size={18}
+                                                color={palette.textBody}
+                                            />
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+                    </View>
+
+                    {!station.accessible_by_car && (
+                        <View style={liveTrackingStyles.warningBox}>
+                            <Ionicons name="car-outline" size={20} color={palette.warning} />
+                            <Text style={liveTrackingStyles.warningText}>
+                                {t('livetracking:noCarAccess')}
+                            </Text>
+                        </View>
+                    )}
+                    {station.accessible_by_car && (
+                        <TouchableOpacity
+                            style={liveTrackingStyles.directionsBtn}
+                            onPress={openDirections}
+                        >
+                            <Ionicons name="navigate" size={20} color={palette.surface} />
+                            <Text style={liveTrackingStyles.directionsBtnText}>
+                                {t('livetracking:getDirections')}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                    <View style={{
+                        paddingTop: 12,
+                        alignItems: 'flex-end',
+                    }}>
+                        <Text style={{ fontFamily: fonts.body,
+            fontSize: 13, color: palette.textBody }}>
+                            {t('livetracking:poweredBy')}{' '}
+                            <Text style={{ fontFamily: fonts.bodySemi,
+            fontSize: 14,
+            color: palette.ink }}> {t('livetracking:livio')}</Text>
                         </Text>
                     </View>
-                )}
-                {station.accessible_by_car && (
-                    <TouchableOpacity
-                        style={liveTrackingStyles.directionsBtn}
-                        onPress={openDirections}
-                    >
-                        <Ionicons name="navigate" size={20} color={colors.white} />
-                        <Text style={liveTrackingStyles.directionsBtnText}>
-                            {t('livetracking:getDirections')}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-                <View style={{
-                    paddingTop: 12,
-                    alignItems: 'flex-end',
-                }}>
-                    <Text style={{ fontSize: 12, color: colors.gray600 }}>
-                        {t('livetracking:poweredBy')}{' '}
-                        <Text style={{ fontWeight: '700', color: colors.gray900 }}> {t('livetracking:livio')}</Text>
-                    </Text>
-                </View>
+                </ScrollView>
             </View>
         </View>
     );

@@ -1,15 +1,17 @@
 import React, { memo, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { resultListStyle } from '../../styles/ResultList.styles';
+import { isNarrowWidth } from '../../utils/screenFit';
+import { formatWave } from '../../utils/waveLabel';
 import { RaceResult } from '../../services/resultList';
 import { useNavigation } from '@react-navigation/native';
-import { colors } from '../../styles/common.styles';
+import { categoryColors, palette } from '../../styles/common.styles';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
-import { formatWave } from '../../utils/waveLabel';
 
 interface ResultCardBeforeRaceProps {
     item: RaceResult;
@@ -40,6 +42,8 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
     analyticsRaceName,
 }) => {
     const { t } = useTranslation(['allrace', 'common']);
+    // compact spacing below 360pt — re-renders on rotation / Display Zoom despite memo
+    const narrow = isNarrowWidth(useWindowDimensions().width);
     const navigation = useNavigation<any>();
 
     const isLive = item.live_tracking_activated === 1;
@@ -78,66 +82,93 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
 
     return (
         <TouchableOpacity
-            style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: colors.pinkcolor }]}
+            style={[resultListStyle.cardWithLeftBorder, narrow && resultListStyle.cardNarrow, isWomen && { backgroundColor: categoryColors.womenSurface }]}
             onPress={handlePress}
         >
-            {/* ✅ Badge: star only — no position before race */}
-            <TouchableOpacity
-                style={[resultListStyle.cornerBadge, isWomen && { backgroundColor: colors.pinkcolor }]}
-                onPress={handleStarPress}
-                activeOpacity={0.8}
-                disabled={isLoading}
-            >
-                <Text style={isFollowed ? resultListStyle.cornerStar : resultListStyle.cornerStarUnfilled}>
-                    ★
-                </Text>
-            </TouchableOpacity>
-
-            {/* Card Content */}
-            <View>
-                <View style={resultListStyle.cardTop}>
-                    <View style={resultListStyle.cardTopLeft}>
-                        <Text style={resultListStyle.cardName}>{item.name}</Text>
-                    </View>
-                    <View style={{ width: 60 }} />
+            {/* Row head — bib circle, identity, follow star. Matches
+                ResultCard / ResultCardLive; before the race there is no
+                position, so the circle carries the bib. */}
+            <View style={resultListStyle.rowHead}>
+                <View style={[resultListStyle.rankCircle, isWomen && { backgroundColor: categoryColors.women }]}>
+                    <Text style={resultListStyle.rankText}>{item.bib || '-'}</Text>
                 </View>
-
-                <Text style={resultListStyle.bibText}>
-                    {t('allrace:race.bibNumber')} {item.bib}
-                </Text>
-
-                <View style={resultListStyle.metaBlock}>
-                    {/* Country is rendered beside the flag in the column below,
-                        so listing it here printed it twice on every row. Club
-                        only now — and the whole line is dropped for an entrant
-                        with no club, rather than left as a blank row. */}
-                    {!!item.club && (
-                        <Text style={resultListStyle.teamText} numberOfLines={1}>
-                            {item.club}
-                        </Text>
-                    )}
-                    {/* Duo teams: `item.name` above is the TEAM name; these are the two
-                        members. Empty on every solo entrant, so nothing renders for them. */}
-                    {item.name_participant_1 ? (
-                        <Text style={resultListStyle.teamText} numberOfLines={2}>
-                            {[item.name_participant_1, item.name_participant_2].filter(Boolean).join(' & ')}
-                        </Text>
-                    ) : null}
+                <View style={resultListStyle.cardTop}>
+                    {/* 2 lines (was 1): a long name / team name in the ~160-200pt
+                        column at 320pt was cut to "…". */}
+                    <Text style={resultListStyle.cardName} numberOfLines={2}>{item.name}</Text>
+                    {/* Two lines. Five values on one clamped line needed ~306pt
+                        in a 234pt column, so the club, country and age were cut
+                        off on every row that had them. Line 1 is the race entry
+                        (always visible), line 2 is who the athlete is. */}
+                    <Text style={resultListStyle.bibText} numberOfLines={2}>
+                        {`${t('allrace:race.bibNumber')} ${item.bib}`}
+                    </Text>
+                    {/* Wave gets its own row. Joined onto the bib line it ran to
+                        41-54 characters ("Bib number 201 - Start Wave 1: Start @ 9h",
+                        longer in fr) and numberOfLines={1} truncated it mid-word in
+                        this column. Empty on the many events with no wave column. */}
                     {item.wave ? (
-                        <Text style={resultListStyle.waveText} numberOfLines={1}>
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
                             {formatWave(t('allrace:race.wavelabel'), item.wave)}
                         </Text>
                     ) : null}
+                    <View style={resultListStyle.metaLineTight}>
+                        {!!item.nation_flag && (
+                            <SvgUri uri={item.nation_flag} width={18} height={13} />
+                        )}
+                        {/* 2 lines (was 1): club · country · age lost the country
+                            and age behind a long club name */}
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
+                            {[item.club, item.nation,
+                              item.age ? `${t('allrace:race.age')} ${item.age}` : null]
+                                .filter(Boolean).join(' \u00b7 ')}
+                        </Text>
+                    </View>
+                    {/* Duo teams: `item.name` above is the TEAM name; these are the two
+                        members. A SIBLING of the flag row above, never a child of it —
+                        that row is flexDirection:'row', so nesting would put the member
+                        names on the same line as the flag. Empty for solo entrants. */}
+                    {item.name_participant_1 ? (
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
+                            {[item.name_participant_1, item.name_participant_2].filter(Boolean).join(' & ')}
+                        </Text>
+                    ) : null}
                 </View>
+                <TouchableOpacity
+                    onPress={handleStarPress}
+                    activeOpacity={0.7}
+                    disabled={isLoading}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={isFollowed ? 'Unfollow athlete' : 'Follow athlete'}
+                >
+                    <Ionicons
+                        name={isFollowed ? 'star' : 'star-outline'}
+                        size={26}
+                        color={isFollowed ? palette.lime : palette.placeholder}
+                    />
+                </TouchableOpacity>
+                <Ionicons name="chevron-forward" size={18} color={palette.placeholder} style={resultListStyle.cardChevron} />
+            </View>
 
+            <View>
                 {isLive && (
-                    <View style={{ marginTop: 6 }}>
+                    <View style={{ marginTop: 8 }}>
                         <LiveTrackingBar />
                     </View>
                 )}
 
-                <View style={resultListStyle.statsRow}>
-                    {showUtmbIndex && (
+                {/* UTMB is the only stat this card has left. The flag + country
+                    column that sat beside it repeated the flag and country already
+                    shown on the identity line above, so it is gone. The whole row
+                    is gated now: without the flag column, an event with no UTMB
+                    index would draw an empty block with a stray top border. */}
+                {showUtmbIndex && (
+                    <View style={[
+                        resultListStyle.statsRow,
+                        narrow && resultListStyle.statsRowNarrow,
+                        isWomen && { borderTopColor: categoryColors.womenDivider },
+                    ]}>
                         <View style={resultListStyle.statCol}>
                             {hasUtmbIndex ? (
                                 <View style={resultListStyle.beforeRaceLeftHalf}>
@@ -160,38 +191,30 @@ const ResultCardBeforeRace: React.FC<ResultCardBeforeRaceProps> = memo(({
                                                 {t('allrace:race.utmbIndex')}
                                             </Text>
                                         </View>
-                                        <Text style={resultListStyle.statLabel}>—</Text>
+                                        <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>—</Text>
                                     </View>
                                 </View>
                             )}
                         </View>
-                    )}
-
-                    <View style={[
-                        resultListStyle.statCol,
-                        showUtmbIndex ? resultListStyle.statFlagMid : resultListStyle.statFlagFullNoBorder,
-                    ]}>
-                        <View style={resultListStyle.flagRow}>
-                            {item.nation_flag && (
-                                <SvgUri width={28} height={20} uri={item.nation_flag} />
-                            )}
-                            <Text style={resultListStyle.statVal} numberOfLines={2}>
-                                {item.nation || '—'}
-                            </Text>
-                        </View>
                     </View>
-                </View>
+                )}
             </View>
         </TouchableOpacity>
     );
 },
 (prev, next) =>
     prev.item.bib === next.item.bib &&
+    // Without this the card never repaints when the Women filter is toggled.
+    prev.isWomen === next.isWomen &&
     prev.isFollowed === next.isFollowed &&
     prev.isLoading === next.isLoading &&
     prev.item.utmb_index === next.item.utmb_index &&
     prev.item.club === next.item.club &&
     prev.item.nation === next.item.nation &&
+    // also printed on the card — stale after a refresh without them
+    prev.item.name === next.item.name &&
+    prev.item.age === next.item.age &&
+    prev.item.wave === next.item.wave &&
     prev.showUtmbIndex === next.showUtmbIndex
 );
 

@@ -1,15 +1,15 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StatusBar, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlatList } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, Entypo } from '@expo/vector-icons';
+import { Entypo } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ResultDetailspops } from '../../types/navigation';
 import RaceInfoTab from './RaceInfoTab';
 import RunnerInfoTab from './RunnerInfoTab';
 import { resultInfoStyles as s } from '../../styles/resultDetails.styles';
-import { colors, commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette } from '../../styles/common.styles';
 import RaceLive from './RaceLive';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,6 +20,7 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { AppHeader } from '../../components/common/AppHeader';
 import { useDimensions } from '../../hooks/useDimensions';
+import { landscapeSideInsets } from '../../utils/landscapeInsets';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import { resultDetailRaceStatus, resultDetailView, effectiveParticipantStatus } from './resultDetailView';
@@ -29,12 +30,18 @@ const TAB_KEYS: TabKey[] = ['raceInfo', 'timingPoint', 'runnerInfo'];
 
 const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     const { t } = useTranslation(['resultdetails', 'common']);
-    const { width: windowWidth } = useDimensions();
+    const { width: windowWidth, height: windowHeight } = useDimensions();
     const [containerWidth, setContainerWidth] = useState(0);
     const width = containerWidth || windowWidth;
     const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = windowWidth
+    // A real boolean (was `= windowWidth`, always truthy, so 3-button Android
+    // took left/right edges in portrait too).
+    const isLandscape = windowWidth > windowHeight;
+    // Side padding in landscape on a notch / Dynamic Island phone (0 in
+    // portrait). On a wrapper OUTSIDE the measured View, so the pages are
+    // sized to the padded width — see utils/landscapeInsets.
+    const side = landscapeSideInsets(insets, windowWidth, windowHeight);
     const {
         raceStatus: raceStatusParam,
         product_app_id,
@@ -195,6 +202,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                 {item === 'runnerInfo' && (
                     <RunnerInfoTab
                         runnerInfo={data?.runner_info}
+                        raceInfo={data?.race_info}
                         showUtmbIndex={data?.event?.show_utmb_index === 1}
                         liveTrackingActivated={data?.race_info?.live_tracking_activated}
                         isFollowing={Followed}
@@ -222,22 +230,14 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
 
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']} >
-                <StatusBar barStyle="dark-content" />
-                <View style={s.header}>
-                    <TouchableOpacity
-                        style={s.headerBackBtn}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Ionicons name="chevron-back" size={32} color={colors.gray900} />
-                    </TouchableOpacity>
-                    <View style={s.headerCenter}>
-                        <Text style={commonStyles.title}>...</Text>
-                    </View>
-                </View>
+            <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']} >
+                {/* The loading state kept the pre-redesign bar - a chevron and a
+                    "..." placeholder on white - while the loaded and error
+                    states both use AppHeader, so the screen changed shape as it
+                    finished loading. */}
+                <AppHeader showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
             </SafeAreaView>
         );
@@ -245,8 +245,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
+            <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
                 <AppHeader showBack />
                 <ErrorScreen
                     type={error!.type}
@@ -259,31 +258,39 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
-            <StatusBar barStyle="dark-content" />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={data?.race_info?.name ?? ''} showBack />
+            <View style={{ flex: 1, paddingLeft: side.left, paddingRight: side.right }}>
             <View
                 style={{ flex: 1 }}
                 onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
             >
+                {/* Sub-header — one muted meta line under the band, per the
+                    mockups. The name moved up into the lime band. */}
                 <View style={s.header}>
-                    <TouchableOpacity
-                        style={s.headerBackBtn}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Ionicons name="chevron-back" size={32} color={colors.gray900} />
-                    </TouchableOpacity>
                     <View style={s.headerCenter}>
-                        <Text style={commonStyles.title}>{data?.race_info?.name ?? '...'}</Text>
-                        <Text style={commonStyles.text}>{data?.race_info?.bib ?? ''}</Text>
+                        {/* 2 lines (was 1): a long distance name was cut to "…".
+                            raceInfo.bib now exists in en/fr/nl (was the English fallback). */}
+                        <Text style={s.runnerMeta} numberOfLines={2}>
+                            {[
+                                data?.race_info?.bib ? `${t('raceInfo.bib', 'Bib')} ${data.race_info.bib}` : null,
+                                data?.event?.distance_name,
+                            ].filter(Boolean).join(' · ')}
+                        </Text>
                     </View>
                     {canFollow && (
-                        <TouchableOpacity onPress={handleFollow} disabled={Loading}>
-                            <Entypo name={Followed ? 'star' : 'star-outlined'} size={33} color="black" />
+                        <TouchableOpacity
+                            onPress={handleFollow}
+                            disabled={Loading}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            accessibilityRole="button"
+                            accessibilityLabel={Followed ? 'Unfollow athlete' : 'Follow athlete'}
+                        >
+                            <Entypo name={Followed ? 'star' : 'star-outlined'} size={26} color={palette.lime} />
                         </TouchableOpacity>
                     )}
                 </View>
-                <View>
+                <View style={s.tabStrip}>
                     <ScrollView
                         ref={tabScrollRef}
                         horizontal
@@ -294,21 +301,13 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                         {TAB_KEYS.map((tabKey) => (
                             <TouchableOpacity
                                 key={tabKey}
-                                style={s.tabItem}
+                                style={[s.tabItem, activeTab === tabKey && s.tabItemActive]}
                                 onPress={() => handleTabPress(tabKey)}
                                 activeOpacity={0.7}
                             >
-                                <Text style={[commonStyles.text, activeTab === tabKey && s.tabTextActive]}>
+                                <Text style={[s.tabText, activeTab === tabKey && s.tabTextActive]}>
                                     {t(`tabs.${tabKey}`)}
                                 </Text>
-                                {activeTab === tabKey && (
-                                    <LinearGradient
-                                        colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                        style={s.tabUnderline}
-                                    />
-                                )}
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
@@ -343,6 +342,7 @@ const ResultDetails: React.FC<ResultDetailspops> = ({ navigation, route }) => {
                     onSubmit={handlePasswordSubmit}
                     onClose={handlePasswordModalClose}
                 />
+            </View>
             </View>
         </SafeAreaView>
     );

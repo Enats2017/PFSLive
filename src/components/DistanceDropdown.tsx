@@ -1,22 +1,38 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, FlatList, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DistanceOption } from '../services/liveTrackingService';
 import { liveTrackingStyles } from '../styles/liveTracking.styles';
-import { colors } from '../styles/common.styles';
+import { palette } from '../styles/common.styles';
+import { useTranslation } from 'react-i18next';
+import { RaceStatePill } from './RaceStatePill';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface DistanceDropdownProps {
     distances: DistanceOption[];
     selectedDistance: DistanceOption;
     onSelect: (distance: DistanceOption) => void;
+    /**
+     * Which state the race is in. The pill used to be a boolean that showed
+     * "LIVE" or nothing at all, so a finished or not-yet-started race said
+     * nothing about itself.
+     */
+    raceState?: 'live' | 'finished' | 'upcoming';
 }
 
 export const DistanceDropdown: React.FC<DistanceDropdownProps> = ({
     distances,
     selectedDistance,
     onSelect,
+    raceState,
 }) => {
+    const { t } = useTranslation(['livetracking']);
     const [isOpen, setIsOpen] = useState(false);
+    // ✅ Landscape (audit 2026-10-23): "Live map" + pill on one row and the
+    // selector under it took ~100pt of a ~200pt body - the map was ~60-100pt.
+    // There they share one row (~55pt). Portrait unchanged.
+    const { width, height } = useWindowDimensions();
+    const oneRow = width > height;
 
     const handleSelect = (distance: DistanceOption) => {
         onSelect(distance);
@@ -24,19 +40,24 @@ export const DistanceDropdown: React.FC<DistanceDropdownProps> = ({
     };
 
     return (
-        <View style={liveTrackingStyles.dropdownContainer}>
+        <View style={[liveTrackingStyles.dropdownContainer, oneRow && liveTrackingStyles.dropdownContainerRow]}>
+            <View style={[liveTrackingStyles.mapHeadRow, oneRow && liveTrackingStyles.mapHeadRowInline]}>
+                <Text style={liveTrackingStyles.mapHeadTitle}>{t('livetracking:liveMap')}</Text>
+                {!!raceState && <RaceStatePill raceState={raceState} />}
+            </View>
+
             <TouchableOpacity
-                style={liveTrackingStyles.dropdownButton}
+                style={[liveTrackingStyles.dropdownButton, oneRow && liveTrackingStyles.dropdownButtonInline]}
                 onPress={() => setIsOpen(true)}
                 activeOpacity={0.7}
             >
                 <Text style={liveTrackingStyles.dropdownButtonText}>
                     {selectedDistance.distance_name}
                 </Text>
-                <Ionicons name="chevron-down" size={20} color={colors.gray900} />
+                <Ionicons name="chevron-down" size={20} color={palette.ink} />
             </TouchableOpacity>
 
-            <Modal
+            <Modal supportedOrientations={MODAL_ORIENTATIONS}
                 visible={isOpen}
                 transparent
                 animationType="fade"
@@ -70,7 +91,7 @@ export const DistanceDropdown: React.FC<DistanceDropdownProps> = ({
                                         {item.distance_name}
                                     </Text>
                                     {item.product_option_value_app_id === selectedDistance.product_option_value_app_id && (
-                                        <Ionicons name="checkmark" size={20} color={colors.primary} />
+                                        <Ionicons name="checkmark" size={20} color={palette.navy} />
                                     )}
                                 </TouchableOpacity>
                             )}

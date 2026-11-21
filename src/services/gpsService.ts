@@ -41,6 +41,11 @@ export const BACKGROUND_LOCATION_TASK = 'background-location-task';
 
 const TRACKING_PARAMS_KEY = '@PFSLive:trackingParams';
 const LAST_SENT_KEY = '@PFSLive:lastSentAt';
+// ✅ When THIS tracking session began, for the elapsed timer on the home screen
+// (02_Home-Tracking-Active.png) and the 5-minute check in maybeUploadInterimLog.
+// Set only for a genuinely new race — a mid-race relaunch must keep the
+// original start or the timer resets to zero.
+const SESSION_START_KEY = '@PFSLive:sessionStartedAt';
 export const BACKGROUND_SENT_COUNT_KEY = '@PFSLive:bgSentCount';
 const LAST_POSITION_KEY = '@PFSLive:lastPosition';
 const LAST_ALTITUDE_KEY = '@PFSLive:lastAltitude';
@@ -187,6 +192,27 @@ const MOVEMENT_THRESHOLD: Record<number, number> = {
   60: 30,  // Cycling — 30m
 };
 const DEFAULT_MOVEMENT_METRES = 5;
+
+// ✅ A move must also be bigger than the GPS's own uncertainty (2026-10-29, growth).
+// A phone lying still reports positions that wander inside their accuracy
+// circles: developer test p4656 (iPhone, walking = 3m threshold) sat still with
+// 8-22m accuracy, its fixes wandered 3-21m from the start position and counted
+// as movement — 6 drift points stored, 38m added to a runner who never moved.
+// iOS gives no usable speed when still (-1), so the accuracy is the signal: two
+// fixes closer than their two accuracy radii together are indistinguishable.
+// Capped so poor fixes (forest, 60m+) cannot hold real progress back for long:
+// walking covers ~40m per 30s send window, running and cycling far more. Not
+// applied in the finish approach (its 1m floor stays — every metre counts there).
+// The anchor's accuracy is stored with LAST_POSITION_KEY; one saved by an older
+// version has none, and then only the new fix's accuracy counts.
+const ACCURACY_FLOOR_CAP_M = 25;
+const validAcc = (a: unknown): number => {
+  const n = Number(a);
+  return a === null || a === undefined || !isFinite(n) || n <= 0 ? 0 : n;
+};
+export function accuracyFloorMetres(accuracy: number | null | undefined, anchorAccuracy?: number | null): number {
+  return Math.min(validAcc(accuracy) + validAcc(anchorAccuracy), ACCURACY_FLOOR_CAP_M);
+}
 
 // ✅ The same thresholds expressed as a PACE, for use where the gap between
 // fixes is not the configured interval.
@@ -1235,7 +1261,7 @@ const _processLocationForSendInternal = async (
           const movedM = distanceMetres(anchor.lat, anchor.lon, raw.latitude, raw.longitude);
           const needM = finishApproach === '1'
             ? FINISH_APPROACH_MIN_MOVE_METRES
-            : requiredMoveMetres(Number(categoryId), elapsedMs);
+            : Math.max(requiredMoveMetres(Number(categoryId), elapsedMs), accuracyFloorMetres(raw.accuracy, anchor.acc));
 
           if (movedM < needM) {
             await addLog('🚶', `Skipped — backlog fix moved only ${movedM.toFixed(1)}m (need ${needM.toFixed(1)}m)${tag}`);
@@ -1248,6 +1274,7 @@ const _processLocationForSendInternal = async (
           await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
             lat: raw.latitude,
             lon: raw.longitude,
+            acc: raw.accuracy ?? null,
           }));
         }
 
@@ -1388,17 +1415,22 @@ const _processLocationForSendInternal = async (
       await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
         lat: raw.latitude,
         lon: raw.longitude,
+        acc: raw.accuracy ?? null,
       }));
       await addLog('📌', `First position recorded — waiting for movement${tag}`);
       return;
     }
     const lastPos = JSON.parse(lastPosStr);
     const moved = distanceMetres(lastPos.lat, lastPos.lon, raw.latitude, raw.longitude);
-    const movementFloor = (finishApproach === '1') ? FINISH_APPROACH_MIN_MOVE_METRES : minMovementMetres;
+    // The category threshold, or the two fixes' accuracy when that is larger
+    // (accuracyFloorMetres — GPS drift while standing still is not a move).
+    const movementFloor = (finishApproach === '1')
+      ? FINISH_APPROACH_MIN_MOVE_METRES
+      : Math.max(minMovementMetres, accuracyFloorMetres(raw.accuracy, lastPos.acc));
     if (moved < movementFloor) {
       const label = (finishApproach === '1')
         ? `Skipped — identical position in finish approach (${moved.toFixed(1)}m)`
-        : `Skipped — moved only ${moved.toFixed(1)}m (need ${minMovementMetres}m)`;
+        : `Skipped — moved only ${moved.toFixed(1)}m (need ${Math.round(movementFloor * 10) / 10}m)`;
       await addLog('🚶', `${label}${tag}`);
       return;
     }
@@ -1450,6 +1482,7 @@ const _processLocationForSendInternal = async (
     await AsyncStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
       lat: location.latitude,
       lon: location.longitude,
+      acc: raw.accuracy ?? null,
     }));
     // [#SAME-FIX-ONCE] sent now, or queued by sendLocation if the post fails.
     if (fixTs > 0) await _rememberFixTs(fixTs);
@@ -1628,6 +1661,10 @@ const _processLocationForSendInternal = async (
       try {
         await AsyncStorage.setItem(PENDING_FINISH_KEY, JSON.stringify({ participantId, eventId }));
         await AsyncStorage.removeItem(TRACKING_PARAMS_KEY);
+        // The session's clock goes with it, as in _doFullStop (developer report
+        // 2026-10-30): a runner who finishes with Livio closed never reaches that
+        // teardown, and the next race's Start showed this race's elapsed time.
+        await AsyncStorage.removeItem(SESSION_START_KEY);
       } catch { /* silent — upload paths fall back to any surviving params */ }
       await addLog(
         '🏆',
@@ -2290,6 +2327,11 @@ const _doFullStop = async (): Promise<void> => {
   await AsyncStorage.removeItem(LAST_POSITION_KEY);
   await AsyncStorage.removeItem(RECENT_FIX_TS_KEY);
   await AsyncStorage.removeItem(LAST_ALTITUDE_KEY);
+  // ✅ The clock belongs to the session (developer report 2026-10-30): kept, the
+  // next Start showed the LAST race's elapsed time for the 2-3 s until the new
+  // start was stamped. Every reader also needs TRACKING_PARAMS_KEY, removed above,
+  // and a resume after an OS kill never comes through here.
+  await AsyncStorage.removeItem(SESSION_START_KEY);
   // Preserve the final total before clearing — the stop toast (and any late
   // reader) runs AFTER this teardown on the background-finish path, and would
   // otherwise read null and fall back to stale React state (showed 10, not 12).
@@ -2447,7 +2489,6 @@ export const flushTrackingLog   = async (): Promise<void> => _flushLogsNow();
 // the normal Stop/finish upload still happens. Called from the heartbeat
 // (background) and HomeScreen's queue timer (foreground); idempotent per session.
 const INTERIM_LOG_KEY = '@PFSLive:interimLogUploaded';
-const SESSION_STARTED_AT_KEY = '@PFSLive:sessionStartedAt';
 // trackingStartService's PENDING_START_PING_KEY, re-declared to avoid an import
 // cycle (that module imports this one).
 const PENDING_START_PING_KEY_LOCAL = '@PFSLive:pendingStartPing';
@@ -2458,7 +2499,7 @@ const _stopIfStale = async (where: string): Promise<boolean> => {
   try {
     const raw = await AsyncStorage.getItem(TRACKING_PARAMS_KEY);
     if (!raw) return false;
-    const startedAt = parseInt((await AsyncStorage.getItem(SESSION_STARTED_AT_KEY)) || '0', 10) || 0;
+    const startedAt = parseInt((await AsyncStorage.getItem(SESSION_START_KEY)) || '0', 10) || 0;
     if (!isStaleSession(JSON.parse(raw), Date.now(), startedAt)) return false;
     await addLog('🧹', `${where} — session older than 24h, stopped`);
     await _doFullStop();
@@ -2508,7 +2549,7 @@ const _maybeUploadInterimLogInner = async (): Promise<void> => {
     if (!p?.participantId || !p?.eventId) return;
     if ((await AsyncStorage.getItem(RACE_FINISHED_KEY)) === '1') return;
 
-    const sessionStart = parseInt((await AsyncStorage.getItem(SESSION_STARTED_AT_KEY)) || '0', 10) || 0;
+    const sessionStart = parseInt((await AsyncStorage.getItem(SESSION_START_KEY)) || '0', 10) || 0;
     if (!sessionStart) return;
     const gun = p.manualStart === 1 ? 0 : (p.raceStartTime ? new Date(p.raceStartTime).getTime() : NaN);
     if (isNaN(gun)) return;                     // unknown start time — can't judge "late"
@@ -2591,6 +2632,50 @@ export const getTrackingParams = async (): Promise<{
 // session, onLocation isn't re-registered yet (that path also affects
 // background sends and is handled separately), so the live display may not
 // tick until tracking is re-initialised.
+/**
+ * Read-only session stats for the tracking-active screen
+ * (02_Home-Tracking-Active.png): how long this session has run, how far the
+ * device has travelled, and how long ago the last position was accepted.
+ *
+ * Display only — nothing here feeds the send path, and every part degrades to
+ * null rather than throwing, so a missing odometer cannot affect tracking.
+ */
+export const getSessionStats = async (): Promise<{
+  startedAt: number | null;
+  distanceKm: number | null;
+  lastSentAt: number | null;
+}> => {
+  let startedAt: number | null = null;
+  let distanceKm: number | null = null;
+  let lastSentAt: number | null = null;
+
+  try {
+    const raw = await AsyncStorage.getItem(SESSION_START_KEY);
+    const n = raw ? Number(raw) : NaN;
+    if (Number.isFinite(n) && n > 0) startedAt = n;
+  } catch { /* display only */ }
+
+  if (startedAt === null) {
+    // No session stamped yet (a Start still on its way): 00:00:00 and 0 km, not
+    // whatever the odometer kept from the last race.
+    distanceKm = 0;
+  } else {
+    try {
+      // Transistor's own accumulator — no distance maths of ours on the GPS path.
+      const metres = await BackgroundGeolocation.getOdometer();
+      if (Number.isFinite(metres) && metres >= 0) distanceKm = metres / 1000;
+    } catch { /* display only */ }
+  }
+
+  try {
+    const raw = await AsyncStorage.getItem(LAST_SENT_KEY);
+    const n = raw ? Number(raw) : NaN;
+    if (Number.isFinite(n) && n > 0) lastSentAt = n;
+  } catch { /* display only */ }
+
+  return { startedAt, distanceKm, lastSentAt };
+};
+
 export const attachUi = async (
   callback: (position: GPSPosition) => void,
   intervalSeconds: number = 30,
@@ -2709,6 +2794,9 @@ export const ensureBackgroundTaskAlive = async (
 };
 
 export const gpsService = {
+  /** Read-only session stats for the tracking-active screen. See getSessionStats. */
+  getSessionStats,
+
   /**
    * DEAD CODE — do not call. Kept only because removing an exported method is a
    * wider change than this warrants.
@@ -3065,11 +3153,22 @@ export const gpsService = {
       // wiped accumulated segments of long events, leaving only the first ~500
       // entries. A genuinely new race still gets a fresh log.
       if (!_isSameRaceResume) {
+        // A new race starts the clock and the odometer from zero. On a resume
+        // both are left alone so the elapsed time and distance survive an OS kill.
+        // ✅ Odometer FIRST (developer report 2026-10-30): Home polls getSessionStats
+        // while this runs, and a new start time beside the last race's odometer
+        // showed that race's distance on the new clock.
+        try {
+          await BackgroundGeolocation.setOdometer(0);
+        } catch {
+          // Odometer is display-only; never let it break the start path.
+        }
+        await AsyncStorage.setItem(SESSION_START_KEY, String(Date.now()));
         await AsyncStorage.removeItem(TRACKING_LOG_KEY);
         await _resetLogBuffer();
         // New session → arm the one-shot interim log upload (maybeUploadInterimLog).
+        // Its 5-minute clock reads SESSION_START_KEY, set above.
         await AsyncStorage.removeItem(INTERIM_LOG_KEY);
-        await AsyncStorage.setItem(SESSION_STARTED_AT_KEY, String(Date.now()));
       }
       await AsyncStorage.removeItem(LAST_POSITION_KEY);
       await AsyncStorage.removeItem(RECENT_FIX_TS_KEY);   // [#SAME-FIX-ONCE] new session
@@ -3167,7 +3266,9 @@ export const gpsService = {
             notification: {
               title: notificationTitle ?? 'Live Tracking Active',
               text:  notificationBody  ?? 'Your location is being tracked.',
-              color: '#1a73e8',
+              // palette.navy, inlined so the headless graph stays free of the
+              // stylesheet module. Keep in step with the token.
+              color: '#0F2447', // design-audit-ignore
             },
             // ✅ rationale goes here, in the app (AppConfig) domain
             backgroundPermissionRationale: {
@@ -3477,7 +3578,7 @@ const _rehydrateTrackingOnBoot = async (): Promise<void> => {
     // old race and hide today's Start. Stop it; its unsent fixes are parked by
     // drainOrphans() and still uploaded under the old race.
     try {
-      const bootStartedAt = parseInt((await AsyncStorage.getItem(SESSION_STARTED_AT_KEY)) || '0', 10) || 0;
+      const bootStartedAt = parseInt((await AsyncStorage.getItem(SESSION_START_KEY)) || '0', 10) || 0;
       if (isStaleSession(JSON.parse(paramsJson), Date.now(), bootStartedAt)) {
         await addLog('🧹', 'Cold boot — session older than 24h found, stopped instead of resumed');
         await _doFullStop();

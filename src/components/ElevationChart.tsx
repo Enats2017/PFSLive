@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, G, Circle, Line } from 'react-native-svg';
-import { colors, commonStyles } from '../styles/common.styles';
+import { commonStyles, palette, mapColors } from '../styles/common.styles';
 import { GpxPoint } from '../hooks/useGpxElevation';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -67,9 +67,9 @@ const RunnerPin: React.FC<{ x: number; y: number }> = ({ x, y }) => {
                     C 0 ${PIN_H * 0.7}, ${PIN_W * 0.35} ${PIN_H * 0.85}, ${PIN_W / 2} ${PIN_H}
                     C ${PIN_W * 0.65} ${PIN_H * 0.85}, ${PIN_W} ${PIN_H * 0.7}, ${PIN_W} ${PIN_H * 0.45}
                     C ${PIN_W} ${PIN_H * 0.35}, ${PIN_W * 0.9} 0, ${PIN_W / 2} 0 Z`}
-                fill="#111"
+                fill={mapColors.checkpoint}
             />
-            <Circle cx={PIN_W / 2} cy={PIN_H * 0.35} r={PIN_W * 0.2} fill="#4CAF50" />
+            <Circle cx={PIN_W / 2} cy={PIN_H * 0.35} r={PIN_W * 0.2} fill={mapColors.start} />
         </G>
     );
 };
@@ -99,6 +99,12 @@ const ElevationChart: React.FC<ElevationChartProps> = ({
         return gpxPoints.filter((_, i) => i % step === 0);
     }, [gpxPoints]);
 
+    // The chart used to draw at the full SCREEN width while sitting inside a
+    // padded card, so it hung over the card's edges on both sides. Measure the
+    // space actually available and draw into that. SCREEN_WIDTH is only the
+    // first-paint estimate, before onLayout reports the real width.
+    const [chartWidth, setChartWidth] = useState(SCREEN_WIDTH);
+
     const distKm = parseFloat(distanceCompleted ?? '0');
     const progressIndex = useMemo(
         () => getProgressIndex(sampledPoints, distKm),
@@ -106,19 +112,19 @@ const ElevationChart: React.FC<ElevationChartProps> = ({
     );
 
     const filledPath = useMemo(
-        () => buildSmoothPath(elevations, SCREEN_WIDTH, CHART_HEIGHT),
-        [elevations]
+        () => buildSmoothPath(elevations, chartWidth, CHART_HEIGHT),
+        [elevations, chartWidth]
     );
 
     const runner = useMemo(
-        () => getRunnerPos(elevations, SCREEN_WIDTH, CHART_HEIGHT, progressIndex),
-        [elevations, progressIndex]
+        () => getRunnerPos(elevations, chartWidth, CHART_HEIGHT, progressIndex),
+        [elevations, progressIndex, chartWidth]
     );
 
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator color={colors.primary} />
+                <ActivityIndicator color={palette.navy} />
             </View>
         );
     }
@@ -126,19 +132,22 @@ const ElevationChart: React.FC<ElevationChartProps> = ({
     if (elevations.length < 2) return null;
 
     return (
-        <View style={styles.container}>
-            <Svg width={SCREEN_WIDTH} height={CHART_HEIGHT}>
+        <View
+            style={styles.container}
+            onLayout={(e) => setChartWidth(e.nativeEvent.layout.width)}
+        >
+            <Svg width={chartWidth} height={CHART_HEIGHT}>
                 <Defs>
                     <LinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                        <Stop offset="0%" stopColor={colors.primaryLight} stopOpacity="1" />
-                        <Stop offset="100%" stopColor={colors.primary} stopOpacity="0.6" />
+                        <Stop offset="0%" stopColor={palette.navyLift} stopOpacity="1" />
+                        <Stop offset="100%" stopColor={palette.navy} stopOpacity="0.6" />
                     </LinearGradient>
                 </Defs>
                 <Path d={filledPath} fill="url(#grad)" />
                 <Line
                     x1={runner.x} y1={runner.y}
                     x2={runner.x} y2={CHART_HEIGHT}
-                    stroke="#111" strokeWidth={1}
+                    stroke={mapColors.checkpoint} strokeWidth={1}
                     strokeDasharray="3 2"
                 />
                 <RunnerPin x={runner.x} y={runner.y} />
@@ -148,7 +157,7 @@ const ElevationChart: React.FC<ElevationChartProps> = ({
 };
 
 const styles = StyleSheet.create({
-    container: { backgroundColor: colors.white },
+    container: { backgroundColor: palette.surface },
     loadingContainer: { height: CHART_HEIGHT, alignItems: 'center', justifyContent: 'center' },
 });
 

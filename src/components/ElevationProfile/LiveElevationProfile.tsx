@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, useWindowDimensions, TouchableOpacity } from 'react-native';
 import { VictoryArea, VictoryChart, VictoryAxis, VictoryScatter, VictoryLine, VictoryLabel } from 'victory-native';
 import { useTranslation } from 'react-i18next';
 import { ChartDataPoint } from '../../types';
 import { GPXAidStation } from '../../services/gpxService';
 import { ParticipantMapMarker, AidStationMapMarker, CheckpointData } from '../../types/liveTracking';
-import { liveTrackingStyles } from '../../styles/liveTracking.styles';
-import { colors } from '../../styles/common.styles';
+import { liveTrackingStyles, ELEVATION_CHART_HEIGHT, ELEVATION_PANEL_HEIGHT } from '../../styles/liveTracking.styles';
+import { palette, mapColors, fonts, withAlpha } from '../../styles/common.styles';
 
 interface LiveElevationProfileProps {
     chartData: ChartDataPoint[];
@@ -17,8 +17,12 @@ interface LiveElevationProfileProps {
     totalDistance: number;
     minElevation: number;
     maxElevation: number;
+    elevationGain?: number;
     onAidStationPress?: (station: AidStationMapMarker) => void;
     onParticipantPress?: (participant: ParticipantMapMarker) => void;
+    /** Panel height when the screen has less room than ELEVATION_PANEL_HEIGHT
+     *  (landscape / short map area); the chart shrinks by the same amount. */
+    panelHeight?: number;
 }
 
 export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.memo(({
@@ -30,11 +34,16 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     totalDistance,
     minElevation,
     maxElevation,
+    elevationGain = 0,
     onAidStationPress,
     onParticipantPress,
+    panelHeight = ELEVATION_PANEL_HEIGHT,
 }) => {
     const { t } = useTranslation('livetracking');
-    const screenWidth = Dimensions.get('window').width;
+    // ✅ useWindowDimensions, not Dimensions.get in render (layout audit
+    // 2026-10-22): the snapshot went stale after a rotation, so the chart kept
+    // the portrait width in landscape until something else re-rendered it.
+    const { width: screenWidth } = useWindowDimensions();
 
     const scrollViewRef = React.useRef<ScrollView>(null);
 
@@ -73,7 +82,17 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
 
     const routeWidthCm = totalDistance / kmPerCm;
     const chartWidth   = Math.max(screenWidth, routeWidthCm * DP_PER_CM);
-    const chartHeight = 220;
+    // 12 top + 180 plot + 4 bottom. Both axes below are fully transparent
+    // (axis, tickLabels AND grid), so the old 20/20 padding reserved 40pt for
+    // furniture that is never drawn - 20 of it as dead space directly under the
+    // chart. Keep a little at the top so a peak is not clipped.
+    // ✅ Shrinks with the panel when the screen caps it (landscape): the panel
+    // used to stay 224pt and cover the whole map. Header + top padding are the
+    // fixed part (ELEVATION_PANEL_HEIGHT - ELEVATION_CHART_HEIGHT).
+    const chartHeight = Math.max(
+        40,
+        Math.min(ELEVATION_CHART_HEIGHT, panelHeight - (ELEVATION_PANEL_HEIGHT - ELEVATION_CHART_HEIGHT)),
+    );
 
     const elevationRange = maxElevation - minElevation;
     const topBuffer = elevationRange * 0.15;
@@ -196,7 +215,11 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                 station = {
                     id: `aid-${idx}`,
                     name: data.station.name,
-                    description: data.checkpoint.description,
+                    // ✅ was data.checkpoint.description - undefined on this
+                    // (GPX aid station) branch, so the TypeError was swallowed
+                    // and tapping a GPX aid station on the chart did nothing.
+                    // GPXAidStation has no description field.
+                    description: data.station.description ?? '',
                     lat: data.station.lat,
                     lon: data.station.lon,
                     ele: data.station.ele,
@@ -214,7 +237,9 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
     // One flat list so taps are resolved by nearest-hit, not by which absolute
     // overlay happens to sit on top — fixes occlusion when participants cluster.
     const tapTargets = React.useMemo(() => {
-        const PAD_TOP = 20, PAD_BOTTOM = 20;   // must match VictoryChart padding
+        // ✅ Was 20/20 while the chart below uses 12/4: initials and tap boxes
+        // sat 8-16pt off their dots.
+        const PAD_TOP = 12, PAD_BOTTOM = 4;   // must match VictoryChart padding
         const plotHeight = chartHeight - PAD_TOP - PAD_BOTTOM;
         const toScreenY = (yVal: number) => {
             const yPct = (yVal - yDomain[0]) / (yDomain[1] - yDomain[0]);
@@ -268,8 +293,15 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
         // ✅ Transparent so the map behind shows through. (For the map to actually
         // be visible behind it, the parent chartContainer must overlap the map —
         // see the absolute-overlay snippet in LiveTrackingScreen.)
-        <View style={[liveTrackingStyles.profileContainer, { backgroundColor: 'transparent' }]}>
-            <Text style={liveTrackingStyles.profileTitle}>{t('elevationProfile')}</Text>
+        <View style={[liveTrackingStyles.profileContainer, { backgroundColor: 'transparent', height: panelHeight }]}>
+            <View style={liveTrackingStyles.profileHeader}>
+                <Text style={liveTrackingStyles.profileTitle}>{t('elevationProfile')}</Text>
+                {elevationGain > 0 && (
+                    <Text style={liveTrackingStyles.profileGain}>
+                        {elevationGain.toLocaleString()} {t('meterDPlus', 'm D+')}
+                    </Text>
+                )}
+            </View>
 
             <ScrollView
                 ref={scrollViewRef}  // ✅ NEW: attach ref
@@ -281,7 +313,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                     <VictoryChart
                         width={chartWidth}
                         height={chartHeight}
-                        padding={{ top: 20, bottom: 20, left: 0, right: 0 }}
+                        padding={{ top: 12, bottom: 4, left: 0, right: 0 }}
                         domain={{ x: [0, totalDistance] as [number, number], y: yDomain }}
                     >
                         <VictoryAxis
@@ -306,8 +338,9 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                             style={{
                                 data: {
                                     // Lighter fill so the map reads through the elevation shape.
-                                    fill: 'rgba(59, 130, 246, 0.25)',
-                                    stroke: '#3B82F6',
+                                    // Tint of the route colour, not the retired blue.
+                                    fill: withAlpha(mapColors.route, 0.25),
+                                    stroke: mapColors.route,
                                     strokeWidth: 3,
                                 },
                             }}
@@ -324,7 +357,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                     data: {
                                         // Light grey, but semi-transparent dark so it stays visible
                                         // over the map (pure #D1D5DB washed out on the overlay).
-                                        stroke: 'rgba(75, 85, 99, 0.45)',
+                                        stroke: withAlpha(palette.textBody, 0.45),
                                         strokeWidth: 1,
                                     },
                                 }}
@@ -340,7 +373,7 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                 ]}
                                 style={{
                                     data: {
-                                        stroke: colors.black,
+                                        stroke: palette.ink,
                                         strokeWidth: 1.5,
                                         strokeDasharray: '4,3',
                                     },
@@ -354,8 +387,8 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                 size={9}
                                 style={{
                                     data: {
-                                        fill: colors.black,
-                                        stroke: colors.white,
+                                        fill: palette.ink,
+                                        stroke: palette.surface,
                                         strokeWidth: 2.5,
                                     },
                                 }}
@@ -373,11 +406,11 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                         // (is_estimated); live / stale-but-real / finished → solid.
                                         fill: ({ datum }: any) =>
                                             datum?.participant?.connection_status === 'offline'
-                                                ? '#94A3B8'
-                                                : '#F97316',
+                                                ? mapColors.offline
+                                                : mapColors.participant,
                                         opacity: ({ datum }: any) =>
                                             datum?.participant?.is_estimated ? 0.55 : 1,
-                                        stroke: colors.white,
+                                        stroke: palette.surface,
                                         strokeWidth: 2.5,
                                     },
                                 }}
@@ -393,10 +426,10 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                     y={14}
                                     text={`${distance} km`}
                                     style={{
-                                        fontSize: 10,
-                                        fill: colors.gray700,
-                                        fontWeight: '600',
-                                    }}
+                                        fontFamily: fonts.bodySemi,
+        fontSize: 11,
+                                        fill: palette.textBody,
+                                        }}
                                     textAnchor="start"
                                     backgroundStyle={{ fill: 'rgba(255, 255, 255, 0.85)' }}
                                     backgroundPadding={3}
@@ -413,13 +446,16 @@ export const LiveElevationProfile: React.FC<LiveElevationProfileProps> = React.m
                                 key={`participant-label-${idx}`}
                                 style={{
                                     position: 'absolute',
-                                    left: t.sx - 11,
+                                    // ✅ 44 wide + one line, still centred on the
+                                    // dot: at 22 a bib fallback ("12345") wrapped
+                                    // onto a second line below the dot.
+                                    left: t.sx - 22,
                                     top: t.sy - 7,
-                                    width: 22,
+                                    width: 44,
                                     textAlign: 'center',
-                                    color: colors.white,
-                                    fontSize: 10,
-                                    fontWeight: '700',
+                                    color: palette.surface,
+                                    fontFamily: fonts.bodySemi,
+        fontSize: 10,
                                     zIndex: 20,
                                     elevation: 20,
                                 }}

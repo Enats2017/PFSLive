@@ -5,11 +5,13 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  useWindowDimensions,
   } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette, space } from '../../styles/common.styles';
+import { detailsHeaderImageLandscape, detailsHeaderImageFit } from '../../utils/screenFit';
 import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
 import { API_CONFIG } from '../../constants/config';
@@ -31,6 +33,12 @@ interface ParticipantTabProps {
 
 const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_image, showResults = true, event_name,   }) => {
   const { t } = useTranslation(['details', 'follower']);
+  // ✅ Header image capped in landscape (layout audit 2026-10-22): full width
+  // at 612:428 it was ~590pt tall there - taller than the screen. Portrait is
+  // unchanged.
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const headerLandscape = windowWidth > windowHeight;
+  const headerImageHeight = detailsHeaderImageLandscape(windowHeight);
 
   const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
   const {
@@ -237,30 +245,30 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     <>
       {event_image ? (
         <View
-          style={{
+          style={[{
             width: '100%',
             aspectRatio: 612 / 428,
             justifyContent: 'center',
             alignItems: 'center',
-          }}
+          }, headerLandscape && { aspectRatio: undefined, height: headerImageHeight }]}
         >
           {imageLoading && (
             <ActivityIndicator
               size="large"
-              color={colors.primary}
+              color={palette.navy}
               style={{ position: 'absolute', zIndex: 1 }}
             />
           )}
 
           <Image
             source={{ uri: event_image }}
-            contentFit="cover"
+            contentFit={detailsHeaderImageFit(headerLandscape)}
               cachePolicy="memory-disk"
-            style={{
+            style={[{
               width: '100%',
               aspectRatio: 612 / 428,
               opacity: imageLoading ? 0 : 1,
-            }}
+            }, headerLandscape && { aspectRatio: undefined, height: '100%' }]}
             onLoad={() => setImageLoading(false)}
             onError={(e) => {
               console.log('❌ Image failed:', event_image, e?.error);
@@ -270,15 +278,16 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
         </View>
       ) : null}
     </>
-  ), [event_image, imageLoading]);
+  ), [event_image, imageLoading, headerLandscape, headerImageHeight]);
 
   const renderFooter = useCallback(() => {
     if (loadingMore) {
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
-            Loading more... ({page}/{totalPages})
+          <ActivityIndicator size="small" color={palette.navy} />
+          <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
+            {/* ✅ Translated (layout audit 2026-10-22): was hard-coded English */}
+            {t('details:participant.loadingMore', { page, total: totalPages })}
           </Text>
         </View>
       );
@@ -287,21 +296,21 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
     if (hasMorePages() && participants.length > 0) {
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-          <Text style={{ color: colors.gray500 }}>
-            Scroll for more ({participants.length})
+          <Text style={{ color: palette.textMuted }}>
+            {t('details:participant.scrollForMore', { count: participants.length })}
           </Text>
         </View>
       );
     }
 
     return null;
-  }, [loadingMore, page, totalPages, hasMorePages, participants.length]);
+  }, [loadingMore, page, totalPages, hasMorePages, participants.length, t]);
 
   if (loading && searchText.length === 0) {
     return (
       <ActivityIndicator
         size="large"
-        color={colors.primary}
+        color={palette.navy}
         style={{ marginTop: 40 }}
       />
     );
@@ -320,39 +329,31 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
 
   return (
     <>
-      <View
-        style={{
-          paddingHorizontal: spacing.md,
-          paddingTop: spacing.md,
-         
-        }}
-      >
-        <SearchInput
-          ref={searchInputRef}
-          placeholder={t('details:participant.search')}
-          value={searchText}
-          onChangeText={setSearchText}
-          icon="search"
-        />
-      </View>
+      <SearchInput
+        ref={searchInputRef}
+        placeholder={t('details:participant.search')}
+        value={searchText}
+        onChangeText={setSearchText}
+        icon="search"
+      />
 
       {loading && searchText.length > 0 && (
         <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
+          <ActivityIndicator size="small" color={palette.navy} />
+          <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
             {t('details:participant.searching')}
           </Text>
         </View>
       )}
 
       {!loading && participants.length === 0 ? (
-        <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
-          <Text style={commonStyles.errorText}>
-            {searchText
-              ? `${t('details:participant.noResults')} "${searchText}"`
-              : t('details:participant.empty')}
-          </Text>
-        </View>
+        <ErrorScreen
+          type="empty"
+          title={searchText
+            ? `${t('details:participant.noResults')} "${searchText}"`
+            : t('details:participant.empty')}
+          onRetry={() => { }}
+        />
       ) : (
         <FlatList
           data={participants}
@@ -365,9 +366,8 @@ const ParticipantTab: React.FC<ParticipantTabProps> = ({ product_app_id, event_i
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           contentContainerStyle={{
-            paddingBottom: spacing.xxxl,
+            paddingBottom: space.xxxl,
             flexGrow: 1,
-            paddingTop:spacing.sm,
           }}
           keyboardShouldPersistTaps="handled"
           removeClippedSubviews={false}

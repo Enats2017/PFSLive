@@ -4,15 +4,17 @@
     "noResults": "Geen resultaten voor deze filters.",
     "live": "LIVE",
     "bibNumber": "Startnummer",
-     "wavelabel": "Startwave",
-    "raceTime": "RACE TIJD",
-    "diffFirst": "VERSCHIL 1E",
-    "ranking": "RANGSCHIKKING",
+    "wavelabel": "Startwave",
+    "age": "Leeftijd",
+    "raceTime": "Race tijd",
+    "diffFirst": "Verschil 1e",
+    "ranking": "KLASSEMENT",
     "retry": "Opnieuw proberen",
     "errorLoad": "Kan resultaten niet laden. Tik om opnieuw te proberen.",
     "utmbIndex": "INDEX",
     "eta": "ETA",
-    "etaFinish": "ETA FINISH",
+    "etaFinish": "ETA finish",
+    "rank": "Plaats",
     "finish": "FINISH"
   },
   "time": {
@@ -21,7 +23,7 @@
     "pm": "PM"
   },
   "filter": {
-    "results": "Resultaten",
+    "results": "Results",
     "live": "Live",
     "favourite": "Favorieten",
     "liveTracking": "Live tracking",
@@ -34,6 +36,9 @@
     "stat_expected": "Verwacht",
     "stat_dnf": "DNF",
     "all": "Alle",
-    "is_finshed": "VOLTOOID"
+    "isFinished": "VOLTOOID"
+  },
+  "search": {
+    "resultsFor": "{{count}} resultaten voor “{{query}}”"
   }
 }

@@ -51,5 +51,10 @@
     "body": "Je ontvangt een bevestigingsmail, en we reageren als het nodig is.",
     "backToProfile": "Terug naar profiel",
     "toastMessage": "Feedback succesvol verzonden!"
+  },
+  "reachUs": {
+    "title": "Andere manieren om ons te bereiken",
+    "email": "support@liviolive.com",
+    "replyTime": "We antwoorden meestal binnen één werkdag."
   }
 }

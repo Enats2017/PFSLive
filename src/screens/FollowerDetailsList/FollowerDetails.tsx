@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
-  StatusBar,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +16,7 @@ import ParticipantTab from '../EventDetails/ParticipantTab';
 import type { followerDetailspops } from '../../types/navigation';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 
@@ -25,12 +25,15 @@ const TABS: Tab[] = ['Participant', 'Distance'];
 
 const FollowerDetails = ({ route }: followerDetailspops) => {
   const { t } = useTranslation(['details']);
-  const { width: windowWidth } = useDimensions();
+  const { width: windowWidth, height: windowHeight } = useDimensions();
   const insets = useSafeAreaInsets();
   const [containerWidth, setContainerWidth] = useState(0);
   const isGestureNav = insets.bottom > 0;
   const width = containerWidth || windowWidth;
-  const isLandscape = width
+  // ✅ A real boolean (layout audit 2026-10-22): `width` alone was always
+  // truthy; the notch side padding is sidePadding on the body below AppHeader.
+  const isLandscape = windowWidth > windowHeight;
+  const sidePadding = useLandscapeSidePadding();
 
   const [activeTab, setActiveTab] = useState<Tab>('Distance');
   const activeTabRef = useRef<Tab>('Distance');
@@ -51,11 +54,8 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   }, [width]);
 
 
-  const renderHeader = useCallback(() => (
-    <View style={detailsStyles.section}>
-      <Text style={commonStyles.title}>{event_name}</Text>
-    </View>
-  ), [event_name]);
+  // The event name lives in the header band now, so this would repeat it.
+  const renderHeader = useCallback(() => null, []);
 
   const renderContent = useCallback((tab: Tab) => {
     if (!product_app_id) {
@@ -133,11 +133,13 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
   return (
     <SafeAreaView
       style={commonStyles.container}
-      edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}
+      edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}
     >
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} showBack />
+      <AppHeader title={event_name} showLogo={true} showBack />
 
+      {/* sidePadding on an outer View so the measured containerWidth below is
+          the padded width the pager pages must match. */}
+      <View style={[{ flex: 1 }, sidePadding]}>
       <View
         style={{ flex: 1 }}
         onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
@@ -145,20 +147,21 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
 
         {renderHeader()}
 
-        <View style={detailsStyles.tabBar}>
+        {/* ✅ In-page content tabs — lime underline on white, per the deck.
+            These were the navy pill group, which the design reserves for
+            FILTERS (event Past/Live/Upcoming), not for switching content. */}
+        <View style={detailsStyles.tabBarUnderline}>
           {TABS.map((tab) => (
-            <TouchableOpacity key={tab} style={detailsStyles.tabItem} onPress={() => handleTabPress(tab)}>
-              <Text style={[commonStyles.subtitle, activeTab === tab && detailsStyles.activeTabText]}>
+            <TouchableOpacity
+              key={tab}
+              style={[detailsStyles.tabItemUnderline, activeTab === tab && detailsStyles.tabItemUnderlineActive]}
+              onPress={() => handleTabPress(tab)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeTab === tab }}
+            >
+              <Text style={[detailsStyles.tabTextUnderline, activeTab === tab && detailsStyles.tabTextUnderlineActive]}>
                 {t(`details:details.${tab}`)}
               </Text>
-              {activeTab === tab && (
-                <LinearGradient
-                  colors={['#e8341a', '#f4a100', '#1a73e8']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={detailsStyles.underline}
-                />
-              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -179,6 +182,7 @@ const FollowerDetails = ({ route }: followerDetailspops) => {
             )}
           />
         </View>
+      </View>
       </View>
 
       <BottomNavigationFollower

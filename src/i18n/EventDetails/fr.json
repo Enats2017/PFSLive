@@ -4,12 +4,12 @@
     "Participant": "Participant"
   },
   "button": "Suivi en direct",
-  "undo": "ANNULER L'INSCRIPTION",
+  "undo": "Annuler l'inscription",
   "register": "S'inscrire",
-  "gpx": "TÉLÉCHARGER GPX",
-  "live": "EN DIRECT",
+  "gpx": "GPX",
+  "live": "En direct",
   "countdown": {
-    "live": "EN DIRECT",
+    "live": "En direct",
     "finished": "TERMINÉ",
     "startsIn": "Départ dans",
     "startingSoon": "Commence Bientôt",
@@ -20,7 +20,6 @@
   },
   "athletes": "Athlètes au départ",
   "finished": "Athlètes à l'arrivée",
-  "freeTrackingIncluded": "Suivi en direct inclus",
   "dnf": "DNF",
   "distance": {
     "empty": "Aucune distance disponible"
@@ -30,9 +29,11 @@
     "search": "Rechercher des participants par nom, numéro de dossard",
     "searching": "Recherche...",
     "noResults": "Aucun participant trouvé pour",
-    "favorite": "AJOUTER AUX FAVORIS",
-    "unknownName": "PARTICIPANT INCONNU",
-    "results": "RÉSULTATS"
+    "favorite": "Ajouter aux favoris",
+    "unknownName": "Participant inconnu",
+    "loadingMore": "Chargement… ({{page}}/{{total}})",
+    "scrollForMore": "Faites défiler pour plus ({{count}})",
+    "results": "Résultats"
   },
   "tracking": {
     "live": "Suivi en Direct Actif",
@@ -92,17 +93,11 @@
       "iosDescription": "Vous avez utilisé toutes vos sessions de suivi en direct. Améliorez votre formule pour vous inscrire à cet événement.",
       "button": "Obtenir plus de sessions"
     },
-    "free_not_registered": {
-      "icon": "🔎",
-      "title": "Nous ne trouvons pas votre inscription",
-      "description": "Le suivi en direct est inclus avec l'inscription a cette course, mais nous ne trouvons pas votre inscription pour cette distance. Si vous vous etes inscrit avec une autre adresse e-mail, connectez-vous avec cette adresse. Sinon, contactez-nous et nous la lierons a votre compte.",
-      "button": "Nous contacter",
-      "notNowButton": "Pas maintenant"
-    },
     "membership_upcoming": {
       "icon": "⏳",
       "title": "Abonnement Pas Encore Actif",
-      "description": "Votre abonnement commence le {{date}}. Vous pourrez vous inscrire au suivi en direct une fois votre abonnement activé."
+      "description": "Votre abonnement commence le {{date}}. Vous pourrez vous inscrire au suivi en direct une fois votre abonnement activé.",
+      "button": "Voir les formules"
     },
     "unavailable": {
       "icon": "⊘",
@@ -128,8 +123,16 @@
       "icon": "🔗",
       "title": "Suivi en direct",
       "description": "Le Live Tracking est facultatif et nécessite un abonnement actif. Vous ne souhaitez pas l’utiliser ? Aucun problème. Vous n’avez pas besoin de connecter Livio à votre dossard. Vos proches continueront à recevoir les mises à jour officielles RFID lors de votre passage aux points de contrôle et à la ligne d’arrivée.",
-      "description_free": "Le Live Tracking est inclus avec votre inscription à cette course : il n’y a rien à acheter et cela n’utilise aucune de vos sessions Livio. Cela reste facultatif : si vous préférez ne pas l’utiliser, vous n’avez pas besoin de connecter Livio à votre dossard, et vos proches continueront à recevoir les mises à jour officielles RFID lors de votre passage aux points de contrôle et à la ligne d’arrivée.",
       "button": "Oui",
+      "notNowButton": "Pas maintenant",
+      "description_free": "Le Live Tracking est inclus avec votre inscription à cette course : il n’y a rien à acheter et cela n’utilise aucune de vos sessions Livio. Cela reste facultatif : si vous préférez ne pas l’utiliser, vous n’avez pas besoin de connecter Livio à votre dossard, et vos proches continueront à recevoir les mises à jour officielles RFID lors de votre passage aux points de contrôle et à la ligne d’arrivée."
+    },
+    "viewPlansButton": "Voir les formules",
+    "free_not_registered": {
+      "icon": "🔎",
+      "title": "Nous ne trouvons pas votre inscription",
+      "description": "Le suivi en direct est inclus avec l'inscription a cette course, mais nous ne trouvons pas votre inscription pour cette distance. Si vous vous etes inscrit avec une autre adresse e-mail, connectez-vous avec cette adresse. Sinon, contactez-nous et nous la lierons a votre compte.",
+      "button": "Nous contacter",
       "notNowButton": "Pas maintenant"
     }
   },
@@ -144,10 +147,16 @@
     "noFileMessage": "Aucun fichier GPX disponible."
   },
   "iosnotnow": "Not Now",
-  "map": "CARTE",
+  "map": "Carte",
   "wave": "Vague de départ",
   "duo": {
     "members": "Équipe",
     "category": "Catégorie"
-  }
+  },
+  "chart": {
+    "elevationProfile": "Profil altimétrique",
+    "distance": "Distance",
+    "elevation": "Dénivelé"
+  },
+  "freeTrackingIncluded": "Suivi en direct inclus"
 }

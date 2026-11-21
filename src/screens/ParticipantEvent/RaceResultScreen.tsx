@@ -5,13 +5,12 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  StatusBar,
   } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
 import { detailsStyles } from '../../styles/details.styles';
@@ -22,13 +21,25 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { formatEventDate } from '../../utils/dateFormatter';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
+import { distanceButtonsBelow, detailsHeaderImageLandscape, detailsHeaderImageFit } from '../../utils/screenFit';
 
 const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }) => {
   const { product_app_id, event_name, event_image } = route.params;
   const { t } = useTranslation(['result', 'details', 'common']);
-  const { width: windowWidth, height } = useDimensions();
+  const { width: windowWidth, height, fontScale } = useDimensions();
+  // Card: margin spacing.md + padding space.lg each side.
+  const buttonsBelow = distanceButtonsBelow(windowWidth - 2 * spacing.md - 2 * spacing.lg, fontScale);
   const insets = useSafeAreaInsets();
+  // ✅ Notch side padding for the list below AppHeader (edges are ['bottom']
+  // on a notched iPhone in landscape) - layout audit 2026-10-22.
+  const sidePadding = useLandscapeSidePadding();
+  const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
+  // ✅ Header image capped in landscape: full width at 612:428 it was ~590pt
+  // tall there - taller than the screen. Portrait is unchanged.
+  const headerImageHeight = detailsHeaderImageLandscape(height);
   const [containerWidth, setContainerWidth] = useState(0);
   const isGestureNav = insets.bottom > 0;
   const isLandscape = windowWidth > height;
@@ -107,23 +118,23 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
     <View style={{ marginBottom: spacing.md }}>
       {event_image ? (
         <View
-          style={{
+          style={[{
             width: '100%',
             aspectRatio: 612 / 428,
             justifyContent: 'center',
             alignItems: 'center',
-          }}
+          }, isLandscape && { aspectRatio: undefined, height: headerImageHeight }]}
         >
           {imageLoading && (
             <ActivityIndicator
               size="large"
-              color={colors.primary}
+              color={palette.navy}
               style={{ position: 'absolute', zIndex: 1 }}
             />
           )}
           <Image
             source={{ uri: event_image }}
-            contentFit="cover"
+            contentFit={detailsHeaderImageFit(isLandscape)}
               cachePolicy="memory-disk"
             style={{
               width: '100%',
@@ -139,58 +150,67 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
         </View>
       ) : null}
     </View>
-  ), [event_name, event_image, imageLoading]);
+  ), [event_name, event_image, imageLoading, isLandscape, headerImageHeight]);
 
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     return (
       <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.md, marginHorizontal: spacing.md }]}>
-        <View style={detailsStyles.distance}>
-          <View style={detailsStyles.distanceInfo}>
-            <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
-              {item.distance_name}
-            </Text>
+        {/* ✅ Distance name on its own full-width line, no line limit (layout
+            audit 2026-10-22): beside the button column it had ~99-169pt, so a
+            single nl word ("Recreatieloop" 141pt, "Wandeltocht" 132pt at 20pt)
+            broke mid-word at 360-414pt and long names were cut at 2 lines. */}
+        <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
+          {item.distance_name}
+        </Text>
+        <View style={[detailsStyles.distance, buttonsBelow && detailsStyles.distanceStacked]}>
+          <View style={[detailsStyles.distanceInfo, buttonsBelow && detailsStyles.distanceInfoStacked]}>
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
-                {item.race_date_formatted}
+              <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
+              <Text style={detailsStyles.metaText}>
+                {/* translated month (the API sends English) — client 2026-10-23 */}
+                {formatEventDate(item.race_date_formatted, t)}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="time-outline" size={15} color={colors.gray600} />
+              <Ionicons name="time-outline" size={15} color={palette.textBody} />
               <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {formatClockTime(item.race_time)}
               </Text>
             </View>
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Feather name="users" size={16} color={colors.gray500} />
-                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                <Feather name="users" size={16} color={palette.textMuted} />
+                <Text style={detailsStyles.metaText}>
                   {item.participant_started_count} {t('details:athletes')}
                 </Text>
               </View>
             )}
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
-                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                <Ionicons name="ribbon-outline" size={15} color={palette.textBody} />
+                <Text style={detailsStyles.metaText}>
                   {item.finished_count} {t('details:finished')}
                 </Text>
               </View>
             )}
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
-                <Text style={detailsStyles.metaTextRed} numberOfLines={1}>
+                <Ionicons name="close-circle-outline" size={15} color={palette.textBody} />
+                <Text style={detailsStyles.metaTextRed}>
                   {item.dnf_count} {t('details:dnf')}
                 </Text>
               </View>
             )}
           </View>
-          <View style={detailsStyles.verticalDivider} />
+          {/* ✅ Divider only with a button beside it (layout audit 2026-10-22):
+              without results it drew a line next to nothing. */}
           {showResults && (
+            <>
+          {!buttonsBelow && <View style={detailsStyles.verticalDivider} />}
             <TouchableOpacity
-              style={detailsStyles.resultsButton}
+              style={[detailsStyles.resultsButton, buttonsBelow && detailsStyles.distanceButtonFull,
+                buttonsBelow && detailsStyles.distanceButtonsBelow]}
               onPress={() =>
                 navigation.navigate('ResultList', {
                   product_app_id,
@@ -208,20 +228,20 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
                 {t('button.result')}
               </Text>
             </TouchableOpacity>
+            </>
           )}
         </View>
       </View>
     );
-  }, [navigation, product_app_id, t,  showResults,showResultsStats,event_name,event_image]);
+  }, [navigation, product_app_id, t,  showResults,showResultsStats,event_name,event_image, buttonsBelow]);
 
   // ✅ LOADING STATE
   if (loading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-        <StatusBar barStyle="dark-content" />
-        <AppHeader showLogo={false} showBack />
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+        <AppHeader title={event_name} showLogo={false} showBack />
         <View style={commonStyles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={palette.navy} />
         </View>
         <BottomNavigation
           activeTab="Home"
@@ -236,8 +256,7 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   // ✅ ERROR STATE
   if (hasError && !loading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
         <ErrorScreen
           type={error!.type}
           title={error!.title}
@@ -256,18 +275,11 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
   }
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={false} showBack />
-
-      <View style={[detailsStyles.section]}>
-        <Text style={commonStyles.title}>{event_name}</Text>
-      </View>
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
+      <AppHeader title={event_name} showLogo={false} showBack />
 
       {results.length === 0 ? (
-        <View style={{ marginTop: 40, alignItems: 'center', paddingHorizontal: spacing.lg }}>
-          <Text style={commonStyles.errorText}>{t('result:noResults')}</Text>
-        </View>
+        <ErrorScreen type="empty" title={t('result:noResults')} onRetry={() => { }} />
       ) : (
         <FlatList
           data={results}
@@ -275,11 +287,11 @@ const RaceResultScreen: React.FC<RaceResultScreenprops> = ({ navigation, route }
             `${item.product_option_value_app_id}-${index}`
           }
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
+          contentContainerStyle={[{
             flexGrow: 1,
 
             paddingBottom: 80,
-          }}
+          }, sidePadding]}
           ListHeaderComponent={renderListHeader}
           renderItem={renderItem}
         />

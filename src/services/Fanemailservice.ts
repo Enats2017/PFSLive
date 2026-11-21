@@ -1,5 +1,7 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
+import { ensureFollowerId } from '../utils/followStorage';
 
 // ==================== TYPES ====================
 
@@ -35,6 +37,19 @@ export const fanEmailApi = {
         try {
             const deviceId = await getDeviceId();
 
+            // The endpoint updates an EXISTING follower row and deliberately
+            // won't create one. That row used to exist only for users who
+            // granted notifications, so everyone else's email was refused with
+            // follower_not_found. Make sure this device has one.
+            // Not on a skip (email ''): a fan with nothing to keep must not get
+            // a server row just for pressing "Skip" — and with no row stored
+            // there is no email to clear, so the request is skipped too.
+            if (email) {
+                await ensureFollowerId();
+            } else if (!(await AsyncStorage.getItem('FOLLOWER_ID'))) {
+                return { success: true };
+            }
+
             const requestBody = {
                 device_id: deviceId,
                 email,
@@ -44,7 +59,7 @@ export const fanEmailApi = {
                 console.log('📤 Sending fan email update:', requestBody);
             }
 
-            const response = await axios.post<StandardApiResponse<UpdateFollowerEmailResult>>(
+            const post = () => axios.post<StandardApiResponse<UpdateFollowerEmailResult>>(
                 getApiEndpoint(API_CONFIG.ENDPOINTS.UPDATE_FOLLOWER_EMAIL),
                 requestBody,
                 {
@@ -52,6 +67,27 @@ export const fanEmailApi = {
                     timeout: API_CONFIG.TIMEOUT,
                 },
             );
+            // The id read BEFORE the request — only that one may be dropped.
+            const idBefore = await AsyncStorage.getItem('FOLLOWER_ID');
+            let response;
+            try {
+                response = await post();
+            } catch (e: any) {
+                if (e?.response?.data?.error !== 'follower_not_found') throw e;
+                response = e.response;
+            }
+            // ✅ The phone held an id but the server has no row for this device
+            // (row deleted / backup restored onto another phone): ensureFollowerId
+            // returned that stale id without registering, so the email was
+            // refused for good. Drop it (if nobody replaced it meanwhile),
+            // register the device again and retry ONCE.
+            if (email && response?.data?.error === 'follower_not_found') {
+                if ((await AsyncStorage.getItem('FOLLOWER_ID')) === idBefore) {
+                    await AsyncStorage.removeItem('FOLLOWER_ID');
+                }
+                await ensureFollowerId();
+                response = await post();
+            }
 
             if (API_CONFIG.DEBUG) {
                 console.log('📡 Fan email API response:', response.data);

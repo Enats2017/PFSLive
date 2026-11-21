@@ -38,5 +38,13 @@
   "minutesAgo_one": "Il y a {{count}} min",
   "minutesAgo_other": "Il y a {{count}} mins",
   "hoursAgo_one": "Il y a {{count}} heure",
-  "hoursAgo_other": "Il y a {{count}} heures"
+  "hoursAgo_other": "Il y a {{count}} heures",
+  "bar": {
+    "label": "Suivi en direct"
+  },
+  "meterDPlus": "m D+",
+  "liveMap": "Carte en direct",
+  "raceState_live": "En direct",
+  "raceState_finished": "Terminé",
+  "raceState_upcoming": "À venir"
 }

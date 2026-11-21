@@ -12,6 +12,15 @@
       "emailNotFound": "Veuillez entrer votre adresse e-mail enregistrée",
       "noConnection": "Pas de connexion. Vérifiez votre internet.",
       "genericError": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "next": {
+      "title": "Ce qui va se passer",
+      "s1": "Consultez votre boîte mail",
+      "s1sub": "Un code à six chiffres arrive en moins d’une minute.",
+      "s2": "Saisissez le code",
+      "s2sub": "Il reste valable 15 minutes.",
+      "s3": "Choisissez un nouveau mot de passe",
+      "s3sub": "Vous restez connecté sur cet appareil."
     }
   },
   "otpStep": {

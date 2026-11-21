@@ -1,7 +1,7 @@
 import React, { useRef, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { EventItem } from '../../services/followerEvent';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,8 @@ import { RootStackParamList } from '../../types/navigation';
 import { API_CONFIG } from '../../constants/config';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { EventListCard } from '../../components/EventListCard';
+import ErrorScreen from '../../components/ErrorScreen';
 
 interface UpcomingTabProps {
     events: EventItem[];
@@ -21,6 +23,10 @@ interface UpcomingTabProps {
 }
 
 const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
+    // ✅ Landscape (device test 2026-10-23): the 90pt nav-bar pad left a
+    // large blank band under the last card on a ~390pt-tall screen.
+    const { width: winW, height: winH } = useWindowDimensions();
+    const isLandscape = winW > winH;
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { t } = useTranslation(['follower', 'common']);
     const handleLoadMore = useCallback(() => {
@@ -46,18 +52,13 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
 
     const renderItem = useCallback(
         ({ item }: { item: EventItem }) => (
-            <TouchableOpacity
-                style={[
-                    commonStyles.card,
-                    {
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingHorizontal: spacing.lg,
-                        paddingVertical: spacing.md,
-                        marginBottom: spacing.md,
-                    },
-                ]}
-                onPress={ async () => {
+            <EventListCard
+                name={item.name}
+                date={formatEventDate(item.race_date, t)}
+                city={item.city}
+                country={item.country}
+                imageUrl={item.event_image}
+                onPress={async () => {
                     await analyticsService.logInteraction(
                         ANALYTICS_SCREENS.FOLLOWER_EVENT_LIST,
                         ANALYTICS_BUTTONS.UPCOMING_EVENT,
@@ -73,46 +74,9 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
                         event_name: item.name,
                         event_image: item.event_image ?? '',
                         sourceTab: 'upcoming',
-                    })
+                    });
                 }}
-                activeOpacity={0.8}
-            >
-                <View style={eventStyles.eventCardInfo}>
-                    <Text style={[commonStyles.title, { marginBottom: 4 }]}>{item.name}</Text>
-                    <View style={eventStyles.eventCardDateRow}>
-                        <Ionicons name="calendar-outline" size={14} color={colors.gray500} />
-                        <Text style={commonStyles.date}>
-                            {formatEventDate(item.race_date, t)}
-                        </Text>
-                    </View>
-                </View>
-
-                {/* Eye icon button - dark blue */}
-                <TouchableOpacity
-                    style={eventStyles.iconButtonBlue}
-                    onPress={ async () =>{
-                         await analyticsService.logInteraction(
-                            ANALYTICS_SCREENS.FOLLOWER_EVENT_LIST,
-                            ANALYTICS_BUTTONS.UPCOMING_EVENT,
-                            'tap',
-                            {
-                                [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
-                                [ANALYTICS_PARAMS.TAB_NAME]: 'upcoming',
-                                [ANALYTICS_PARAMS.EVENT_STATUS]: 'upcoming',
-                            }
-                        );
-                        navigation.navigate('FollowDetails', {
-                            product_app_id: Number(item.product_app_id),
-                            event_name: item.name,
-                            event_image: item.event_image ?? '',
-                            sourceTab: 'upcoming',
-                        })
-                    }}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="eye-outline" size={23} color={colors.primaryDark} />
-                </TouchableOpacity>
-            </TouchableOpacity>
+            />
         ),
         [navigation, t]
     );
@@ -128,18 +92,14 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
         return (
             <ActivityIndicator
                 size="small"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ marginVertical: spacing.md }}
             />
         );
     }, [loadingMore]);
 
     const ListEmptyComponent = useCallback(() => (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing.xxl }}>
-            <Text style={commonStyles.errorText}>
-                {t('event:empty.upcoming')}
-            </Text>
-        </View>
+        <ErrorScreen type="empty" title={t('event:empty.upcoming')} onRetry={() => { }} />
     ), [t]);
 
     return (
@@ -151,9 +111,9 @@ const UpcomingTab: React.FC<UpcomingTabProps> = ({ events, onLoadMore, loadingMo
             onEndReachedThreshold={0.5}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-                paddingHorizontal: spacing.md,
+                paddingHorizontal: spacing.xl,
                 paddingTop: spacing.md,
-                paddingBottom: spacing.xxxxl,
+                paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
                 flexGrow: 1
             }}
             ListFooterComponent={ListFooterComponent}

@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  StatusBar,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -17,9 +16,12 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { useTranslation } from 'react-i18next'
 import FloatingLabelInput from '../../components/FloatingLabelInput'
 import CountrySelector from '../../components/CountrySelector'
-import { commonStyles } from '../../styles/common.styles'
+import { commonStyles, palette, space } from '../../styles/common.styles'
+import { useDimensions } from '../../hooks/useDimensions'
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding'
+import NoticeCard from '../../components/NoticeCard'
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens'
-import { useEditProfile } from '../../hooks/Useeditprofile'
+import { EMAIL_REGEX, useEditProfile } from '../../hooks/Useeditprofile'
 import { needsParentConsent } from '../../services/validation/authValidation'
 import { fetchProfileApi } from '../../services/profileServices'
 import { tokenService } from '../../services/tokenService'
@@ -33,6 +35,7 @@ import { API_CONFIG } from '../../constants/config'
 import { useNavigation } from '@react-navigation/native'
 import { saveLanguage, getLanguageCodeFromId } from '../../i18n';
 import { useLanguageStore } from '../../store/useLanguageStore';
+import EmailChangeConfirmModal from '../../components/EmailChangeConfirmModal'
 
 const GENDER_VALUES = [
     'male',
@@ -43,10 +46,22 @@ const GENDER_VALUES = [
 
 const EditProfileScreen = () => {
     const { t } = useTranslation(['profile', 'common', 'errorScreen'])
+    // ✅ Notch clearance for the body in landscape (edges are ['bottom'] here).
+    const sidePadding = useLandscapeSidePadding()
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
+    // ✅ Same rule as RegisterScreen: the paired rows leave ~134pt per field at
+    // 320pt, too narrow for fr/nl labels beside the icons — stack them below
+    // 360pt or with iOS Larger Text.
+    const { width: winWidth, fontScale } = useDimensions()
+    const stackPairs = winWidth < 360 || (fontScale ?? 1) >= 1.2
+    const pairRowStyle = stackPairs ? undefined : profileStyles.fieldRow
+    const pairHalfStyle = stackPairs ? undefined : profileStyles.fieldHalf
     const [profileLoading, setProfileLoading] = useState(true)
     const { error: profileError, isAuthError, handleApiError, clearError } = useScreenError()
     const handleSessionExpired = useSessionExpired()
     const [profile, setProfile] = useState<Awaited<ReturnType<typeof fetchProfileApi>> | null>(null)
+    const [showEmailConfirm, setShowEmailConfirm] = useState(false)
+    const [pendingBusy, setPendingBusy] = useState(false)
 
     // ✅ Language options — id matches API expectation
     const LANGUAGE_OPTIONS = [
@@ -67,20 +82,22 @@ const EditProfileScreen = () => {
     //    showed "account_not_found" with no way out. fetchProfileApi maps that
     //    code to session_expired, so isAuthError offers Log In (useSessionExpired
     //    clears the stored token and resets to LoginScreen).
+    //    Stays async: the pending-email confirm/cancel handlers await it.
     //    No setProfileLoading(true) here: handleApiError changes with the
     //    language, so this re-runs after a language save (as the old [t] effect
     //    did) and must refetch quietly, without swapping the form for a spinner
     //    while handleSave is still navigating. Only the retry button shows it.
-    const loadProfile = useCallback(() => {
+    const loadProfile = useCallback(async () => {
         clearError()
-        fetchProfileApi()
-            .then(setProfile)
-            .catch(handleApiError)
-            .finally(() => setProfileLoading(false))
+        try {
+            setProfile(await fetchProfileApi())
+        } catch (e) {
+            handleApiError(e)
+        }
     }, [clearError, handleApiError])
 
     useEffect(() => {
-        loadProfile()
+        loadProfile().finally(() => setProfileLoading(false))
     }, [loadProfile])
 
     const {
@@ -92,6 +109,17 @@ const EditProfileScreen = () => {
         removePicture, setRemovePicture,
         submit,
     } = useEditProfile(profile)
+
+    const savedEmail = (profile?.email ?? '').trim().toLowerCase()
+    const typedEmail = form.email.trim().toLowerCase()
+    const emailDirty = !!savedEmail && typedEmail !== savedEmail
+
+    const emailChangeReady = emailDirty && EMAIL_REGEX.test(typedEmail)
+
+    const serverPendingEmail =
+        profile?.pending_email && profile.pending_email.trim().toLowerCase() !== savedEmail
+            ? profile.pending_email.trim()
+            : null
 
     const genderDisplayValue =
         genderOptions.find(g => g.value === form.gender)?.label || ''
@@ -205,24 +233,117 @@ const EditProfileScreen = () => {
 
     const { changeLanguage } = useLanguageStore();
 
-    const handleSave = useCallback(async () => {
-        const ok = await submit()
-        if (ok) {
-            toastSuccess(t('profile:messages.success_profile_updated'))
+    // The actual save. `emailOverride` is used by the pending-email banner; a
+    // plain Save passes nothing and the form's own email is sent.
+    const performSave = useCallback(async (emailOverride?: string) => {
+        const result = await submit(emailOverride ? { email: emailOverride } : undefined)
+        if (!result.ok) return false
 
-            const langCode = getLanguageCodeFromId(form.language_id)
-            if (langCode) {
-                await saveLanguage(langCode)
-                await changeLanguage(langCode, { screenName: ANALYTICS_SCREENS.EDIT_PROFILE, userInitiated: true })
+        const langCode = getLanguageCodeFromId(form.language_id)
+        if (langCode) {
+            await saveLanguage(langCode)
+            await changeLanguage(langCode, { screenName: ANALYTICS_SCREENS.EDIT_PROFILE, userInitiated: true })
+        }
+
+        if (result.isEmailChange && result.emailChangeToken && result.pendingEmail) {
+            // ✅ The rest of the profile (name, city, DOB, language) is already
+            // saved at this point. Say so before routing away, otherwise those
+            // edits appear to vanish into the OTP screen with no confirmation.
+            toastSuccess(
+                t('profile:emailChange.code_sent_toast_title'),
+                t('profile:emailChange.code_sent_toast_message', { email: result.pendingEmail }),
+            )
+
+            navigation.navigate('OTPVerificationScreen', {
+                purpose: 'email_change',
+                verification_token: result.emailChangeToken,
+                email: result.pendingEmail,
+            })
+            return true
+        }
+
+        toastSuccess(t('profile:messages.success_profile_updated'))
+
+        const customer_app_id = await tokenService.getCustomerId()
+        navigation.navigate('OwnProfile', {
+            customer_app_id: customer_app_id || 0,
+            fromEdit: true,
+        })
+        return true
+    }, [submit, navigation, t, form.language_id, changeLanguage])
+
+     const handleSave = useCallback(async () => {
+        if (emailChangeReady) {
+            setShowEmailConfirm(true)
+            return
+        }
+        // An obviously malformed address falls through on purpose: performSave
+        // runs the real validation and surfaces the inline error, so the user
+        // never gets prompted to confirm something that cannot be sent.
+        await performSave()
+    }, [emailChangeReady, performSave])
+
+     const handleConfirmEmailChange = useCallback(async () => {
+        // The modal stays up while the request is in flight — `loading` drives a
+        // spinner on its confirm button. Close it either way afterwards: on
+        // failure the inline field error needs a visible form behind it.
+        await performSave()
+        setShowEmailConfirm(false)
+    }, [performSave])
+
+    // ✅ Re-submitting the pending address mints a fresh OTP + token
+    // (edit_profile_api.php compares against the *confirmed* email, so a still-
+    // pending address reads as a new change), which is what the OTP screen needs.
+    const handleVerifyPending = useCallback(async () => {
+        if (!serverPendingEmail || pendingBusy) return
+        setPendingBusy(true)
+        try {
+            const result = await submit({ email: serverPendingEmail })
+
+            if (result.ok && result.emailChangeToken && result.pendingEmail) {
+                navigation.navigate('OTPVerificationScreen', {
+                    purpose: 'email_change',
+                    verification_token: result.emailChangeToken,
+                    email: result.pendingEmail,
+                })
+                return
             }
 
-            const customer_app_id = await tokenService.getCustomerId()
-            navigation.navigate('OwnProfile', {
-                customer_app_id: customer_app_id || 0,
-                fromEdit: true,
-            })
+            // The realistic failure is email_already_taken — another account
+            // claimed the address while it sat here unconfirmed. That error
+            // arrives as an inline field error, but the field is showing the
+            // *confirmed* address, so leaving it there would be misleading.
+            // Clear it, say what happened, and re-read the pending state.
+            setField('email', form.email)
+            toastError(
+                t('profile:emailChange.resend_failed_title'),
+                t('profile:emailChange.resend_failed_message'),
+            )
+            await loadProfile()
+        } finally {
+            setPendingBusy(false)
         }
-    }, [submit, navigation, t, form.language_id, changeLanguage])
+    }, [serverPendingEmail, pendingBusy, submit, navigation, t, loadProfile, setField, form.email])
+
+    // ✅ Clearing the staged address needs an explicit flag — re-submitting the
+    // confirmed email is a no-op server-side (and returns `no_changes` when
+    // nothing else differs), because the change is only detected by comparing
+    // against `email`, which never moved.
+    const handleCancelPending = useCallback(async () => {
+        if (!serverPendingEmail || pendingBusy) return
+        setPendingBusy(true)
+        try {
+            const result = await submit(undefined, { cancelEmailChange: true })
+            if (!result.ok) return
+            toastSuccess(
+                t('profile:emailChange.pending_cancelled_title'),
+                t('profile:emailChange.pending_cancelled_message'),
+            )
+            await loadProfile()
+        } finally {
+            setPendingBusy(false)
+        }
+    }, [serverPendingEmail, pendingBusy, submit, t, loadProfile])
 
     const avatarUri: string | null = picture
         ? picture.uri
@@ -235,11 +356,10 @@ const EditProfileScreen = () => {
 
     if (profileLoading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={t('common:band.account')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color="#e8341a" />
+                    <ActivityIndicator size="large" color={palette.danger} />
                 </View>
             </SafeAreaView>
         )
@@ -247,15 +367,14 @@ const EditProfileScreen = () => {
 
     if (profileError) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={t('common:band.account')} showLogo={true} showBack />
                 <ErrorScreen
                     type={profileError.type}
                     title={profileError.title}
                     message={profileError.message}
                     buttonLabel={isAuthError ? t('errorScreen:codes.session_expired.button') : undefined}
-                    onRetry={isAuthError ? () => { void handleSessionExpired() } : () => { setProfileLoading(true); loadProfile() }}
+                    onRetry={isAuthError ? () => { void handleSessionExpired() } : () => { setProfileLoading(true); void loadProfile().finally(() => setProfileLoading(false)) }}
                 />
             </SafeAreaView>
         )
@@ -264,11 +383,10 @@ const EditProfileScreen = () => {
     const consentLocked = Number(profile?.parent_consent) === 1
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} showBack />
+        <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+            <AppHeader title={t('common:band.account')} showLogo={true} showBack />
             <KeyboardAvoidingView
-                style={{ flex: 1 }}
+                style={[{ flex: 1 }, sidePadding]}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={10}
             >
@@ -296,7 +414,7 @@ const EditProfileScreen = () => {
                                 </View>
                             )}
                             <View style={profileStyles.cameraBtn}>
-                                <Ionicons name="camera" size={16} color="#fff" />
+                                <Ionicons name="camera" size={16} color={palette.surface} />
                             </View>
                         </TouchableOpacity>
 
@@ -313,57 +431,140 @@ const EditProfileScreen = () => {
                         )}
                     </View>
 
-                    <FloatingLabelInput
-                        label={t('profile:labels.first_name')}
-                        value={form.firstname}
-                        onChangeText={(v) => setField('firstname', v)}
-                        iconName="person-outline"
-                        required
-                        editable={!loading}
-                        error={!!errors.firstname}
-                        errorMessage={errors.firstname}
-                    />
+                    <View style={pairRowStyle}>
+                      <View style={pairHalfStyle}>
+                        <FloatingLabelInput
+                            label={t('profile:labels.first_name')}
+                            value={form.firstname}
+                            onChangeText={(v) => setField('firstname', v)}
+                            iconName="person-outline"
+                            required
+                            editable={!loading}
+                            error={!!errors.firstname}
+                            errorMessage={errors.firstname}
+                        />
+                      </View>
+                      <View style={pairHalfStyle}>
+                        <FloatingLabelInput
+                            label={t('profile:labels.last_name')}
+                            value={form.lastname}
+                            onChangeText={(v) => setField('lastname', v)}
+                            iconName="people-outline"
+                            required
+                            editable={!loading}
+                            error={!!errors.lastname}
+                            errorMessage={errors.lastname}
+                        />
+                      </View>
+                    </View>
 
-                    <FloatingLabelInput
-                        label={t('profile:labels.last_name')}
-                        value={form.lastname}
-                        onChangeText={(v) => setField('lastname', v)}
-                        iconName="people-outline"
-                        required
-                        editable={!loading}
-                        error={!!errors.lastname}
-                        errorMessage={errors.lastname}
-                    />
+                     <View style={profileStyles.emailFieldWrapper}>
+                        <FloatingLabelInput
+                            label={t('profile:labels.email')}
+                            value={form.email}
+                            onChangeText={(value) => setField('email', value)}
+                            iconName="mail-outline"
+                            editable={!loading}
+                            error={!!errors.email}
+                            errorMessage={errors.email}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                        />
 
-                    <FloatingLabelInput
-                        label={t('profile:labels.email')}
-                        value={form.email}
-                        onChangeText={() => {}}
-                        iconName="mail-outline"
-                        editable={false}
-                        error={false}
-                    />
-                    <Text style={profileStyles.readOnlyHint}>
-                        {t('profile:messages.email_readonly')}
-                    </Text>
+                        {/* ✅ Just-in-time, not ambient: only once the typed value
+                            actually differs from the saved one. */}
+                        {emailChangeReady && !errors.email && (
+                            <View style={profileStyles.emailChangeHintRow}>
+                                <Ionicons
+                                    name="information-circle-outline"
+                                    size={14}
+                                    color={profileStyles.emailChangeHintIcon.color}
+                                    style={profileStyles.emailChangeHintIcon}
+                                />
+                                <Text style={profileStyles.emailChangeHintText}>
+                                    {t('profile:emailChange.hint', { email: form.email.trim() })}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
 
-                    <CountrySelector
-                        label={t('profile:labels.country')}
-                        value={form.countryName}
-                        onSelect={handleCountrySelect}
-                        isoCode={form.country_iso}
-                        error={errors.countryName}
-                    />
+                    {/* ✅ An unconfirmed address from an earlier save. Without this
+                        the pending state is invisible — the server holds it but
+                        nothing in the app ever says so. Hidden mid-edit; the hint
+                        above is the relevant message then. */}
+                    {!!serverPendingEmail && !emailDirty && (
+                        <View style={profileStyles.pendingEmailWrapper}>
+                            <NoticeCard
+                                icon="time-outline"
+                                title={t('profile:emailChange.pending_title')}
+                                message={t('profile:emailChange.pending_message', { email: serverPendingEmail })}
+                            >
+                                {/* ✅ wrap + rowGap: fr "Vérifier maintenant" + "Annuler le
+                                    changement" need ~301pt but the notice body is
+                                    214-284pt — the 2nd action ran out of the card. */}
+                                <View style={[profileStyles.pendingEmailActions, { flexWrap: 'wrap', rowGap: space.sm }]}>
+                                    <TouchableOpacity
+                                        onPress={handleVerifyPending}
+                                        disabled={pendingBusy}
+                                        accessibilityRole="button"
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                        <Text style={profileStyles.pendingEmailAction}>
+                                            {t('profile:emailChange.pending_verify')}
+                                        </Text>
+                                    </TouchableOpacity>
 
-                    <FloatingLabelInput
-                        label={t('profile:labels.city')}
-                        value={form.city}
-                        onChangeText={(v) => setField('city', v)}
-                        iconName="location-outline"
-                        editable={!loading}
-                        error={!!errors.city}
-                        errorMessage={errors.city}
-                    />
+                                    <TouchableOpacity
+                                        onPress={handleCancelPending}
+                                        disabled={pendingBusy}
+                                        accessibilityRole="button"
+                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                        <Text style={profileStyles.pendingEmailActionMuted}>
+                                            {t('profile:emailChange.pending_cancel')}
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    {pendingBusy && <ActivityIndicator size="small" color={palette.navy} />}
+                                </View>
+                            </NoticeCard>
+                        </View>
+                    )}
+
+                    <View style={pairRowStyle}>
+                      <View style={pairHalfStyle}>
+                        <CountrySelector
+                            label={t('profile:labels.country')}
+                            value={form.countryName}
+                            onSelect={handleCountrySelect}
+                            isoCode={form.country_iso}
+                            error={errors.countryName}
+                            // ✅ Same strings RegisterScreen passes — without them the
+                            // picker fell back to its English defaults in fr/nl.
+                            i18n={{
+                                title:             t('common:countrySelector.title'),
+                                searchPlaceholder: t('common:countrySelector.searchPlaceholder'),
+                                resultOne:         t('common:countrySelector.resultOne'),
+                                resultMany:        t('common:countrySelector.resultMany'),
+                                retry:             t('common:countrySelector.retry'),
+                                errorLoad:         t('common:countrySelector.errorLoad'),
+                                errorNetwork:      t('common:countrySelector.errorNetwork'),
+                                emptyResult:       t('common:countrySelector.emptyResult'),
+                            }}
+                        />
+                      </View>
+                      <View style={pairHalfStyle}>
+                        <FloatingLabelInput
+                            label={t('profile:labels.city')}
+                            value={form.city}
+                            onChangeText={(v) => setField('city', v)}
+                            iconName="location-outline"
+                            editable={!loading}
+                            error={!!errors.city}
+                            errorMessage={errors.city}
+                        />
+                      </View>
+                    </View>
 
                     <FloatingLabelInput
                         label={t('profile:labels.dob')}
@@ -414,7 +615,7 @@ const EditProfileScreen = () => {
                                     disabled={loading || consentLocked}
                                 >
                                     {form.parentConsent && (
-                                        <Ionicons name="checkmark" size={16} color="#fff" />
+                                        <Ionicons name="checkmark" size={16} color={palette.surface} />
                                     )}
                                 </TouchableOpacity>
 
@@ -502,6 +703,7 @@ const EditProfileScreen = () => {
                     <TouchableOpacity
                         style={[
                             commonStyles.primaryButton,
+                            profileStyles.saveButton,
                             loading && profileStyles.saveBtnDisabled
                         ]}
                         onPress={handleSave}
@@ -509,7 +711,7 @@ const EditProfileScreen = () => {
                         activeOpacity={0.85}
                     >
                         {loading ? (
-                            <ActivityIndicator color="#fff" size="small" />
+                            <ActivityIndicator color={palette.surface} size="small" />
                         ) : (
                             <Text style={commonStyles.primaryButtonText}>
                                 {t('profile:buttons.save_changes')}
@@ -519,7 +721,7 @@ const EditProfileScreen = () => {
 
                     {success && !emailChanged && (
                         <View style={profileStyles.successBanner}>
-                            <Ionicons name="checkmark-circle" size={18} color="#2e7d32" />
+                            <Ionicons name="checkmark-circle" size={18} color={palette.lime} />
                             <Text style={profileStyles.successText}>
                                 {t('profile:messages.success_profile_updated')}
                             </Text>
@@ -527,6 +729,13 @@ const EditProfileScreen = () => {
                     )}
                 </ScrollView>
             </KeyboardAvoidingView>
+            <EmailChangeConfirmModal
+                visible={showEmailConfirm}
+                newEmail={form.email.trim()}
+                loading={loading}
+                onConfirm={handleConfirmEmailChange}
+                onClose={() => setShowEmailConfirm(false)}
+            />
         </SafeAreaView>
     )
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -9,10 +9,11 @@ import {
     View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors } from '../styles/common.styles';
+import { palette, fonts, shadows, space } from '../styles/common.styles';
 import { SuggestionItem } from '../services/followerScreenService';
 import { formatEventDate } from '../utils/dateFormatter';
 import { useTranslation } from 'react-i18next';
+import { useDropdownMaxHeight } from '../hooks/useKeyboardHeight';
 
 
 interface SuggestionDropdownProps {
@@ -29,6 +30,9 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
     onSelect,
 }) => {
     const { t } = useTranslation(['event', 'common']);
+    // Never taller than the room above the keyboard (it scrolls inside); 220 otherwise.
+    const listRef = useRef<View>(null);
+    const listMax = useDropdownMaxHeight(listRef, 220, visible && !loading && suggestions.length > 0);
     if (!visible) return null;
 
 
@@ -36,8 +40,10 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
         return (
             <View style={styles.container}>
                 <View style={styles.loaderRow}>
-                    <ActivityIndicator size="small" color={colors.primary ?? '#F5C518'} />
-                    <Text style={styles.loaderText}>Searching…</Text>
+                    <ActivityIndicator size="small" color={palette.navy} />
+                    {/* ✅ Was hard-coded English; reuses the existing
+                        follower:searching key (en/fr/nl already translated). */}
+                    <Text style={styles.loaderText}>{t('follower:searching')}</Text>
                 </View>
             </View>
         );
@@ -47,16 +53,16 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
         return (
             <View style={styles.container}>
                 <View style={styles.centeredRow}>
-                    <Text style={styles.emptyText}>No results found</Text>
+                    <Text style={styles.emptyText}>{t('common:empty.noResults')}</Text>
                 </View>
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} ref={listRef}>
              <ScrollView
-                style={{ maxHeight: 220 }}
+                style={{ maxHeight: listMax }}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled
@@ -70,9 +76,12 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
                             onPress={() => onSelect(item)}
                             activeOpacity={0.7}
                         >
-                            <Feather name="flag" size={14} color="#888" style={styles.rowIcon} />
+                            <Feather name="flag" size={14} color={palette.textMuted} style={styles.rowIcon} />
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.name} numberOfLines={1}>
+                                {/* ✅ 2 lines: full event names (often 40+ chars) were
+                                    cut to one line, hiding the part that tells
+                                    similar events apart. */}
+                                <Text style={styles.name} numberOfLines={2}>
                                     {item.name}
                                 </Text>
                                 <Text style={styles.date}>
@@ -80,7 +89,7 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
                                 </Text>
                             </View>
                             
-                            <Feather name="chevron-right" size={14} color="#bbb" style={{ marginLeft: 6 }} />
+                            <Feather name="chevron-right" size={14} color={palette.placeholder} style={{ marginLeft: 8 }} />
                         </TouchableOpacity>
                     </React.Fragment>
                 ))}
@@ -93,60 +102,60 @@ const SuggestionDropdown: React.FC<SuggestionDropdownProps> = ({
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#fff',
+    ...shadows.card,
+
+        backgroundColor: palette.surface,
         borderWidth: 1,
-        borderColor: '#E8E8E8',
+        borderColor: palette.border,
         borderRadius: 10,
         marginTop: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 6,
         overflow: 'hidden',
-    },
+  },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 14,
-        paddingVertical: 11,
+        paddingHorizontal: space.xl,
+        paddingVertical: 12,
     },
     rowIcon: {
         marginRight: 8,
         marginTop: 1,
     },
     name: {
+        fontFamily: fonts.bodySemi,
         fontSize: 14,
-        fontWeight: '600',
-        color: '#1a1a1a',
+        color: palette.ink,
         marginBottom: 2,
     },
     date: {
-        fontSize: 12,
-        color: '#888',
+        fontFamily: fonts.body,
+        fontSize: 13,
+        color: palette.textMuted,
     },
     separator: {
         height: 1,
-        backgroundColor: '#F2F2F2',
-        marginHorizontal: 14,
+        backgroundColor: palette.fill,
+        marginHorizontal: 16,
     },
     loaderRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 14,
+        padding: 16,
     },
     loaderText: {
         marginLeft: 8,
-        fontSize: 13,
-        color: '#888',
+        fontFamily: fonts.body,
+        fontSize: 14,
+        color: palette.textMuted,
     },
     centeredRow: {
-        padding: 14,
+        padding: 16,
         alignItems: 'center',
     },
     emptyText: {
-        fontSize: 13,
-        color: '#aaa',
+        fontFamily: fonts.body,
+        fontSize: 14,
+        color: palette.placeholder,
     },
 });
 

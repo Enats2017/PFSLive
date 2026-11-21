@@ -1,49 +1,51 @@
 import { StyleSheet } from "react-native";
-import { colors, spacing } from "./common.styles";
+import { spacing, palette, fonts, space } from './common.styles';
 
 export const ownProfile = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.themeiColor,
+    backgroundColor: palette.surface,
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: spacing.xxxxl,
   },
   header: {
-    height: 115,
-    backgroundColor: colors.themeiColor,
+    height: 0,
   },
   profileRow: {
-    position: "absolute",
-    top: 47,
-    left: 0,
-    right: 0,
-    height: 140,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    zIndex: 10,
+    gap: space.lg,
+    paddingHorizontal: space.xl,
+    paddingVertical: space.lg,
+    backgroundColor: palette.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
   },
   avatarWrapper: {
-    marginRight: 16,
+    position: "relative",
   },
   avatar: {
-    width: 125,
-    height: 125,
-    borderRadius: 62,
-    borderWidth: 5,
-    borderColor: colors.white,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2.5,
+    borderColor: palette.lime,
+    backgroundColor: palette.fill,
   },
   cameraBadge: {
     position: "absolute",
-    bottom: 5,
-    right: 5,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.themeiColor,
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: palette.lime,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: palette.surface,
   },
   profileInfo: {
     flex: 1,
@@ -51,88 +53,91 @@ export const ownProfile = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
-    gap: 24,
-    marginTop: 18,
+    // ✅ Wrap (layout audit 2026-10-22): fr at ×1.35 ran off-screen in one row.
+    flexWrap: "wrap",
+    columnGap: space.xl,
+    rowGap: space.xs,
+    marginTop: space.sm,
   },
   statItem: {
     alignItems: "flex-start",
   },
   statNumber: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.gray900,
+    fontFamily: fonts.display,
+        fontSize: 15,
+    color: palette.ink,
   },
   statLabel: {
-    fontSize: 11,
-    color: colors.gray900,
-    marginTop: 1,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
   },
   whiteBody: {
     flex: 1,
-    backgroundColor: colors.white,
-    borderTopRightRadius: 40,
-    paddingTop: 83,
+    backgroundColor: palette.page,
+    paddingTop: space.lg,
   },
   menuSection: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
   },
   trackingBanner: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    backgroundColor: colors.themeiColor,
+    backgroundColor: palette.lime,
     borderRadius: 14,
-    padding: 14,
+    padding: 16,
     marginTop: spacing.sm,
     marginBottom: 20,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
   },
   trackingTextWrapper: {
     flex: 1,
   },
 
   title: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.gray900,
+    fontFamily: fonts.display,
+        fontSize: 15,
+    color: palette.ink,
     lineHeight: 20,
-    marginBottom: 7,
+    marginBottom: 8,
   },
 
   subtitle: {
-    fontSize: 13,
-    color: colors.gray600,
-    lineHeight: 16,
+    fontFamily: fonts.body,
+        fontSize: 14,
+    color: palette.textBody,
+    lineHeight: 18,
   },
   // "this race is included - it won't use a session", on the Android banner.
   // gray700 rather than gray600: it has to carry over the yellow banner fill
   // without competing with the title above it.
   freeline: {
     fontSize: 13,
-    fontWeight: "600",
-    color: colors.gray700,
+    fontFamily: fonts.bodySemi,
+    color: palette.warningText,
     lineHeight: 17,
-    marginTop: 6,
+    marginTop: spacing.sm,
   },
   menuRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 15,
+    marginBottom: 16,
   },
   menuTextWrapper: {
     flex: 1,
   },
 
   initialsWrapper: {
-    backgroundColor: colors.primaryDark,
+    backgroundColor: palette.ink,
     alignItems: "center",
     justifyContent: "center",
   },
   initialsText: {
-    fontSize: 40,
-    fontWeight: "800",
-    color: colors.white,
+    fontFamily: fonts.display,
+        fontSize: 40,
+    color: palette.surface,
     letterSpacing: 2,
   },
 
@@ -140,17 +145,20 @@ export const ownProfile = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        marginBottom: 20,
-        paddingHorizontal:spacing.md
+        // ✅ 44pt touch target (was ~22pt, the text line). The 11pt it adds
+        // under the label comes off the margin, so the visual gap is unchanged.
+        minHeight: 44,
+        marginBottom: 8,
+        paddingHorizontal: space.xl
     },
     backLabel: {
-        fontSize: 17,
-        fontWeight: '700',
-        color: colors.gray900,
+        fontFamily: fonts.display,
+        fontSize: 15,
+        color: palette.ink,
     },
 
      ioscard: {
-        backgroundColor: '#16283A',
+        backgroundColor: palette.navy,
         borderRadius: 14,
         padding: 16,
         marginBottom:spacing.lg
@@ -159,40 +167,41 @@ export const ownProfile = StyleSheet.create({
     iosheader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 6,
+        marginBottom: space.md,
     },
     iostitle: {
-        marginLeft: 6,
-        color: '#A6B1BE',
-        fontSize: 11,
-        fontWeight: '600',
+        marginLeft: 8,
+        color: palette.textOnNavy,
+        fontFamily: fonts.bodySemi,
+        fontSize: 12,
         letterSpacing: 0.5,
         textTransform: 'uppercase'
     },
     iossubtitle: {
-        color: '#FFFFFF',
-        fontSize: 18,
-        fontWeight: '500',
-        marginBottom: 14,
+        color: palette.surface,
+        fontFamily: fonts.displayMedium,
+        fontSize: 20,
+        marginBottom: space.md,
     },
     iosbold: {
-        fontWeight: '700',
+        fontFamily: fonts.bodySemi,
     },
     // The same "included" line on the dark iOS card. iossubtitle already
     // carries a 14pt bottom margin, so this sits in that gap with a negative
     // offset rather than pushing the button further down the card.
     iosfreeline: {
-        color: colors.themeiColor,
+        color: palette.lime,
         fontSize: 13,
-        fontWeight: '600',
+        fontFamily: fonts.bodySemi,
         lineHeight: 17,
-        marginTop: -6,
-        marginBottom: 14,
+        marginTop: -spacing.sm,
+        marginBottom: spacing.md,
     },
     iosbutton: {
-        backgroundColor: colors.themeiColor,
-        borderRadius: 8,
-        height: 44,
+        backgroundColor: palette.lime,
+        borderRadius: 10,
+        minHeight: 44,
+        paddingVertical: 8,
         paddingHorizontal: 16,
         
         flexDirection: 'row',
@@ -200,25 +209,34 @@ export const ownProfile = StyleSheet.create({
         justifyContent: 'space-between',
     },
     iosbuttonText: {
-        color: '#16283A',
+        color: palette.navy,
+        fontFamily: fonts.display,
         fontSize: 15,
-        fontWeight: '700',
-    },
+        // ✅ Wraps instead of pushing the chevron out of the lime button (fr).
+        flexShrink: 1,
+        marginRight: 8,
+        },
     createBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        backgroundColor: colors.themeiColor,
+        backgroundColor: palette.lime,
         borderRadius: 10,
-        height: 48,
-        marginHorizontal: spacing.md,
+        minHeight: 48,
+        paddingVertical: 8,
+        // ✅ Side padding + shrinking label (layout audit 2026-10-22): the fr
+        // label ran out of the button at 320pt with larger text.
+        paddingHorizontal: space.lg,
+        marginHorizontal: space.xl,
         marginBottom: spacing.md,
     },
     createBtnText: {
+        fontFamily: fonts.display,
         fontSize: 15,
-        fontWeight: '700',
-        color: colors.gray900,
+        color: palette.ink,
+        flexShrink: 1,
+        textAlign: 'center',
     },
 
 });

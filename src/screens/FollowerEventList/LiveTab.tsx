@@ -1,11 +1,11 @@
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import { EventItem } from '../../services/followerEvent';
 import { formatEventDate } from '../../utils/dateFormatter';
@@ -13,6 +13,8 @@ import { API_CONFIG } from '../../constants/config';
 import ErrorScreen from '../../components/ErrorScreen';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS, EVENT_STATUS_BUTTON, liveTabStatus } from '../../constants/analyticsScreens';
+
+import { EventListCard } from '../../components/EventListCard';
 
 // Status of a Live-tab row — see liveTabStatus in analyticsScreens.ts.
 const liveStatus = liveTabStatus;
@@ -25,8 +27,34 @@ interface LiveTabProps {
 }
 
 const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
+    // ✅ Landscape (device test 2026-10-23): the 90pt nav-bar pad left a
+    // large blank band under the last card on a ~390pt-tall screen.
+    const { width: winW, height: winH } = useWindowDimensions();
+    const isLandscape = winW > winH;
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-    const { t } = useTranslation(['event', 'common', 'follower']);
+    const { t } = useTranslation(['event', 'common', 'follower', 'livetracking']);
+
+    // The live tab is a WINDOW (today-2 .. today+5 on event_list_api.php), so it
+    // also holds races that have already finished and ones that have not begun.
+    // `event_status` says which each row actually is.
+    //
+    // Deliberately NOT liveTabStatus (analyticsScreens.ts), which defaults a
+    // missing status to 'live' — for analytics that is right, because the tab
+    // itself is the attribution. On screen it would be a claim we cannot back.
+    //
+    // No status -> NO BADGE. Defaulting to 'live' is what made a 2026-09-06 race
+    // claim to be live: the second page of this tab comes from a different query
+    // that was not sending the field. Showing nothing is honest; asserting the
+    // one state we cannot verify is not.
+    const eventBadge = useCallback((status?: 'live' | 'finished' | 'upcoming' | null) => {
+        if (!status) return {};
+        return {
+            badgeLabel: t(`livetracking:raceState_${status}`),
+            badgeTone: (status === 'live' ? 'lime' : 'neutral') as 'lime' | 'neutral',
+            badgeCaps: true,
+        };
+    }, [t]);
+
 
     // ✅ SIMPLIFIED: Just check hasMore and loadingMore (EXACT PROFILESCREEN PATTERN)
     const handleLoadMore = useCallback(() => {
@@ -52,18 +80,14 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
     const renderItem = useCallback(
         ({ item }: { item: EventItem }) => (
-            <TouchableOpacity
-                style={[
-                    commonStyles.card,
-                    {
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingHorizontal: spacing.lg,
-                        paddingVertical: spacing.md,
-                        marginBottom: spacing.md,
-                    },
-                ]}
-                onPress={ async () => {
+            <EventListCard
+                name={item.name}
+                date={formatEventDate(item.race_date, t)}
+                city={item.city}
+                country={item.country}
+                imageUrl={item.event_image}
+                {...eventBadge(item.event_status)}
+                onPress={async () => {
                     await analyticsService.logInteraction(
                         ANALYTICS_SCREENS.FOLLOWER_EVENT_LIST,
                         EVENT_STATUS_BUTTON[liveStatus(item) ?? 'live'] ?? ANALYTICS_BUTTONS.LIVE_EVENT,
@@ -79,46 +103,9 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         event_name: item.name,
                         event_image: item.event_image ?? '',
                         sourceTab: 'live',
-                    })
+                    });
                 }}
-                activeOpacity={0.8}
-            >
-                <View style={eventStyles.eventCardInfo}>
-                    <Text style={[commonStyles.title, { marginBottom: 4 }]}>{item.name}</Text>
-                    <View style={eventStyles.eventCardDateRow}>
-                        <Ionicons name="calendar-outline" size={14} color={colors.gray500} />
-                        <Text style={commonStyles.date}>
-                            {formatEventDate(item.race_date, t)}
-                        </Text>
-                    </View>
-                </View>
-
-                {/* Eye icon button - dark blue */}
-                <TouchableOpacity
-                    style={eventStyles.iconButtonBlue}
-                    onPress={ async () => {
-                        await analyticsService.logInteraction(
-                            ANALYTICS_SCREENS.FOLLOWER_EVENT_LIST,
-                            EVENT_STATUS_BUTTON[liveStatus(item) ?? 'live'] ?? ANALYTICS_BUTTONS.LIVE_EVENT,
-                            'tap',
-                            {
-                                [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
-                                [ANALYTICS_PARAMS.TAB_NAME]: 'live',
-                                [ANALYTICS_PARAMS.EVENT_STATUS]: liveStatus(item),
-                            }
-                        );
-                        navigation.navigate('FollowDetails', {
-                            product_app_id: Number(item.product_app_id),
-                            event_name: item.name,
-                            event_image: item.event_image ?? '',
-                            sourceTab: 'live',
-                        })
-                    }}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="eye-outline" size={23} color={colors.primaryDark} />
-                </TouchableOpacity>
-            </TouchableOpacity>
+            />
         ),
         [navigation, t]
     );
@@ -133,7 +120,7 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
         return (
             <ActivityIndicator
                 size="small"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ marginVertical: spacing.md }}
             />
         );
@@ -160,9 +147,9 @@ const LiveTab: React.FC<LiveTabProps> = ({ events, onLoadMore, loadingMore, hasM
             onEndReachedThreshold={0.5}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
-                paddingHorizontal: spacing.md,
+                paddingHorizontal: spacing.xl,
                 paddingTop: spacing.md,
-                paddingBottom: spacing.xxxxl,
+                paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
                 flexGrow: 1,
             }}
             ListFooterComponent={ListFooterComponent}

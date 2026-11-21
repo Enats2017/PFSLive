@@ -9,7 +9,11 @@ import {
     StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/common.styles';
+import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
+import { RING_TINT, useCompactDialog } from './ui';
+import { useTranslation } from 'react-i18next';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
 
 export type ModalActionType =  'disabled' | 'locked' | 'hidden';
 
@@ -24,10 +28,12 @@ interface MembershipActionModalProps {
     onConfirm?: () => void;
 }
 
-const ICON_BY_ACTION: Record<ModalActionType, { name: any; color: string; bg: string }> = {
-    disabled: { name: 'lock-closed', color: '#9CA3AF', bg: '#F3F4F6' },
-    locked: { name: 'time-outline', color: '#F59E0B', bg: '#FEF3C7' },
-    hidden: { name: 'information-circle', color: '#3B82F6', bg: '#DBEAFE' },
+// No `bg` here on purpose — the halo is RING_TINT for every action, like every
+// other modal. Only the glyph and its colour carry the action.
+const ICON_BY_ACTION: Record<ModalActionType, { name: any; color: string }> = {
+    disabled: { name: 'lock-closed', color: palette.textMuted },
+    locked: { name: 'time-outline', color: palette.warning },
+    hidden: { name: 'information-circle', color: palette.noticeText },
 };
 
 const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
@@ -40,8 +46,12 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
     onClose,
     onConfirm,
 }) => {
+  const { t } = useTranslation();
     const scale = useRef(new Animated.Value(0.85)).current;
     const opacity = useRef(new Animated.Value(0)).current;
+    // ✅ Landscape: no icon, buttons side by side (device test 2026-10-23).
+    // Portrait: unchanged. Called before the early return below (hooks rule).
+    const cd = useCompactDialog();
 
     useEffect(() => {
         if (visible) {
@@ -68,43 +78,56 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
     const icon = ICON_BY_ACTION[actionType];
 
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+        <Modal supportedOrientations={MODAL_ORIENTATIONS} statusBarTranslucent visible={visible} transparent animationType="fade" onRequestClose={onClose}>
             <TouchableWithoutFeedback onPress={onClose}>
-                <View style={styles.backdrop}>
-                    <TouchableWithoutFeedback onPress={() => {}}>
-                        <Animated.View
-                            style={[
-                                styles.card,
-                                { opacity, transform: [{ scale }] },
-                            ]}
-                        >
-                            <TouchableOpacity style={styles.closeButton} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                                <Ionicons name="close" size={20} color="#6B7280" />
-                            </TouchableOpacity>
-
-                            <View style={[styles.iconWrapper, { backgroundColor: icon.bg }]}>
-                                <Ionicons name={icon.name} size={34} color={icon.color} />
-                            </View>
-
-                            <Text style={styles.title}>{title}</Text>
-                            <Text style={styles.description}>{description}</Text>
-
-                            {showConfirm ? (
-                                <View style={styles.buttonRow}>
-                                    <TouchableOpacity style={styles.secondaryButton} onPress={onClose}>
-                                        <Text style={styles.secondaryButtonText}>Cancel</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.primaryButton} onPress={onConfirm}>
-                                        <Text style={styles.primaryButtonText}>{confirmLabel}</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            ) : (
-                                <TouchableOpacity style={styles.primaryButtonFull} onPress={onClose}>
-                                    <Text style={styles.primaryButtonText}>{confirmLabel}</Text>
+                <View style={[styles.backdrop, cd.s.wrapper]}>
+                    {/* ModalScroll: in landscape the card was taller than the screen —
+                        icon off the top, buttons off the bottom (audit 2026-10-22) */}
+                    <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.compact ? 16 : 48}>
+                        <TouchableWithoutFeedback onPress={() => {}}>
+                            <Animated.View
+                                style={[
+                                    styles.card,
+                                    cd.s.card,
+                                    cd.compact && styles.cardCompact,
+                                    { opacity, transform: [{ scale }] },
+                                ]}
+                            >
+                                <TouchableOpacity style={styles.closeButton} onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                    <Ionicons name="close" size={20} color={palette.textMuted} />
                                 </TouchableOpacity>
-                            )}
-                        </Animated.View>
-                    </TouchableWithoutFeedback>
+
+                                <View style={[styles.iconWrapper, cd.s.hide]}>
+                                    <Ionicons name={icon.name} size={56} color={icon.color} />
+                                </View>
+
+                                <Text style={[styles.title, cd.s.title, cd.compact && styles.clearClose]}>{title}</Text>
+                                <Text style={[styles.description, cd.s.message]}>{description}</Text>
+
+                                {/* Stacked, primary on top — the shape ErrorModal,
+                                    UndoConfirmModal and DeleteEventModal all use. */}
+                                <View style={[styles.buttons, cd.s.buttonsRow]}>
+                                    <TouchableOpacity
+                                        style={[commonStyles.primaryButton, styles.fullWidth, cd.s.button]}
+                                        onPress={showConfirm ? onConfirm : onClose}
+                                        activeOpacity={0.85}
+                                    >
+                                        <Text style={commonStyles.primaryButtonText}>{confirmLabel}</Text>
+                                    </TouchableOpacity>
+
+                                    {showConfirm && (
+                                        <TouchableOpacity
+                                            style={[commonStyles.secondaryButton, styles.fullWidth, cd.s.button]}
+                                            onPress={onClose}
+                                            activeOpacity={0.85}
+                                        >
+                                            <Text style={commonStyles.secondaryButtonText}>{t('common:buttons.cancel')}</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            </Animated.View>
+                        </TouchableWithoutFeedback>
+                    </ModalScroll>
                 </View>
             </TouchableWithoutFeedback>
         </Modal>
@@ -114,25 +137,37 @@ const MembershipPlanModel: React.FC<MembershipActionModalProps> = ({
 const styles = StyleSheet.create({
     backdrop: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: withAlpha(palette.ink, 0.6),
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 24,
+        // had no vertical padding: a tall card touched the status bar / home
+        // indicator (audit 2026-10-22)
+        paddingVertical: 24,
     },
     card: {
+    ...shadows.overlay,
+
         width: '100%',
-        maxWidth: 360,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
+        maxWidth: 400,
+        backgroundColor: palette.surface,
+        borderRadius: 16,
         paddingTop: 28,
-        paddingBottom: 22,
+        paddingBottom: 24,
         paddingHorizontal: 24,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-        elevation: 10,
+  },
+    // ✅ Compact (device test 2026-10-23): paddingTop/Bottom beat the shared
+    // compact paddingVertical (an edge wins over its shorthand), so they are
+    // tightened here too.
+    cardCompact: {
+        paddingTop: 16,
+        paddingBottom: 16,
+    },
+    // ✅ Compact: the icon is hidden, so the title is level with the X — keep a
+    // long title out from under it.
+    clearClose: {
+        paddingHorizontal: 32,
     },
     closeButton: {
         position: 'absolute',
@@ -142,67 +177,43 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: palette.fill,
         alignItems: 'center',
         justifyContent: 'center',
     },
     iconWrapper: {
-        width: 68,
-        height: 68,
-        borderRadius: 34,
+        width: 90,
+        height: 90,
+        borderRadius: 45,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: RING_TINT,
         marginBottom: 16,
     },
     title: {
-        fontSize: 19,
-        fontWeight: '700',
-        color: '#111827',
+        fontFamily: fonts.display,
+        fontSize: 20,
+        color: palette.ink,
         textAlign: 'center',
         marginBottom: 8,
     },
     description: {
+        fontFamily: fonts.body,
         fontSize: 14,
-        color: '#6B7280',
+        color: palette.textBody,
         textAlign: 'center',
-        lineHeight: 20,
-        marginBottom: 22,
+        lineHeight: 21,
+        marginBottom: 24,
     },
-    buttonRow: {
-        flexDirection: 'row',
+    // Buttons come from commonStyles now; the local copies were a filled-grey
+    // secondary at paddingVertical 12 against the shared outlined navy at
+    // height 48, which is the drift Dialog.tsx's header warns about.
+    buttons: {
         width: '100%',
-        gap: 10,
+        gap: 12,
     },
-    secondaryButton: {
-        flex: 1,
-        paddingVertical: 13,
-        borderRadius: 14,
-        backgroundColor: '#F3F4F6',
-        alignItems: 'center',
-    },
-    secondaryButtonText: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#374151',
-    },
-    primaryButton: {
-        flex: 1,
-        paddingVertical: 13,
-        borderRadius: 14,
-        backgroundColor: colors.primary,
-        alignItems: 'center',
-    },
-    primaryButtonFull: {
+    fullWidth: {
         width: '100%',
-        paddingVertical: 13,
-        borderRadius: 14,
-       backgroundColor: colors.primary,
-        alignItems: 'center',
-    },
-    primaryButtonText: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: colors.white,
     },
 });
 

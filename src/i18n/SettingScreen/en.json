@@ -1,9 +1,9 @@
 {
   "liveTrackingSettings": {
     "header": "Settings",
-    "pageTitle": "Live Tracking",
+    "pageTitle": "Live tracking",
     "pageSubtitle": "Manage who can see your location",
-    "cardTitle": "Live Tracking Settings",
+    "cardTitle": "Live tracking settings",
     "cardSubtitle": "Control access to your live location",
     "visibilityLabel": "Visibility",
     "public": "Public",
@@ -11,13 +11,13 @@
     "statusPublic": "Anyone with your link can view your location",
     "statusPrivate": "Protected with password",
     "statusNotSet": "not set",
-    "saveSettings": "Save ",
-    "editPassword": "⚙️  Edit",
-    "modalTitle": "🔒 Private Access Settings",
+    "saveSettings": "Save",
+    "editPassword": "⚙️ Edit",
+    "modalTitle": "🔒 private access settings",
     "modalSubtitle": "Set a password to protect your live tracking link",
-    "passwordLabel": "Access Password",
+    "passwordLabel": "Access password",
     "passwordPlaceholder": "Enter or generate a password",
-    "generatePassword": "✨  Generate Strong Password",
+    "generatePassword": "✨ generate strong password",
     "passwordRequired": "Password is required for Private mode.",
     "strengthWeak": "🔴 Too short",
     "strengthModerate": "🟡 Moderate",
@@ -31,15 +31,15 @@
     "deleteAccount": "Delete my account",
     "deleteAccountHint": "Opens the account deletion request page in your browser",
     "deleteAccountError": "Couldn't open the deletion page. Please try again later.",
-     "guestTitle": "Language Preference",
+    "guestTitle": "Language preference",
     "guestSubtitle": "Choose the language you'd like to see event updates in.",
     "guestNote": "Sign in to unlock live tracking visibility, password protection, and more.",
     "languagePlaceholder": "Select your language"
   },
   "passwordModal": {
-      "title": "🔒 Private Profile",
-      "subtitle": "This profile is password protected. Enter the password to follow.",
-      "placeholder": "Enter access password",
-      "submit": "Verify & Follow"
+    "title": "🔒 private profile",
+    "subtitle": "This profile is password protected. Enter the password to follow.",
+    "placeholder": "Enter access password",
+    "submit": "Verify & follow"
   }
 }

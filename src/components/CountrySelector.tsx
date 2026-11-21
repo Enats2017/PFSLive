@@ -9,11 +9,19 @@ import {
   StyleSheet,
   ActivityIndicator,
   Animated,
+  Keyboard,
+  KeyboardEvent,
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
-import { colors } from '../styles/common.styles';
+import { palette, fonts, shadows, radii, space, withAlpha } from '../styles/common.styles';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import { useModalSideInsets } from '../hooks/useLandscapeSidePadding';
+import { useCompactDialog } from './ui';
 
 // ─── Types ───────────────────────────────────────────────────────
 export interface Country {
@@ -72,15 +80,15 @@ const getFlagEmoji = (isoCode2: string): string => {
 };
 
 const COLORS = {
-  ERROR:        colors.error,        // #DC143C
-  PRIMARY:      colors.primary,      // #0f2a3f
-  GRAY_LIGHT:   colors.inputBorder,  // #d1d5db
-  GRAY_MED:     colors.gray400,      // #9ca3af
-  GRAY_DARK:    colors.gray900,      // #111827
-  WHITE:        colors.white,        // #ffffff
-  BORDER_LIGHT: colors.inputBorderFocus, // #e5e7eb
-  BG_SELECTED:  colors.inputBgSelected,  // #fff5f5
-  BG_ITEM:      colors.inputBgItem,      // #f3f4f6
+  ERROR:        palette.danger,        // #DC143C
+  PRIMARY:      palette.navy,      // #0f2a3f
+  GRAY_LIGHT:   palette.inputBorder,  // #d1d5db
+  GRAY_MED:     palette.placeholder,      // #9ca3af
+  GRAY_DARK:    palette.ink,      // #111827
+  WHITE:        palette.surface,        // #ffffff
+  BORDER_LIGHT: palette.border, // #e5e7eb
+  BG_SELECTED:  palette.noticeBg,  // #fff5f5
+  BG_ITEM:      palette.fill,      // #f3f4f6
 } as const;
 
 // ════════════════════════════════════════════════════════════════
@@ -102,6 +110,38 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
+
+  // Picker sheet keyboard handling (audit 2026-10-22): the sheet was a fixed
+  // 85% tall with an autoFocused search and no keyboard avoidance — in
+  // landscape the keyboard covered the whole country list. Now the sheet sits
+  // above the keyboard and shrinks to fit, and search only autoFocuses in
+  // portrait.
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // landscape: the picker sheet clear of the camera / nav bar (modals are outside any SafeAreaView)
+  const modalSides = useModalSideInsets();
+  const isLandscape = windowWidth > windowHeight;
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  // ✅ Compact sheet in landscape (device test 2026-10-23): with the keyboard
+  // up on a 393pt-tall iPhone the sheet is ~176pt (393 − ~209 keyboard − 8),
+  // and header 63 + search 66 + result count 36 + bottom padding 20 = 185 left
+  // NO room for the list. Compact: header / search gaps 8 (not 16), and while
+  // the keyboard is up no result count and no bottom padding (the keyboard
+  // covers the home indicator) — ~70pt, one full row, stays for the list.
+  // Empty / error states lose their 40pt icon. Portrait: unchanged.
+  const cd = useCompactDialog();
+  const kbCompact = cd.compact && keyboardHeight > 0;
+
+  useEffect(() => {
+    if (!showModal) return;
+    // the keyboard may already be up (another field) when the picker opens
+    setKeyboardHeight(Keyboard.isVisible() ? Keyboard.metrics()?.height ?? 0 : 0);
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); setKeyboardHeight(0); };
+  }, [showModal]);
 
   const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
 
@@ -125,7 +165,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
     backgroundColor: COLORS.WHITE,
     paddingHorizontal: 4,
     zIndex: 1,
-    fontWeight: '500' as const,
+    fontFamily: fonts.bodyMedium,
     letterSpacing: 0.3,
   };
 
@@ -194,8 +234,8 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
   // ✅ Build empty result string using i18n template
   const emptyResultText = i18n.emptyResult.replace('{{search}}', search);
 
-  const borderColor = error ? COLORS.ERROR : showModal ? COLORS.PRIMARY : '#d1d5db';
-  const iconColor = error ? COLORS.ERROR : showModal ? COLORS.PRIMARY : '#d1d5db';
+  const borderColor = error ? COLORS.ERROR : showModal ? COLORS.PRIMARY : palette.inputBorder;
+  const iconColor = error ? COLORS.ERROR : showModal ? COLORS.PRIMARY : palette.inputBorder;
 
   return (
     <View style={styles.wrapper}>
@@ -224,13 +264,21 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
         {/* Floating Label */}
         <Animated.Text style={labelStyle}>
           {label}
-          {required && <Animated.Text style={{ color: '#ef4444' }}> *</Animated.Text>}
+          {required && <Animated.Text style={{ color: palette.danger }}> *</Animated.Text>}
         </Animated.Text>
 
         {/* Selected value */}
+        {/* 2 lines + tighter right padding (was 1 line, 44/44): in EditProfile's
+            half-width field at 320pt the value got ~43pt and "France" was cut.
+            Right padding only clears the icon actually shown (chevron 18 / X 20)
+            (audit 2026-10-22). */}
         <Text
-          style={[styles.valueText, !value && styles.placeholder]}
-          numberOfLines={1}
+          style={[
+            styles.valueText,
+            { paddingRight: selectedCountry ? 38 : 34 },
+            !value && styles.placeholder,
+          ]}
+          numberOfLines={2}
         >
           {value || ''}
         </Text>
@@ -242,7 +290,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
               onPress={handleClear}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close-circle" size={20} color="#9ca3af" />
+              <Ionicons name="close-circle" size={20} color={palette.placeholder} />
             </TouchableOpacity>
           ) : (
             <Ionicons name="chevron-down-outline" size={18} color={iconColor} />
@@ -253,66 +301,73 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
       {/* Error */}
       {!!error && (
         <Text style={styles.errorText}>
-          <Ionicons name="alert-circle-outline" size={11} color="#ef4444" /> {error}
+          <Ionicons name="alert-circle-outline" size={11} color={palette.danger} /> {error}
         </Text>
       )}
 
       {/* ══════════════════════════════════════════════════════════
        *  MODAL
        * ══════════════════════════════════════════════════════════ */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         visible={showModal}
         animationType="slide"
         transparent
         onRequestClose={() => setShowModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+        <View style={[styles.modalOverlay, modalSides, { paddingBottom: keyboardHeight }]}>
+          <View
+            style={[
+              styles.modalContainer,
+              { height: Math.min(windowHeight * 0.85, windowHeight - keyboardHeight - insets.top - 8) },
+              kbCompact && { paddingBottom: 0 },
+            ]}
+          >
 
             {/* Header */}
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, cd.compact && { paddingVertical: 8 }]}>
               <Text style={styles.modalTitle}>{i18n.title}</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Ionicons name="close-circle-outline" size={26} color={colors.primary} />
+                <Ionicons name="close-circle-outline" size={26} color={palette.navy} />
               </TouchableOpacity>
             </View>
 
             {/* Search */}
-            <View style={styles.searchContainer}>
-              <Ionicons name="search-outline" size={18} color="#9ca3af" style={styles.searchIcon} />
+            <View style={[styles.searchContainer, cd.compact && { marginTop: 8 }]}>
+              <Ionicons name="search-outline" size={18} color={palette.placeholder} style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
                 placeholder={i18n.searchPlaceholder}
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={palette.placeholder}
                 value={search}
                 onChangeText={handleSearch}
-                autoFocus
+                // portrait only: in landscape the keyboard would hide the list
+                autoFocus={!isLandscape}
               />
               {search.length > 0 && (
                 <TouchableOpacity onPress={() => handleSearch('')}>
-                  <Ionicons name="close-circle" size={18} color="#9ca3af" />
+                  <Ionicons name="close-circle" size={18} color={palette.placeholder} />
                 </TouchableOpacity>
               )}
             </View>
 
             {/* Result count */}
-            {!loading && !fetchError && (
+            {!loading && !fetchError && !kbCompact && (
               <Text style={styles.resultCount}>{resultCountText}</Text>
             )}
 
             {loading ? (
-              <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+              <ActivityIndicator size="large" color={palette.navy} style={{ marginTop: 40 }} />
             ) : fetchError ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="wifi-outline" size={40} color="#d1d5db" />
+              <View style={[styles.emptyContainer, cd.compact && { paddingBottom: 0 }]}>
+                <Ionicons name="wifi-outline" size={40} color={palette.inputBorder} style={cd.s.hide} />
                 <Text style={styles.emptyText}>{fetchError}</Text>
                 <TouchableOpacity style={styles.retryButton} onPress={fetchCountries}>
                   <Text style={styles.retryText}>{i18n.retry}</Text>
                 </TouchableOpacity>
               </View>
             ) : filtered.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={40} color="#d1d5db" />
+              <View style={[styles.emptyContainer, cd.compact && { paddingBottom: 0 }]}>
+                <Ionicons name="search-outline" size={40} color={palette.inputBorder} style={cd.s.hide} />
                 <Text style={styles.emptyText}>{emptyResultText}</Text>
               </View>
             ) : (
@@ -321,6 +376,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                 keyExtractor={(item) => item.country_id}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 renderItem={({ item }) => {
                   const isSelected = selectedCountry?.country_id === item.country_id;
                   return (
@@ -346,7 +402,7 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
                       </View>
 
                       {value === item.name && (
-                        <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                        <Ionicons name="checkmark-circle" size={20} color={palette.navy} />
                       )}
                     </TouchableOpacity>
                   );
@@ -364,52 +420,56 @@ const CountrySelector: React.FC<CountrySelectorProps> = ({
 };
 
 const styles = StyleSheet.create({
-  wrapper: { marginVertical: 10 },
+  wrapper: { marginVertical: 8 },
   container: {
+    ...shadows.card,
+
     flexDirection: 'row',
     alignItems: 'center',
-    height: 56,
+    // minHeight (was a fixed height): with larger iOS text the field grows
+    // instead of clipping the chosen country (2026-10-22).
+    minHeight: 56,
+    paddingVertical: 4,
     borderWidth: 1.5,
-    borderRadius: 12,
-    borderColor: '#d1d5db',
-    backgroundColor: '#ffffff',
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 6,
-    elevation: 0,
+    borderRadius: 14,
+    borderColor: palette.inputBorder,
+    backgroundColor: palette.surface,
   },
-  containerFocused: { shadowOpacity: 0.12, elevation: 3 },
+  containerFocused: {
+    ...shadows.card,
+  },
 
   iconLeft: { position: 'absolute', left: 14, zIndex: 2 },
   iconRight: { position: 'absolute', right: 14, zIndex: 2 },
-  flagInField: { fontSize: 20 },
+  flagInField: { fontFamily: fonts.body,
+        fontSize: 20 },
   valueText: {
     flex: 1,
-    fontSize: 15,
-    color: '#111827',
+    fontFamily: fonts.body,
+        fontSize: 15,
+    color: palette.ink,
     paddingLeft: 44,
-    paddingRight: 44,
-    paddingTop: 6,
+    paddingRight: 44, // overridden inline to fit the right icon actually shown
+    paddingTop: 8,
   },
-  placeholder: { color: '#9ca3af' },
+  placeholder: { color: palette.placeholder },
   errorText: {
-    marginTop: 5,
+    marginTop: 4,
     marginLeft: 4,
-    fontSize: 11.5,
-    color: '#ef4444',
-    fontWeight: '500',
-  },
+    fontFamily: fonts.bodyMedium,
+        fontSize: 12,
+    color: palette.danger,
+    },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '85%',
+    backgroundColor: palette.surface,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    // height set inline: 85% of the window, capped to the space above the keyboard
     paddingBottom: 20,
   },
   modalHeader: {
@@ -419,50 +479,58 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: palette.fill,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
+  modalTitle: { fontFamily: fonts.display,
+        fontSize: 20, color: palette.ink },
   selectedBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f3ff',
+    backgroundColor: palette.fill,
     marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 12,
+    marginTop: 16,
+    borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e0e7ff',
+    borderColor: palette.border,
   },
-  selectedBannerFlag: { fontSize: 28, marginRight: 12 },
-  selectedBannerLabel: { fontSize: 11, color: colors.primary, fontWeight: '600', marginBottom: 2 },
-  selectedBannerName: { fontSize: 15, color: '#111827', fontWeight: '600' },
+  selectedBannerFlag: { fontFamily: fonts.body,
+        fontSize: 26, marginRight: 12 },
+  selectedBannerLabel: { fontFamily: fonts.bodySemi,
+        fontSize: 12, color: palette.navy, marginBottom: 2 },
+  selectedBannerName: { fontFamily: fonts.display,
+        fontSize: 15, color: palette.ink, },
   clearButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    paddingHorizontal: space.xl,
+    paddingVertical: 8,
+    backgroundColor: palette.surface,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: palette.inputBorder,
   },
-  clearButtonText: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
+  clearButtonText: { fontFamily: fonts.bodyMedium,
+        fontSize: 14, color: palette.textMuted, },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 16,
-    marginTop: 14,
+    marginTop: 16,
     marginBottom: 4,
-    paddingHorizontal: 14,
-    height: 46,
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
+    paddingHorizontal: space.xl,
+    minHeight: 46,
+    paddingVertical: 4,
+    backgroundColor: palette.page,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: palette.border,
   },
   searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 15, color: '#111827' },
+  searchInput: { flex: 1, fontFamily: fonts.body,
+        fontSize: 15, color: palette.ink },
   resultCount: {
-    fontSize: 12,
-    color: '#9ca3af',
+    fontFamily: fonts.body,
+        fontSize: 13,
+    color: palette.placeholder,
     paddingHorizontal: 20,
     paddingVertical: 8,
   },
@@ -472,34 +540,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
-  countryItemSelected: { backgroundColor: '#fafafe' },
-  flag: { fontSize: 26, marginRight: 14, width: 36, textAlign: 'center' },
-  countryName: { fontSize: 15, color: colors.primary, fontWeight: '400' },
-  countryNameSelected: { color: colors.primary, fontWeight: '600' },
-  isoCode: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
-  separator: { height: 1, backgroundColor: '#f3f4f6', marginLeft: 70 },
+  countryItemSelected: { backgroundColor: palette.page },
+  flag: { fontFamily: fonts.body,
+        fontSize: 26, marginRight: 16, width: 36, textAlign: 'center' },
+  countryName: { fontFamily: fonts.body,
+        fontSize: 15, color: palette.navy, },
+  countryNameSelected: { color: palette.navy, fontFamily: fonts.bodySemi,
+        fontSize: 14,
+        },
+  isoCode: { fontFamily: fonts.body,
+        fontSize: 12, color: palette.placeholder, marginTop: 2 },
+  separator: { height: 1, backgroundColor: palette.fill, marginLeft: 72 },
   selectedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#6366f1',
-    borderRadius: 20,
-    paddingHorizontal: 10,
+    backgroundColor: palette.navy,
+    borderRadius: radii.pill,
+    paddingHorizontal: space.xl,
     paddingVertical: 4,
     gap: 4,
   },
-  selectedBadgeText: { fontSize: 12, color: '#fff', fontWeight: '600' },
+  selectedBadgeText: { fontFamily: fonts.bodySemi,
+        fontSize: 13, color: palette.surface, },
   unselectedBadge: {
-    borderRadius: 20,
-    paddingHorizontal: 10,
+    borderRadius: radii.pill,
+    paddingHorizontal: space.xl,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: palette.border,
   },
-  unselectedBadgeText: { fontSize: 12, color: '#9ca3af', fontWeight: '400' },
+  unselectedBadgeText: { fontFamily: fonts.body,
+        fontSize: 13, color: palette.placeholder, },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 },
-  emptyText: { fontSize: 14, color: '#9ca3af', marginTop: 12, textAlign: 'center', paddingHorizontal: 30 },
-  retryButton: { marginTop: 16, paddingHorizontal: 24, paddingVertical: 10, backgroundColor: '#6366f1', borderRadius: 10 },
-  retryText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  emptyText: { fontFamily: fonts.body,
+        fontSize: 14, color: palette.placeholder, marginTop: 12, textAlign: 'center', paddingHorizontal: 32 },
+  retryButton: { marginTop: 16, paddingHorizontal: 24, paddingVertical: 8, backgroundColor: palette.navy, borderRadius: 10 },
+  retryText: { color: palette.surface, fontFamily: fonts.bodySemi,
+        fontSize: 14 },
 });
 
 export default CountrySelector;

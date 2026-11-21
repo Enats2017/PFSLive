@@ -25,16 +25,20 @@ export interface FavouritePagination {
 export interface FavouritesResponse {
   favourites: FavouriteItem[];
   pagination: FavouritePagination;
+  is_own: number; 
 }
 
 export interface GetFavouritesParams {
   search?: string;
   page?: number;
+  customer_app_id?: number;
+  
 }
 
 interface FavouritesData {
   favourites?: FavouriteItem[];
   pagination?: FavouritePagination;
+  is_own?: number;
   // get_favourite_all_api.php answers a token it cannot verify with
   // HTTP 200 + success:true + action:"unauthorized" — not an error status —
   // so this never reaches apiClient.handleError. See getFavourites().
@@ -58,7 +62,13 @@ export const userfavouriteService = {
       // the fan identity the API falls back to. Sending both keeps the
       // logged-out list working without changing the logged-in behaviour:
       // server-side customer_app_id wins whenever it resolves.
-      const customer_app_id = await tokenService.getCustomerId();
+      //
+      // params.customer_app_id names ANOTHER athlete when this screen was
+      // opened from their profile. It has to win over the logged-in id, and
+      // the device_id sent alongside is harmless: the API treats device_id as
+      // a fallback, never an override, so a target never resolves to the
+      // viewer's own list.
+      const customer_app_id = params.customer_app_id ?? await tokenService.getCustomerId();
       const device_id = await getDeviceId();
 
       if (API_CONFIG.DEBUG) {
@@ -111,7 +121,9 @@ export const userfavouriteService = {
             per_page: 0, // unknown — API didn't return it
             total: 0,
             total_pages: 1,
+            
           },
+          is_own: response.data.is_own ?? 0,
         };
       }
 

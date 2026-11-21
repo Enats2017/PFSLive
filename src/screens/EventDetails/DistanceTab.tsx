@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,16 @@ import {
   FlatList,
   ActivityIndicator,
   StatusBar,
-  Linking
+  Linking,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, space, palette, fonts } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
+import { raceReadyService } from '../../services/raceReadyService';
 import RegistrationModal from '../../components/RegistrationModal';
 /* included = 1 with entitled = 0 is "this race includes tracking, but we
    cannot find YOUR entry" - a different message from the membership one.
@@ -29,11 +31,12 @@ import { API_CONFIG } from '../../constants/config';
 import { toastSuccess } from '../../../utils/toast';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/common/AppHeader';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons, AntDesign } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { formatEventDate } from '../../utils/dateFormatter';
+import { distanceButtonsBelow, detailsHeaderImageLandscape, detailsHeaderImageFit } from '../../utils/screenFit';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
 import { canShowConnectButton } from './distanceConnect';
 import { analyticsService } from '../../services/analyticsService';
@@ -45,6 +48,8 @@ interface DistanceTabProps {
   event_name: string;
   event_image?: string | null;
   auto_register_id?: number | null;
+  /** Highlight + scroll to this distance; never registers. See navigation types. */
+  preselect_pov_id?: number | null;
   onRefresh?: () => void;
   onResultsAvailability?: (show: boolean) => void;
   onRaceDateAvailable?: (date: string | null) => void; 
@@ -55,11 +60,12 @@ const DistanceTab = ({
   event_name,
   event_image,
   auto_register_id,
+  preselect_pov_id,
   onRefresh,
   onResultsAvailability,
   onRaceDateAvailable,
 }: DistanceTabProps) => {
-  const { t } = useTranslation(['details']);
+  const { t } = useTranslation(['details', 'result']);
   const navigation = useNavigation<any>();
   const [distances, setDistances] = useState<Distance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +76,11 @@ const DistanceTab = ({
   const [pendingRefresh, setPendingRefresh] = useState(false);
   const { downloadGpx, downloadingId } = useGpxDownload();
   const [imageLoading, setImageLoading] = useState(true);
+  // The event image is not always passed in the route params - the pencil on
+  // Your Events navigates from `AthleteEvent`, which has no image field at all.
+  // event_detail_api.php returns one, so fall back to that instead of showing a
+  // headerless card. Any caller that can pass an image still wins.
+  const [fetchedImage, setFetchedImage] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [showResultsStats, setShowResultsStats] = useState(false);
   const [rrUrl, setRrUrl] = useState<string>('');
@@ -100,6 +111,7 @@ const DistanceTab = ({
         setServerTime(result.server_datetime);
 
         setRrUrl(result.event?.rr_url ?? '');
+        setFetchedImage(result.event?.image?.trim() ? result.event.image : null);
         setShowGpx(result.event?.show_gpx !== 0);
       setEventRegisterUrl(result.event?.event_register_url ?? '');
 
@@ -159,6 +171,10 @@ const DistanceTab = ({
     []
   );
 
+  // Set on a successful connect, consumed when the celebration closes — that
+  // is when the Get race-ready flow opens (raceReadyService).
+  const justConnectedRef = useRef(false);
+
   // ✅ SUCCESS CALLBACK
   const handleSuccess = useCallback(
     async (product_option_value_app_id: number, participant_app_id?: number) => {
@@ -169,6 +185,7 @@ const DistanceTab = ({
       updateDistanceStatus(product_option_value_app_id, 'registered', participant_app_id);
       setSuccessVisible(true);
       setPendingRefresh(true);
+      justConnectedRef.current = true;
     },
     [updateDistanceStatus]
   );
@@ -202,6 +219,21 @@ const DistanceTab = ({
   const handleSuccessModalClose = useCallback(() => {
     setSuccessVisible(false);
 
+    // The runner just connected — days before the race, relaxed: the moment
+    // to sort out permissions, not the start line. Opens only if something
+    // is actually missing, once per race.
+    if (justConnectedRef.current) {
+      justConnectedRef.current = false;
+      setTimeout(() => {
+        void raceReadyService.maybeOpen({
+          raceKey: product_app_id,
+          raceName: event_name,
+          source: 'connect',
+          onlyFromRoute: 'EventDetails',
+        });
+      }, 400);
+    }
+
     if (pendingRefresh) {
       if (API_CONFIG.DEBUG) {
         console.log('🔄 Refreshing after modal close');
@@ -213,7 +245,7 @@ const DistanceTab = ({
         setPendingRefresh(false);
       }, 300);
     }
-  }, [pendingRefresh, fetchDistances, onRefresh]);
+  }, [pendingRefresh, fetchDistances, onRefresh, product_app_id, event_name]);
 
   const {
     modalVisible,
@@ -237,6 +269,7 @@ const DistanceTab = ({
     handleConnectClick,
     handleLiveTrackingConfirm,
     handleLiveTrackingClose,
+    registeringItemId,
   } = useRegistrationHandler(
     product_app_id,
     event_name,
@@ -250,6 +283,42 @@ const DistanceTab = ({
       fetchDistances(false);
     }, [fetchDistances])
   );
+
+  // ✅ PRESELECT (deep link) — scroll to the distance once, never register.
+  const listRef = useRef<FlatList<Distance>>(null);
+  // Card: margin space.xl + padding space.lg each side.
+  const { width: windowWidth, height: windowHeight, fontScale } = useWindowDimensions();
+  const buttonsBelow = distanceButtonsBelow(windowWidth - 2 * space.xl - 2 * space.lg, fontScale);
+  // ✅ Header image capped in landscape (layout audit 2026-10-22): full width
+  // at 612:428 it was ~590pt tall there - more than the whole screen - and the
+  // distances started a full screen down. Portrait is unchanged.
+  const headerLandscape = windowWidth > windowHeight;
+  const headerImageHeight = detailsHeaderImageLandscape(windowHeight);
+  const preselectDoneRef = useRef(false);
+  // onScrollToIndexFailed retries the real index ONCE per preselect scroll
+  // (a retry that fails again must not loop).
+  const scrollRetriedRef = useRef(false);
+  const distancesRef = useRef<Distance[]>(distances);
+  distancesRef.current = distances;
+  // A second link to this (still mounted) screen with ANOTHER distance must
+  // preselect again — the done-flag belonged to the previous one.
+  useEffect(() => { preselectDoneRef.current = false; }, [preselect_pov_id]);
+  useEffect(() => {
+    if (!preselect_pov_id || preselectDoneRef.current || loading || distances.length === 0) return;
+    // Number(): the API may send the id as a string.
+    const index = distances.findIndex((d) => Number(d.product_option_value_app_id) === preselect_pov_id);
+    preselectDoneRef.current = true;
+    if (index < 0) return;
+    setTimeout(() => {
+      // Re-check: a focus refetch may have changed the list in the 300 ms.
+      const now = distancesRef.current.findIndex((d) => Number(d.product_option_value_app_id) === preselect_pov_id);
+      if (now < 0) return;
+      try {
+        scrollRetriedRef.current = false;
+        listRef.current?.scrollToIndex({ index: now, animated: true, viewPosition: 0.2 });
+      } catch { /* out of range — the highlight alone is enough */ }
+    }, 300);
+  }, [preselect_pov_id, distances, loading]);
 
   // ✅ AUTO-REGISTER LOGIC
   useEffect(() => {
@@ -370,9 +439,11 @@ const handleExternalRegister = useCallback((url: string) => {
     setSelectedUndoItem(null);
   }, [selectedUndoItem, handleDelete]);
 
+  const headerImage = event_image || fetchedImage;
+
   React.useEffect(() => {
     setImageLoading(true);
-  }, [event_image]);
+  }, [headerImage]);
 
 
   const renderListHeader = useCallback(() => {
@@ -381,28 +452,31 @@ const handleExternalRegister = useCallback((url: string) => {
     );
     return (
       <View>
-        {event_image ? (
-          <View style={{ width: '100%', aspectRatio: 612 / 428, justifyContent: 'center', alignItems: 'center',}}>
+        {headerImage ? (
+          <View style={[
+            { width: '100%', aspectRatio: 612 / 428, justifyContent: 'center', alignItems: 'center',},
+            headerLandscape && { aspectRatio: undefined, height: headerImageHeight },
+          ]}>
             {imageLoading && (
               <ActivityIndicator
                 size="large"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ position: 'absolute', zIndex: 1 }}
               />
             )}
 
             <Image
-              source={{ uri: event_image }}
-              contentFit="cover"
+              source={{ uri: headerImage }}
+              contentFit={detailsHeaderImageFit(headerLandscape)}
               cachePolicy="memory-disk"
-              style={{
+              style={[{
                 width: '100%',
                 aspectRatio: 612 / 428,
                 opacity: imageLoading ? 0 : 1,
-              }}
+              }, headerLandscape && { aspectRatio: undefined, height: '100%' }]}
               onLoad={() => setImageLoading(false)}
               onError={(e) => {
-                console.log('❌ Image failed:', event_image, e?.error);
+                console.log('❌ Image failed:', headerImage, e?.error);
                 setImageLoading(false);
               }}
             />
@@ -411,7 +485,7 @@ const handleExternalRegister = useCallback((url: string) => {
 
         <View style={detailsStyles.infoBox}>
           <View style={detailsStyles.infoIconWrapper}>
-            <AntDesign name="link" size={20} color={colors.primaryDark} />
+            <AntDesign name="link" size={20} color={palette.ink} />
           </View>
           <Text style={detailsStyles.infoBoxText}>
             {t('details:connectInfo')}
@@ -420,31 +494,47 @@ const handleExternalRegister = useCallback((url: string) => {
 
       </View>
     );
-  }, [event_name, event_image, distances, imageLoading]);
+  }, [event_name, headerImage, distances, imageLoading, headerLandscape, headerImageHeight]);
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isRegistering =
-      registerLoading &&
-      (confirmItem?.product_option_value_app_id === item.product_option_value_app_id ||
-        selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
+    registerLoading &&
+    (registeringItemId === item.product_option_value_app_id ||
+      confirmItem?.product_option_value_app_id === item.product_option_value_app_id ||
+      selectedItem?.product_option_value_app_id === item.product_option_value_app_id);
 
     return (
-      <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.md, marginHorizontal: spacing.md }]}>
-        <View style={detailsStyles.distance}>
-          <View style={detailsStyles.distanceInfo}>
-            <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
-              {item.distance_name}
-            </Text>
+      <View
+        style={[
+          commonStyles.card,
+          { minHeight: 110, marginBottom: space.md, marginHorizontal: space.xl },
+          // Deep-linked distance (email/campaign) — highlighted only.
+          !!preselect_pov_id && preselect_pov_id === Number(item.product_option_value_app_id) && {
+            borderWidth: 2,
+            borderColor: palette.lime,
+          },
+        ]}
+      >
+        {/* ✅ Distance name on its own full-width line, no line limit (layout
+            audit 2026-10-22): beside the button column it had ~99-169pt, so a
+            single nl word ("Recreatieloop" 141pt, "Wandeltocht" 132pt at 20pt)
+            broke mid-word at 360-414pt and long names were cut at 2 lines. */}
+        <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
+          {item.distance_name}
+        </Text>
+        <View style={[detailsStyles.distance, buttonsBelow && detailsStyles.distanceStacked]}>
+          <View style={[detailsStyles.distanceInfo, buttonsBelow && detailsStyles.distanceInfoStacked]}>
 
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
-                {item.race_date_formatted}
+              <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
+              <Text style={detailsStyles.metaText}>
+                {/* translated month (the API sends English) — client 2026-10-23 */}
+                {formatEventDate(item.race_date_formatted, t)}
               </Text>
             </View>
 
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="time-outline" size={15} color={colors.gray600} />
+              <Ionicons name="time-outline" size={15} color={palette.textBody} />
               <Text style={detailsStyles.metaText} numberOfLines={1}>
                 {formatClockTime(item.race_time)}
               </Text>
@@ -457,8 +547,8 @@ const handleExternalRegister = useCallback((url: string) => {
                 Published to signed-out callers too, so it reads before login. */}
             {item.free_tracking_included === 1 && canShowConnectButton(item) && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="navigate-circle-outline" size={15} color={colors.themeiColor} />
-                <Text style={[detailsStyles.metaText, { color: colors.themeiColor, fontWeight: '600' }]} numberOfLines={1}>
+                <Ionicons name="navigate-circle-outline" size={15} color={palette.lime} />
+                <Text style={[detailsStyles.metaText, { color: palette.ink, fontFamily: fonts.bodySemi }]}>
                   {t('details:freeTrackingIncluded')}
                 </Text>
               </View>
@@ -466,8 +556,8 @@ const handleExternalRegister = useCallback((url: string) => {
 
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Feather name="users" size={16} color={colors.gray500} />
-                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                <Feather name="users" size={16} color={palette.textMuted} />
+                <Text style={detailsStyles.metaText}>
                   {item.participant_started_count} {t('details:athletes')}
                 </Text>
               </View>
@@ -475,8 +565,8 @@ const handleExternalRegister = useCallback((url: string) => {
 
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
-                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                <Ionicons name="ribbon-outline" size={15} color={palette.textBody} />
+                <Text style={detailsStyles.metaText}>
                   {item.finished_count} {t('details:finished')}
                 </Text>
               </View>
@@ -484,15 +574,15 @@ const handleExternalRegister = useCallback((url: string) => {
 
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
-                <Text style={detailsStyles.metaTextRed} numberOfLines={1}>
+                <Ionicons name="close-circle-outline" size={15} color={palette.textBody} />
+                <Text style={detailsStyles.metaTextRed}>
                   {item.dnf_count} {t('details:dnf')}
                 </Text>
               </View>
             )}
 
             <View style={detailsStyles.metaRow}>
-              <MaterialCommunityIcons name="timer-sand" size={15} color={colors.gray600} />
+              <MaterialCommunityIcons name="timer-sand" size={15} color={palette.textBody} />
               <CountdownBadge
                 days={item.countdown.days}
                 hours={item.countdown.hours}
@@ -501,12 +591,12 @@ const handleExternalRegister = useCallback((url: string) => {
               />
             </View>
           </View>
-          <View style={detailsStyles.verticalDivider} />
+          {!buttonsBelow && <View style={detailsStyles.verticalDivider} />}
 
-          <View style={{ gap: spacing.sm }} >
+          <View style={buttonsBelow ? detailsStyles.distanceButtonsBelow : { gap: spacing.sm }}>
             {canShowConnectButton(item) && (
             <TouchableOpacity
-                style={[detailsStyles.resultsButton]}
+                style={[detailsStyles.resultsButton, buttonsBelow && detailsStyles.distanceButtonFull]}
                 onPress={() => {
                   if (isRegisterMode) {
                     handleExternalRegister(eventRegisterUrl);
@@ -520,9 +610,9 @@ const handleExternalRegister = useCallback((url: string) => {
                 activeOpacity={0.8}
               >
               {isRegistering ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={palette.surface} />
               ) : (
-                <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
+                <Text style={detailsStyles.resultsButtonText}>
                 {item.registration_status === 'registered'
                   ? t('details:undo')
                   : isRegisterMode
@@ -537,12 +627,12 @@ const handleExternalRegister = useCallback((url: string) => {
                 tab and the follower one cannot drift apart. */}
             {canShowGpxButton(item, undefined, showGpx) && (
               <TouchableOpacity
-                style={detailsStyles.routeButton}
+                style={[detailsStyles.routeButton, buttonsBelow && detailsStyles.distanceButtonFull]}
                 //onPress={() => handleGpxClick(item)}
                 onPress={() => handleDownloadGpx(item)}
                 activeOpacity={0.8}
               >
-                <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
+                <Text style={detailsStyles.routeButtonText}>
                   {t('details:gpx')}
                 </Text>
               </TouchableOpacity>
@@ -550,11 +640,11 @@ const handleExternalRegister = useCallback((url: string) => {
 
             {/* ✅ MAP button — live tracking map for this distance */}
             <TouchableOpacity
-              style={detailsStyles.routeButton}
+              style={[detailsStyles.routeButton, buttonsBelow && detailsStyles.distanceButtonFull]}
               onPress={() => handleMapClick(item)}
               activeOpacity={0.8}
             >
-              <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
+              <Text style={detailsStyles.routeButtonText}>
                 {t('details:map')}
               </Text>
             </TouchableOpacity>
@@ -562,17 +652,21 @@ const handleExternalRegister = useCallback((url: string) => {
         </View>
       </View>
     );
-  }, [CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode, showGpx]);
+  }, [navigation, product_app_id, event_name, event_image, CountdownBadge, handleConnectClick, handleUndoClick, handleMapClick, handleGpxClick, handleDownloadGpx, handleExternalRegister, eventRegisterUrl, registerLoading, registeringItemId, confirmItem, selectedItem, t, showResults, showResultsStats, isRegisterMode, showGpx, preselect_pov_id, buttonsBelow]);
 
   if (loading) {
     return (
-      <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+      <ActivityIndicator size="large" color={palette.navy} style={{ marginTop: 40 }} />
     );
   }
 
   if (hasError && !loading) {
+    // A TAB, not a screen. The parent screen owns both insets - it renders
+    // AppHeader (which carries the status bar) inside its own SafeAreaView with
+    // edges={['bottom']}. A SafeAreaView here claimed 'top' a second time and
+    // pushed the error state down below the header, so this is a plain View.
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
+      <View style={commonStyles.container}>
         <StatusBar barStyle="dark-content" />
         <ErrorScreen
           type={error!.type}
@@ -580,27 +674,40 @@ const handleExternalRegister = useCallback((url: string) => {
           message={error!.message}
           onRetry={() => { clearError(); fetchDistances(); }}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (distances.length === 0) {
     return (
-      <View style={{ marginTop: 40, alignItems: 'center' }}>
-        <Text style={commonStyles.errorText}>{t('details:distance.empty')}</Text>
-      </View>
+      <ErrorScreen type="empty" title={t('details:distance.empty')} onRetry={() => { }} />
     );
   }
 
   return (
     <>
       <FlatList
+        ref={listRef}
         data={distances}
         extraData={showResults}
+        onScrollToIndexFailed={(info) => {
+          // Rows have variable height — fall back to an estimate, then retry.
+          listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+          // The estimate alone can land rows away from the linked distance:
+          // once the rows near it are rendered and measured, go to the real
+          // index (once — see scrollRetriedRef).
+          if (scrollRetriedRef.current) return;
+          scrollRetriedRef.current = true;
+          setTimeout(() => {
+            try {
+              listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.2 });
+            } catch { /* out of range — the highlight alone is enough */ }
+          }, 100);
+        }}
         keyExtractor={(item, index) => `${item.product_option_value_app_id}-${index}`}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 50, }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 48, }}
         renderItem={renderItem}
         ListHeaderComponent={renderListHeader}
       />

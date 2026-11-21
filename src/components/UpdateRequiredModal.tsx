@@ -1,7 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform } from 'react-native';
-import { colors, spacing, typography } from '../styles/common.styles';
+import { spacing, typography, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
+import { useCompactDialog } from './ui';
 
 interface UpdateRequiredModalProps {
   visible: boolean;
@@ -26,6 +30,9 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
   onLater,
 }) => {
   const { t } = useTranslation(['common']);
+  // ✅ Compact in landscape (device test 2026-10-23): no icon, buttons side by
+  // side, so Update Now is on screen. Called before the early return (hooks rule).
+  const cd = useCompactDialog();
 
   // Early return if not visible
   if (!visible) {
@@ -33,80 +40,84 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
   }
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent={true}
       animationType="fade"
       statusBarTranslucent
       hardwareAccelerated={true}
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
-          {/* Icon */}
-          <View style={styles.iconContainer}>
-            <Text style={styles.icon}>🔄</Text>
-          </View>
-
-          {/* Title from API */}
-          {title ? (
-            <Text style={styles.title}>{title}</Text>
-          ) : null}
-
-          {/* Message from API */}
-          {message ? (
-            <Text style={styles.message}>{message}</Text>
-          ) : null}
-
-          {/* Version Info */}
-          <View style={styles.versionInfo}>
-            <View style={styles.versionRow}>
-              <Text style={styles.versionLabel}>
-                {t('common:update.currentVersion')}:
-              </Text>
-              <Text style={styles.versionValue}>{currentVersion}</Text>
+      <View style={[styles.overlay, cd.s.wrapper]}>
+        {/* ModalScroll: icon + API message + versions + two buttons is taller
+            than a landscape screen — Update Now was off the bottom (audit 2026-10-22) */}
+        <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
+          <View style={[styles.container, cd.s.card]}>
+            {/* Icon */}
+            <View style={[styles.iconContainer, cd.s.hide]}>
+              <Ionicons name="refresh" size={56} color={palette.navy} />
             </View>
-            <View style={styles.versionRow}>
-              <Text style={styles.versionLabel}>
-                {t('common:update.latestVersion')}:
-              </Text>
-              <Text style={styles.versionValue}>{latestVersion}</Text>
+
+            {/* Title from API */}
+            {title ? (
+              <Text style={[styles.title, cd.s.title]}>{title}</Text>
+            ) : null}
+
+            {/* Message from API */}
+            {message ? (
+              <Text style={[styles.message, cd.s.message]}>{message}</Text>
+            ) : null}
+
+            {/* Version Info */}
+            <View style={styles.versionInfo}>
+              <View style={styles.versionRow}>
+                <Text style={styles.versionLabel}>
+                  {t('common:update.currentVersion')}:
+                </Text>
+                <Text style={styles.versionValue}>{currentVersion}</Text>
+              </View>
+              <View style={styles.versionRow}>
+                <Text style={styles.versionLabel}>
+                  {t('common:update.latestVersion')}:
+                </Text>
+                <Text style={styles.versionValue}>{latestVersion}</Text>
+              </View>
             </View>
-          </View>
 
-          {/* Buttons */}
-          <View style={styles.buttonContainer}>
-            {/* Update Button */}
-            <TouchableOpacity
-              style={[styles.button, styles.updateButton]}
-              onPress={onUpdate}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.updateButtonText}>
-                {t('common:update.updateNow')}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Later Button */}
-            {!isForced && onLater && (
+            {/* Buttons */}
+            <View style={[styles.buttonContainer, cd.s.buttonsRow]}>
+              {/* Update Button */}
               <TouchableOpacity
-                style={[styles.button, styles.laterButton]}
-                onPress={onLater}
+                style={[styles.button, styles.updateButton, cd.s.button]}
+                onPress={onUpdate}
                 activeOpacity={0.8}
               >
-                <Text style={styles.laterButtonText}>
-                  {t('common:update.later')}
+                <Text style={styles.updateButtonText}>
+                  {t('common:update.updateNow')}
                 </Text>
               </TouchableOpacity>
+
+              {/* Later Button */}
+              {!isForced && onLater && (
+                <TouchableOpacity
+                  style={[styles.button, styles.laterButton, cd.s.button]}
+                  onPress={onLater}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.laterButtonText}>
+                    {t('common:update.later')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Forced update warning */}
+            {isForced && (
+              <Text style={styles.forcedText}>
+                {t('common:update.forcedMessage')}
+              </Text>
             )}
           </View>
-
-          {/* Forced update warning */}
-          {isForced && (
-            <Text style={styles.forcedText}>
-              {t('common:update.forcedMessage')}
-            </Text>
-          )}
-        </View>
+        </ModalScroll>
       </View>
     </Modal>
   );
@@ -115,60 +126,56 @@ export const UpdateRequiredModal: React.FC<UpdateRequiredModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
   },
   container: {
-    backgroundColor: colors.white,
+    backgroundColor: palette.surface,
     borderRadius: 16,
     padding: spacing.xxl,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.black,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
+    ...shadows.overlay,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary + '20',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: withAlpha(palette.navy, 0.13),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
   icon: {
-    fontSize: 40,
+    fontFamily: fonts.body,
+        fontSize: 40,
   },
   title: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
+    // fonts.display/20 like every other modal. This was bodySemi/26 — bodySemi
+    // is the screen-heading face (see OtpScreen h1) and read as a different
+    // typeface in a dialog, and 26 turned out to be shared with two other
+    // modals rather than deliberate, so it was drift, not emphasis.
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
   message: {
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: palette.textBody,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 23,
     marginBottom: spacing.lg,
   },
   versionInfo: {
     width: '100%',
-    backgroundColor: colors.gray100,
-    borderRadius: 8,
+    backgroundColor: palette.fill,
+    borderRadius: 10,
     padding: spacing.md,
     marginBottom: spacing.lg,
   },
@@ -178,60 +185,55 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   versionLabel: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
-    fontWeight: typography.weights.medium,
-  },
+    fontFamily: fonts.bodyMedium,
+        fontSize: 14,
+    color: palette.textBody,
+
+        },
   versionValue: {
-    fontSize: typography.sizes.sm,
-    color: colors.black,
-    fontWeight: typography.weights.semibold,
-  },
+    fontFamily: fonts.bodySemi,
+        fontSize: 14,
+    color: palette.ink,
+
+        },
   buttonContainer: {
     width: '100%',
     gap: spacing.md,
   },
   button: {
     paddingVertical: spacing.lg,
-    borderRadius: 8,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   updateButton: {
-    backgroundColor: colors.primary,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    backgroundColor: palette.navy,
+    ...shadows.card,
   },
   updateButtonText: {
-    color: colors.white,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 0.5,
+    color: palette.surface,
+    fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        letterSpacing: 0.5,
   },
   laterButton: {
-    backgroundColor: colors.white,
+    backgroundColor: palette.surface,
     borderWidth: 1,
-    borderColor: colors.gray300,
+    borderColor: palette.inputBorder,
   },
   laterButtonText: {
-    color: colors.gray600,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-  },
+    color: palette.textBody,
+    fontFamily: fonts.bodySemi,
+        fontSize: 15,
+
+        },
   forcedText: {
-    fontSize: typography.sizes.xs,
-    color: colors.error,
+    fontFamily: fonts.bodyMedium,
+        fontSize: 13,
+    color: palette.danger,
     textAlign: 'center',
     marginTop: spacing.md,
-    fontWeight: typography.weights.medium,
-  },
+
+        },
 });

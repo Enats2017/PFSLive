@@ -4,16 +4,19 @@ import {
     Text,
     TouchableOpacity,
     ScrollView,
-    StatusBar,
     ActivityIndicator,
     Linking,
     Alert,
+    useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { colors, commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette, space } from '../../styles/common.styles';
+import { AppHeader } from '../../components/common/AppHeader';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
+import { Button } from '../../components/ui';
 import { membershipPlansStyle as styles, COLORS } from '../../styles/membershipPlans.styles';
 import { useMembershipPlans, PlanId, PLAN_IDS } from '../../hooks/useMembershipplans';
 import MembershipPlanModel, { ModalActionType } from '../../components/MembershipPlanModel';
@@ -52,6 +55,15 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     // RESULT effect below, which doesn't otherwise receive it.
     const pendingProductIdRef = useRef<string | null>(null);
     const insets = useSafeAreaInsets();
+    const sidePadding = useLandscapeSidePadding();   // landscape: body clear of the notch (audit 2026-10-22)
+    const safeEdges = useSafeAreaEdges();
+    // ✅ Below 400pt or with larger text the sessions badge gets its own line
+    // under the name (layout audit 2026-10-22): name, badge, price and period
+    // on one row left the badge empty / "5 sess…" at 320-360pt, and at ×1.35
+    // the row ran ~50pt past the card. Wider phones keep the one-row layout
+    // (see the layout note in membershipPlans.styles.ts).
+    const { width: windowWidth, fontScale } = useWindowDimensions();
+    const badgeOwnLine = windowWidth < 400 || fontScale > 1;
 
 
     const {
@@ -75,6 +87,7 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         restoreResult,
         restoreError,
         resetRestore,
+        purchaseButtonLoading,
     } = useMembershipPlans();
 
     useEffect(() => {
@@ -304,68 +317,86 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     const renderPlanCard = (id: PlanId) => {
         const plan = getPlan(id);
         const isSelected = selected === id;
+        const sessionsBadge = (
+            <View style={[styles.sessionsBadge, isSelected && styles.sessionsBadgeLime]}>
+                <Text
+                    style={[
+                        styles.sessionsBadgeText,
+                        isSelected && styles.sessionsBadgeTextSelected,
+                    ]}
+                    numberOfLines={1}
+                >
+                    {getSessionsLabel(id)}
+                </Text>
+            </View>
+        );
         return (
             <TouchableOpacity
                 key={id}
                 activeOpacity={0.85}
                 onPress={() => handlePlanPress(id)}
                 style={[styles.card, isSelected ? styles.cardSelected : styles.cardUnselected]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
+                // getPriceLabel is null until StoreKit answers, and interpolating it
+                // straight in made the card announce "PRO, null / year". Dropping the
+                // empty part reads correctly in both states.
+                accessibilityLabel={[plan.name, getPriceLabel(id), plan.period]
+                    .filter(Boolean)
+                    .join(', ')}
             >
-                {plan.popularLabel && (
+                {!!plan.popularLabel && (
                     <View style={styles.popularBadge}>
-                        <Text style={[styles.popularBadgeText, isSelected && styles.popularselectedtext]}>{plan.popularLabel}</Text>
+                        <Text style={styles.popularBadgeText}>{plan.popularLabel}</Text>
                     </View>
                 )}
 
                 {isSelected && (
                     <View style={styles.checkCircle}>
-                        <Ionicons name="checkmark" size={15} color={colors.themeiColor} />
+                        <Ionicons name="checkmark" size={11} color={palette.navy} />
                     </View>
                 )}
 
-                <View style={styles.cardHeaderRow}>
-                    <Text style={[styles.planName, isSelected && styles.textLight]}>
+                <View style={styles.planRow}>
+                    <Text style={[styles.planName, badgeOwnLine && styles.planNameShrink, isSelected && styles.textLight]}>
                         {plan.name}
                     </Text>
-                    <View style={[styles.sessionsBadge, isSelected && styles.sessionsBadgeLime]}>
-                        <Text
-                            style={[
-                                styles.sessionsBadgeText,
-                                isSelected && styles.sessionsBadgeTextSelected,
-                            ]}
-                        >
-                            {getSessionsLabel(id)}
-                        </Text>
-                    </View>
-                </View>
-
-                <View style={styles.priceRow}>
+                    {!badgeOwnLine && sessionsBadge}
+                    <View style={styles.spacer} />
+                    {/* Name, badge and price stay on ONE row — see the layout note in
+                        membershipPlans.styles.ts: stacking the price pushes the App
+                        Review 3.1.2 disclosures off the bottom of the screen.
+                        The null check is master's: the figure is not known until
+                        StoreKit answers, and a hardcoded price that disagrees with
+                        the store is an App Review rejection. The spinner is white on
+                        a selected card, which is navy — master's `COLORS.navy` here
+                        would have been invisible, and its `styles.periodLight` does
+                        not exist on this branch (the token is `mutedLight`). */}
                     {getPriceLabel(id) !== null ? (
-                        <Text style={[styles.price, isSelected && styles.textLight]}>
+                        <Text style={[styles.price, isSelected && styles.textLight]} numberOfLines={1}>
                             {getPriceLabel(id)}
                         </Text>
                     ) : (
                         <ActivityIndicator
                             size="small"
-                            color={isSelected ? COLORS.navy : COLORS.darkText}
+                            color={isSelected ? COLORS.white : COLORS.darkText}
                         />
                     )}
-                    <Text style={[styles.period, isSelected && styles.periodLight]}>
-                        {' '}
+                    <Text
+                        style={[styles.period, isSelected && styles.mutedLight]}
+                        numberOfLines={1}
+                    >
                         {plan.period}
                     </Text>
                 </View>
+                {badgeOwnLine && <View style={styles.sessionsBadgeLine}>{sessionsBadge}</View>}
 
                 <View style={styles.featuresWrapper}>
                     {plan.features.map((feature, idx) => (
                         <View key={idx} style={styles.featureRow}>
-                            <Ionicons
-                                name="checkmark"
-                                size={18}
-                                color={isSelected ? COLORS.navy : COLORS.darkText}
-                            />
+                            <Ionicons name="checkmark" size={14} color={palette.lime} />
                             <Text
-                                style={[styles.featureText, isSelected && styles.featureTextLight]}
+                                style={[styles.featureText, isSelected && styles.mutedLight]}
                             >
                                 {feature}
                             </Text>
@@ -378,10 +409,10 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     if (loadingPlans || loadingPrices) {
         return (
-            <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.themeiColor }]} edges={['top']}>
-                <StatusBar barStyle="light-content" backgroundColor={colors.themeiColor} />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={t('common:band.membership')} showBack />
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <ActivityIndicator size="large" color={COLORS.white} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
             </SafeAreaView>
         );
@@ -389,40 +420,46 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     if (plansError) {
         return (
-            <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.themeiColor }]} edges={['top']}>
-                <StatusBar barStyle="light-content" backgroundColor={colors.themeiColor} />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={t('common:band.membership')} showBack />
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
-                    <Text style={{ color: COLORS.white, textAlign: 'center', marginBottom: 16 }}>
+                    <Text style={[styles.headerSubtitle, { textAlign: 'center', marginBottom: 16 }]}>
                         {plansError}
                     </Text>
-                    <TouchableOpacity onPress={refetchPlans} style={styles.ctaButton}>
-                        <Text style={styles.ctaButtonText}>{t('membership:retry') as string}</Text>
-                    </TouchableOpacity>
+                    <Button
+                        label={t('membership:retry') as string}
+                        onPress={refetchPlans}
+                        fullWidth={false}
+                    />
                 </View>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={[commonStyles.container, { backgroundColor: colors.themeiColor }]} edges={['top' ]}>
-            <StatusBar barStyle="light-content" backgroundColor={colors.themeiColor} />
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="chevron-back" size={22} color={COLORS.navy} />
-                    <Text style={styles.headerLabel}>{t('membership:header.label')}</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.headerTitle}>{t('membership:header.title')}</Text>
-                <Text style={styles.headerSubtitle}>{t('membership:header.subtitle')}</Text>
-            </View>
+        // No 'bottom' edge here: the checkout bar below pads the bottom inset
+        // itself (white to the screen edge). Both padded it - 34+34+20pt under
+        // the button in portrait, 21+21+20 in landscape (audit 2026-10-23).
+        <SafeAreaView style={commonStyles.container} edges={safeEdges.filter((e) => e !== 'bottom')}>
+            {/* The screen name now lives in the header's lime band, so
+                membership:header.label is no longer rendered here. */}
+            <AppHeader title={t('common:band.membership')} showBack />
 
             <ScrollView
                 style={styles.scroll}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[styles.scrollContent, {
+                    // notch inset ADDED to the 20pt gutter: paddingLeft/Right beat
+                    // paddingHorizontal, so a bare {paddingLeft: 0} removed it
+                    paddingLeft: space.xl + sidePadding.paddingLeft,
+                    paddingRight: space.xl + sidePadding.paddingRight,
+                }]}
                 showsVerticalScrollIndicator={false}
             >
+                <Text style={styles.headerTitle}>{t('membership:header.title')}</Text>
+                <Text style={styles.headerSubtitle}>{t('membership:header.subtitle')}</Text>
+
                 <View style={styles.infoBanner}>
-                    <Ionicons name="information-circle-outline" size={22} color={COLORS.infoText} />
+                    <Ionicons name="information-circle-outline" size={16} color={COLORS.infoText} />
                     <Text style={styles.infoBannerText}>
                         {getBannerText()}
                     </Text>
@@ -515,13 +552,22 @@ const MembershipPlansScreen: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 </View>
             </ScrollView>
 
-            <View style={[styles.ctaWrapper, { paddingBottom: insets.bottom }]}>
-                <TouchableOpacity style={[styles.ctaButton, isContinueDisabled && { opacity: 0.4 }]} activeOpacity={0.85} onPress={handleContinue} disabled={isContinueDisabled}>
-                    <Text style={styles.ctaButtonText}>
-                        {t('membership:cta.continueWith', { planName: getPlan(selected).name })}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={18} color={COLORS.darkText} />
-                </TouchableOpacity>
+            {/* The bottom inset once (the SafeAreaView above has no bottom
+                edge), and the button clear of the notch in landscape (0 in
+                portrait). */}
+            <View style={[styles.ctaWrapper, {
+                paddingBottom: insets.bottom + 20,
+                paddingLeft: space.xl + sidePadding.paddingLeft,
+                paddingRight: space.xl + sidePadding.paddingRight,
+            }]}>
+                <Button
+                    label={t('membership:cta.continueWith', { planName: getPlan(selected).name })}
+                    onPress={handleContinue}
+                    disabled={isContinueDisabled}
+                    loading={purchaseButtonLoading}
+                    icon="chevron-forward"
+                    iconPosition="trailing"
+                />
             </View>
 
             <MembershipPlanModel

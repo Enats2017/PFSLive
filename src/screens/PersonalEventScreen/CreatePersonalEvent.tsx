@@ -2,7 +2,6 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   KeyboardAvoidingView,
   ScrollView,
-  StatusBar,
   Platform,
   View,
   Text,
@@ -13,7 +12,7 @@ import { SafeAreaView, useSafeAreaInsets  } from 'react-native-safe-area-context
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { PersonalEventProps } from '../../types/navigation';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
 import { personalStyles } from '../../styles/personalEvent.styles';
@@ -31,8 +30,10 @@ import { usePersonalEventForm } from '../../hooks/usePersonalEventForm';
 import { startOfToday } from '../../utils/dateValidation';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { tokenService } from '../../services/tokenService';
 import { analyticsService } from '../../services/analyticsService';
+import { raceReadyService } from '../../services/raceReadyService';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -40,10 +41,14 @@ type RegistrationStatus = 'membership_required' | 'limit_reached' | 'membership_
 
 const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }) => {
   const { t } = useTranslation(['personal', 'common']);
-  const { width } = useDimensions();
+  const { width, height } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged
+    // in effect (portrait has no side/bottom inset where the branches differ).
+    const isLandscape = width > height;
+    // ✅ Notch clearance in landscape, where edges fall back to ['bottom'].
+    const sidePadding = useLandscapeSidePadding();
 
   // ✅ GPX file URI and filename passed from share intent (may be undefined)
   const sharedFileUri = route?.params?.sharedFileUri;
@@ -243,6 +248,12 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
       }
       if (response.success) {
         toastSuccess(t('personal:success.title'), response.message || t('personal:success.message'));
+        // Captured before resetForm() clears it — used by Get race-ready below.
+        const createdName = formData.name.trim();
+        // Same key Home uses for this race: custom_<product_custom_app_id>
+        // (create_custom_event_api returns it as event.product_custom_app_id).
+        const createdId = Number(response.event?.product_custom_app_id) || 0;
+        const createdKey = createdId > 0 ? `custom_${createdId}` : null;
         resetForm();
         clearFile();
         await analyticsService.markAsParticipant('create_event'); 
@@ -252,6 +263,11 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
             customer_app_id: customerId,
             fromEdit: true,
         } as never);
+        // A custom event is a "just connected" moment too — open Get
+        // race-ready on top of the profile if anything is missing.
+        setTimeout(() => {
+          void raceReadyService.maybeOpen({ raceKey: createdKey, raceName: createdName, source: 'custom_event', onlyFromRoute: 'OwnProfile' });
+        }, 600);
       } else {
         throw new Error(response.message || 'API_ERROR');
       }
@@ -278,14 +294,17 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
   ]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} showBack />
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+      <AppHeader title={t('common:band.newPersonalEvent')} showLogo={true} showBack />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, sidePadding]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        // ✅ 0, not 80: RN's KAV uses its onLayout frame, relative to a
+        // SafeAreaView that starts at the screen top (headerShown false), so
+        // AppHeader is already counted. 80 lifted the form 80pt clear of the
+        // keyboard — in landscape that left ~0-20pt of form while typing.
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           style={{ flex: 1 }}
@@ -293,10 +312,6 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
           contentContainerStyle={{ flexGrow: 1, paddingBottom:spacing.xxxxl }}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={personalStyles.section}>
-            <Text style={commonStyles.title}>{t('personal:title')}</Text>
-          </View>
-
           <View style={personalStyles.formContainer}>
             {/* Event Name */}
             <View style={personalStyles.fieldWrapper}>
@@ -384,7 +399,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     style={{ marginLeft: 8, marginBottom: 8 }}
                   >
-                    <Ionicons name="close-circle" size={22} color={colors.gray500} />
+                    <Ionicons name="close-circle" size={22} color={palette.textMuted} />
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -400,7 +415,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
                   activeOpacity={0.8}
                   disabled={isSubmitting}
                 >
-                  <Ionicons name="cloud-upload-outline" size={40} color={colors.primary} />
+                  <Ionicons name="cloud-upload-outline" size={40} color={palette.navy} />
                   <Text style={personalStyles.uploadTitle}>{t('personal:file.uploadTitle')}</Text>
                   <Text style={personalStyles.uploadSubtitle}>
                     {t('personal:file.uploadSubtitle', { size: MAX_FILE_SIZE / (1024 * 1024) })}
@@ -410,10 +425,10 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
                 <View style={personalStyles.fileCard}>
                   <View style={personalStyles.fileLeft}>
                     <View style={personalStyles.fileIconContainer}>
-                      <Ionicons name="document-outline" size={28} color={colors.primary} />
+                      <Ionicons name="document-outline" size={28} color={palette.navy} />
                     </View>
                     <View style={personalStyles.fileDetails}>
-                      <Text numberOfLines={1} style={personalStyles.fileName}>{selectedFile.name}</Text>
+                      <Text numberOfLines={1} ellipsizeMode="middle" style={personalStyles.fileName}>{selectedFile.name}</Text>
                       <Text style={personalStyles.fileSize}>{formatFileSize(selectedFile.size)}</Text>
                     </View>
                   </View>
@@ -424,7 +439,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
                       disabled={isSubmitting}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="eye-outline" size={20} color={colors.gray600} />
+                      <Ionicons name="eye-outline" size={20} color={palette.textBody} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={personalStyles.actionButton}
@@ -432,7 +447,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
                       disabled={isSubmitting}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="close-circle" size={20} color={colors.error} />
+                      <Ionicons name="close-circle" size={20} color={palette.danger} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -454,7 +469,7 @@ const CreatePersonalEvent: React.FC<PersonalEventProps> = ({ navigation, route }
               activeOpacity={0.8}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color={colors.white} />
+                <ActivityIndicator size="small" color={palette.surface} />
               ) : (
                 <Text style={commonStyles.primaryButtonText}>{t('personal:button.save')}</Text>
               )}

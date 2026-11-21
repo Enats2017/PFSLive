@@ -1,19 +1,20 @@
 import { StyleSheet } from "react-native";
-import { colors, spacing } from "./common.styles";
+import { spacing, palette, fonts, radii, space } from "./common.styles";
 
 export const fanstyle = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: spacing.xxxxl,
   },
   section: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
     paddingTop: spacing.md,
   },
   navCard: {
-    backgroundColor: colors.primary,
-    borderRadius: spacing.sm,
+    backgroundColor: palette.navy,
+    borderRadius: radii.md,
     paddingVertical: spacing.sm, // was: padding: spacing.md (all sides)
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
@@ -33,20 +34,21 @@ export const fanstyle = StyleSheet.create({
     flex: 1,
   },
   navTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: colors.white,
+    fontFamily: fonts.display,
+        fontSize: 15,
+    color: palette.surface,
     letterSpacing: 0.4,
     marginBottom: spacing.xs,
     textTransform: "uppercase",
   },
   navSub: {
-    fontSize: 13,
+    fontFamily: fonts.body,
+        fontSize: 14,
     color: "rgba(255,255,255,0.65)",
-    lineHeight: 18,
+    lineHeight: 19,
   },
   nextEventsSection: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
     paddingTop: spacing.xs,
   },
 
@@ -57,21 +59,25 @@ export const fanstyle = StyleSheet.create({
     marginBottom: spacing.md,
   },
   nextEventsTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: colors.primaryDark,
+    fontFamily: fonts.display,
+        fontSize: 15,
+    color: palette.ink,
     letterSpacing: 0.8,
     textTransform: "uppercase",
+    // flexShrink here, 0 on View all: nl "VOLGENDE EVENEMENTEN" + "Alles
+    // bekijken" = 314pt in 280 at 320 pushed View all off-screen (audit 2026-10-22)
+    flexShrink: 1,
   },
   viewAllBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
+    flexShrink: 0,
   },
   viewAllText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.primary,
+    fontFamily: fonts.bodySemi,
+        fontSize: 14,
+    color: palette.navy,
   },
 
   sliderContent: {
@@ -79,14 +85,32 @@ export const fanstyle = StyleSheet.create({
     paddingRight: 4,
     paddingBottom: 4,
   },
+  // "Next events" failed to load: message + Try again (NextEventsPlaceholder)
+  nextEventsError: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: space.sm,
+    paddingVertical: spacing.md,
+  },
+  nextEventsErrorText: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: palette.textMuted,
+    flexShrink: 1,
+  },
 
   eventCard: {
     width: 160,
-    backgroundColor: colors.white,
+    // Fills its touchable, which the horizontal row stretches to the tallest
+    // card: every "Next events" card is the same height whatever the name's
+    // length (a 2-line name made its card taller than the rest).
+    flex: 1,
+    backgroundColor: palette.surface,
     borderRadius: 14,
     overflow: "hidden",
     borderWidth: 0.5,
-    borderColor: "#e5e8ef",
+    borderColor: palette.border,
   },
   eventImg: {
     width: 160,
@@ -110,21 +134,29 @@ export const fanstyle = StyleSheet.create({
   // },
   eventInfo: {
     padding: 12,
+    // name at the top, date row pinned to the bottom — the same layout in
+    // every card of the row
+    flex: 1,
+    justifyContent: "space-between",
   },
   eventName: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.primaryDark,
-    marginBottom: 5,
+    fontFamily: fonts.bodySemi,
+        fontSize: 14,
+    color: palette.ink,
+    marginBottom: 4,
   },
   eventDateRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 5,
+    gap: space.sm,
   },
   eventDate: {
-    fontSize: 12,
-    color: "#5a6880",
+    fontFamily: fonts.body,
+        fontSize: 13,
+    color: palette.textMuted,
+    // flexShrink: "25 September 2026" at x1.35 pushed the calendar icon out of
+    // the 136pt card body (audit 2026-10-22)
+    flexShrink: 1,
   },
 });

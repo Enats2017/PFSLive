@@ -1,7 +1,7 @@
 {
   "loading_route": "Loading route...",
   "error_loading_route": "Failed to load route",
-  "elevation_profile": "Elevation Profile",
+  "elevation_profile": "Elevation profile",
   "map": {
     "follow_mode": "Following",
     "overview_mode": "Overview"

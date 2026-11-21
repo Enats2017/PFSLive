@@ -122,6 +122,12 @@ import ContactEN from './Contactfeedbackscreen/en.json';
 import ContactFR from './Contactfeedbackscreen/fr.json';
 import ContactNL from './Contactfeedbackscreen/nl.json';
 
+// ✅ READINESS — Get race-ready flow, home readiness card, notifications
+// screen, follow pre-prompt, countdown, share link, idle home
+import ReadinessEN from './Readiness/en.json';
+import ReadinessFR from './Readiness/fr.json';
+import ReadinessNL from './Readiness/nl.json';
+
 
 
 
@@ -293,7 +299,8 @@ i18n.use(initReactI18next).init({
       follow:FollowerSrceenEN, 
       ownProfile:OwnProfileEN,
       membership:MembershipEN,
-      contact:ContactEN
+      contact:ContactEN,
+      readiness:ReadinessEN
     },
     fr: {
       common: commonFR,
@@ -322,7 +329,8 @@ i18n.use(initReactI18next).init({
       follow:FollowerSrceenFR, 
       ownProfile:OwnProfileFR,
       membership:MembershipFR,
-      contact:ContactFR
+      contact:ContactFR,
+      readiness:ReadinessFR
     },
     nl: {
       common: commonNL,
@@ -351,7 +359,8 @@ i18n.use(initReactI18next).init({
       follow:FollowerSrceenNL,
       ownProfile:OwnProfileNL,
       membership:MembershipNL,
-      contact:ContactNL 
+      contact:ContactNL,
+      readiness:ReadinessNL
     },
   },
   lng: initialLanguage,
@@ -383,7 +392,8 @@ i18n.use(initReactI18next).init({
     'follow',
     'ownProfile',
     'membership',
-    'contact'
+    'contact',
+    'readiness'
   ],
   interpolation: {
     escapeValue: false,

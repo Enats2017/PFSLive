@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
     ScrollView,
-    StatusBar,
     Text,
     TouchableOpacity,
     View,
@@ -10,7 +9,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette, space } from '../../styles/common.styles';
+import { useSearchFieldKeyboard } from '../../hooks/useKeyboardHeight';
 import { particpant } from '../../styles/participantscreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
@@ -20,45 +20,41 @@ import { SuggestionItem } from '../../services/followerScreenService';
 import SuggestionDropdown from '../../components/SuggestionDropdown';
 import useSearchSuggestions from '../../hooks/useSearchSuggestions';
 import { useDimensions } from '../../hooks/useDimensions';
-import { eventService, EventItem } from '../../services/followerEvent';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { fanstyle } from '../../styles/fan.styles';
 import EventCard from '../../components/EventCard';
+import NextEventsPlaceholder from '../../components/NextEventsPlaceholder';
+import { useNextEvents } from '../../hooks/useNextEvents';
 
 const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['participant']);
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width
-    const [events, setEvents] = useState<EventItem[]>([]);
+    // width > height: `= width` was always truthy (audit 2026-10-22)
+    const isLandscape = width > height;
+    // Notched iPhones in landscape get edges ['bottom'] below — keep the body
+    // clear of the notch (audit 2026-10-22)
+    const sidePadding = useLandscapeSidePadding();
+    // ✅ The search's suggestions opened behind the keyboard (audit 2026-10-23):
+    // room for the keyboard at the end, the search scrolled to the top
+    // (useKeyboardHeight.ts).
+    const scrollRef = useRef<ScrollView>(null);
+    const searchSectionY = useRef(0);
+    const { keyboardPad, focusAt, blur } = useSearchFieldKeyboard((y) => {
+        scrollRef.current?.scrollTo({ y, animated: true });
+    });
+    // "Next events": loading / failed states too — the row was blank on a slow
+    // network (developer report 2026-10-29; hooks/useNextEvents).
+    const { events, status: eventsStatus, reload: reloadEvents } = useNextEvents();
     const [visibleCount, setVisibleCount] = useState(3);
 
-    const liveUpcoming = useSearchSuggestions('filter_name', ['live', 'upcoming']);
-
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const [page1, page2] = await Promise.all([
-                    eventService.getEvents({ page_live: 1, page_upcoming: 1 }),
-                    eventService.getEvents({ page_live: 2, page_upcoming: 2 }),
-                ]);
-                const seen = new Set<string>();
-                const unique = [
-                    ...page1.tabs.live,
-                    ...page2.tabs.live,
-                    ...page1.tabs.upcoming,
-                    ...page2.tabs.upcoming,
-                ].filter(e => {
-                    if (seen.has(e.product_app_id)) return false;
-                    seen.add(e.product_app_id);
-                    return true;
-                });
-                setEvents(unique.slice(0, 6));
-            } catch { }
-        };
-        load();
-    }, []);
+    // Both keys: this screen's search lists past events alongside live/upcoming.
+    const liveUpcoming = useSearchSuggestions(
+        ['filter_name', 'filter_name_past_suggestion'],
+        ['live', 'upcoming', 'past'],
+    );
 
     const handlePersonalEventPress = useCallback(async () => {
         try {
@@ -90,18 +86,21 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
 
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
+            <AppHeader title={t('common:band.participantHub')} showBack />
             <ScrollView
+                ref={scrollRef}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: spacing.xxxxl }}
+                contentContainerStyle={[{ paddingBottom: spacing.xxxxl + keyboardPad }, sidePadding]}
             >
-                <View style={{ zIndex: 50, elevation: 30 }}>
-                    <View style={particpant.yellowHeader}>
-                        <Feather name="radio" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                        <Text style={commonStyles.title}>
+                <View
+                    style={{ zIndex: 50, elevation: 30 }}
+                    onLayout={(e) => { searchSectionY.current = e.nativeEvent.layout.y; }}
+                >
+                    <View style={particpant.sectionLabel}>
+                        <Feather name="radio" size={14} color={palette.lime} />
+                        <Text style={particpant.sectionLabelText}>
                             {t('participant:liveTracking.title')}
                         </Text>
                     </View>
@@ -112,6 +111,9 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                                 value={liveUpcoming.query}
                                 onChangeText={liveUpcoming.handleSearch}
                                 icon="search"
+                                framed={false}
+                                onFocus={() => focusAt(searchSectionY.current)}
+                                onBlur={blur}
                             />
                             <SuggestionDropdown
                                 suggestions={liveUpcoming.suggestions}
@@ -121,11 +123,11 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                             />
                         </View>
                         <TouchableOpacity
-                            style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.md }]}
+                            style={[commonStyles.primaryButton, { flexDirection: 'row' }]}
                             onPress={() => navigation.navigate('ParticipantEvent')}
                             activeOpacity={0.8}
                         >
-                            <Feather name="calendar" size={15} color="#fff" style={{ marginRight: 8 }} />
+                            <Feather name="calendar" size={15} color={palette.surface} style={{ marginRight: 8 }} />
                             <Text style={commonStyles.primaryButtonText}>
                                 {t('participant:liveTracking.showAll')}
                             </Text>
@@ -134,53 +136,59 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                 </View>
                 <View style={particpant.dividerRow}>
                     <View style={particpant.dividerLine} />
-
+                    <Text style={particpant.dividerOr}>{t('common:or')}</Text>
+                    <View style={particpant.dividerLine} />
                 </View>
-                <View style={particpant.yellowHeader}>
-                    <Feather name="plus-circle" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                    <Text style={commonStyles.title}>
+                <View style={particpant.sectionLabel}>
+                    <Feather name="plus-circle" size={18} color={palette.ink} style={{ marginRight: 8 }} />
+                    <Text style={particpant.sectionLabelText}>
                         {t('participant:personalRace.title')}
                     </Text>
                 </View>
                 <View style={particpant.section}>
                     <View style={particpant.infoCard}>
-                        <MaterialCommunityIcons name="map-marker-path" size={22} color={colors.themeiColor} />
-                        <Text style={[commonStyles.text, { lineHeight: 20 }]}>
+                        <MaterialCommunityIcons name="map-marker-path" size={22} color={palette.lime} />
+                        {/* `infoCard` is a ROW: without flex the text sized to
+                            its content and ran outside the card instead of
+                            wrapping inside it. */}
+                        <Text style={[commonStyles.text, { flex: 1, minWidth: 0, lineHeight: 20 }]}>
                             {t('participant:personalRace.description')}
                         </Text>
                     </View>
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, { flexDirection: 'row' }]}
+                        style={commonStyles.limeButton}
                         onPress={handlePersonalEventPress}
                         activeOpacity={0.8}
                     >
-                        <Feather name="plus" size={15} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={commonStyles.primaryButtonText}>
+                        <Feather name="plus" size={15} color={palette.ink} style={{ marginRight: 8 }} />
+                        <Text style={commonStyles.limeButtonText}>
                             {t('participant:personalRace.createButton')}
                         </Text>
                     </TouchableOpacity>
                 </View>
                 <View style={particpant.dividerRow}>
-                    <View style={particpant.dividerLine} />
+                    {/* <View style={particpant.dividerLine} /> */}
 
                 </View>
-                <View style={{paddingHorizontal:spacing.md}}>
+                <View style={{paddingHorizontal: space.xl}}>
                 <View style={fanstyle.nextEventsHeader}>
-                    <Text style={fanstyle.nextEventsTitle}>{t('participant:nextevetn')}</Text>
+                    <Text style={fanstyle.nextEventsTitle}>{t('participant:nextEvents')}</Text>
                     <TouchableOpacity
                         style={fanstyle.viewAllBtn}
                         onPress={() => navigation.navigate('ParticipantEvent')}
                         activeOpacity={0.7}
                     >
                         <Text style={fanstyle.viewAllText}>{t('participant:viewAll')}</Text>
-                        <Feather name="chevron-right" size={14} color={colors.primary} />
+                        <Feather name="chevron-right" size={14} color={palette.navy} />
                     </TouchableOpacity>
                 </View>
+                <NextEventsPlaceholder status={eventsStatus} onRetry={reloadEvents} t={t} />
+                {eventsStatus === 'ready' && (
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={{
-                        gap: 10,
+                        gap: space.md,
                         paddingRight: 4,
                         paddingBottom: 4,
                     }}
@@ -201,6 +209,7 @@ const ParticipantScreen: React.FC<ParticipantScreenpops> = () => {
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
+                )}
                 </View>
             </ScrollView>
         </SafeAreaView>

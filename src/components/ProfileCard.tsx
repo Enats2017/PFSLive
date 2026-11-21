@@ -4,11 +4,13 @@ import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useNavigation } from '@react-navigation/native';
-import { commonStyles, spacing } from '../styles/common.styles';
+import { commonStyles, spacing, palette } from '../styles/common.styles';
 import { AthleteProfile } from '../services/athleteProfileService';
 import { profileStyles } from '../styles/Profile.styles';
 import { API_CONFIG } from '../constants/config';
 import { useTranslation } from 'react-i18next';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types/navigation';
 
 interface ProfileCardProps {
     profile: AthleteProfile | null;
@@ -27,11 +29,11 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
     isFollowLoading,
     onToggleFollow,
 }) => {
-    const { t } = useTranslation(['follower', 'profile']);
-    const navigation = useNavigation();
+    const { t } = useTranslation(['follower', 'profile', 'ownProfile']);
+        const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
     const fullName = profile
-        ? `${profile.firstname} ${profile.lastname}`.toUpperCase()
+        ? `${profile.firstname} ${profile.lastname}`
         : '';
 
     const isOwn = profile?.is_own_profile === 1;
@@ -47,11 +49,8 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
 
     return (
         <View style={profileStyles.profileCard}>
-            <Text style={[commonStyles.title, { marginBottom: spacing.sm }]}>
-                {fullName || '—'}
-            </Text>
-
-            <View style={profileStyles.avatarWrapper}>
+            <View style={profileStyles.identityRow}>
+                <View style={profileStyles.avatarWrapper}>
                 <View style={profileStyles.avatar}>
                     {profile?.profile_picture ? (
                         <Image
@@ -60,7 +59,7 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                             style={profileStyles.avatar}
                         />
                     ) : (
-                        <Ionicons name="person" size={50} color="#555" />
+                        <Ionicons name="person" size={50} color={palette.textMuted} />
                     )}
                 </View>
                 {isOwn && (
@@ -68,9 +67,54 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                         style={profileStyles.editIcon}
                         onPress={() => navigation.navigate('EditProfileScreen' as never)}
                     >
-                        <FontAwesome name="pencil" size={14} color="#fff" />
+                        <FontAwesome name="pencil" size={14} color={palette.surface} />
                     </TouchableOpacity>
                 )}
+                </View>
+
+                <View style={profileStyles.identityText}>{/* ✅ name: 2 lines (layout audit 2026-10-22) - a long name at 20pt was cut */}
+                    <Text style={profileStyles.identityName} numberOfLines={2}>
+                        {fullName || '—'}
+                    </Text>
+                    {!!(profile?.city || profile?.country) && (
+                        <Text style={profileStyles.identityPlace} numberOfLines={2}>
+                            {[profile?.city, profile?.country].filter(Boolean).join(' · ')}
+                        </Text>
+                    )}
+
+                    {/* ✅ Split into pressable segments for followers/following, races stays plain */}
+                    {/* Wraps (2026-10-22): "123 Courses 1234 Abonnés 123 Abonnements" needs
+                        ~260-300pt, the column beside the avatar has 232-302pt, so the
+                        last count ended in "…" on most phones. Each count stays whole. */}
+                    <View style={profileStyles.identityMetaRow}>
+                        <Text style={profileStyles.identityMeta} numberOfLines={1}>
+                            {`${profile?.races_count ?? 0} ${t('ownProfile:profile.races')}`}
+                        </Text>
+
+                        <TouchableOpacity
+                             onPress={() =>navigation.navigate('FollowersList', {customer_app_id})}
+                            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                        >
+                            <Text style={profileStyles.identityMeta} numberOfLines={1}>
+                                {`${profile?.followers_count ?? 0} ${t('ownProfile:profile.followers')}`}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() =>
+                                navigation.navigate('UserFavouriteList', {
+                                    customer_app_id
+                            })
+                            }
+        
+                            hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                        >
+                            <Text style={profileStyles.identityMeta} numberOfLines={1}>
+                                {`${profile?.following_count ?? 0} ${t('ownProfile:profile.following')}`}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
 
             {/* ✅ BUTTON - FULL WIDTH */}
@@ -79,9 +123,8 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                     style={[
                         commonStyles.primaryButton,
                         {
-                            width: '90%',
-                            alignSelf: 'center',
-                            marginTop: spacing.sm,
+                            alignSelf: 'stretch',
+                            marginTop: spacing.md,
                         }
                     ]}
                     onPress={() => navigation.navigate('EditProfileScreen' as never)}
@@ -96,9 +139,8 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                     style={[
                         commonStyles.primaryButton,
                         {
-                            width: '90%',
-                            alignSelf: 'center',
-                            marginTop: spacing.sm,
+                            alignSelf: 'stretch',
+                            marginTop: spacing.md,
                             flexDirection: 'row',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -110,14 +152,14 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
                     activeOpacity={0.8}
                 >
                     {isFollowLoading ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <ActivityIndicator size="small" color={palette.surface} />
                     ) : (
                         <>
                             <Ionicons
                                 name={isFollowed ? 'heart' : 'heart-outline'}
                                 size={16}
-                                color="#fff"
-                                style={{ marginRight: 6 }}
+                                color={palette.surface}
+                                style={{ marginRight: 8 }}
                             />
                             <Text style={commonStyles.primaryButtonText}>
                                 {isFollowed
@@ -141,6 +183,7 @@ const ProfileCard: React.FC<ProfileCardProps> = React.memo(({
         prevProps.profile?.firstname === nextProps.profile?.firstname &&
         prevProps.profile?.lastname === nextProps.profile?.lastname &&
         prevProps.profile?.profile_picture === nextProps.profile?.profile_picture &&
+        prevProps.profile?.device_id === nextProps.profile?.device_id &&
         prevProps.profile?.is_own_profile === nextProps.profile?.is_own_profile &&
         prevProps.password_protected === nextProps.password_protected
     );

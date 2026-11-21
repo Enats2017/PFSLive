@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView,Dimensions } from 'react-native';
+import { View, Text, ScrollView,Dimensions, useWindowDimensions } from 'react-native';
+import { isNarrowWidth } from '../../utils/screenFit';
 import { useTranslation } from 'react-i18next';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
-import { commonStyles, spacing, typography } from '../../styles/common.styles';
+import { commonStyles, spacing, typography, palette, fonts } from '../../styles/common.styles';
 import { Entypo } from '@expo/vector-icons';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { CheckpointDetail, RaceInfo, ResultDetailEvent } from '../../services/resultDetailsService';
 import ElevationChart from '../../components/ElevationChart';
 import { useGpxElevation } from '../../hooks/useGpxElevation';
 import { formatClockTime } from '../../utils/timeFormat';
-import { formatWave } from '../../utils/waveLabel';
+import { stripWavePrefix } from '../../utils/waveLabel';
 import { raceLiveStatus, effectiveParticipantStatus } from './resultDetailView';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
@@ -38,6 +39,8 @@ interface RaceLiveProps {
 
 const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => {
     const { t } = useTranslation(['resultdetails', 'common']);
+    // 12pt headings only below 360pt; 14pt fits the column from 360pt (verify pass 2026-10-22)
+    const narrow = isNarrowWidth(useWindowDimensions().width);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
     const { points: gpxPoints, loading: gpxLoading } = useGpxElevation(event?.gpx_url);
@@ -100,39 +103,53 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
             showsVerticalScrollIndicator={false}
         >
             <View style={[resultInfoStyles.card, { marginBottom: 20 }]}>
-                <View style={resultInfoStyles.headerBar}>
-                    <View style={[resultInfoStyles.headerGreen]}>
-                        <Text style={resultInfoStyles.text}>
-                            {t(`status.${liveStatus}`)}
-                        </Text>
-                    </View>
-                    <View style={resultInfoStyles.diagLeft} />
-                    <View style={resultInfoStyles.headerMiddle} />
-                    <View style={resultInfoStyles.diagRight} />
-                    <View style={resultInfoStyles.headerRed}>
-                        <Text
-                            style={resultInfoStyles.text}
-                            numberOfLines={1}
-                            adjustsFontSizeToFit
-                            minimumFontScale={0.7}
-                        >
-                            {event?.distance_name ?? '—'}
-                        </Text>
-                    </View>
+                {/* 29_RaceInfo.png: a small-caps section label, then label/value
+                    rows. Status and distance were chips left over from the old
+                    two-tone banner. */}
+                <Text style={resultInfoStyles.sectionLabel}>{t('raceInfo.raceResult')}</Text>
+
+                {/* rowLabelFixed / rowValueEnd on these rows: the value never
+                    shrank, so a long one crushed the label ("Distance" broke a
+                    letter per line) or ran past the card edge at 320pt. */}
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.status')}</Text>
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={1}>
+                        {t(`status.${liveStatus}`)}
+                    </Text>
                 </View>
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.title}>{raceInfo?.bib ?? '—'}</Text>
-                    <Text style={commonStyles.title}>{raceInfo?.name ?? '—'}</Text>
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.distance')}</Text>
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={2}>
+                        {event?.distance_name ?? '—'}
+                    </Text>
                 </View>
-                 {raceInfo?.wave && (
+
+                {/* The runner's name was a bare heading wedged between two
+                    label/value rows. It reads as one of them now, matching the
+                    Distance row above it. */}
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.runner')}</Text>
+                    {/* 2 lines (was 1): long names / team names were cut to "…" */}
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]} numberOfLines={2}>
+                        {raceInfo?.name ?? '—'}
+                    </Text>
+                </View>
+                <View style={resultInfoStyles.bibCard}>
+                    <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.bib', 'Bib')}</Text>
+                    <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]}>{raceInfo?.bib ?? '—'}</Text>
+                </View>
+                 {!!raceInfo?.wave && (
                     <View style={resultInfoStyles.bibCard}>
-                        <Text style={commonStyles.title}>{formatWave(t('raceInfo.wavelabel'), raceInfo?.wave)}</Text>
+                        <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.wavelabel')}</Text>
+                        {/* Value only — the label above already says "wave", so the
+                            raw RR value ("Wave 1: Start @ 9h") said it twice, stacked. */}
+                        <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]}>{stripWavePrefix(raceInfo?.wave)}</Text>
                     </View>
                 )}
 
                 <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.subtitle}>{t('raceInfo.raceTime')}</Text>
+                    <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.raceTime')}</Text>
                     <Text style={resultInfoStyles.raceTimeText}>
                         {hasClock ? formatSeconds(elapsedSeconds) : '—'}
                     </Text>
@@ -140,12 +157,17 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
 
                 {raceInfo?.next_cp && (
                     <View style={[resultListStyle.card, {
+                        // the list card's 20pt side margin pulled it in inside
+                        // this card; full width like every row above it
+                        marginHorizontal: 0,
                         borderWidth: 0.28,
                         borderLeftWidth: 0.28,
-                        borderColor: '#FF3B30',
+                        borderColor: palette.danger,
                     }]}>
-                        <View style={resultInfoStyles.bibCard}>
-                            <Text style={commonStyles.subtitle}>
+                        {/* A column (was the bibCard ROW): label on top, then the
+                            name, the time and the countdown under it. */}
+                        <View style={resultInfoStyles.timingBlock}>
+                            <Text style={resultInfoStyles.rowLabel}>
                                 {t('raceInfo.nextTimingPoint')}
                             </Text>
                             <Text style={resultInfoStyles.timingPointDate}>
@@ -167,8 +189,9 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                 )}
 
                 {raceInfo?.previous_cp && (
-                    <View style={resultInfoStyles.bibCard}>
-                        <Text style={commonStyles.subtitle}>
+                    // A column (was the bibCard ROW) — see the next-timing-point block.
+                    <View style={resultInfoStyles.timingBlock}>
+                        <Text style={resultInfoStyles.rowLabel}>
                             {t('raceInfo.previousTimingPoint')}
                         </Text>
                         <Text style={resultInfoStyles.timingPointDate}>
@@ -180,12 +203,9 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                                 : formatClockTime(raceInfo.previous_cp.actual_time) || '—'
                             }
                         </Text>
-                        <View style={[resultInfoStyles.headerBar, {
-                            paddingTop: spacing.sm,
-                            gap: spacing.sm,
-                        }]}>
-                            <Entypo name="stopwatch" size={24} color="black" />
-                            <Text style={commonStyles.title}>
+                        <View style={resultInfoStyles.iconRow}>
+                            <Entypo name="stopwatch" size={24} color={palette.ink} />
+                            <Text style={resultInfoStyles.rowValue}>
                                 {raceInfo.previous_cp.race_time || '—'}
                             </Text>
                         </View>
@@ -214,20 +234,23 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                                 i === 1 && resultInfoStyles.rankingColBorder,
                             ]}
                         >
-                            <Text style={[commonStyles.subtitle, { textAlign: 'center', marginBottom: 8 }]}>
+                            {/* 12pt, capped at x1: at 14pt "Classement" / "Klassement"
+                                (~77pt) broke mid-word in the ~58-72pt columns at
+                                320-360pt. Values: up to 2 lines, shrinking to fit,
+                                instead of wrapping freely ("12 / 345 Vrouwen" is
+                                166pt at 20pt); rankingCol's space-between lines
+                                them up at the bottom. */}
+                            <Text style={[resultInfoStyles.rankingLabel, narrow && resultInfoStyles.rankingLabelSmall]} maxFontSizeMultiplier={1}>
                                 {t(item.labelKey)}
                             </Text>
-                            <Text style={[commonStyles.title,{textAlign:'center', fontSize:typography.sizes.lg}]}>{item.value}</Text>
+                            <Text style={resultInfoStyles.rankingValue} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.6}>{item.value}</Text>
                         </View>
                     ))}
                 </View>
 
                 <View style={resultInfoStyles.statsCard}>
                     <View style={resultInfoStyles.statsCol}>
-                        <Text style={[commonStyles.subtitle, {
-                            textAlign: 'center',
-                            marginBottom: 8,
-                        }]}>
+                        <Text style={resultInfoStyles.rankingLabel}>
                             {t('raceInfo.distanceCompleted')}
                         </Text>
                         <Text style={resultInfoStyles.raceTimeText}>
@@ -238,10 +261,7 @@ const RaceLive: React.FC<RaceLiveProps> = ({ raceInfo, event, checkpoints }) => 
                     </View>
                     <View style={resultInfoStyles.statsColBorder} />
                     <View style={resultInfoStyles.statsCol}>
-                        <Text style={[commonStyles.subtitle, {
-                            textAlign: 'center',
-                            marginBottom: 8,
-                        }]}>
+                        <Text style={resultInfoStyles.rankingLabel}>
                             {t('raceInfo.elevationGain')}
                         </Text>
                         <Text style={resultInfoStyles.raceTimeText}>

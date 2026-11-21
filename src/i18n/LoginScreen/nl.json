@@ -55,5 +55,7 @@
       "deviceIdTitle": "Apparaat niet herkend",
       "deviceId": "We konden deze telefoon niet identificeren. Herstart de app en probeer het opnieuw."
     }
-  }
+  },
+  "createAccount": "Account aanmaken",
+  "noAccountNote": "Het meeste van Livio werkt zonder account — je hebt er alleen een nodig om te racen of te volgen."
 }

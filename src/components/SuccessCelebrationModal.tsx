@@ -6,10 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, commonStyles } from '../styles/common.styles';
+import { commonStyles, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
+import { dialogTone, useCompactDialog } from './ui';
+import { useTranslation } from 'react-i18next';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
 
 interface SuccessCelebrationModalProps {
   visible: boolean;
@@ -18,14 +22,19 @@ interface SuccessCelebrationModalProps {
   title:string,
 }
 
-const { width } = Dimensions.get('window');
-
 const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
   visible,
   message,
   title = "Registration Successful!",
   onClose,
 }) => {
+  const { t } = useTranslation();
+  // ✅ The live window width, not Dimensions at import time (device test
+  // 2026-10-23): in landscape the confetti only fell over the left part of the
+  // screen (the portrait width).
+  const { width } = useWindowDimensions();
+  // ✅ Landscape: no icon, tighter card (device test 2026-10-23). Portrait: unchanged.
+  const cd = useCompactDialog();
   const confettiAnims = useRef(
     Array.from({ length: 20 }, () => ({
       translateY: new Animated.Value(0),
@@ -76,7 +85,7 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
   };
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="fade"
@@ -96,11 +105,11 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
               left: Math.random() * width,
               top: -20,
               backgroundColor: [
-                colors.primary,
-                colors.success,
-                '#FFD700',
-                '#FF69B4',
-                '#00CED1',
+                palette.navy,
+                palette.lime,
+                palette.lime,
+                palette.navy,
+                palette.navyLift,
               ][index % 5],
               transform: [
                 { translateY: anim.translateY },
@@ -113,37 +122,49 @@ const SuccessCelebrationModal: React.FC<SuccessCelebrationModalProps> = ({
       ))}
 
       {/* Content */}
-      <View style={styles.wrapper}>
-        <View style={styles.card}>
-          {/* ✅ CLOSE BUTTON (TOP RIGHT X) */}
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={handleClose}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="close" size={24} color="#64748b" />
-          </TouchableOpacity>
+      {/* ModalScroll: at 320pt tall (landscape) the card was taller than the
+          screen — the X (top 16) and Got it were off-screen (audit 2026-10-22) */}
+      <View style={[styles.wrapper, cd.s.wrapper]}>
+        <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
+          <View style={[styles.card, cd.s.card]}>
+            {/* ✅ CLOSE BUTTON (TOP RIGHT X) */}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={handleClose}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={24} color={palette.textMuted} />
+            </TouchableOpacity>
 
-          {/* Success Icon */}
-          <View style={styles.iconWrapper}>
-            <Ionicons name="checkmark-circle" size={80} color={colors.primary} />
+            {/* Success Icon */}
+            <View style={[styles.iconWrapper, { backgroundColor: dialogTone.success.ring }, cd.s.hide]}>
+              <Ionicons name="checkmark-circle" size={56} color={dialogTone.success.icon} />
+            </View>
+
+            {/* Title */}
+            {/* ✅ Compact: with the icon hidden the title is the top line, level with
+                the X — clearClose keeps a long title out from under it (2026-10-23) */}
+            <Text style={[styles.title, cd.s.title, cd.compact && styles.clearClose]}>{title}</Text>
+
+            {/* Message */}
+            <Text style={[styles.message, cd.s.message]}>{message}</Text>
+
+            {/* ✅ GOT IT BUTTON */}
+            {/* Primary, not secondary: across this app secondary means "the OTHER
+                choice" (cancel/close next to a primary). A lone acknowledge button
+                has no other choice to sit beside, so it is the primary — which is
+                what FeedbackSuccessModal and MembershipPlanModel already do. */}
+            <TouchableOpacity
+              style={[commonStyles.primaryButton, styles.button]}
+              onPress={handleClose}
+              activeOpacity={0.8}
+            >
+              <Text style={commonStyles.primaryButtonText}>
+                {t('common:buttons.gotIt')}
+              </Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Title */}
-          <Text style={styles.title}>{title}</Text>
-
-          {/* Message */}
-          <Text style={styles.message}>{message}</Text>
-
-          {/* ✅ GOT IT BUTTON */}
-          <TouchableOpacity
-            style={[commonStyles.primaryButton, styles.button]}
-            onPress={handleClose}
-            activeOpacity={0.8}
-          >
-            <Text style={commonStyles.primaryButtonText}>Got It!</Text>
-          </TouchableOpacity>
-        </View>
+        </ModalScroll>
       </View>
     </Modal>
   );
@@ -154,7 +175,7 @@ export default SuccessCelebrationModal;
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
   },
   wrapper: {
     flex: 1,
@@ -163,18 +184,15 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
+    ...shadows.overlay,
+
+    backgroundColor: palette.surface,
+    borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 40,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 12,
   },
   closeButton: {
     position: 'absolute',
@@ -183,32 +201,40 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: palette.fill,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
   },
   iconWrapper: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
     marginBottom: 12,
   },
   message: {
-    fontSize: 15,
-    color: '#64748b',
+    fontFamily: fonts.body,
+        fontSize: 14,
+    color: palette.textBody,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 25,
     marginBottom: 28,
     paddingHorizontal: 8,
   },
   button: {
     width: '100%',
-    backgroundColor: colors.primary,
+  },
+  clearClose: {
+    paddingHorizontal: 32,
   },
   confetti: {
     position: 'absolute',

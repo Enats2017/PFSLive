@@ -6,7 +6,6 @@ import {
     FlatList,
     ActivityIndicator,
     Dimensions,
-    StatusBar,
     ScrollView,
     useWindowDimensions,
 } from 'react-native';
@@ -15,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import { homeStyles } from '../../styles/home.styles';
 import PastTab from './PastTab';
@@ -28,6 +27,7 @@ import { tokenService } from '../../services/tokenService';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
@@ -35,10 +35,14 @@ const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
 const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     const { t } = useTranslation(['event', 'common']);
     const insets = useSafeAreaInsets(); 
-    const { width: windowWidth } = useDimensions(); // ← tablet/iPad fallback
+    const { width: windowWidth, height: windowHeight } = useDimensions(); // ← tablet/iPad fallback
     const [containerWidth, setContainerWidth] = useState(0);
     const width = containerWidth || windowWidth;
-    const isLandscape = windowWidth ;
+    // ✅ A real boolean (layout audit 2026-10-22): `windowWidth` alone was always
+    // truthy; the notch side padding is sidePadding on the body below AppHeader.
+    const isLandscape = windowWidth > windowHeight;
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
     const isGestureNav = insets.bottom > 0;
     const flatListRef = useRef<FlatList>(null);
     const activeTabRef = useRef<Tab>('Live');
@@ -312,11 +316,10 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
 
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={t('common:band.participantHub')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
             </SafeAreaView>
         );
@@ -324,9 +327,8 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showBack />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={t('common:band.participantHub')} showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -338,45 +340,52 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={t('common:band.participantHub')} showLogo={true} showBack />
+            {/* sidePadding on an outer View so the measured containerWidth below
+                is the padded width the pager pages must match. */}
+            <View style={[{ flex: 1 }, sidePadding]}>
             <View style={{ flex: 1 }} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
-                <View style={eventStyles.section}>
-                    <Text style={eventStyles.textCenter}>{t('event:official.title')}</Text>
-                </View>
+                {/* ✅ Sub-header — deck: one white band under the AppHeader holding
+                    the page label and its filter tabs. Was a full-width lime
+                    strip with a centred title. */}
+                <View style={[eventStyles.subHeader, isLandscape && eventStyles.subHeaderLandscape]}>
+                    <Text style={eventStyles.sectionLabel}>{t('event:official.title')}</Text>
 
-                {/* TAB BAR */}
-                <View style={eventStyles.tabBar}>
+                    {/* TAB BAR */}
+                    <View style={eventStyles.tabBar}>
                     {TABS.map((tab) => (
                         <TouchableOpacity
                             key={tab}
-                            style={eventStyles.tabItem}
+                            style={[eventStyles.tabItem, windowWidth < 360 && eventStyles.tabItemNarrow, activeTab === tab && eventStyles.tabItemActive]}
                             onPress={() => handleTabPress(tab)}
                             activeOpacity={0.7}
                         >
+                            {/* ✅ One line, shrunk to fit, capped at ×1.2 (layout
+                                audit 2026-10-22): "Binnenkort" / "Verleden" broke
+                                mid-word at 320pt and with larger text. */}
                             <Text
                                 style={[
                                     commonStyles.subtitle,
                                     activeTab === tab && eventStyles.activeTabText,
                                 ]}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.75}
+                                maxFontSizeMultiplier={1.2}
                             >
                                 {t(`event:live.${tab}`)}
                             </Text>
-                            {activeTab === tab && (
-                                <LinearGradient
-                                    colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={eventStyles.underline}
-                                />
-                            )}
                         </TouchableOpacity>
                     ))}
+                    </View>
                 </View>
 
                 {/* TAB CONTENT */}
-                <View>
+                {/* ✅ flex 1 (layout audit 2026-10-22): a plain View sized to its
+                    content, so each tab's list was as tall as all its rows and
+                    could not scroll to the end inside the screen. */}
+                <View style={{ flex: 1 }}>
                     <FlatList
                         ref={flatListRef}
                         data={TABS}
@@ -388,8 +397,8 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                         onMomentumScrollEnd={handleSwipe}
                         initialScrollIndex={TABS.indexOf('Live')}
                         contentContainerStyle={{
-
-                            paddingBottom: spacing.xxxxl,
+                            // landscape: no 90pt pad under the pages (device test 2026-10-23)
+                           
                             flexGrow: 1,
                         }}
                         scrollEnabled={true}
@@ -399,7 +408,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                             index,
                         })}
                         renderItem={({ item }) => (
-                            <View style={{ width }}>
+                            <View style={{ width: width, flex: 1 }}>
                                 {item === 'Past' && (
                                     <PastTab
                                         events={pastEvents}
@@ -428,6 +437,7 @@ const ParticipantEvent: React.FC<ParticipantEventProps> = ({ navigation }) => {
                         )}
                     />
                 </View>
+            </View>
             </View>
         </SafeAreaView>
     );

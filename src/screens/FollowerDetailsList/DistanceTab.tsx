@@ -3,21 +3,23 @@ import {
   View, Text, FlatList, ActivityIndicator,
   TouchableOpacity,
   StatusBar,
-  Dimensions
+  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { eventDetailService, Distance } from '../../services/eventDetailService';
 import { useNavigation } from '@react-navigation/native';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import CountdownBadge from '../../components/CountdownBadge';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatClockTime } from '../../utils/timeFormat';
+import { formatEventDate } from '../../utils/dateFormatter';
+import { distanceButtonsBelow, detailsHeaderImageLandscape, detailsHeaderImageFit } from '../../utils/screenFit';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
 import useGpxDownload, { canShowGpxButton } from '../../hooks/useGpxDownload';
@@ -110,29 +112,36 @@ const DistanceTab = ({
     [downloadGpx, event_name],
   );
 
+  // ✅ Header image capped in landscape (layout audit 2026-10-22): full width
+  // at 612:428 it was ~590pt tall there - taller than the screen. Portrait is
+  // unchanged.
+  const { width: headerWinWidth, height: headerWinHeight } = useWindowDimensions();
+  const headerLandscape = headerWinWidth > headerWinHeight;
+  const headerImageHeight = detailsHeaderImageLandscape(headerWinHeight);
+
   const renderListHeader = useCallback(() => (
     <>
       <View style={{ paddingTop: 2 }}>
         {event_image ? (
           <View
-            style={{
+            style={[{
               width: '100%',
               aspectRatio: 612 / 428,
               justifyContent: 'center',
               alignItems: 'center',
-            }}
+            }, headerLandscape && { aspectRatio: undefined, height: headerImageHeight }]}
           >
             {imageLoading && (
               <ActivityIndicator
                 size="large"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ position: 'absolute', zIndex: 1 }}
               />
             )}
 
             <Image
               source={{ uri: event_image }}
-              contentFit="cover"
+              contentFit={detailsHeaderImageFit(headerLandscape)}
               cachePolicy="memory-disk"
               style={{
                 width: '100%',
@@ -149,7 +158,11 @@ const DistanceTab = ({
         ) : null}
       </View>
     </>
-  ), [event_image, imageLoading]);
+  ), [event_image, imageLoading, headerLandscape, headerImageHeight]);
+
+  // Card: margin spacing.md + padding space.lg each side.
+  const { width: windowWidth, fontScale } = useWindowDimensions();
+  const buttonsBelow = distanceButtonsBelow(windowWidth - 2 * spacing.md - 2 * spacing.lg, fontScale);
 
   const renderItem = useCallback(({ item }: { item: Distance }) => {
     const isPast = sourceTab === 'past';
@@ -157,50 +170,55 @@ const DistanceTab = ({
     
     return (
       <View style={[commonStyles.card, { minHeight: 110, marginBottom: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.md }]}>
-        <View style={[detailsStyles.distance]}>
-          <View style={detailsStyles.distanceInfo}>
-            <Text style={[commonStyles.title, { marginBottom: spacing.xs }]} numberOfLines={2}>
-              {item.distance_name}
-            </Text>
+        {/* ✅ Distance name on its own full-width line, no line limit (layout
+            audit 2026-10-22): beside the button column it had ~99-169pt, so a
+            single nl word ("Recreatieloop" 141pt, "Wandeltocht" 132pt at 20pt)
+            broke mid-word at 360-414pt and long names were cut at 2 lines. */}
+        <Text style={[commonStyles.title, { marginBottom: spacing.xs }]}>
+          {item.distance_name}
+        </Text>
+        <View style={[detailsStyles.distance, buttonsBelow && detailsStyles.distanceStacked]}>
+          <View style={[detailsStyles.distanceInfo, buttonsBelow && detailsStyles.distanceInfoStacked]}>
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="calendar-outline" size={14} color={colors.gray600} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
-                {item.race_date_formatted}
+              <Ionicons name="calendar-outline" size={14} color={palette.textBody} />
+              <Text style={commonStyles.subtitle}>
+                {/* translated month (the API sends English) — client 2026-10-23 */}
+                {formatEventDate(item.race_date_formatted, t)}
               </Text>
             </View>
             <View style={detailsStyles.metaRow}>
-              <Ionicons name="time-outline" size={15} color={colors.gray600} />
-              <Text style={detailsStyles.metaText} numberOfLines={1}>
+              <Ionicons name="time-outline" size={15} color={palette.textBody} />
+              <Text style={commonStyles.subtitle} numberOfLines={1}>
                 {formatClockTime(item.race_time)}
               </Text>
             </View>
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Feather name="users" size={16} color={colors.gray500} />
-                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                <Feather name="users" size={16} color={palette.textMuted} />
+                <Text style={commonStyles.subtitle}>
                   {item.participant_started_count} {t('details:athletes')}
                 </Text>
               </View>
             )}
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="ribbon-outline" size={15} color={colors.gray600} />
-                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                <Ionicons name="ribbon-outline" size={15} color={palette.textBody} />
+                <Text style={commonStyles.subtitle}>
                   {item.finished_count} {t('details:finished')}
                 </Text>
               </View>
             )}
             {showResultsStats && (
               <View style={detailsStyles.metaRow}>
-                <Ionicons name="close-circle-outline" size={15} color={colors.gray600} />
-                <Text style={detailsStyles.metaText} numberOfLines={1}>
+                <Ionicons name="close-circle-outline" size={15} color={palette.textBody} />
+                <Text style={commonStyles.subtitlered}>
                   {item.dnf_count} {t('details:dnf')}
                 </Text>
               </View>
             )}
             {!isPast && (
               <View style={detailsStyles.metaRow}>
-                <MaterialCommunityIcons name="timer-sand" size={15} color={colors.gray600} />
+                <MaterialCommunityIcons name="timer-sand" size={15} color={palette.textBody} />
                 <CountdownBadge
                   days={item.countdown.days}
                   hours={item.countdown.hours}
@@ -210,12 +228,12 @@ const DistanceTab = ({
               </View>
             )}
           </View>
-          <View style={detailsStyles.verticalDivider} />
+          {!buttonsBelow && <View style={detailsStyles.verticalDivider} />}
 
-          <View style={{ gap: spacing.md }}>
+          <View style={buttonsBelow ? detailsStyles.distanceButtonsBelow : { gap: spacing.md }}>
             {showResults && (
               <TouchableOpacity
-                style={detailsStyles.resultsButton}
+                style={[detailsStyles.resultsButton, buttonsBelow && detailsStyles.distanceButtonFull]}
                   onPress={async () => {
                     analyticsService.logInteraction(
                       ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,      // was: not logged
@@ -236,8 +254,8 @@ const DistanceTab = ({
                   }}
                 activeOpacity={0.8}
               >
-                <Text style={[commonStyles.primaryButtonText,{fontSize: 11.5}]}>
-                  {/* PARTICIPANTS before race day, RESULTS from race day on (distanceButton.ts).
+                <Text style={detailsStyles.resultsButtonText}>
+                  {/* Participants before race day, Results from race day on (distanceButton.ts).
                       button.result stays as-is: RaceResultScreen still uses it. */}
                   {t(distanceButtonKind(item.race_date, item.countdown?.status) === 'participants'
                     ? 'button.participants'
@@ -247,7 +265,7 @@ const DistanceTab = ({
             )}
             {isLiveOrUpcoming && (
               <TouchableOpacity
-                style={detailsStyles.routeButton}
+                style={[detailsStyles.routeButton, buttonsBelow && detailsStyles.distanceButtonFull]}
                 onPress={async () => {
                   analyticsService.logInteraction(
                     ANALYTICS_SCREENS.FOLLOWER_EVENT_DETAILS,      // was: EVENT_DETAILS
@@ -268,8 +286,8 @@ const DistanceTab = ({
                 }}
                 activeOpacity={0.8}
               >
-                <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
-                  {t('details:map')}
+                <Text style={detailsStyles.routeButtonText}>
+                  {t('button.route')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -278,11 +296,11 @@ const DistanceTab = ({
                 tab and the participant one cannot drift apart. */}
             {canShowGpxButton(item, sourceTab, showGpx) && (
               <TouchableOpacity
-                style={detailsStyles.routeButton}
+                style={[detailsStyles.routeButton, buttonsBelow && detailsStyles.distanceButtonFull]}
                 onPress={() => handleDownloadGpx(item)}
                 activeOpacity={0.8}
               >
-                <Text style={[commonStyles.primaryButtonText, { fontSize: 11.5 }]}>
+                <Text style={detailsStyles.routeButtonText}>
                   {t('details:gpx')}
                 </Text>
               </TouchableOpacity>
@@ -291,19 +309,23 @@ const DistanceTab = ({
         </View>
       </View>
     );
-  }, [navigation, product_app_id, event_name, event_image, sourceTab, t, showResults, showResultsStats, handleDownloadGpx, showGpx]);
+  }, [navigation, product_app_id, event_name, event_image, sourceTab, t, showResults, showResultsStats, handleDownloadGpx, showGpx, buttonsBelow]);
 
   if (loading) {
     return (
       <View style={[commonStyles.centerContainer, { marginTop: 40 }]}>
-        <ActivityIndicator size="large" color={colors.success} />
+        <ActivityIndicator size="large" color={palette.lime} />
       </View>
     );
   }
 
   if (hasError && !loading) {
+    // A TAB, not a screen. The parent screen owns both insets - it renders
+    // AppHeader (which carries the status bar) inside its own SafeAreaView with
+    // edges={['bottom']}. A SafeAreaView here claimed 'top' a second time and
+    // pushed the error state down below the header, so this is a plain View.
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
+      <View style={commonStyles.container}>
         <StatusBar barStyle="dark-content" />
         <ErrorScreen
           type={error!.type}
@@ -311,18 +333,14 @@ const DistanceTab = ({
           message={error!.message}
           onRetry={() => { clearError(); fetchResults(); }}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
     <View style={{ flex: 1 }}>
       {results.length === 0 ? (
-        <View style={{ marginTop: 40, alignItems: 'center' }}>
-          <Text style={commonStyles.errorText}>
-            {t('result:noResults')}
-          </Text>
-        </View>
+        <ErrorScreen type="empty" title={t('result:noResults')} onRetry={() => { }} />
       ) : (
         <FlatList
           data={results}

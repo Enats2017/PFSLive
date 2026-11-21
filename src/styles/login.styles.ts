@@ -1,115 +1,93 @@
-import { StyleSheet, Platform } from 'react-native';
-import { colors, spacing, typography } from './common.styles';
+import { StyleSheet } from 'react-native';
+import { palette, space, fonts, type, radii } from './common.styles';
 
+// ✅ Redesign: 09_Login.png. The 250pt logo block is gone — the mark now sits in
+// the shared header, and the screen opens on a left-aligned hero instead of a
+// centred lockup, matching every other screen in the deck.
 export const loginStyles = StyleSheet.create({
-  // ✅ CONTAINER
   inner: {
     flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
   },
 
-  // ✅ HEADER
+  // Hero sits on white and is separated from the form by a hairline, as drawn.
   headerSection: {
-    alignItems: 'center',
-    marginBottom: spacing.sm,
+    paddingHorizontal: space.xl,
+    paddingTop: space.xxl,
+    paddingBottom: space.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
   },
-
-  cardscetion: {
-    alignSelf: 'stretch',
-  },
-
-  logo: {
-    width: '100%',
-    height: 250,
-  },
-
-  textSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  iconCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    borderWidth: 2,
-    borderColor: colors.primary + '30',
-  },
-
   title: {
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
-    marginBottom: spacing.xs,
-    textAlign: 'center',
+    ...type.h1,
   },
-
   subtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
-    textAlign: 'center',
+    ...type.small,
+    marginTop: space.sm,
   },
 
-  // ✅ FORM
   formSection: {
     flex: 1,
+    paddingHorizontal: space.xl,
+    paddingTop: space.xxl,
+    gap: space.lg,
   },
 
   forgotButton: {
     alignSelf: 'flex-end',
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
-    paddingVertical: spacing.xs,
+    // A text link still needs a real touch target. At 4pt padding this was about
+    // 26pt tall - well under the 44pt (iOS) / 48pt (Android) minimum - and it
+    // carried no hitSlop, so it read as "not clickable" rather than as a link
+    // that was merely hard to hit.
+    paddingVertical: space.md,
+    paddingHorizontal: space.xs,
+    minHeight: 44,
+    justifyContent: 'center',
   },
-
   forgotText: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
-    fontWeight: typography.weights.medium,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: palette.navy,
   },
 
-  // ✅ DIVIDER
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: spacing.xl,
+    marginVertical: space.xs,
   },
-
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.gray200,
+    backgroundColor: palette.border,
   },
-
   dividerText: {
-    marginHorizontal: spacing.md,
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
-    fontWeight: typography.weights.medium,
+    ...type.small,
+    marginHorizontal: space.md,
   },
 
-  // ✅ REGISTER LINK
   registerButton: {
+    minHeight: 56,
+    paddingVertical: 8,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: palette.navy,
+    backgroundColor: palette.surface,
     alignItems: 'center',
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.md,
+    justifyContent: 'center',
+    marginBottom: space.lg,
   },
-
   registerText: {
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
-    textAlign:"center",
-   
+    ...type.h3,
+    color: palette.navy,
   },
-
+  // The reassurance line at the foot of the screen.
+  accountNote: {
+    ...type.small,
+    textAlign: 'center',
+    marginTop: space.xl,
+    paddingHorizontal: space.xl,
+  },
   registerLink: {
-    color: colors.primary,
-    fontWeight: typography.weights.bold,
-    
+    fontFamily: fonts.bodySemi,
+    color: palette.navy,
   },
 });

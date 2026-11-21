@@ -11,10 +11,13 @@ import {
   ScrollView,
   Modal,
   Pressable,
+  LayoutChangeEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/common.styles';
+import { palette, radii, fonts, shadows, space, withAlpha } from '../styles/common.styles';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import { useModalSideInsets } from '../hooks/useLandscapeSidePadding';
 
 // ✅ TYPES
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -51,20 +54,26 @@ interface FloatingLabelInputProps extends Omit<TextInputProps, 'onChangeText'> {
 }
 
 // ✅ CONSTANTS
+// Repointed at the design tokens. These used to read the legacy palette, whose
+// navy was #0f2a3f rather than the approved #0F2447, and whose selected-row tint
+// was a pink (#fff5f5) that appears nowhere in the deck.
 const COLORS = {
-  ERROR:        colors.error,        // #DC143C
-  PRIMARY:      colors.primary,      // #0f2a3f
-  GRAY_LIGHT:   colors.inputBorder,  // #d1d5db
-  GRAY_MED:     colors.gray400,      // #9ca3af
-  GRAY_DARK:    colors.gray900,      // #111827
-  WHITE:        colors.white,        // #ffffff
-  BORDER_LIGHT: colors.inputBorderFocus, // #e5e7eb
-  BG_SELECTED:  colors.inputBgSelected,  // #fff5f5
-  BG_ITEM:      colors.inputBgItem,      // #f3f4f6
+  ERROR:        palette.danger,
+  PRIMARY:      palette.navy,
+  GRAY_LIGHT:   palette.inputBorder,
+  GRAY_MED:     palette.placeholder,
+  GRAY_DARK:    palette.inkSoft,
+  WHITE:        palette.surface,
+  BORDER_LIGHT: palette.border,
+  BG_SELECTED:  palette.noticeBg,
+  BG_ITEM:      palette.fill,
 } as const;
 
 const ANIMATION_DURATION = 200;
 const INPUT_HEIGHT = 56;
+// Read-only text fields: cursor (and so the scroll) at the start. One object, so
+// the prop is stable across renders.
+export const READ_ONLY_SELECTION = { start: 0, end: 0 };
 
 // ✅ Pure value <-> Date helpers (module-level — no component state needed)
 // Stored string formats: date = "YYYY-MM-DD", time = "HH:MM".
@@ -123,6 +132,8 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   pickerCancelLabel = 'Cancel',
    multiline = false,
   inputHeight = 120,
+  onFocus: onFocusProp,
+  onBlur: onBlurProp,
   ...props
 }) => {
   // ✅ STATE
@@ -168,6 +179,21 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
 
   const labelLeft = iconName ? 44 : 15;
 
+  // ✅ Measured field width, so the label's maxWidth can be an exact figure.
+  // A flat '75%' ignored the right-hand icon: in a half-width field (134pt at
+  // 320) the label at left 44 ran to ~145pt, i.e. under the chevron/calendar
+  // at w − 34 — fr "Date de naissance", nl "Geboortedatum" were cut mid-glyph
+  // with the icon painted over them (audit 2026-10-22).
+  const [fieldWidth, setFieldWidth] = useState(0);
+  const handleFieldLayout = useCallback(
+    (e: LayoutChangeEvent) => setFieldWidth(e.nativeEvent.layout.width),
+    [],
+  );
+  // Pickers / dropdowns always show a right icon; the password eye too. The
+  // clear button only appears once there is a value — and then the label has
+  // already floated onto the border, clear of it.
+  const hasRestingRightIcon = isDropdown || isDatePicker || isTimePicker || isPassword;
+
   const labelStyle = useMemo(() => ({
     position: 'absolute' as const,
     left: labelLeft,
@@ -182,7 +208,20 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     //
     // `right` was also keeping a long label clear of the clear/eye button in the
     // resting position; maxWidth does that job now without stretching the box.
-    maxWidth: '75%' as const,
+    //
+    // Resting (inside the field, vertically level with the right icon at
+    // `right: 14`, 20pt wide) it must stop 40pt short of the edge; floated onto
+    // the border it no longer meets the icon and may use the width up to the
+    // rounded corner (12pt). '75%' stays only as the pre-layout fallback.
+    maxWidth: fieldWidth > 0
+      ? animatedValue.interpolate({
+          inputRange: [0, 1],
+          outputRange: [
+            Math.max(0, fieldWidth - labelLeft - (hasRestingRightIcon ? 40 : 12)),
+            Math.max(0, fieldWidth - labelLeft - 12),
+          ],
+        })
+      : ('75%' as const),
     top: animatedValue.interpolate({
       inputRange: [0, 1],
       outputRange: [17, -9],
@@ -198,9 +237,10 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     backgroundColor: COLORS.WHITE,
     paddingHorizontal: 4,
     zIndex: 1,
-    fontWeight: '500' as const,
+    fontFamily: fonts.bodyMedium,
     letterSpacing: 0.3,
-  }), [animatedValue, labelLeft, error]);
+  }), [animatedValue, labelLeft, error, fieldWidth, hasRestingRightIcon]);
+
 
   // ══════════════════════════════════════════════════════════
   //  DATE / TIME PICKER CALLBACKS
@@ -259,8 +299,18 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     onChangeText('');
   }, [onChangeText]);
 
-  const handleFocus = useCallback(() => setIsFocused(true), []);
-  const handleBlur = useCallback(() => setIsFocused(false), []);
+  // ✅ Caller's onFocus/onBlur are chained, not spread: `{...props}` comes after
+  // onFocus={handleFocus} on the TextInput, so a caller's onFocus (Contact
+  // form's message field) silently replaced ours — the label never floated
+  // and the placeholder never showed on that field.
+  const handleFocus = useCallback<NonNullable<TextInputProps['onFocus']>>((e) => {
+    setIsFocused(true);
+    onFocusProp?.(e);
+  }, [onFocusProp]);
+  const handleBlur = useCallback<NonNullable<TextInputProps['onBlur']>>((e) => {
+    setIsFocused(false);
+    onBlurProp?.(e);
+  }, [onBlurProp]);
   const togglePassword = useCallback(() => setShowPassword(prev => !prev), []);
   const toggleDropdown = useCallback(() => setShowDropdown(prev => !prev), []);
 
@@ -290,6 +340,9 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     return showClearButton && !!value && !isPassword && !isDatePicker && !isTimePicker;
   }, [showClearButton, value, isPassword, isDatePicker, isTimePicker]);
 
+  // landscape: Cancel / Done clear of the camera (modals are outside any SafeAreaView)
+  const modalSides = useModalSideInsets();
+
   // ✅ Shared iOS bottom-sheet wrapper for either picker
   const renderIosPickerModal = (
     visible: boolean,
@@ -297,13 +350,13 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     onConfirm: () => void,
     picker: React.ReactNode,
   ) => (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="slide"
       onRequestClose={onCancel}
     >
-      <TouchableOpacity style={styles.pickerBackdrop} activeOpacity={1} onPress={onCancel}>
+      <TouchableOpacity style={[styles.pickerBackdrop, modalSides]} activeOpacity={1} onPress={onCancel}>
         {/* Inner touchable swallows taps so pressing the sheet doesn't cancel */}
         <TouchableOpacity activeOpacity={1} style={styles.pickerSheet} onPress={() => {}}>
           <View style={styles.pickerBar}>
@@ -328,8 +381,13 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
           activeOpacity={0.8}
           onPress={toggleDropdown}
           disabled={!editable}
+          onLayout={handleFieldLayout}
           style={[
             styles.container,
+            // ✅ minHeight, not a fixed 56: a long choice (fr "Problème lié à un
+            // événement", 206pt in a ~153pt value area) now wraps to a 2nd line
+            // and the box grows, instead of being cut to one line.
+            { height: 'auto', minHeight: INPUT_HEIGHT },
             { borderColor },
             showDropdown && styles.containerFocused,
             error && styles.containerError,
@@ -351,11 +409,27 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
               styles.input,
               {
                 paddingLeft: iconName ? 44 : 15,
-                lineHeight: INPUT_HEIGHT,
+                // The chevron / clear button is absolutely positioned at
+                // `right: 14` and is up to 20pt wide, so the value needs 48pt of
+                // clearance - the same figure the plain input uses for its eye
+                // button. Without it `styles.input`'s 20pt right padding let the
+                // value run underneath the icon, which is visible as soon as the
+                // field is half-width (birth date and gender share a row on
+                // 04_Register.png) and the value is a full date.
+                paddingRight: 48,
+                // ✅ Dropdown only: natural line height + vertical padding instead
+                // of `lineHeight: INPUT_HEIGHT`. A 56pt line height made a 2nd
+                // line 112pt tall, so the value was locked to one line; the
+                // container's minHeight (above) now does the centring, and
+                // equal top/bottom padding replaces styles.input's 8pt-top-only
+                // shift (paddingTop, not paddingVertical — the specific key wins).
+                height: 'auto',
+                paddingTop: 8,
+                paddingBottom: 8,
                 color: value ? COLORS.GRAY_DARK : COLORS.GRAY_MED,
               },
             ]}
-            numberOfLines={1}
+            numberOfLines={2}
           >
             {value}
           </Text>
@@ -423,6 +497,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
           activeOpacity={0.8}
           onPress={openTimePicker}
           disabled={!editable}
+          onLayout={handleFieldLayout}
           style={[
             styles.container,
             { borderColor },
@@ -446,10 +521,23 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
               styles.input,
               {
                 paddingLeft: iconName ? 44 : 15,
+                // The chevron / clear button is absolutely positioned at
+                // `right: 14` and is up to 20pt wide, so the value needs 48pt of
+                // clearance - the same figure the plain input uses for its eye
+                // button. Without it `styles.input`'s 20pt right padding let the
+                // value run underneath the icon, which is visible as soon as the
+                // field is half-width (birth date and gender share a row on
+                // 04_Register.png) and the value is a full date.
+                paddingRight: 48,
+                // `lineHeight: INPUT_HEIGHT` already centres the single line in
+                // the 56pt box; `styles.input`'s paddingTop: 8 then pushed it
+                // 8pt below centre and clipped the descenders.
+                paddingTop: 0,
                 lineHeight: INPUT_HEIGHT,
                 color: value ? COLORS.GRAY_DARK : COLORS.GRAY_MED,
               },
             ]}
+            numberOfLines={1}
           >
             {/* ✅ Only show the placeholder once the label has floated out of the way.
                 The label animates up on `isFocused || value || showTimePicker` (see the
@@ -517,6 +605,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
           activeOpacity={0.8}
           onPress={openDatePicker}
           disabled={!editable}
+          onLayout={handleFieldLayout}
           style={[
             styles.container,
             { borderColor },
@@ -543,10 +632,23 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
               styles.input,
               {
                 paddingLeft: iconName ? 44 : 15,
+                // The chevron / clear button is absolutely positioned at
+                // `right: 14` and is up to 20pt wide, so the value needs 48pt of
+                // clearance - the same figure the plain input uses for its eye
+                // button. Without it `styles.input`'s 20pt right padding let the
+                // value run underneath the icon, which is visible as soon as the
+                // field is half-width (birth date and gender share a row on
+                // 04_Register.png) and the value is a full date.
+                paddingRight: 48,
+                // `lineHeight: INPUT_HEIGHT` already centres the single line in
+                // the 56pt box; `styles.input`'s paddingTop: 8 then pushed it
+                // 8pt below centre and clipped the descenders.
+                paddingTop: 0,
                 lineHeight: INPUT_HEIGHT,
                 color: value ? COLORS.GRAY_DARK : COLORS.GRAY_MED,
               },
             ]}
+            numberOfLines={1}
           >
             {/* ✅ Same as the time picker above — the placeholder must not be drawn while
                 the label is still un-floated, or "Date of Birth" and "DD-MM-YYYY" overlap. */}
@@ -611,6 +713,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   <View style={styles.wrapper}>
     <Pressable
       onPress={focusInput}
+      onLayout={handleFieldLayout}
       style={[
         styles.container,
         { borderColor },
@@ -630,12 +733,13 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
         {required && <Animated.Text style={{ color: COLORS.ERROR }}> *</Animated.Text>}
       </Animated.Text>
 
+
       <TextInput
         ref={inputRef}
         style={[
           styles.input,
           { paddingLeft: iconName ? 44 : 15 },
-          (isPassword || showClear) && { paddingRight: 46 },
+          (isPassword || showClear) && { paddingRight: 48 },
           multiline && { paddingTop: 20, textAlignVertical: 'top' },
         ]}
         value={value}
@@ -646,6 +750,15 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
         placeholderTextColor={COLORS.GRAY_LIGHT}
         editable={editable}
         multiline={multiline}
+        // ✅ A READ-ONLY field shows the START of its text (developer report
+        // 2026-10-29: Contact & Feedback's e-mail lost its first letter). Android
+        // puts the cursor of a value set from code at the END and scrolls to keep
+        // it visible; with the app's font the line measures a little wider than
+        // it draws, so the scroll overshoots and clips the first character — and
+        // a read-only field cannot be scrolled back by hand. Pinning the
+        // selection to 0 keeps it at the start. Only while not editable, so
+        // typing and the cursor are untouched; a caller's own selection wins.
+        selection={!editable && !multiline && props.selection === undefined ? READ_ONLY_SELECTION : props.selection}
         {...props}
         placeholder={isFocused ? props.placeholder : undefined}
       />
@@ -688,24 +801,20 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
 // ✅ OPTIMIZED STYLES
 const styles = StyleSheet.create({
   wrapper: {
-    marginVertical: 10,
+    marginVertical: 8,
   },
   container: {
+    ...shadows.card,
+
     flexDirection: 'row',
     alignItems: 'center',
     height: INPUT_HEIGHT,
     borderWidth: 1.5,
-    borderRadius: 12,
+    borderRadius: radii.md,
     backgroundColor: COLORS.WHITE,
-    shadowColor: COLORS.PRIMARY,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 6,
-    elevation: 0,
   },
   containerFocused: {
-    shadowOpacity: 0.12,
-    elevation: 3,
+    ...shadows.card,
   },
   containerError: {
     borderColor: COLORS.ERROR,
@@ -724,35 +833,37 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: '100%',
-    fontSize: 15,
+    fontFamily: fonts.body,
+        fontSize: 15,
     color: COLORS.GRAY_DARK,
-    paddingHorizontal: 15,
-    paddingTop: 6,
+    paddingHorizontal: space.xl,
+    paddingTop: 8,
   },
   errorText: {
-    marginTop: 5,
+    marginTop: 4,
     marginLeft: 4,
-    fontSize: 11.5,
+    fontFamily: fonts.bodyMedium,
+        fontSize: 12,
     color: COLORS.ERROR,
-    fontWeight: '500',
-  },
+    },
   dropdown: {
     borderWidth: 1,
     borderColor: COLORS.BORDER_LIGHT,
-    borderRadius: 12,
-    marginTop: 6,
+    borderRadius: radii.md,
+    marginTop: 8,
     backgroundColor: COLORS.WHITE,
     maxHeight: 200,
     overflow: 'hidden',
   },
   dropdownItem: {
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.BG_ITEM,
   },
   dropdownText: {
-    fontSize: 14,
+    fontFamily: fonts.body,
+        fontSize: 14,
     color: COLORS.GRAY_DARK,
   },
   selectedItem: {
@@ -762,13 +873,14 @@ const styles = StyleSheet.create({
   },
   selectedText: {
     color: COLORS.PRIMARY,
-    fontWeight: '600',
-  },
+    fontFamily: fonts.bodySemi,
+        fontSize: 14,
+        },
 
   // ✅ iOS picker bottom-sheet
   pickerBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
     justifyContent: 'flex-end',
   },
   pickerSheet: {
@@ -787,15 +899,15 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.BG_ITEM,
   },
   pickerCancel: {
-    fontSize: 16,
+    fontFamily: fonts.displayMedium,
+        fontSize: 15,
     color: COLORS.GRAY_MED,
-    fontWeight: '500',
-  },
+    },
   pickerDone: {
-    fontSize: 16,
+    fontFamily: fonts.display,
+        fontSize: 15,
     color: COLORS.PRIMARY,
-    fontWeight: '700',
-  },
+    },
   pickerSpinner: {
     alignSelf: 'stretch',
   },

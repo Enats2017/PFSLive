@@ -214,7 +214,7 @@ console.log('\nThe six display states (§6.1 of the plan)\n');
 {
   const r = render('en', { membership_info: null, free_events: [BRUSSELS] });
   ck('5. free only -> state', r.state, 'free_only');
-  ck('   ios title is NOT "No Active Membership"', r.iosTitle, 'Tracking included');
+  ck('   ios title is NOT "No active membership"', r.iosTitle, 'Tracking included');
   ck('   android names the race', r.androidTitle,
      'Tracking included for Trail de Bruxelles.');
 }
@@ -223,7 +223,7 @@ console.log('\nThe six display states (§6.1 of the plan)\n');
 {
   const r = render('en', { membership_info: null, free_events: [] });
   ck('6. nothing -> state', r.state, 'no_membership');
-  ck('   ios title unchanged', r.iosTitle, 'No Active Membership');
+  ck('   ios title unchanged', r.iosTitle, 'No active membership');
   ck('   android title unchanged', r.androidTitle, 'You have no live tracking sessions left.');
   ck('   no extra line', r.extra, null);
 }

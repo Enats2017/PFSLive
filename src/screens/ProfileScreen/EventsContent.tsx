@@ -4,13 +4,12 @@ import {
     Text,
     TouchableOpacity,
     FlatList,
-    Dimensions,
     
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { spacing, palette } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
  
 import LiveTab from './LiveTab';
@@ -19,13 +18,12 @@ import { AthleteEvent, AthleteProfile, eventService } from '../../services/athle
 import { API_CONFIG } from '../../constants/config';
 import { ownProfile } from '../../styles/ownProfile.styles';
 import { useDimensions } from '../../hooks/useDimensions';
-
-const { width, height } = Dimensions.get('window');
+import { profileListLandscapeHeight } from '../../utils/screenFit';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Tab = 'Past' | 'Live';
 const TABS: Tab[] = ['Past', 'Live'];
 const LIVE_INDEX = TABS.indexOf('Live');
-const TAB_CONTENT_HEIGHT = height * 0.56;
 
 interface PaginationState {
     live: { page: number; total_pages: number };
@@ -56,9 +54,24 @@ const EventsContent: React.FC<EventsContentProps> = ({
     pagination,
 }) => {
     const { t } = useTranslation(['profile','ownProfile']);
-    const { width: windowWidth } = useDimensions(); // ← tablet/iPad fallback
+    const { width: windowWidth, height: windowHeight } = useDimensions(); // ← tablet/iPad fallback
+    const insets = useSafeAreaInsets();
     const [containerWidth, setContainerWidth] = useState(0);
     const width = containerWidth || windowWidth;
+
+    // The pager sits inside a ScrollView, so it cannot use flex:1 and needs an
+    // explicit height. This used to be `Dimensions.get('window').height * 0.56`
+    // read at MODULE scope - captured once at import, so it never updated on
+    // rotation. It also ignored the bottom inset, which is what let the last
+    // card sit under the fixed bar.
+    // ✅ At least 360pt (layout audit 2026-10-22): in landscape this left
+    // ~174-197pt - less than one card in the nested list. OwnProfile's outer
+    // ScrollView scrolls to the rest.
+    // Landscape: exactly the visible area under the header (screenFit) — 360
+    // was taller than a landscape screen, the bottom cards sat off it.
+    const TAB_CONTENT_HEIGHT = windowWidth > windowHeight
+        ? profileListLandscapeHeight(windowHeight, insets.top, insets.bottom)
+        : Math.max(windowHeight * 0.56 - insets.bottom, 360);
     const flatListRef = useRef<FlatList>(null);
     const activeTabRef = useRef<Tab>('Live');
     const [activeTab, setActiveTab] = React.useState<Tab>('Live');
@@ -117,7 +130,7 @@ const EventsContent: React.FC<EventsContentProps> = ({
     return (
         <View style={{ flex: 1 }} onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
             <TouchableOpacity style={ownProfile.backRow} onPress={onBack} activeOpacity={0.7}>
-                <Ionicons name="arrow-back" size={22} color={colors.gray900} />
+                <Ionicons name="arrow-back" size={22} color={palette.ink} />
                 <Text style={ownProfile.backLabel}>{t('ownProfile:backbtn.events')}</Text>
             </TouchableOpacity>
 
@@ -127,21 +140,13 @@ const EventsContent: React.FC<EventsContentProps> = ({
                     return (
                         <TouchableOpacity
                             key={tab}
-                            style={detailsStyles.tabItem}
+                            style={[detailsStyles.tabItem, isActive && detailsStyles.tabItemActive]}
                             onPress={() => handleTabPress(tab)}
                             activeOpacity={0.7}
                         >
-                            <Text style={[commonStyles.subtitle, isActive && detailsStyles.activeTabText]}>
+                            <Text style={[detailsStyles.tabText, isActive && detailsStyles.activeTabText]}>
                                 {t(`profile:tab.${tab}`)}
                             </Text>
-                            {isActive && (
-                                <LinearGradient
-                                    colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={detailsStyles.underline}
-                                />
-                            )}
                         </TouchableOpacity>
                     );
                 })}

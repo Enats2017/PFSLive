@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StatusBar,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -18,7 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { AppHeader } from '../../components/common/AppHeader';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
 import CountrySelector from '../../components/CountrySelector';
-import { commonStyles, colors } from '../../styles/common.styles';
+import { commonStyles, palette, space } from '../../styles/common.styles';
 import { registerStyles } from '../../styles/Register.styles';
 import { RegisterProps } from '../../types/navigation';
 import { authService } from '../../services/authService';
@@ -28,6 +27,8 @@ import { useAuthForm } from '../../hooks/useAuthForm';
 import { API_CONFIG } from '../../constants/config';
 import { analyticsService } from '../../services/analyticsService';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
+import { Button } from '../../components/ui';
 
 // ✅ CONSTANTS
 const INITIAL_FORM_DATA = {
@@ -76,9 +77,20 @@ const FIELD_ERROR_MAP: Record<string, { field: string; i18nKey: string }> = {
 const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
   const { t } = useTranslation(['register', 'common']);
   const insets = useSafeAreaInsets();
-  const { width } = useDimensions();
+  const { width, height, fontScale } = useDimensions();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged
+    // in effect (portrait has no side/bottom inset where they differ).
+    const isLandscape = width > height;
+    // ✅ Notch clearance in landscape: edges fall back to ['bottom'] there.
+    const sidePadding = useLandscapeSidePadding();
+    // ✅ The paired rows (first/last name, birth date/gender) are only ~134pt
+    // per field at 320pt — fr "Nom de famille *" / "Date de naissance" cannot
+    // fit beside the icons even with the label now ellipsized before the
+    // chevron. Below 360pt, or with iOS Larger Text, stack them full width.
+    const stackPairs = width < 360 || (fontScale ?? 1) >= 1.2;
+    const pairRowStyle = stackPairs ? undefined : registerStyles.fieldRow;
+    const pairHalfStyle = stackPairs ? undefined : registerStyles.fieldHalf;
 
   // ✅ FORM STATE (CUSTOM HOOK)
   const { formData, errors, setField, setErrors, clearAllErrors } =
@@ -372,14 +384,17 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
   }, [formData, clearAllErrors, setErrors, applyApiFieldErrors, navigation, t]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} showBack />
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+      <AppHeader title={t('common:band.register')} showLogo={true} showBack />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, sidePadding]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        // ✅ 0, not 80: RN's KAV uses its onLayout frame (relative to the parent,
+        // which starts at the screen top — headerShown is false), so frame.y
+        // already includes AppHeader. 80 lifted the form a further 80pt above
+        // the keyboard (landscape: almost no form left while typing).
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           style={{ flex: 1 }}
@@ -390,7 +405,14 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={{ paddingHorizontal: 15 }}>
+          {/* ✅ HEADER SECTION — same white sub-header as Login: the deck opens
+              every auth screen with a heading + one line of reassurance. */}
+          <View style={registerStyles.headerSection}>
+            <Text style={registerStyles.title}>{t('register:title')}</Text>
+            <Text style={registerStyles.subtitle}>{t('register:subtitle')}</Text>
+          </View>
+
+          <View style={{ paddingHorizontal: space.xl }}>
             {/* ✅ PROFILE IMAGE SECTION */}
             <View style={registerStyles.imagesection}>
               <TouchableOpacity onPress={showImageSourcePicker} activeOpacity={0.8}>
@@ -407,16 +429,16 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
                         onPress={removeImage}
                         activeOpacity={0.8}
                       >
-                        <Ionicons name="close" size={14} color="{colors.primary}" />
+                        <Ionicons name="close" size={14} color={palette.navy} />
                       </TouchableOpacity>
                     </>
                   ) : (
                     <>
                       <View style={registerStyles.placeholder}>
-                        <Ionicons name="person-outline" size={40} color="#9ca3af" />
+                        <Ionicons name="person-outline" size={40} color={palette.placeholder} />
                       </View>
                       <View style={registerStyles.cameraIcon}>
-                        <Ionicons name="camera-outline" size={18} color="#fff" />
+                        <Ionicons name="camera-outline" size={18} color={palette.surface} />
                       </View>
                     </>
                   )}
@@ -431,28 +453,33 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               )}
             </View>
 
-            {/* Form Fields */}
-            <FloatingLabelInput
-              label={t('firstName')}
-              value={formData.firstname}
-              onChangeText={(value) => setField('firstname', value)}
-              iconName="person-outline"
-              required
-              editable={!loading}
-              error={!!errors.firstname}
-              errorMessage={errors.firstname}
-            />
-
-            <FloatingLabelInput
-              label={t('lastName')}
-              value={formData.lastname}
-              onChangeText={(value) => setField('lastname', value)}
-              iconName="people-outline"
-              required
-              editable={!loading}
-              error={!!errors.lastname}
-              errorMessage={errors.lastname}
-            />
+            {/* Form Fields — 04_Register.png pairs the two name fields. */}
+            <View style={pairRowStyle}>
+              <View style={pairHalfStyle}>
+                <FloatingLabelInput
+                  label={t('firstName')}
+                  value={formData.firstname}
+                  onChangeText={(value) => setField('firstname', value)}
+                  iconName="person-outline"
+                  required
+                  editable={!loading}
+                  error={!!errors.firstname}
+                  errorMessage={errors.firstname}
+                />
+              </View>
+              <View style={pairHalfStyle}>
+                <FloatingLabelInput
+                  label={t('lastName')}
+                  value={formData.lastname}
+                  onChangeText={(value) => setField('lastname', value)}
+                  iconName="people-outline"
+                  required
+                  editable={!loading}
+                  error={!!errors.lastname}
+                  errorMessage={errors.lastname}
+                />
+              </View>
+            </View>
 
             <FloatingLabelInput
               label={t('email')}
@@ -507,38 +534,47 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
               errorMessage={errors.city}
             />
 
-            <FloatingLabelInput
-              label={t('dateOfBirth')}
-              value={formData.dob}
-              onChangeText={(value) => setField('dob', value)}
-              iconName="calendar-outline"
-              isDatePicker
-              // ✅ A date of birth cannot be in the future. Blocked in the picker
-              // so it never reaches the age rules, which the backend also refuses
-              // (dob_invalid) - DateTime::diff() is unsigned there, so a future
-              // date used to come back as a large positive age.
-              maximumDate={new Date()}
-              datePickerPlaceholder={t('common:datePicker.placeholder')}
-              pickerDoneLabel={t('common:buttons.done')}
-              pickerCancelLabel={t('common:buttons.cancel')}
-              editable={!loading}
-              error={!!errors.dob}
-              errorMessage={errors.dob}
-            />
-
-            {/* ✅ Gender — displays translated label, stores English key for API */}
-            <FloatingLabelInput
-              label={t('register:Gender.gender')}
-              value={formData.genderLabel}
-              onChangeText={handleGenderSelect}
-              iconName="people-outline"
-              isDropdown
-              required
-              options={GENDER_LABELS}
-              editable={!loading}
-              error={!!errors.gender}
-              errorMessage={errors.gender}
-            />
+            {/* ✅ Birth date and gender each take the full width (client
+                question 2026-10-23): side by side, the empty field's label
+                ("Date de naissance") ended in "…" in French. Edit profile
+                already shows the birth date full width. */}
+            <View>
+              <View>
+                <FloatingLabelInput
+                  label={t('dateOfBirth')}
+                  value={formData.dob}
+                  onChangeText={(value) => setField('dob', value)}
+                  iconName="calendar-outline"
+                  isDatePicker
+                  // ✅ A date of birth cannot be in the future. Blocked in the picker
+                  // so it never reaches the age rules, which the backend also refuses
+                  // (dob_invalid) - DateTime::diff() is unsigned there, so a future
+                  // date used to come back as a large positive age.
+                  maximumDate={new Date()}
+                  datePickerPlaceholder={t('common:datePicker.placeholder')}
+                  pickerDoneLabel={t('common:buttons.done')}
+                  pickerCancelLabel={t('common:buttons.cancel')}
+                  editable={!loading}
+                  error={!!errors.dob}
+                  errorMessage={errors.dob}
+                />
+              </View>
+              <View>
+                {/* ✅ Gender — displays translated label, stores English key for API */}
+                <FloatingLabelInput
+                  label={t('register:Gender.gender')}
+                  value={formData.genderLabel}
+                  onChangeText={handleGenderSelect}
+                  iconName="people-outline"
+                  isDropdown
+                  required
+                  options={GENDER_LABELS}
+                  editable={!loading}
+                  error={!!errors.gender}
+                  errorMessage={errors.gender}
+                />
+              </View>
+            </View>
 
             {/* ✅ Parent / guardian consent — ONLY at 13 to 17.
                 Hidden for an adult and for a blank date of birth, which is
@@ -558,7 +594,7 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
                     disabled={loading}
                   >
                     {formData.parentConsent && (
-                      <Ionicons name="checkmark" size={16} color="#fff" />
+                      <Ionicons name="checkmark" size={16} color={palette.surface} />
                     )}
                   </TouchableOpacity>
 
@@ -591,11 +627,19 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
                 disabled={loading}
               >
                 {formData.acceptedTerms && (
-                  <Ionicons name="checkmark" size={16} color="#fff" />
+                  <Ionicons name="checkmark" size={16} color={palette.surface} />
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity disabled={loading}>
+              {/* ✅ flex 1 so the label wraps inside the row (fr overflowed the
+                  screen edge below ~416pt), and tapping it toggles the box —
+                  both as the parent-consent row above already does. */}
+              <TouchableOpacity
+                onPress={() => setField('acceptedTerms', !formData.acceptedTerms)}
+                activeOpacity={0.8}
+                disabled={loading}
+                style={{ flex: 1 }}
+              >
                 <Text style={registerStyles.termsText}>
                   {t('termsAndConditions')}
                 </Text>
@@ -612,20 +656,13 @@ const RegisterScreen: React.FC<RegisterProps> = ({ navigation }) => {
 
             {/* Submit Button */}
             <View style={registerStyles.buttonSection}>
-              <TouchableOpacity
-                style={[commonStyles.primaryButton, loading && { opacity: 0.7 }]}
+              <Button
+                // 04_Register.png names the primary CTA "Create account" - the
+                // generic Save label belongs to edit forms, not to sign-up.
+                label={t('register:createAccount')}
                 onPress={handleSubmit}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={commonStyles.primaryButtonText}>
-                    {t('common:buttons.save')}
-                  </Text>
-                )}
-              </TouchableOpacity>
+                loading={loading}
+              />
             </View>
 
             {/* Divider */}

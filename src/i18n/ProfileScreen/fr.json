@@ -5,14 +5,14 @@
   },
   "buttons": {
     "editProfile": "Modifier le profil",
-    "edit_personal_event": "MODIFIER L'ÉVÉNEMENT PERSONNEL",
-    "live_tracking_progress": "SUIVI EN DIRECT EN COURS",
-    "live_tracking_soon": "LE SUIVI EN DIRECT COMMENCE BIENTÔT",
-    "enable_gps": "ACTIVER LE GPS POUR DÉMARRER LE SUIVI",
+    "edit_personal_event": "Modifier l'événement personnel",
+    "live_tracking_progress": "Suivi en direct en cours",
+    "live_tracking_soon": "Le suivi en direct commence bientôt",
+    "enable_gps": "Activer le GPS pour démarrer le suivi",
     "load_more": "Charger plus",
-    "save_changes": "ENREGISTRER LES MODIFICATIONS",
-    "edit_live_tracking_event": "MODIFIER LE SUIVI EN DIRECT",
-    "live_tracking_ended": "SUIVI EN DIRECT TERMINÉ"
+    "save_changes": "Enregistrer les modifications",
+    "edit_live_tracking_event": "Modifier le suivi en direct",
+    "live_tracking_ended": "Suivi en direct terminé"
   },
   "errors": {
     "user_not_found": "Utilisateur non trouvé. Veuillez vous reconnecter.",
@@ -46,7 +46,7 @@
     "parent_consent_required": "Un parent ou tuteur doit donner son consentement pour une personne de moins de 18 ans"
   },
   "status": {
-    "live": "EN DIRECT",
+    "live": "En direct",
     "soon": "BIENTÔT",
     "finished": "TERMINÉ"
   },
@@ -55,7 +55,7 @@
     "no_live_events_msg": "Il n'y a actuellement aucun événement en cours.\nVeuillez revenir plus tard."
   },
   "past": {
-    "view_results": "VOIR LES RÉSULTATS",
+    "view_results": "Voir les résultats",
     "no_events": "Aucun événement passé trouvé",
     "no_events_msg": "Vous n'avez encore participé à aucun événement.\nVos événements passés apparaîtront ici."
   },
@@ -80,6 +80,7 @@
   },
   "messages": {
     "email_readonly": "L'e-mail ne peut pas être modifié ici.",
+    "email_change_tooltip": "La modification de votre adresse e-mail nécessite une vérification par OTP envoyé à la nouvelle adresse e-mail.",
     "verify_email_title": "Vérifiez votre e-mail",
     "verify_email_message": "Un code de vérification a été envoyé à votre nouvelle adresse e-mail.",
     "saved_title": "Enregistré",
@@ -94,13 +95,32 @@
     "choose_gallery": "Choisir dans la galerie"
   },
   "sections": {
-    "personal_info": "INFORMATIONS PERSONNELLES",
-    "change_password": "CHANGER LE MOT DE PASSE",
-    "password_hint": "Laisser vide pour conserver l'actuel"
+    "personal_info": "Informations personnelles",
+    "change_password": "Changer le mot de passe",
+    "password_hint": "Laisser vide pour conserver l'actuel",
+    "recentRaces": "Courses récentes"
   },
   "languages": {
     "english": "Anglais",
     "dutch": "Néerlandais",
     "french": "Français"
+  },
+  "emailChange": {
+    "title": "Changer votre e-mail ?",
+    "body": "Nous enverrons un code à 6 chiffres à {{email}}.",
+    "note": "Votre e-mail actuel continue de fonctionner jusqu'à ce que vous saisissiez le code.",
+    "confirm": "Envoyer le code",
+    "cancel": "Annuler",
+    "hint": "Vous devrez confirmer ce changement avec un code envoyé à {{email}}.",
+    "code_sent_toast_title": "Code envoyé",
+    "code_sent_toast_message": "Entrez le code que nous avons envoyé à {{email}} pour confirmer votre nouvelle adresse.",
+    "pending_title": "Changement d'e-mail en attente",
+    "pending_message": "Nous attendons que vous confirmiez {{email}}. Votre adresse actuelle reste active jusque-là.",
+    "pending_verify": "Vérifier maintenant",
+    "pending_cancel": "Annuler le changement",
+    "pending_cancelled_title": "Changement annulé",
+    "pending_cancelled_message": "Votre adresse e-mail reste inchangée.",
+    "resend_failed_title": "Impossible d'envoyer un nouveau code",
+    "resend_failed_message": "Veuillez réessayer de changer votre e-mail."
   }
 }

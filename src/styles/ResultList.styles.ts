@@ -1,61 +1,82 @@
 import { StyleSheet } from "react-native";
-import { colors, spacing, typography } from "./common.styles";
+import { spacing, typography, type, palette, fonts, shadows, space, radii } from "./common.styles";
 
 export const resultListStyle = StyleSheet.create({
+  // 23_ParticipantSearch.png: "6 RESULTS FOR ..." above the list.
+  searchCount: {
+    ...type.label,
+    color: palette.textMuted,
+    paddingHorizontal: space.xl,
+    paddingTop: space.lg,
+    paddingBottom: space.sm,
+  },
+
   filterRow1: {
     flexDirection: "row",
-    paddingHorizontal: 15,
+    gap: space.sm,
+    paddingHorizontal: space.xl,
+    paddingTop: space.lg,
+    backgroundColor: palette.surface,
   },
   filterRow2: {
     flexDirection: "row",
-    paddingHorizontal: 15,
+    gap: space.sm,
+    paddingHorizontal: space.xl,
+    paddingTop: space.sm,
+    paddingBottom: space.lg,
+    backgroundColor: palette.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
   },
-
-
   filterTab: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
+    justifyContent: "space-between",
+    minHeight: 38,
+    paddingVertical: 4,
+    // space.sm (was md): two filters per row now (ResultList), and every pt
+    // goes to the label — "Point de contrôle" needs ~114pt at 14pt.
+    paddingHorizontal: space.sm,
+    borderRadius: radii.sm,
+    backgroundColor: palette.page,
+    borderWidth: 1,
+    borderColor: palette.inputBorder,
+  },
+  // The distance filter's share of row 1 (the type filter beside it is flex 1).
+  filterTabWide: {
+    flex: 1.6,
+  },
+  // One filter per row (filtersOnePerRow, utils/screenFit.ts). flex 1 in a
+  // column with no fixed height would not size the button by its label.
+  filterRowStacked: {
+    flexDirection: "column",
+  },
+  filterTabStacked: {
+    flex: 0,
   },
   tabrow: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingBottom: 7,
-    borderBottomWidth: 1.5,
-    borderColor: colors.info,
   },
-
   filterTabText: {
     flex: 1,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.black,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: palette.ink,
   },
-
-
-statisticsContainer: {
+  statisticsContainer: {
+    ...shadows.card,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    marginHorizontal: 10,
-     marginTop:3,
-    marginBottom: 3,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-   shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
-     borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-},
+    paddingVertical: space.lg,
+    paddingHorizontal: space.sm,
+    marginHorizontal: space.xl,
+    marginTop: space.lg,
+    backgroundColor: palette.surface,
+    borderRadius: radii.md,
+  },
 
 statItem: {
     flex: 1,
@@ -64,47 +85,53 @@ statItem: {
 },
 
 statValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: colors.gray900,
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     marginBottom: 2,
 },
 
 statValueHighlight: {
-    color: "#E14B4B", // make DNF stand out, e.g. red/orange
+    color: palette.danger, // make DNF stand out, e.g. red/orange
 },
 
+// Column headings of the 3-column stat grids. Their <Text> carries
+// maxFontSizeMultiplier={1}: with larger iOS text even one step up, "CLASSEMENT" /
+// "KLASSEMENT" no longer fit a ~75-90pt column and broke mid-word (2026-10-22).
+// The VALUES under them (times, ranks) still grow with the phone's text size.
 statLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: colors.gray500 ,
+    fontFamily: fonts.bodySemi,
+    fontSize: 11,
+    color: palette.textMuted,
     textAlign: "center",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
-   marginBottom: 4,
+    // 0.3 (was 0.5) with the 1pt bigger size: keeps "GEPASSEERD" / "CLASSEMENT"
+    // whole on a 360pt-wide phone (tests/growth/audit27 measures it).
+    letterSpacing: 0.3,
+    lineHeight: 14,
+    minHeight: 28,        // two lines (2 x lineHeight 14) — keeps all three values on one baseline
+    marginBottom: 4,
 },
 
 divider: {
     width: 1,
     height: "100%",
-    backgroundColor: colors.gray400,
+    backgroundColor: palette.placeholder,
 },
 
 
-  filterArrow: { fontSize: 13, color: colors.black, marginLeft: 6 },
-  filterArrowOpen: { color: colors.success },
+  filterArrow: { fontFamily: fonts.body,
+        fontSize: 14, color: palette.ink, marginLeft: space.xs },
+  filterArrowOpen: { color: palette.lime },
 
   popup: {
+    ...shadows.card,
+
     position: "absolute",
-    backgroundColor: "#fff",
+    backgroundColor: palette.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.white,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 12,
+    borderColor: palette.surface,
     zIndex: 999,
     overflow: "hidden",
   },
@@ -113,103 +140,134 @@ divider: {
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingVertical: 12,
   },
   popupRowLast: { borderBottomWidth: 0 },
+  // No marginTop: the 12pt it carried opened a gap above whichever row was
+  // selected, so the list jumped in the middle (2026-10-22).
   popupRowActive: {
-    backgroundColor: colors.gray200,
-    marginTop: 12,
+    backgroundColor: palette.border,
   },
   popupRowText: {
-    fontSize: 14,
-    color: colors.black,
-    fontWeight: typography.weights.semibold,
-  },
+    fontFamily: fonts.bodySemi,
+        fontSize: 14,
+    color: palette.ink,
+    // wraps inside the popup's maxWidth (FilterDropdown) instead of running
+    // past the right screen edge
+    flexShrink: 1,
+    },
   popupRowTextActive: {
-    color: colors.black,
-    fontWeight: typography.weights.bold,
-  },
+    color: palette.ink,
+    fontFamily: fonts.bodySemi,
+        fontSize: 14,
+        },
 
   card: {
-    backgroundColor: "#fff",
-    marginBottom: 10,
-    marginHorizontal: 10,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
+    ...shadows.card,
+    backgroundColor: palette.surface,
+    marginBottom: space.md,
+    marginHorizontal: space.xl,
+    borderRadius: radii.md,
+    padding: space.lg,
   },
 
+  // The women's category keeps a left accent; everything else is a plain card.
   cardWithLeftBorder: {
-    backgroundColor: "#fff",
-    marginBottom: 10,
-    marginHorizontal: 10,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
+    ...shadows.card,
+    backgroundColor: palette.surface,
+    marginBottom: space.md,
+    marginHorizontal: space.xl,
+    borderRadius: radii.md,
+    padding: space.lg,
+  },
+  // Below 360pt (isNarrowWidth, utils/screenFit.ts): 12 + 12 instead of 20 + 16
+  // and a gap of 8 between the stat columns — at 320pt "CLASSEMENT" /
+  // "KLASSEMENT" (~79pt) needed more than the ~75pt column and broke mid-word.
+  cardNarrow: {
+    marginHorizontal: space.md,
+    padding: space.md,
+  },
+  statsRowNarrow: {
+    gap: space.sm,
   },
 
-  // ✅ Badge — row: star left | rank+gender right stacked
-  cornerBadge: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.primary,
-    borderBottomLeftRadius: 12,
-    borderTopRightRadius: 10,
-    paddingVertical: 10,
-    paddingLeft: 16,
-    paddingRight: 18,
-    zIndex: 20,
-    gap: 10,
+  // ── Row head: rank circle | name + meta | star ────────────────────────
+  rowHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space.md,
+    width: '100%',
   },
-
-  // ✅ Star icon
-  cornerStar: {
-    fontSize: 26,
-    color: '#FFD700',
+  // minWidth, not width: a 4-5 digit rank (1000+) or "DNF" did not fit a fixed
+  // 34pt circle. Short ranks stay a circle; longer ones grow into a pill.
+  rankCircle: {
+    minWidth: 34,
+    // minHeight: grows with larger iOS text too (the number stays inside)
+    minHeight: 34,
+    paddingHorizontal: space.xs,
+    borderRadius: radii.pill,
+    backgroundColor: palette.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-
-  cornerStarUnfilled: {
-    fontSize: 26,
-    color: '#FFFFFF',
+  // Kept as a no-op: the deck draws every rank circle lime, whatever the
+  // race status. Call sites still reference it.
+  rankCircleFinished: {},
+  rankText: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
   },
-
-  // ✅ Right side — rank on top, gender below
-  cornerBadgeRight: {
-    alignItems: "flex-start",
-    justifyContent: "center",
-    gap: 2,
-    overflow: "hidden",
+  rankTextFinished: {},
+  rankGender: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 11,
+    color: palette.ink,
   },
-
-  cornerNum: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "600",
-    lineHeight: 20,
+  // The whole card opens the athlete; this says so (client 2026-10-22: "not
+  // immediately obvious that you can click on a participant").
+  cardChevron: {
+    marginTop: space.xs,
   },
-
-  cornerGenderRank: {
-    color: "#fff",
+  // Live card: the UTMB index is one more identity line under the name, in the
+  // name's column. As its own full-width row (15pt value, from the card edge)
+  // it was too prominent and did not line up with anything (client 2026-10-22).
+  utmbInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    marginTop: space.xs,
+  },
+  utmbBadgeCompact: {
+    paddingHorizontal: space.xs,
+    paddingVertical: 2,
+  },
+  utmbInlineValue: {
+    fontFamily: fonts.bodySemi,
     fontSize: 13,
-    fontWeight: "900",
-    lineHeight: 15,
+    color: palette.ink,
+  },
+
+  // Kept so the old corner-badge keys still resolve while callers migrate.
+  cornerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+  },
+  cornerBadgeRight: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cornerNum: {
+    color: palette.ink,
+    fontFamily: fonts.display,
+    fontSize: 15,
+  },
+  cornerGenderRank: {
+    color: palette.textMuted,
+    fontFamily: fonts.bodySemi,
+    fontSize: 11,
   },
 
   // Keep for backward compat
@@ -238,7 +296,7 @@ divider: {
     height: 0,
     borderTopWidth: 72,
     borderLeftWidth: 72,
-    borderTopColor: colors.primary,
+    borderTopColor: palette.navy,
     borderLeftColor: "transparent",
   },
   cornerStarBtn: {
@@ -258,38 +316,84 @@ divider: {
   },
 
   // ── Card Content ──────────────────────────────────────────
+  // ✅ flexShrink is REQUIRED here. React Native defaults it to 0 (web defaults
+  // to 1), so without it this column never yields width: a long team name or a
+  // "Name & Name" duo members line makes the column claim its full intrinsic
+  // width and pushes the follow star out past the card's padding, outside the
+  // rounded border. flexGrow alone does not help - that only distributes SPARE
+  // space. minWidth:0 lets it shrink below the text's intrinsic width so the
+  // numberOfLines clamps can ellipsize instead.
   cardTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 2,
+    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   cardTopLeft: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
   },
   cardName: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.gray900,
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
+    flexShrink: 1,
+    minWidth: 0,
   },
 
   bibText: {
-    fontSize: 12,
-    color: colors.gray500,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 18,
+    color: palette.textMuted,
+    marginTop: space.xs,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  // The SECOND meta line (club · country · age). `bibText`'s 4pt top margin is
+  // the gap to the NAME; between two meta lines a hairline is enough.
+  bibTextTight: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    lineHeight: 18,
+    color: palette.textMuted,
     marginTop: 2,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+
+  starButton: {
+    flexShrink: 0,
+  },
+
+  metaLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginTop: space.xs,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  // Same row, as the second meta line.
+  metaLineTight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginTop: 2,
+    flexShrink: 1,
+    minWidth: 0,
   },
 
   teamText: {
-    fontSize: 12,
-    color: colors.gray500,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
   },
   waveText: {
-    fontSize: 12,
-    color: colors.gray500,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
   },
 
   // ✅ The 10px gap belongs to the club/nation + wave BLOCK, not to whichever
@@ -298,43 +402,56 @@ divider: {
   // true for most events — so the wave line is usually absent. Hanging the
   // margin off waveText silently dropped the gap on every non-wave event.
   metaBlock: {
-    marginBottom: 10,
-    // ✅ The lines inside are 12px captions with no lineHeight set, so they
-    // stacked on the font's line box alone — club, the duo members and the
-    // wave sat almost touching once we started rendering all three. A 2px gap
-    // separates them without changing the block's own 10px outer rhythm.
-    gap: 2,
+    marginTop: 2,
   },
 
   // ── Stats Row ─────────────────────────────────────────────
   statsRow: {
-    flexDirection: "row",
-    padding: 12,
+    flexDirection: 'row',
+    // Holds each column's content clear of the separator beside it. Without a
+    // gap the columns sit flush and their text lands on the rules.
+    gap: space.md,
+    marginTop: space.md,
+    paddingTop: space.lg,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
   },
 
   statCol: {
+    flexGrow: 1,
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    minWidth: 0,
+    // Label at the top, value at the bottom: the columns stretch to the row's
+    // height, so when one label wraps to 3 lines (fr category / checkpoint
+    // names) the three values still share one baseline.
+    justifyContent: 'space-between',
   },
 
+  // Separators between the stat columns. These carried borders with NO
+  // horizontal padding: `statCol` sets no alignItems, so the text started at
+  // x=0 and sat directly on the rule. The padding is what makes them work.
+  // space.sm, not space.md (2026-10-22): with the labels at 11pt the middle
+  // column was ~62pt on a 360pt-wide phone, too narrow for "RANK WOMEN" /
+  // "PLAATS VROUWEN" without breaking a word. 8pt still clears the rule.
   statColMid: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: colors.gray400,
+    borderColor: palette.placeholder,
+    paddingHorizontal: space.sm,
   },
 
   statColLeft: {
     borderLeftWidth: 1,
-    borderColor: colors.gray400,
+    borderColor: palette.placeholder,
+    paddingLeft: space.sm,
   },
 
   statFlagMid: {
     borderLeftWidth: 1,
-    borderColor: colors.gray400,
+    borderColor: palette.placeholder,
     alignItems: "center",
     justifyContent: "center",
-    paddingLeft: 8,
+    paddingLeft: space.sm,
   },
 
   // Flag is the only remaining column (UTMB was to its left) → no divider.
@@ -345,10 +462,11 @@ divider: {
   },
   
   statVal: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.gray900,
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
     textAlign: "center",
+    marginTop: space.xs,
   },
 
   beforeRaceLeftHalf: {
@@ -366,7 +484,7 @@ divider: {
   utmbBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1a1a2e",
+    backgroundColor: palette.ink,
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -374,32 +492,49 @@ divider: {
   },
 
   utmbBadgeTextTop: {
-    color: colors.white,
-    fontSize: 8,
-    fontWeight: "800",
+    color: palette.surface,
+    fontFamily: fonts.bodySemi,
+        fontSize: 11,
     letterSpacing: 0.5,
   },
 
   utmbBadgeTextBottom: {
-    backgroundColor: colors.info,
+    backgroundColor: palette.navy,
     borderRadius: 3,
-    paddingHorizontal: 5,
+    paddingHorizontal: 4,
     paddingVertical: 1,
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: "900",
+    color: palette.surface,
+    fontFamily: fonts.bodySemi,
+        fontSize: 12,
     letterSpacing: 0.5,
   },
 
   utmbValue: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: colors.gray900,
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
   },
 
   list: {
-    paddingTop: 10,
+    paddingTop: 8,
     paddingBottom: 24,
+  },
+  // Landscape, filters + statistics inside the list: the 8pt moves from above
+  // the filters to below the statistics — the same layout as portrait.
+  listWithHeader: {
+    paddingTop: 0,
+  },
+  listHeaderInList: {
+    marginBottom: 8,
+  },
+  // Landscape, error / empty: filters and the state scroll together; the state
+  // keeps room for its icon, text and Retry.
+  stateScroll: {
+    flexGrow: 1,
+    paddingBottom: 16,
+  },
+  stateInScroll: {
+    minHeight: 260,
   },
 
   center: {
@@ -411,30 +546,32 @@ divider: {
   },
 
   loadingText: {
-    color: colors.gray600,
-    fontSize: 14,
+    color: palette.textBody,
+    fontFamily: fonts.body,
+        fontSize: 14,
     marginTop: 8,
     textAlign: "center",
   },
 
   errorText: {
-    color: "#555",
-    fontSize: 14,
+    color: palette.textMuted,
+    fontFamily: fonts.body,
+        fontSize: 14,
     textAlign: "center",
   },
 
   retryBtn: {
     marginTop: 4,
     paddingHorizontal: 28,
-    paddingVertical: 10,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
+    paddingVertical: 8,
+    backgroundColor: palette.navy,
+    borderRadius: 10,
   },
 
   retryText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
+    color: palette.surface,
+    fontFamily: fonts.bodySemi,
+        fontSize: 14,
   },
 
   filterOverlay: {
@@ -457,9 +594,10 @@ divider: {
   },
 
   statValSmall: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: colors.gray900,
+    fontFamily: fonts.bodySemi,
+        fontSize: 14,
+
+        color: palette.ink,
     flexShrink: 1,
     flexWrap: 'wrap',
   },

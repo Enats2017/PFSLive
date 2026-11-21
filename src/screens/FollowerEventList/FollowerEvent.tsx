@@ -4,7 +4,6 @@ import {
     Text,
     TouchableOpacity,
     FlatList,
-    StatusBar,
     ActivityIndicator,
     Keyboard,
     KeyboardEvent,
@@ -14,7 +13,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import PastTab from './PastTab';
 import LiveTab from './LiveTab';
@@ -27,6 +26,7 @@ import { FollowerEventpops } from '../../types/navigation';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
 type Tab = 'Past' | 'Live' | 'Upcoming';
 const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
@@ -34,10 +34,14 @@ const TABS: Tab[] = ['Past', 'Live', 'Upcoming'];
 const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
     const { t } = useTranslation(['follower', 'common']);
     const insets = useSafeAreaInsets();
-    const { width: windowWidth } = useDimensions();
+    const { width: windowWidth, height: windowHeight } = useDimensions();
     const [containerWidth, setContainerWidth] = useState(0);
     const width = containerWidth || windowWidth;
-    const isLandscape = windowWidth ;
+    // ✅ A real boolean (layout audit 2026-10-22): `windowWidth` alone was always
+    // truthy; the notch side padding is sidePadding on the body below AppHeader.
+    const isLandscape = windowWidth > windowHeight;
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
     const isGestureNav = insets.bottom > 0;
     const initialTab = (route.params?.initialTab) as Tab;
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -297,6 +301,17 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
         flatListRef.current?.scrollToIndex({ index, animated: false });
     }, []);
 
+    // ✅ Re-sync the page after a rotation (audit 2026-10-23), as ParticipantEvent
+    // does: the FlatList's own onLayout scrolled with the OLD page width, so the
+    // pager showed half of one tab and half of the next.
+    useEffect(() => {
+        const index = TABS.indexOf(activeTabRef.current);
+        const timer = setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index, animated: false });
+        }, 80);
+        return () => clearTimeout(timer);
+    }, [width]);
+
     useEffect(() => {
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
         if (searchText.trim().length === 0) {
@@ -333,11 +348,10 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
 
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={t('common:band.events')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
             </SafeAreaView>
         );
@@ -345,9 +359,8 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showBack />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={t('common:band.events')} showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -359,9 +372,11 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={t('common:band.events')} showLogo={true} showBack />
+            {/* sidePadding on an outer View so the measured containerWidth below
+                is the padded width the pager pages must match. */}
+            <View style={[{ flex: 1 }, sidePadding]}>
             <Animated.View
                 style={{
                     flex: 1,
@@ -369,38 +384,43 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                 }}
                 onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
             >
-                <View style={eventStyles.section}>
-                    <Text style={eventStyles.textCenter}>{t('follower:official.title')}</Text>
-                </View>
-
-                {/* TAB BAR */}
-                <View style={eventStyles.tabBar}>
+                {/* ✅ Sub-header — deck: one white band under the AppHeader holding
+                    the page label and its filter tabs. Was a full-width lime
+                    strip with a centred title. */}
+                <View style={[eventStyles.subHeader, isLandscape && eventStyles.subHeaderLandscape]}>
+                    {/* TAB BAR */}
+                    <View style={eventStyles.tabBar}>
                     {TABS.map((tab) => (
                         <TouchableOpacity
                             key={tab}
-                            style={eventStyles.tabItem}
+                            style={[eventStyles.tabItem, windowWidth < 360 && eventStyles.tabItemNarrow, activeTab === tab && eventStyles.tabItemActive]}
                             onPress={() => handleTabPress(tab)}
                             activeOpacity={0.7}
                         >
-                            <Text style={[
-                                commonStyles.subtitle,
-                                activeTab === tab && eventStyles.activeTabText,
-                            ]}>
+                            {/* ✅ One line, shrunk to fit, capped at ×1.2 (layout
+                                audit 2026-10-22): "Binnenkort" / "Verleden" broke
+                                mid-word at 320pt and with larger text. */}
+                            <Text
+                                style={[
+                                    commonStyles.subtitle,
+                                    activeTab === tab && eventStyles.activeTabText,
+                                ]}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.75}
+                                maxFontSizeMultiplier={1.2}
+                            >
                                 {t(`follower:live.${tab}`)}
                             </Text>
-                            {activeTab === tab && (
-                                <LinearGradient
-                                    colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={eventStyles.underline}
-                                />
-                            )}
                         </TouchableOpacity>
                     ))}
+                    </View>
                 </View>
 
-                <View>
+                {/* ✅ flex 1 (layout audit 2026-10-22): a plain View sized to its
+                    content, so each tab's list was as tall as all its rows and
+                    could not scroll to the end inside the screen. */}
+                <View style={{ flex: 1 }}>
                     <FlatList
                         ref={flatListRef}
                         data={TABS}
@@ -411,7 +431,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                         keyExtractor={(item) => item}
                         onMomentumScrollEnd={handleSwipe}
                         initialScrollIndex={TABS.indexOf('Live')}
-                        contentContainerStyle={{ paddingBottom: spacing.xxxxl }}
+                        contentContainerStyle={{ flexGrow: 1 }}
                         scrollEnabled={true}
                         getItemLayout={(_, index) => ({
                             length: width,
@@ -419,7 +439,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                             index,
                         })}
                         renderItem={({ item }) => (
-                            <View style={{ width }}>
+                            <View style={{ width,  flex: 1 }}>
                                 {item === 'Past' && (
                                     <PastTab
                                         events={pastEvents}
@@ -449,6 +469,7 @@ const FanEvent: React.FC<FollowerEventpops> = ({ navigation, route }) => {
                     />
                 </View>
             </Animated.View>
+            </View>
         </SafeAreaView>
     );
 };

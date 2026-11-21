@@ -3,13 +3,13 @@
   "editTitle": "Mettre à jour votre événement",
   "name": "Nom de l'événement",
   "type": "Type d'événement",
-   "category": "Type de catégorie",
+  "category": "Type de catégorie",
   "date": "Date de l'événement",
   "startTime": "Heure de départ",
   "fileInfo": "Le téléchargement d'un fichier GPX est facultatif mais fortement recommandé pour un suivi précis",
   "button": {
     "gpx": "Télécharger le fichier GPX",
-    "save": "SOUMETTRE L'ÉVÉNEMENT"
+    "save": "Soumettre l'événement"
   },
   "success": {
     "title": "Succès !",
@@ -45,6 +45,7 @@
     "participantInsertFailed": "Événement créé mais l'inscription a échoué. Veuillez réessayer.",
     "eventNotFound": "Événement introuvable. Il a peut-être été supprimé.",
     "noChanges": "Aucune modification n'a été apportée à l'événement.",
+    "trackingStarted": "Cet événement ne peut plus être modifié, car le suivi a déjà commencé.",
     "invalidEventId": "Événement invalide. Veuillez revenir en arrière et réessayer.",
     "categoryRequired": "Veuillez sélectionner un type de catégorie",
     "categoryInvalid": "Veuillez sélectionner une catégorie valide"
@@ -68,10 +69,8 @@
     "training": "Session d'entraînement"
   },
   "categoryTypes": {
-  "walking": "Marche",
-  "running": "Course",
-  "cycling": "Cyclisme"
+    "walking": "Marche",
+    "running": "Course",
+    "cycling": "Cyclisme"
   }
-
-  
 }

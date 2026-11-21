@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { Participant } from '../../services/participantService';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, space, palette, fonts } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,9 +63,16 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
 
   // ✅ Button logic driven by source + race_status
   const isResultSource = item.source === 'race_result';
-  const isPast         = item.race_status === 'finished';
-  // Follow only makes sense before/while racing (not for finished/past)
-  const showFollow     = !isPast;
+  // 22_ParticipantList.png shows Follow on every row, including finished ones —
+  // and that is right: useFollowManager follows by customer_app_id, "ATHLETE
+  // scope ... carries across", so following after a race is what puts that
+  // athlete in your favourites for their NEXT one. The real precondition is the
+  // one the follow call itself enforces — something to follow them by.
+  const showFollow =
+    (item.customer_app_id !== null &&
+      item.customer_app_id !== undefined &&
+      Number(item.customer_app_id) > 0) ||
+    !!hasBibNumber;
     const shouldShowResults = showResults;
 
   const bib = item.bib || item.bib_number || '';
@@ -74,7 +81,6 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
   // value, never on item.wave - the raw value is non-empty in that case.
   const waveLabel = formatWave(t('details:wave'), item.wave, item.race_distance);
 
-  const location = [item.city, item.country].filter(Boolean).join(' | ');
 
   // ✅ Duo teams. There is no is_duo flag anywhere — a team is simply an entrant
   // RR sent member names for. Solo entrants get '', so this is false and nothing
@@ -135,7 +141,18 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
     <View
       style={[
         commonStyles.card,
-        { padding: 0, marginBottom: spacing.md, marginHorizontal:spacing.md, marginTop:spacing.sm },
+        detailsStyles.rowAccent,
+        // The page gutter is 20 everywhere else in the app (result list,
+        // favourites, distances); at 12 these cards sat 8pt wider than
+        // their neighbours on every other list.
+        //
+        // The 12 is a marginTOP, not a bottom: it has to be the gap under the
+        // search frame as well as the gap between cards. The list itself cannot
+        // carry it as paddingTop — SearchInput's frame already pays 16 of its
+        // own, which stacked to 24 above the event image — and the image header
+        // cannot carry it either, since events without an image skip that header
+        // entirely and the first card then sat flush against the hairline.
+        { marginTop: space.md, marginHorizontal: space.xl },
       ]}
     >
       <View style={detailsStyles.topRow}>
@@ -155,102 +172,70 @@ const ParticipantCard: React.FC<ParticipantCardProps> = React.memo(({
           )}
         </View>
 
-        <LinearGradient
-          colors={['#e8341a', '#f4a100', '#1a73e8']}
-          start={{ x: 0, y: 1 }}
-          end={{ x: 1, y: 0 }}
-          style={detailsStyles.dividerStretch}
-        />
-
         <View style={detailsStyles.info}>
-          <Text style={commonStyles.title}>{fullName}</Text>
-          {/* Joined rather than interpolated with a literal " | ": duo entrants
-              carry a country but no city, which rendered a leading " | France".
-              A solo row has both, so its output is unchanged. */}
-          {!!location && <Text style={commonStyles.text}>{location}</Text>}
-          <Text style={commonStyles.subtitle}>{item.race_distance}</Text>
-          {hasBibNumber && (
-            <Text
-              style={[
-                commonStyles.subtitle,
-                { color: colors.primary, fontWeight: '600' },
-              ]}
-            >
-              {t('details:tracking.bib')}: {item.bib_number}
-            </Text>
-          )}
-          {!!waveLabel && (
-              <Text style={commonStyles.subtitle}>{waveLabel}</Text>
-            )
-          }
-          {/* ✅ Duo teams only. `fullName` above is already the TEAM name (RR puts
-              it on lastname), so these are the two members and their category. */}
+          {/* 2 lines (was 1): long names / team names were cut to "…" */}
+          <Text style={detailsStyles.rowName} numberOfLines={2}>{fullName}</Text>
+          {/* City + country is one phrase: it wraps rather than being cut. */}
+          <Text style={detailsStyles.rowMeta} numberOfLines={2}>
+            {[item.city, item.country].filter(Boolean).join(' \u00b7 ')}
+          </Text>
+          {/* Distance, bib and wave read as one line in the deck rather than
+              three stacked rows. 2 lines (was 1): with a wave label the
+              line ran past the column and the wave was cut off. */}
+          <Text style={detailsStyles.rowMeta} numberOfLines={2}>
+            {[
+              item.race_distance,
+              hasBibNumber ? `${t('details:tracking.bib')} ${item.bib_number}` : null,
+              waveLabel || null,
+            ].filter(Boolean).join(' \u00b7 ')}
+          </Text>
+          {/* Duo teams only. `fullName` above is already the TEAM name (RR puts
+              it on lastname), so this is who is actually in the team plus the
+              category. One line joined with the same separator as the rows above,
+              and unlabelled: the deck compacts related values rather than stacking
+              labelled rows, and under a team name these read unambiguously. */}
           {isDuo && (
-            <>
-              <Text style={commonStyles.subtitle}>
-                {t('details:duo.members')}: {teamMembers}
-              </Text>
-              {!!item.category_name && (
-                <Text style={commonStyles.subtitle}>
-                  {t('details:duo.category')}: {item.category_name}
-                </Text>
-              )}
-            </>
+            <Text style={detailsStyles.rowMeta} numberOfLines={2}>
+              {[teamMembers, item.category_name].filter(Boolean).join(' \u00b7 ')}
+            </Text>
           )}
         </View>
       </View>
 
       {isLiveTracking && (
         <View style={detailsStyles.liveTrackingBadge}>
-          <Ionicons name="radio" size={14} color={colors.success} />
+          <Ionicons name="radio" size={14} color={palette.lime} />
           <Text style={detailsStyles.liveTrackingText}>
             {t('details:tracking.live')}
           </Text>
         </View>
       )}
 
-      {/* ✅ ACTION ROW
-          - Past/finished: primary button only (full width)
-          - Else: primary button + follow/unfollow side by side */}
-      <View style={{ flexDirection: 'row' }}>
+      {/* ✅ ACTION ROW — Results (filled) and Follow (outlined), per
+          22_ParticipantList.png. Follow shows whenever the athlete can be
+          followed, which is what the follow call itself requires. */}
+      <View style={detailsStyles.cardActionRow}>
         {shouldShowResults && (
           <TouchableOpacity
-            style={[
-              commonStyles.primaryButton,
-              {
-                flex: 1,
-                borderRadius: 0,
-                borderBottomLeftRadius: 12,
-                borderBottomRightRadius: showFollow ? 0 : 12,
-              },
-            ]}
+            style={detailsStyles.cardActionPrimary}
             activeOpacity={0.8}
             onPress={onPrimaryPress}
           >
-            <Text style={commonStyles.primaryButtonText}>{primaryLabel}</Text>
+            <Text style={detailsStyles.cardActionPrimaryText}>{primaryLabel}</Text>
           </TouchableOpacity>
         )}
 
         {showFollow && (
           <TouchableOpacity
-            style={[
-              commonStyles.primaryButton,
-              {
-                flex: 1,
-                borderRadius: 0,
-                borderBottomRightRadius: 12,
-                opacity: isLoading ? 0.6 : 1,
-                backgroundColor: colors.primaryLight,
-              },
-            ]}
+            style={[detailsStyles.cardActionSecondary, isLoading && { opacity: 0.6 }]}
             activeOpacity={0.8}
             onPress={onToggleFollow}
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
+              <ActivityIndicator size="small" color={palette.navy} />
             ) : (
-              <Text style={commonStyles.primaryButtonText}>{followLabel}</Text>
+              <Text style={detailsStyles.cardActionSecondaryText}>{followLabel}</Text>
             )}
           </TouchableOpacity>
         )}

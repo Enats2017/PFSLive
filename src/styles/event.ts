@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { colors, spacing, typography } from "./common.styles";
+import { spacing, typography, type, palette, fonts, space, radii } from "./common.styles";
 
 export const eventStyles = StyleSheet.create({
   scrollView: {
@@ -12,58 +12,122 @@ export const eventStyles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
   },
-  section: {
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-    marginBottom:spacing.sm,
-    
-    backgroundColor: colors.themeiColor,
-    
+  // ✅ Redesign: the deck's sub-header — a white band under the AppHeader
+  // carrying the page label and its filter tabs. This replaced a full-width
+  // lime strip with a centred 20px title, which was the old design's device
+  // and is not in the deck.
+  subHeader: {
+    backgroundColor: palette.surface,
+    paddingHorizontal: space.xl,
+    paddingVertical: space.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
+    gap: space.md,
+  },
+  // ✅ Landscape (device test 2026-10-23): label and tabs share one row with
+  // 8pt padding — the stacked band took ~110pt of a ~390pt-tall screen.
+  subHeaderLandscape: {
+    paddingVertical: space.sm,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionLabel: {
+    ...type.label,
+    color: palette.textMuted,
   },
   title: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.themeblue,
+    fontFamily: fonts.bodySemi,
+        fontSize: 20,
+
+        color: palette.navy,
   },
   textCenter: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.themeblue,
+    fontFamily: fonts.bodySemi,
+        fontSize: 20,
+
+        color: palette.navy,
     textAlign:"center"
   },
   header: {
     alignItems: "center",
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: space.xl,
   },
+  // ✅ Redesign: the segmented pill group — page tint, hairline border, 4pt
+  // padding. The old bottom rule went with the underline.
   tabBar: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray300,
+    alignSelf: "flex-start",
+    gap: space.xs,
+    backgroundColor: palette.page,
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderRadius: radii.pill,
+    padding: space.xs,
   },
   tabItem: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: spacing.md,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+    borderRadius: radii.lg,
   },
+  // ✅ Below 360pt (layout audit 2026-10-22): three equal pills leave ~55pt of
+  // text at 320pt with 16pt padding — nl "Binnenkort" (66-72pt) broke mid-word
+  // even at default text. 8pt padding leaves ~71pt; the label also shrinks to
+  // fit (adjustsFontSizeToFit) with larger text.
+  tabItemNarrow: {
+    paddingHorizontal: space.sm,
+  },
+  // ✅ Redesign: tabs are the segmented pill group from the design sheet, so
+  // the active state is a navy pill rather than an underline. `underline` is
+  // gone — it carried a three-colour gradient that appears nowhere in the deck.
   tabText: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
-    fontWeight: typography.weights.medium,
+    fontFamily: fonts.displayMedium,
+    fontSize: 15,
+    color: palette.textMuted,
   },
   activeTabText: {
-    color: colors.black,
-    fontWeight: typography.weights.bold,
+    fontFamily: fonts.display,
+    color: palette.surface,
   },
-  underline: {
-    position: "absolute",
-    bottom: 0,
-    height: 2,
-    width: "60%",
-    borderRadius: 2,
+  tabItemActive: {
+    backgroundColor: palette.navy,
+  },
+
+  // ✅ In-page content tabs (EventDetail, RunnerInfo, RaceInfo, CheckpointHistory,
+  // ParticipantList) — a lime underline on white. Distinct from `tabBar`, which
+  // is the segmented pill group used for FILTERS.
+  tabBarUnderline: {
+    flexDirection: "row",
+    gap: space.xxl,
+    paddingHorizontal: space.xl,
+    paddingTop: space.lg,
+    backgroundColor: palette.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
+  },
+  tabItemUnderline: {
+    paddingBottom: 12,
+    borderBottomWidth: 2.5,
+    borderBottomColor: "transparent",
+  },
+  tabItemUnderlineActive: {
+    borderBottomColor: palette.lime,
+  },
+  tabTextUnderline: {
+    fontFamily: fonts.displayMedium,
+    fontSize: 15,
+    color: palette.textMuted,
+  },
+  tabTextUnderlineActive: {
+    fontFamily: fonts.display,
+    color: palette.ink,
   },
 
   eventCardInfo: {
@@ -76,8 +140,8 @@ eventCardDateRow: {
   alignItems: 'center',
 },
 iconButtonBlue: {
-  backgroundColor: colors.themeiColor,
-  borderRadius: 8,
+  backgroundColor: palette.lime,
+  borderRadius: 10,
   width: 45,
   height: 40,
   alignItems: 'center',

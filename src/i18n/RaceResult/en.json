@@ -1,8 +1,9 @@
 {
   "button": {
-    "result": "RESULT",
-    "participants": "PARTICIPANTS",
-    "results": "RESULTS"
+    "result": "Result",
+    "route": "Route",
+    "participants": "Participants",
+    "results": "Results"
   },
   "noResults": "No finished events yet",
   "error": {

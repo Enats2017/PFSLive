@@ -1,25 +1,27 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
-    StatusBar,
     Text,
     TouchableOpacity,
     View,
     ScrollView,
     } from 'react-native';
+import { useSearchFieldKeyboard } from '../../hooks/useKeyboardHeight';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import SearchInput from '../../components/SearchInput';
 import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { fanstyle } from '../../styles/fan.styles';
 import { suggestionService, SuggestionItem } from '../../services/followerScreenService';
 import SuggestionDropdown from '../../components/SuggestionDropdown';
-import { eventService, EventItem } from '../../services/followerEvent';
 import { formatEventDate } from '../../utils/dateFormatter';
 import EventCard from '../../components/EventCard';
+import NextEventsPlaceholder from '../../components/NextEventsPlaceholder';
+import { useNextEvents } from '../../hooks/useNextEvents';
 import { analyticsService } from '../../services/analyticsService';
 
 
@@ -32,13 +34,18 @@ interface NavCardProps {
 }
 
 const NavCard: React.FC<NavCardProps> = ({ icon, title, subtitle, onPress }) => (
-    <TouchableOpacity style={fanstyle.navCard} onPress={onPress} activeOpacity={0.82}>
-        <View style={fanstyle.navIconWrap}>{icon}</View>
-        <View style={fanstyle.navText}>
-            <Text style={fanstyle.navTitle}>{title}</Text>
-            <Text style={fanstyle.navSub}>{subtitle}</Text>
+    <TouchableOpacity
+        style={commonStyles.menuCard}
+        onPress={onPress}
+        activeOpacity={0.82}
+        accessibilityRole="button"
+    >
+        <View style={commonStyles.menuIconPlate}>{icon}</View>
+        <View style={commonStyles.menuText}>
+            <Text style={commonStyles.menuTitle}>{title}</Text>
+            <Text style={commonStyles.menuSub}>{subtitle}</Text>
         </View>
-        <Feather name="chevron-right" size={22} color={colors.white} />
+        <Feather name="chevron-right" size={22} color={palette.textMuted} />
     </TouchableOpacity>
 );
 
@@ -48,16 +55,31 @@ const NavCard: React.FC<NavCardProps> = ({ icon, title, subtitle, onPress }) => 
 const FanScreen = () => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['follow']);
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets();
-    const isLandscape = width > 600;
+    // width > height (was > 600): SE landscape is 568 wide, tablets are > 600 in
+    // portrait too (audit 2026-10-22)
+    const isLandscape = width > height;
+    // Notched iPhones in landscape get edges ['bottom'] below — keep the body
+    // clear of the notch (audit 2026-10-22)
+    const sidePadding = useLandscapeSidePadding();
     const isGestureNav = insets.bottom > 0;
     const [searchQuery, setSearchQuery] = useState('');
     const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
     const [searchLoading, setSearchLoading] = useState(false);
     const [dropdownVisible, setDropdownVisible] = useState(false);
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const [events, setEvents] = useState<EventItem[]>([]);
+    // ✅ The search's suggestions opened behind the keyboard (audit 2026-10-23):
+    // room for the keyboard at the end, the search scrolled to the top
+    // (useKeyboardHeight.ts).
+    const scrollRef = useRef<ScrollView>(null);
+    const searchSectionY = useRef(0);
+    const { keyboardPad, focusAt, blur } = useSearchFieldKeyboard((y) => {
+        scrollRef.current?.scrollTo({ y, animated: true });
+    });
+    // "Next events": loading / failed states too — the row was blank on a slow
+    // network (developer report 2026-10-29; hooks/useNextEvents).
+    const { events, status: eventsStatus, reload: reloadEvents } = useNextEvents();
     const [visibleCount, setVisibleCount] = useState(3);
 
     const handleSearch = useCallback((text: string) => {
@@ -92,29 +114,6 @@ const FanScreen = () => {
         }, 350);
     }, []);
 
-    useEffect(() => {
-        const load = async () => {
-            try {
-                const [page1, page2] = await Promise.all([
-                    eventService.getEvents({ page_live: 1, page_upcoming: 1 }),
-                    eventService.getEvents({ page_live: 2, page_upcoming: 2 }),
-                ]);
-                const seen = new Set<string>();
-                const unique = [
-                    ...page1.tabs.live,
-                    ...page2.tabs.live,
-                    ...page1.tabs.upcoming,
-                    ...page2.tabs.upcoming,
-                ].filter(e => {
-                    if (seen.has(e.product_app_id)) return false;
-                    seen.add(e.product_app_id);
-                    return true;
-                });
-                setEvents(unique.slice(0, 6));
-            } catch { }
-        };
-        load();
-    }, []);
 
     const handleSelect = useCallback((item: SuggestionItem) => {
         setDropdownVisible(false);
@@ -136,22 +135,28 @@ const FanScreen = () => {
     return (
         <SafeAreaView
             style={commonStyles.container}
-            edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}
+            edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}
         >
-            <StatusBar barStyle="dark-content" />
-            <AppHeader logoimg={true} showBack />
+            <AppHeader title={t('common:band.followRace')} logoimg={true} showBack />
 
             <ScrollView
-                contentContainerStyle={fanstyle.scrollContent}
+                ref={scrollRef}
+                contentContainerStyle={[fanstyle.scrollContent, sidePadding, keyboardPad > 0 && { paddingBottom: spacing.xxxxl + keyboardPad }]}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-                <View style={fanstyle.section}>
+                <View
+                    style={fanstyle.section}
+                    onLayout={(e) => { searchSectionY.current = e.nativeEvent.layout.y; }}
+                >
                     <SearchInput
-                        placeholder={t('follow:search.upcomgsearch', 'Find an event by name…')}
+                        framed={false}
+                        placeholder={t('follow:search.upcomingSearch', 'Find an event by name…')}
                         value={searchQuery}
                         onChangeText={handleSearch}
                         icon="search"
+                        onFocus={() => focusAt(searchSectionY.current)}
+                        onBlur={blur}
                     />
                     <SuggestionDropdown
                         suggestions={suggestions}
@@ -163,25 +168,25 @@ const FanScreen = () => {
 
                 <View style={fanstyle.section}>
                     <NavCard
-                        icon={<Ionicons name="calendar-outline" size={26} color={colors.white} />}
+                        icon={<Ionicons name="calendar-outline" size={24} color={palette.navy} />}
                         title={t('follow:upcomingrace')}
                         subtitle={t('follow:nav.upcomingsub')}
                         onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Live' })}
                     />
                     <NavCard
-                        icon={<Ionicons name="trophy-outline" size={26} color={colors.white} />}
+                        icon={<Ionicons name="trophy-outline" size={24} color={palette.navy} />}
                         title={t('follow:pastrace')}
                         subtitle={t('follow:nav.pastsub')}
                         onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Past' })}
                     />
                     <NavCard
-                        icon={<Feather name="user" size={26} color={colors.white} />}
+                        icon={<Feather name="user" size={24} color={palette.navy} />}
                         title={t('follow:athlete')}
                         subtitle={t('follow:nav.athletesub')}
                         onPress={() => navigation.navigate('AthleteSearchScreen', {})}
                     />
                     <NavCard
-                        icon={<Ionicons name="heart-outline" size={26} color={colors.white} />}
+                        icon={<Ionicons name="heart-outline" size={24} color={palette.navy} />}
                         title={t('follow:button.favourite', 'FAVORITES')}
                         subtitle={t('follow:nav.favouritesub')}
                         onPress={() => navigation.navigate('UserFavouriteList')}
@@ -190,16 +195,18 @@ const FanScreen = () => {
 
                 <View style={fanstyle.nextEventsSection}>
                     <View style={fanstyle.nextEventsHeader}>
-                        <Text style={fanstyle.nextEventsTitle}>{t('follow:nextevetn')}</Text>
+                        <Text style={fanstyle.nextEventsTitle}>{t('follow:nextEvents')}</Text>
                         <TouchableOpacity
                             style={fanstyle.viewAllBtn}
                             onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Live' })}
                             activeOpacity={0.7}
                         >
                             <Text style={fanstyle.viewAllText}>{t('follow:viewAll')}</Text>
-                            <Feather name="chevron-right" size={14} color={colors.primary} />
+                            <Feather name="chevron-right" size={14} color={palette.navy} />
                         </TouchableOpacity>
                     </View>
+                    <NextEventsPlaceholder status={eventsStatus} onRetry={reloadEvents} t={t} />
+                    {eventsStatus === 'ready' && (
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -221,6 +228,7 @@ const FanScreen = () => {
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
+                    )}
                 </View>
             </ScrollView>
         </SafeAreaView>

@@ -2,23 +2,25 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
-    StatusBar,
     Text,
     View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Feather } from '@expo/vector-icons';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
+import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
+import ErrorScreen from '../../components/ErrorScreen';
 import FanEventCard from '../FollowerEventList/FollowerCard';
 import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import { eventService, ParticipantItem } from '../../services/followerEvent';
 import { AthleteSearchScreenpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 import { useFocusEffect } from '@react-navigation/native';
@@ -30,10 +32,17 @@ interface PaginationState {
 
 const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
     const { t } = useTranslation(['follow', 'follower']);
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged
+    // in effect (portrait has no side/bottom inset where the branches differ).
+    const isLandscape = width > height;
+    // ✅ Notch clearance for the body in landscape (edges fall back to ['bottom']).
+    const sidePadding = useLandscapeSidePadding();
+    // ✅ The end of the results could not scroll above the keyboard (audit
+    // 2026-10-23): the list gets the keyboard's height as extra end padding.
+    const keyboardHeight = useKeyboardHeight();
 
     const [searchText, setSearchText] = useState('');
     const [participants, setParticipants] = useState<ParticipantItem[]>([]);
@@ -191,6 +200,7 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
     const renderCard = useCallback(
         ({ item }: { item: ParticipantItem }) => (
             <FanEventCard
+                variant="search"
                 analyticsScreenName={ANALYTICS_SCREENS.ATHLETE_SEARCH}
                 item={item}
                 isFollowed={isFollowed(item.customer_app_id)}
@@ -211,21 +221,23 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
             return (
                 <ActivityIndicator
                     size="small"
-                    color={colors.primary}
+                    color={palette.navy}
                     style={{ marginTop: spacing.lg }}
                 />
             );
         }
         if (searchText.trim().length > 0) {
             return (
-                <Text style={[commonStyles.errorText, { textAlign: 'center', marginTop: 40 }]}>
-                    {t('follow:empty.favouriteSearchEmpty')}
-                </Text>
+                <ErrorScreen
+                    type="empty"
+                    title={t('follow:empty.favouriteSearchEmpty')}
+                    onRetry={() => { }}
+                />
             );
         }
         return (
             <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: spacing.xl, gap: 12 }}>
-                <Feather name="users" size={48} color={colors.gray500} />
+                <Feather name="users" size={48} color={palette.textMuted} />
                 <Text style={commonStyles.title}>
                     {t('follow:empty.emptyTitle')}
                 </Text>
@@ -237,14 +249,21 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
     }, [searching, searchText, t]);
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={t('common:band.findAthlete')} showBack />
 
-            <View style={follow.yellowHeader}>
-                <Text style={commonStyles.title}>{t('follow:athlete')}</Text>
+            {/* ✅ Landscape notch padding on the body. The search band keeps its
+                white fill behind the inset so it still reads full-bleed. */}
+            <View style={[{ backgroundColor: palette.surface }, sidePadding]}>
+            <SearchInput
+                placeholder={t('follow:search.athletesearch')}
+                value={searchText}
+                onChangeText={setSearchText}
+                icon="search"
+            />
             </View>
 
+            <View style={[{ flex: 1 }, sidePadding]}>
             <FlatList
                 data={displayEvents}
                 keyExtractor={(item, index) => `${item.customer_app_id}_${index}`}
@@ -255,28 +274,24 @@ const AthleteSearchScreen: React.FC<AthleteSearchScreenpops> = () => {
                 keyboardShouldPersistTaps="handled"
                 removeClippedSubviews={false}
                 contentContainerStyle={{
-                    paddingHorizontal: spacing.md,
-                    paddingBottom: spacing.xxxxl,
+                    paddingHorizontal: spacing.xl,
+                    // The search band above is full-bleed white; the list needs
+                    // its own top inset so the first card is not welded to it.
+                    paddingTop: spacing.lg,
+                    paddingBottom: spacing.xxxxl + keyboardHeight,
                 }}
-                ListHeaderComponent={
-                    <SearchInput
-                        placeholder={t('follow:search.athletesearch')}
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        icon="search"
-                    />
-                }
                 ListEmptyComponent={renderEmpty}
                 ListFooterComponent={
                     loadingMore || loadingMoreParticipant ? (
                         <ActivityIndicator
                             size="small"
-                            color={colors.primary}
+                            color={palette.navy}
                             style={{ marginVertical: spacing.md }}
                         />
                     ) : null
                 }
             />
+            </View>
 
             <TrackingPasswordModal
                 visible={passwordModalVisible}

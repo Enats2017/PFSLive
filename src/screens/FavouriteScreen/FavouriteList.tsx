@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, space, palette, fonts } from '../../styles/common.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import { BottomNavigationFollower } from '../../components/common/BottomNavigationFollower';
 import { BottomNavigation } from '../../components/common/BottomNavigation';
@@ -18,7 +18,15 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useFollowManager } from '../../hooks/useFollowManager';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
+import { Ionicons } from '@expo/vector-icons';
+
+// FAB bottom offset above the bottom bar: 40 in portrait keeps it where it
+// sat before (was 140 from the screen bottom, nav ~77 + inset), space.lg in
+// landscape where the list area is short. Clearance = button 56 + offset + gap.
+const FAB_BOTTOM_PORTRAIT = 40;
+const fabClearance = (bottom: number) => 56 + bottom + space.lg;
 
 const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
     const {
@@ -31,10 +39,17 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         product_option_value_app_id,
     } = route.params;
 
-    const { width } = useDimensions();
-    const insets = useSafeAreaInsets(); 
+    const { width, height } = useDimensions();
+    const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // A real boolean: this was `= width` (always truthy), so the SafeAreaView
+    // took left/right edges in PORTRAIT on 3-button Android too.
+    const isLandscape = width > height;
+    const fabBottom = isLandscape ? space.lg : FAB_BOTTOM_PORTRAIT;
+    // Notch / Dynamic Island in landscape on gesture phones, where the
+    // SafeAreaView below only takes the bottom edge (0 everywhere else).
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
     const { t } = useTranslation(['favourite', 'common']);
     const [favourites, setFavourites] = useState<FavouriteItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -178,16 +193,16 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
 
     const renderEmptyComponent = useCallback(() => (
         <View style={commonStyles.centerContainer}>
-            <Text style={{ fontSize: 48, marginBottom: 10 }}>⭐</Text>
+                                <Ionicons name="star" size={34} color={palette.lime} />
             <Text style={commonStyles.title}>{t('favourite:message.nofavourite')}</Text>
-            <Text style={[commonStyles.subtitle, { textAlign: 'center', marginTop: 5 }]}>
+            <Text style={[commonStyles.subtitle, { textAlign: 'center', marginTop: 4 }]}>
                 {t('favourite:message.favouritemsg')}
             </Text>
         </View>
     ), [t]);
 
     const renderFooter = useCallback(() => {
-        if (loadingMore) return <ActivityIndicator size="small" style={{ paddingVertical: 14 }} />;
+        if (loadingMore) return <ActivityIndicator size="small" style={{ paddingVertical: 16 }} />;
         return null;
     }, [loadingMore]);
 
@@ -195,93 +210,133 @@ const FavouriteList: React.FC<FavouriteListpops> = ({ route, navigation }) => {
         navigation.navigate('AllParticipant', { product_app_id, event_name });
     }, [navigation, product_app_id, event_name]);
 
+    // One bottom bar for every state (the error state had none, and loading
+    // highlighted "Results" on the participant bar).
+    const bottomNav = sectionType === 'follower' ? (
+        <BottomNavigationFollower
+            activeTab='Favorites'
+            product_app_id={product_app_id}
+            event_name={event_name}
+            event_image={event_image}
+            sourceTab={sourceTab}
+            product_option_value_app_id={product_option_value_app_id}
+            showResults={showResults}
+            race_date={raceDate}
+        />
+    ) : (
+        <BottomNavigation
+            activeTab="Favorites"
+            product_app_id={product_app_id}
+            event_name={event_name}
+            event_image={event_image}
+            sourceScreen={sourceScreen}
+            product_option_value_app_id={product_option_value_app_id}
+            showResults={showResults}
+            race_date={raceDate}
+        />
+    );
+    // Gutter + notch inset added together: spreading sidePadding here would
+    // replace the 20pt gutter with 0 in portrait.
+    const subHeaderPad = {
+        paddingLeft: space.xl + sidePadding.paddingLeft,
+        paddingRight: space.xl + sidePadding.paddingRight,
+    };
+    // ✅ Landscape (audit 2026-10-23): the fixed sub-header left ~105-141pt for a
+    // ~175pt card. There it scrolls away with the list. Portrait unchanged.
+    const subHeader = (
+        <View style={[favstyle.subHeader, isLandscape ? { paddingHorizontal: space.xl } : subHeaderPad]}>
+            <Text style={favstyle.subHeaderText}>{t('favourite:subheader')}</Text>
+        </View>
+    );
+
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
-                <AppHeader title={t('favourite:title')} showBack />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={event_name} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
-                {sectionType === 'follower' ? (
-                    <BottomNavigationFollower activeTab='Favorites' event_name={event_name} />
-                ) : (
-                    <BottomNavigation activeTab="Results" event_name={event_name} />
-                )}
+                {bottomNav}
             </SafeAreaView>
         );
     }
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showBack />
-                <ErrorScreen
-                    type={error!.type}
-                    title={error!.title}
-                    message={error!.message}
-                    onRetry={() => { clearError(); fetchFavourites(); }}
-                />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={event_name} showBack />
+                {/* 25_Favourites.png: one line saying what the list is. */}
+                <View style={[favstyle.subHeader, subHeaderPad]}>
+                    <Text style={favstyle.subHeaderText}>{t('favourite:subheader')}</Text>
+                </View>
+                <View style={[{ flex: 1 }, sidePadding]}>
+                    <ErrorScreen
+                        type={error!.type}
+                        title={error!.title}
+                        message={error!.message}
+                        onRetry={() => { clearError(); fetchFavourites(); }}
+                    />
+                </View>
+                {bottomNav}
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
-            <AppHeader title={t('favourite:title')} showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={event_name} showBack />
 
-            <FlatList
-                data={favourites}
-                keyExtractor={keyExtractor}
-                renderItem={renderItem}
-                onEndReached={loadMore}
-                onEndReachedThreshold={0.5}
-                contentContainerStyle={{
-                    paddingHorizontal: spacing.sm,
-                    paddingBottom: spacing.xxxl,
-                    flexGrow: 1,
-                }}
-                ListFooterComponent={renderFooter}
-                ListEmptyComponent={renderEmptyComponent}
-            />
+            {/* 25_Favourites.png: one line saying what the list is. It was only
+                rendered in the error branch, so the populated list - the state
+                people actually see - had nothing between the lime band and the
+                first card, and the cards read as glued to the header. */}
+            {!isLandscape && subHeader}
 
-            <View style={favstyle.addButtonContainer}>
-                <TouchableOpacity
-                    style={[favstyle.addButton,{right: isLandscape && !isGestureNav ? insets.right : 0,}]}
-                    activeOpacity={0.8}
-                    onPress={handleAddPress}
-                >
-                    <View style={favstyle.iconWrapper}>
-                        <MaterialIcons name="person-add-alt" size={30} color={colors.white} />
-                    </View>
-                </TouchableOpacity>
+            {/* Body between the sub-header and the bottom bar. The FAB is
+                anchored to THIS box (bottom-right, above the bottom bar) instead
+                of the screen's bottom edge + a fixed 140pt measured once at
+                module load — in landscape that put it over the middle of the
+                cards. The list sits in its own padded box so the FAB's offsets
+                never depend on how Yoga treats padding for absolute children. */}
+            <View style={{ flex: 1 }}>
+                <View style={[{ flex: 1 }, sidePadding]}>
+                    <FlatList
+                        data={favourites}
+                        keyExtractor={keyExtractor}
+                        renderItem={renderItem}
+                        onEndReached={loadMore}
+                        onEndReachedThreshold={0.5}
+                        contentContainerStyle={{
+                            // The page gutter is 20 everywhere else; this list was at 8.
+                            paddingHorizontal: space.xl,
+                            paddingTop: spacing.lg,
+                            // FAB (56) + its bottom offset + a gap, so the last card
+                            // can scroll clear above the button (was 32: never did).
+                            paddingBottom: fabClearance(fabBottom),
+                            flexGrow: 1,
+                        }}
+                        ListHeaderComponent={isLandscape ? subHeader : null}
+                        // full-bleed inside the list's 20pt gutter, flush on top
+                        ListHeaderComponentStyle={isLandscape ? { marginHorizontal: -space.xl, marginTop: -spacing.lg, marginBottom: spacing.lg } : undefined}
+                        ListFooterComponent={renderFooter}
+                        ListEmptyComponent={renderEmptyComponent}
+                    />
+                </View>
+
+                <View style={[favstyle.addButtonContainer, { bottom: fabBottom, right: space.xl + sidePadding.paddingRight }]}>
+                    <TouchableOpacity
+                        style={favstyle.addButton}
+                        activeOpacity={0.8}
+                        onPress={handleAddPress}
+                    >
+                        <View style={favstyle.iconWrapper}>
+                            <MaterialIcons name="person-add-alt" size={30} color={palette.surface} />
+                        </View>
+                    </TouchableOpacity>
+                </View>
             </View>
 
-            {sectionType === 'follower' ? (
-                <BottomNavigationFollower
-                    activeTab='Favorites'
-                    product_app_id={product_app_id}
-                    event_name={event_name}
-                    event_image={event_image}
-                    sourceTab={sourceTab}
-                    product_option_value_app_id={product_option_value_app_id}
-                    showResults={showResults}
-                    race_date={raceDate}
-                />
-            ) : (
-                <BottomNavigation
-                    activeTab="Favorites"
-                    product_app_id={product_app_id}
-                    event_name={event_name}
-                    event_image={event_image}
-                    sourceScreen={sourceScreen}
-                    product_option_value_app_id={product_option_value_app_id}
-                    showResults={showResults}
-                    race_date={raceDate}
-
-                    
-                />
-            )}
+            {bottomNav}
 
             <TrackingPasswordModal
                 visible={passwordModalVisible}

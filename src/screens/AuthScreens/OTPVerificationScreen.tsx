@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StatusBar,
   ActivityIndicator,
   TextInput,
   KeyboardAvoidingView,
@@ -15,7 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
 import { AppHeader } from '../../components/common/AppHeader';
-import { commonStyles, colors } from '../../styles/common.styles';
+import { Button } from '../../components/ui';
+import { commonStyles, palette } from '../../styles/common.styles';
 import { optStyles } from '../../styles/OtpScreen.styles';
 import { OTPVerificationScreenProps } from '../../types/navigation';
 import { tokenService } from '../../services/tokenService';
@@ -25,6 +25,7 @@ import { usePendingRegistration } from '../../hooks/usePendingRegistration';
 import { API_CONFIG, getDeviceId } from '../../constants/config';
 import { useAuth } from '../../context/AuthContext';
 import { analyticsService } from '../../services/analyticsService';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
 const OTP_LENGTH = 6;
 const INITIAL_COUNTDOWN = 60;
@@ -34,12 +35,15 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
   route,
 }) => {
   const { t } = useTranslation(['otp', 'common']);
+  const sidePadding = useLandscapeSidePadding();
+  const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
   const { email, verification_token, purpose } = route.params;
   const { login } = useAuth(); // ✅ get login() from context
 
   // ✅ Moving an account to a new phone reuses this whole screen; only the
   // copy and a couple of analytics calls differ.
   const isDeviceChange = purpose === 'device_change';
+  const isEmailChange = purpose === 'email_change';
 
   const { handleAfterAuth } = usePendingRegistration(navigation);
 
@@ -120,6 +124,21 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
           purpose,
           ...(isDeviceChange ? { device_id: await getDeviceId() } : {}),
         });
+
+        if (isEmailChange && data.success) {
+          // No token is issued for email_change — the existing session stays
+          // valid, so skip saveToken/saveCustomerId/login() entirely.
+          void analyticsService.logAuthStep('email_change_verified');
+
+          toastSuccess(t('otp:emailChange.successTitle'), t('otp:emailChange.successMessage'));
+
+          const customer_app_id = await tokenService.getCustomerId()
+            navigation.navigate('OwnProfile', {
+                customer_app_id: customer_app_id || 0,
+                fromEdit: true,
+            })
+              return;
+        }
 
         if (data.success && data.data?.token) {
           const customerId = data.data?.customer?.customer_app_id ?? 0;
@@ -205,6 +224,13 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
               t('otp:errors.deviceTaken'),
             );
             break;
+          case 'email_already_taken':
+            showErrorToast(t('otp:errors.emailTakenTitle'), t('otp:errors.emailTaken'));
+            break;
+          case 'email_change_invalid':
+          case 'email_change_conflict':
+            showErrorToast(t('otp:errors.genericErrorTitle'), t('otp:errors.genericError'));
+            break;
           case 'otp_max_resends':
             setError(t('otp:errors.maxResends'));
             showErrorToast(t('otp:errors.maxResendsTitle'), t('otp:errors.maxResends'));
@@ -230,7 +256,7 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
     // `purpose` / `isDeviceChange` must be listed: they now drive which request
     // is sent and which copy is shown, so a stale closure would submit the
     // wrong purpose.
-    [otp, verification_token, purpose, isDeviceChange, handleAfterAuth, login, showErrorToast, t, navigation]
+    [otp, verification_token, purpose, isDeviceChange,isEmailChange, handleAfterAuth, login, showErrorToast, t, navigation]
   );
 
   const handleResend = useCallback(async () => {
@@ -286,12 +312,12 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
   }, [canResend, resending, verification_token, purpose, showErrorToast, t]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} showBack />
+    <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+      <AppHeader title={t('common:band.verifyEmail')} showLogo={true} showBack />
 
+      {/* ✅ sidePadding: notch clearance in landscape (edges are ['bottom']). */}
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, sidePadding]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
@@ -303,14 +329,14 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
               <Ionicons
                 name={isDeviceChange ? 'phone-portrait-outline' : 'mail-outline'}
                 size={40}
-                color="{colors.primary}"
+                color={palette.navy}
               />
             </View>
             <Text style={optStyles.title}>
-              {isDeviceChange ? t('otp:deviceChange.title') : t('otp:title')}
+              {isDeviceChange ? t('otp:deviceChange.title') : isEmailChange  ? t('otp:emailChange.title') : t('otp:title')}
             </Text>
             <Text style={optStyles.subtitle}>
-              {isDeviceChange ? t('otp:deviceChange.subtitle') : t('otp:subtitle')}
+              {isDeviceChange ? t('otp:deviceChange.subtitle') : isEmailChange ? t('otp:emailChange.subtitle') : t('otp:subtitle')}
             </Text>
             <Text style={optStyles.email}>{email ?? ''}</Text>
           </View>
@@ -339,29 +365,27 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
 
           {!!error && (
             <Text style={optStyles.errorText}>
-              <Ionicons name="alert-circle-outline" size={13} color="#ef4444" /> {error}
+              <Ionicons name="alert-circle-outline" size={13} color={palette.danger} /> {error}
             </Text>
           )}
 
-          <TouchableOpacity
-            style={[commonStyles.primaryButton, loading && { opacity: 0.7 }, optStyles.verifyButton]}
+          <Button
+            label={t('otp:verifyButton')}
             onPress={() => handleVerify()}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={commonStyles.primaryButtonText}>{t('otp:verifyButton')}</Text>
-            )}
-          </TouchableOpacity>
+            loading={loading}
+            style={optStyles.verifyButton}
+          />
 
           <View style={optStyles.resendContainer}>
             <Text style={optStyles.resendLabel}>{t('otp:didntReceive')} </Text>
             {canResend ? (
-              <TouchableOpacity onPress={handleResend} disabled={resending}>
+              <TouchableOpacity
+                  onPress={handleResend}
+                  disabled={resending}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
                 {resending ? (
-                  <ActivityIndicator size="small" color="#FF5722" />
+                  <ActivityIndicator size="small" color={palette.warning} />
                 ) : (
                   <Text style={optStyles.resendLink}>{t('otp:resend')}</Text>
                 )}
@@ -369,6 +393,19 @@ const OTPVerificationScreen: React.FC<OTPVerificationScreenProps> = ({
             ) : (
               <Text style={optStyles.countdown}>{t('otp:resendIn')} {countdown}s</Text>
             )}
+          </View>
+
+          {/* 05_OTP.png: where the code actually went, and a way back if the
+              address was mistyped. */}
+          <View style={optStyles.notArrivedCard}>
+            <Text style={optStyles.notArrivedTitle}>{t('otp:notArrived.title')}</Text>
+            <Text style={optStyles.notArrivedBody}>{t('otp:notArrived.spam')}</Text>
+            <View style={optStyles.notArrivedRow}>
+              <Text style={optStyles.notArrivedBody}>{t('otp:notArrived.wrongAddress')}</Text>
+              <TouchableOpacity onPress={() => navigation.goBack()} accessibilityRole="button">
+                <Text style={optStyles.notArrivedLink}>{t('otp:notArrived.changeEmail')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

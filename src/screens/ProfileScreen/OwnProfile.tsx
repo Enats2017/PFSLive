@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, StatusBar, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Dimensions, TouchableOpacity, ScrollView, Platform, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { colors, commonStyles, spacing } from '../../styles/common.styles'
+import { commonStyles, spacing, space } from '../../styles/common.styles'
 import { Ionicons, FontAwesome5, FontAwesome6, FontAwesome, Feather } from '@expo/vector-icons'
 import { eventService, AthleteEvent, AthleteProfile } from '../../services/athleteProfileService';
 import { FlatList } from 'react-native-gesture-handler'
@@ -16,6 +16,7 @@ import { ownProfile } from '../../styles/ownProfile.styles';
 import EventsContent from './EventsContent';
 import TrainingContent from './TrainingContent';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { DeleteEventModal } from '../../components/DeleteEventModal';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { appleVerifyService } from '../../services/appleverifyservice';
@@ -24,6 +25,8 @@ import { resolveProfileCard } from './profileCard';
 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
+import { palette, fonts } from '../../styles/common.styles';
+import { AppHeader } from '../../components/common/AppHeader';
 
 
 
@@ -80,41 +83,40 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                 ? t('ownProfile:membershipCard.freeStillAvailable', { event: freeLabel })
                 : null;
 
-            // Fall back to the old single name so older API responses still render.
     const membershipNames: string[] =
         profile?.membership_info?.membership_names?.length
             ? profile.membership_info.membership_names
-            : profile?.membership_info?.membership_name
-                ? [profile.membership_info.membership_name]
-                : [];
+        : profile?.membership_info?.membership_name
+            ? [profile.membership_info.membership_name]
+            : [];
     const renderIosCard = () => {
         if (profile?.in_process_payment === 1) {
             return (
                 <View style={ownProfile.ioscard}>
                     <View style={{ alignItems: 'center', paddingVertical: 8 }}>
-                        <Ionicons name="time-outline" size={28} color={colors.themeiColor} />
+                        <Ionicons name="time-outline" size={28} color={palette.lime} />
                         <Text style={[ownProfile.iostitle, { textAlign: 'center', marginTop: 8 }]}>
                             {t('ownProfile:membershipCard.paymentProcessing')}
                         </Text>
                         <TouchableOpacity
                             onPress={onRefresh}
                             activeOpacity={0.8}
-                            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 6 }}
+                            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: space.sm }}
                         >
                             {refreshLoading ? (
                                 <ActivityIndicator
                                     size="small"
-                                    color={colors.themeiColor}
+                                    color={palette.lime}
                                 />
                             ) : (
                                 <>
-                                    <Feather name="refresh-ccw" size={16} color={colors.themeiColor} />
+                                    <Feather name="refresh-ccw" size={16} color={palette.lime} />
                                     <Text
                                         style={{
-                                            color: colors.themeiColor,
-                                            fontSize: 14,
-                                            fontWeight: '600',
-                                        }}
+                                            color: palette.lime,
+                                            fontFamily: fonts.bodySemi,
+        fontSize: 14,
+                                            }}
                                     >
                                         {t('ownProfile:membershipCard.refresh')}
                                     </Text>
@@ -129,7 +131,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
         return (
             <View style={ownProfile.ioscard}>
                 <View style={ownProfile.iosheader}>
-                    <Ionicons name="navigate-circle-outline" size={24} color={colors.themeiColor} />
+                    <Ionicons name="navigate-circle-outline" size={24} color={palette.lime} />
                     <Text style={[ownProfile.iostitle, { flex: 1 }]}>
                         {profile?.membership_info?.has_membership && membershipNames.length > 0
                             ? membershipNames.join(' & ')
@@ -197,7 +199,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                     <Text style={ownProfile.iosbuttonText}>
                         {t('ownProfile:membershipCard.viewPlans')}
                     </Text>
-                    <Ionicons name="chevron-forward" size={18} color="#1A2233" />
+                    <Ionicons name="chevron-forward" size={18} color={palette.ink} />
                 </TouchableOpacity>
             </View>
         );
@@ -208,7 +210,7 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
             {profile?.is_own_profile === 1 && (
                 Platform.OS === 'ios' ? renderIosCard() : (
                     <TouchableOpacity style={ownProfile.trackingBanner} activeOpacity={0.85}>
-                        <Ionicons name="navigate-circle-outline" size={30} color="black" />
+                        <Ionicons name="navigate-circle-outline" size={30} color={palette.ink} />
                         <View style={ownProfile.trackingTextWrapper}>
                             {eventActivation ? (
                                 <>
@@ -266,41 +268,61 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
                 )
             )}
 
-            <TouchableOpacity style={[commonStyles.card, ownProfile.menuRow]} activeOpacity={0.7} onPress={() => onSelect('events')}>
-                <Ionicons name="calendar-outline" size={25} color="black" />
-                <View style={ownProfile.menuTextWrapper}>
-                    <Text style={ownProfile.title}>{t('menu.events.title')}</Text>
-                    <Text style={ownProfile.subtitle}>{t('menu.events.subtitle')}</Text>
+            <TouchableOpacity style={commonStyles.menuCard} activeOpacity={0.7} onPress={() => onSelect('events')}>
+                <View style={commonStyles.menuIconPlate}><Ionicons name="calendar-outline" size={25} color={palette.ink} /></View>
+                <View style={commonStyles.menuText}>
+                    <Text style={commonStyles.menuTitle}>{t('menu.events.title')}</Text>
+                    <Text style={commonStyles.menuSub}>{t('menu.events.subtitle')}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={24} color="black" />
+                <Ionicons name="chevron-forward" size={22} color={palette.textMuted} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={[commonStyles.card, ownProfile.menuRow]} activeOpacity={0.7} onPress={() => onSelect('training')}>
-                <FontAwesome5 name="running" size={24} color="black" />
-                <View style={ownProfile.menuTextWrapper}>
-                    <Text style={ownProfile.title}>{t('menu.training.title')}</Text>
-                    <Text style={ownProfile.subtitle}>{t('menu.training.subtitle')}</Text>
+            <TouchableOpacity style={commonStyles.menuCard} activeOpacity={0.7} onPress={() => onSelect('training')}>
+                <View style={commonStyles.menuIconPlate}><FontAwesome5 name="running" size={24} color={palette.ink} /></View>
+                <View style={commonStyles.menuText}>
+                    <Text style={commonStyles.menuTitle}>{t('menu.training.title')}</Text>
+                    <Text style={commonStyles.menuSub}>{t('menu.training.subtitle')}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={24} color="black" />
+                <Ionicons name="chevron-forward" size={22} color={palette.textMuted} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={[commonStyles.card, ownProfile.menuRow]} activeOpacity={0.7} onPress={() => onNavigate('EditProfileScreen')}>
-                <FontAwesome6 name="contact-card" size={24} color="black" />
-                <View style={ownProfile.menuTextWrapper}>
-                    <Text style={ownProfile.title}>{t('menu.account.title')}</Text>
-                    <Text style={ownProfile.subtitle}>{t('menu.account.subtitle')}</Text>
+            <TouchableOpacity style={commonStyles.menuCard} activeOpacity={0.7} onPress={() => onNavigate('EditProfileScreen')}>
+                <View style={commonStyles.menuIconPlate}><FontAwesome6 name="contact-card" size={24} color={palette.ink} /></View>
+                <View style={commonStyles.menuText}>
+                    <Text style={commonStyles.menuTitle}>{t('menu.account.title')}</Text>
+                    <Text style={commonStyles.menuSub}>{t('menu.account.subtitle')}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={24} color="black" />
+                <Ionicons name="chevron-forward" size={22} color={palette.textMuted} />
             </TouchableOpacity>
-            <TouchableOpacity style={[commonStyles.card, ownProfile.menuRow]} activeOpacity={0.7} onPress={() => onNavigate('ContactFeedbackScreen', { profile })}>
-                <Feather name="message-square" size={26} color="black" />
-                <View style={ownProfile.menuTextWrapper}>
-                    <Text style={ownProfile.title}>{t('menu.contact.title')}</Text>
-                    <Text style={ownProfile.subtitle}>{t('menu.contact.subtitle')}</Text>
+            <TouchableOpacity style={commonStyles.menuCard} activeOpacity={0.7} onPress={() => onNavigate('ContactFeedbackScreen', { profile })}>
+                <View style={commonStyles.menuIconPlate}><Feather name="message-square" size={26} color={palette.ink} /></View>
+                <View style={commonStyles.menuText}>
+                    <Text style={commonStyles.menuTitle}>{t('menu.contact.title')}</Text>
+                    <Text style={commonStyles.menuSub}>{t('menu.contact.subtitle')}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={24} color="black" />
+                <Ionicons name="chevron-forward" size={22} color={palette.textMuted} />
             </TouchableOpacity>
-            
+
+            {Platform.OS  === 'ios' && (
+                <TouchableOpacity style={commonStyles.menuCard} activeOpacity={0.7} onPress={() => onNavigate('MembershipPlansScreen')}>
+                    <View style={commonStyles.menuIconPlate}><Ionicons name="card-outline" size={25} color={palette.ink} /></View>
+                    <View style={commonStyles.menuText}>
+                        <Text style={commonStyles.menuTitle}>{t('menu.membership.title')}</Text>
+                        <Text style={commonStyles.menuSub}>{t('menu.membership.subtitle')}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={22} color={palette.textMuted} />
+                </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={commonStyles.menuCard} activeOpacity={0.7} onPress={() => onNavigate('LiveTrackingSettings')}>
+                <View style={commonStyles.menuIconPlate}><Ionicons name="settings-outline" size={25} color={palette.ink} /></View>
+                <View style={commonStyles.menuText}>
+                    <Text style={commonStyles.menuTitle}>{t('menu.settings.title')}</Text>
+                    <Text style={commonStyles.menuSub}>{t('menu.settings.subtitle')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color={palette.textMuted} />
+            </TouchableOpacity>
+
         </View>
     );
 };
@@ -308,10 +330,13 @@ const MenuContent: React.FC<MenuContentProps> = ({ onSelect, onNavigate, profile
 const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
     const { t } = useTranslation('ownProfile');
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets();
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width
+    // ✅ A real boolean (layout audit 2026-10-22): `width` alone was always
+    // truthy; the notch side padding is sidePadding on the body below AppHeader.
+    const isLandscape = width > height;
+    const sidePadding = useLandscapeSidePadding();
     const [activeSection, setActiveSection] = useState<SectionKey>('menu')
     const flatListRef = useRef<FlatList>(null);
     const [profile, setProfile] = useState<AthleteProfile | null>(null);
@@ -538,9 +563,12 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                 await fetchProfile(true);
                 toastSuccess(t('ownProfile:deleteEvent.deleteSuccess'));
             } else if (action === 'tracking_already_started') {
+                // ✅ Not deleted (2026-10-30): this said "Event deleted successfully"
+                // and kept the stale list. Say why, and refetch so the card loses
+                // Delete and Edit as the server now reports it.
                 setDeleteTarget(null);
-                handleApiError(t('ownProfile:deleteEvent.trackingStartedError'));
-                toastSuccess(t('ownProfile:deleteEvent.deleteSuccess'));
+                toastError(t('ownProfile:deleteEvent.trackingStartedError'));
+                await fetchProfile(true);
             }
         } catch (err) {
             handleApiError(err);
@@ -582,19 +610,19 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
         : '';
 
     return (
-        <SafeAreaView style={ownProfile.safeArea} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}>
-            <StatusBar barStyle="dark-content" backgroundColor={colors.themeiColor} />
-            <TouchableOpacity style={{ paddingHorizontal: spacing.xl, alignSelf: 'flex-start', marginTop: spacing.md, }} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' as never }], })}>
-                <Ionicons name="arrow-back" size={28} color={colors.primaryDark} />
-            </TouchableOpacity>
+        <SafeAreaView style={ownProfile.safeArea} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
+            <AppHeader
+                title={t('common:band.profile')}
+                showBack
+                onBack={() => navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' as never }] })}
+            />
             <ScrollView
                 nestedScrollEnabled={true}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ flexGrow: 1 }}
+                contentContainerStyle={[{ flexGrow: 1 }, sidePadding]}
             >
                 <View style={ownProfile.scrollContent}>
-                    <View style={ownProfile.header} />
                     <View style={ownProfile.profileRow}>
                         <View style={ownProfile.avatarWrapper}>
                             {profile?.profile_picture ? (
@@ -609,7 +637,7 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                                     {avatarLoading && (
                                         <ActivityIndicator
                                             size="small"
-                                            color={colors.themeiColor}
+                                            color={palette.lime}
                                             style={{
                                                 position: 'absolute',
                                                 top: 0,
@@ -629,9 +657,13 @@ const OwnProfile: React.FC<OwnProfileprops> = ({ route }) => {
                                     </Text>
                                 </View>
                             )}
+                            {/* A 26pt circle is well under the minimum target;
+                                the badge stays small by design, so the hit area
+                                is widened with hitSlop rather than padding. */}
                             <TouchableOpacity style={ownProfile.cameraBadge}
+                                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                                 onPress={() => navigation.navigate('EditProfileScreen' as never)} >
-                                <Ionicons name="camera-sharp" size={16} color={colors.gray900} />
+                                <Ionicons name="camera-sharp" size={16} color={palette.ink} />
                             </TouchableOpacity>
                         </View>
                         <View style={ownProfile.profileInfo}>

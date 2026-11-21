@@ -85,7 +85,12 @@ export interface RaceInfo {
     position_total?: string;
     category_rank_total?: string;
     gender_ranking_total?: string;
-    wave: string
+    wave: string;
+    /** Average pace as "M:SS" per km, or '' when there is no finish time. */
+    average_pace: string;
+    /** How many of the field finished, and how many started. */
+    finishers: number;
+    field_size: number;
 }
 
 export interface RunnerInfo {
@@ -100,6 +105,15 @@ export interface RunnerInfo {
     age: string;
     gender: string;
     profile_picture: string;
+    /**
+     * Career totals for the 28_RunnerInfo.png card, sent only for a runner
+     * linked to a Livio account (0 otherwise). `podiums` is null until finish
+     * positions are joined from the partner results feed - they are not in our
+     * tables - so the row renders a dash.
+     */
+    races?: number;
+    career_distance?: number;
+    podiums?: number | null;
     // ✅ Duo teams. `name` above is the TEAM name; these are the two members.
     // Optional so a cached or older API response cannot break the screen, and
     // the API returns '' (never null) for solo entrants — so the block that

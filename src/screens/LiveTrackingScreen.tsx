@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, Text, ActivityIndicator, StatusBar, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../components/common/AppHeader';
+import { RaceStatePill } from '../components/RaceStatePill';
 import { BottomNavigation } from '../components/common/BottomNavigation';
 import { BottomNavigationFollower } from '../components/common/BottomNavigationFollower';
 import { LiveTrackingScreenProps } from '../types/navigation';
@@ -20,13 +21,15 @@ import { useFollowManager } from '../hooks/useFollowManager';
 import { followedBibsForEvent } from '../utils/liveMapBibs';
 import { isCurrentLiveResponse, dropClearsLoading, ownsError, liveFollowsKey } from '../utils/liveMapRequests';
 import { useFocusEffect } from '@react-navigation/native';
-import { commonStyles, colors } from '../styles/common.styles';
-import { liveTrackingStyles } from '../styles/liveTracking.styles';
+import { commonStyles, palette } from '../styles/common.styles';
+import { liveTrackingStyles, ELEVATION_PANEL_HEIGHT } from '../styles/liveTracking.styles';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../hooks/useLandscapeSidePadding';
 import { ChartDataPoint } from '../types';
 import ErrorScreen from '../components/ErrorScreen';
 import { useScreenError } from '../hooks/useApiError';
 import { tokenService } from '../services/tokenService';
 import * as Location from 'expo-location';
+import { isTracking } from '../services/gpsService';
 import { useDimensions } from '../hooks/useDimensions';
 import { analyticsService } from '../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../constants/analyticsScreens';
@@ -51,10 +54,19 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const { width, height } = useDimensions(); // make sure height is destructured
     const isLandscape = width > height;
     const insets = useSafeAreaInsets();
-    const TAB_BAR_HEIGHT = 87;
     const isGestureNav = insets.bottom > 0;
-    const profileBottom = TAB_BAR_HEIGHT + insets.bottom;
-    const collapseBtnBottom = profileBottom + 100;
+    // ✅ Notch side padding for the body below AppHeader (edges are ['bottom']
+    // on a notched iPhone in landscape, so nothing else pads the sides).
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
+    // ✅ Measured height of the map area (layout audit 2026-10-22). The 224pt
+    // elevation panel is pinned to its bottom; in landscape the area is only
+    // ~96-130pt, so the panel covered the whole map, overflowed up over the
+    // distance selector (taking its taps), and the collapse button - placed
+    // with tab-bar + inset maths at 187pt+ - sat above the container where
+    // Android could not tap it. In portrait Android 3-button (inset 0) that
+    // same button covered the panel's ELEVATION / D+ header.
+    const [mapAreaHeight, setMapAreaHeight] = useState(0);
     const isCustomEvent = event_source === 'custom';
     const { followedUsers, followedBibs, refreshFollowedUsers } = useFollowManager(t);
     // ✅ [#MAP-BIB-FOLLOWS] Runners followed BY BIB on this event (feedback #31:
@@ -78,12 +90,49 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const [loading, setLoading] = useState(true);
     //const [error, setError] = useState<string | null>(null);
     const [popupState, setPopupState] = useState<PopupState>({ type: null, data: null });
+    // Not forced collapsed in landscape (verify pass): on a phone the panel is
+    // hidden there anyway (panelHeight < MIN_PANEL), a tablet gets the 60% cap,
+    // and back in portrait the panel is as the user left it.
     const [profileCollapsed, setProfileCollapsed] = useState(false);
     const [participantsLoading, setParticipantsLoading] = useState(false);
     const [loadedGpxUrl, setLoadedGpxUrl] = useState<string | null>(null);
     const [showResults, setShowResults] = useState(false);
     const [raceDate, setRaceDate] = useState<string | null>(null);
+    const [countdownStatus, setCountdownStatus] =
+        useState<'not_started' | 'in_progress' | 'finished' | null>(null);
     const isRrActive = !isCustomEvent && showResults;
+
+    /**
+     * What the map's status pill says. `sourceTab` is the list the user came
+     * from and is the only status the screen is handed, so it leads. When it is
+     * absent, fall back to the event's own date: a race whose day has passed is
+     * finished, one still ahead is upcoming, and today's is live.
+     */
+    const raceState: 'live' | 'finished' | 'upcoming' = useMemo(() => {
+        // The API's countdown leads. It is computed from the per-distance
+        // race_date + start_time + end_time in the event's own timezone, so it
+        // is right for multi-day events and midnight-crossing starts.
+        if (countdownStatus === 'finished') return 'finished';
+        if (countdownStatus === 'not_started') return 'upcoming';
+        if (countdownStatus === 'in_progress') return 'live';
+
+        // `sourceTab` is only a hint, and a weak one: BottomNavigation,
+        // HomeScreen, EventCardLive and the participant DistanceTab all pass a
+        // hardcoded 'live'. Trust it only to say "not live".
+        if (sourceTab === 'past') return 'finished';
+        if (sourceTab === 'upcoming') return 'upcoming';
+        const day = (raceDate ?? '').slice(0, 10);
+        if (!day) return isRrActive ? 'live' : 'upcoming';
+        // LOCAL calendar date, not toISOString(): that returns UTC, and the race
+        // date is a plain local day. In Belgium (UTC+1/+2) the UTC date is still
+        // yesterday until 01:00-02:00 local, so a 04:00 trail start would have
+        // read as "Upcoming" on its own race morning.
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        if (day < today) return 'finished';
+        if (day > today) return 'upcoming';
+        return 'live';
+    }, [countdownStatus, sourceTab, raceDate, isRrActive]);
     const [trainingFree, setTrainingFree] = useState(false);
     
 
@@ -213,13 +262,26 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
     // ✅ Follower's own position — watched on mount, never written to DB.
     // Uses Balanced accuracy (battery friendly) since precision isn't critical.
+    //
+    // CHECK, never REQUEST. This used to cold-prompt every map viewer for
+    // location just to draw their own "YOU" dot — most viewers are fans, and a
+    // fan who said no was later blocked when they raced themselves (the OS asks
+    // only once; recovery then needs Settings). The dot still shows for anyone
+    // who has already granted location.
+    //
+    // Also skipped while this phone is tracking a race: Option B (gpsService
+    // header) — a second location stream next to Transistor's is exactly what
+    // destabilised Hermes under the New Architecture.
     useEffect(() => {
         let watcher: Location.LocationSubscription | null = null;
+        let cancelled = false;
 
         const startFollowerLocation = async () => {
             try {
-                const { status } = await Location.requestForegroundPermissionsAsync();
+                const { status } = await Location.getForegroundPermissionsAsync();
                 if (status !== 'granted') return;
+                if (await isTracking()) return;
+                if (cancelled) return;
                 watcher = await Location.watchPositionAsync(
                     {
                         accuracy: Location.Accuracy.Balanced,
@@ -233,13 +295,15 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         });
                     }
                 );
+                // Unmounted while the watcher was being created.
+                if (cancelled) watcher.remove();
             } catch (err) {
                 console.log('📍 Follower location error (non-fatal):', err);
             }
         };
 
         startFollowerLocation();
-        return () => { watcher?.remove(); };
+        return () => { cancelled = true; watcher?.remove(); };
     }, []);
 
     // ✅ Initial load with followed users check
@@ -513,6 +577,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                 response?.data?.show_results === 1;
 
             setRaceDate(response?.data?.product_race_date ?? null);
+            setCountdownStatus(response?.data?.countdown?.status ?? null);
 
             console.log("livetrackingscreen",raceDate );
             
@@ -671,7 +736,24 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     const hasCheckpoints = apiCheckpoints != null && apiCheckpoints.length > 0;
     const showRouteLine = hasGpx;
     const showCheckpoints = hasGpx && hasCheckpoints;
-    const showElevationProfile = hasGpx;
+    // ✅ Panel geometry from the measured map area (see mapAreaHeight): never
+    // taller than the area minus room for the collapse button above it, and
+    // at most 60% of it in landscape. Below MIN_PANEL there is no useful chart,
+    // so the panel and its toggle are hidden (landscape on a phone) - the
+    // profile comes back in portrait.
+    const MIN_PANEL = 72;
+    const COLLAPSE_BTN_ROOM = 56;   // 40pt button + 8 gap + 8 margin
+    const panelHeight = mapAreaHeight > 0
+        ? Math.floor(Math.min(
+            ELEVATION_PANEL_HEIGHT,
+            mapAreaHeight - COLLAPSE_BTN_ROOM,
+            isLandscape ? mapAreaHeight * 0.6 : ELEVATION_PANEL_HEIGHT,
+        ))
+        : ELEVATION_PANEL_HEIGHT;
+    const showElevationProfile = hasGpx && panelHeight >= MIN_PANEL;
+    const popupOpen = popupState.type !== null;
+    // Relative to the panel's top, always inside the map container.
+    const collapseBtnBottom = profileCollapsed ? 16 : panelHeight + 8;
     const hasValidCoords = participantMarkers.some(p => p.lat !== 0 && p.lon !== 0);
     // GPS-tracked events (custom, or partner with RR off) show the map as soon as a
     // route exists, even before anyone has a fix — there's no results view to fall
@@ -697,7 +779,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     if (loading) {
         return (
             <View style={commonStyles.centerContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
+                <ActivityIndicator size="large" color={palette.navy} />
                 <Text style={commonStyles.loadingText}>{t('livetracking:loadingData')}</Text>
             </View>
         );
@@ -705,8 +787,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={event_name} showLogo={true} showBack />
                 <ErrorScreen
                     type={error!.type}
@@ -721,8 +802,7 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
     // Handle no data separately — no error object needed
     if (isRrActive && !selectedDistance && !hasValidCoords) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
                 <AppHeader title={event_name} showLogo={true} showBack />
                 <ErrorScreen
                     type="empty"
@@ -732,18 +812,62 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
         );
     }
 
+    // ✅ Landscape (device test 2026-10-23): the popups sat inside the map area,
+    // ~170pt under the header, distance selector and bottom bar — the card was
+    // a thin scrolling strip with the close button at its edge. In landscape they
+    // cover the whole screen (centred, clear of the notch / status bar / home
+    // indicator); in portrait they stay over the map, as before.
+    const mapPopups = (
+        <>
+            {popupState.type === 'participant' && livePopupParticipant && (
+                <ParticipantPopup
+                    participant={livePopupParticipant}
+                    event_source={event_source}
+                    isRrActive={isRrActive}
+                    onClose={handleClosePopup}
+                    fullScreen={isLandscape}
+                />
+            )}
+
+            {popupState.type === 'aidstation' && popupState.data && (
+                <AidStationPopup
+                    station={popupState.data as AidStationMapMarker}
+                    onClose={handleClosePopup}
+                    fullScreen={isLandscape}
+                />
+            )}
+        </>
+    );
+
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top', 'bottom']}>
-            <StatusBar barStyle="dark-content" />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
             <AppHeader title={event_name} showLogo={true} showBack />
+            <View style={[{ flex: 1 }, sidePadding]}>
+            {/* A custom event has no distances, so no dropdown to carry the
+                status pill - it gets the same header row on its own. */}
+            {!showDistanceDropdown && (
+                <View style={liveTrackingStyles.dropdownContainer}>
+                    <View style={liveTrackingStyles.mapHeadRow}>
+                        <Text style={liveTrackingStyles.mapHeadTitle}>
+                            {t('livetracking:liveMap')}
+                        </Text>
+                        <RaceStatePill raceState={raceState} />
+                    </View>
+                </View>
+            )}
+
             {showDistanceDropdown && selectedDistance && (
                 <DistanceDropdown
                     distances={distances}
                     selectedDistance={selectedDistance}
                     onSelect={handleDistanceChange}
+                    raceState={raceState}
                 />
             )}
-            <View style={{ flex: 1 }}>
+            <View
+                style={{ flex: 1 }}
+                onLayout={(e) => setMapAreaHeight(Math.round(e.nativeEvent.layout.height))}
+            >
 
                 <View style={liveTrackingStyles.mapContainer}>
                     <LiveRouteMap
@@ -764,9 +888,15 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                             liveTrackingStyles.chartContainer,
                             {
                                 position: 'absolute',
-                                bottom: 0,   
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                height: panelHeight,   // capped to the map area (see panelHeight)
                                 backgroundColor: 'transparent',
-                                elevation: 5,
+                                // 0 while a popup is open: Android draws by elevation
+                                // before zIndex, so the panel (5) and the chevron (10)
+                                // were painted over the portrait popup (audit 2026-10-23).
+                                elevation: popupOpen ? 0 : 5,
                             },
                         ]}
                         pointerEvents="box-none"
@@ -780,8 +910,10 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                             totalDistance={routeData?.totalDistance ?? 0}
                             minElevation={routeData?.minElevation ?? 0}
                             maxElevation={routeData?.maxElevation ?? 0}
+                            elevationGain={routeData?.elevationGain ?? 0}
                             onAidStationPress={handleAidStationPress}
                             onParticipantPress={handleParticipantPress}
+                            panelHeight={panelHeight}
                         />
                     </View>
                 )}
@@ -793,8 +925,8 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                             {
                                 bottom: collapseBtnBottom,
                                 
-                                zIndex: 10, elevation: 10
-                            },   // follow the bottom:0 profile + sit above the overlay
+                                zIndex: 10, elevation: popupOpen ? 0 : 10
+                            },   // just above the panel's top (or near the bottom when collapsed)
                         ]}
                         onPress={() => {
                             void analyticsService.logInteraction(
@@ -809,27 +941,14 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                         <Ionicons
                             name={profileCollapsed ? 'chevron-up' : 'chevron-down'}
                             size={24}
-                            color={colors.gray900}
+                            color={palette.ink}
                         />
                     </TouchableOpacity>
                 )}
 
-                {popupState.type === 'participant' && livePopupParticipant && (
-                    <ParticipantPopup
-                        participant={livePopupParticipant}
-                        event_source={event_source}
-                        isRrActive={isRrActive}
-                        onClose={handleClosePopup}
-                    />
-                )}
+                {!isLandscape && mapPopups}
 
-                {popupState.type === 'aidstation' && popupState.data && (
-                    <AidStationPopup
-                        station={popupState.data as AidStationMapMarker}
-                        onClose={handleClosePopup}
-                    />
-                )}
-
+            </View>
             </View>
 
             {showBottomNav && (
@@ -857,6 +976,9 @@ const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({ route, navigati
                     />
                 )
             )}
+
+            {/* last child: above the header and the bottom bar */}
+            {isLandscape && mapPopups}
         </SafeAreaView>
     );
 };

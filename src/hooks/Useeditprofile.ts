@@ -30,6 +30,8 @@ export interface EditProfileForm {
 
 export type FormErrors = Partial<Record<keyof EditProfileForm, string>>
 
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const fieldErrorMap: Partial<Record<FieldError, keyof EditProfileForm>> = {
     firstname_invalid: 'firstname',
     lastname_invalid: 'lastname',
@@ -47,6 +49,9 @@ const fieldErrorMap: Partial<Record<FieldError, keyof EditProfileForm>> = {
     country_not_found: 'countryName',
     password_too_short: 'password',
     password_too_long: 'password',
+    email_invalid: 'email',
+    email_too_long: 'email',
+    email_already_taken: 'email',
 }
 
 const initialFormState: EditProfileForm = {
@@ -75,6 +80,8 @@ export const useEditProfile = (initialProfile: Profile | null) => {
     const [loading, setLoading] = useState(false)
     const [success, setSuccess] = useState(false)
     const [emailChanged, setEmailChanged] = useState(false)
+    const [emailChangeToken, setEmailChangeToken] = useState<string | null>(null)   // NEW
+    const [pendingEmail, setPendingEmail] = useState<string | null>(null) 
 
     const [picture, setPicture] = useState<{
         uri: string
@@ -130,20 +137,25 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         setErrors(prev => ({ ...prev, countryName: undefined }))
     }, [])
 
-    const validate = (): boolean => {
+    const validate = (candidate: EditProfileForm): boolean => {
         const newErrors: FormErrors = {}
 
-        if (form.firstname.trim().length < 2)
+        if (candidate.firstname.trim().length < 2)
             newErrors.firstname = t('profile:validation.firstname_invalid')
 
-        if (form.lastname.trim().length < 2)
+        if (candidate.lastname.trim().length < 2)
             newErrors.lastname = t('profile:validation.lastname_invalid')
 
-        if (form.city.trim().length < 2)
+        if (candidate.city.trim().length < 2)
             newErrors.city = t('profile:validation.city_invalid')
 
-        if (form.dob) {
-            const dobDate = new Date(form.dob)
+        const trimmedEmail = candidate.email.trim()
+        if (!trimmedEmail || !EMAIL_REGEX.test(trimmedEmail)) {
+            newErrors.email = t('profile:validation.email_invalid')
+        }
+
+        if (candidate.dob) {
+            const dobDate = new Date(candidate.dob)
 
             if (isNaN(dobDate.getTime())) {
                 newErrors.dob = t('profile:validation.dob_invalid_format')
@@ -187,33 +199,45 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             }
         }
 
-        if (form.password && form.password.length < 4)
+        if (candidate.password && candidate.password.length < 4)
             newErrors.password = t('profile:validation.password_too_short')
 
-        if (form.password && form.password !== form.confirmPassword)
+        if (candidate.password && candidate.password !== candidate.confirmPassword)
             newErrors.confirmPassword = t('profile:validation.passwords_do_not_match')
 
         setErrors(newErrors)
         return Object.keys(newErrors).length === 0
     }
 
-    const submit = useCallback(async (): Promise<boolean> => {
-        if (!validate()) return false
+    const submit = useCallback(async (
+        overrides?: Partial<EditProfileForm>,
+        opts?: { cancelEmailChange?: boolean }
+    ): Promise<{
+        ok: boolean
+        isEmailChange: boolean
+        emailChangeToken: string | null
+        pendingEmail: string | null
+    }> => {
+        const effective: EditProfileForm = { ...form, ...overrides }
+
+        if (!validate(effective)) return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
 
         setLoading(true)
         setSuccess(false)
 
         const payload: EditProfilePayload = {
-            firstname: form.firstname.trim(),
-            lastname: form.lastname.trim(),
-            city: form.city.trim(),
-            dob: form.dob.trim(),
-            gender: form.gender || undefined,
-            country_id: form.country_id ? Number(form.country_id) : undefined,
+            firstname: effective.firstname.trim(),
+            lastname: effective.lastname.trim(),
+            email: effective.email.trim().toLowerCase(),
+            city: effective.city.trim(),
+            dob: effective.dob.trim(),
+            gender: effective.gender || undefined,
+            country_id: effective.country_id ? Number(effective.country_id) : undefined,
             // ✅ Use language selected in form instead of getCurrentLanguageId()
-            language_id: form.language_id,
-            ...(form.password && { password: form.password }),
+            language_id: effective.language_id,
+            ...(effective.password && { password: effective.password }),
             ...(removePicture && { remove_profile_picture: '1' as '1' }),
+            ...(opts?.cancelEmailChange && { cancel_email_change: '1' as '1' }),
             // ✅ Only sent when the date being saved actually asks for it. Ticking
             // the box at 15 and then changing the date to an adult one would
             // otherwise record consent nobody was ever asked for.
@@ -225,8 +249,18 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         try {
             const result = await editProfileApi(payload, picture ?? undefined)
 
-            setSuccess(true)
-            setEmailChanged(result.message === 'profile_updated_verify_email')
+            const isEmailChange = result.message === 'profile_updated_verify_email'
+            const emailChangeToken = isEmailChange ? result.email_change_token ?? null : null
+            const pendingEmail = isEmailChange ? result.profile.pending_email ?? null : null
+
+            // ✅ The inline banner means "your edits were saved". Cancelling a
+            // pending email change is its own action with its own toast, so it
+            // must not raise the banner too. `success` was already reset to false
+            // at the top of submit(), so this settles it without a flash.
+            setSuccess(!opts?.cancelEmailChange)
+            setEmailChanged(isEmailChange)
+            setEmailChangeToken(emailChangeToken)
+            setPendingEmail(pendingEmail)
 
             setForm(prev => ({
                 ...prev,
@@ -237,7 +271,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
             setPicture(null)
             setRemovePicture(false)
 
-            return true
+            return { ok: true, isEmailChange, emailChangeToken, pendingEmail }
         } catch (err) {
             if (err instanceof ValidationError) {
                 const newErrors: FormErrors = {}
@@ -249,7 +283,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
                 })
                 setErrors(newErrors)
             }
-            return false
+            return { ok: false, isEmailChange: false, emailChangeToken: null, pendingEmail: null }
         } finally {
             setLoading(false)
         }
@@ -278,5 +312,7 @@ export const useEditProfile = (initialProfile: Profile | null) => {
         removePicture,
         setRemovePicture,
         submit,
+        emailChangeToken,   // NEW
+        pendingEmail, 
     }
 }

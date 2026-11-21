@@ -13,8 +13,17 @@ export interface EventItem {
  category_id:  any;
   race_result_api_url: string;
   event_image: string; 
-  /** 'live' | 'finished' from the API, and only on the live tab — null elsewhere. */
-  event_status?: string | null;
+  /**
+   * Where the event sits today, from event_list_api.php. Only the LIVE tab
+   * sends it: that tab is a WINDOW (today-2 .. today+5), so it also holds
+   * races that already finished and ones that have not started. Null on the
+   * past and upcoming tabs, where the tab itself is the answer.
+   *
+   * Three states, not two: the API emits 'upcoming' as well (verified against
+   * event_list_api.php). `null` is kept in the type so analyticsScreens'
+   * `liveTabStatus`, which accepts `string | null`, still takes this directly.
+   */
+  event_status?: 'live' | 'finished' | 'upcoming' | null;
 }
 
 export interface EventTabs {

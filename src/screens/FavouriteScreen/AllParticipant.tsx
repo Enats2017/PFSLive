@@ -4,14 +4,11 @@ import {
     Text,
     FlatList,
     ActivityIndicator,
-    TouchableOpacity,
-    StatusBar,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, space, palette } from '../../styles/common.styles';
 import SearchInput from '../../components/SearchInput';
 import { participantService, Participant } from '../../services/participantService';
 import { API_CONFIG } from '../../constants/config';
@@ -23,15 +20,21 @@ import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { AppHeader } from '../../components/common/AppHeader';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => {
     const { product_app_id, event_name } = route.params;
     const { t } = useTranslation(['details', 'follower']);
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width
+    // A real boolean: this was `= width` (always truthy), so the SafeAreaView
+    // took left/right edges in PORTRAIT on 3-button Android too.
+    const isLandscape = width > height;
+    // Notch / Dynamic Island in landscape on gesture phones (0 elsewhere).
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
     const productId = typeof product_app_id === 'string' ? parseInt(product_app_id, 10) : product_app_id;
     const {
         isFollowed,
@@ -205,7 +208,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
         if (loadingMore) {
             return (
                 <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color={colors.primary} />
+                    <ActivityIndicator size="small" color={palette.navy} />
                 </View>
             );
         }
@@ -213,21 +216,27 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
         return null;
     }, [loadingMore]);
 
+    // 37_EmptyStates.png: an empty result is a designed state, not a line of
+    // error-coloured text. `ErrorScreen type="empty"` is what the rest of the
+    // app uses for this.
     const renderEmpty = useCallback(() => (
-        <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
-            <Text style={commonStyles.errorText}>
-                {searchText
-                    ? `${t('details:participant.noResults')} "${searchText}"`
-                    : t('details:participant.empty')}
-            </Text>
-        </View>
+        <ErrorScreen
+            type="empty"
+            title={searchText
+                ? `${t('details:participant.noResults')} "${searchText}"`
+                : t('details:participant.empty')}
+            onRetry={() => { }}
+        />
     ), [searchText, t]);
 
     if (loading && searchText.length === 0) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top', 'bottom']}>
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                {/* The header in the first load too: without it the screen had
+                    no back button (or title) until the list arrived. */}
+                <AppHeader title={t('common:band.searchParticipants')} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
             </SafeAreaView>
         );
@@ -235,9 +244,8 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showBack />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={t('common:band.searchParticipants')} showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -249,33 +257,41 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top','bottom']}>
-            <StatusBar barStyle="dark-content" />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
 
-            <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom:spacing.sm }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10 }}>
-                    <TouchableOpacity
-                        style={{ width: 32 }}
-                        hitSlop={{ top: 8, bottom: 8, left: 10, right: 8 }}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Ionicons name="chevron-back" size={32} color={colors.gray900} />
-                    </TouchableOpacity>
-                    <Text style={commonStyles.title}>{t('favourite:addRunner')}</Text>
-                </View>
-                <SearchInput
-                    ref={searchInputRef}
-                    placeholder={t('details:participant.search')}
-                    value={searchText}
-                    onChangeText={setSearchText}
-                    icon="search"
-                />
-            </View>
+            {/* This screen hand-rolled a back chevron and a plain title on white,
+                so it looked nothing like the rest of the app - and nothing like
+                its own error state, which already used AppHeader. `edges` must
+                not include 'top' with AppHeader: the bar carries the status-bar
+                inset itself and would otherwise double-pad. */}
+            <AppHeader title={t('common:band.searchParticipants')} showBack />
+
+            {/* Body below AppHeader, clear of the notch in landscape (0 in portrait,
+                so the search band stays full-bleed there). */}
+            <View style={[{ flex: 1 }, sidePadding]}>
+            {/* Full-bleed, like every other search screen: the component draws
+                its own white sub-header band, which a padded wrapper broke. */}
+            <SearchInput
+                ref={searchInputRef}
+                placeholder={t('details:participant.search')}
+                value={searchText}
+                onChangeText={setSearchText}
+                icon="search"
+                // ✅ Landscape: the band reaches the screen edges (it was inset
+                // by the notch padding, grey strips each side); the field
+                // keeps clear of the notch. 0 in portrait.
+                frameStyle={{
+                    marginLeft: -sidePadding.paddingLeft,
+                    marginRight: -sidePadding.paddingRight,
+                    paddingLeft: space.xl + sidePadding.paddingLeft,
+                    paddingRight: space.xl + sidePadding.paddingRight,
+                }}
+            />
 
             {loading && searchText.length > 0 && (
                 <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                    <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
+                    <ActivityIndicator size="small" color={palette.navy} />
+                    <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
                         {t('details:participant.searching')}
                     </Text>
                 </View>
@@ -291,7 +307,9 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
                 contentContainerStyle={{
-                    paddingHorizontal: spacing.sm,
+                    // The card supplies its own 20pt gutter; this only needs to
+                    // hold the first card clear of the search band above it.
+                    paddingTop: spacing.sm,
                     paddingBottom: spacing.xxxl,
                     flexGrow: 1,
                 }}
@@ -300,6 +318,7 @@ const AllParticipant: React.FC<AllParticipantpops> = ({ route, navigation }) => 
                 ListFooterComponent={renderFooter}
                 ListEmptyComponent={!loading ? renderEmpty : null}
             />
+            </View>
 
             <TrackingPasswordModal
                 visible={passwordModalVisible}

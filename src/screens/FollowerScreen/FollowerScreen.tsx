@@ -1,22 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Platform,
     ScrollView,
-    StatusBar,
     Text,
     TouchableOpacity,
     View,
-    Keyboard,
-    KeyboardEvent,
     useWindowDimensions,
     FlatList,
 } from 'react-native';
+import { useSearchFieldKeyboard } from '../../hooks/useKeyboardHeight';
 import { SafeAreaView,useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
@@ -26,6 +22,7 @@ import useSearchSuggestions from '../../hooks/useSearchSuggestions';
 import { eventService, ParticipantItem } from '../../services/followerEvent';
 import AthleteSuggestionDropdown from '../../components/AthleteSuggestionDropdown';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { analyticsService } from '../../services/analyticsService';
 
 const Divider = () => (
@@ -37,10 +34,14 @@ const Divider = () => (
 const FollowerScreen = () => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['follow']);
-    const { width } = useDimensions();
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged
+    // in effect (portrait has no side/bottom inset where the branches differ).
+    const isLandscape = width > height;
+    // ✅ Notch clearance for the body in landscape (edges fall back to ['bottom']).
+    const sidePadding = useLandscapeSidePadding();
     const upcoming = useSearchSuggestions('filter_name', ['upcoming', 'live']);
     const past = useSearchSuggestions('filter_name_past_suggestion', ['past']);
     const [athleteQuery, setAthleteQuery] = useState('');
@@ -53,37 +54,18 @@ const FollowerScreen = () => {
     const athleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const athleteQueryRef = useRef('');
 
-    const participantSearchFocused = useRef(false);
-    const keyboardOffset = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-        const onShow = (e: KeyboardEvent) => {
-            if (!participantSearchFocused.current) return;
-            Animated.timing(keyboardOffset, {
-                toValue: e.endCoordinates.height,
-                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
-                useNativeDriver: true,
-            }).start();
-        };
-
-        const onHide = (e: KeyboardEvent) => {
-            Animated.timing(keyboardOffset, {
-                toValue: 0,
-                duration: Platform.OS === 'ios' ? (e.duration ?? 250) : 200,
-                useNativeDriver: true,
-            }).start();
-        };
-
-        const showSub = Keyboard.addListener(showEvent, onShow);
-        const hideSub = Keyboard.addListener(hideEvent, onHide);
-        return () => {
-            showSub.remove();
-            hideSub.remove();
-        };
-    }, [keyboardOffset]);
+    // ✅ Search fields vs the keyboard: the focused search scrolls to the top
+    // and the list gets room for the keyboard, so its suggestions open above
+    // it (useKeyboardHeight.ts). Was the athlete search only; the upcoming and
+    // past searches opened their suggestions behind the keyboard (audit
+    // 2026-10-23). Each section's y is measured in the list content.
+    const listRef = useRef<FlatList<never>>(null);
+    const upcomingSectionY = useRef(0);
+    const pastSectionY = useRef(0);
+    const athleteSectionY = useRef(0);
+    const { keyboardPad, focusAt, blur } = useSearchFieldKeyboard((y) => {
+        listRef.current?.scrollToOffset({ offset: y, animated: true });
+    });
 
     const handleUpcomingSelect = useCallback((item: SuggestionItem) => {
         upcoming.clearSuggestions();
@@ -170,17 +152,23 @@ const FollowerScreen = () => {
 
     const renderContent = () => (
         <>
-            <View style={{ zIndex: 30, elevation: 30 }}>
-                <View style={follow.yellowHeader}>
-                    <Feather name="radio" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                    <Text style={commonStyles.title}>{t('follow:upcomingrace')}</Text>
+            <View
+                style={{ zIndex: 30, elevation: 30 }}
+                onLayout={(e) => { upcomingSectionY.current = e.nativeEvent.layout.y; }}
+            >
+                <View style={follow.sectionLabel}>
+                    <Feather name="radio" size={14} color={palette.lime} />
+                    <Text style={follow.sectionLabelText}>{t('follow:upcomingrace')}</Text>
                 </View>
                 <View style={follow.section}>
                     <SearchInput
-                        placeholder={t('follow:search.upcomgsearch')}
+                        framed={false}
+                        placeholder={t('follow:search.upcomingSearch')}
                         value={upcoming.query}
                         onChangeText={upcoming.handleSearch}
                         icon="search"
+                        onFocus={() => focusAt(upcomingSectionY.current)}
+                        onBlur={blur}
                     />
                     <SuggestionDropdown
                         suggestions={upcoming.suggestions}
@@ -189,27 +177,33 @@ const FollowerScreen = () => {
                         onSelect={handleUpcomingSelect}
                     />
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.md }]}
+                        style={[commonStyles.outlineButton, { flexDirection: 'row', marginTop: spacing.md }]}
                         onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Live' })}
                         activeOpacity={0.8}
                     >
-                        <Feather name="calendar" size={15} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={commonStyles.primaryButtonText}>{t('follow:button.upcoming')}</Text>
+                        <Feather name="calendar" size={15} color={palette.navy} style={{ marginRight: 8 }} />
+                        <Text style={commonStyles.outlineButtonText}>{t('follow:button.upcoming')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
             <Divider />
-            <View style={{ zIndex: 20, elevation: 20 }}>
-                <View style={follow.yellowHeader}>
-                    <Feather name="radio" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                    <Text style={commonStyles.title}>{t('follow:pastrace')}</Text>
+            <View
+                style={{ zIndex: 20, elevation: 20 }}
+                onLayout={(e) => { pastSectionY.current = e.nativeEvent.layout.y; }}
+            >
+                <View style={follow.sectionLabel}>
+                    <Feather name="radio" size={14} color={palette.lime} />
+                    <Text style={follow.sectionLabelText}>{t('follow:pastrace')}</Text>
                 </View>
                 <View style={follow.section}>
                     <SearchInput
-                        placeholder={t('follow:search.upcomgsearch')}
+                        framed={false}
+                        placeholder={t('follow:search.upcomingSearch')}
                         value={past.query}
                         onChangeText={past.handleSearch}
                         icon="search"
+                        onFocus={() => focusAt(pastSectionY.current)}
+                        onBlur={blur}
                     />
                     <SuggestionDropdown
                         suggestions={past.suggestions}
@@ -218,29 +212,33 @@ const FollowerScreen = () => {
                         onSelect={handlePastSelect}
                     />
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.md }]}
+                        style={[commonStyles.outlineButton, { flexDirection: 'row', marginTop: spacing.md }]}
                         onPress={() => navigation.navigate('FollowerEvent', { initialTab: 'Past' })}
                         activeOpacity={0.8}
                     >
-                        <Feather name="calendar" size={15} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={commonStyles.primaryButtonText}>{t('follow:button.past')}</Text>
+                        <Feather name="calendar" size={15} color={palette.navy} style={{ marginRight: 8 }} />
+                        <Text style={commonStyles.outlineButtonText}>{t('follow:button.past')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
             <Divider />
-            <View style={{ zIndex: 10, elevation: 10 }}>
-                <View style={follow.yellowHeader}>
-                    <Feather name="plus-circle" size={18} color="#1a1a1a" style={{ marginRight: 8 }} />
-                    <Text style={commonStyles.title}>{t('follow:athlete')}</Text>
+            <View
+                style={{ zIndex: 10, elevation: 10 }}
+                onLayout={(e) => { athleteSectionY.current = e.nativeEvent.layout.y; }}
+            >
+                <View style={follow.sectionLabel}>
+                    <Feather name="plus-circle" size={18} color={palette.ink} style={{ marginRight: 8 }} />
+                    <Text style={follow.sectionLabelText}>{t('follow:athlete')}</Text>
                 </View>
                 <View style={follow.section}>
                     <SearchInput
+                        framed={false}
                         placeholder={t('follow:search.athletesearch')}
                         value={athleteQuery}
                         onChangeText={handleAthleteSearch}
                         icon="search"
-                        onFocus={() => { participantSearchFocused.current = true; }}
-                        onBlur={() => { participantSearchFocused.current = false; }}
+                        onFocus={() => focusAt(athleteSectionY.current)}
+                        onBlur={blur}
                     />
                     <AthleteSuggestionDropdown
                         suggestions={athleteSuggestions}
@@ -252,12 +250,12 @@ const FollowerScreen = () => {
                         hasMore={athletePage < athleteTotalPages}
                     />
                     <TouchableOpacity
-                        style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.xl }]}
+                        style={[commonStyles.outlineButton, { flexDirection: 'row', marginTop: spacing.xl }]}
                         onPress={() => navigation.navigate('AthleteSearchScreen', {})}
                         activeOpacity={0.8}
                     >
-                        <Feather name="search" size={15} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={commonStyles.primaryButtonText}>
+                        <Feather name="search" size={15} color={palette.navy} style={{ marginRight: 8 }} />
+                        <Text style={commonStyles.outlineButtonText}>
                             {t('follow:button.athlete')}
                         </Text>
                     </TouchableOpacity>
@@ -265,12 +263,12 @@ const FollowerScreen = () => {
             </View>
             <View style={[follow.section, { zIndex: 1, elevation: 1 }]}>
                 <TouchableOpacity
-                    style={[commonStyles.primaryButton, { flexDirection: 'row', marginTop: spacing.xl, gap: 8 }]}
+                    style={[commonStyles.limeButton, { flexDirection: 'row', marginTop: spacing.xl, gap: 8 }]}
                     onPress={() => navigation.navigate('UserFavouriteList')}
                     activeOpacity={0.8}
                 >
-                    <MaterialIcons name="favorite-outline" size={18} color={colors.white} />
-                    <Text style={commonStyles.primaryButtonText}>
+                    <MaterialIcons name="favorite-outline" size={18} color={palette.ink} />
+                    <Text style={commonStyles.limeButtonText}>
                         {t('follow:button.favourite')}
                     </Text>
                 </TouchableOpacity>
@@ -279,25 +277,25 @@ const FollowerScreen = () => {
     );
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={t('common:band.findRace')} showBack />
 
-            <Animated.View
-                style={{
-                    flex: 1,
-                    transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }],
-                }}
-            >
+            <View style={[{ flex: 1 }, sidePadding]}>
                 <FlatList
+                    ref={listRef}
                     data={[]}                         
                     renderItem={null}
-                    ListHeaderComponent={renderContent}
+                    // ✅ An element, not the function: renderContent is a new
+                    // function every render, and VirtualizedList renders a
+                    // function as <ListHeaderComponent /> — a new component type
+                    // each time, so the whole header (and the focused search
+                    // field) remounted on every state change.
+                    ListHeaderComponent={renderContent()}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: spacing.xxxxl}}
+                    contentContainerStyle={{ paddingBottom: spacing.xxxxl + keyboardPad }}
                 />
-            </Animated.View>
+            </View>
         </SafeAreaView>
     );
 };

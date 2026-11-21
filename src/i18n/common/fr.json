@@ -35,22 +35,37 @@
   "loading": {
     "please_wait": "Veuillez patienter...",
     "loading": "Chargement...",
-    "processing": "Traitement en cours..."
+    "processing": "Traitement en cours...",
+    "participants": "Chargement des participants…"
   },
   "months": {
-    "january": "Janvier",
-    "february": "Février",
-    "march": "Mars",
-    "april": "Avril",
-    "may": "Mai",
-    "june": "Juin",
-    "july": "Juillet",
-    "august": "Août",
-    "september": "Septembre",
-    "october": "Octobre",
-    "november": "Novembre",
-    "december": "Décembre"
+    "january": "janvier",
+    "february": "février",
+    "march": "mars",
+    "april": "avril",
+    "may": "mai",
+    "june": "juin",
+    "july": "juillet",
+    "august": "août",
+    "september": "septembre",
+    "october": "octobre",
+    "november": "novembre",
+    "december": "décembre"
   },
+  "monthsShort": [
+    "janv.",
+    "févr.",
+    "mars",
+    "avr.",
+    "mai",
+    "juin",
+    "juil.",
+    "août",
+    "sept.",
+    "oct.",
+    "nov.",
+    "déc."
+  ],
   "week": {
     "mon": "Lu",
     "tue": "Ma",
@@ -63,7 +78,7 @@
   "update": {
     "currentVersion": "Version actuelle",
     "latestVersion": "Dernière version",
-    "updateNow": "METTRE À JOUR",
+    "updateNow": "Mettre à jour",
     "later": "Plus tard",
     "forcedMessage": "Vous devez mettre à jour pour continuer à utiliser l'application"
   },
@@ -87,7 +102,39 @@
     "placeholder": "HH:MM"
   },
   "gender": {
-  "men": "Hommes",
-  "women": "Femmes"
-}
+    "men": "Hommes",
+    "women": "Femmes"
+  },
+  "band": {
+    "home": "Suivi en direct & résultats",
+    "login": "Connexion",
+    "register": "Inscription",
+    "verifyEmail": "Vérifier l'e-mail",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "profile": "Profil",
+    "account": "Compte",
+    "athlete": "Athlète",
+    "myFollowers": "Mes abonnés",
+    "yourEvents": "Vos événements",
+    "membership": "Abonnement",
+    "settings": "Paramètres",
+    "trackingSettings": "Paramètres de suivi",
+    "contactFeedback": "Contact & commentaires",
+    "events": "Événements",
+    "findRace": "Trouver une course",
+    "followRace": "Suivre la course",
+    "participantHub": "Espace participant",
+    "findAthlete": "Trouver un athlète",
+    "favouriteAthletes": "Athlètes favoris",
+    "searchParticipants": "Rechercher des participants",
+    "selectProfile": "Choisissez votre profil",
+    "newPersonalEvent": "Nouvel événement personnel",
+    "editPersonalEvent": "Modifier l'événement personnel",
+    "trainingSessions": "Séances d'entraînement"
+  },
+  "empty": {
+    "noResults": "Aucun résultat",
+    "noAthletes": "Aucun athlète trouvé"
+  },
+  "or": "OU"
 }

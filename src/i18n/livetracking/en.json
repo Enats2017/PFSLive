@@ -38,5 +38,13 @@
   "minutesAgo_one": "{{count}} min ago",
   "minutesAgo_other": "{{count}} mins ago",
   "hoursAgo_one": "{{count}} hour ago",
-  "hoursAgo_other": "{{count}} hours ago"
+  "hoursAgo_other": "{{count}} hours ago",
+  "bar": {
+    "label": "Live tracking"
+  },
+  "meterDPlus": "m D+",
+  "liveMap": "Live map",
+  "raceState_live": "Live",
+  "raceState_finished": "Finished",
+  "raceState_upcoming": "Upcoming"
 }

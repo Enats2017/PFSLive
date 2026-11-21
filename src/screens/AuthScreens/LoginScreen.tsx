@@ -3,16 +3,14 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StatusBar,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator
 } from 'react-native';
-import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AppHeader } from '../../components/common/AppHeader';
+import { Button } from '../../components/ui';
 import FloatingLabelInput from '../../components/FloatingLabelInput';
 import DeviceTransferModal from '../../components/DeviceTransferModal';
 import { authService } from '../../services/authService';
@@ -25,6 +23,7 @@ import { useAuthForm } from '../../hooks/useAuthForm';
 import { usePendingRegistration } from '../../hooks/usePendingRegistration';
 import { useAuth } from '../../context/AuthContext';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { analyticsService } from '../../services/analyticsService';
 
 const INITIAL_FORM_DATA = {
@@ -35,10 +34,14 @@ const INITIAL_FORM_DATA = {
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['login', 'common']);
   const { login } = useAuth(); // ✅ get login() from context
-  const { width } = useDimensions();
+  const { width, height } = useDimensions();
   const insets = useSafeAreaInsets(); 
   const isGestureNav = insets.bottom > 0;
-  const isLandscape = width 
+  // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged in
+  // effect (portrait has no side/bottom inset where the two branches differ).
+  const isLandscape = width > height;
+  // ✅ Notch clearance in landscape, where edges fall back to ['bottom'].
+  const sidePadding = useLandscapeSidePadding();
 
   const { formData, errors, setField, setErrors, clearAllErrors } =
     useAuthForm(INITIAL_FORM_DATA);
@@ -228,14 +231,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   }, [formData, navigation, setErrors, t]);
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo={true} showBack />
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+      <AppHeader title={t('common:band.login')} showLogo={true} showBack />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, sidePadding]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        // ✅ 0, not 80: RN's KAV uses its onLayout frame (relative to the parent,
+        // which starts at the screen top — headerShown is false), so frame.y
+        // already includes AppHeader. 80 lifted the form a further 80pt above
+        // the keyboard (landscape: almost no form left while typing).
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           style={{ flex: 1 }}
@@ -245,13 +251,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         >
           <View style={loginStyles.inner}>
             <View style={loginStyles.headerSection}>
-              <View style={loginStyles.cardscetion}>
-                <Image
-                  source={require('../../../assets/livio_logo_transparent.png')}
-                  style={loginStyles.logo}
-                  contentFit="contain"
-                />
-              </View>
               <Text style={loginStyles.title}>{t('login:title')}</Text>
               <Text style={loginStyles.subtitle}>{t('login:subtitle')}</Text>
             </View>
@@ -291,18 +290,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 <Text style={loginStyles.forgotText}>{t('login:forgotPassword')}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[commonStyles.primaryButton, loading && { opacity: 0.7 }]}
+              <Button
+                label={t('login:loginButton')}
                 onPress={handleLogin}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={commonStyles.primaryButtonText}>{t('login:loginButton')}</Text>
-                )}
-              </TouchableOpacity>
+                loading={loading}
+              />
 
               <View style={loginStyles.divider}>
                 <View style={loginStyles.dividerLine} />
@@ -317,10 +309,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 disabled={loading}
               >
                 <Text style={loginStyles.registerText}>
-                  {t('login:noAccount')}{' '}
-                  <Text style={loginStyles.registerLink}>{t('login:registerNow')}</Text>
+                  {t('login:createAccount')}
                 </Text>
               </TouchableOpacity>
+
+              {/* 03_Login.png: most of the app works signed out — say so. */}
+              <Text style={loginStyles.accountNote}>
+                {t('login:noAccountNote')}
+              </Text>
             </View>
           </View>
         </ScrollView>

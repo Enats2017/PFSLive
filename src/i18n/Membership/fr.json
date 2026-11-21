@@ -1,8 +1,8 @@
 {
   "header": {
-    "label": "ABONNEMENT",
+    "label": "Abonnement",
     "title": "Choisissez votre formule",
-    "subtitle": "Suivez vos athlètes en direct."
+    "subtitle": "Continuez à suivre vos athlètes en direct."
   },
   "infoBanner": {
     "text": "Un abonnement est nécessaire pour vous inscrire et suivre votre course en direct le jour J. Choisissez une formule pour commencer.",
@@ -36,7 +36,7 @@
         "Accès prioritaire aux événements populaires",
         "Le suivi de votre activité est toujours gratuit pour vos fans"
       ],
-      "popularLabel": "LE PLUS POPULAIRE"
+      "popularLabel": "Le plus populaire"
     },
     "pro": {
       "name": "UNLIMITED",
@@ -63,9 +63,18 @@
   },
   "retry": "Réessayer",
   "restorePurchases": "Restaurer les achats",
-  "restoreSuccess": { "title": "Achats restaurés", "message": "Votre abonnement a été restauré avec succès." },
-  "restoreNone": { "title": "Rien à restaurer", "message": "Aucun achat précédent n'a été trouvé pour cet identifiant Apple." },
-  "restoreError": { "title": "Échec de la restauration", "message": "Nous n'avons pas pu restaurer vos achats. Veuillez réessayer." },
+  "restoreSuccess": {
+    "title": "Achats restaurés",
+    "message": "Votre abonnement a été restauré avec succès."
+  },
+  "restoreNone": {
+    "title": "Rien à restaurer",
+    "message": "Aucun achat précédent n'a été trouvé pour cet identifiant Apple."
+  },
+  "restoreError": {
+    "title": "Échec de la restauration",
+    "message": "Nous n'avons pas pu restaurer vos achats. Veuillez réessayer."
+  },
   "subscriptionInfo": "Les abonnements sont facturés annuellement et se renouvellent automatiquement, sauf annulation au moins 24 heures avant la fin de la période en cours. Vous pouvez gérer ou annuler votre abonnement dans les réglages de votre compte App Store.",
   "cta": {
     "continueWith": "Continuer avec {{planName}}"
@@ -91,5 +100,13 @@
       "description": "Vous êtes actuellement abonné via le site web. Gérez votre abonnement depuis celui-ci.",
       "confirm": "J'ai compris"
     }
+  },
+  "purchase": {
+    "processingTitle": "Paiement en cours",
+    "processingBody": "Veuillez patienter pendant que nous confirmons votre achat auprès d'Apple…",
+    "successTitle": "Tout est prêt !",
+    "successBody": "Votre abonnement est actif. Bon suivi de vos athlètes !",
+    "errorTitle": "Une erreur s'est produite",
+    "errorBody": "Nous n'avons pas pu vérifier votre achat. Réessayez ou contactez le support."
   }
 }

@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, TouchableOpacity, Text } from 'react-native';
+import { View, TouchableOpacity, Text, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { colors } from '../../styles/common.styles';
+import { palette } from '../../styles/common.styles';
 import { bottomNavStyles } from '../../styles/bottomNav.styles';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_PARAMS, ANALYTICS_BUTTONS } from '../../constants/analyticsScreens';
@@ -68,6 +68,12 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
   const navigation = useNavigation<any>();
   const route = useRoute();
   const { t } = useTranslation('common');
+  // ✅ Landscape (audit 2026-10-23): the 79pt bar (icon over label) was ~40%
+  // of a ~200pt body - the live map was a ~60-100pt strip, a details list
+  // showed only its header image. There the label sits beside the icon
+  // (~43pt). Portrait unchanged.
+  const { width: navW, height: navH } = useWindowDimensions();
+  const slim = navW > navH;
 
   // One flag drives both the label and the icon so they can't drift apart.
   const raceIsPast = isRaceInPast(race_date);
@@ -168,25 +174,36 @@ export const BottomNavigationFollower: React.FC<BottomNavigationFollowerProps> =
   };
 
   return (
-    <View style={bottomNavStyles.container}>
+    <View style={[bottomNavStyles.container, slim && bottomNavStyles.containerSlim]}>
       {tabs.map((tab) => {
         const isActive = activeTab === tab.name;
         return (
           <TouchableOpacity
             key={tab.name}
-            style={bottomNavStyles.tab}
+            style={[bottomNavStyles.tab, slim && bottomNavStyles.tabSlim]}
             onPress={() => handleTabPress(tab.name)}
             activeOpacity={0.7}
           >
             {/* ✅ tintColor as a PROP — expo-image ignores it in a StyleSheet.
                 See the note in BottomNavigation.tsx. */}
-            <Image
-              source={tab.icon}
-              style={bottomNavStyles.iconImage}
-              tintColor={isActive ? colors.accent : colors.gray500}
-              contentFit="contain"
-            />
-            <Text style={[bottomNavStyles.label, isActive && bottomNavStyles.labelActive]}>
+            <View style={isActive ? bottomNavStyles.pill : bottomNavStyles.pillGhost}>
+              <Image
+                source={tab.icon}
+                style={bottomNavStyles.iconImage}
+                tintColor={isActive ? palette.ink : palette.textMuted}
+                contentFit="contain"
+              />
+            </View>
+            {/* ✅ One line, shrunk to fit (layout audit 2026-10-22): with larger iOS
+                text "Participants" / "Startpagina" broke mid-word in an 80pt tab at
+                320pt and the wrapped tab's icon rose above the others. At default
+                text every label already fits (audit27/33), so nothing shrinks. */}
+            <Text
+              style={[bottomNavStyles.label, isActive && bottomNavStyles.labelActive]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
               {tab.label}
             </Text>
           </TouchableOpacity>

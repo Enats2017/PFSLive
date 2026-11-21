@@ -9,7 +9,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles } from '../styles/common.styles';
+import { commonStyles, palette, fonts, radii, withAlpha } from '../styles/common.styles';
+import { dialogStyles, dialogTone, useCompactDialog } from './ui';
+import ModalScroll from './ui/ModalScroll';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 
 interface UndoConfirmModalProps {
   visible: boolean;
@@ -25,9 +28,12 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
   onClose,
 }) => {
   const { t } = useTranslation(['undoModal']);
+  // ✅ Landscape: no icon, buttons side by side (device test 2026-10-23 — this
+  // card's buttons were cut off on a landscape phone). Portrait: unchanged.
+  const cd = useCompactDialog();
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="fade"
@@ -35,7 +41,7 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
       onRequestClose={onClose}
     >
       {/* Backdrop */}
-      <View style={styles.backdrop}>
+      <View style={dialogStyles.backdrop}>
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -44,51 +50,55 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
       </View>
 
       {/* Card */}
-      <View style={styles.wrapper}>
-        <View style={styles.card}>
-          {/* Icon */}
-          <View style={styles.iconWrapper}>
-            <Ionicons name="alert-circle-outline" size={60} color={colors.warning} />
-          </View>
-
-          {/* Title */}
-          <Text style={styles.title}>{t('undoModal:title')}</Text>
-
-          {/* Distance name */}
-          {distanceName ? (
-            <View style={styles.chip}>
-              <Text style={styles.chipText} numberOfLines={1}>
-                {distanceName}
-              </Text>
+      {/* ModalScroll: the card (~444pt) was taller than a landscape screen —
+          icon off the top, Cancel off the bottom (audit 2026-10-22) */}
+      <View style={[dialogStyles.wrapper, cd.s.wrapper]}>
+        <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
+          <View style={[dialogStyles.card, cd.s.card]}>
+            {/* Icon */}
+            <View style={[dialogStyles.iconWrapper, { backgroundColor: dialogTone.warning.ring }, cd.s.hide]}>
+              <Ionicons name="alert-circle-outline" size={56} color={dialogTone.warning.icon} />
             </View>
-          ) : null}
 
-          {/* Message */}
-          <Text style={styles.message}>{t('undoModal:message')}</Text>
+            {/* Title */}
+            <Text style={[dialogStyles.title, cd.s.title]}>{t('undoModal:title')}</Text>
 
-          {/* Buttons */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[commonStyles.primaryButton, styles.confirmButton]}
-              onPress={onConfirm}
-              activeOpacity={0.8}
-            >
-              <Text style={commonStyles.primaryButtonText}>
-                {t('undoModal:buttons.confirm')}
-              </Text>
-            </TouchableOpacity>
+            {/* Distance name */}
+            {distanceName ? (
+              <View style={styles.chip}>
+                <Text style={styles.chipText} numberOfLines={2}>
+                  {distanceName}
+                </Text>
+              </View>
+            ) : null}
 
-            <TouchableOpacity
-              style={commonStyles.secondaryButton}
-              onPress={onClose}
-              activeOpacity={0.7}
-            >
-              <Text style={commonStyles.secondaryButtonText}>
-                {t('undoModal:buttons.cancel')}
-              </Text>
-            </TouchableOpacity>
+            {/* Message */}
+            <Text style={[dialogStyles.message, cd.s.message]}>{t('undoModal:message')}</Text>
+
+            {/* Buttons */}
+            <View style={[dialogStyles.buttons, cd.s.buttonsRow]}>
+              <TouchableOpacity
+                style={[commonStyles.primaryButton, dialogStyles.fullWidthButton, cd.s.button]}
+                onPress={onConfirm}
+                activeOpacity={0.8}
+              >
+                <Text style={commonStyles.primaryButtonText}>
+                  {t('undoModal:buttons.confirm')}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[commonStyles.secondaryButton, cd.s.button]}
+                onPress={onClose}
+                activeOpacity={0.7}
+              >
+                <Text style={commonStyles.secondaryButtonText}>
+                  {t('undoModal:buttons.cancel')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </ModalScroll>
       </View>
     </Modal>
   );
@@ -97,77 +107,22 @@ const UndoConfirmModal: React.FC<UndoConfirmModalProps> = ({
 export default UndoConfirmModal;
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  wrapper: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: { elevation: 8 },
-    }),
-  },
-  iconWrapper: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: colors.warning + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
+  // Only the chip is local — the dialog chrome comes from `dialogStyles`.
   chip: {
-    backgroundColor: colors.primary + '15',
+    backgroundColor: withAlpha(palette.navy, 0.08),
     borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: 20,
+    borderColor: palette.navy,
+    borderRadius: radii.pill,
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingVertical: 8,
     marginBottom: 16,
   },
   chipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
+    fontFamily: fonts.bodySemi,
+    fontSize: 13,
+    color: palette.navy,
     letterSpacing: 0.5,
-  },
-  message: {
-    fontSize: 14,
-    color: '#64748b',
+    // 2 lines (was 1): a long distance name was cut at 320pt (audit 2026-10-22)
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  buttonContainer: {
-    width: '100%',
-    gap: 12,
-  },
-  confirmButton: {
-    backgroundColor: colors.primary,
   },
 });

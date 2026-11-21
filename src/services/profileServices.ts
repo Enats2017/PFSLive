@@ -20,6 +20,7 @@ export interface Profile {
     profile_picture: string;
     language_id: number;
     email_verified: number;
+    pending_email?: string;  // NEW: optional field for pending email change
     parent_consent?: number;
 }
 

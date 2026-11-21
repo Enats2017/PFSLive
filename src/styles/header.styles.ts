@@ -1,99 +1,62 @@
-  import { StyleSheet } from 'react-native';
-import { colors, spacing, typography } from './common.styles';
+import { StyleSheet } from 'react-native';
+import { palette, radii, space, fonts } from './common.styles';
 
+// ✅ Redesign header (client-approved 2026-08-29).
+// Two stacked pieces, in this order on every screen:
+//   1. a navy gradient action row — back · home · [actions] · settings · profile
+//   2. a lime band carrying the screen name
+// The action row absorbs the status-bar inset itself, so screens using <AppHeader>
+// must NOT also pass edges={['top']} to their SafeAreaView or the bar double-pads.
 export const headerStyles = StyleSheet.create({
-  container: {
+  bar: {
+    paddingHorizontal: space.xl,
+    paddingBottom: space.lg,
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
-    height: 60,
-  },
-  
-  leftSection: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  
-  backBtn: {
-    width: 34,
+    gap: space.md,
     height: 44,
+  },
+  // Every icon sits in the SAME 24pt slot. Without a fixed slot each button was
+  // only as wide as its own glyph - chevron 23, home 21, the rest 20 - so a flat
+  // gap produced visibly uneven spacing across search / settings / profile.
+  // Slot + gap = 36pt centre-to-centre: the artboards measure ~28, but at that
+  // pitch the settings and profile icons read as crowded on a real device.
+  // The touch target stays comfortable via hitSlop, not via padding.
+  iconBtn: {
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  
-  centerSection: {
-    flex: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  rightSection: {
+  spacer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
   },
-  
-  logo: {
-    width: 44,
-    height: 44,
+  centerLogoWrap: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  
+  // The PNG is 900x474 (~1.9:1). The old 96x22 box was far wider than that, so
+  // `contain` drew the mark only ~42x22 — client: "the logo is too small"
+  // (2026-10-22). The box now has the image's own ratio and fills the 44pt row.
   centerLogo: {
-    width: "100%",
-    height: 45,
+    height: 38,
+    width: 72,
   },
-  
-  // ✅ ADD THIS: Logo Image Style
-  logoImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+
+  band: {
+    backgroundColor: palette.lime,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.xl,
   },
-  
-  logoIcon: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.primary,
-  },
-  
-  title: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.semibold,
-    color: colors.black,
+  bandText: {
+    fontFamily: fonts.bodySemi,
+    fontSize: 13,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: palette.ink,
     textAlign: 'center',
   },
-  
-  iconButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-  },
-  searchButton:{
-    width: 35,
-    height: 35,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-
-  },
-  
-  icon: {
-    fontSize: 20,
-  },
-  Searchicon:{
-    fontSize:25
-  }
 });

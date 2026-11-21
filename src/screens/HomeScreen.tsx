@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import {
   View,
   Text,
   TouchableOpacity,
-  StatusBar,
   ScrollView,
   AppState,
   ActivityIndicator,
   BackHandler,
   Modal,
   Platform,
-  Linking,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,22 +38,41 @@ import { isStaleSession, computeRaceStartTime, shouldResumePendingStart } from '
 import { startReminderService } from '../services/startReminderService';
 import { QUEUE_COUNT_KEY } from '../services/locationQueueService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { notificationPermissionService, forgetSentPushToken } from '../services/notificationPermissionService';
 import { locationQueueService } from '../services/locationQueueService';
 import { tokenService } from '../services/tokenService';
 import { useAuth } from '../context/AuthContext';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { useNotifications, NotificationData } from '../hooks/useNotifications';
 import { followerApi } from '../services/registerFollowerServices';
-import { syncFollowDataFromAPI } from '../utils/followStorage';
+import { syncFollowDataFromAPI, restoreFollowsWithoutToken, getFollowWriteSeq, adoptIfOtherRow } from '../utils/followStorage';
+import { PreRaceCountdown, computeRaceStartMs, startMsFromServer, msUntilStart, formatTimeToStart } from '../components/Home/PreRaceCountdown';
+import { ReadinessCard } from '../components/Home/ReadinessCard';
+import { ShareTrackingLink } from '../components/Home/ShareTrackingLink';
+import { IdleHome } from '../components/Home/IdleHome';
+import { raceReadyService } from '../services/raceReadyService';
+import { readPrecise } from '../services/readinessService';
+import { locationPopupCopy } from '../utils/locationPopupCopy';
+import { watchForOsPrompt } from '../utils/permissionPrompt';
+import {
+  openLocationSettingsFor,
+  PermissionBlockReason,
+  requestBatteryOptimizationExemption,
+} from '../utils/deviceSettings';
 
 // Styles
-import { colors, spacing, typography, commonStyles } from '../styles/common.styles';
+import { spacing, typography, commonStyles, palette, fonts } from '../styles/common.styles';
 import { homeStyles } from '../styles/home.styles';
 import FollowingLiveEventsSection from './FollowingLiveEventsSection';
 import { useDimensions } from '../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges, isCompactPopup } from '../hooks/useLandscapeSidePadding';
+import ModalScroll from '../components/ui/ModalScroll';
 import { FanEmailModal } from '../components/Fanemailmodal';
 import { fanEmailStorage } from '../utils/fanEmailStorage';
+import { formatClockTime, formatEventDate } from '../utils/timeFormat';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS } from '../constants/analyticsScreens';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import { formatElapsed, formatSessionKm } from '../utils/sessionDisplay';
 
 interface StandardApiResponse<T = any> {
   success: boolean;
@@ -104,12 +122,33 @@ interface HomeData {
   timezone?: string;
   next_race_in_hours?: number;
   following_live_events?: FollowingLiveEvent[];
+  // Growth API: the runner's own bib + distance for the next race, so the app
+  // can build their share link. Strings — bibs can be alphanumeric. Absent
+  // until the server change ships; the share button hides itself until then.
+  next_race_bib_number?: string | null;
+  next_race_product_option_value_app_id?: number | string | null;
+  /** 'partner' | 'custom' — home_api has always sent it; typed for the race-ready key. */
+  event_source?: string;
+  /** Next race start as unix seconds (event timezone applied, DST-correct); 0/absent = unknown. */
+  next_race_start_ts?: number;
+  /** Server clock (unix seconds) when this answer was built. */
+  server_now_ts?: number;
 }
 
 // ==================== CONSTANTS ====================
 
-// ✅ Stored permanently — never cleared after first prompt
-const BATTERY_PROMPTED_KEY = '@PFSLive:batteryOptimizationPrompted';
+// A Start blocked at the permission gate is finished automatically when the
+// runner comes back with the problem fixed — but only this soon after (see
+// pendingStartAtRef).
+export const PENDING_START_MAX_MS = 15 * 60 * 1000;
+
+// A start still "running" after this long is hung (an await that never
+// settles — half-open socket, stuck native call): a new Start is let through
+// instead of being ignored until the screen remounts (see startingAtRef).
+export const START_STUCK_MS = 60 * 1000;
+
+// screen_ready already logged (race key | local day) — see the effect that logs it.
+const screenReadyClaimed = new Set<string>();
 
 // Hard ceiling on the fresh home refetch at Start (2026-10-20 re-check). It ran
 // before the engine with only axios's 15 s timeout (which does not reliably fire
@@ -126,110 +165,33 @@ const PENDING_BG_START_KEY = '@PFSLive:pendingBgStart';
 
 // ✅ Hours threshold — show early tracking warning if race is more than this far away
 
-// ==================== BATTERY OPTIMIZATION ====================
-
-const ANDROID_PACKAGE = 'eu.passionforsports.livio';
-
-/**
- * Open system dialog to exempt app from battery optimization.
- * HomeScreen provides the visual background behind the system dialog.
- * Called once on first install — permanent, zero cost on non-event days.
- */
-const requestBatteryOptimizationExemption = async (): Promise<void> => {
-  if (Platform.OS !== 'android') return;
-  try {
-    await IntentLauncher.startActivityAsync(
-      IntentLauncher.ActivityAction.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-      { data: `package:${ANDROID_PACKAGE}` }
-    );
-  } catch {
-    // Fallback — open battery optimization list directly
-    await IntentLauncher.startActivityAsync(
-      'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS'
-    );
-  }
-};
-
-type PermissionBlockReason = 'denied' | 'no_background_perm' | 'location_off';
-
-/**
- * Take the runner to the page that fixes THEIR problem, and actually land on
- * it — not on App info with a list of instructions to follow.
- *
- * Android publishes an intent for the device Location toggle, so 'location_off'
- * is exact. The per-app permission page has no public intent, so:
- *   1. MANAGE_APP_PERMISSIONS -> Livio's permission list, one tap from Location.
- *   2. APPLICATION_DETAILS_SETTINGS -> App info. The old behaviour; always resolves.
- *
- * DELIBERATELY NOT USED: MANAGE_APP_PERMISSION (singular), which targets the
- * Location page itself. It requires Intent.EXTRA_USER, a Parcelable UserHandle,
- * and expo-intent-launcher can only carry plain JS values in `extra`. Without it
- * the activity still RESOLVES — so no exception is thrown and the ladder never
- * falls through — then finishes immediately. The runner sees a flash and lands
- * nowhere, which is worse than App info. It cannot be fixed from JS; reaching
- * that page needs a native module.
- *
- * Falling through is otherwise safe: IntentLauncherModule.kt wraps
- * startActivityForResult in try/catch(Throwable) -> promise.reject, so an OEM
- * that does not export a tier rejects rather than crashing. That promise only
- * settles when the user RETURNS, so a tier that does launch cannot fall through
- * and open a second screen behind it.
- *
- * iOS has no per-page deep link at all (the App-Prefs: schemes are private API
- * and get apps rejected), so openSettings() lands on Livio's own page, where
- * Location is a single row.
- */
-const openLocationSettingsFor = async (reason: PermissionBlockReason): Promise<void> => {
-  if (Platform.OS !== 'android') {
-    Linking.openSettings().catch(() => { /* silent */ });
-    return;
-  }
-
-  if (reason === 'location_off') {
-    try {
-      await IntentLauncher.startActivityAsync(
-        IntentLauncher.ActivityAction.LOCATION_SOURCE_SETTINGS
-      );
-      return;
-    } catch {
-      // OEM without the activity — fall through to App info.
-    }
-  } else {
-    try {
-      await IntentLauncher.startActivityAsync('android.intent.action.MANAGE_APP_PERMISSIONS', {
-        extra: { 'android.intent.extra.PACKAGE_NAME': ANDROID_PACKAGE },
-      });
-      return;
-    } catch {
-      // Fall through to App info.
-    }
-  }
-
-  try {
-    await IntentLauncher.startActivityAsync(
-      IntentLauncher.ActivityAction.APPLICATION_DETAILS_SETTINGS,
-      { data: `package:${ANDROID_PACKAGE}` }
-    );
-  } catch {
-    Linking.openSettings().catch(() => { /* silent */ });
-  }
-};
+// Battery-exemption intent and the settings-page ladder moved to
+// utils/deviceSettings so the readiness card and the Get race-ready screen
+// reuse exactly the same routes as the start-time modal.
 
 // ==================== COMPONENT ====================
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { t } = useTranslation(['home', 'common']);
-  const { width, height: windowHeight } = useDimensions();
+
+  // Short month names for the next-session card's date, in the app language.
+  const monthsShort = useMemo(
+    () => t('common:monthsShort', { returnObjects: true }) as string[],
+    [t],
+  );
+  const { width, height } = useDimensions();
   const insets = useSafeAreaInsets();
-  // Start popup: the most its content may take before it scrolls, in POINTS.
-  // A percentage maxHeight is not reliable inside a Modal (growth_v0.1 device
-  // test 2026-10-22: popups "did not scroll" in landscape), so — like its
-  // ModalScroll — window height minus twice the larger system bar (the box is
-  // centred), the wrapper's padding (2 x spacing.xl) and the card's own
-  // vertical padding (2 x spacing.xxxl). Follows rotation (useDimensions).
-  const startPopupScrollMax = Math.max(120, windowHeight - 2 * Math.max(insets.top, insets.bottom) - 2 * spacing.xl - 2 * spacing.xxxl);
   const isGestureNav = insets.bottom > 0;
-  const isLandscape = width
+  // width > height: `= width` was always truthy, so portrait 3-button phones
+  // also got ['left','right'] (harmless there — no side insets — but wrong) (audit 2026-10-22)
+  const isLandscape = width > height;
+  // Notched iPhones in landscape resolve to edges ['bottom'] below, so the
+  // body sat under the notch — pad it here (audit 2026-10-22).
+  const sidePadding = useLandscapeSidePadding();
+  // landscape (phone or tablet) or a short window: compact popups (home.styles notif*Compact)
+  const popupWindow = useWindowDimensions();
+  const compactPopups = isCompactPopup(popupWindow.width, popupWindow.height);
+  const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
   const [showFanEmailModal, setShowFanEmailModal] = useState(false);
 
 
@@ -258,6 +220,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [isSendingData, setIsSendingData] = useState(false);
   const [locationUpdateCount, setLocationUpdateCount] = useState(0);
   const [queuedCount, setQueuedCount] = useState(0);
+  // ✅ 02_Home-Tracking-Active.png — session clock, odometer and send status.
+  // Display only: read from gpsService, never written back into it.
+  const [sessionStats, setSessionStats] = useState<{
+    startedAt: number | null; distanceKm: number | null; lastSentAt: number | null;
+  }>({ startedAt: null, distanceKm: null, lastSentAt: null });
+  const [nowTick, setNowTick] = useState(Date.now());
+
+  // "00:42:18" since the session began, and "12 sec ago" since the last accepted
+  // position. Both recompute from `nowTick`, which only runs while tracking is on.
+  const elapsedLabel = useMemo(
+    () => formatElapsed(sessionStats.startedAt, nowTick),
+    [sessionStats.startedAt, nowTick],
+  );
+
+  const lastSentLabel = useMemo(() => {
+    if (!sessionStats.lastSentAt) return t('home:active.justNow');
+    const secs = Math.max(0, Math.floor((nowTick - sessionStats.lastSentAt) / 1000));
+    if (secs < 5) return t('home:active.justNow');
+    if (secs < 60) return t('home:active.secAgo', { n: secs });
+    return t('home:active.minAgo', { n: Math.floor(secs / 60) });
+  }, [sessionStats.lastSentAt, nowTick, t]);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [hasPermission, setHasPermission] = useState(false);
   const [raceStartTime, setRaceStartTime] = useState<Date | null>(null);
@@ -268,6 +251,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Location-permission gate (blocks Start) and the mid-race GPS health banner.
   const [showLocationPermissionModal, setShowLocationPermissionModal] = useState(false);
   const [permissionBlockReason, setPermissionBlockReason] = useState<PermissionBlockReason>('denied');
+  // Which situation opened the location popup: the Start flow (a pitch — why
+  // to allow) or the mid-race warning banner (a problem report — what broke).
+  const [permissionModalMidRace, setPermissionModalMidRace] = useState(false);
+  // Mid-race "GPS returns no position" (indoors, tunnel): location is ON and
+  // allowed — the permission/location-off copy would be wrong there.
+  const [permissionModalNoFix, setPermissionModalNoFix] = useState(false);
+  const popupCopy = locationPopupCopy({
+    midRace: permissionModalMidRace,
+    noFix: permissionModalNoFix,
+    reason: permissionBlockReason,
+    platform: Platform.OS,
+  });
   // Whether the OS will still show its own Location permission page. Decides
   // BOTH what the popup's button can achieve and what its text may promise;
   // false means the button can only reach App info, so the text must say so.
@@ -278,8 +273,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ✅ Tracking log — DEBUG only, shows background task events live
   const [trackingLogs, setTrackingLogs] = useState<TrackingLogEntry[]>([]);
 
-  // ✅ Battery explanation modal — shown once before system dialog
-  const [showBatteryModal, setShowBatteryModal] = useState(false);
   // Start-time battery optimisation check (Android) — answered by
   // handleBatteryStart* below; see startGPSTracking.
   const [showBatteryStartModal, setShowBatteryStartModal] = useState(false);
@@ -287,6 +280,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // ✅ Early tracking warning modal — shown when race is more than 24h away
   const [showEarlyTrackingModal, setShowEarlyTrackingModal] = useState(false);
+  // Time to the gun measured when Start was tapped — what that popup says.
+  const [earlyMsLeft, setEarlyMsLeft] = useState(0);
 
   const [showStartConfirmModal, setShowStartConfirmModal] = useState(false);
 
@@ -294,14 +289,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // Was a native Alert.alert, which looked unlike every other popup on this screen.
   const [stopConfirmMode, setStopConfirmMode] = useState<null | 'before' | 'after'>(null);
 
-  // ✅ The other three Home popups, moved off Alert.alert onto the same notif*
+  // ✅ Two more Home popups, moved off Alert.alert onto the same notif*
   // modal (2026-10-19):
-  //   - approximate location at Start: the start flow awaits the runner's
-  //     choice through approxResolveRef (true = continue, false = settings)
   //   - start failure: the error text, one OK button
   //   - manual override ("start sending now")
-  const [showApproxModal, setShowApproxModal] = useState(false);
-  const approxResolveRef = useRef<((proceed: boolean) => void) | null>(null);
   const [startErrorMessage, setStartErrorMessage] = useState<string | null>(null);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
 
@@ -336,6 +327,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // START and sit through the confirm popup a second time on the start line.
   // Cleared on resume, on explicit dismissal, and once a start clears the gate.
   const pendingStartRef = useRef(false);
+  // When it was armed. The return listener only finishes a start armed within
+  // PENDING_START_MAX_MS: a runner who granted the permission an hour later
+  // (or the next morning) did not ask for tracking to start right then.
+  const pendingStartAtRef = useRef(0);
+  // ✅ The location popup's "Open settings" already asked the OS once and the
+  // answer was no (2026-10-28). The next tap goes straight to Settings: asking
+  // again either shows nothing or the same "no", and the popup came back
+  // instead of Settings opening — the button looked dead. Cleared by a new
+  // Start tap and by the mid-race banner (a new popup, a new decision).
+  const osAskedFromPopupRef = useRef(false);
+  // "Start anyway" on the precise-location popup: the next start skips that
+  // check once (an approximate track beats none — never block the runner).
+  const allowApproximateRef = useRef(false);
+  // ✅ A start is running (gate → fresh fetch → engine start: seconds on a
+  // race-day network). A second tap / "Start anyway" / the return listener
+  // used to run a SECOND doStartGPSTracking alongside it — two engine starts.
+  const startingRef = useRef(false);
+  // When that start began: one older than START_STUCK_MS no longer blocks a
+  // new Start, and only the newest start clears startingRef in its finally.
+  const startingAtRef = useRef(0);
+  const isStarting = () => startingRef.current && Date.now() - startingAtRef.current < START_STUCK_MS;
   // ✅ Ref so GPS callback always reads current value without stale closure
   const isSendingDataRef = useRef<boolean>(false);
   // ✅ Ref to tracking params — needed by watchdog to restart task if killed
@@ -396,6 +408,39 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // ==================== NOTIFICATION HANDLERS ====================
 
   // ✅ Log push token when ready (DEBUG only)
+  // ✅ While tracking is on, refresh the clock every second and the session
+  // stats every five. Stops dead when tracking stops — nothing polls at rest.
+  useEffect(() => {
+    // ✅ Stopped: forget the session (developer report 2026-10-30). Kept, the
+    // next Start drew the last race's clock and distance until the first read.
+    if (!isGPSActive) {
+      setSessionStats({ startedAt: null, distanceKm: null, lastSentAt: null });
+      return;
+    }
+
+    let cancelled = false;
+    let stamped = false;
+    const readStats = async () => {
+      try {
+        const stats = await gpsService.getSessionStats();
+        if (cancelled) return;
+        stamped = stats.startedAt !== null;
+        setSessionStats(stats);
+      } catch { /* display only */ }
+    };
+
+    setNowTick(Date.now());
+    void readStats();
+    // Until the engine stamps the new start (a second or three into Start),
+    // re-read every tick, so the clock starts at 00:00:01, not at the 5 s poll.
+    const tick = setInterval(() => {
+      setNowTick(Date.now());
+      if (!stamped) void readStats();
+    }, 1000);
+    const stats = setInterval(() => { void readStats(); }, 5000);
+    return () => { cancelled = true; clearInterval(tick); clearInterval(stats); };
+  }, [isGPSActive]);
+
   useEffect(() => {
     if (API_CONFIG.DEBUG && expoPushToken) {
       console.log('📲 Expo push token ready:', expoPushToken);
@@ -441,47 +486,149 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, [isRegistering]);
 
   useEffect(() => {
-    if (!expoPushToken) return;
+    // Wait for the silent token registration to settle, so a user who HAS
+    // notifications doesn't run the token-less path first.
+    if (isRegistering) return;
 
     const syncFromServer = async () => {
       try {
-        const data = await followerApi.getFollowerData(expoPushToken);
+        if (expoPushToken) {
+          const seq = getFollowWriteSeq();
+          try {
+            const data = await followerApi.getFollowerData(expoPushToken);
+            // The token's row is not the one the phone holds an id for: merge.
+            if (await adoptIfOtherRow(data as any)) return;
+            await syncFollowDataFromAPI(
+              data.followed_customers ?? [],
+              data.followed_bibs ?? {},
+              seq,
+              data.follow_seq,
+            );
+            return;
+          } catch (e: any) {
+            // Token not known server-side (registration failed / reinstall):
+            // fall back to the device_id restore below — and make the phone
+            // send its token again (it still believes the server has it).
+            if (e?.code === 'follower_not_found') {
+              try { await AsyncStorage.removeItem('expo_push_token'); } catch { /* silent */ }
+              forgetSentPushToken();
+              void notificationPermissionService.registerIfGranted();
+            }
+          }
+        }
 
-        console.log('data');
-        console.log(data);
-
-        await syncFollowDataFromAPI(
-          data.followed_customers ?? [],
-          data.followed_bibs ?? {},
-        );
+        // No push token (notifications off or not yet asked). Restore used to
+        // be skipped entirely here, so a reinstall without notifications lost
+        // every follow. Keyed on device_id instead — see followStorage.
+        await restoreFollowsWithoutToken();
       } catch {
         // Silent — local data stays as fallback if server unreachable
       }
     };
 
     syncFromServer();
-  }, [expoPushToken]);
+  }, [expoPushToken, isRegistering]);
+
+  // ✅ Pre-start countdown — same maths as doStartGPSTracking, anchored to when
+  // this homeData arrived. Display only; Start recomputes from a fresh fetch.
+  const raceStartMs = useMemo(
+    () =>
+      // Placeholder start (00:00 / 00:01 — the real gun time isn't known):
+      // no countdown; it would count down to midnight.
+      /^00:0[01](:00)?$/.test(String(homeData?.next_race_time ?? '').trim()) ? null :
+      // The server's start instant (event timezone, DST-correct) when it
+      // sends one; the wall-clock maths is off by an hour across a DST change.
+      startMsFromServer(homeData?.next_race_start_ts, homeData?.server_now_ts, Date.now()) ??
+      computeRaceStartMs(
+        homeData?.next_race_date,
+        homeData?.next_race_time,
+        homeData?.server_datetime,
+        Date.now(),
+      ),
+    [homeData],
+  );
+
+  // ✅ Get race-ready fallback + activation funnel, once per race.
+  //  - Opens the flow for runners who connected before it existed, or whose
+  //    email link never opened the app. Only while the race is still > 3h
+  //    away: on race morning the readiness card and the Start gate handle it —
+  //    the point is never to ask at the start line.
+  //  - start_step 'screen_ready': Start was visible for this race (once a day)
+  //    — the denominator that separates "never pressed" from "pressed and blocked".
+  // Boolean, not the hours value: next_race_in_hours changes every ~36 s
+  // (2-decimal rounding), which would re-run this effect on every refetch.
+  const raceMoreThan3hAway = (homeData?.next_race_in_hours ?? 0) > 3;
+  // Any of Home's own popups up → don't push Get race-ready (it would open
+  // UNDER the modal). In the deps, so it opens once the popup closes.
+  const homeModalOpen =
+    showStartConfirmModal || showEarlyTrackingModal ||
+    showLocationPermissionModal || showPowerSavingModal || notificationPopup.visible ||
+    showFanEmailModal || stopConfirmMode !== null || startErrorMessage !== null ||
+    showOverrideModal || showBatteryStartModal;
+  // Read at the last moment by maybeOpen (its checks are async — a popup can
+  // open, or Start be pressed, while they run).
+  // Focus is a dep of the race-ready trigger: when Home wasn't on screen as
+  // its data arrived (cold start from a push tap), returning to Home retries.
+  const homeIsFocused = useIsFocused();
+  const homeModalOpenRef = useRef(homeModalOpen);
+  homeModalOpenRef.current = homeModalOpen;
+  // Same key as CreatePersonalEvent for custom events (their ids come from
+  // another table and can collide with partner ids). Also the race_id of every
+  // start_step event: a custom event's id logged bare joined it with the
+  // partner race that happens to share the number.
+  const raceReadyKey = eventId ? (homeData?.event_source === 'custom' ? `custom_${eventId}` : String(eventId)) : null;
+  useEffect(() => {
+    if (homeData?.show_start_track !== 1 || !eventId || isGPSActive) return;
+
+    void (async () => {
+      try {
+        // The runner's LOCAL day — the UTC date flipped mid-evening (or
+        // mid-morning east of UTC) and logged the same day twice.
+        const d = new Date();
+        const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        // ONE map key ({ raceId: day }), pruned to today's entries — a key per
+        // race piled up in storage for good.
+        const KEY = '@PFSLive:startReadyLogged';
+        // Claimed in memory BEFORE the storage read: this effect re-runs on
+        // every dep change, and two runs both read "not logged yet" before
+        // either write landed — screen_ready logged twice.
+        const claim = `${raceReadyKey}|${day}`;
+        if (screenReadyClaimed.has(claim)) return;
+        screenReadyClaimed.add(claim);
+        let map: Record<string, string> = {};
+        try {
+          const parsed = JSON.parse((await AsyncStorage.getItem(KEY)) || '{}');
+          if (parsed && typeof parsed === 'object') map = parsed;
+        } catch { /* corrupt → start over */ }
+        if (map[String(raceReadyKey)] !== day) {
+          const next: Record<string, string> = {};
+          for (const [k, v] of Object.entries(map)) if (v === day) next[k] = v;
+          next[String(raceReadyKey)] = day;
+          await AsyncStorage.setItem(KEY, JSON.stringify(next));
+          void analyticsService.logStartStep('screen_ready', undefined, raceReadyKey);
+          // The old one-key-per-race entries — dropped once.
+          const legacy = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(KEY + ':'));
+          if (legacy.length) await AsyncStorage.multiRemove(legacy);
+        }
+      } catch { /* analytics only */ }
+    })();
+
+    if (raceMoreThan3hAway && !homeModalOpen && homeIsFocused) {
+      void raceReadyService.maybeOpen({
+        raceKey: raceReadyKey,
+        raceName: homeData?.next_race_name,
+        source: 'home',
+        onlyFromRoute: 'HomeScreen',
+        stillAllowed: () => !homeModalOpenRef.current && navigation.isFocused(),
+      });
+    }
+  }, [homeData?.show_start_track, eventId, isGPSActive, raceMoreThan3hAway, homeModalOpen, homeIsFocused, raceReadyKey, homeData?.next_race_name, navigation]);
 
   // ==================== UTILITIES ====================
 
   const getServerTime = useCallback((): Date => {
     const deviceTime = new Date();
     return new Date(deviceTime.getTime() + serverTimeOffsetRef.current);
-  }, []);
-
-  const formatDate = useCallback((dateString: string): string => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return dateString;
-
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-
-      return `${day}-${month}-${year}`;
-    } catch (error) {
-      return dateString;
-    }
   }, []);
 
   const hasRaceStarted = useCallback((): boolean => {
@@ -493,40 +640,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // numerically larger than real UTC, causing race to appear started early.
     return Date.now() >= raceStartTimeRef.current.getTime();
   }, [homeData?.manual_start]);
-
-  // ==================== BATTERY OPTIMIZATION ====================
-
-  /**
-   * Show battery explanation modal once on first install.
-   * HomeScreen is mounted so user sees the app behind the system dialog.
-   * Key is NEVER cleared — user is only asked once, ever.
-   */
-  const checkAndPromptBatteryOptimization = useCallback(async (): Promise<void> => {
-    if (Platform.OS !== 'android') return;
-    try {
-      const alreadyPrompted = await AsyncStorage.getItem(BATTERY_PROMPTED_KEY);
-      if (alreadyPrompted) return;
-      setShowBatteryModal(true);
-    } catch { /* silent */ }
-  }, []);
-
-  // ✅ User taps "Allow" — mark permanently, open system dialog
-  const handleBatteryAllow = useCallback(async (): Promise<void> => {
-    setShowBatteryModal(false);
-    try {
-      await AsyncStorage.setItem(BATTERY_PROMPTED_KEY, '1');
-    } catch { /* silent */ }
-    await requestBatteryOptimizationExemption();
-  }, []);
-
-  // ✅ User taps "Skip" — mark permanently, never ask again
-  const handleBatterySkip = useCallback(async (): Promise<void> => {
-    setShowBatteryModal(false);
-    try {
-      await AsyncStorage.setItem(BATTERY_PROMPTED_KEY, '1');
-    } catch { /* silent */ }
-  }, []);
-
 
   const checkPowerSavingMode = useCallback(async (): Promise<boolean> => {
     if (Platform.OS !== 'android') {
@@ -831,6 +944,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // iOS background time for the start — taken after the last popup (see
     // gpsService.beginStartWindow), always released in finally.
     let startWindow: number | null = null;
+    // One start at a time, and never over a running session (see startingRef).
+    if (isStarting() || isGPSActiveRef.current) return;
+    startingRef.current = true;
+    const startedAt = Date.now();
+    startingAtRef.current = startedAt;
+    // "Start anyway" covers THIS start only — consumed here whatever happens
+    // next, so a start that bails earlier in the gate (location off, no
+    // Always) cannot carry it over to a later, unrelated start.
+    const allowApproximate = allowApproximateRef.current;
+    allowApproximateRef.current = false;
     try {
       // ── BATTERY SAVER GATE — on EVERY start path (2026-10-20) ────────────
       // startGPSTracking (the button) already refuses Battery Saver / Low Power
@@ -838,6 +961,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // permission screen, back after a pocketed Android start, the cold-start
       // resume. Battery Saver switched on in between went straight through.
       if (await checkPowerSavingMode()) {
+        // growth_v0.1: every gate that stops a start is a funnel step
+        void analyticsService.logStartStep('blocked', 'power_saving', raceReadyKey);
         setShowPowerSavingModal(true);
         return;
       }
@@ -863,45 +988,66 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setHasPermission(perms.foreground);
       setPermissionCanAskAgain(perms.canAskAgain);
 
-      if (!perms.foreground || !perms.background) {
-        setPermissionBlockReason(perms.foreground ? 'no_background_perm' : 'denied');
-        // Arm the resume — see pendingStartRef. Without this the runner grants
-        // Always and comes back to a stopped tracker.
+      // Phone-wide Location switch FIRST: while it is off, iOS reports the
+      // app's permission as "denied", so the popup blamed the app permission
+      // and sent the runner to Livio's settings page, which can't fix it.
+      // Same order as the readiness card (readinessService.getState).
+      if (!(await gpsService.isLocationServiceEnabled())) {
+        setPermissionBlockReason('location_off');
+        setPermissionModalMidRace(false);
+        setPermissionModalNoFix(false);
+        void analyticsService.logStartStep('blocked', 'location_off', raceReadyKey);
         pendingStartRef.current = true;
+        pendingStartAtRef.current = Date.now();
         setShowLocationPermissionModal(true);
         return;
       }
 
-      // Permissions can ALL be granted while the phone's master Location switch
-      // is off. Nothing above catches that, so the session used to start, show
-      // "GPS Active", and record nothing — the 23 Aug failure. Blocking here is
-      // what makes the 'location_off' deep-link reachable at start time.
-      if (!(await gpsService.isLocationServiceEnabled())) {
-        setPermissionBlockReason('location_off');
+      if (!perms.foreground || !perms.background) {
+        setPermissionBlockReason(perms.foreground ? 'no_background_perm' : 'denied');
+        setPermissionModalMidRace(false);
+        setPermissionModalNoFix(false);
+        // Funnel only (Firebase) — never a server tracking row. See logStartStep.
+        void analyticsService.logStartStep(
+          'blocked',
+          `${perms.foreground ? 'no_background' : 'denied'}_${perms.canAskAgain ? 'can_ask' : 'settings'}`,
+          raceReadyKey,
+        );
+        // Arm the resume — see pendingStartRef. Without this the runner grants
+        // Always and comes back to a stopped tracker.
         pendingStartRef.current = true;
+        pendingStartAtRef.current = Date.now();
         setShowLocationPermissionModal(true);
         return;
       }
+
+      // Precise location off ("Approximate" on Android 12+, "Precise: Off" on
+      // iOS 14+): everything above passes, the session starts and shows green,
+      // and the live track is off by kilometres. Checked AFTER the location
+      // switch and the permission (same order as the readiness card). Advice,
+      // not a wall: the popup's "Start anyway" continues the start.
+      if (!allowApproximate && (await readPrecise()) === false) {
+        setPermissionBlockReason('precise');
+        setPermissionModalMidRace(false);
+        setPermissionModalNoFix(false);
+        void analyticsService.logStartStep('blocked', 'approximate', raceReadyKey);
+        // Armed: coming back from Settings finishes the start (re-checked here).
+        pendingStartRef.current = true;
+        pendingStartAtRef.current = Date.now();
+        setShowLocationPermissionModal(true);
+        return;
+      }
+
+      // (The master Location switch is checked first, above — permissions can
+      // ALL be granted while it is off; the session used to start, show
+      // "GPS Active", and record nothing — the 23 Aug failure.)
 
       // Past the gate — disarm, so a later unrelated foreground cannot fire a
       // phantom start.
       pendingStartRef.current = false;
 
-      // ✅ APPROXIMATE LOCATION — WARN, never block (M6, 2026-10-18 audit).
-      // iOS "Precise: Off" / Android "Approximate" pass every check above, but
-      // the fixes are fuzzed by kilometres: the live dot wanders and the
-      // distance-based finish cannot fire. Blocking would be wrong on race day
-      // (the runner may not find the switch, and a fuzzy track beats none), so
-      // the runner chooses. "Open settings" re-arms pendingStartRef so returning
-      // from Settings resumes this start (and re-checks) like the permission gate.
-      if (await gpsService.isApproximateLocation()) {
-        // Answered by handleApproxOpenSettings / handleApproxContinue.
-        const proceed = await new Promise<boolean>((resolve) => {
-          approxResolveRef.current = resolve;
-          setShowApproxModal(true);
-        });
-        if (!proceed) return;
-      }
+      // (Approximate location: handled by the precise gate above — readPrecise +
+      // "Start anyway" — so master's separate M6 alert is not repeated here.)
 
       // ✅ Re-fetch home data FRESH (cache-bypassed) at the moment Start is
       // pressed. The organiser can edit the race start_hour right before the
@@ -1100,6 +1246,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         intervalSeconds: trackingParamsRef.current?.intervalSeconds,
       });
     } catch (error) {
+      void analyticsService.logStartStep('failed', 'exception', raceReadyKey);
       setIsGPSActive(false);
       isGPSActiveRef.current = false;
       // Android: the app left the foreground before the engine could start (the
@@ -1108,6 +1255,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       // foreground — instead of an error popup nobody sees in a pocket.
       if ((error as any)?.code === START_BACKGROUNDED_CODE) {
         pendingStartRef.current = true;
+        pendingStartAtRef.current = Date.now();
         void AsyncStorage.setItem(PENDING_BG_START_KEY, JSON.stringify({
           participantId: homeData?.next_race_participant_app_id ?? participantId,
           eventId: homeData?.next_race_id ?? eventId,
@@ -1130,6 +1278,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       setStartErrorMessage(error instanceof Error ? error.message : t('home:errors.trackingFailed'));
     } finally {
       void gpsService.endStartWindow(startWindow);
+      // A hung start that settles late must not clear a newer start's guard.
+      if (startingAtRef.current === startedAt) startingRef.current = false;
     }
   }, [
     hasPermission,
@@ -1141,12 +1291,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     startQueueProcessor,
     startRaceStartChecker,
     fetchHomeData,
+    raceReadyKey,
     t,
     checkPowerSavingMode,
   ]);
 
   const startGPSTracking = useCallback(async () => {
     if (!participantId || !eventId) {
+      void analyticsService.logStartStep('blocked', 'missing_ids', raceReadyKey);
       toastError(t('home:errors.missingInfo'), t('home:errors.missingInfoDescription'));
       return;
     }
@@ -1154,6 +1306,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const isPowerSaving = await checkPowerSavingMode();
     console.log('Power Saving Mode:', isPowerSaving);
     if (isPowerSaving) {
+      void analyticsService.logStartStep('blocked', 'power_saving', raceReadyKey);
       setShowPowerSavingModal(true);
       return;
 
@@ -1170,7 +1323,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         batteryStartResolveRef.current = resolve;
         setShowBatteryStartModal(true);
       });
-      if (choice === 'cancel') return;
+      if (choice === 'cancel') {
+        // growth_v0.1: a start abandoned here is a funnel drop-off like the others
+        void analyticsService.logStartStep('blocked', 'battery_optimization', raceReadyKey);
+        return;
+      }
       if (choice === 'allow') {
         try { await requestBatteryOptimizationExemption(); } catch { /* the start still goes on */ }
       }
@@ -1184,23 +1341,38 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // that cost 8 participants their entire track: they started early, saw a green
     // "tracking" banner, waited, gave up and closed the app before the start. One
     // was 4.4 minutes from the gun.
-    const hoursUntilRace = homeData?.next_race_in_hours ?? 0;
-    if (homeData?.manual_start !== 1 && hoursUntilRace > 0) {
+    // Measured NOW, from the card countdown's start instant — not
+    // next_race_in_hours, which is as old as the last Home load (developer
+    // report 2026-10-29: "11 minutes" for a race 5-10 min away; and a tap just
+    // after the gun still got "not started yet"). See msUntilStart.
+    const msLeft = msUntilStart(raceStartMs, Date.now(), homeData?.next_race_in_hours);
+    if (homeData?.manual_start !== 1 && msLeft > 0) {
+      void analyticsService.logStartStep('blocked', 'early_modal', raceReadyKey);
+      setEarlyMsLeft(msLeft);
       setShowEarlyTrackingModal(true);
       return;
     }
 
     await doStartGPSTracking();
-  }, [participantId, eventId, homeData, doStartGPSTracking, t]);
+  }, [participantId, eventId, homeData, raceStartMs, doStartGPSTracking, raceReadyKey, t]);
 
   // Opens the confirm popup (button now calls this instead of startGPSTracking)
   const confirmStartTracking = useCallback(() => {
+    if (isStarting()) return; // tapped mid-start
+    // A new tap is a new decision: a start left armed by an earlier blocked
+    // attempt must not fire on a later foreground if this one is declined.
+    pendingStartRef.current = false;
+    osAskedFromPopupRef.current = false;
+    void analyticsService.logStartStep('tap', undefined, raceReadyKey);
+    // From here the Start gate owns permissions for this race: Get race-ready
+    // must not pop up in the middle of the Start sequence (start line!).
+    if (raceReadyKey) void raceReadyService.markShown(raceReadyKey);
     if (!participantId || !eventId) {
       toastError(t('home:errors.missingInfo'), t('home:errors.missingInfoDescription'));
       return;
     }
     setShowStartConfirmModal(true);
-  }, [participantId, eventId, t]);
+  }, [participantId, eventId, t, raceReadyKey]);
 
   // User taps "Yes" → close popup, run the real start flow
   const handleStartConfirmYes = useCallback(async () => {
@@ -1210,6 +1382,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // User taps "No" → just close, do nothing
   const handleStartConfirmNo = useCallback(() => {
+    pendingStartRef.current = false;
     setShowStartConfirmModal(false);
   }, []);
 
@@ -1221,6 +1394,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   // ✅ User cancels early tracking — do nothing
   const handleEarlyTrackingCancel = useCallback(() => {
+    pendingStartRef.current = false;
     setShowEarlyTrackingModal(false);
   }, []);
 
@@ -1480,26 +1654,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setShowOverrideModal(false);
   }, []);
 
-  // Approximate-location popup: hand the choice back to the waiting start flow.
-  const resolveApprox = useCallback((proceed: boolean) => {
-    setShowApproxModal(false);
-    const resolve = approxResolveRef.current;
-    approxResolveRef.current = null;
-    resolve?.(proceed);
-  }, []);
-
-  // "Open settings" re-arms pendingStartRef so returning from Settings resumes
-  // this start (and re-checks), like the permission gate.
-  const handleApproxOpenSettings = useCallback(() => {
-    pendingStartRef.current = true;
-    Linking.openSettings().catch(() => { /* silent */ });
-    resolveApprox(false);
-  }, [resolveApprox]);
-
-  const handleApproxContinue = useCallback(() => {
-    resolveApprox(true);
-  }, [resolveApprox]);
-
   // Settles the start-time battery popup exactly once.
   const resolveBatteryStart = useCallback((choice: 'allow' | 'anyway' | 'cancel') => {
     setShowBatteryStartModal(false);
@@ -1522,11 +1676,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     initializeScreen();
   }, [initializeScreen]);
 
-  // ✅ Battery optimization — prompt once on first install when HomeScreen is visible
-  // HomeScreen provides the background behind the system dialog — better UX than App.tsx
-  useEffect(() => {
-    checkAndPromptBatteryOptimization();
-  }, [checkAndPromptBatteryOptimization]);
+  // Battery optimization used to be prompted here on FIRST LAUNCH — before the
+  // user had done anything, the same cold ask that cost us notifications. It
+  // now lives in Get race-ready (after connecting to a race) and in the home
+  // readiness card, both of which read the real exemption state instead of a
+  // one-shot flag. The first-launch modal and its handlers were removed (nothing
+  // triggered them any more).
 
   // Countdown timer + background sent count sync + queue count sync
   useEffect(() => {
@@ -1763,22 +1918,59 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // subscribe once and never churn.
   const doStartGPSTrackingRef = useRef(doStartGPSTracking);
   doStartGPSTrackingRef.current = doStartGPSTracking;
+  // The return-from-Settings listener below is set up once ([] deps), when
+  // homeData — and so eventId — is still null; read the race id through a ref.
+  // The race-ready key (custom_<id> for custom events), like every start_step.
+  const eventIdRef = useRef(raceReadyKey);
+  eventIdRef.current = raceReadyKey;
+  // True while the popup's own button is waiting on the OS permission request.
+  // The OS dialog / Android 11+ Location page sends the app to the background
+  // and back, so the listener below would log the SAME answer a second time.
+  const inlineRequestRef = useRef(false);
+  // When it started: a request that never settles must not mute the return
+  // listener for the rest of the session (the runner would face a bare screen).
+  const inlineRequestAtRef = useRef(0);
 
   useEffect(() => {
+    // Only a REAL trip out of the app (Settings, the OS Location page) counts:
+    // inactive → active is Control Center, a notification banner pulled down,
+    // or an OS alert — the runner fixed nothing, and acting on it re-showed
+    // (or started) out of nowhere.
+    let sawBackground = false;
     const sub = AppState.addEventListener('change', (next) => {
-      if (next !== 'active' || !pendingStartRef.current) return;
+      if (next === 'background') { sawBackground = true; return; }
+      if (next !== 'active') return;
+      const cameBack = sawBackground;
+      sawBackground = false;
+      if (!cameBack || !pendingStartRef.current) return;
 
       void (async () => {
         try {
           const perms = await gpsService.getPermissionState();
           setHasPermission(perms.foreground);
+          const servicesOn = await gpsService.isLocationServiceEnabled();
+          // Precise location too (same gate as doStartGPSTracking): coming back
+          // from a precise block with it still off is not "fixed".
+          const preciseOk = perms.foreground && perms.background && servicesOn
+            ? (await readPrecise()) !== false : true;
 
-          const satisfied =
-            perms.foreground &&
-            perms.background &&
-            (await gpsService.isLocationServiceEnabled());
+          const satisfied = perms.foreground && perms.background && servicesOn && preciseOk;
+
+          // Re-check after the awaits: the popup's own button may have been
+          // answered meanwhile and already started (or the runner cancelled).
+          // Acting on the stale check started tracking a second time.
+          if (!pendingStartRef.current) return;
 
           if (satisfied) {
+            // Armed too long ago: not what the runner is doing now — disarm.
+            if (Date.now() - pendingStartAtRef.current > PENDING_START_MAX_MS) {
+              pendingStartRef.current = false;
+              setShowLocationPermissionModal(false);
+              return;
+            }
+            if (!inlineRequestRef.current) {
+              void analyticsService.logStartStep('permission_result', 'granted_on_return', eventIdRef.current);
+            }
             // Clear FIRST — the inline-grant path can resolve for the same
             // grant, and whichever runs second must find nothing pending.
             pendingStartRef.current = false;
@@ -1790,6 +1982,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // Came back without granting. The button already dismissed the modal,
           // so without this the runner faces a bare screen and no explanation
           // of why tracking still is not running. Put it back and stay armed.
+          // The popup's own permission request is still running (iOS asks in
+          // two steps; answering the first one brings the app back to the
+          // foreground): that request owns the outcome and puts the popup
+          // back itself if the runner says no. Re-showing it here flashed the
+          // popup between the two OS questions.
+          if (inlineRequestRef.current && Date.now() - inlineRequestAtRef.current < 60_000) return;
+          void analyticsService.logStartStep('permission_result', 'still_blocked_on_return', eventIdRef.current);
+          // Re-show with the CURRENT problem: e.g. "denied" → granted only
+          // "While using" now needs the "Always" text and route, not "denied".
+          // Same order as the Start gate: the phone-wide switch first (with it
+          // off iOS reports the permission as denied), then the permission.
+          setPermissionBlockReason(!servicesOn ? 'location_off' : !perms.foreground ? 'denied' : !perms.background ? 'no_background_perm' : 'precise');
+          setPermissionCanAskAgain(perms.canAskAgain);
+          pendingStartAtRef.current = Date.now();   // re-armed: still at it
+          // This is the Start popup again — never the mid-race wording.
+          setPermissionModalMidRace(false);
+          setPermissionModalNoFix(false);
           setShowLocationPermissionModal(true);
         } catch { /* silent — a later foreground retries */ }
       })();
@@ -1825,8 +2034,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   useEffect(() => {
     const gun = homeData?.next_race_date && homeData?.next_race_time && serverTimeOffsetKnownRef.current
       // 00:00 / 00:01 is a placeholder (the organiser has not set the real gun
-      // time yet — 27 of 151 upcoming distances on 2026-10-19): no reminders,
-      // they would ring at 23:50 the night before.
+      // time yet — 27 of 151 upcoming distances on 2026-10-19; same rule as
+      // raceStartMs): no reminders, they would ring at 23:50 the night before.
       && !/^00:0[01](:00)?$/.test(String(homeData.next_race_time).trim())
       ? computeRaceStartTime(homeData.next_race_date, homeData.next_race_time, serverTimeOffsetRef.current)
       : null;
@@ -2072,11 +2281,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <AppHeader showLogo={true} />
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+        <AppHeader title={t('common:band.home')} logoimg showLogo={true} />
         <View style={commonStyles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={palette.navy} />
           <Text style={[commonStyles.loadingText, { marginTop: spacing.lg }]}>
             {t('home:status.loading')}
           </Text>
@@ -2085,55 +2293,29 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     );
   }
 
-  // ✅ Format hours for early tracking modal message
-  const hoursUntilRace = homeData?.next_race_in_hours ?? 0;
-  // Sub-hour starts are now the common case for this modal, so minutes matter:
-  // Math.round() alone rendered "0h" for a runner 4 minutes from the gun.
-  const hoursDisplay = hoursUntilRace >= 24
-    ? `${Math.floor(hoursUntilRace / 24)}d ${Math.round(hoursUntilRace % 24)}h`
-    : hoursUntilRace >= 1
-      ? `${Math.floor(hoursUntilRace)}h ${Math.round((hoursUntilRace % 1) * 60)}m`
-      : `${Math.max(1, Math.round(hoursUntilRace * 60))}m`;
+  // ✅ Early tracking modal: the time to the gun measured when Start was
+  // tapped (earlyMsLeft). Sub-hour starts are the common case, so minutes
+  // matter ("0h" used to show for a runner 4 minutes from the gun).
+  const hoursDisplay = formatTimeToStart(earlyMsLeft);
+
+  // Location-permission popup: the Close button and Android back share this.
+  const closeLocationPermissionModal = () => {
+    // Backing out cancels the start — disarm, or a later
+    // foreground would fire a start the runner declined.
+    if (!permissionModalMidRace) {
+      void analyticsService.logStartStep('permission_result', 'dismissed', raceReadyKey);
+    }
+    pendingStartRef.current = false;
+    setShowLocationPermissionModal(false);
+  };
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left', 'right'] : ['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <AppHeader />
-
-      {Platform.OS === 'android' && (
-        <Modal
-          transparent
-          visible={showBatteryModal}
-          animationType="fade"
-          statusBarTranslucent
-        >
-          <View style={homeStyles.notifBackdrop}>
-            <View style={homeStyles.notifWrapper}>
-              <View style={homeStyles.notifCard}>
-                <View style={homeStyles.notifIconWrapper}>
-                  <Ionicons name="battery-charging" size={36} color={colors.primary} />
-                </View>
-                <Text style={homeStyles.notifTitle}>{t('home:battery.title')}</Text>
-                <Text style={homeStyles.notifBody}>{t('home:battery.message')}</Text>
-                <View style={homeStyles.notifButtonContainer}>
-                  <TouchableOpacity
-                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
-                    onPress={handleBatteryAllow}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={commonStyles.primaryButtonText}>{t('home:battery.allow')}</Text>
-                  </TouchableOpacity>
-
-                </View>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
+    <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left', 'right'] : ['bottom']}>
+      <AppHeader title={t('common:band.home')} logoimg showLogo={true} />
 
       {/* ✅ Start-time battery optimisation (Android) — see startGPSTracking */}
       {Platform.OS === 'android' && (
-        <Modal
+        <Modal supportedOrientations={MODAL_ORIENTATIONS}
           transparent
           visible={showBatteryStartModal}
           animationType="fade"
@@ -2141,23 +2323,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           onRequestClose={handleBatteryStartCancel}
         >
           <View style={homeStyles.notifBackdrop}>
-            <View style={homeStyles.notifWrapper}>
-              <View style={homeStyles.notifCard}>
-                <View style={homeStyles.notifIconWrapper}>
-                  <Ionicons name="battery-charging" size={36} color={colors.primary} />
+            <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+              {/* ModalScroll: every notif card was ~500-540pt tall — in landscape and
+                  on SE / larger text the icon went off the top and the buttons off the
+                  bottom, unreachable. Tall cards now scroll (audit 2026-10-22). */}
+              <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+              <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+                <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
+                  <Ionicons name="battery-charging" size={36} color={palette.navy} />
                 </View>
                 <Text style={homeStyles.notifTitle}>{t('home:battery.title')}</Text>
-                <Text style={homeStyles.notifBody}>{t('home:battery.message')}</Text>
-                <View style={homeStyles.notifButtonContainer}>
+                <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>{t('home:battery.message')}</Text>
+                <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                   <TouchableOpacity
-                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                    style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                     onPress={handleBatteryStartAllow}
                     activeOpacity={0.8}
                   >
                     <Text style={commonStyles.primaryButtonText}>{t('home:battery.allow')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={commonStyles.secondaryButton}
+                    style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                     onPress={handleBatteryStartAnyway}
                     activeOpacity={0.7}
                   >
@@ -2165,13 +2351,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </TouchableOpacity>
                 </View>
               </View>
+              </ModalScroll>
             </View>
           </View>
         </Modal>
       )}
 
       {/* ✅ Start tracking confirmation */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={showStartConfirmModal}
         animationType="fade"
@@ -2179,62 +2366,52 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={handleStartConfirmNo}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            {/* Scrolls only when taller than the screen (2026-10-24): the platform
-                line left the French popup only ~7-14 pt to spare on a 360x640 Android /
-                an iPhone SE 2, so a larger text size, a 3-button nav bar or a first-gen
-                SE pushes the Start button off-screen. Fits → nothing moves. The cap is
-                in points (startPopupScrollMax), not a percentage. */}
-            <View style={homeStyles.notifCard}>
-              <ScrollView
-                style={[homeStyles.notifScroll, { maxHeight: startPopupScrollMax }]}
-                contentContainerStyle={homeStyles.notifScrollContent}
-                bounces={false}
-                keyboardShouldPersistTaps="handled"
-              >
-              <View style={homeStyles.notifIconWrapper}>
-                <Ionicons name="navigate-circle-outline" size={36} color={colors.primary} />
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
+                <Ionicons name="navigate-circle-outline" size={36} color={palette.navy} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:startConfirm.title')}</Text>
-              <Text style={homeStyles.notifBody}>{t('home:startConfirm.message')}</Text>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>{t('home:startConfirm.message')}</Text>
               {/* Android cannot start the location service once the app is in the
                   background: a phone pocketed within ~3 s of Start never tracks
                   until Livio is opened again (start_backgrounded). A runner does
                   not feel a notification mid-race, so say it before they start. */}
-              <View style={homeStyles.notifKeepOpenBox}>
+              <View style={[homeStyles.notifKeepOpenBox, compactPopups && homeStyles.notifKeepOpenCompact]}>
                 <Text style={homeStyles.notifKeepOpenText}>{t('home:startConfirm.keepOpen')}</Text>
                 {/* 2026-10-24: 5 silent starts — the phone killed Livio after Start.
                     iOS never relaunches an app swiped away from the switcher;
                     Android pauses it when battery use is restricted. */}
-                <Text style={[homeStyles.notifKeepOpenText, { marginTop: 6 }]}>
+                <Text style={[homeStyles.notifKeepOpenText, { marginTop: spacing.sm }]}>
                   {t(Platform.OS === 'ios' ? 'home:startConfirm.dontCloseIos' : 'home:startConfirm.dontCloseAndroid')}
                 </Text>
               </View>
-              <View style={homeStyles.notifButtonContainer}>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleStartConfirmYes}
                   activeOpacity={0.8}
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('home:startConfirm.yes')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={commonStyles.secondaryButton}
+                  style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleStartConfirmNo}
                   activeOpacity={0.7}
                 >
                   <Text style={commonStyles.secondaryButtonText}>{t('home:startConfirm.no')}</Text>
                 </TouchableOpacity>
               </View>
-              </ScrollView>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
 
       {/* ✅ Stop tracking confirmation — before/after-gun copy. The safe choice
           (Keep tracking) is the primary button: a stop cannot be undone. */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={stopConfirmMode !== null}
         animationType="fade"
@@ -2242,27 +2419,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={handleStopConfirmNo}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <View style={homeStyles.notifCard}>
-              <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger]}>
-                <Ionicons name="stop-circle-outline" size={36} color={colors.error} />
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger, compactPopups && homeStyles.hideCompact]}>
+                <Ionicons name="stop-circle-outline" size={36} color={palette.danger} />
               </View>
               <Text style={homeStyles.notifTitle}>
                 {t(stopConfirmMode === 'after' ? 'home:alerts.stopAfterStartTitle' : 'home:alerts.stopBeforeStartTitle')}
               </Text>
-              <Text style={homeStyles.notifBody}>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>
                 {t(stopConfirmMode === 'after' ? 'home:alerts.stopAfterStartMessage' : 'home:alerts.stopBeforeStartMessage')}
               </Text>
-              <View style={homeStyles.notifButtonContainer}>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleStopConfirmNo}
                   activeOpacity={0.8}
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('home:alerts.keepTracking')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[commonStyles.secondaryButton, homeStyles.notifDangerButton]}
+                  style={[commonStyles.secondaryButton, homeStyles.notifDangerButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleStopConfirmYes}
                   activeOpacity={0.7}
                 >
@@ -2270,50 +2448,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ✅ Approximate location at Start — warn, never block. No dismiss on
-          back (was cancelable: false): the start flow waits for a choice. */}
-      <Modal
-        transparent
-        visible={showApproxModal}
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => { /* a choice is required */ }}
-      >
-        <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <View style={homeStyles.notifCard}>
-              <View style={homeStyles.notifIconWrapper}>
-                <Ionicons name="locate-outline" size={36} color={colors.warning} />
-              </View>
-              <Text style={homeStyles.notifTitle}>{t('home:alerts.approximateLocationTitle')}</Text>
-              <Text style={homeStyles.notifBody}>{t('home:alerts.approximateLocationMessage')}</Text>
-              <View style={homeStyles.notifButtonContainer}>
-                <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
-                  onPress={handleApproxOpenSettings}
-                  activeOpacity={0.8}
-                >
-                  <Text style={commonStyles.primaryButtonText}>{t('home:alerts.openSettings')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={commonStyles.secondaryButton}
-                  onPress={handleApproxContinue}
-                  activeOpacity={0.7}
-                >
-                  <Text style={commonStyles.secondaryButtonText}>{t('home:alerts.continueAnyway')}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
 
       {/* ✅ Start failed — the error, one OK button */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={startErrorMessage !== null}
         animationType="fade"
@@ -2321,16 +2462,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={handleStartErrorClose}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <View style={homeStyles.notifCard}>
-              <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger]}>
-                <Ionicons name="alert-circle-outline" size={36} color={colors.error} />
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, homeStyles.notifIconWrapperDanger, compactPopups && homeStyles.hideCompact]}>
+                <Ionicons name="alert-circle-outline" size={36} color={palette.danger} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('common:errors.generic')}</Text>
-              <Text style={homeStyles.notifBody}>{startErrorMessage}</Text>
-              <View style={homeStyles.notifButtonContainer}>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>{startErrorMessage}</Text>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleStartErrorClose}
                   activeOpacity={0.8}
                 >
@@ -2338,12 +2480,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
 
       {/* ✅ Manual override — start sending now, ignoring the race start time */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={showOverrideModal}
         animationType="fade"
@@ -2351,23 +2494,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={handleOverrideCancel}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <View style={homeStyles.notifCard}>
-              <View style={homeStyles.notifIconWrapper}>
-                <Ionicons name="play-circle-outline" size={36} color={colors.primary} />
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
+                <Ionicons name="play-circle-outline" size={36} color={palette.navy} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:alerts.overrideTitle')}</Text>
-              <Text style={homeStyles.notifBody}>{t('home:alerts.overrideMessage')}</Text>
-              <View style={homeStyles.notifButtonContainer}>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>{t('home:alerts.overrideMessage')}</Text>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleOverrideConfirm}
                   activeOpacity={0.8}
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('home:alerts.startNow')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={commonStyles.secondaryButton}
+                  style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleOverrideCancel}
                   activeOpacity={0.7}
                 >
@@ -2375,12 +2519,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
 
       {/* ✅ Early tracking warning modal — shown when race is more than 24h away */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={showEarlyTrackingModal}
         animationType="fade"
@@ -2388,25 +2533,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         onRequestClose={handleEarlyTrackingCancel}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <View style={homeStyles.notifCard}>
-              <View style={homeStyles.notifIconWrapper}>
-                <Ionicons name="time-outline" size={36} color={colors.warning} />
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
+                <Ionicons name="time-outline" size={36} color={palette.warning} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:earlyTracking.title')}</Text>
-              <Text style={homeStyles.notifBody}>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>
                 {t('home:earlyTracking.message', { hours: hoursDisplay })}
               </Text>
-              <View style={homeStyles.notifButtonContainer}>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleEarlyTrackingConfirm}
                   activeOpacity={0.8}
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('home:earlyTracking.yes')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={commonStyles.secondaryButton}
+                  style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={handleEarlyTrackingCancel}
                   activeOpacity={0.7}
                 >
@@ -2414,6 +2560,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
@@ -2421,38 +2568,45 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       {/* ✅ Location-permission modal — blocks Start, and is also reachable by
           tapping the mid-race health banner. Same notif* skeleton as every
           other modal on this screen. */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={showLocationPermissionModal}
         animationType="fade"
         statusBarTranslucent
+        // Android back = the Close button (audit 2026-10-22: there was no
+        // onRequestClose, so back did nothing)
+        onRequestClose={closeLocationPermissionModal}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <View style={homeStyles.notifCard}>
-              <View style={homeStyles.notifIconWrapper}>
-                <Ionicons name="location-outline" size={36} color={colors.error} />
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
+              <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
+                <Ionicons name="location-outline" size={36} color={palette.navy} />
               </View>
-              <Text style={homeStyles.notifTitle}>{t('home:gpsHealth.title')}</Text>
-              <Text style={homeStyles.notifBody}>
+              <Text style={homeStyles.notifTitle}>
+                {t(popupCopy.titleKey)}
+              </Text>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>
                 {/* Three distinct problems, three distinct instructions: turn the
                     phone's Location on, grant the permission at all, or upgrade
                     While-Using to Always. Collapsing them tells most runners to
                     do the wrong thing. */}
-                {permissionBlockReason === 'location_off'
-                  ? t('home:gpsHealth.blockedBodyLocationOff')
-                  : permissionBlockReason === 'denied'
-                    ? t('home:gpsHealth.blockedBodyDenied')
-                    : t('home:gpsHealth.blockedBody')}
+                {/* Start flow vs mid-race vs "no GPS position": see locationPopupCopy. */}
+                {t(popupCopy.bodyKey)}
               </Text>
               {/* Shown wherever the button cannot land on the exact page — which
                   on Android's permission route is still the case, since the one
                   intent that targets the Location page needs a Parcelable extra
                   JS cannot send. Android's location_off deep-link IS exact, so
                   that combination alone gets no extra line. */}
-              {!(Platform.OS === 'android' && permissionBlockReason === 'location_off') && (
-                <Text style={homeStyles.notifBody}>
-                  {Platform.OS === 'ios'
+              {popupCopy.showSettingsSteps && (
+                <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>
+                  {permissionBlockReason === 'precise'
+                    ? (Platform.OS === 'ios'
+                        ? t('home:gpsHealth.stepsPreciseIos')
+                        : t('home:gpsHealth.stepsPreciseAndroid'))
+                    : Platform.OS === 'ios'
                     ? (permissionBlockReason === 'location_off'
                         ? t('home:gpsHealth.stepsLocationOffIos')
                         : t('home:gpsHealth.stepsIos'))
@@ -2461,11 +2615,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       : t('home:gpsHealth.stepsAndroidSettings')}
                 </Text>
               )}
-              <View style={homeStyles.notifButtonContainer}>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
+                {popupCopy.showSettingsButton && (
                 <TouchableOpacity
-                  style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                  style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                   onPress={() => {
                     setShowLocationPermissionModal(false);
+                    // The runner is acting on the blocked start right now:
+                    // restart its window (see PENDING_START_MAX_MS) — a slow
+                    // trip through Settings must still finish the start.
+                    if (pendingStartRef.current) pendingStartAtRef.current = Date.now();
                     void (async () => {
                       // Ask the OS FIRST. On Android 11+ a background-location
                       // request cannot be answered by a dialog, so the system
@@ -2476,11 +2635,33 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       // is the only route to it, and it can also return granted
                       // outright. Only once the OS refuses to ask again does a
                       // settings trip become the last resort.
-                      if (permissionBlockReason !== 'location_off') {
+                      // Precise location: no OS request can switch it on from
+                      // here — straight to the app's permission page.
+                      // Already asked from this popup and refused: Settings now.
+                      if (permissionBlockReason !== 'location_off' && permissionBlockReason !== 'precise' && !osAskedFromPopupRef.current) {
                         try {
-                          const t0 = Date.now();
-                          const perms = await gpsService.requestPermissionsDetailed();
+                          // Did the OS show anything? (see utils/permissionPrompt)
+                          const promptWatch = watchForOsPrompt();
+                          let osShowed = false;
+                          inlineRequestAtRef.current = Date.now();
+                          inlineRequestRef.current = true;
+                          let perms;
+                          try {
+                            perms = await gpsService.requestPermissionsDetailed();
+                          } finally {
+                            inlineRequestRef.current = false;
+                            osShowed = promptWatch.done();
+                          }
                           setHasPermission(perms.foreground);
+                          // Start-funnel step only when the popup came from Start
+                          // (the mid-race banner reuses this popup).
+                          if (!permissionModalMidRace) {
+                            void analyticsService.logStartStep(
+                              'permission_result',
+                              perms.background ? 'granted' : (osShowed ? 'denied' : 'no_prompt'),
+                              raceReadyKey,
+                            );
+                          }
                           if (perms.background) {
                             // Granted outright, without ever leaving the app —
                             // on Android 11+ the OS opens Livio's Location page
@@ -2490,6 +2671,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                             // again. Finish what they already asked for.
                             // Clear the ref FIRST so the AppState resume below
                             // sees nothing pending and cannot start a second time.
+                            // Close the popup too — nothing is blocked any more,
+                            // and it must not sit over a running tracker.
+                            setShowLocationPermissionModal(false);
                             if (pendingStartRef.current) {
                               pendingStartRef.current = false;
                               await doStartGPSTracking();
@@ -2502,50 +2686,85 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                           // Elapsed time separates them — a screen the runner
                           // read and dismissed cannot come back in a few ms.
                           // Without this the button silently did nothing.
-                          if (Date.now() - t0 > 700) return;
+                          if (osShowed) {
+                            osAskedFromPopupRef.current = true;
+                            // The runner answered "no". The return listener
+                            // stays quiet during this request, so put the
+                            // Start popup back here, with the current problem.
+                            if (pendingStartRef.current) {
+                              setPermissionBlockReason(!perms.foreground ? 'denied' : 'no_background_perm');
+                              setPermissionCanAskAgain(perms.canAskAgain);
+                              setPermissionModalMidRace(false);
+                              setPermissionModalNoFix(false);
+                              setShowLocationPermissionModal(true);
+                            }
+                            return;
+                          }
                         } catch {
                           // fall through to settings
                         }
                       }
-                      await openLocationSettingsFor(permissionBlockReason);
+                      if (!permissionModalMidRace) {
+                        void analyticsService.logStartStep('permission_result', 'sent_to_settings', raceReadyKey);
+                      }
+                      await openLocationSettingsFor(permissionBlockReason === 'precise' ? 'denied' : permissionBlockReason);
                     })();
                   }}
                   activeOpacity={0.8}
                 >
                   <Text style={commonStyles.primaryButtonText}>{t('home:gpsHealth.openSettings')}</Text>
                 </TouchableOpacity>
+                )}
+                {/* Precise location is advice: a runner who won't change it
+                    still gets tracked (approximately) — never blocked. */}
+                {permissionBlockReason === 'precise' && !permissionModalMidRace && (
+                  <TouchableOpacity
+                    style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
+                    onPress={() => {
+                      // A start is already running — ignore the tap (startingRef).
+                      if (isStarting()) return;
+                      void analyticsService.logStartStep('permission_result', 'start_approximate', raceReadyKey);
+                      pendingStartRef.current = false;
+                      setShowLocationPermissionModal(false);
+                      allowApproximateRef.current = true;
+                      void doStartGPSTracking();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={commonStyles.secondaryButtonText}>{t('home:gpsHealth.startAnyway')}</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
-                  style={commonStyles.secondaryButton}
-                  onPress={() => {
-                    // Backing out cancels the start — disarm, or a later
-                    // foreground would fire a start the runner declined.
-                    pendingStartRef.current = false;
-                    setShowLocationPermissionModal(false);
-                  }}
+                  style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
+                  onPress={closeLocationPermissionModal}
                   activeOpacity={0.7}
                 >
                   <Text style={commonStyles.secondaryButtonText}>{t('common:buttons.close')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
 
       {/* ✅ Power Saving Mode modal — blocks tracking when battery saver is ON */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={showPowerSavingModal}
         animationType="fade"
         statusBarTranslucent
+        // Android back = Close / Got it (audit 2026-10-22: no onRequestClose before)
+        onRequestClose={() => setShowPowerSavingModal(false)}
       >
         <View style={homeStyles.notifBackdrop}>
-          <View style={homeStyles.notifWrapper}>
-            <View style={homeStyles.notifCard}>
+          <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]}>
+            <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+            <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
 
               {/* Icon */}
-              <View style={homeStyles.notifIconWrapper}>
-                <Ionicons name="battery-dead-outline" size={36} color={colors.error} />
+              <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
+                <Ionicons name="battery-dead-outline" size={36} color={palette.danger} />
               </View>
               <Text style={homeStyles.notifTitle}>{t('home:powerSaving.title')}</Text>
               {/* Platform-specific on purpose. This previously read
@@ -2554,23 +2773,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   modal rendered the literal string "home:powerSaving.message"
                   to users. iOS has no deep link to Low Power Mode, hence the
                   two different texts. */}
-              <Text style={homeStyles.notifBody}>
+              <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>
                 {Platform.OS === 'android'
                   ? t('home:powerSaving.messageAndroid')
                   : t('home:powerSaving.messageIos')}
               </Text>
-              <View style={homeStyles.notifButtonContainer}>
+              <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
                 {Platform.OS === 'android' ? (
                   <>
                     <TouchableOpacity
-                      style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                      style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                       onPress={openPowerSavingSettings}
                       activeOpacity={0.8}
                     >
                       <Text style={commonStyles.primaryButtonText}>{t('home:powerSaving.disable')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={commonStyles.secondaryButton}
+                      style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                       onPress={() => setShowPowerSavingModal(false)}
                       activeOpacity={0.7}
                     >
@@ -2581,7 +2800,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   // iOS: no deep link to Low Power Mode exists, so a Settings button is
                   // pointless. Instruction text does the work; this only acknowledges.
                   <TouchableOpacity
-                    style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                    style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                     onPress={() => setShowPowerSavingModal(false)}
                     activeOpacity={0.8}
                   >
@@ -2590,13 +2809,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 )}
               </View>
             </View>
+            </ModalScroll>
           </View>
         </View>
       </Modal>
 
 
       {/* ✅ Foreground notification popup */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         transparent
         visible={notificationPopup.visible}
         animationType="fade"
@@ -2612,33 +2832,35 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           />
         </View>
 
-        {/* Card */}
-        <View style={homeStyles.notifWrapper}>
-          <View style={homeStyles.notifCard}>
+        {/* Card — box-none: this full-screen wrapper sat over the backdrop
+            above and swallowed every tap outside the card (audit 2026-10-22). */}
+        <View style={[homeStyles.notifWrapper, compactPopups && homeStyles.notifWrapperCompact]} pointerEvents="box-none">
+          <ModalScroll style={[homeStyles.notifScroll, compactPopups && homeStyles.notifScrollCompact]} reserve={compactPopups ? 16 : 40}>
+          <View style={[homeStyles.notifCard, compactPopups && homeStyles.notifCardCompact]}>
             {/* Close button */}
             <TouchableOpacity
-              style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}
+              style={{ position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: palette.fill, justifyContent: 'center', alignItems: 'center', zIndex: 10 }}
               onPress={closeNotificationPopup}
               activeOpacity={0.7}
             >
-              <Ionicons name="close" size={20} color="#64748b" />
+              <Ionicons name="close" size={20} color={palette.textMuted} />
             </TouchableOpacity>
 
             {/* Icon */}
-            <View style={homeStyles.notifIconWrapper}>
-              <Ionicons name="notifications" size={36} color={colors.primary} />
+            <View style={[homeStyles.notifIconWrapper, compactPopups && homeStyles.hideCompact]}>
+              <Ionicons name="notifications" size={36} color={palette.navy} />
             </View>
 
             {/* Title */}
-            <Text style={homeStyles.notifTitle}>{notificationPopup.title}</Text>
+            <Text style={[homeStyles.notifTitle, compactPopups && homeStyles.notifTitleClearClose]}>{notificationPopup.title}</Text>
 
             {/* Body */}
-            <Text style={homeStyles.notifBody}>{notificationPopup.body}</Text>
+            <Text style={[homeStyles.notifBody, compactPopups && homeStyles.notifBodyCompact]}>{notificationPopup.body}</Text>
 
             {/* Buttons */}
-            <View style={homeStyles.notifButtonContainer}>
+            <View style={[homeStyles.notifButtonContainer, compactPopups && homeStyles.notifButtonRowCompact]}>
               <TouchableOpacity
-                style={[commonStyles.primaryButton, homeStyles.notifViewButton]}
+                style={[commonStyles.primaryButton, homeStyles.notifViewButton, compactPopups && homeStyles.notifButtonCompact]}
                 onPress={() => {
                   closeNotificationPopup();
                   if (notificationPopup.data) navigateToResultDetails(notificationPopup.data);
@@ -2649,7 +2871,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={commonStyles.secondaryButton}
+                style={[commonStyles.secondaryButton, compactPopups && homeStyles.notifButtonCompact]}
                 onPress={closeNotificationPopup}
                 activeOpacity={0.7}
               >
@@ -2657,22 +2879,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           </View>
+          </ModalScroll>
         </View>
       </Modal>
 
       <ScrollView
         style={homeStyles.scrollView}
-        contentContainerStyle={homeStyles.scrollContent}
+        // sidePadding: hero, cards and buttons clear of the notch in landscape (audit 2026-10-22)
+        contentContainerStyle={[homeStyles.scrollContent, sidePadding]}
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled={true}
       >
-        {/* Logo & Title */}
+        {/* Hero — the mark itself is in the header band above. */}
         <View style={homeStyles.cardscetion}>
-          <Image
-            source={require('../../assets/livio_logo_transparent.png')}
-            style={homeStyles.logo}
-            contentFit="contain"
-          />
+          <Text style={homeStyles.title}>{t('home:hero.title')}</Text>
+          <Text style={homeStyles.subtitle}>{t('home:hero.subtitle')}</Text>
         </View>
 
 
@@ -2686,32 +2907,65 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               labels itself from the session and skips home's date. */}
           {homeData?.show_start_track === 1 || isGPSActive ? (
             <>
+              <Text style={homeStyles.sectionLabel}>{t('home:sections.nextSession')}</Text>
               <View style={commonStyles.card}>
-                <View style={homeStyles.eventInfo}>
-                  <Text style={homeStyles.eventNameText}>
-                    <Text style={homeStyles.eventLabel}>{t('home:Event.title')}: </Text>
-                    <Text style={homeStyles.eventValue}>
-                      {(isGPSActive && sessionRaceName) || (homeData?.show_start_track === 1 ? homeData?.next_race_name : '') || ''}
-                    </Text>
-                  </Text>
-                </View>
+                {/* 01_Home.png: the event NAME leads the card, then a single
+                    meta line carrying the date and the start time. The old
+                    "Event name: x" / "Date: y" label prefixes are not in the
+                    deck and pushed the values down to caption size. */}
+                {/* No numberOfLines: 26pt cut long race names at 2 lines (audit 2026-10-22) */}
+                <Text style={homeStyles.eventName}>
+                  {(isGPSActive && sessionRaceName) || (homeData?.show_start_track === 1 ? homeData?.next_race_name : '') || ''}
+                </Text>
 
+                {/* Date / start time only while home offers this race: in the
+                    session-only state (M1) home's fields may belong to another race. */}
                 {homeData?.show_start_track === 1 && !!homeData?.next_race_date && (
-                  <Text style={homeStyles.smallText}>
-                    <Text style={{ fontWeight: typography.weights.bold }}>{t('home:Event.Date')}:</Text>
-                    {' '}
-                    {formatDate(homeData.next_race_date)}
+                <View style={homeStyles.eventMetaRow}>
+                  <Ionicons name="calendar-outline" size={16} color={palette.textMuted} />
+                  <Text style={homeStyles.eventMetaText}>
+                    {formatEventDate(homeData.next_race_date, monthsShort)}
                   </Text>
+                  {!!homeData.next_race_time && (
+                    <>
+                      <Ionicons name="time-outline" size={16} color={palette.textMuted} />
+                      <Text style={homeStyles.eventMetaText}>
+                        {formatClockTime(homeData.next_race_time)}
+                      </Text>
+                    </>
+                  )}
+                </View>
                 )}
+
+                {/* Countdown BEFORE Start — it used to exist only once tracking
+                    was running. Manual-start races have no fixed gun. */}
+                {!isGPSActive && homeData?.manual_start !== 1 && (
+                  <PreRaceCountdown startAtMs={raceStartMs} />
+                )}
+
+                {/* Each runner brings their own audience. Hidden until the
+                    server sends this race's bib + distance. */}
+                {/* Only while home offers this race: in the session-only state
+                    (M1) homeData may be absent or describe another race. */}
+                {homeData?.show_start_track === 1 && (
+                  <ShareTrackingLink
+                    productAppId={homeData.next_race_id}
+                    povId={homeData.next_race_product_option_value_app_id}
+                    bib={homeData.next_race_bib_number}
+                    raceName={homeData.next_race_name}
+                  />
+                )}
+
+                <View style={homeStyles.cardDivider} />
                 {/* Manual Start Indicator */}
                 {homeData?.manual_start === 1 && (
-                  <View style={[homeStyles.trackingStatus, { backgroundColor: colors.warning + '20' }]}>
-                    <Text style={homeStyles.trackingStatusIcon}>🔓</Text>
+                  <View style={[homeStyles.trackingStatus, { backgroundColor: palette.warningBg }]}>
+                    <Ionicons name="lock-open-outline" size={16} color={palette.warning} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[homeStyles.trackingStatusText, { color: colors.warning }]}>
+                      <Text style={[homeStyles.trackingStatusText, { color: palette.warning }]}>
                         {t('home:status.manualStartEnabled')}
                       </Text>
-                      <Text style={[homeStyles.trackingCountText, { color: colors.warning }]}>
+                      <Text style={[homeStyles.trackingCountText, { color: palette.warning }]}>
                         {t('home:status.manualStartDescription')}
                       </Text>
                     </View>
@@ -2723,35 +2977,86 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     assume it's broken (it isn't) and stop it — exactly the
                     missed-start incident. Show a clear pre-race / sending state. */}
                 {isGPSActive && (
-                  <View style={homeStyles.trackingStatus}>
-                    <Text style={homeStyles.trackingStatusIcon}>{isSendingData ? '🟢' : '🟡'}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={homeStyles.trackingStatusText}>
-                        {isSendingData ? t('home:status.sendingData') : t('home:status.gpsActive')}
-                      </Text>
+                  <>
+                    {/* Session clock — 02_Home-Tracking-Active.png */}
+                    <View style={homeStyles.activeCard}>
+                      <View style={homeStyles.activeStatusRow}>
+                        <View style={homeStyles.activeDot} />
+                        <Text style={homeStyles.activeStatusText}>
+                          {isSendingData
+                            ? t('home:active.trackingActive')
+                            : t('home:status.gpsActive')}
+                        </Text>
+                      </View>
+
+                      {/* One line, shrinks: wrapped mid-number at 320 with larger text (audit 2026-10-22) */}
+                      <Text style={homeStyles.activeClock} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{elapsedLabel}</Text>
+
+                      {/* The RUNNING session's race (M1): home may show another one mid-session. */}
+                      {!!(sessionRaceName || homeData?.next_race_name) && (
+                        // No numberOfLines: long race names were cut (audit 2026-10-22)
+                        <Text style={homeStyles.activeEvent}>
+                          {sessionRaceName || homeData?.next_race_name}
+                        </Text>
+                      )}
 
                       {!isSendingData && timeUntilRace && (
-                        <Text style={homeStyles.trackingCountText}>
+                        <Text style={homeStyles.activeEvent}>
                           {homeData?.manual_start === 1
                             ? t('home:status.manualStartReady')
-                            : `Race starts in: ${timeUntilRace}`}
+                            : t('home:status.raceStartsIn', { time: timeUntilRace })}
                         </Text>
                       )}
-
-                      {currentLocation && (
-                        <Text style={homeStyles.trackingLocationText}>
-                          {currentLocation.lat.toFixed(6)}, {currentLocation.lon.toFixed(6)}
-                        </Text>
-                      )}
-                      <Text style={homeStyles.trackingCountText}>
-                        {t('home:status.sent')}: {locationUpdateCount} | {t('home:status.queued')}:{' '}
-                        {queuedCount}
-                      </Text>
-                      <Text style={homeStyles.trackingCountText}>
-                        {t('home:status.interval')}: {sendingInterval}s
-                      </Text>
                     </View>
-                  </View>
+
+                    {/* Distance covered and whether everything reached the server */}
+                    <View style={homeStyles.statCard}>
+                      <Text style={homeStyles.sectionLabel}>{t('home:active.distance')}</Text>
+                      {/* One line, shrinks: wrapped mid-number at 320 with larger text (audit 2026-10-22) */}
+                      <Text style={homeStyles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+                        {sessionStats.distanceKm != null
+                          ? `${formatSessionKm(sessionStats.distanceKm)} ${t('units.km', 'km')}`
+                          : '—'}
+                      </Text>
+
+                      <View style={homeStyles.sendRow}>
+                        <Ionicons
+                          name={queuedCount > 0 ? 'time-outline' : 'checkmark-circle'}
+                          size={16}
+                          color={queuedCount > 0 ? palette.warning : palette.lime}
+                        />
+                        <Text style={homeStyles.sendText}>
+                          {queuedCount > 0
+                            ? t('home:active.queued', { count: queuedCount, ago: lastSentLabel })
+                            : t('home:active.allSent', { ago: lastSentLabel })}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={homeStyles.keepOpenNote}>{t('home:active.keepOpen')}</Text>
+
+                    {/* The raw readouts stay, but only where they are useful:
+                        support and dev builds. They are diagnostics, not UI. */}
+                    {(API_CONFIG.DEBUG || __DEV__) && (
+                      <View style={homeStyles.trackingStatus}>
+                        <Text style={homeStyles.trackingStatusIcon}>{isSendingData ? '🟢' : '🟡'}</Text>
+                        <View style={{ flex: 1 }}>
+                          {currentLocation && (
+                            <Text style={homeStyles.trackingLocationText}>
+                              {currentLocation.lat.toFixed(6)}, {currentLocation.lon.toFixed(6)}
+                            </Text>
+                          )}
+                          <Text style={homeStyles.trackingCountText}>
+                            {t('home:status.sent')}: {locationUpdateCount} | {t('home:status.queued')}:{' '}
+                            {queuedCount}
+                          </Text>
+                          <Text style={homeStyles.trackingCountText}>
+                            {t('home:status.interval')}: {sendingInterval}s
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  </>
                 )}
 
                 {/* ✅ Tracking log panel — DEBUG only */}
@@ -2759,8 +3064,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   <ScrollView
                     style={{
                       maxHeight: 200,
-                      backgroundColor: '#0f172a',
-                      borderRadius: 8,
+                      backgroundColor: palette.ink,
+                      borderRadius: 10,
                       padding: 8,
                       marginBottom: spacing.md,
                     }}
@@ -2775,7 +3080,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       return (
                         <Text
                           key={`${entry.ts}-${origIdx}`}
-                          style={{ fontFamily: 'monospace', fontSize: 10, color: '#e2e8f0', marginBottom: 2 }}
+                          style={{ fontFamily: 'monospace', fontSize: 11, color: palette.border, marginBottom: 2 }}
                         >
                           {time} {entry.icon} {entry.msg}
                         </Text>
@@ -2784,7 +3089,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </ScrollView>
                 )}
 
-                <Text style={homeStyles.heading}>{t('home:Event.description')}</Text>
+                <Text style={homeStyles.eventDescription}>{t('home:Event.description')}</Text>
                 {/* GPS-HEALTH WARNING BANNER.
                     Seven sessions on 2026-08-23 showed "GPS Active" for hours
                     while recording nothing, and none of them recovered. This is
@@ -2805,6 +3110,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       setPermissionBlockReason(
                         gpsHealth === 'no_background_perm' ? 'no_background_perm' : 'location_off'
                       );
+                      setPermissionModalMidRace(true);
+                      setPermissionModalNoFix(gpsHealth === 'no_fix');
+                      osAskedFromPopupRef.current = false;
                       void gpsService.getPermissionState()
                         .then((ps) => setPermissionCanAskAgain(ps.canAskAgain))
                         .catch(() => setPermissionCanAskAgain(false));
@@ -2829,19 +3137,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     args keeps the manual-stop path explicit. */}
                 <TouchableOpacity
                   style={[
-                    homeStyles.button,
-                    { width: '100%', marginBottom: spacing.md },
+                    isGPSActive ? homeStyles.stopButton : homeStyles.button,
+                    // Equal space above and below: the button had a bottom
+                    // margin only, so it sat flush against the tracking
+                    // description above it.
+                    { width: '100%', marginTop: spacing.md, marginBottom: spacing.md },
                     // Greyed only when it cannot be pressed: while tracking it is
                     // Stop, which works even if home no longer carries the ids (M1).
                     !isGPSActive && (!participantId || !eventId) && {
-                      backgroundColor: colors.gray400,
+                      backgroundColor: palette.placeholder,
                       opacity: 0.6,
                     },
                   ]}
                   onPress={isGPSActive ? confirmStopTracking : confirmStartTracking}
                   disabled={!isGPSActive && (!participantId || !eventId)}
+                  accessibilityRole="button"
                 >
-                  <Text style={homeStyles.buttonText}>
+                  <Text style={isGPSActive ? homeStyles.stopButtonText : homeStyles.buttonText}>
                     {isGPSActive
                       ? t('home:Event.button')
                       : !participantId || !eventId
@@ -2850,12 +3162,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                   </Text>
                 </TouchableOpacity>
               </View>
+              {/* Ready to race? — days ahead, not at the start line. */}
+              {!isGPSActive && (
+                <ReadinessCard
+                  raceName={homeData?.next_race_name}
+                  raceKey={raceReadyKey}
+                  onOpenPowerSaving={openPowerSavingSettings}
+                />
+              )}
+
               {/* ✅ Queue retry button — shown after tracking stops if locations remain queued */}
               {!isGPSActive && queuedCount > 0 && participantId && eventId && (
                 <TouchableOpacity
                   style={[
                     homeStyles.button,
-                    { width: '100%', marginBottom: spacing.md, backgroundColor: colors.warning },
+                    { width: '100%', marginBottom: spacing.md, backgroundColor: palette.warning },
                   ]}
                   onPress={async () => {
                     try {
@@ -2897,7 +3218,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       homeStyles.button,
                       {
                         width: '100%',
-                        backgroundColor: colors.warning,
+                        backgroundColor: palette.warning,
                         marginBottom: spacing.xl,
                       },
                     ]}
@@ -2912,6 +3233,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
           ) : (
             <>
+              {/* No upcoming race: IdleHome is rendered BELOW the existing
+                  "following live" section further down, so that entry point
+                  keeps its place under the hero. */}
               {/*homeData?.following_live_events && homeData.following_live_events.length > 0 && (
                 <FollowingLiveEventsSection
                   events={homeData.following_live_events}
@@ -2959,6 +3283,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               }}
             />
           )}
+
+          {/* No upcoming race — most users, most of the time. After the live
+              section on purpose (it was right under the hero before). */}
+          {homeData && homeData.show_start_track !== 1 && !isGPSActive && <IdleHome />}
         </View>
         {/* Bottom Buttons */}
         <View style={homeStyles.buttonContainer}>

@@ -63,7 +63,8 @@ test('session_expired is the code useScreenError treats as an auth error', () =>
 });
 test('api.ts still turns a 400 with error=account_not_found into an AppError (not a resolved body)', () => {
   const s = read('services/api.ts');
-  assert.match(s, /if \(status && status >= 400\) return new AppError\("empty", code\);/);
+  // growth/free-event pass the response data as a third argument; the code is what matters.
+  assert.match(s, /if \(status && status >= 400\) return new AppError\("empty", code[,)]/);
   assert.ok(!/"account_not_found"/.test(s), 'account_not_found must not be mapped globally: LoginScreen reads it as a login error');
 });
 test('EditProfileScreen no longer prints the raw error text', () => {
@@ -74,22 +75,25 @@ test('EditProfileScreen no longer prints the raw error text', () => {
 test('EditProfileScreen routes load errors through useScreenError + ErrorScreen', () => {
   const s = read('screens/AuthScreens/EditProfileScreen.tsx');
   assert.match(s, /useScreenError\(\)/);
-  assert.match(s, /\.catch\(handleApiError\)/);
+  // master: promise chain; growth/free-event: async loadProfile (awaited by the email-confirm handlers)
+  assert.match(s, /\.catch\(handleApiError\)|catch \(e\) \{\s*handleApiError\(e\)/);
   assert.match(s, /<ErrorScreen[\s\S]*?type=\{profileError\.type\}/);
 });
 test('EditProfileScreen: auth error → Log In button runs useSessionExpired; other errors retry', () => {
   const s = read('screens/AuthScreens/EditProfileScreen.tsx');
   assert.match(s, /const handleSessionExpired = useSessionExpired\(\)/);
   assert.match(s, /buttonLabel=\{isAuthError \? t\('errorScreen:codes\.session_expired\.button'\) : undefined\}/);
-  assert.match(s, /onRetry=\{isAuthError \? \(\) => \{ void handleSessionExpired\(\) \} : \(\) => \{ setProfileLoading\(true\); loadProfile\(\) \}\}/);
+  assert.match(s, /onRetry=\{isAuthError \? \(\) => \{ void handleSessionExpired\(\) \} : \(\) => \{ setProfileLoading\(true\); (void )?loadProfile\(\)[^}]*\}\}/);
   assert.match(s, /useTranslation\(\[[^\]]*'errorScreen'[^\]]*\]\)/);
 });
 test('EditProfileScreen: the language-change refetch stays quiet (no spinner swap, like the old [t] effect)', () => {
   const s = read('screens/AuthScreens/EditProfileScreen.tsx');
-  const body = (s.match(/const loadProfile = useCallback\(\(\) => \{([\s\S]*?)\}, \[clearError, handleApiError\]\)/) || [])[1];
+  const body = (s.match(/const loadProfile = useCallback\((?:async )?\(\) => \{([\s\S]*?)\}, \[clearError, handleApiError\]\)/) || [])[1];
   assert.ok(body, 'loadProfile not found');
   assert.ok(!/setProfileLoading\(true\)/.test(body), 'loadProfile must not show the spinner');
-  assert.match(body, /\.finally\(\(\) => setProfileLoading\(false\)\)/);
+  // The spinner is cleared either inside loadProfile (master) or by the mount effect (async variant).
+  assert.ok(/\.finally\(\(\) => setProfileLoading\(false\)\)/.test(body)
+    || /loadProfile\(\)\.finally\(\(\) => setProfileLoading\(false\)\)\s*\}, \[loadProfile\]\)/.test(s), 'spinner never cleared');
 });
 test('fetchProfileApi is only called by EditProfileScreen (no other flow sees the new code)', () => {
   const hits: string[] = [];

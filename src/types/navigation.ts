@@ -22,6 +22,13 @@ export type RootStackParamList = {
     event_name: string;
     event_image?: string; 
     auto_register_id: number | null;
+    /**
+     * Highlight + scroll to this distance, NEVER register. auto_register_id
+     * registers immediately (post-login resume) — an email/deep link must use
+     * this instead, so the runner still makes the final "connect me" tap
+     * (connecting is what uses up a tracking session).
+     */
+    preselect_pov_id?: number | null;
   };
   ParticipantResult: {
     product_app_id: string | number;
@@ -32,11 +39,16 @@ export type RootStackParamList = {
   OTPVerificationScreen: {
     email: string;
     verification_token: string;
-    purpose:'registration' | 'forgot_password' | 'device_change';
+    purpose:'registration' | 'forgot_password' | 'device_change'| 'email_change';
   };
   RaceResultScreen: {
     product_app_id: number;
-    product_option_value_app_id: number;
+    /**
+     * Optional: the screen never reads it, and neither BottomNavigation nor the
+     * Past tab has one to give. Declaring it required made those call sites
+     * invent a value.
+     */
+    product_option_value_app_id?: number;
     event_image: string; 
     event_name: string;
   };
@@ -111,8 +123,22 @@ export type RootStackParamList = {
       customer_app_id?: number;
   };
 
-  UserFavouriteList:undefined;
-  FollowersList:undefined;
+  UserFavouriteList: {
+    customer_app_id?: number; 
+  };
+
+  FollowersList: {
+    customer_app_id?: number;
+  };
+
+  // Get race-ready — see raceReadyService for when it opens.
+  RaceReady: {
+    race_name?: string;
+    source?: string;
+    /** Partner races only (numeric): race_ready_step events carry the race. */
+    product_app_id?: number;
+  };
+  NotificationSettings: undefined;
 
 };
 

@@ -13,9 +13,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, space, palette, fonts, shadows, withAlpha } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import { AppHeader } from '../../components/common/AppHeader';
+import NoticeCard from '../../components/NoticeCard';
 import SearchInput from '../../components/SearchInput';
 import { analyticsService } from '../../services/analyticsService';
 import ConfirmRaceResultModal from './ConfirmRaceResultModal';
@@ -28,6 +29,10 @@ import { getCurrentLanguageId } from '../../i18n';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { MODAL_ORIENTATIONS } from '../../constants/modalOrientations';
+import ModalScroll from '../../components/ui/ModalScroll';
+import { useCompactDialog } from '../../components/ui';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
 interface ParticipantResultRouteParams {
   product_app_id: number;
@@ -44,6 +49,11 @@ const ParticipantResult = () => {
   const { t } = useTranslation(['details', 'participantResult', 'confirmModal']);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const sidePadding = useLandscapeSidePadding();
+  const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
+  // ✅ Mail-sent popup compact in landscape (device test 2026-10-23): no icon,
+  // tighter card. Up here, before the early returns (hooks rule).
+  const cd = useCompactDialog();
 
   const params = route.params as ParticipantResultRouteParams | undefined;
   const product_app_id = params?.product_app_id;
@@ -311,53 +321,57 @@ const ParticipantResult = () => {
         registeringId === participantService.getParticipantId(participant);
 
       return (
-        <View style={[commonStyles.card, { padding: 0, marginBottom: spacing.lg }]}>
+        <View style={[commonStyles.card, commonStyles.cardAccent, { padding: 0, marginBottom: spacing.lg }]}>
           <View style={detailsStyles.topRow}>
-            <View style={detailsStyles.avatar}>
-              <Ionicons name="person-circle-outline" size={55} color="#9ca3af" style={detailsStyles.logo} />
-            </View>
-            <LinearGradient
-              colors={['#e8341a', '#f4a100', '#1a73e8']}
-              start={{ x: 0, y: 1 }}
-              end={{ x: 1, y: 0 }}
-              style={detailsStyles.divider}
-            />
-            <View style={detailsStyles.info}>
-              <Text style={commonStyles.title}>{fullName}</Text>
-              <Text style={commonStyles.text}>
-                {participant.city} | {participant.country}
+            <View style={detailsStyles.avatarFallback}>
+              <Text style={detailsStyles.avatarInitials}>
+                {(fullName || '?').split(/\s+/).filter(Boolean).slice(0, 2)
+                  .map((n) => n[0]).join('').toUpperCase() || '?'}
               </Text>
-              <Text style={commonStyles.subtitle}>{participant.race_distance}</Text>
-              {hasBibNumber && (
-                <Text style={[commonStyles.subtitle, { color: colors.primary, fontWeight: '600' }]}>
-                  {t('details:tracking.bib')}: {participant.bib_number}
-                </Text>
-              )}
+            </View>
+            <View style={detailsStyles.info}>
+              {/* 2 lines (were 1): a 20pt caps name like "SOPHIE DE MEULEMEESTER"
+                  and the bib · distance · wave line were cut on every phone
+                  (audit 2026-10-22). */}
+              <Text style={commonStyles.title} numberOfLines={2}>{fullName}</Text>
+              <Text style={detailsStyles.rowMeta} numberOfLines={2}>
+                {[
+                  hasBibNumber ? `${t('details:tracking.bib')} ${participant.bib_number}` : null,
+                  participant.race_distance,
+                  participant.wave ? `${t('details:wave')} ${participant.wave}` : null,
+                ].filter(Boolean).join(' · ')}
+              </Text>
+              {/* City + country is one phrase: it wraps rather than being cut. */}
+              <Text style={detailsStyles.rowMeta} numberOfLines={2}>
+                {[participant.city, participant.country].filter(Boolean).join(' · ')}
+              </Text>
             </View>
           </View>
 
           {isLiveTracking && (
             <View style={detailsStyles.liveTrackingBadge}>
-              <Ionicons name="radio" size={14} color={colors.success} />
+              <Ionicons name="radio" size={14} color={palette.lime} />
               <Text style={detailsStyles.liveTrackingText}>{t('details:tracking.live')}</Text>
             </View>
           )}
 
+          <View style={detailsStyles.cardActionRow}>
           <TouchableOpacity
             style={[
-              commonStyles.primaryButton,
-              { borderRadius: 0, opacity: isThisRegistering ? 0.7 : 1, borderBottomLeftRadius: 12, borderBottomRightRadius: 12 },
+              detailsStyles.cardActionPrimary,
+              { opacity: isThisRegistering ? 0.7 : 1 },
             ]}
             onPress={() => handleThisIsMe(participant)}
             disabled={registerLoading}
             activeOpacity={0.8}
           >
             {isThisRegistering ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={palette.surface} />
             ) : (
-              <Text style={commonStyles.primaryButtonText}>{t('participantResult:button')}</Text>
+              <Text style={detailsStyles.cardActionPrimaryText}>{t('participantResult:button')}</Text>
             )}
           </TouchableOpacity>
+          </View>
         </View>
       );
     },
@@ -368,8 +382,8 @@ const ParticipantResult = () => {
     if (loadingMore) {
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
+          <ActivityIndicator size="small" color={palette.navy} />
+          <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
             {t('participantResult:loadingMore', { page, totalPages })}
           </Text>
         </View>
@@ -378,7 +392,7 @@ const ParticipantResult = () => {
     if (hasMorePages() && participants.length > 0) {
       return (
         <View style={{ paddingVertical: spacing.lg, alignItems: 'center' }}>
-          <Text style={{ color: colors.gray500 }}>
+          <Text style={{ color: palette.textMuted }}>
             {t('participantResult:scrollForMore', { count: participants.length })}
           </Text>
         </View>
@@ -389,96 +403,106 @@ const ParticipantResult = () => {
 
   if (loading && searchText.length === 0) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <AppHeader showLogo={true} showBack />
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+        <AppHeader title={event_name} showLogo={true} showBack />
+        <ActivityIndicator size="large" color={palette.navy} style={{ marginTop: 40 }} />
       </SafeAreaView>
     );
   }
 
+  // Wrapped like the loading state: the bare ErrorScreen had no header, so
+  // there was no back button off this screen (audit 2026-10-22).
   if (hasError && !loading && searchText.length === 0) {
     return (
-      <ErrorScreen
-        type={error!.type}
-        title={error!.title}
-        message={error!.message}
-        onRetry={() => { clearError(); fetchParticipants(1, searchText); }}
-      />
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+        <AppHeader title={event_name} showLogo={true} showBack />
+        <View style={[{ flex: 1 }, sidePadding]}>
+          <ErrorScreen
+            type={error!.type}
+            title={error!.title}
+            message={error!.message}
+            onRetry={() => { clearError(); fetchParticipants(1, searchText); }}
+          />
+        </View>
+      </SafeAreaView>
     );
   }
 
+  // The info card scrolls away with the list (it used to sit fixed above it with
+  // the search, leaving ~77pt for the list in landscape). The search stays
+  // fixed so typing never unmounts it when results switch to the empty state.
+  const infoNotice = (
+    <NoticeCard
+      icon="information-circle-outline"
+      title={t('participantResult:info.title')}
+      message={t('participantResult:info.message')}
+    />
+  );
+
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <AppHeader showLogo={true} showBack />
+    <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+      <AppHeader title={event_name} showLogo={true} showBack />
 
-      <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
-        <Text style={[commonStyles.title, { marginBottom: spacing.sm }]}>{event_name}</Text>
+      {/* landscape: body kept clear of the notch (AppHeader pads itself) */}
+      <View style={[{ flex: 1 }, sidePadding]}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: space.md }}>
+          <SearchInput
+            framed={false}
+            ref={searchInputRef}
+            placeholder={t('details:participant.search')}
+            value={searchText}
+            onChangeText={setSearchText}
+            icon="search"
+          />
+        </View>
 
-        <View style={{
-          backgroundColor: '#FEF3C7',
-          borderLeftWidth: 4,
-          borderLeftColor: '#F59E0B',
-          borderRadius: 8,
-          padding: spacing.md,
-          marginBottom: spacing.lg,
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            <Ionicons name="information-circle" size={24} color="#F59E0B" style={{ marginRight: spacing.sm, marginTop: 2 }} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: '#92400E', marginBottom: 4 }}>
-                {t('participantResult:info.title')}
-              </Text>
-              <Text style={{ fontSize: 14, color: '#92400E', lineHeight: 20 }}>
-                {t('participantResult:info.message')}
-              </Text>
-            </View>
+        {loading && searchText.length > 0 && (
+          <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
+            <ActivityIndicator size="small" color={palette.navy} />
+            <Text style={{ marginTop: spacing.sm, color: palette.textMuted }}>
+              {t('details:participant.searching')}
+            </Text>
           </View>
-        </View>
+        )}
 
-        <SearchInput
-          ref={searchInputRef}
-          placeholder={t('details:participant.search')}
-          value={searchText}
-          onChangeText={setSearchText}
-          icon="search"
-        />
+        {!loading && participants.length === 0 ? (
+          <>
+            <View style={{ paddingHorizontal: spacing.lg }}>{infoNotice}</View>
+            <ErrorScreen
+              type="empty"
+              title={searchText
+                ? `${t('details:participant.noResults')} "${searchText}"`
+                : t('details:participant.empty')}
+              onRetry={() => { }}
+            />
+          </>
+        ) : (
+          <FlatList
+            data={participants}
+            keyExtractor={(item, index) => `${participantService.getParticipantId(item)}-${index}`}
+            renderItem={renderParticipant}
+            showsVerticalScrollIndicator={false}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            contentContainerStyle={{
+              // The gutter lives HERE, not on the card: renderParticipant's card
+              // (above) carries no marginHorizontal, unlike ParticipantCard.tsx,
+              // which is a different component used by the Participants tab and
+              // brings its own 20pt. Matches the search header's inset at the top
+              // of this screen. `marginTop` on a content container alongside
+              // flexGrow is unreliable; paddingTop is the predictable form.
+              paddingHorizontal: spacing.lg,
+              paddingTop: spacing.md,
+              paddingBottom: spacing.xxxl,
+              flexGrow: 1,
+            }}
+            keyboardShouldPersistTaps="handled"
+            removeClippedSubviews={false}
+            ListHeaderComponent={<View style={{ marginBottom: spacing.lg }}>{infoNotice}</View>}
+            ListFooterComponent={renderFooter}
+          />
+        )}
       </View>
-
-      {loading && searchText.length > 0 && (
-        <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={{ marginTop: spacing.sm, color: colors.gray500 }}>
-            {t('details:participant.searching')}
-          </Text>
-        </View>
-      )}
-
-      {!loading && participants.length === 0 ? (
-        <View style={{ marginTop: 40, paddingHorizontal: spacing.lg }}>
-          <Text style={commonStyles.errorText}>
-            {searchText
-              ? `${t('details:participant.noResults')} "${searchText}"`
-              : t('details:participant.empty')}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={participants}
-          keyExtractor={(item, index) => `${participantService.getParticipantId(item)}-${index}`}
-          renderItem={renderParticipant}
-          showsVerticalScrollIndicator={false}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          contentContainerStyle={{
-            paddingHorizontal: spacing.lg,
-            paddingBottom: spacing.xxxl,
-            flexGrow: 1,
-          }}
-          keyboardShouldPersistTaps="handled"
-          removeClippedSubviews={false}
-          ListFooterComponent={renderFooter}
-        />
-      )}
 
       {/* ✅ Confirm modal — email verification mode */}
       <ConfirmRaceResultModal
@@ -496,31 +520,35 @@ const ParticipantResult = () => {
       />
 
       {/* ✅ Mail sent modal */}
-      <Modal
+      <Modal supportedOrientations={MODAL_ORIENTATIONS}
         visible={mailSentVisible}
         transparent
         animationType="fade"
         statusBarTranslucent
         onRequestClose={() => setMailSentVisible(false)}
       >
-        <View style={mailStyles.backdrop}>
-          <View style={mailStyles.card}>
-            <View style={mailStyles.iconWrapper}>
-              <Text style={mailStyles.iconText}>📧</Text>
+        {/* ModalScroll: the card (~494-520pt) was taller than a landscape
+            screen — the button was off the bottom (audit 2026-10-22) */}
+        <View style={[mailStyles.backdrop, cd.s.wrapper]}>
+          <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.compact ? 16 : 48}>
+            <View style={[mailStyles.card, cd.s.card]}>
+              <View style={[mailStyles.iconWrapper, cd.s.hide]}>
+                <Ionicons name="mail" size={28} color={palette.navy} />
+              </View>
+              <Text style={[mailStyles.title, cd.s.title]}>{t('participantResult:mailSent.title')}</Text>
+              <Text style={mailStyles.message}>{t('participantResult:mailSent.message')}</Text>
+              <TouchableOpacity
+                style={[commonStyles.primaryButton, { marginTop: cd.compact ? space.lg : 24 }]}
+                onPress={() => {
+                  setMailSentVisible(false);
+                  navigation.goBack();
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={commonStyles.primaryButtonText}>{t('participantResult:mailSent.button')}</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={mailStyles.title}>{t('participantResult:mailSent.title')}</Text>
-            <Text style={mailStyles.message}>{t('participantResult:mailSent.message')}</Text>
-            <TouchableOpacity
-              style={[commonStyles.primaryButton, { marginTop: 24 }]}
-              onPress={() => {
-                setMailSentVisible(false);
-                navigation.goBack();
-              }}
-              activeOpacity={0.8}
-            >
-              <Text style={commonStyles.primaryButtonText}>{t('participantResult:mailSent.button')}</Text>
-            </TouchableOpacity>
-          </View>
+          </ModalScroll>
         </View>
       </Modal>
 
@@ -540,42 +568,46 @@ const ParticipantResult = () => {
 const mailStyles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    backgroundColor: palette.surface,
+    borderRadius: 16,
     padding: 32,
     alignItems: 'center',
     width: '100%',
+    maxWidth: 400, // shared modal cap — was full-width in landscape (audit 2026-10-22)
+    ...shadows.overlay,
   },
   iconWrapper: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: palette.fill,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   iconText: {
-    fontSize: 32,
+    fontFamily: fonts.body,
+        fontSize: 26,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
     marginBottom: 12,
   },
   message: {
-    fontSize: 14,
-    color: '#64748b',
+    fontFamily: fonts.body,
+        fontSize: 14,
+    color: palette.textMuted,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 23,
   },
 });
 

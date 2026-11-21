@@ -2,15 +2,15 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
-    StatusBar,
     Text,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import SearchInput from '../../components/SearchInput';
 import { userFollowersService, FollowerItem } from '../../services/followerListService';
 
@@ -20,6 +20,7 @@ import { useScreenError } from '../../hooks/useApiError';
 import { useSessionExpired } from '../../hooks/useSessionExpired';
 import { analyticsService } from '../../services/analyticsService';
 import { useFocusEffect } from '@react-navigation/native';
+import { FollowersListpops } from '../../types/navigation';
 
 interface PaginationState {
     page: number;
@@ -28,9 +29,14 @@ interface PaginationState {
 
 const INITIAL_PAGINATION: PaginationState = { page: 1, total_pages: 1 };
 
-const FollowersList: React.FC = () => {
+const FollowersList: React.FC<FollowersListpops> = ({ route }) => {
     const { t } = useTranslation(['follow', 'follower', 'errorScreen']);
-
+    // ✅ Notch clearance for the body in landscape (edges are ['bottom']).
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
+    const { customer_app_id } = route.params || {};
+    console.log("followerlist");
+    
     const [searchText, setSearchText]             = useState('');
     const [followers, setFollowers]               = useState<FollowerItem[]>([]);
     const [searchResults, setSearchResults]       = useState<FollowerItem[]>([]);
@@ -59,7 +65,7 @@ const FollowersList: React.FC = () => {
         try {
             setInitialLoading(true);
             clearError();
-            const result = await userFollowersService.getFollowers({ page: 1 });
+            const result = await userFollowersService.getFollowers({ customer_app_id, page: 1 });
             if (requestId !== requestIdRef.current) return;
             setFollowers(result.followers);
             setFavPagination({ page: 1, total_pages: result.pagination.total_pages });
@@ -73,7 +79,7 @@ const FollowersList: React.FC = () => {
     // handleApiError / clearError are intentionally NOT deps: this callback
     // feeds useFocusEffect, and FavouriteList.tsx keeps them out for the same
     // reason — a changing identity would re-subscribe the focus effect.
-    }, []);
+    }, [customer_app_id]);
 
     const retry = useCallback(() => {
         clearError();
@@ -104,6 +110,7 @@ const FollowersList: React.FC = () => {
                 setSearching(true);
                 clearError();
                 const result = await userFollowersService.getFollowers({
+                    customer_app_id,
                     search: searchText.trim(),
                     page: 1,
                 });
@@ -124,7 +131,7 @@ const FollowersList: React.FC = () => {
             }
         }, 350);
         return () => clearTimeout(timer);
-    }, [searchText]);
+    }, [searchText,customer_app_id]);
 
     const loadMoreSearchResults = useCallback(async () => {
         if (isLoadingMoreSearch.current) return;
@@ -145,6 +152,7 @@ const FollowersList: React.FC = () => {
             const requestId = ++requestIdRef.current;
             const nextPage = currentPage + 1;
             const result = await userFollowersService.getFollowers({
+                 customer_app_id,
                 search: searchText,
                 page: nextPage,
             });
@@ -160,7 +168,7 @@ const FollowersList: React.FC = () => {
             isLoadingMoreSearch.current = false;
             setLoadingMore(false);
         }
-    }, [searchText]);
+    }, [searchText, customer_app_id]);
 
     const loadMoreFollowers = useCallback(async () => {
         if (loadingMoreFav || favPagination.page >= favPagination.total_pages) return;
@@ -168,7 +176,7 @@ const FollowersList: React.FC = () => {
             setLoadingMoreFav(true);
             const requestId = ++requestIdRef.current;
             const nextPage = favPagination.page + 1;
-            const result = await userFollowersService.getFollowers({ page: nextPage });
+            const result = await userFollowersService.getFollowers({ customer_app_id, page: nextPage });
             if (requestId !== requestIdRef.current) return;
             setFollowers(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
@@ -180,7 +188,7 @@ const FollowersList: React.FC = () => {
         } finally {
             setLoadingMoreFav(false);
         }
-    }, [loadingMoreFav, favPagination]);
+    }, [loadingMoreFav, favPagination, customer_app_id]);
 
     const handleLoadMore = useCallback(() => {
         if (searchText.trim().length > 0) {
@@ -206,7 +214,7 @@ const FollowersList: React.FC = () => {
         return (
             <ActivityIndicator
                 size="small"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ marginTop: spacing.lg }}
             />
         );
@@ -227,9 +235,11 @@ const FollowersList: React.FC = () => {
     }
     if (searchText.trim().length > 0) {
         return (
-            <Text style={[commonStyles.errorText, { textAlign: 'center', marginTop: 40 }]}>
-                {t('follow:empty.followerSearchEmpty')}
-            </Text>
+            <ErrorScreen
+                type="empty"
+                title={t('follow:empty.followerSearchEmpty')}
+                onRetry={() => { }}
+            />
         );
     }
     // ✅ No followers at all
@@ -246,17 +256,24 @@ const FollowersList: React.FC = () => {
     const displayList = searchText.trim().length > 0 ? searchResults : followers;
 
     const listFooter = (loadingMore || loadingMoreFav)
-        ? <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.md }} />
+        ? <ActivityIndicator size="small" color={palette.navy} style={{ marginVertical: spacing.md }} />
         : null;
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showBack />
-            <View style={follow.yellowHeader}>
-                <Text style={commonStyles.title}>{t('follow:followers')}</Text>
+        <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+            <AppHeader title={t('common:band.myFollowers')} showBack />
+            {/* ✅ Landscape notch padding on the body. The search band keeps its
+                white fill behind the inset so it still reads full-bleed. */}
+            <View style={[{ backgroundColor: palette.surface }, sidePadding]}>
+            <SearchInput
+                placeholder={t('follow:search.athletesearch')}
+                value={searchText}
+                onChangeText={setSearchText}
+                icon="search"
+            />
             </View>
 
+            <View style={[{ flex: 1 }, sidePadding]}>
             <FlatList
                 data={displayList}
                 keyExtractor={(item, index) => `follower_${item.customer_app_id}_${index}`}
@@ -268,20 +285,16 @@ const FollowersList: React.FC = () => {
                 removeClippedSubviews={false}
                 contentContainerStyle={{
                     flexGrow: 1,
-                    paddingHorizontal: spacing.md,
+                    paddingHorizontal: spacing.xl,
+                    // The search band above is full-bleed white; the list needs
+                    // its own top inset so the first card is not welded to it.
+                    paddingTop: spacing.lg,
                     paddingBottom: spacing.xxxxl,
                 }}
-                ListHeaderComponent={
-                    <SearchInput
-                        placeholder={t('follow:search.athletesearch')}
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        icon="search"
-                    />
-                }
                 ListEmptyComponent={renderEmpty}
                 ListFooterComponent={listFooter}
             />
+            </View>
 
         </SafeAreaView>
     );

@@ -2,7 +2,7 @@ import axios from 'axios';
 import { API_CONFIG, getApiEndpoint } from '../constants/config';
 
 // ✅ TYPES
-export type OtpPurpose = 'registration' | 'forgot_password' | 'device_change';
+export type OtpPurpose = 'registration' | 'forgot_password' | 'device_change' | 'email_change';
 
 export interface VerifyOtpPayload {
   verification_token: string;
@@ -37,6 +37,7 @@ export interface OtpResponse {
       dob:             string;
       gender:          string;
       profile_picture: string;
+      email_verified?: number;
     };
   };
 }
@@ -86,9 +87,7 @@ export const otpService = {
       if (API_CONFIG.DEBUG) {
         console.log('📤 Resend OTP request');
       }
-      console.log("111",payload);
-      
-
+    
       const response = await axios.post<OtpResponse>(
         getApiEndpoint(API_CONFIG.ENDPOINTS.RESEND_OTP),
         payload,

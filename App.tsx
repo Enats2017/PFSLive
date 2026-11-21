@@ -18,6 +18,11 @@ import { useVersionCheck } from './src/hooks/useVersionCheck';
 import { versionService } from './src/services/versionService';
 import { UpdateRequiredModal } from './src/components/UpdateRequiredModal';
 import { analyticsService } from './src/services/analyticsService';
+import { raceReadyService } from './src/services/raceReadyService';
+import { parseQuery, parseEventLink, positiveInt, whenNavigatorReady, isRepeatLink } from './src/utils/deepLink';
+import { useFonts } from 'expo-font';
+import { Poppins_500Medium, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 
 const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
 
@@ -112,6 +117,19 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
   const { changeLanguage } = useLanguageStore();
 
+  // ✅ The design system is Poppins (display) + Inter (body). Until this resolves
+  // every screen renders in the platform default, which is a visibly different
+  // face — so the app is held on the loading view until the fonts are in.
+  // `fontError` is deliberately treated as "carry on": a missing font is a
+  // cosmetic fallback, never a reason to block a runner from starting a race.
+  const [fontsLoaded, fontError] = useFonts({
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+  });
+
   useEffect(() => {
     const initializeApp = async () => {
       try {
@@ -147,29 +165,72 @@ export default function App() {
       // ✅ iOS document open: WhatsApp/Files deliver a file:// URL to the app Inbox.
       // Android handles GPX opens via the GpxShare native module (separate effect),
       // so restrict this to iOS to avoid double-firing navigation.
-      if (Platform.OS === 'ios' && url && /\.gpx(\?|$)/i.test(url)) {
+      // A shared FILE only — never one of our own livio:// links that merely
+      // ends in ".gpx" (e.g. an event_name), which went to PersonalEvent.
+      if (Platform.OS === 'ios' && url && !/^livio:/i.test(url) && /\.gpx(\?|$)/i.test(url)) {
         const fileName = decodeURIComponent(url.split('/').pop()?.split('?')[0] ?? 'shared.gpx');
         navigateToPersonalEvent(url, fileName);
         return;
       }
       
+      // Some iOS builds deliver a cold-start link through BOTH getInitialURL
+      // and the 'url' event; both now wait for the navigator, so drop the
+      // repeat or the event screen is pushed twice.
+      if (url && isRepeatLink(url)) return;
+
       if (url?.startsWith('livio://registration-confirmed')) {
         if (API_CONFIG.DEBUG) console.log('✅ Deep link: registration confirmed', url);
-          // Parse query params from deep link URL
-          const queryString = url.split('?')[1] ?? '';
-          const params = Object.fromEntries(
-          queryString.split('&').filter(Boolean).map(p => {
-            const [key, value] = p.split('=');
-            return [key, decodeURIComponent(value ?? '')];
-          })
-        );
-        const product_app_id = params.product_app_id ? Number(params.product_app_id) : null;
-        const event_name = params.event_name ?? '';
-        if (product_app_id && event_name) {
-          navigationRef.current?.navigate('EventDetails', { product_app_id, event_name, auto_register_id: null });
-        } else {
-          navigationRef.current?.navigate('ParticipantEvent');
-        }
+        // Parse query params from deep link URL ('+' → space, see deepLink.ts)
+        const params = parseQuery(url);
+        const product_app_id = positiveInt(params.product_app_id);
+        // Display-only text any page can put in the link: keep it short.
+        const event_name = (params.event_name ?? '').slice(0, 120);
+        // Cold start from the email: wait for the navigator, or the navigate
+        // below does nothing and the runner lands on Home.
+        whenNavigatorReady(() => {
+          if (product_app_id && event_name) {
+            navigationRef.current?.navigate('EventDetails', { product_app_id, event_name, auto_register_id: null });
+            // The email-verified connect completes HERE, not in-app (the
+            // ParticipantResult path ends in a verification email), so this is
+            // the runner's "just connected" moment — open Get race-ready on top
+            // of the event, if anything is missing. Once per race.
+            setTimeout(() => {
+              void raceReadyService.maybeOpen({
+                raceKey: product_app_id,
+                raceName: event_name,
+                source: 'email_confirm',
+                onlyFromRoute: 'EventDetails',
+              });
+            }, 800);
+          } else {
+            navigationRef.current?.navigate('ParticipantEvent');
+          }
+        });
+        return;
+      }
+
+      // ✅ livio://event?product_app_id=..&event_name=..&pov=..
+      // Opens an event with a distance PRESELECTED for emails/campaign links.
+      // Never registers: preselect_pov_id only highlights, so the runner still
+      // makes the final "connect me" tap — connecting is what uses up a
+      // tracking session. (auto_register_id would register on arrival.)
+      // Exactly livio://event (not livio://events…, a different future link).
+      if (url && /^livio:\/\/event(\?|$)/.test(url)) {
+        const link = parseEventLink(url);
+        whenNavigatorReady(() => {
+          // Same rule as registration-confirmed: no event_name → the events
+          // list (EventDetails' header would be blank).
+          if (link && link.event_name) {
+            navigationRef.current?.navigate('EventDetails', {
+              product_app_id: link.product_app_id,
+              event_name: link.event_name,
+              auto_register_id: null,
+              preselect_pov_id: link.preselect_pov_id,
+            });
+          } else {
+            navigationRef.current?.navigate('ParticipantEvent');
+          }
+        });
       }
     };
 
@@ -207,7 +268,7 @@ export default function App() {
     return () => subscription.remove();
   }, [isReady]);
 
-  if (!isReady) {
+  if (!isReady || (!fontsLoaded && !fontError)) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#DC143C" />

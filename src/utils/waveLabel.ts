@@ -17,6 +17,10 @@
  * Returns '' when there is nothing worth showing, so every caller must render
  * the row only when the result is non-empty — do NOT guard on the raw value.
  */
+// RR's own leading "Wave" token. Anchored with \b so an interior "Wave", and a
+// value such as "Waverley", both survive untouched.
+const RR_WAVE_PREFIX = /^wave\b[\s:]*/i;
+
 export const formatWave = (
   label: string,
   wave?: string | null,
@@ -34,9 +38,27 @@ export const formatWave = (
   const dist = (distance ?? '').trim();
   if (dist && raw.toLowerCase() === dist.toLowerCase()) return '';
 
-  // Only RR's own leading "Wave" token goes — never an interior one, so a value
-  // like "Wave 2: Wave start" keeps its second word.
-  const stripped = raw.replace(/^wave\b[\s:]*/i, '').trim();
+  const stripped = raw.replace(RR_WAVE_PREFIX, '').trim();
 
   return stripped ? `${label} ${stripped}` : label;
+};
+
+
+/**
+ * The value alone, with RR's leading "Wave" token removed.
+ *
+ * ✅ For cards that stack the label ABOVE the value instead of running them
+ * together on one line — this branch's `rowLabel` / `rowValue` pattern. There
+ * formatWave's single joined string cannot be used, but printing the raw value
+ * under a "Start Wave" label still says wave twice, just stacked rather than
+ * inline.
+ *
+ * Falls back to the raw value when stripping would leave nothing (a value of
+ * exactly "Wave"), so the value line is never rendered blank under its label.
+ */
+export const stripWavePrefix = (wave?: string | null): string => {
+  const raw = (wave ?? '').trim();
+  if (!raw) return '';
+
+  return raw.replace(RR_WAVE_PREFIX, '').trim() || raw;
 };

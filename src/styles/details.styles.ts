@@ -1,59 +1,161 @@
 import { Platform, StyleSheet } from "react-native";
-import { colors, spacing, typography } from "./common.styles";
+import { spacing, typography, type, palette, fonts, space, radii, shadows } from "./common.styles";
 
 export const detailsStyles = StyleSheet.create({
   section: {
     alignItems: "center",
-    backgroundColor: colors.themeiColor,
+    backgroundColor: palette.lime,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md, 
+    paddingHorizontal: space.xl, 
     
   },
+  // ✅ Redesign: the segmented pill group — page tint, hairline border, 4pt
+  // padding. The old bottom rule went with the underline.
   tabBar: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    alignSelf: "flex-start",
+    gap: space.xs,
+    backgroundColor: palette.page,
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderRadius: radii.pill,
+    padding: space.xs,
+    marginHorizontal: space.xl,
+    marginBottom: space.md,
   },
   tabItem: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.lg,
+    borderRadius: radii.lg,
   },
   
   card: {
-      backgroundColor: colors.white,
-      borderRadius: 12,
+      backgroundColor: palette.surface,
+      borderRadius: 14,
       padding: spacing.md,
-      shadowColor: colors.black,
-      marginHorizontal: spacing.md,      // FIX: added — aligns cards with infoBox gutters
+      marginHorizontal: space.xl,      // FIX: added — aligns cards with infoBox gutters
       marginBottom: spacing.md,    
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 10,
-      elevation: 3,
-       ...Platform.select({
-      ios: {
-        shadowOpacity: 0.15,
-        shadowRadius: 5,
-      },   
-    }),
+    ...shadows.card,
   
     },
+  // ✅ Text for the segmented pill group above (FILTERS). The deck has two
+  // tab treatments and they are not interchangeable: a navy pill for
+  // filtering one list, a lime underline for switching content — see
+  // `tabBarUnderline` below. The old three-colour gradient underline is gone.
   tabText: {
-    fontSize: 14,
-    color: "#999",
-    fontWeight: "500",
+    fontFamily: fonts.displayMedium,
+    fontSize: 15,
+    color: palette.textMuted,
   },
   activeTabText: {
-    color: "#000",
-    fontWeight: "700",
+    fontFamily: fonts.display,
+    color: palette.surface,
   },
-  underline: {
-    position: "absolute",
-    bottom: 0,
-    height: 2,
-    width: "60%",
-    borderRadius: 2,
+  tabItemActive: {
+    backgroundColor: palette.navy,
+  },
+
+  // ── 22_ParticipantList.png: the card's action row ──────
+  // Two inset pill buttons — Results filled navy, Follow outlined. The old row
+  // welded both to the card's bottom edge with square inner corners, and used
+  // two different navies with mismatched 12/14 radii.
+  cardActionRow: {
+    flexDirection: 'row',
+    gap: space.md,
+    paddingHorizontal: space.lg,
+    paddingBottom: space.lg,
+    paddingTop: space.md,
+  },
+  cardActionPrimary: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: radii.md,
+    backgroundColor: palette.navy,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardActionPrimaryText: {
+    fontFamily: fonts.display,
+    fontSize: 14,
+    color: palette.surface,
+  },
+  cardActionSecondary: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: palette.navy,
+    backgroundColor: palette.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardActionSecondaryText: {
+    fontFamily: fonts.display,
+    fontSize: 14,
+    color: palette.navy,
+  },
+
+  // Destructive twin of `cardActionSecondary` - 19_FavouriteAthletes.png draws
+  // Remove in the danger colour, and it keeps that weight when it shares a row
+  // with View.
+  cardActionDanger: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: palette.danger,
+    backgroundColor: palette.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardActionDangerText: {
+    fontFamily: fonts.display,
+    fontSize: 14,
+    color: palette.danger,
+  },
+
+  // ✅ Section label — the deck's `.meta` treatment: the small uppercase line
+  // that titles a block of content ("Recent races").
+  sectionLabel: {
+    ...type.label,
+    color: palette.textMuted,
+    paddingHorizontal: space.xl,
+    paddingTop: space.xl,
+    // "Recent races" sat flush against the Past/Live pills below it: this style
+    // had top padding only, and `tabBar` has no top margin of its own.
+    paddingBottom: space.md,
+  },
+
+  // ✅ In-page content tabs (EventDetail, RunnerInfo, RaceInfo, CheckpointHistory,
+  // ParticipantList) — a lime underline on white. Distinct from `tabBar`, which
+  // is the segmented pill group used for FILTERS.
+  tabBarUnderline: {
+    flexDirection: "row",
+    gap: space.xxl,
+    paddingHorizontal: space.xl,
+    paddingTop: space.lg,
+    backgroundColor: palette.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.border,
+  },
+  tabItemUnderline: {
+    paddingBottom: 12,
+    borderBottomWidth: 2.5,
+    borderBottomColor: "transparent",
+  },
+  tabItemUnderlineActive: {
+    borderBottomColor: palette.lime,
+  },
+  tabTextUnderline: {
+    fontFamily: fonts.displayMedium,
+    fontSize: 15,
+    color: palette.textMuted,
+  },
+  tabTextUnderlineActive: {
+    fontFamily: fonts.display,
+    color: palette.ink,
   },
 
   distance: {
@@ -63,11 +165,15 @@ export const detailsStyles = StyleSheet.create({
     gap:spacing.md,
    
   },
+  // Avatar | name+meta | action. Reviewer note (2026-09-04): the avatar and the
+  // name block were welded together - the row had padding but no gap, so the
+  // text started at the edge of the 60pt circle on every card that uses this
+  // row (participant list, athlete search, favourites, followers).
   topRow: {
     flexDirection: "row",
     alignItems: "center",
-     padding: spacing.md,
-   
+    gap: space.md,
+    padding: space.lg,
   },
   
     distanceInfo: {
@@ -79,28 +185,29 @@ export const detailsStyles = StyleSheet.create({
    metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: space.sm,
     marginTop: spacing.sm,
   },
 
   metaIcon: {
-    fontSize: 15,                         // FIX: was 13 — synced with metaText; prevents misalignment
+    fontFamily: fonts.body,
+        fontSize: 15,                         // FIX: was 13 — synced with metaText; prevents misalignment
     lineHeight: 20,                       // FIX: added — stabilises vertical alignment
   },
 
   metaText: {
-    fontSize: typography.sizes.sm,        // keep — but ensure sm >= 13px in common.styles
-    color: colors.gray500,
-    fontWeight: typography.weights.medium,
-    lineHeight: 20,                       // FIX: added — matches metaIcon lineHeight
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: palette.textMuted,
+    lineHeight: 21,                       // FIX: added — matches metaIcon lineHeight
     flexShrink: 1,
   },
 
   metaTextRed: {
-    fontSize: typography.sizes.sm,        // keep — but ensure sm >= 13px in common.styles
-    color: colors.error,
-    fontWeight: typography.weights.medium,
-    lineHeight: 20,                       // FIX: added — matches metaIcon lineHeight
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: palette.danger,
+    lineHeight: 21,                       // FIX: added — matches metaIcon lineHeight
     flexShrink: 1,
   },
   // ✅ AVATAR CONTAINER
@@ -109,16 +216,17 @@ export const detailsStyles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     overflow: 'hidden',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: palette.fill,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   // ✅ AVATAR IMAGE STYLE
+  // 100% of the 60pt avatar circle (was 65×65 in a 60pt clipped circle, so
+  // the photo was off-centre and cropped) - layout audit 2026-10-22.
   avatarImage: {
-    width: 65,
-    height: 65,
-    borderRadius: 30,
+    width: '100%',
+    height: '100%',
   },
 
   // ✅ AVATAR FALLBACK (FOR INITIALS)
@@ -126,16 +234,16 @@ export const detailsStyles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: palette.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   // ✅ AVATAR INITIALS TEXT
   avatarInitials: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primary,
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.navy,
     textTransform: 'uppercase',
   },
 
@@ -144,32 +252,31 @@ export const detailsStyles = StyleSheet.create({
     width: 100,
     height: 60,
   },
-  divider: {
-    width: 3,
-    height: 55,
-    marginHorizontal: spacing.md,
-  },
 
-  // ✅ Same accent bar, but height follows the text block instead of being fixed.
-  // ParticipantCard's block grew from 4 lines to 5 when the wave line was added,
-  // so the fixed 55 (which used to end flush with the last line) now stops around
-  // the bib and leaves the wave line hanging below it. alignSelf:'stretch'
-  // overrides topRow's alignItems:'center' for this one child, so the bar spans
-  // the block whether or not the wave line renders.
-  // Kept separate from `divider` on purpose — ParticipantResult, FollowerCard and
-  // FollowerListCard still use the 4-line layout, where 55 is correct.
-  dividerStretch: {
-    width: 3,
-    alignSelf: "stretch",
-    marginHorizontal: spacing.md,
-  },
   info: {
     flex: 1,
     // ✅ Up to seven lines stack here — name, location, distance, bib, wave,
     // duo members, category — and commonStyles.subtitle sets no margin or
     // lineHeight, so they ran together. 3px suits the 16px type; the 12px
     // captions in ResultList.styles.ts use 2.
-    gap: 3,
+    gap: space.xs,
+  },
+
+  // Card row: name plus muted meta lines (25_ParticipantList.png).
+  rowName: {
+    fontFamily: fonts.display,
+    fontSize: 15,
+    color: palette.ink,
+  },
+  rowMeta: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: palette.textMuted,
+    marginTop: space.xs,
+  },
+  rowAccent: {
+    borderLeftWidth: 3,
+    borderLeftColor: palette.lime,
   },
   actions: {
     flexDirection: "row",
@@ -181,64 +288,103 @@ export const detailsStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f0fdf4',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    backgroundColor: palette.noticeBg,
+    paddingVertical: 8,
+    paddingHorizontal: space.xl,
     
     
-    gap: 6,
+    gap: space.sm,
   },
   
   liveTrackingText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.success,
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
+    color: palette.lime,
     textTransform: 'uppercase',
   },
 
   title: {
-    fontSize: 20,
+    fontFamily: fonts.display,
+        fontSize: 20,
     textAlign:"center",
-    fontWeight: typography.weights.bold,
-    color: colors.themeblue,
+    color: palette.navy,
   },
 
     resultsButton: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: spacing.sm,
-    paddingHorizontal: spacing.md,
+    backgroundColor: palette.navyLift,
+    borderRadius: radii.md,
+    // space.lg (was xl) + maxWidth 140 (2026-10-22): with the 14pt labels a long one
+    // ("Annuler l'inscription", "Suivi en direct") pushed this column so wide that the
+    // date / athlete counts beside it ended in "…" (fr / nl, device test). A long
+    // label now wraps to two centred lines inside 140 instead.
+    paddingHorizontal: space.lg,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     minWidth: 130,
+    maxWidth: 140,
     minHeight: 44, 
     
   },
 
   routeButton: {
-    backgroundColor: colors.primary,
-    borderRadius: spacing.sm,
-    paddingHorizontal: spacing.md,
+    backgroundColor: palette.surface,
+    borderWidth: 1.5,
+    borderColor: palette.navy,
+    borderRadius: radii.md,
+    paddingHorizontal: space.lg,   // see resultsButton
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     minWidth: 130,
-    minHeight: 44, 
+    maxWidth: 140,
+    minHeight: 44,
+  },
+  routeButtonText: {
+    fontFamily: fonts.display,
+    fontSize: 14,
+    color: palette.navy,
+    textAlign: 'center',
+  },
+  resultsButtonText: {
+    fontFamily: fonts.display,
+    fontSize: 14,
+    color: palette.surface,
+    textAlign: 'center',
   },
   verticalDivider: {
     width: 1,
     height:130,
     alignSelf: 'center',
-    backgroundColor: colors.gray200,
+    backgroundColor: palette.border,
+  },
+
+  // Buttons full width UNDER the details instead of in the 130-140pt column
+  // beside them — distanceButtonsBelow (utils/screenFit.ts): 320pt screens and
+  // larger iOS text, where "September" / "Participants" broke mid-word.
+  distanceStacked: {
+    flexDirection: "column",
+    alignItems: "stretch",
+  },
+  // flex 1 in a column with no fixed height would size the details to 0
+  distanceInfoStacked: {
+    flex: 0,
+  },
+  distanceButtonsBelow: {
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  distanceButtonFull: {
+    maxWidth: '100%',
   },
 
   infoBox: {
   flexDirection: 'row',
   alignItems: 'center',
-  backgroundColor: '#EDF2F7',       // light blue tint like the screenshot
-  borderRadius: 12,
+  backgroundColor: palette.fill,       // light blue tint like the screenshot
+  borderRadius: 14,
   padding: spacing.sm,
-  marginHorizontal: spacing.md,
+  marginHorizontal: space.xl,
   marginBottom: spacing.md, 
   marginTop: spacing.md, 
   gap: spacing.sm,
@@ -248,7 +394,7 @@ infoIconWrapper: {
   width: 40,
   height: 40,
   borderRadius: 20,
-  backgroundColor: '#CBD5E0',       // slightly darker circle behind icon
+  backgroundColor: palette.border,       // slightly darker circle behind icon
   alignItems: 'center',
   justifyContent: 'center',
   flexShrink: 0,
@@ -256,9 +402,10 @@ infoIconWrapper: {
 
 infoBoxText: {
   flex: 1,
-  fontSize: typography.sizes.xs,
-  color: colors.primaryLight,
-  fontWeight: typography.weights.semibold,
-  lineHeight: 18,
+  fontFamily: fonts.bodySemi,
+        fontSize: 13,
+  color: palette.navyLift,
+
+        lineHeight: 19,
 },
 });

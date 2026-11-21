@@ -1,5 +1,6 @@
  import React, { memo, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { palette } from '../styles/common.styles';
  
  export const PulsingDot: React.FC = () => {
     const scale = useRef(new Animated.Value(1)).current;
@@ -46,8 +47,8 @@ import { View, Text, TouchableOpacity, Animated } from 'react-native';
                     position: 'absolute',
                     width: 14,
                     height: 14,
-                    borderRadius: 7,
-                    backgroundColor: '#FF3B30',
+                    borderRadius: 10,
+                    backgroundColor: palette.danger,
                     opacity,
                     transform: [{ scale }],
                 }}
@@ -58,7 +59,7 @@ import { View, Text, TouchableOpacity, Animated } from 'react-native';
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: '#FF3B30',
+                    backgroundColor: palette.danger,
                 }}
             />
         </View>

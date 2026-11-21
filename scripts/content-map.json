@@ -1,0 +1,163 @@
+{
+  "Home": [
+    "screens/HomeScreen.tsx",
+    "styles/home.styles.ts",
+    "screens/FollowingLiveEventsSection.tsx",
+    "screens/HomeScreen/index.tsx"
+  ],
+  "Login": [
+    "screens/AuthScreens/LoginScreen.tsx",
+    "styles/login.styles.ts"
+  ],
+  "Register": [
+    "screens/AuthScreens/RegisterScreen.tsx",
+    "styles/Register.styles.ts"
+  ],
+  "OTP": [
+    "screens/AuthScreens/OTPVerificationScreen.tsx",
+    "styles/OtpScreen.styles.ts"
+  ],
+  "ForgotPassword": [
+    "screens/AuthScreens/ForgotPasswordScreen/ForgotPassword.tsx",
+    "screens/AuthScreens/ForgotPasswordScreen/EmailStep.tsx",
+    "styles/forgetPassword.styles.ts"
+  ],
+  "EditProfile": [
+    "screens/AuthScreens/EditProfileScreen.tsx"
+  ],
+  "Profile": [
+    "screens/ProfileScreen/OwnProfile.tsx",
+    "styles/ownProfile.styles.ts",
+    "screens/ProfileScreen/MenuContent.tsx"
+  ],
+  "OtherProfile": [
+    "components/ProfileCard.tsx",
+    "styles/Profile.styles.ts",
+    "screens/ProfileScreen/ProfileScreen.tsx",
+    "styles/details.styles.ts"
+  ],
+  "FollowersList": [
+    "screens/ProfileScreen/FollowersList.tsx",
+    "screens/ProfileScreen/FollowerListCard.tsx",
+    "styles/followerScreen.styles.ts"
+  ],
+  "YourEvents": [
+    "screens/ProfileScreen/EventsContent.tsx",
+    "screens/ProfileScreen/EventCardLive.tsx",
+    "styles/ownProfile.styles.ts"
+  ],
+  "TrainingSessions": [
+    "screens/ProfileScreen/TrainingContent.tsx"
+  ],
+  "Membership": [
+    "screens/ProfileScreen/MembershipPlansScreen.tsx",
+    "styles/membershipPlans.styles.ts"
+  ],
+  "ContactFeedback": [
+    "screens/ProfileScreen/ContactFeedbackScreen.tsx"
+  ],
+  "Settings": [
+    "screens/SettingScreen/LiveTrackingSettingsScreen.tsx",
+    "screens/SettingScreen/UserTrackingSettings.tsx",
+    "styles/liveTrackingSettings.styles.ts",
+    "screens/SettingScreen/LanguageSelector.tsx"
+  ],
+  "EventList": [
+    "screens/FollowerEventList/FollowerEvent.tsx",
+    "screens/FollowerEventList/LiveTab.tsx",
+    "components/EventListCard.tsx",
+    "styles/event.ts"
+  ],
+  "EventDetail": [
+    "screens/FollowerDetailsList/FollowerDetails.tsx",
+    "screens/EventDetails/DistanceTab.tsx",
+    "styles/details.styles.ts"
+  ],
+  "ParticipantList": [
+    "screens/EventDetails/ParticipantTab.tsx",
+    "screens/EventDetails/ParticipantCard.tsx",
+    "screens/FollowerDetailsList/FollowerDetails.tsx",
+    "styles/details.styles.ts"
+  ],
+  "ParticipantSearch": [
+    "screens/ResultList/SearchParticipant.tsx",
+    "styles/ResultList.styles.ts"
+  ],
+  "ResultList": [
+    "screens/ResultList/ResultList.tsx",
+    "screens/ResultList/ResultCard.tsx",
+    "styles/ResultList.styles.ts"
+  ],
+  "RaceInfo": [
+    "screens/ResultDetailsScreen/RaceInfoTab.tsx",
+    "screens/ResultDetailsScreen/ResultDetails.tsx",
+    "styles/resultDetails.styles.ts"
+  ],
+  "CheckpointHistory": [
+    "screens/ResultDetailsScreen/LiveTimingPoint.tsx",
+    "screens/ResultDetailsScreen/ResultDetails.tsx",
+    "styles/resultDetails.styles.ts"
+  ],
+  "RunnerInfo": [
+    "screens/ResultDetailsScreen/RunnerInfoTab.tsx",
+    "screens/ResultDetailsScreen/ResultDetails.tsx",
+    "styles/resultDetails.styles.ts"
+  ],
+  "Favourites": [
+    "screens/FavouriteScreen/FavouriteList.tsx",
+    "screens/FavouriteScreen/FavouriteCard.tsx",
+    "styles/favourite.style.ts"
+  ],
+  "FavouriteAthletes": [
+    "screens/FollowerScreen/UserFavouriteList.tsx",
+    "components/ProfileCard.tsx",
+    "styles/followerScreen.styles.ts"
+  ],
+  "AthleteSearch": [
+    "screens/FollowerScreen/AthleteSearchScreen.tsx",
+    "styles/followerScreen.styles.ts"
+  ],
+  "FollowerHub": [
+    "screens/FollowerScreen/FollowerScreen.tsx",
+    "styles/followerScreen.styles.ts"
+  ],
+  "FanHub": [
+    "screens/FollowerScreen/FanScreen.tsx",
+    "styles/fan.styles.ts"
+  ],
+  "ParticipantHub": [
+    "screens/ParticipantScreen/ParticipantScreen.tsx",
+    "styles/participantscreen.styles.ts"
+  ],
+  "MapView": [
+    "screens/LiveTrackingScreen.tsx",
+    "components/DistanceDropdown.tsx",
+    "components/ElevationProfile/LiveElevationProfile.tsx",
+    "styles/liveTracking.styles.ts"
+  ],
+  "CreateEvent": [
+    "screens/PersonalEventScreen/CreatePersonalEvent.tsx",
+    "styles/personalEvent.styles.ts"
+  ],
+  "ClaimBib": [
+    "screens/EventDetails/ParticipantResult.tsx",
+    "styles/details.styles.ts"
+  ],
+  "MembershipTerms": [
+    "screens/ProfileScreen/MembershipPlansScreen.tsx",
+    "styles/membershipPlans.styles.ts"
+  ],
+  "RegistrationModal": [
+    "components/RegistrationModal.tsx",
+    "styles/details.styles.ts"
+  ],
+  "ResultDetails": [
+    "screens/ResultDetailsScreen/ResultDetails.tsx",
+    "styles/resultDetails.styles.ts",
+    "screens/ResultList/ResultCard.tsx"
+  ],
+  "TrackingActive": [
+    "screens/HomeScreen.tsx",
+    "styles/home.styles.ts"
+  ]
+}

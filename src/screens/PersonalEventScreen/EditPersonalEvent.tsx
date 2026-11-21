@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar,
   Text,
   TouchableOpacity,
   View,
@@ -21,11 +20,12 @@ import { parseLocalDate, startOfToday } from '../../utils/dateValidation';
 import { useEditFileUpload } from '../../hooks/Useeditfileupload';
 import { getPersonalEvent, updatePersonalEvent, formatFileSize, getDeviceTimezone } from '../../services/editPersonalEventService';
 import { tokenService } from '../../services/tokenService';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { personalStyles } from '../../styles/personalEvent.styles';
 import { EditPersonalEventpops } from '../../types/navigation';
 import { toastError, toastSuccess } from '../../../utils/toast';
 import { FileCard } from '../../components/FileCard';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MB = MAX_FILE_SIZE / 1_048_576;
@@ -33,6 +33,9 @@ const MB = MAX_FILE_SIZE / 1_048_576;
 const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation }) => {
   const { eventId } = route.params;
   const { t } = useTranslation(['personal', 'common']);
+  // ✅ Notch clearance for the body in landscape (edges are ['bottom']).
+  const sidePadding = useLandscapeSidePadding();
+  const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
 
   const {
     formData,
@@ -187,6 +190,10 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
           case 'no_changes':
             toastError(t('common:errors.generic'), t('personal:errors.noChanges'));
             break;
+          // Server lock (2026-10-30): > 10 min tracked — same rule that hides Edit on Profile.
+          case 'tracking_already_started':
+            toastError(t('common:errors.generic'), t('personal:errors.trackingStarted'));
+            break;
           case 'product_custom_app_id_invalid':
             toastError(t('common:errors.generic'), t('personal:errors.invalidEventId'));
             break;
@@ -227,35 +234,33 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
 
   if (isLoading) {
     return (
-      <SafeAreaView style={commonStyles.container} edges={['top']}>
-        <StatusBar barStyle="dark-content" />
-        <AppHeader showLogo showBack />
+      <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+        <AppHeader title={t('common:band.editPersonalEvent')} showLogo showBack />
         <View style={commonStyles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={palette.navy} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={commonStyles.container} edges={['top']}>
-      <StatusBar barStyle="dark-content" />
-      <AppHeader showLogo showBack />
+    <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+      <AppHeader title={t('common:band.editPersonalEvent')} showLogo showBack />
 
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, sidePadding]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        // ✅ 0, not 80: RN's KAV uses its onLayout frame, relative to a
+        // SafeAreaView that starts at the screen top (headerShown false), so
+        // AppHeader is already counted. 80 lifted the form 80pt clear of the
+        // keyboard — in landscape that left ~0-20pt of form while typing.
+        keyboardVerticalOffset={0}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1 }}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={personalStyles.section}>
-            <Text style={commonStyles.title}>{t('personal:editTitle')}</Text>
-          </View>
-
           <View style={personalStyles.formContainer}>
             {/* Event Name */}
             <View style={personalStyles.fieldWrapper}>
@@ -342,7 +347,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     style={{ marginLeft: 8, marginBottom: 8 }}
                   >
-                    <Ionicons name="close-circle" size={22} color={colors.gray500} />
+                    <Ionicons name="close-circle" size={22} color={palette.textMuted} />
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -370,14 +375,14 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
                   >
                     {isPickingFile ? (                    
                       <>
-                        <ActivityIndicator size="large" color={colors.primary} />
+                        <ActivityIndicator size="large" color={palette.navy} />
                         <Text style={personalStyles.uploadTitle}>
                           {t('personal:file.loading')}
                         </Text>
                       </>
                     ) : (
                       <>
-                        <Ionicons name="cloud-upload-outline" size={40} color={colors.primary} />
+                        <Ionicons name="cloud-upload-outline" size={40} color={palette.navy} />
                         <Text style={personalStyles.uploadTitle}>{t('personal:file.uploadTitle')}</Text>
                         <Text style={personalStyles.uploadSubtitle}>
                           {t('personal:file.uploadSubtitle', { size: MB })}
@@ -426,7 +431,7 @@ const EditPersonalEvent: React.FC<EditPersonalEventpops> = ({ route, navigation 
               activeOpacity={0.8}
             >
               {isSubmitting ? (
-                <ActivityIndicator size="small" color={colors.white} />
+                <ActivityIndicator size="small" color={palette.surface} />
               ) : (
                 <Text style={commonStyles.primaryButtonText}>{t('personal:button.save')}</Text>
               )}

@@ -10,8 +10,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../styles/common.styles';
+import { commonStyles, spacing, palette, fonts, space, shadows, withAlpha } from '../styles/common.styles';
+import { dialogTone, RING_TINT, useCompactDialog } from './ui';
 import { AthleteEvent } from '../services/athleteProfileService';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
 
 interface Props {
     visible: boolean;
@@ -23,6 +26,9 @@ interface Props {
 
 export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, onCancel, onConfirm }) => {
     const { t } = useTranslation(['ownProfile']);
+    // ✅ Landscape: no icon, buttons side by side (device test 2026-10-23).
+    // Portrait: unchanged. Called before the early return below (hooks rule).
+    const cd = useCompactDialog();
     const scaleAnim = useRef(new Animated.Value(0.85)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
     const [internalVisible, setInternalVisible] = useState(visible);
@@ -62,47 +68,52 @@ export const DeleteEventModal: React.FC<Props> = ({ visible, event, isDeleting, 
     if (!internalVisible) return null;
 
     return (
-        <Modal transparent visible={internalVisible} animationType="none" onRequestClose={onCancel}>
-            <View style={styles.overlay}>
+        <Modal supportedOrientations={MODAL_ORIENTATIONS} statusBarTranslucent transparent visible={internalVisible} animationType="none" onRequestClose={onCancel}>
+            <View style={[styles.overlay, cd.s.wrapper]}>
                 <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onCancel} />
 
-                <Animated.View
-                    style={[
-                        styles.sheet,
-                        { opacity: opacityAnim, transform: [{ scale: scaleAnim }] },
-                    ]}
-                >
-                    <View style={styles.iconWrap}>
-                        <Ionicons name="trash-outline" size={30} color={colors.participantColor ?? '#E53935'} />
-                    </View>
+                {/* ModalScroll: in landscape the card was taller than the screen —
+                    icon off the top, Cancel off the bottom (audit 2026-10-22) */}
+                <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.reserve}>
+                    <Animated.View
+                        style={[
+                            styles.sheet,
+                            cd.s.card,
+                            { opacity: opacityAnim, transform: [{ scale: scaleAnim }] },
+                        ]}
+                    >
+                        <View style={[styles.iconWrap, cd.s.hide]}>
+                            <Ionicons name="trash-outline" size={56} color={dialogTone.danger.icon} />
+                        </View>
 
-                    <Text style={commonStyles.title}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
-                    <Text style={styles.message}>
-                        {t('ownProfile:deleteEvent.confirmMessage', { name: event?.name ?? '' })}
-                    </Text>
+                        <Text style={[styles.title, cd.s.title]}>{t('ownProfile:deleteEvent.confirmTitle')}</Text>
+                        <Text style={[styles.message, cd.s.message]}>
+                            {t('ownProfile:deleteEvent.confirmMessage', { name: event?.name ?? '' })}
+                        </Text>
 
-                    <View style={styles.actions}>
-                        <TouchableOpacity
-                            style={[styles.btn, styles.cancelBtn]}
-                            onPress={onCancel}
-                            activeOpacity={0.85}
-                            disabled={isDeleting}
-                        >
-                            <Text style={styles.cancelText}>{t('ownProfile:deleteEvent.cancel')}</Text>
-                        </TouchableOpacity>
+                        <View style={[styles.actions, cd.s.buttonsRow]}>
+                            <TouchableOpacity
+                                style={[commonStyles.primaryButton, cd.s.button, isDeleting && { opacity: 0.7 }]}
+                                onPress={onConfirm}
+                                activeOpacity={0.85}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting
+                                    ? <ActivityIndicator size="small" color={palette.surface} />
+                                    : <Text style={commonStyles.primaryButtonText}>{t('ownProfile:deleteEvent.confirm')}</Text>}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[commonStyles.secondaryButton, cd.s.button]}
+                                onPress={onCancel}
+                                activeOpacity={0.85}
+                                disabled={isDeleting}
+                            >
+                                <Text style={commonStyles.secondaryButtonText}>{t('ownProfile:deleteEvent.cancel')}</Text>
+                            </TouchableOpacity>
 
-                        <TouchableOpacity
-                            style={[styles.btn, styles.deleteBtn, isDeleting && { opacity: 0.7 }]}
-                            onPress={onConfirm}
-                            activeOpacity={0.85}
-                            disabled={isDeleting}
-                        >
-                            {isDeleting
-                                ? <ActivityIndicator size="small" color="#fff" />
-                                : <Text style={styles.deleteText}>{t('ownProfile:deleteEvent.confirm')}</Text>}
-                        </TouchableOpacity>
-                    </View>
-                </Animated.View>
+                        </View>
+                    </Animated.View>
+                </ModalScroll>
             </View>
         </Modal>
     );
@@ -113,31 +124,34 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        backgroundColor: withAlpha(palette.ink, 0.6),
         paddingHorizontal: spacing.lg,   // NEW — keeps the card off the screen edges
+        paddingVertical: spacing.lg,     // scrolled card keeps a gap top/bottom (audit 2026-10-22)
     },
     backdrop: { ...StyleSheet.absoluteFillObject },
     sheet: {
         width: '100%',
-        backgroundColor: '#fff',
-        borderRadius: 24,    
+        maxWidth: 400,
+        backgroundColor: palette.surface,
+        borderRadius: 16,    
                 // NEW — all corners rounded now that it's centered
-        paddingHorizontal: spacing.lg,
+        paddingHorizontal: 24,
         paddingTop: spacing.lg,
         paddingBottom: spacing.lg,
         alignItems: 'center',
+        ...shadows.overlay,
     },
     iconWrap: {
-        width: 60, height: 60, borderRadius: 30,
-        backgroundColor: '#FDECEA', alignItems: 'center', justifyContent: 'center',
+        width: 90, height: 90, borderRadius: 45,
+        backgroundColor: RING_TINT, alignItems: 'center', justifyContent: 'center',
         marginBottom: spacing.md,
     },
-    title: { fontSize: 18, fontWeight: '700', color: colors.gray900, marginBottom: 10, textAlign: 'center' },
-    message: { fontSize: 15, color: '#666', textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
-    actions: { flexDirection: 'row', width: '100%', gap: 12 },
-    btn: { flex: 1, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    cancelBtn: { backgroundColor: '#F2F2F2' },
-    cancelText: { color: colors.gray900, fontWeight: '600', fontSize: 15 },
-    deleteBtn: { backgroundColor: colors.primary },
-    deleteText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+    // fonts.display at 20, same as ErrorModal / Dialog / MembershipPlanModel
+    // and commonStyles.title. bodySemi here was the last thing making this
+    // modal read as a different component.
+    title: { fontFamily: fonts.display,
+        fontSize: 20, color: palette.ink, marginBottom: space.sm, textAlign: 'center' },
+    message: { fontFamily: fonts.body,
+        fontSize: 14, color: palette.textBody, textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.sm },
+    actions: { width: '100%', gap: 12 },
 });

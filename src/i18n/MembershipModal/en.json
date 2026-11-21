@@ -3,7 +3,7 @@
     "upgrade": {
       "title": "Upgrade your membership?",
       "description": "Your current plan will be upgraded to {{planName}} once you confirm.",
-      "confirm": "Confirm Upgrade"
+      "confirm": "Confirm upgrade"
     },
     "disabled": {
       "title": "Downgrade not allowed",
@@ -16,9 +16,9 @@
       "confirm": "Got it"
     },
     "hidden": {
-  "title": "You already have an active membership",
-  "description": "You're currently subscribed through the web. Manage your membership from there.",
-  "confirm": "Got it"
-}
+      "title": "You already have an active membership",
+      "description": "You're currently subscribed through the web. Manage your membership from there.",
+      "confirm": "Got it"
+    }
   }
 }

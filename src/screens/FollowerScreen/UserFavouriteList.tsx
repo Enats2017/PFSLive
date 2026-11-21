@@ -2,13 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
-    StatusBar,
     Text,
     View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { follow } from '../../styles/followerScreen.styles';
 import { AppHeader } from '../../components/common/AppHeader';
 import SearchInput from '../../components/SearchInput';
@@ -17,13 +16,15 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import { userfavouriteService, FavouriteItem } from '../../services/userfavouriteService';
 import { UserFavouriteListpops } from '../../types/navigation';
 import { useFollowManager } from '../../hooks/useFollowManager';
+import { whenFollowSyncIdle } from '../../utils/followStorage';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useSessionExpired } from '../../hooks/useSessionExpired';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding } from '../../hooks/useLandscapeSidePadding';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect,useRoute } from '@react-navigation/native';
 
 interface PaginationState {
     page: number;
@@ -32,12 +33,18 @@ interface PaginationState {
 
 const INITIAL_PAGINATION: PaginationState = { page: 1, total_pages: 1 };
 
-const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
+const UserFavouriteList: React.FC<UserFavouriteListpops> = ({ navigation }) => {
     const { t } = useTranslation(['follow', 'follower', 'errorScreen']);
-    const { width } = useDimensions();
+    const route = useRoute<any>();
+     const targetCustomerAppId = route.params?.customer_app_id;
+    const { width, height } = useDimensions();
     const insets = useSafeAreaInsets(); 
     const isGestureNav = insets.bottom > 0;
-    const isLandscape = width 
+    // ✅ A real boolean — `width` alone was always truthy. Edges are unchanged
+    // in effect (portrait has no side/bottom inset where the branches differ).
+    const isLandscape = width > height;
+    // ✅ Notch clearance for the body in landscape (edges fall back to ['bottom']).
+    const sidePadding = useLandscapeSidePadding();
 
     const [searchText, setSearchText]           = useState('');
     const [favourites, setFavourites]           = useState<FavouriteItem[]>([]);
@@ -48,6 +55,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
     const [loadingMoreFav, setLoadingMoreFav]   = useState(false);
     const [favPagination, setFavPagination]     = useState<PaginationState>(INITIAL_PAGINATION);
     const [searchPagination, setSearchPagination] = useState<PaginationState>(INITIAL_PAGINATION);
+    const [isOwnList, setIsOwnList] = useState(false);
 
     const isLoadingMoreSearch = useRef(false);
 
@@ -100,9 +108,10 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
         try {
             setInitialLoading(true);
             clearError();
-            const result = await userfavouriteService.getFavourites({ page: 1 });
+            const result = await userfavouriteService.getFavourites({ page: 1, customer_app_id: targetCustomerAppId });
             if (requestId !== requestIdRef.current) return;
             setFavourites(result.favourites);
+            setIsOwnList(result.is_own === 1);
             setFavPagination({ page: 1, total_pages: result.pagination.total_pages });
         } catch (err) {
             if (requestId !== requestIdRef.current) return;
@@ -114,7 +123,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
     // handleApiError / clearError are intentionally NOT deps: this callback
     // feeds useFocusEffect, and FavouriteList.tsx keeps them out for the same
     // reason — a changing identity would re-subscribe the focus effect.
-    }, []);
+    }, [targetCustomerAppId]);
 
     const retry = useCallback(() => {
         clearError();
@@ -127,7 +136,9 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
             skipNextRefetchRef.current = false;
             return;
         }
-        loadInitial();
+        // followUser resolves once the follow is saved on the phone; the upload
+        // runs after. Refetching straight away could miss the new follow.
+        void whenFollowSyncIdle().then(() => loadInitial());
     };
 
     useFocusEffect(
@@ -164,6 +175,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
                 const result = await userfavouriteService.getFavourites({
                     search: searchText.trim(),
                     page: 1,
+                    customer_app_id: targetCustomerAppId, 
                 });
                 if (requestId !== requestIdRef.current) return;
                 setSearchResults(result.favourites);
@@ -182,7 +194,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
             }
         }, 350);
         return () => clearTimeout(timer);
-    }, [searchText]);
+    }, [searchText, targetCustomerAppId]);
 
     const loadMoreSearchResults = useCallback(async () => {
         if (isLoadingMoreSearch.current) return;
@@ -205,6 +217,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
             const result = await userfavouriteService.getFavourites({
                 search: searchText,
                 page: nextPage,
+                customer_app_id: targetCustomerAppId,
             });
             if (requestId !== requestIdRef.current) return;
             setSearchResults(prev => {
@@ -218,7 +231,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
             isLoadingMoreSearch.current = false;
             setLoadingMore(false);
         }
-    }, [searchText]);
+    }, [searchText, targetCustomerAppId]);
 
     const loadMoreFavourites = useCallback(async () => {
         if (loadingMoreFav || favPagination.page >= favPagination.total_pages) return;
@@ -226,7 +239,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
             setLoadingMoreFav(true);
             const requestId = ++requestIdRef.current;
             const nextPage = favPagination.page + 1;
-            const result = await userfavouriteService.getFavourites({ page: nextPage });
+            const result = await userfavouriteService.getFavourites({ page: nextPage, customer_app_id: targetCustomerAppId });
             if (requestId !== requestIdRef.current) return;
             setFavourites(prev => {
                 const ids = new Set(prev.map(e => e.customer_app_id));
@@ -238,7 +251,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
         } finally {
             setLoadingMoreFav(false);
         }
-    }, [loadingMoreFav, favPagination]);
+    }, [loadingMoreFav, favPagination,targetCustomerAppId]);
 
     const handleLoadMore = useCallback(() => {
         if (searchText.trim().length > 0) {
@@ -255,10 +268,12 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
     const renderCard = useCallback(
         ({ item }: { item: FavouriteItem }) => (
             <FanEventCard
+                variant="favourite"
                 analyticsScreenName={ANALYTICS_SCREENS.USER_FAVOURITES}
                 item={item}
                 isFollowed={isFollowed(item.customer_app_id)}
                 isLoading={isLoading(item.customer_app_id)}
+                showRemoveButton={isOwnList}
                 onToggleFollow={() => {
                     // This list IS the follow list, so a toggle on a followed
                     // athlete is a removal — hide the row now, and tell the
@@ -279,7 +294,10 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
                 }}
             />
         ),
-        [isFollowed, isLoading, handleFollowPress],
+        // isOwnList drives showRemoveButton and is set by loadInitial, i.e. AFTER
+        // the first render. Left out of the deps the card kept the closure that
+        // captured false, and the Remove button never appeared at all.
+        [isFollowed, isLoading, handleFollowPress, isOwnList],
     );
 
    const renderEmpty = useCallback(() => {
@@ -287,7 +305,7 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
         return (
             <ActivityIndicator
                 size="small"
-                color={colors.primary}
+                color={palette.navy}
                 style={{ marginTop: spacing.lg }}
             />
         );
@@ -308,9 +326,11 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
     }
     if (searchText.trim().length > 0) {
         return (
-            <Text style={[commonStyles.errorText, { textAlign: 'center', marginTop: 40 }]}>
-                {t('follow:empty.favouriteSearchEmpty')}
-            </Text>
+            <ErrorScreen
+                type="empty"
+                title={t('follow:empty.favouriteSearchEmpty')}
+                onRetry={() => { }}
+            />
         );
     }
     // ✅ No following at all
@@ -320,9 +340,14 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
             title={t('follow:empty.no_following_title')}
             message={t('follow:empty.no_following_msg')}
             onRetry={() => {}}
+            emptyAction={{
+                label: t('follow:athlete'),
+                icon: 'search',
+                onPress: () => navigation.navigate('AthleteSearchScreen', {}),
+            }}
         />
     );
-}, [initialLoading, searching, searchText, t, error, isAuthError, handleSessionExpired, retry]);
+}, [initialLoading, searching, searchText, t, navigation, error, isAuthError, handleSessionExpired, retry]);
 
     const rawList = searchText.trim().length > 0 ? searchResults : favourites;
     const displayList = removedIds.size > 0
@@ -330,18 +355,25 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
         : rawList;
 
     const listFooter = (loadingMore || loadingMoreFav)
-        ? <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.md }} />
+        ? <ActivityIndicator size="small" color={palette.navy} style={{ marginVertical: spacing.md }} />
         : null;
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={t('common:band.favouriteAthletes')} showBack />
 
-            <View style={follow.yellowHeader}>
-                <Text style={commonStyles.title}>{t('follow:favourite')}</Text>
+            {/* ✅ Landscape notch padding on the body. The search band keeps its
+                white fill behind the inset so it still reads full-bleed. */}
+            <View style={[{ backgroundColor: palette.surface }, sidePadding]}>
+            <SearchInput
+                placeholder={t('follow:search.athletesearch')}
+                value={searchText}
+                onChangeText={setSearchText}
+                icon="search"
+            />
             </View>
 
+            <View style={[{ flex: 1 }, sidePadding]}>
             <FlatList
                 data={displayList}
                 keyExtractor={(item, index) => `fav_${item.customer_app_id}_${index}`}
@@ -353,20 +385,16 @@ const UserFavouriteList: React.FC<UserFavouriteListpops> = () => {
                 removeClippedSubviews={false}
                 contentContainerStyle={{
                     flexGrow: 1,
-                    paddingHorizontal: spacing.md,
+                    paddingHorizontal: spacing.xl,
+                    // The search band above is full-bleed white; the list needs
+                    // its own top inset so the first card is not welded to it.
+                    paddingTop: spacing.lg,
                     paddingBottom: spacing.xxxxl,
                 }}
-                ListHeaderComponent={
-                    <SearchInput
-                        placeholder={t('follow:search.athletesearch')}
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        icon="search"
-                    />
-                }
                 ListEmptyComponent={renderEmpty}
                 ListFooterComponent={listFooter}
             />
+            </View>
 
             <TrackingPasswordModal
                 visible={passwordModalVisible}

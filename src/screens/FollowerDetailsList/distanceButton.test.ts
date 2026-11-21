@@ -150,13 +150,17 @@ test('button.participants / button.results exist and are non-empty in en, fr, nl
   }
 });
 
-test('agreed wording, uppercase like the other app buttons', () => {
-  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.participants), ['PARTICIPANTS', 'DEELNEMERS', 'PARTICIPANTS']);
-  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.results), ['RESULTS', 'RESULTATEN', 'RÉSULTATS']);
+// growth_v0.1 carries the new design: labels are Title Case (master's are uppercase).
+// FR is "Inscrits": "Participants" (~94pt) overflows this design's ~90pt button.
+test('agreed wording, Title Case like this design\'s other buttons', () => {
+  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.participants), ['Participants', 'Deelnemers', 'Inscrits']);
+  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.results), ['Results', 'Results', 'Résultats']);
 });
 
-test('button.result is unchanged (RaceResultScreen still renders it)', () => {
-  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.result), ['RESULT', 'RESULTAAT', 'RÉSULTAT']);
+// nl: "Results" / "Result" stay English (client, 2026-10-22).
+test('button.result and button.route (RaceResultScreen / the route button render them)', () => {
+  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.result), ['Result', 'Result', 'Résultat']);
+  assert.deepStrictEqual(['en', 'nl', 'fr'].map((l) => readLang(l).button.route), ['Route', 'Route', 'Itinéraire']);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

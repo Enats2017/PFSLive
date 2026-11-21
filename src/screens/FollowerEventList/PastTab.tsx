@@ -1,9 +1,9 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { commonStyles, spacing, colors } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { eventStyles } from '../../styles/event';
 import { EventItem, eventService } from '../../services/followerEvent';
 import { formatEventDate } from '../../utils/dateFormatter';
@@ -12,6 +12,7 @@ import { API_CONFIG } from '../../constants/config';
 import ErrorScreen from '../../components/ErrorScreen';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_SCREENS, ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
+import { EventListCard } from '../../components/EventListCard';
 
 interface PastTabProps {
     events: EventItem[];
@@ -21,6 +22,10 @@ interface PastTabProps {
 }
 
 const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasMore }) => {
+    // ✅ Landscape (device test 2026-10-23): the 90pt nav-bar pad left a
+    // large blank band under the last card on a ~390pt-tall screen.
+    const { width: winW, height: winH } = useWindowDimensions();
+    const isLandscape = winW > winH;
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['event', 'common']);
     const [searchText, setSearchText] = useState('');
@@ -147,17 +152,12 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
 
     const renderItem = useCallback(
         ({ item }: { item: EventItem }) => (
-            <TouchableOpacity
-                style={[
-                    commonStyles.card,
-                    {
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingHorizontal: spacing.lg,
-                        paddingVertical: spacing.md,
-                        marginBottom: spacing.md,
-                    },
-                ]}
+            <EventListCard
+                name={item.name}
+                date={formatEventDate(item.race_date, t)}
+                city={item.city}
+                country={item.country}
+                imageUrl={item.event_image}
                 onPress={async () => {
                     await analyticsService.logInteraction(
                         ANALYTICS_SCREENS.FOLLOWER_EVENT_LIST,
@@ -174,46 +174,9 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                         event_name: item.name,
                         event_image: item.event_image ?? '',
                         sourceTab: 'past',
-                    })
+                    });
                 }}
-                activeOpacity={0.8}
-            >
-                <View style={eventStyles.eventCardInfo}>
-                    <Text style={[commonStyles.title, { marginBottom: 4 }]}>{item.name}</Text>
-                    <View style={eventStyles.eventCardDateRow}>
-                        <Ionicons name="calendar-outline" size={14} color={colors.gray500} />
-                        <Text style={commonStyles.date}>
-                            {formatEventDate(item.race_date, t)}
-                        </Text>
-                    </View>
-                </View>
-
-                {/* Eye icon button - dark blue */}
-                <TouchableOpacity
-                    style={eventStyles.iconButtonBlue}
-                    onPress={async () => {
-                        await analyticsService.logInteraction(
-                            ANALYTICS_SCREENS.FOLLOWER_EVENT_LIST,
-                            ANALYTICS_BUTTONS.PAST_EVENT,
-                            'tap',
-                            {
-                                [ANALYTICS_PARAMS.EVENT_NAME]: item.name,
-                                [ANALYTICS_PARAMS.TAB_NAME]: 'past',
-                                [ANALYTICS_PARAMS.EVENT_STATUS]: 'past',
-                            }
-                        );
-                        navigation.navigate('FollowDetails', {
-                            product_app_id: Number(item.product_app_id),
-                            event_name: item.name,
-                            event_image: item.event_image ?? '',
-                            sourceTab: 'past',
-                        })
-                    }}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="bar-chart-outline" size={23} color={colors.primaryDark} />
-                </TouchableOpacity>
-            </TouchableOpacity>
+            />
         ),
         [navigation, t]
     );
@@ -226,7 +189,7 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
     const ListFooterComponent = useCallback(() => {
         if (!loadingMore && !loadingMoreSearch) return null;
         return (
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.md }} />
+            <ActivityIndicator size="small" color={palette.navy} style={{ marginVertical: spacing.md }} />
         );
     }, [loadingMore, loadingMoreSearch]);
 
@@ -246,22 +209,33 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
         [t, searchText]
     );
 
-    return (
+    // ✅ Landscape (device test 2026-10-23): the search band sits in the
+    // list header and scrolls away, so a ~390pt-tall screen shows whole
+    // cards instead of a sliver under a fixed band.
+    const searchBand = (
         <>
-            <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm }}>
-                <SearchInput
-                    placeholder={t('event:search')}
-                    value={searchText}
-                    onChangeText={setSearchText}
-                    icon="search"
-                />
-            </View>
+            <SearchInput
+                placeholder={t('event:search')}
+                value={searchText}
+                onChangeText={setSearchText}
+                icon="search"
+            />
 
             {searching && (
                 <View style={{ marginTop: spacing.lg, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color={colors.primary} />
+                    <ActivityIndicator size="small" color={palette.navy} />
                 </View>
             )}
+        </>
+    );
+
+    return (
+        <>
+            {/* Full-bleed, like every other search screen. SearchInput draws
+                its own white sub-header band with its own padding; the wrapper
+                here inset that band 20pt from each edge and doubled the padding
+                before the field. */}
+            {!isLandscape && searchBand}
 
             <FlatList
                 data={displayEvents}
@@ -272,10 +246,13 @@ const PastTab: React.FC<PastTabProps> = ({ events, onLoadMore, loadingMore, hasM
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{
                     paddingTop: spacing.sm,
-                    paddingHorizontal: spacing.md,
-                    paddingBottom: spacing.xxxxl,
+                    paddingHorizontal: spacing.xl,
+                    paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
                     flexGrow: 1,
                 }}
+                ListHeaderComponent={isLandscape ? searchBand : null}
+                // full-bleed band: undo the list's side / top padding
+                ListHeaderComponentStyle={isLandscape ? { marginHorizontal: -spacing.xl, marginTop: -spacing.sm, marginBottom: spacing.sm } : undefined}
                 ListFooterComponent={ListFooterComponent}
                 ListEmptyComponent={ListEmptyComponent}
                 keyboardShouldPersistTaps="handled"

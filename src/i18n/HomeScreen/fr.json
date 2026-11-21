@@ -1,21 +1,21 @@
 {
-  "subtitle": "SUIVI EN DIRECT & RÉSULTATS",
-  "tagline": "PARTAGEZ VOTRE COURSE OU ENTRAÎNEMENT AVEC VOS AMIS & FAMILLE",
+  "subtitle": "Suivi en direct & résultats",
+  "tagline": "Partagez votre course ou entraînement avec vos amis & famille",
   "Logotagline": "Livio - application officielle de suivi et de résultats des plus belles courses",
   "subtext": "Résultats en direct",
   "participant": {
     "title": "Suivi en direct"
   },
   "button": {
-    "Participant": "JE SUIS UN PARTICIPANT",
-    "Fan": "JE SUIS UN FAN"
+    "Participant": "Je suis un participant",
+    "Fan": "Je suis un fan"
   },
   "Event": {
     "title": "Nom de l'événement",
     "Date": "Date",
     "description": "Vous pouvez démarrer votre suivi en direct 1 heure avant votre départ. Assurez-vous de garder cette application ouverte en permanence et de ne pas la fermer !",
-    "buttonText": "DÉMARRER LE SUIVI",
-    "button": "ARRÊTER LE SUIVI"
+    "buttonText": "Démarrer le suivi",
+    "button": "Arrêter le suivi"
   },
   "status": {
     "gpsActive": "GPS Actif - En attente du départ de la course",
@@ -27,7 +27,8 @@
     "loading": "Chargement...",
     "manualStartEnabled": "Démarrage manuel activé",
     "manualStartDescription": "La transmission des données est contrôlée manuellement",
-    "manualStartReady": "Prêt à envoyer (mode manuel)"
+    "manualStartReady": "Prêt à envoyer (mode manuel)",
+    "raceStartsIn": "La course commence dans : {{time}}"
   },
   "tracking": {
     "gpsActivated": "GPS Activé",
@@ -108,10 +109,12 @@
     "midRaceBody": "L'économiseur de batterie peut empêcher Livio d'enregistrer votre course. Désactivez-le si possible."
   },
   "followingEvents": {
-    "sectionTitle": "ÉVÉNEMENTS QUE VOUS SUIVEZ",
-    "startsIn": "COMMENCE DANS",
-    "live": "EN DIRECT",
-    "routeButton": "Suivre L'Événement"
+    "sectionTitle": "Événements que vous suivez",
+    "startsIn": "Commence dans",
+    "live": "En direct",
+    "routeButton": "Suivre L'Événement",
+    "youFollow": "Vous suivez",
+    "opensEventPage": "Ouvre la page de l’événement"
   },
   "startConfirm": {
     "title": "Démarrer le suivi en direct ?",
@@ -135,20 +138,47 @@
     "savedMessage": "Nous vous tiendrons informé des mises à jour des courses."
   },
   "gpsHealth": {
-    "title": "Accès à la localisation limité",
+    "title": "Laissez vos proches vous suivre en direct",
+    "titleMidRace": "Accès à la localisation limité",
+    "titleLocationOffMidRace": "Localisation désactivée",
+    "titleNoFix": "Pas de position GPS pour le moment",
+    "blockedBodyNoFix": "Votre téléphone ne reçoit pas de position GPS en ce moment — cela arrive à l'intérieur, dans un tunnel ou sous un feuillage dense. Le suivi continue : rejoignez un endroit dégagé et votre position sera de nouveau envoyée dès que le GPS vous aura localisé.",
+    "blockedBodyLocationOffMidRace": "La localisation est désactivée sur ce téléphone, votre position n'est donc pas envoyée. Réactivez la localisation — le suivi reprend tout seul, inutile de l'arrêter ou de le relancer.",
     "blockedBody": "Livio a besoin de l'accès à la localisation « Toujours » pour enregistrer votre course lorsque votre téléphone est dans votre poche. Avec « Lorsque l'app est active », votre position n'est plus enregistrée dès que l'écran s'éteint.",
     "blockedBodyDenied": "Livio a besoin d'accéder à votre position pour enregistrer votre course. L'autorisation de localisation est actuellement désactivée pour cette application.",
+    "titlePrecise": "Activez la position exacte",
+    "blockedBodyPrecise": "Votre téléphone ne partage qu'une position approximative avec Livio : votre position en direct peut être décalée de plusieurs kilomètres. Activez la position exacte pour un tracé précis.",
+    "stepsPreciseIos": "Touchez Position, puis activez « Position exacte ».",
+    "stepsPreciseAndroid": "Ouvrez Autorisations → Localisation, puis activez « Utiliser la position exacte ».",
+    "startAnyway": "Démarrer quand même",
     "openSettings": "Ouvrir les réglages",
     "bannerNoBackground": "Accès à la localisation limité — votre position ne sera plus enregistrée quand l'écran s'éteindra. Appuyez pour corriger.",
-    "bannerNoFix": "Le GPS ne renvoie aucune position. Votre course n'est pas enregistrée.",
+    "bannerNoFix": "Le GPS ne renvoie aucune position pour le moment. Le suivi continue : rejoignez un endroit dégagé.",
     "bannerProviderOff": "La localisation est désactivée. Votre course n'est pas enregistrée.",
     "notificationTitle": "Livio n'enregistre pas votre course",
     "notificationBody": "Le GPS ne répond plus. Ouvrez Livio pour corriger.",
-    "blockedBodyLocationOff": "La localisation est désactivée sur ce téléphone, Livio ne peut donc pas enregistrer votre course. Activez la localisation, puis appuyez de nouveau sur Démarrer.",
+    "blockedBodyLocationOff": "La localisation est désactivée sur ce téléphone, Livio ne peut donc pas enregistrer votre course. Activez la localisation : le suivi démarre dès que vous revenez dans Livio.",
     "stepsLocationOffIos": "Allez dans Réglages → Confidentialité et sécurité → Service de localisation et activez-le.",
     "stepsIos": "Touchez Position, puis choisissez « Toujours ».",
     "stepsAndroid": "Choisissez « Toujours autoriser » sur l'écran suivant.",
     "stepsAndroidSettings": "Ouvrez Autorisations → Localisation, puis choisissez « Toujours autoriser »."
+  },
+  "hero": {
+    "title": "Suivez votre course\nen temps réel",
+    "subtitle": "Et ne manquez rien des athlètes que vous suivez"
+  },
+  "sections": {
+    "nextSession": "Prochaine session"
+  },
+  "active": {
+    "trackingActive": "Suivi actif",
+    "distance": "Distance",
+    "allSent": "Toutes les positions envoyées · {{ago}}",
+    "queued": "{{count}} en attente d’envoi · {{ago}}",
+    "secAgo": "il y a {{n}} s",
+    "minAgo": "il y a {{n}} min",
+    "justNow": "à l’instant",
+    "keepOpen": "Verrouillez votre téléphone et rangez-le — Livio continue en arrière-plan. Ne fermez simplement pas l’application."
   },
   "reminders": {
     "preTitle": "Votre course commence dans 10 minutes",

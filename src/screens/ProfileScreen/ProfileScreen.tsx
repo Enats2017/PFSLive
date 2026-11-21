@@ -1,11 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { profileListLandscapeHeight } from '../../utils/screenFit';
 import {
     View,
     Text,
     TouchableOpacity,
     FlatList,
     ActivityIndicator,
-    StatusBar,
     ScrollView
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { AppHeader } from '../../components/common/AppHeader';
-import { commonStyles, colors, spacing } from '../../styles/common.styles';
+import { commonStyles, spacing, palette } from '../../styles/common.styles';
 import { detailsStyles } from '../../styles/details.styles';
 import LiveTab from './LiveTab';
 import PastTab from './PastTab';
@@ -26,6 +26,7 @@ import { TrackingPasswordModal } from '../../components/TrackingPasswordModal';
 import ErrorScreen from '../../components/ErrorScreen';
 import { useScreenError } from '../../hooks/useApiError';
 import { useDimensions } from '../../hooks/useDimensions';
+import { useLandscapeSidePadding, useSafeAreaEdges } from '../../hooks/useLandscapeSidePadding';
 import { ANALYTICS_SCREENS } from '../../constants/analyticsScreens';
 
 type Tab = 'Past' | 'Live';
@@ -47,10 +48,26 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const { width: windowWidth, height } = useDimensions(); 
     const insets = useSafeAreaInsets();
     const [containerWidth, setContainerWidth] = useState(0);
-    const isLandscape = windowWidth ;
+    // ✅ A real boolean (layout audit 2026-10-22): `windowWidth` alone was always
+    // truthy, so a notched iPhone in landscape got edges ['bottom'] and no side
+    // inset. sidePadding pads the body below AppHeader for exactly that case.
+    const isLandscape = windowWidth > height;
     const isGestureNav = insets.bottom > 0;
+    const sidePadding = useLandscapeSidePadding();
+    const safeEdges = useSafeAreaEdges();   // + Android 3-button landscape sides
 
-    const TAB_CONTENT_HEIGHT = height * 0.6;
+    // The pager is inside a ScrollView, so it needs an explicit height rather
+    // than flex:1. Reserve the bottom inset: without it the page ended level
+    // with the screen edge and the last card sat under the fixed bar.
+    // ✅ At least 360pt (layout audit 2026-10-22): in landscape half the window
+    // height left ~174-197pt, a nested list showing less than one card. The
+    // outer ScrollView scrolls to the rest.
+    // Landscape (audit 2026-10-23): exactly the visible area under the header,
+    // as the own profile (EventsContent) - 360 was taller than the screen, the
+    // last cards were never on it together.
+    const TAB_CONTENT_HEIGHT = isLandscape
+        ? profileListLandscapeHeight(height, insets.top, insets.bottom)
+        : height * 0.5 - insets.bottom;
     const width = containerWidth || windowWidth;
     const flatListRef = useRef<FlatList>(null);
 
@@ -72,6 +89,17 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     const isFetching = useRef(false);
     const fromEditFetched = useRef(false);
     const activeTabRef = useRef<Tab>('Live');
+
+    // ✅ Re-sync the page after a rotation (audit 2026-10-23), as ParticipantEvent
+    // does: the FlatList's own onLayout scrolled with the OLD page width, so the
+    // pager showed half of one tab and half of the next.
+    useEffect(() => {
+        const index = TABS.indexOf(activeTabRef.current);
+        const timer = setTimeout(() => {
+            flatListRef.current?.scrollToIndex({ index, animated: false });
+        }, 80);
+        return () => clearTimeout(timer);
+    }, [width]);
 
     // ✅ SAFELY EXTRACT targetId WITH DEFAULT
     const targetId = route.params?.customer_app_id ?? 0;
@@ -339,11 +367,10 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
 
     if (loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={t('common:band.athlete')} showLogo={true} showBack />
                 <View style={commonStyles.centerContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={palette.navy} />
                 </View>
             </SafeAreaView>
         );
@@ -351,9 +378,8 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
 
     if (hasError && !loading) {
         return (
-            <SafeAreaView style={commonStyles.container} edges={['top']}>
-                <StatusBar barStyle="dark-content" />
-                <AppHeader showLogo={true} showBack />
+            <SafeAreaView style={commonStyles.container} edges={safeEdges}>
+                <AppHeader title={t('common:band.athlete')} showLogo={true} showBack />
                 <ErrorScreen
                     type={error!.type}
                     title={error!.title}
@@ -365,16 +391,17 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
     }
 
     return (
-        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['top', 'left','right'] : ['top']}>
-            <StatusBar barStyle="dark-content" />
-            <AppHeader showLogo={true} showBack />
+        <SafeAreaView style={commonStyles.container} edges={isLandscape && !isGestureNav ? ['left','right'] : ['bottom']}>
+            <AppHeader title={t('common:band.athlete')} showLogo={true} showBack />
 
             <ScrollView                
                 nestedScrollEnabled={true}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{
+                contentContainerStyle={[{
                     flexGrow: 1,
-                }}
+                    // landscape: 16, not the 90pt nav-bar pad (a blank band)
+                    paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
+                }, sidePadding]}
             >
                 <ProfileCard
                     profile={profile}
@@ -391,33 +418,36 @@ const ProfileScreen: React.FC<ProfileScreenprops> = ({ route }) => {
                     }}
                 />
 
+                {/* ✅ Section label — the deck titles the race block above
+                    its Past/Live filter. */}
+                <Text style={detailsStyles.sectionLabel}>{t('profile:sections.recentRaces')}</Text>
+
                 <View style={detailsStyles.tabBar}>
                     {TABS.map(tab => {
                         const isActive = activeTab === tab;
                         return (
                             <TouchableOpacity
                                 key={tab}
-                                style={detailsStyles.tabItem}
+                                style={[detailsStyles.tabItem, isActive && detailsStyles.tabItemActive]}
                                 onPress={() => handleTabPress(tab)}
                                 activeOpacity={0.7}
                             >
-                                <Text style={[commonStyles.subtitle, isActive && detailsStyles.activeTabText]}>
+                                <Text style={[detailsStyles.tabText, isActive && detailsStyles.activeTabText]}>
                                     {t(`profile:tab.${tab}`)}
                                 </Text>
-                                {isActive && (
-                                    <LinearGradient
-                                        colors={['#e8341a', '#f4a100', '#1a73e8']}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                        style={detailsStyles.underline}
-                                    />
-                                )}
                             </TouchableOpacity>
                         );
                     })}
                 </View>
 
-                <View style={{ height: TAB_CONTENT_HEIGHT }}>
+                {/* ✅ onLayout → containerWidth (as ResultDetails does): pages
+                    were window-wide, so with side padding (landscape notch) or
+                    any inset each page was wider than the viewport and paging
+                    drifted. */}
+                <View
+                    style={{ height: TAB_CONTENT_HEIGHT }}
+                    onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+                >
                     <FlatList
                         ref={flatListRef}
                         data={TABS}

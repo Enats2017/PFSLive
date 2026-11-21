@@ -11,11 +11,11 @@ export interface MembershipInfo {
     total_used: number | null;
     memberships_count: number;
     membership_name: string;
-     membership_names: string[];
     /** 1 when an event-bound activation is ALL the cover they have. */
     event_only?: number;
     /** The EUR 5.95 single activations - each valid at ONE event only. */
     event_activations?: EventActivation[];
+    membership_names?: string[];
 }
 
 /**
@@ -59,10 +59,15 @@ export interface AthleteProfile {
   profile_picture: string;
   is_own_profile: number;
   password_protected: 0 | 1;
+  city: string;
+  country: string;
   followers_count: number;
   following_count: number;
-  membership_info: MembershipInfo | null;
+  /** Races this athlete appears in — the two tab totals combined. */
+  races_count: number;
+   membership_info: MembershipInfo | null;
    in_process_payment: number | null;
+   device_id: string | null;
    /** Upcoming races where tracking is included with the event. [] when none. */
    free_events?: FreeEvent[];
 }
@@ -77,6 +82,10 @@ export interface AthleteEvent {
   name: string;
   race_date_formatted: string;
   race_time: string;
+  // 09_YourEvents.png prefixes the meta line with the distance. The API has
+  // always sent it (participant_profile_api.php formatEvents) — it was simply
+  // never declared here, so the card could not read it.
+  race_distance?: string;
   event_source: string;
   race_status?: "not_started" | "in_progress" | "finished";
    can_delete?: number;
@@ -249,11 +258,15 @@ export const eventService = {
               email:"",
               is_own_profile: 0,
               password_protected: 0,
-              followers_count: 0, // ← add
+              city: "",
+              country: "",
+              followers_count: 0,
               following_count: 0,
+              races_count: 0,
               membership_info: null,
               in_process_payment: 0,
-              free_events: []
+                device_id: null,
+                free_events: []
             },
             tabs: {
               past: eventsData.past || [],

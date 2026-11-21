@@ -1,16 +1,18 @@
 import React, { memo, useCallback } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SvgUri } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { resultListStyle } from '../../styles/ResultList.styles';
+import { isNarrowWidth } from '../../utils/screenFit';
+import { formatWave } from '../../utils/waveLabel';
 import { RaceResult } from '../../services/resultList';
 import { LiveTrackingBar } from '../../components/LiveTrackingBar';
-import { colors } from '../../styles/common.styles';
+import { palette, categoryColors } from '../../styles/common.styles';
 import { FilterOption } from '../../components/FilterDropdown';
 import { analyticsService } from '../../services/analyticsService';
 import { ANALYTICS_BUTTONS, ANALYTICS_PARAMS } from '../../constants/analyticsScreens';
-import { formatWave } from '../../utils/waveLabel';
 
 interface ResultCardProps {
     item: RaceResult;
@@ -46,6 +48,8 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 }) => {
     const navigation = useNavigation<any>();
     const { t } = useTranslation(['allrace', 'common']);
+    // compact spacing below 360pt — re-renders on rotation / Display Zoom despite memo
+    const narrow = isNarrowWidth(useWindowDimensions().width);
 
     const hasUtmbIndex = showUtmbIndex &&
         item.utmb_index &&
@@ -104,111 +108,137 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
 
 
     return (
-        <View style={[resultListStyle.cardWithLeftBorder, isWomen && { borderLeftColor: colors.pinkcolor }]}>
+        // The whole card opens the athlete — see ResultCardLive (client 2026-10-22).
+        <TouchableOpacity
+            style={[resultListStyle.cardWithLeftBorder, narrow && resultListStyle.cardNarrow, isWomen && { backgroundColor: categoryColors.womenSurface }]}
+            onPress={handleCardPress}
+            activeOpacity={0.7}
+        >
 
-            <TouchableOpacity
-                style={[
-                    resultListStyle.cornerBadge,
-                    isWomen
-                        ? { backgroundColor: colors.pinkcolor }
-                        : hasFinished
-                            ? { backgroundColor: "#028A77" }
-                            : null,
-                ]}
-                onPress={handleStarPress}
-                activeOpacity={0.8}
-                disabled={isLoading}
-            >
-                <Text style={[isFollowed ? resultListStyle.cornerStar : resultListStyle.cornerStarUnfilled]}>
-                    ★
-                </Text>
-                <View style={resultListStyle.cornerBadgeRight}>
-                    <Text style={resultListStyle.cornerNum}>
-                         {displayPosition || "-"}
+            {/* Row head — rank circle, identity, follow star. */}
+            <View style={resultListStyle.rowHead}>
+                <View style={[resultListStyle.rankCircle, hasFinished && resultListStyle.rankCircleFinished]}>
+                    {/* 26_ResultList.png puts ONE number in the circle. The gender
+                        rank used to be stacked underneath it inside 34px — two
+                        ranks in one circle, and only on women's rows, so rows
+                        disagreed with each other. It now sits in the ranking
+                        column below, where it has a label. */}
+                    <Text style={[resultListStyle.rankText, hasFinished && resultListStyle.rankTextFinished]}>
+                        {displayPosition || '-'}
                     </Text>
-                    {genderRank && (
-                        <Text style={resultListStyle.cornerGenderRank}>{genderRank}</Text>
-                    )}
                 </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={handleCardPress} activeOpacity={0.7}>
                 <View style={resultListStyle.cardTop}>
-                    <View style={resultListStyle.cardTopLeft}>
-                        <Text style={resultListStyle.cardName}>{item.name}</Text>
-                    </View>
-                    <View style={{ width: 100 }} />
-                </View>
-
-                <Text style={resultListStyle.bibText}>
-                    {t('allrace:race.bibNumber')} {item.bib}
-                </Text>
-
-                <View style={resultListStyle.metaBlock}>
-                    {/* Country is rendered beside the flag in the column below,
-                        so listing it here printed it twice on every row. Club
-                        only now — and the whole line is dropped for an entrant
-                        with no club, rather than left as a blank row. */}
-                    {!!item.club && (
-                        <Text style={resultListStyle.teamText} numberOfLines={1}>
-                            {item.club}
-                        </Text>
-                    )}
-                    {/* Duo teams: `item.name` above is the TEAM name; these are the two
-                        members. Empty on every solo entrant, so nothing renders for them. */}
-                    {item.name_participant_1 ? (
-                        <Text style={resultListStyle.teamText} numberOfLines={2}>
-                            {[item.name_participant_1, item.name_participant_2].filter(Boolean).join(' & ')}
-                        </Text>
-                    ) : null}
+                    {/* 2 lines (was 1): a long name / team name in the ~160-200pt
+                        column at 320pt was cut to "…". */}
+                    <Text style={resultListStyle.cardName} numberOfLines={2}>{item.name}</Text>
+                    {/* Two lines, matching the live and before-race cards. Four
+                        values on one clamped line needed ~252pt in a 234pt
+                        column, so the club and country were cut off on every row
+                        that had a club. */}
+                    <Text style={resultListStyle.bibText} numberOfLines={2}>
+                        {`${t('allrace:race.bibNumber')} ${item.bib}`}
+                    </Text>
+                    {/* Wave gets its own row. Joined onto the bib line it ran to
+                        41-54 characters ("Bib number 201 - Start Wave 1: Start @ 9h",
+                        longer in fr) and numberOfLines={1} truncated it mid-word in
+                        this column. Empty on the many events with no wave column. */}
                     {item.wave ? (
-                        <Text style={resultListStyle.waveText} numberOfLines={1}>
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
                             {formatWave(t('allrace:race.wavelabel'), item.wave)}
                         </Text>
                     ) : null}
+                    {/* Flag + club + country on the identity line, matching the live
+                        and before-race cards. The 28x20 flag that used to sit in the
+                        stats row is gone - it repeated the country shown here - so
+                        this is now the card's ONLY flag and must render even when
+                        club and country are both empty. */}
+                    {(!!item.nation_flag || !!item.club || !!item.nation) && (
+                        <View style={resultListStyle.metaLineTight}>
+                            {!!item.nation_flag && (
+                                <SvgUri uri={item.nation_flag} width={18} height={13} />
+                            )}
+                            {/* 2 lines (was 1): a long club name pushed the country off */}
+                            <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
+                                {[item.club, item.nation].filter(Boolean).join(' \u00b7 ')}
+                            </Text>
+                        </View>
+                    )}
+                    {/* Duo teams: `item.name` above is the TEAM name; these are
+                        the two members. Empty on every solo entrant, so nothing
+                        renders for them. Sits in rowHead with the other identity
+                        lines, where the redesign moved bib/wave/club. */}
+                    {item.name_participant_1 ? (
+                        <Text style={resultListStyle.bibTextTight} numberOfLines={2}>
+                            {[item.name_participant_1, item.name_participant_2].filter(Boolean).join(' & ')}
+                        </Text>
+                    ) : null}
                 </View>
+                <TouchableOpacity
+                    style={resultListStyle.starButton}
+                    onPress={handleStarPress}
+                    disabled={isLoading}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={isFollowed ? 'Unfollow athlete' : 'Follow athlete'}
+                >
+                    <Ionicons
+                        name={isFollowed ? 'star' : 'star-outline'}
+                        size={26}
+                        color={isFollowed ? palette.lime : palette.placeholder}
+                    />
+                </TouchableOpacity>
+                <Ionicons name="chevron-forward" size={18} color={palette.placeholder} style={resultListStyle.cardChevron} />
+            </View>
+
+            <View>
 
                 {isLive && (
-                    <View style={{ marginTop: 6 }}>
+                    <View style={{ marginTop: 8 }}>
                         <LiveTrackingBar />
                     </View>
                 )}
 
-                <View style={resultListStyle.statsRow}>
+                <View style={[
+                    resultListStyle.statsRow,
+                    narrow && resultListStyle.statsRowNarrow,
+                    isWomen && { borderTopColor: categoryColors.womenDivider },
+                ]}>
                     <View style={resultListStyle.statCol}>
-                        <Text style={resultListStyle.statLabel}>{t('allrace:race.raceTime')}</Text>
-                        <Text style={resultListStyle.statVal}>{item.time || "-"}</Text>
+                        <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>{t('allrace:race.raceTime')}</Text>
+                        <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{item.time || "-"}</Text>
                     </View>
 
                     {fromLive === 0 ? (
                         <>
                             <View style={[resultListStyle.statCol, resultListStyle.statColMid]}>
-                                <Text style={resultListStyle.statLabel}>{t('allrace:race.diffFirst')}</Text>
-                                <Text style={resultListStyle.statVal}> {item.position === 'DNF' ? '-' : displayDiff}</Text>
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>{t('allrace:race.diffFirst')}</Text>
+                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{item.position === 'DNF' ? '-' : displayDiff}</Text>
                             </View>
                             <View style={resultListStyle.statCol}>
-                                <Text style={resultListStyle.statLabel}>
-                                    {t('allrace:race.ranking')}{'\n'}{displayRankingLabel}
+                                {/* One label, wrapped naturally — the hard \n made this
+                                    column two lines tall while its neighbours were one,
+                                    so its value sat lower than theirs.
+                                    3 lines (was 2): "CLASSEMENT MASTER 1 HOMMES" needs
+                                    ~194pt in a ~85-98pt column; statCol's space-between
+                                    keeps the value on its neighbours' baseline. */}
+                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1} numberOfLines={3}>
+                                    {[t('allrace:race.ranking'), displayRankingLabel]
+                                        .filter(Boolean).join(' ')}
                                 </Text>
-                                <Text style={resultListStyle.statVal}>
-                                    <Text style={resultListStyle.statVal}>
-                                       {displayAgeGroupRank}
-                                    </Text>
+                                {/* The women's gender rank used to be stacked inside the
+                                    rank circle. It belongs here, where it has a label. */}
+                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+                                    {[displayAgeGroupRank, genderRank].filter(Boolean).join(' · ')}
                                 </Text>
                             </View>
                         </>
                     ) : (
                         <>
-                            <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
-                                <View style={resultListStyle.flagRow}>
-                                    {item.nation_flag && (
-                                        <SvgUri width={28} height={20} uri={item.nation_flag} />
-                                    )}
-                                    <Text style={resultListStyle.statVal} numberOfLines={2}>
-                                        {item.nation || '—'}
-                                    </Text>
-                                </View>
-                            </View>
+                            {/* The flag + country column that stood here repeated the
+                                country already shown on the identity line above, so it
+                                is gone. RACE TIME still holds this row open, so unlike
+                                the upcoming card the row needs no gating. */}
                             {showUtmbIndex && (
                                 <View style={[resultListStyle.statCol, resultListStyle.statFlagMid]}>
                                     {hasUtmbIndex ? (
@@ -220,7 +250,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                                                         {t('allrace:race.utmbIndex')}
                                                     </Text>
                                                 </View>
-                                                <Text style={resultListStyle.statVal}>{item.utmb_index}</Text>
+                                                <Text style={resultListStyle.statVal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{item.utmb_index}</Text>
                                             </View>
                                         </View>
                                     ) : (
@@ -232,7 +262,7 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                                                         {t('allrace:race.utmbIndex')}
                                                     </Text>
                                                 </View>
-                                                <Text style={resultListStyle.statLabel}>-</Text>
+                                                <Text style={resultListStyle.statLabel} maxFontSizeMultiplier={1}>-</Text>
                                             </View>
                                         </View>
                                     )}
@@ -241,12 +271,14 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
                         </>
                     )}
                 </View>
-            </TouchableOpacity>
-        </View>
+            </View>
+        </TouchableOpacity>
     );
 }, (prev, next) =>
     prev.fromLive === next.fromLive &&
     prev.item.bib === next.item.bib &&
+    // Without this the card never repaints when the Women filter is toggled.
+    prev.isWomen === next.isWomen &&
     prev.isFollowed === next.isFollowed &&
     prev.isLoading === next.isLoading &&
     prev.item.position === next.item.position &&
@@ -254,7 +286,23 @@ const ResultCard: React.FC<ResultCardProps> = memo(({
     prev.item.diff === next.item.diff &&
     prev.item.finish_rank_agegroup === next.item.finish_rank_agegroup &&
     prev.item.live_tracking_activated === next.item.live_tracking_activated &&
-    prev.selectedCheckpoint?.value === next.selectedCheckpoint?.value
+    prev.selectedCheckpoint?.value === next.selectedCheckpoint?.value &&
+    // Everything else the card prints (cheap === checks). Without these a
+    // refresh that changed only a name / club / category / checkpoint list
+    // left stale text on screen.
+    prev.item.name === next.item.name &&
+    prev.item.club === next.item.club &&
+    prev.item.nation === next.item.nation &&
+    prev.item.nation_flag === next.item.nation_flag &&
+    prev.item.wave === next.item.wave &&
+    prev.item.category_name === next.item.category_name &&
+    prev.item.finish_rank_gender === next.item.finish_rank_gender &&
+    prev.item.status === next.item.status &&
+    prev.item.utmb_index === next.item.utmb_index &&
+    prev.item.name_participant_1 === next.item.name_participant_1 &&
+    prev.item.name_participant_2 === next.item.name_participant_2 &&
+    prev.item.checkpoints === next.item.checkpoints &&
+    prev.showUtmbIndex === next.showUtmbIndex
 );
 
 ResultCard.displayName = 'ResultCard';

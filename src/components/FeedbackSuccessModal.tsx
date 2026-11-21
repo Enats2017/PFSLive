@@ -7,10 +7,12 @@ import {
     TouchableOpacity,
     Animated,
     Easing,
-    Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, commonStyles, spacing } from '../styles/common.styles';
+import { commonStyles, spacing, space, palette, fonts, shadows, withAlpha } from '../styles/common.styles';
+import { RING_TINT, useCompactDialog } from './ui';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
 
 interface FeedbackSuccessModalProps {
     visible: boolean;
@@ -20,9 +22,6 @@ interface FeedbackSuccessModalProps {
     onClose: () => void;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = Math.min(SCREEN_WIDTH - 48, 340);
-
 const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
     visible,
     title = 'Thanks, we got it',
@@ -30,6 +29,9 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
     buttonLabel = 'Back to profile',
     onClose,
 }) => {
+    // ✅ Compact in landscape (device test 2026-10-23): no icon, tighter card
+    // so the button is on screen without scrolling. Portrait: unchanged.
+    const cd = useCompactDialog();
 
     const cardScale = useRef(new Animated.Value(0.85)).current;
     const cardOpacity = useRef(new Animated.Value(0)).current;
@@ -92,19 +94,26 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
     }, [visible]);
 
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-            <View style={styles.backdrop}>
-                <Animated.View
-                    style={[
-                        styles.card,
-                        { opacity: cardOpacity, transform: [{ scale: cardScale }] },
-                    ]}
-                >
-                    <View style={styles.iconWrapper}>
+        <Modal supportedOrientations={MODAL_ORIENTATIONS} visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+            <View style={[styles.backdrop, cd.s.wrapper]}>
+                {/* ModalScroll: keeps the button reachable when the card is taller
+                    than a landscape screen (audit 2026-10-22) */}
+                <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.compact ? 16 : 48}>
+                    <Animated.View
+                        style={[
+                            styles.card,
+                            cd.s.card,
+                            // paddingTop/Bottom beat cd.s.card's paddingVertical,
+                            // so compact sets them itself (device test 2026-10-23)
+                            cd.compact && { paddingTop: space.lg, paddingBottom: space.lg },
+                            { opacity: cardOpacity, transform: [{ scale: cardScale }] },
+                        ]}
+                    >
                         <Animated.View
                             style={[
                                 styles.iconCircle,
                                 { transform: [{ scale: iconScale }] },
+                                cd.s.hide,
                             ]}
                         >
                             <Animated.View
@@ -113,22 +122,22 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
                                     transform: [{ scale: checkScale }],
                                 }}
                             >
-                                <Ionicons name="checkmark" size={38} color={colors.primaryDark} />
+                                <Ionicons name="checkmark" size={56} color={palette.ink} />
                             </Animated.View>
                         </Animated.View>
-                    </View>
 
-                    <Text style={[commonStyles.title, { textAlign: 'center' }]}>{title}</Text>
-                    <Text style={styles.subtitle}>{subtitle}</Text>
+                        <Text style={[commonStyles.title, { textAlign: 'center' }]}>{title}</Text>
+                        <Text style={[styles.subtitle, cd.s.message]}>{subtitle}</Text>
 
-                    <TouchableOpacity
-                        style={[commonStyles.primaryButton, { minWidth: '100%' }]}
-                        activeOpacity={0.9}
-                        onPress={onClose}
-                    >
-                        <Text style={commonStyles.primaryButtonText}>{buttonLabel}</Text>
-                    </TouchableOpacity>
-                </Animated.View>
+                        <TouchableOpacity
+                            style={[commonStyles.primaryButton, { minWidth: '100%' }]}
+                            activeOpacity={0.9}
+                            onPress={onClose}
+                        >
+                            <Text style={commonStyles.primaryButtonText}>{buttonLabel}</Text>
+                        </TouchableOpacity>
+                    </Animated.View>
+                </ModalScroll>
             </View>
         </Modal>
     );
@@ -137,70 +146,70 @@ const FeedbackSuccessModal: React.FC<FeedbackSuccessModalProps> = ({
 const styles = StyleSheet.create({
     backdrop: {
         flex: 1,
-        backgroundColor: 'rgba(15, 23, 42, 0.55)',
+        backgroundColor: withAlpha(palette.ink, 0.6),
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 24,
+        paddingVertical: 24, // scrolled card keeps a gap top/bottom (audit 2026-10-22)
     },
     card: {
-        width: CARD_WIDTH,
-        backgroundColor: colors.white,
-        borderRadius: 28,
+    ...shadows.overlay,
+
+        // 400 is the shared modal cap; the backdrop's paddingHorizontal keeps the
+        // gutter. Was Math.min(Dimensions width - 48, 400) computed ONCE at module
+        // load — wrong after a rotation (portrait width in landscape and vice
+        // versa) (audit 2026-10-22).
+        width: '100%',
+        maxWidth: 400,
+        backgroundColor: palette.surface,
+        borderRadius: 16,
         paddingTop: 36,
         paddingBottom: 24,
-        paddingHorizontal: 28,
+        paddingHorizontal: 24,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.18,
-        shadowRadius: 24,
-        elevation: 12,
-    },
-    iconWrapper: {
-        width: 84,
-        height: 84,
+  },
+    // 90/45 and no shadow, same as every other modal halo. It was a shadowed 68
+    // inside a 90 iconWrapper, so it read a size smaller than the rest. The
+    // wrapper is gone rather than kept at 90: it only supplied the marginBottom,
+    // and the circle springs past scale 1 on open, so an identically sized
+    // parent box is something to clip against for nothing.
+    iconCircle: {
+        width: 90,
+        height: 90,
+        borderRadius: 45,
+        backgroundColor: RING_TINT,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 20,
     },
-    iconCircle: {
-        width: 68,
-        height: 68,
-        borderRadius: 34,
-        backgroundColor: colors.themeiColor,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.35,
-        shadowRadius: 7,
-        elevation: 6,
-    },
     title: {
-        fontSize: 19,
-        fontWeight: '700',
-        color: colors.gray900,
+        fontFamily: fonts.display,
+        fontSize: 20,
+        color: palette.ink,
         marginBottom: 8,
         textAlign: 'center',
     },
     subtitle: {
+        fontFamily: fonts.body,
         fontSize: 14,
-        lineHeight: 20,
-        color: colors.gray400,
+        lineHeight: 21,
+        color: palette.textBody,
         textAlign: 'center',
         marginBottom: 24,
     },
     button: {
         width: '100%',
-        height: 52,
+        minHeight: 48,
+        paddingVertical: 8,
         borderRadius: 14,
-        backgroundColor: colors.primary,
+        backgroundColor: palette.navy,
         alignItems: 'center',
         justifyContent: 'center',
     },
     buttonText: {
-        color: colors.white,
+        color: palette.surface,
+        fontFamily: fonts.display,
         fontSize: 15,
-        fontWeight: '700',
         letterSpacing: 0.2,
     },
 });

@@ -1,17 +1,19 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, commonStyles } from '../../styles/common.styles';
+import { commonStyles, palette, fonts, space } from '../../styles/common.styles';
 import { resultInfoStyles } from '../../styles/resultDetails.styles';
-import { RunnerInfo } from '../../services/resultDetailsService';
+import { RunnerInfo, RaceInfo } from '../../services/resultDetailsService';
 import { resultListStyle } from '../../styles/ResultList.styles';
 import { SvgUri } from 'react-native-svg';
 import { getImageUrl } from '../../constants/config';
+import { stripWavePrefix } from '../../utils/waveLabel';
 
 interface RunnerInfoProps {
     runnerInfo?: RunnerInfo;
+    raceInfo?: RaceInfo;
     showUtmbIndex?: boolean;
     liveTrackingActivated?: number;
     isFollowing?: boolean;
@@ -25,7 +27,7 @@ const getInitials = (name?: string): string => {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, liveTrackingActivated,isFollowing,onMapPress}) => {
+const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, raceInfo, showUtmbIndex, liveTrackingActivated,isFollowing,onMapPress}) => {
     const { t } = useTranslation('resultdetails');
     const initials = getInitials(runnerInfo?.name);
 
@@ -45,10 +47,17 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
         const showMapButton = liveTrackingActivated === 1 && !!isFollowing;
 
     return (
-        <View style={commonStyles.container}>
-            <View style={[resultInfoStyles.card, { marginTop: 10 }]}>
+        // Every other tab lays its cards out in a padded scroll view
+        // (`scrollContent`). This one used a bare container with an 8pt inline
+        // margin, so the About card ran to the screen edges while the Results
+        // and Checkpoints cards beside it were inset 20.
+        <ScrollView
+            contentContainerStyle={resultInfoStyles.scrollContent}
+            showsVerticalScrollIndicator={false}
+        >
+            <View style={resultInfoStyles.card}>
 
-                <View>
+                <View style={resultInfoStyles.identityBlock}>
                     {runnerInfo?.profile_picture ? (
                         <Image
                             source={{ uri: getImageUrl(runnerInfo?.profile_picture) || undefined }}
@@ -57,29 +66,28 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                         />
                     ) : (
                         <View style={resultInfoStyles.initials}>
-                            <Text style={{
-                                fontSize: 30,
-                                fontWeight: '600',
-                                color: colors.participantColor,
-                                letterSpacing: 1,
-                            }}>
+                            <Text style={resultInfoStyles.initialsText}>
                                 {initials}
                             </Text>
                         </View>
                     )}
-                </View>
 
-                <View style={resultInfoStyles.bibCard}>
-                    <Text style={commonStyles.title}>{runnerInfo?.name ?? '—'}</Text>
-                    {/* Sibling of the flag row, not a child — that row is
-                        flexDirection:'row' and would put the members on the
+                    <Text style={resultInfoStyles.identityName} numberOfLines={2}>
+                        {runnerInfo?.name ?? '—'}
+                    </Text>
+
+                    {/* Duo teams: identityName above is the TEAM name, these are
+                        the two members. Unlabelled, matching ParticipantCard on
+                        this branch. Above identityRow, not inside it - that row
+                        is flexDirection:'row' and would put the names on the
                         same line as the flag and country. */}
                     {teamMembers ? (
-                        <Text style={[commonStyles.subtitle, { marginTop: 4, textAlign: 'center' }]} numberOfLines={2}>
-                            {t('runnerInfo.teamMembers')}: {teamMembers}
+                        <Text style={resultInfoStyles.identityTeam} numberOfLines={2}>
+                            {teamMembers}
                         </Text>
                     ) : null}
-                    <View style={[resultListStyle.flagRow, { marginTop: 10, marginBottom: 8 }]}>
+
+                    <View style={resultInfoStyles.identityRow}>
                         {runnerInfo?.nation_flag ? (
                             <SvgUri
                                 width={28}
@@ -89,7 +97,10 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                         ) : (
                             <Text>🏳️</Text>
                         )}
-                        <Text style={resultListStyle.statVal} numberOfLines={1}>
+                        <Text
+                            style={[resultListStyle.statVal, { flexShrink: 1, maxWidth: '100%' }]}
+                            numberOfLines={1}
+                        >
                             {runnerInfo?.nation || '—'}
                         </Text>
                     </View>
@@ -97,8 +108,8 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
 
                 {/* <View style={resultInfoStyles.row}>
                     <View style={resultInfoStyles.col}>
-                        <Text style={commonStyles.subtitle}>{t('runnerInfo.club')}</Text>
-                        <Text style={commonStyles.subtitle}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('runnerInfo.club')}</Text>
+                        <Text style={resultInfoStyles.rowLabel}>
                             {runnerInfo?.club || '—'}
                         </Text>
                     </View>
@@ -106,18 +117,22 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                     <View style={resultInfoStyles.colDivider} />
 
                     <View style={resultInfoStyles.col}>
-                        <Text style={commonStyles.subtitle}>{t('runnerInfo.category')}</Text>
-                        <Text style={commonStyles.title}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('runnerInfo.category')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>
                             {runnerInfo?.category_name || '—'}
                         </Text>
                     </View>
                 </View> */}
 
-                <View style={resultInfoStyles.row}>
+                <View style={resultInfoStyles.statDividerRow}>
                     {showUtmbIndex && hasUtmbIndex && (
                         <>
-                            <View style={resultInfoStyles.col}>
-                                <View style={resultInfoStyles.utmbIndexBadge}>
+                            {/* paddingHorizontal space.xs (was space.md, from `col`): the
+                                UTMB + INDEX badge is ~108pt and the column left it
+                                ~99pt at 320pt. The badge may also wrap its tag under
+                                "UTMB" with larger iOS text instead of overflowing. */}
+                            <View style={[resultInfoStyles.col, { paddingHorizontal: space.xs }]}>
+                                <View style={[resultInfoStyles.utmbIndexBadge, { flexWrap: 'wrap', justifyContent: 'center', maxWidth: '100%' }]}>
                                     <Text style={resultInfoStyles.utmbText}>
                                         UTMB
                                     </Text>
@@ -129,7 +144,7 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                                     </View>
                                 </View>
 
-                                <Text style={commonStyles.title}>
+                                <Text style={resultInfoStyles.rowValue}>
                                     {runnerInfo.utmb_index}
                                 </Text>
                             </View>
@@ -140,40 +155,103 @@ const RunnerInfoTab: React.FC<RunnerInfoProps> = ({ runnerInfo, showUtmbIndex, l
                     <View
                         style={[
                             resultInfoStyles.col,
-                            { gap: 5 },
+                            // same inset as the UTMB column beside it, so both stay equal
+                            { gap: space.sm, paddingHorizontal: space.xs },
                             !showUtmbIndex && resultInfoStyles.singleColumn,
                         ]}
                     >
-                        <Text style={commonStyles.subtitle}>
+                        <Text style={resultInfoStyles.rowLabel}>
                             {t('runnerInfo.category')}
                         </Text>
 
-                        <Text style={commonStyles.title}>
+                        <Text style={resultInfoStyles.rowValue}>
                             {runnerInfo?.category_name || '—'}
                         </Text>
-
-                        <Ionicons
-                            name="card-outline"
-                            size={28}
-                            color="#333"
-                        />
                     </View>
                 </View>
+            </View>
 
+            {!!raceInfo && (
+                <View style={resultInfoStyles.card}>
+                    <Text style={resultInfoStyles.sectionLabel}>{t('runnerInfo.thisRace')}</Text>
+
+                    <View style={resultInfoStyles.bibCard}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.raceTime')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>{raceInfo.time || '—'}</Text>
+                    </View>
+
+                    <View style={resultInfoStyles.bibCard}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('raceInfo.scratchPosition')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>
+                            {raceInfo.position
+                                ? (raceInfo.position_total
+                                    ? `${raceInfo.position} / ${raceInfo.position_total}`
+                                    : raceInfo.position)
+                                : '—'}
+                        </Text>
+                    </View>
+
+                    {!!raceInfo.wave && (
+                        <View style={resultInfoStyles.bibCard}>
+                            <Text style={[resultInfoStyles.rowLabel, resultInfoStyles.rowLabelFixed]}>{t('raceInfo.wavelabel')}</Text>
+                            {/* as RaceInfoTab: value only, wraps right-aligned (a long
+                                wave pushed past the card edge at 320pt) */}
+                            <Text style={[resultInfoStyles.rowValue, resultInfoStyles.rowValueEnd]}>{stripWavePrefix(raceInfo.wave)}</Text>
+                        </View>
+                    )}
+                </View>
+            )}
+
+            {/* 28_RunnerInfo.png closes with a career card. It only exists for a
+                runner linked to a Livio account - an unlinked bib has no history
+                to count, and the API sends 0. Podiums stays a dash: finishing
+                positions live in the partner results feed, not in our tables. */}
+            {!!runnerInfo?.races && (
+                <View style={resultInfoStyles.card}>
+                    <Text style={resultInfoStyles.sectionLabel}>{t('runnerInfo.career')}</Text>
+
+                    <View style={resultInfoStyles.bibCard}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('runnerInfo.races')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>{runnerInfo.races}</Text>
+                    </View>
+
+                    {!!runnerInfo.career_distance && (
+                        <View style={resultInfoStyles.bibCard}>
+                            <Text style={resultInfoStyles.rowLabel}>
+                                {t('runnerInfo.totalDistance')}
+                            </Text>
+                            <Text style={resultInfoStyles.rowValue}>
+                                {runnerInfo.career_distance} {t('units.km')}
+                            </Text>
+                        </View>
+                    )}
+
+                    <View style={resultInfoStyles.bibCard}>
+                        <Text style={resultInfoStyles.rowLabel}>{t('runnerInfo.podiums')}</Text>
+                        <Text style={resultInfoStyles.rowValue}>
+                            {typeof runnerInfo.podiums === 'number' ? runnerInfo.podiums : '—'}
+                        </Text>
+                    </View>
+                </View>
+            )}
+
+            <View>
                 {showMapButton && (
                     <TouchableOpacity
-                        style={resultInfoStyles.mapButton}
+                        style={[commonStyles.primaryButton,{gap: space.md, justifyContent: 'center', alignItems: 'center'}]}
                         onPress={onMapPress}
                         activeOpacity={0.8}
                     >
-                        <Ionicons name="map-outline" size={18} color={colors.white} />
-                        <Text style={resultInfoStyles.mapButtonText}>
+                        {/* surface, not fill — fill is a background token and
+                            read a shade off against primaryButtonText's white. */}
+                        <Ionicons name="map-outline" size={18} color={palette.surface} />
+                        <Text style={commonStyles.primaryButtonText}>
                             {t('runnerInfo.viewOnMap')}
                         </Text>
                     </TouchableOpacity>
                 )}
             </View>
-        </View>
+        </ScrollView>
     );
 };
 

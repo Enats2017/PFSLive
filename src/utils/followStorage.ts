@@ -2,6 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, getApiEndpoint, getDeviceId } from '../constants/config';
 import { apiClient } from '../services/api';
 import { useFollowStore } from '../store/useFollowStore';
+import { followerApi } from '../services/registerFollowerServices';
+import { AppState } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
+import { forgetSentPushToken, notificationPermissionService } from '../services/notificationPermissionService';
 
 const STORAGE_KEY = 'followed_users';
 // Set when an upload fails, cleared when one succeeds. Its only job is to say
@@ -10,6 +14,160 @@ const SYNC_PENDING_KEY = '@PFSLive:followSyncPending';
 const STORAGE_KEY_BIBS = 'followed_bibs_by_product';
 const FOLLOWER_ID_KEY = 'FOLLOWER_ID';
 const DEVICE_ID_KEY = 'device_id';
+// Set when the phone learned its follower_id but has not MERGED with the
+// server row yet (the id can be learned from the fan-email / language screens,
+// or the merge's download can fail). Every sync/restore merges first while set.
+const ADOPT_PENDING_KEY = '@PFSLive:followAdoptPending';
+// Unfollows made before that merge — the union would otherwise bring them back.
+const REMOVED_BEFORE_ADOPT_KEY = '@PFSLive:followRemovedBeforeAdopt';
+
+// Bumped on every local follow/unfollow. A server download that STARTED before
+// a local change must not overwrite it when it lands (see syncFollowDataFromAPI).
+let followWriteSeq = 0;
+export function getFollowWriteSeq(): number { return followWriteSeq; }
+// The newest local change that has REACHED the server. While it lags behind
+// followWriteSeq an upload is still in flight (or failed): the phone is ahead
+// of the server, so a download must push instead of overwriting. (The pending
+// flag alone only covered FAILED uploads — a slow one in flight let a download
+// wipe the follow on the phone, and the next follow then removed it upstream.)
+let lastPushedSeq = 0;
+
+// ✅ Upload number sent as client_seq. Always rising — also across app
+// restarts (persisted; Date.now() as the floor survives a reinstall) — so the
+// server can ignore an older upload that reaches it AFTER a newer one (a
+// timed-out upload the server still commits late). Without it the older list
+// silently undid the newer follow/unfollow and the phone never knew.
+const FOLLOW_SEQ_KEY = '@PFSLive:followSeqIssued';
+let seqIssued = 0;
+let seqLoaded = false;
+// The stored number as read at loadStoredSeq — the phone's own last issued
+// upload BEFORE this session (0 = none). A first upload after an update (no
+// stored base yet) whose follow_conflict names it hit a row that holds the
+// phone's own last upload: those lists are the base (see uploadCurrent).
+let seqIssuedAtLoad = 0;
+
+// A usable upload number: a safe integer, not absurdly far in the future —
+// the server's own bound (update_follower_favourites_api: now + 1 year); a
+// looser app bound let the stale re-send chase a number the server ignores.
+// Anything else (corrupt storage, a hostile/buggy writer of the row) would make
+// `+ 1` a no-op above 2^53 and the stale/re-send below loop for good.
+function isSaneSeq(n: number): boolean {
+  return Number.isSafeInteger(n) && n > 0 && n < Date.now() + 365 * 864e5;
+}
+
+async function loadStoredSeq(): Promise<void> {
+  if (seqLoaded) return;
+  try {
+    const stored = Number(await AsyncStorage.getItem(FOLLOW_SEQ_KEY));
+    if (isSaneSeq(stored)) { seqIssuedAtLoad = stored; seqIssued = Math.max(seqIssued, stored); }
+  } catch { /* floor below */ }
+  seqLoaded = true;
+}
+
+async function nextClientSeq(): Promise<number> {
+  await loadStoredSeq();
+  seqIssued = Math.max(Date.now(), seqIssued + 1);
+  try { await AsyncStorage.setItem(FOLLOW_SEQ_KEY, String(seqIssued)); } catch { /* Date.now() still rises */ }
+  return seqIssued;
+}
+function phoneAheadOfServer(): boolean { return lastPushedSeq !== followWriteSeq; }
+
+/** The server said this device has no follower row — a real answer, unlike a
+ *  timeout / 5xx / 429, which must never be read as "nothing to merge". */
+function isFollowerNotFound(error: any): boolean {
+  return error?.code === 'follower_not_found';
+}
+
+type RemovedBeforeAdopt = { customers: number[]; bibs: Record<string, string[]> };
+
+async function readRemovedBeforeAdopt(): Promise<RemovedBeforeAdopt> {
+  try {
+    const raw = await AsyncStorage.getItem(REMOVED_BEFORE_ADOPT_KEY);
+    const v = raw ? JSON.parse(raw) : null;
+    return {
+      customers: Array.isArray(v?.customers) ? v.customers : [],
+      bibs: v?.bibs && typeof v.bibs === 'object' ? v.bibs : {},
+    };
+  } catch {
+    return { customers: [], bibs: {} };
+  }
+}
+
+// ✅ What the phone's lists are BASED ON, per follower row: the row's
+// follow_seq the phone last saw (a download it applied, a merge, or its own
+// ACCEPTED upload) plus the lists at that point. Sent as base_seq: if the row
+// moved on since (a follow made on the web — same device_id, same row), the
+// server refuses with follow_conflict instead of letting this full-list upload
+// erase it, and the phone merges (see mergeConflict). Unknown base = 0 + empty
+// lists, which makes the first conflict a plain union (like adoption).
+const FOLLOW_BASE_KEY = '@PFSLive:followBase';
+type FollowLists = { customers: number[]; bibs: Record<string, string[]> };
+type FollowBase = FollowLists & { id: number; seq: number };
+
+async function readBase(followerId: number): Promise<FollowBase> {
+  try {
+    const v = JSON.parse((await AsyncStorage.getItem(FOLLOW_BASE_KEY)) || 'null');
+    if (v && toValidId(v.id) === followerId && isSaneSeq(Number(v.seq))) {
+      return {
+        id: followerId, seq: Number(v.seq),
+        customers: Array.isArray(v.customers) ? v.customers : [],
+        bibs: v.bibs && typeof v.bibs === 'object' ? v.bibs : {},
+      };
+    }
+  } catch { /* unknown base */ }
+  return { id: followerId, seq: 0, customers: [], bibs: {} };
+}
+
+/** Never moves a row's base backwards (a late/stale answer must not undo a newer one). */
+async function writeBase(followerId: number, seq: number, lists: FollowLists): Promise<void> {
+  if (!isSaneSeq(seq)) return;
+  try {
+    const cur = await readBase(followerId);
+    if (seq < cur.seq) return;
+    await AsyncStorage.setItem(FOLLOW_BASE_KEY, JSON.stringify({ id: followerId, seq, ...lists }));
+  } catch { /* the next conflict merges as a union */ }
+}
+
+/** A download's follow_seq, or null when the server does not send one (old server). */
+function seqOf(v: any): number | null {
+  const n = Number(v);
+  return v !== undefined && v !== null && isSaneSeq(n) ? n : null;
+}
+
+function listsOf(customers: any, bibs: any): FollowLists {
+  const out: FollowLists = {
+    customers: (Array.isArray(customers) ? customers : []).map(toValidId).filter((id): id is number => id !== null),
+    bibs: {},
+  };
+  Object.entries(bibs && typeof bibs === 'object' ? bibs : {}).forEach(([pid, list]) => {
+    const p = toValidId(pid);
+    const l = (Array.isArray(list) ? list : []).map(toValidBib).filter((b): b is string => b !== null);
+    if (p !== null && l.length > 0) out.bibs[String(p)] = l;
+  });
+  return out;
+}
+
+/** Remember an unfollow while the phone has not merged with its server row. */
+async function rememberRemovalIfUnadopted(customerId: number | null, productId?: number, bib?: string): Promise<void> {
+  try {
+    const hasId = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) !== null;
+    const pending = (await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1';
+    if (hasId && !pending) return;
+    const removed = await readRemovedBeforeAdopt();
+    if (customerId !== null && !removed.customers.includes(customerId)) removed.customers.push(customerId);
+    if (productId !== undefined && bib !== undefined) {
+      const list = removed.bibs[String(productId)] ?? [];
+      if (!list.includes(bib)) list.push(bib);
+      removed.bibs[String(productId)] = list;
+    }
+    await AsyncStorage.setItem(REMOVED_BEFORE_ADOPT_KEY, JSON.stringify(removed));
+  } catch { /* best effort */ }
+}
+
+// Unfollowed in THIS session, noted synchronously (before any await) — a
+// merge landing in the same moment must not add them back while the stored
+// "remembered unfollows" write is still on its way. Re-follow removes them.
+const unfollowedNow = { customers: new Set<number>(), bibs: new Set<string>() };
 
 let cache: Set<number> | null = null;
 let bibCache: Map<number, Set<string>> | null = null;
@@ -26,36 +184,59 @@ function toValidBib(bib: any): string | null {
   return str.length > 0 ? str : null;
 }
 
-async function loadCache(): Promise<Set<number>> {
+// ✅ One read at a time: two follows right after launch (cold cache) each
+// read storage and built their OWN set — the second save then overwrote the
+// first and one follow was lost. Concurrent callers now share one load.
+let cacheLoading: Promise<Set<number>> | null = null;
+let bibCacheLoading: Promise<Map<number, Set<string>>> | null = null;
+
+function loadCache(): Promise<Set<number>> {
+  if (cache) return Promise.resolve(cache);
+  if (!cacheLoading) cacheLoading = readCacheFromStorage().finally(() => { cacheLoading = null; });
+  return cacheLoading;
+}
+
+function loadBibCache(): Promise<Map<number, Set<string>>> {
+  if (bibCache) return Promise.resolve(bibCache);
+  if (!bibCacheLoading) bibCacheLoading = readBibCacheFromStorage().finally(() => { bibCacheLoading = null; });
+  return bibCacheLoading;
+}
+
+// A read from storage is only kept if NOTHING newer arrived while it was in
+// flight: a download (syncFollowDataFromAPI) may have swapped in the server
+// list, or clearCache() may have dropped everything. Putting the older
+// storage contents back would make the next follow push them over the
+// server's list. cacheGen changes on every clearCache().
+let cacheGen = 0;
+
+async function readCacheFromStorage(): Promise<Set<number>> {
   if (cache) return cache;
+  const gen = cacheGen;
+  let loaded: Set<number>;
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     const parsed = raw ? (JSON.parse(raw) as any[]) : [];
-
-    cache = new Set(
+    loaded = new Set(
       parsed
         .map(toValidId)
         .filter((id): id is number => id !== null)
     );
   } catch (error) {
     console.warn('Failed to load customer cache:', error);
-    cache = new Set();
+    loaded = new Set();
   }
+  if (gen !== cacheGen) return loadCache();   // cleared meanwhile → read again
+  if (!cache) cache = loaded;                 // else a newer list won — keep it
   return cache;
 }
 
-async function loadBibCache(): Promise<Map<number, Set<string>>> {
+async function readBibCacheFromStorage(): Promise<Map<number, Set<string>>> {
   if (bibCache) return bibCache;
+  const gen = cacheGen;
+  const loaded = new Map<number, Set<string>>();
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY_BIBS);
-    if (!raw) {
-      bibCache = new Map();
-      return bibCache;
-    }
-
-    const parsed = JSON.parse(raw) as Record<string, string[]>;
-    bibCache = new Map();
-
+    const parsed = raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
     Object.entries(parsed).forEach(([productId, bibs]) => {
       const validProductId = toValidId(productId);
       if (validProductId !== null && Array.isArray(bibs)) {
@@ -65,14 +246,15 @@ async function loadBibCache(): Promise<Map<number, Set<string>>> {
             .filter((bib): bib is string => bib !== null)
         );
         if (bibSet.size > 0) {
-          bibCache!.set(validProductId, bibSet);
+          loaded.set(validProductId, bibSet);
         }
       }
     });
   } catch (error) {
     console.warn('Failed to load BIB cache:', error);
-    bibCache = new Map();
   }
+  if (gen !== cacheGen) return loadBibCache();
+  if (!bibCache) bibCache = loaded;
   return bibCache;
 }
 
@@ -100,17 +282,106 @@ async function persistBibCache(map: Map<number, Set<string>>): Promise<void> {
   }
 }
 
+// ✅ A follower_id for this device, with or without a push token.
+//
+// follower_id used to be minted ONLY by registering an Expo push token, so a
+// user who denied notifications never had one and every follow returned early
+// below — silently, with no pending flag, so it was never retried. Following
+// looked fine on the phone and never reached the server (no follower counts,
+// no restore after reinstall, nothing for the web). A token-less row fixes
+// that; registerFollower() later UPSERTs the token onto the SAME row.
+//
+// `adopted` = this call is the first time the phone learned its id. The caller
+// must then MERGE rather than let either side overwrite the other — see
+// adoptServerFollowData.
+let ensureInFlight: Promise<{ id: number | null; adopted: boolean }> | null = null;
+
+export async function ensureFollowerId(): Promise<{ id: number | null; adopted: boolean }> {
+  const existing = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY));
+  if (existing !== null) return { id: existing, adopted: false };
+
+  if (!ensureInFlight) {
+    ensureInFlight = (async () => {
+      try {
+        // Time-limited: a hung registration would hold every follow behind it.
+        const res = await withJobTimeout(followerApi.registerGuestFollower());
+        const id = toValidId(res?.follower_id);
+        if (id === null) return { id: null, adopted: false };
+        // Merge still owed — whoever called us (follow, fan email, language).
+        // Flag FIRST: an id without the flag would let the next sync push
+        // local over the server row (crash, or an unfollow in between).
+        await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
+        await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(id));
+        // A (re)registered row holds no push token: send it again (next
+        // foreground or launch) instead of skipping it as "already sent".
+        await AsyncStorage.removeItem('expo_push_token');
+        forgetSentPushToken();
+        // …and NOW if permission is granted: waiting for the next foreground
+        // left the new row without pushes for the rest of the session.
+        void notificationPermissionService.registerIfGranted();
+        if (API_CONFIG.DEBUG) console.log('🆔 Token-less follower registered:', id);
+        return { id, adopted: true };
+      } catch (error) {
+        if (API_CONFIG.DEBUG) console.warn('⚠️ Guest follower registration failed:', error);
+        return { id: null, adopted: false };
+      } finally {
+        ensureInFlight = null;
+      }
+    })();
+  }
+  return ensureInFlight;
+}
+
 // ✅ NEW: Sync follow data to API
-async function syncFollowDataToAPI(): Promise<void> {
+// `fromAdopt`: called by adoptServerFollowData itself. Never re-enter the merge
+// from there — if storage can't clear the pending flag, that would loop.
+async function syncFollowDataToAPI(fromAdopt = false, expectedId: string | null = null): Promise<void> {
+  // The id this upload was sent to (for the follower_not_found handling below).
+  let sentToId: number | null = null;
+  syncsRunning++;   // see whenFollowSyncIdle
   try {
     // Get follower_id and device_id from storage
-    const followerIdRaw = await AsyncStorage.getItem(FOLLOWER_ID_KEY);
+    // toValidId, not a truthy check: an old install may hold the string "null".
+    let followerIdRaw: string | null = null;
+    const storedId = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY));
     const deviceId = await getDeviceId();
+
+    if (storedId === null && deviceId) {
+      const { id } = await ensureFollowerId();
+      // On the flag, not on `adopted`: if another caller (fan email) won the
+      // ensure race we get adopted=false, but the merge is still owed.
+      if (id !== null && !fromAdopt && (await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1') {
+        // First id for this phone: the server row may already hold follows
+        // (same device_id used on the web). Merge both sides, then push.
+        await adoptServerFollowData();
+        return;
+      }
+      followerIdRaw = id !== null ? String(id) : null;
+    } else if (storedId !== null) {
+      if (!fromAdopt && (await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1') {
+        // Id learned elsewhere without the merge — do it before any push.
+        await adoptServerFollowData();
+        return;
+      }
+      followerIdRaw = String(storedId);
+      // A merge's push is only valid for the row it merged with. If the id
+      // changed in the meantime, that row's merge is owed instead.
+      if (fromAdopt && expectedId !== null && String(expectedId) !== String(storedId)) {
+        try {
+          await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
+          await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
+        } catch { /* silent */ }
+        return;
+      }
+    }
 
     if (!followerIdRaw || !deviceId) {
       if (API_CONFIG.DEBUG) {
         console.log('⏭️ Skipping API sync: follower_id or device_id not found');
       }
+      // Local is now ahead of the server — record it, so the next sync pushes
+      // instead of the next download overwriting the follow.
+      try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
       return;
     }
 
@@ -122,69 +393,33 @@ async function syncFollowDataToAPI(): Promise<void> {
       return;
     }
 
-    // Get current follow data
-    const customerSet = await loadCache();
-    const bibMap = await loadBibCache();
-
-    // Build customer_app_id_string
-    const customer_app_id_string = [...customerSet].join(',');
-
-    // Build bib_number_string object
-    const bib_number_string: Record<string, string> = {};
-    bibMap.forEach((bibSet, productId) => {
-      if (bibSet.size > 0) {
-        bib_number_string[productId] = [...bibSet].join(',');
-      }
-    });
-
-    const requestBody = {
-      follower_id: followerId,
-      device_id: deviceId,
-      customer_app_id_string,
-      bib_number_string,
-    };
-
-    if (API_CONFIG.DEBUG) {
-      console.log('📡 Syncing follow data to API:', {
-        follower_id: followerId,
-        device_id: deviceId,
-        customers: customer_app_id_string,
-        bibs: bib_number_string,
-      });
-    }
-
-    const headers = await API_CONFIG.getHeaders();
-
-    await apiClient.post(
-      getApiEndpoint(API_CONFIG.ENDPOINTS.SYNC_FOLLOW_DATA),
-      requestBody,
-      {
-        headers,
-        timeout: API_CONFIG.TIMEOUT,
-      }
-    );
-
-    if (API_CONFIG.DEBUG) {
-      console.log('✅ Follow data synced to API');
-    }
-
-    // ✅ Tell the screens that show SERVER-derived counts to refetch.
-    //    Bumped here, after the POST resolves, so all four callers
-    //    (followUser / unfollowUser / followBib / unfollowBib) are covered by
-    //    one line. Deliberately NOT bumped in the catch below: when the sync
-    //    failed the server state genuinely did not change, so a refetch would
-    //    redisplay the old number and read as a second bug.
-    useFollowStore.getState().bump();
-
-    // Local and server agree again.
-    try {
-      await AsyncStorage.removeItem(SYNC_PENDING_KEY);
-    } catch {
-      // A failure here only risks one redundant re-upload later. Harmless.
-    }
+    // One upload at a time, each built from the newest lists when its turn
+    // comes (see enqueueUpload). Errors propagate to the catch below.
+    sentToId = followerId;
+    await enqueueUpload(`${followerId}|${deviceId}`, () => uploadCurrent(followerId, deviceId));
   } catch (error: any) {
     if (API_CONFIG.DEBUG) {
       console.error('❌ Failed to sync follow data to API:', error);
+    }
+
+    // The server refuses lists over its cap (update_follower_favourites_api,
+    // 1000 items) — no retry can succeed, and staying "not synced" would make
+    // every download push this list again instead of pulling (web changes
+    // would never arrive). Accept the server's list as the truth: the next
+    // download replaces the local one.
+    if (error?.code === 'list_too_large') {
+      if (API_CONFIG.DEBUG) console.warn('⚠️ Follow list over the server limit — keeping the server list');
+      // Only up to THIS upload's change: one queued behind it (e.g. an
+      // unfollow that brings the list under the cap) is still owed.
+      const s = Number(error?.seqAtPush) || 0;
+      if (s > lastPushedSeq) lastPushedSeq = s;
+      try {
+        if (s === followWriteSeq) await AsyncStorage.removeItem(SYNC_PENDING_KEY);
+        // The server list is the truth now: remembered unfollows from before
+        // a merge must not filter a later merge (they can't be honoured here).
+        await AsyncStorage.removeItem(REMOVED_BEFORE_ADOPT_KEY);
+      } catch { /* silent */ }
+      return;
     }
 
     // Still don't throw — following has to keep working with no signal, which
@@ -198,12 +433,353 @@ async function syncFollowDataToAPI(): Promise<void> {
     } catch {
       // If even the flag cannot be written we are no worse off than before.
     }
+    // The server no longer knows this follower id for this device (row gone or
+    // re-assigned): retrying it would fail forever and the phone would never
+    // take a download again. Forget the id — the next sync registers the
+    // device again (same row if it still exists) and merges first.
+    // Only if the phone still holds THAT id: a push-token registration may
+    // have stored a new, valid one while this upload was queued.
+    if (error?.code === 'follower_not_found') {
+      try {
+        if (sentToId !== null && toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) === sentToId) {
+          await AsyncStorage.removeItem(FOLLOWER_ID_KEY);
+          // The row was gone or deactivated — and with it this phone's push
+          // token (a DeviceNotRegistered push sets status 0). Forget the
+          // "already sent" token so the next launch registers it again
+          // (literal key: notificationPermissionService owns it; no cycle).
+          await AsyncStorage.removeItem('expo_push_token');
+          forgetSentPushToken();
+          // Re-register now (UPSERT on device_id → a row WITH the token), not
+          // at the next foreground — see ensureFollowerId.
+          void notificationPermissionService.registerIfGranted();
+        }
+      } catch { /* silent */ }
+    }
+  } finally {
+    syncsRunning--;
+  }
+}
+
+// Syncs started and not finished yet — follow/unfollow no longer await them
+// (fire-and-forget, see followUser), so tests need a way to wait.
+let syncsRunning = 0;
+
+/** Resolves once no follow sync, merge, guest registration or queued upload
+ *  is running. For tests (the UI never waits on the network). */
+export async function whenFollowSyncIdle(): Promise<void> {
+  for (;;) {
+    await Promise.allSettled([uploadChain, adoptInFlight, ensureInFlight].filter(Boolean));
+    await new Promise((r) => setTimeout(r, 0));
+    if (syncsRunning === 0 && !adoptInFlight && !ensureInFlight && !queuedRun) return;
+  }
+}
+
+// ✅ Uploads run ONE AT A TIME. Each sends the whole list, so two concurrent
+// uploads could reach the server out of order — the older list landing last
+// silently removed the newer follow upstream (and the next download then took
+// it off the phone). Queued, each upload reads the lists when its turn comes,
+// so the last one to land is always the newest.
+let uploadChain: Promise<void> = Promise.resolve();
+// The run that is queued but has NOT started yet. It reads the lists when its
+// turn comes, so later taps simply join it — N taps behind a slow upload send
+// one more upload, not N identical ones.
+// Only joined when it uploads to the SAME row: a run queued for an old id
+// (replaced by a push-token registration) must not carry the new row's push.
+let queuedRun: Promise<void> | null = null;
+let queuedKey: string | null = null;
+
+function enqueueUpload(key: string, job: () => Promise<void>): Promise<void> {
+  if (queuedRun && queuedKey === key) return queuedRun;
+  let run: Promise<void>;
+  const start = () => {
+    if (queuedRun === run) { queuedRun = null; queuedKey = null; }   // started: later taps queue anew
+    return withJobTimeout(job());
+  };
+  run = uploadChain.then(start, start);
+  queuedRun = run;
+  queuedKey = key;
+  uploadChain = run.catch(() => { /* the caller handles it */ });
+  return run;
+}
+
+// A queued upload must never hold the queue forever: axios's own timeout does
+// not reliably fire on a half-open socket (race-day networks — see CLAUDE.md
+// and gpsService's withTimeout), and one hung upload would otherwise freeze
+// every later follow, download and merge for the session. On timeout the job
+// rejects like any failed upload: the "not synced" mark stays and it is
+// re-sent on the next sync.
+// Also used for the merge download and guest registration, which hold the
+// same queue (adoptInFlight / ensureInFlight). A timeout is a network error,
+// never "follower_not_found".
+function withJobTimeout<T>(p: Promise<T>): Promise<T> {
+  const ms = (API_CONFIG.TIMEOUT || 15000) + 5000;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(() => reject(Object.assign(new Error('follow upload timed out'), { type: 'network' })), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+const MAX_CONFLICT_ROUNDS = 3;
+// The last few uploads this phone sent, by client_seq. A follow_conflict that
+// names one of them is our OWN upload that timed out here but committed late:
+// the row holds its lists, so they are the base to merge against.
+const sentSnapshots = new Map<number, FollowBase>();
+function rememberSent(seq: number, snap: FollowBase): void {
+  sentSnapshots.set(seq, snap);
+  while (sentSnapshots.size > 5) sentSnapshots.delete(sentSnapshots.keys().next().value as number);
+}
+
+/**
+ * follow_conflict: row lists ∪ what the phone ADDED since its base − what the
+ * phone REMOVED since its base (and the unfollow tombstones). A follow made on
+ * the web is kept; a web unfollow of something the phone did not touch is
+ * kept too; a phone unfollow is never resurrected. The row's lists + number
+ * become the new base, so the re-upload goes through unless the row moved again.
+ */
+async function mergeConflict(followerId: number, serverSeq: number, data: any, base: FollowLists): Promise<void> {
+  const server = listsOf(data?.followed_customers, data?.followed_bibs);
+  const removed = await readRemovedBeforeAdopt();
+  // A merge is a local change too (see runAdopt / syncFollowDataFromAPI).
+  followWriteSeq++;
+  const customers = await loadCache();
+  const bibs = await loadBibCache();
+
+  // From here to the swap: no await — a tap in between must not be lost.
+  const baseC = new Set(base.customers.map(Number));
+  const serverC = new Set(server.customers);
+  const nextC = new Set<number>();
+  customers.forEach((id) => { if (!baseC.has(id) || serverC.has(id)) nextC.add(id); });
+  serverC.forEach((id) => {
+    if (baseC.has(id) && !customers.has(id)) return;                       // the phone removed it
+    if (removed.customers.includes(id) || unfollowedNow.customers.has(id)) return;
+    nextC.add(id);
+  });
+  const flat = (b: Record<string, string[]>) => new Set(Object.entries(b).flatMap(([p, l]) => (l || []).map((x) => `${p}|${x}`)));
+  const localB = new Set<string>();
+  bibs.forEach((set, pid) => set.forEach((b) => localB.add(`${pid}|${b}`)));
+  const baseB = flat(base.bibs);
+  const serverB = flat(server.bibs);
+  const nextB = new Set<string>();
+  localB.forEach((k) => { if (!baseB.has(k) || serverB.has(k)) nextB.add(k); });
+  serverB.forEach((k) => {
+    if (baseB.has(k) && !localB.has(k)) return;
+    const [p, b] = [k.slice(0, k.indexOf('|')), k.slice(k.indexOf('|') + 1)];
+    if ((removed.bibs[p] ?? []).includes(b) || unfollowedNow.bibs.has(k)) return;
+    nextB.add(k);
+  });
+  customers.clear();
+  nextC.forEach((id) => customers.add(id));
+  cache = customers;
+  bibs.clear();
+  nextB.forEach((k) => {
+    const pid = Number(k.slice(0, k.indexOf('|')));
+    const set = bibs.get(pid) ?? new Set<string>();
+    set.add(k.slice(k.indexOf('|') + 1));
+    bibs.set(pid, set);
+  });
+  bibCache = bibs;
+  await persistCache(customers);
+  await persistBibCache(bibs);
+
+  await writeBase(followerId, serverSeq, server);
+  // The re-upload must number above the row, or the server calls it stale.
+  if (serverSeq > seqIssued) {
+    seqIssued = serverSeq;
+    try { await AsyncStorage.setItem(FOLLOW_SEQ_KEY, String(seqIssued)); } catch { /* in memory still */ }
+  }
+  if (API_CONFIG.DEBUG) console.log('🔀 Follow conflict merged with the server row:', { serverSeq, customers: nextC.size });
+}
+
+async function uploadCurrent(followerId: number, deviceId: string): Promise<void> {
+  // Mark "not synced" BEFORE sending: if the app is killed while the upload
+  // hangs (half-open sockets on race-day networks), the relaunch must still
+  // know the phone is ahead — the in-memory counters start from zero again.
+  try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
+  // The stored number is read BEFORE the lists: a storage stall here must not
+  // sit between reading the lists and numbering them (a newer upload could be
+  // numbered meanwhile and this older list would then carry the higher number).
+  await loadStoredSeq();
+  // A follow_conflict (the row moved on since the phone's base) is merged and
+  // sent again — a few rounds at most (a web user tapping in step with the
+  // phone must not loop us); after that the pending mark stays for the next sync.
+  for (let round = 0; ; round++) {
+    // Base read before the lists, for the same reason as the number above: an
+    // older base with newer lists can only cause a conflict, never a lost follow.
+    const base = await readBase(followerId);
+    // The newest local change this upload will carry.
+    const seqAtPush = followWriteSeq;
+    // Get current follow data
+    const customerSet = await loadCache();
+    const bibMap = await loadBibCache();
+
+    // Build customer_app_id_string
+    const customer_app_id_string = [...customerSet].join(',');
+
+    // Build bib_number_string object
+    const bib_number_string: Record<string, string> = {};
+    // What this upload carries — the base once the server accepts it.
+    const sent: FollowLists = { customers: [...customerSet], bibs: {} };
+    bibMap.forEach((bibSet, productId) => {
+      if (bibSet.size > 0) {
+        bib_number_string[productId] = [...bibSet].join(',');
+        sent.bibs[String(productId)] = [...bibSet];
+      }
+    });
+
+    // Numbered AFTER the lists were read: a higher number always carries lists
+    // at least as new.
+    const clientSeq = await nextClientSeq();
+    rememberSent(clientSeq, { id: followerId, seq: clientSeq, ...sent });
+
+    const requestBody = {
+      follower_id: followerId,
+      device_id: deviceId,
+      customer_app_id_string,
+      bib_number_string,
+      client_seq: clientSeq,
+      // The row's follow_seq these lists are based on (old servers ignore it).
+      base_seq: base.seq,
+    };
+
+    if (API_CONFIG.DEBUG) {
+      console.log('📡 Syncing follow data to API:', {
+        follower_id: followerId,
+        device_id: deviceId,
+        customers: customer_app_id_string,
+        bibs: bib_number_string,
+      });
+    }
+
+    const headers = await API_CONFIG.getHeaders();
+
+    let res: any;
+    try {
+      res = await apiClient.post(
+        getApiEndpoint(API_CONFIG.ENDPOINTS.SYNC_FOLLOW_DATA),
+        requestBody,
+        {
+          headers,
+          timeout: API_CONFIG.TIMEOUT,
+        }
+      );
+    } catch (e: any) {
+      // The row changed since the phone's base (e.g. a follow made on the web):
+      // nothing was written. Merge the row's lists into the phone's and send
+      // again on top of the row's number.
+      const conflictSeq = e?.code === 'follow_conflict' ? seqOf(e?.data?.follow_seq) : null;
+      if (conflictSeq !== null && round < MAX_CONFLICT_ROUNDS) {
+        // The conflicting number is one of OUR uploads that timed out here but
+        // committed late: its lists — not the older base — are what the row holds.
+        const own = sentSnapshots.get(conflictSeq);
+        // No known base (first upload after an update) but the row's number is
+        // the phone's own last upload from before this session: the row's lists
+        // ARE what the phone last sent, so they are the base — an unfollow made
+        // offline on the old version (absent here, still on the row) stays
+        // removed. A row number that is not ours keeps the plain union.
+        const rowIsOurs = base.seq === 0 && seqIssuedAtLoad > 0 && conflictSeq === seqIssuedAtLoad;
+        const conflictBase = own && own.id === followerId ? own
+          : rowIsOurs ? listsOf(e?.data?.followed_customers, e?.data?.followed_bibs) : base;
+        await mergeConflict(followerId, conflictSeq, e.data, conflictBase);
+        continue;
+      }
+      // Which local change this upload carried — the caller's handling of a
+      // refusal must not count a NEWER change (queued behind it) as delivered.
+      if (e && typeof e === 'object') e.seqAtPush = seqAtPush;
+      throw e;
+    }
+
+    // The server already applied a NEWER upload of this row and ignored this
+    // one: nothing reached it, so this is not "synced" (the pending mark stays).
+    // A "stale" answer naming THIS upload's own number is a duplicate delivery
+    // of it (e.g. a transport retry): it landed — fall through as a success.
+    if (res?.data?.stale === true && Number(res?.data?.follow_seq) !== clientSeq) {
+      const applied = Number(res?.data?.follow_seq) || 0;
+      if (API_CONFIG.DEBUG) console.log('⏭️ Follow upload ignored by the server (older than applied):', { clientSeq, applied });
+      // …but if this IS the phone's newest list, the phone's numbering fell
+      // behind the row's (clock set back; or the row was written by another
+      // install of this device): continue above the server's and send again.
+      // One re-send — the next number is above `applied`. Only when the row's
+      // number is NOT one this phone issued (applied > seqIssued): if it is ours,
+      // a newer upload of ours already carries lists at least as new.
+      if (seqAtPush === followWriteSeq && isSaneSeq(applied) && applied > seqIssued) {
+        seqIssued = Math.max(seqIssued, applied);
+        try { await AsyncStorage.setItem(FOLLOW_SEQ_KEY, String(seqIssued)); } catch { /* in memory still */ }
+        void syncFollowDataToAPI();
+      } else if (seqAtPush === followWriteSeq && seqAtPush > lastPushedSeq && applied <= seqIssued) {
+        // The winning number IS ours, but it carried an OLDER list (an upload
+        // numbered late — e.g. its storage stalled past the job timeout — landed
+        // above this newer one): the server holds a list older than the phone's
+        // newest and nothing newer is on its way. Send again; the next number is
+        // above everything this phone issued, so this cannot loop.
+        try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
+        void syncFollowDataToAPI();
+      }
+      return;
+    }
+
+    if (API_CONFIG.DEBUG) {
+      console.log('✅ Follow data synced to API');
+    }
+
+    // ✅ Tell the screens that show SERVER-derived counts to refetch.
+    //    Bumped here, after the POST resolves, so all four callers
+    //    (followUser / unfollowUser / followBib / unfollowBib) are covered by
+    //    one line. Deliberately NOT bumped in the catch below: when the sync
+    //    failed the server state genuinely did not change, so a refetch would
+    //    redisplay the old number and read as a second bug.
+    useFollowStore.getState().bump();
+    // Accepted: the row now holds exactly these lists at this number.
+    await writeBase(followerId, clientSeq, sent);
+
+    // Landed AFTER a newer upload (this one's job had timed out but the POST
+    // still arrived): the server now holds this OLDER list. Mark the phone ahead
+    // and send the current list again — not awaited, this may run inside the queue.
+    if (seqAtPush < lastPushedSeq) {
+      try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
+      void syncFollowDataToAPI();
+      return;
+    }
+    if (seqAtPush > lastPushedSeq) lastPushedSeq = seqAtPush;
+    // A full list reached the merged row: the remembered unfollows (honoured by
+    // the merge, removed locally) are spent. Kept, they would wrongly filter a
+    // later web follow out of the NEXT merge, maybe weeks later.
+    try {
+      if ((await AsyncStorage.getItem(ADOPT_PENDING_KEY)) !== '1'
+          && toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) === followerId) {
+        await AsyncStorage.removeItem(REMOVED_BEFORE_ADOPT_KEY);
+      }
+    } catch { /* silent — cleared by the next upload */ }
+    // Local and server agree again — but only if nothing changed while this
+    // upload was in flight (an older upload finishing late must not clear the
+    // flag a newer, failed one set).
+    if (seqAtPush === followWriteSeq) {
+      try {
+        await AsyncStorage.removeItem(SYNC_PENDING_KEY);
+      } catch {
+        // A failure here only risks one redundant re-upload later. Harmless.
+      }
+      // Every local change (incl. unfollows) has reached the row: the
+      // in-session unfollow guard is no longer needed — unless a merge is
+      // running right now (its download may predate the unfollow).
+      if (!adoptInFlight) {
+        unfollowedNow.customers.clear();
+        unfollowedNow.bibs.clear();
+      }
+    }
+    return;
   }
 }
 
 export function clearCache(): void {
   cache = null;
   bibCache = null;
+  // Any read already in flight started before this — don't let it land.
+  cacheGen++;
+  cacheLoading = null;
+  bibCacheLoading = null;
 }
 
 export async function getFollowedUsers(): Promise<number[]> {
@@ -243,6 +819,8 @@ export async function followUser(id: any): Promise<void> {
   if (validId === null) {
     throw new Error(`Invalid customer ID: ${id}`);
   }
+  const wasUnfollowedNow = unfollowedNow.customers.has(validId);
+  unfollowedNow.customers.delete(validId);
 
   try {
     const set = await loadCache();
@@ -253,10 +831,21 @@ export async function followUser(id: any): Promise<void> {
     
     set.add(validId);
     cache = set;
-    await persistCache(set);
+    followWriteSeq++; // before any await — see syncFollowDataFromAPI
+    try {
+      await persistCache(set);
+    } catch (e) {
+      // Not saved: undo it in memory too — the caller rolls the button back,
+      // and a later upload must not deliver a follow the user saw fail.
+      set.delete(validId);
+      if (wasUnfollowedNow) unfollowedNow.customers.add(validId);
+      throw e;
+    }
     
-    // ✅ Sync to API after successful local save
-    await syncFollowDataToAPI();
+    // ✅ Sync to API after successful local save — NOT awaited: the button,
+    // toast and notification ask must not wait for register + merge + upload
+    // (seconds on a race-day network). It never throws; failures stay pending.
+    void syncFollowDataToAPI();
   } catch (error) {
     console.error('Follow user error:', error);
     throw error;
@@ -270,10 +859,12 @@ export async function followBib(productAppId: number, bib: string): Promise<void
   if (validProductId === null || validBib === null) {
     throw new Error(`Invalid productAppId (${productAppId}) or bib (${bib})`);
   }
+  const wasUnfollowedNow = unfollowedNow.bibs.has(`${validProductId}|${validBib}`);
+  unfollowedNow.bibs.delete(`${validProductId}|${validBib}`);
 
   try {
     const map = await loadBibCache();
-    
+
     let bibSet = map.get(validProductId);
     if (!bibSet) {
       bibSet = new Set();
@@ -286,10 +877,19 @@ export async function followBib(productAppId: number, bib: string): Promise<void
 
     bibSet.add(validBib);
     bibCache = map;
-    await persistBibCache(map);
+    followWriteSeq++; // before any await — see syncFollowDataFromAPI
+    try {
+      await persistBibCache(map);
+    } catch (e) {
+      // Not saved: undo in memory too (see followUser).
+      bibSet.delete(validBib);
+      if (bibSet.size === 0 && map.get(validProductId) === bibSet) map.delete(validProductId);
+      if (wasUnfollowedNow) unfollowedNow.bibs.add(`${validProductId}|${validBib}`);
+      throw e;
+    }
     
-    // ✅ Sync to API after successful local save
-    await syncFollowDataToAPI();
+    // ✅ Sync to API after successful local save — not awaited (see followUser).
+    void syncFollowDataToAPI();
   } catch (error) {
     console.error('Follow BIB error:', error);
     throw error;
@@ -301,6 +901,8 @@ export async function unfollowUser(id: any): Promise<void> {
   if (validId === null) {
     throw new Error(`Invalid customer ID: ${id}`);
   }
+  const wasUnfollowedNow = unfollowedNow.customers.has(validId);
+  unfollowedNow.customers.add(validId);
 
   try {
     const set = await loadCache();
@@ -311,10 +913,19 @@ export async function unfollowUser(id: any): Promise<void> {
     
     set.delete(validId);
     cache = set;
-    await persistCache(set);
+    followWriteSeq++; // before any await — see syncFollowDataFromAPI
+    try {
+      await persistCache(set);
+    } catch (e) {
+      // Not saved: undo in memory too (see followUser).
+      set.add(validId);
+      if (!wasUnfollowedNow) unfollowedNow.customers.delete(validId);
+      throw e;
+    }
+    await rememberRemovalIfUnadopted(validId);
     
-    // ✅ Sync to API after successful local save
-    await syncFollowDataToAPI();
+    // ✅ Sync to API after successful local save — not awaited (see followUser).
+    void syncFollowDataToAPI();
   } catch (error) {
     console.error('Unfollow user error:', error);
     throw error;
@@ -328,6 +939,8 @@ export async function unfollowBib(productAppId: number, bib: string): Promise<vo
   if (validProductId === null || validBib === null) {
     throw new Error(`Invalid productAppId (${productAppId}) or bib (${bib})`);
   }
+  const wasUnfollowedNow = unfollowedNow.bibs.has(`${validProductId}|${validBib}`);
+  unfollowedNow.bibs.add(`${validProductId}|${validBib}`);
 
   try {
     const map = await loadBibCache();
@@ -344,10 +957,20 @@ export async function unfollowBib(productAppId: number, bib: string): Promise<vo
     }
 
     bibCache = map;
-    await persistBibCache(map);
+    followWriteSeq++; // before any await — see syncFollowDataFromAPI
+    try {
+      await persistBibCache(map);
+    } catch (e) {
+      // Not saved: undo in memory too (see followUser).
+      bibSet.add(validBib);
+      if (!map.has(validProductId)) map.set(validProductId, bibSet);
+      if (!wasUnfollowedNow) unfollowedNow.bibs.delete(`${validProductId}|${validBib}`);
+      throw e;
+    }
+    await rememberRemovalIfUnadopted(null, validProductId, validBib);
     
-    // ✅ Sync to API after successful local save
-    await syncFollowDataToAPI();
+    // ✅ Sync to API after successful local save — not awaited (see followUser).
+    void syncFollowDataToAPI();
   } catch (error) {
     console.error('Unfollow BIB error:', error);
     throw error;
@@ -427,20 +1050,285 @@ export async function hasPendingFollowSync(): Promise<boolean> {
   }
 }
 
+// ✅ A follow made offline used to wait for the NEXT follow tap or the next
+// launch's download to be retried — the web and the follower counts never
+// saw it for the whole race. Retry when the app comes back to the
+// foreground and when the network becomes reachable again. Installed once,
+// at module load (like notificationPermissionService's foreground listener).
+let followRetryInstalled = false;
+function installFollowRetry(): void {
+  if (followRetryInstalled) return;
+  followRetryInstalled = true;
+  const retry = async () => {
+    try { if (await hasPendingFollowSync()) void syncFollowDataToAPI(); } catch { /* next trigger */ }
+  };
+  try {
+    AppState.addEventListener('change', (next) => { if (next === 'active') void retry(); });
+  } catch { /* no AppState (tests / headless) */ }
+  try {
+    // Only on the not-reachable → reachable edge: NetInfo also reports
+    // every network detail change while online.
+    let wasReachable: boolean | null = null;
+    NetInfo.addEventListener((state: any) => {
+      const reachable = state?.isConnected !== false && state?.isInternetReachable !== false;
+      if (reachable && wasReachable === false) void retry();
+      wasReachable = reachable;
+    });
+  } catch { /* no NetInfo native module — foreground retry still runs */ }
+}
+installFollowRetry();
+
+/**
+ * First-adoption merge: UNION of what the phone has and what the server row
+ * has, saved locally and pushed back. Used only when the phone has just learned
+ * its follower_id — neither side is authoritative at that moment, and a plain
+ * download would wipe follows made while the phone had no id.
+ */
+type ServerFollowData = {
+  follower_id?: number;
+  /** The row's number when it was read (servers with base_seq support). */
+  follow_seq?: number;
+  followed_customers?: number[];
+  followed_bibs?: Record<string, string[]>;
+};
+
+// One merge at a time: two quick follows with the merge owed would otherwise
+// both download + push, and the second could re-add an unfollow made between.
+let adoptInFlight: Promise<void> | null = null;
+
+export function adoptServerFollowData(prefetched?: ServerFollowData): Promise<void> {
+  if (adoptInFlight) return adoptInFlight;
+  adoptInFlight = runAdopt(prefetched).finally(() => { adoptInFlight = null; });
+  return adoptInFlight;
+}
+
+async function runAdopt(prefetched?: ServerFollowData): Promise<void> {
+  // The id this merge is for. If a push-token registration hands the phone a
+  // DIFFERENT id while we run, that id's merge is still owed — keep its flag.
+  const idAtStart = await AsyncStorage.getItem(FOLLOWER_ID_KEY);
+  try {
+    let server: ServerFollowData = prefetched ?? {};
+    if (!prefetched) {
+      try {
+        // Time-limited: adoptInFlight holds every follow until this settles.
+        server = await withJobTimeout(followerApi.getFollowerDataByDevice());
+      } catch (error) {
+        if (!isFollowerNotFound(error)) {
+          // Offline / 5xx / rate-limited: we do NOT know the server's list, so
+          // pushing ours would overwrite it. Keep both flags; retry next sync.
+          try {
+            await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
+            await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
+          } catch { /* silent */ }
+          return;
+        }
+        server = {}; // the device has no row yet — nothing to merge in
+      }
+    }
+
+    const removed = await readRemovedBeforeAdopt();
+
+    // A merge is a local change too: a download that started before it must
+    // not overwrite it when it lands (see syncFollowDataFromAPI).
+    followWriteSeq++;
+    const customers = await loadCache();
+    (server.followed_customers ?? [])
+      .map(toValidId)
+      .forEach((id) => { if (id !== null && !removed.customers.includes(id) && !unfollowedNow.customers.has(id)) customers.add(id); });
+    cache = customers;
+    await persistCache(customers);
+
+    const bibs = await loadBibCache();
+    Object.entries(server.followed_bibs ?? {}).forEach(([productId, list]) => {
+      const pid = toValidId(productId);
+      if (pid === null || !Array.isArray(list)) return;
+      const gone = [...(removed.bibs[String(pid)] ?? []), ...[...unfollowedNow.bibs].filter((k) => k.startsWith(pid + '|')).map((k) => k.slice(String(pid).length + 1))];
+      const set = bibs.get(pid) ?? new Set<string>();
+      list.map(toValidBib).forEach((b) => { if (b !== null && !gone.includes(b)) set.add(b); });
+      if (set.size > 0) bibs.set(pid, set);
+    });
+    bibCache = bibs;
+    await persistBibCache(bibs);
+
+    const idNow = await AsyncStorage.getItem(FOLLOWER_ID_KEY);
+    if (idNow !== idAtStart) {
+      // Id changed mid-merge: this merge was with the OLD row. Keep the flag
+      // (and the remembered unfollows) so the next sync merges with the new
+      // row instead of pushing this list over it.
+      try { await AsyncStorage.setItem(SYNC_PENDING_KEY, '1'); } catch { /* silent */ }
+      return;
+    }
+    try {
+      // Remembered unfollows stay until the merged list has reached the row
+      // (below): if this push fails, the next merge must still honour them.
+      // "Not synced" FIRST: killed between the two writes, the relaunch must
+      // still push the merged list, never let a download overwrite it.
+      await AsyncStorage.setItem(SYNC_PENDING_KEY, '1');
+      await AsyncStorage.removeItem(ADOPT_PENDING_KEY);
+    } catch { /* silent */ }
+    // If a new id landed while the flag was being cleared, put its flag back.
+    if ((await AsyncStorage.getItem(FOLLOWER_ID_KEY)) !== idAtStart) {
+      try { await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1'); } catch { /* silent */ }
+      return;
+    }
+    // The merged lists are based on the row as downloaded: its number is the
+    // base_seq of this push (a web change since then → follow_conflict → merge).
+    const rowId = toValidId(idAtStart);
+    const rowSeq = seqOf(server.follow_seq);
+    if (rowId !== null && rowSeq !== null) await writeBase(rowId, rowSeq, listsOf(server.followed_customers, server.followed_bibs));
+    // Remembered unfollows are cleared by the first upload that reaches this
+    // row (uploadCurrent) — this push, or a later one if this push fails.
+    await syncFollowDataToAPI(true, idAtStart);
+  } catch (error) {
+    if (API_CONFIG.DEBUG) console.warn('⚠️ adoptServerFollowData failed:', error);
+  } finally {
+    // The in-session unfollow list only guards THIS merge's union; kept
+    // longer, it would stop a later merge from adopting a follow the user
+    // made again elsewhere (web) for the rest of the session.
+    unfollowedNow.customers.clear();
+    unfollowedNow.bibs.clear();
+  }
+}
+
+/**
+ * Follow restore for a phone WITHOUT a push token (HomeScreen mount).
+ * Deliberately does not create a follower row just because the app opened:
+ * a row is only created when there is something to keep (local follows).
+ *  - phone knows its id      → normal download (pending-aware)
+ *  - server knows the device → learn the id, then merge (reinstall / web)
+ *  - neither, but local follows exist → create the row, then push
+ */
+/**
+ * The server's row for THIS device is not the row the phone holds an id for
+ * (a foreign id — backup, old shared row, web relabel): take the server's id
+ * and MERGE. Treating that row's list as the phone's truth overwrote the
+ * phone's own follows, which the next upload then removed for good.
+ * Returns true when handled.
+ */
+export async function adoptIfOtherRow(server: ServerFollowData | null | undefined): Promise<boolean> {
+  const sid = toValidId(server?.follower_id);
+  if (!server || sid === null) return false;
+  const known = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY));
+  if (known === sid) return false;
+  // No stored id (e.g. dropped after follower_not_found) but the server row
+  // HAS follows: same as a different row — merge, never let the caller
+  // overwrite the phone's list with it (follows made meanwhile would be lost).
+  if (known === null) {
+    const hasFollows = (server.followed_customers ?? []).length > 0
+      || Object.values(server.followed_bibs ?? {}).some((l) => Array.isArray(l) && l.length > 0);
+    if (!hasFollows) return false;
+  }
+  await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
+  await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(sid));
+  await adoptServerFollowData(server);
+  return true;
+}
+
+export async function restoreFollowsWithoutToken(): Promise<void> {
+  const knownId = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY));
+
+  const seq = followWriteSeq;
+  let server: ServerFollowData | null = null;
+  try {
+    server = await followerApi.getFollowerDataByDevice();
+  } catch (error) {
+    // Only a real "no row" lets us go on; a timeout/5xx means we don't know
+    // what the server holds — touch nothing, try again on the next launch.
+    if (!isFollowerNotFound(error)) return;
+    server = null;
+  }
+
+  if (knownId !== null) {
+    if ((await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1') {
+      // Changed locally while downloading: merge with a fresh download (see
+      // syncFollowDataFromAPI).
+      await adoptServerFollowData(seq !== followWriteSeq ? undefined : (server ?? {}));
+      return;
+    }
+    if (server) {
+      if (await adoptIfOtherRow(server)) return;
+      await syncFollowDataFromAPI(server.followed_customers ?? [], server.followed_bibs ?? {}, seq, server.follow_seq);
+      return;
+    }
+    // The server has NO row for this device although the phone holds an id:
+    // the id came from another device (Android backup restored onto a new
+    // phone). Forget it and carry on as a phone without an id (below) —
+    // otherwise follows, fan email and language keep failing.
+    try {
+      if (toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY)) === knownId) {
+        await AsyncStorage.removeItem(FOLLOWER_ID_KEY);
+        await AsyncStorage.removeItem('expo_push_token');
+        forgetSentPushToken();
+        void notificationPermissionService.registerIfGranted();   // see ensureFollowerId
+      }
+    } catch { /* silent */ }
+  }
+
+  const serverId = toValidId(server?.follower_id);
+  if (server && serverId !== null) {
+    await AsyncStorage.setItem(ADOPT_PENDING_KEY, '1');
+    await AsyncStorage.setItem(FOLLOWER_ID_KEY, String(serverId));
+    await adoptServerFollowData(server);
+    return;
+  }
+
+  const local = await loadCache();
+  const localBibs = await loadBibCache();
+  if (local.size === 0 && localBibs.size === 0) return;
+
+  const { id } = await ensureFollowerId();
+  if (id !== null) await adoptServerFollowData({});
+}
+
 export async function syncFollowDataFromAPI(
   followed_customers: number[],
   followed_bibs: Record<string, string[]>,
+  /** getFollowWriteSeq() taken BEFORE the download started. If the user
+   *  followed/unfollowed while it was in flight, the download is older than
+   *  the phone — push instead of overwriting. */
+  startedAtSeq?: number,
+  /** The download's follow_seq (the row's number when it was read). */
+  followSeq?: number | null,
 ): Promise<void> {
   try {
+    // The id was learned without a merge (e.g. by registering a push token on
+    // a phone that only had local follows) — merge, never overwrite.
+    if ((await AsyncStorage.getItem(ADOPT_PENDING_KEY)) === '1') {
+      // A local change landed while this download was in flight: it may be
+      // older than an unfollow whose upload has ALREADY landed (its in-session
+      // tombstone is gone), and the union would bring that follow back.
+      // Merge with a fresh download instead.
+      if (startedAtSeq !== undefined && startedAtSeq !== followWriteSeq) {
+        await adoptServerFollowData();
+        return;
+      }
+      await adoptServerFollowData({ followed_customers, followed_bibs, follow_seq: followSeq ?? undefined });
+      return;
+    }
+    if (startedAtSeq !== undefined && startedAtSeq !== followWriteSeq) {
+      await syncFollowDataToAPI();
+      return;
+    }
     // This OVERWRITES local storage, so it must never run while local holds a
     // change the server has not seen — that is how a follow made offline used
     // to disappear a moment later. Push local up instead; if that succeeds the
     // flag clears and the next call proceeds normally, and if it fails local
     // stays authoritative until it can be delivered.
-    if (await hasPendingFollowSync()) {
+    if (phoneAheadOfServer() || (await hasPendingFollowSync())) {
       if (API_CONFIG.DEBUG) {
         console.log('⏭️ Local follow data not yet synced — pushing instead of overwriting');
       }
+      await syncFollowDataToAPI();
+      return;
+    }
+    // A download OLDER than what the phone already knows of this row (its own
+    // accepted upload, or a newer download) — a stale server cache. Taking it
+    // would undo the phone's newer lists; push them instead.
+    const rowId = toValidId(await AsyncStorage.getItem(FOLLOWER_ID_KEY));
+    const dlSeq = followSeq !== undefined && followSeq !== null && Number.isSafeInteger(Number(followSeq)) && Number(followSeq) >= 0
+      ? Number(followSeq) : null;
+    if (rowId !== null && dlSeq !== null && dlSeq < (await readBase(rowId)).seq) {
+      if (API_CONFIG.DEBUG) console.log('⏭️ Follow download older than the last accepted upload — pushing instead');
       await syncFollowDataToAPI();
       return;
     }
@@ -450,8 +1338,6 @@ export async function syncFollowDataFromAPI(
         .map(toValidId)
         .filter((id): id is number => id !== null)
     );
-    cache = customerSet;
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([...customerSet]));
 
     const bibMap = new Map<number, Set<string>>();
     Object.entries(followed_bibs).forEach(([productId, bibs]) => {
@@ -465,8 +1351,25 @@ export async function syncFollowDataFromAPI(
         }
       }
     });
+    // Re-check after the awaits above: a follow that landed meanwhile — or one
+    // whose upload hasn't reached the server yet — wins. Both caches are
+    // swapped in the same tick, before any further await.
+    if ((startedAtSeq !== undefined && startedAtSeq !== followWriteSeq) || phoneAheadOfServer()) {
+      await syncFollowDataToAPI();
+      return;
+    }
+    cache = customerSet;
     bibCache = bibMap;
-    await persistBibCache(bibMap);
+    // Both writes start NOW, in the same tick as the swap: AsyncStorage runs
+    // operations in order, so any read issued after this (e.g. a follow screen
+    // mounting → clearCache() → reload) queues behind BOTH writes. Writing the
+    // bibs only after the users write left a gap where a read got the old bibs.
+    await Promise.all([
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([...customerSet])),
+      persistBibCache(bibMap),
+    ]);
+    // The phone's lists are now this download: it is the base for base_seq.
+    if (rowId !== null && dlSeq !== null) await writeBase(rowId, dlSeq, listsOf(followed_customers, followed_bibs));
 
     if (API_CONFIG.DEBUG) {
       console.log('✅ Follow data synced from API:', {

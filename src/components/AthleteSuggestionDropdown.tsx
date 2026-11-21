@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { colors, spacing } from '../styles/common.styles';
+import { spacing, palette, fonts, shadows, space } from '../styles/common.styles';
 import { ParticipantItem } from '../services/followerEvent';
+import { useTranslation } from 'react-i18next';
+import { useDropdownMaxHeight } from '../hooks/useKeyboardHeight';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,14 +37,22 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
     onSelect,
     onLoadMore,
 }) => {
+  const { t } = useTranslation();
+  const { width: winW, height: winH } = useWindowDimensions();   // before the early return (hooks rule)
+  const isLandscape = winW > winH;
+  // Never taller than the room above the keyboard (it scrolls inside); 260 otherwise.
+  const listRef = useRef<View>(null);
+  const listMax = useDropdownMaxHeight(listRef, 260, visible && !loading && suggestions.length > 0);
     if (!visible) return null;
 
     if (loading) {
         return (
             <View style={styles.container}>
                 <View style={styles.centeredRow}>
-                    <ActivityIndicator size="small" color={colors.primary ?? '#F5C518'} />
-                    <Text style={styles.loaderText}>Searching…</Text>
+                    <ActivityIndicator size="small" color={palette.navy} />
+                    {/* ✅ Was hard-coded English; reuses the existing
+                        follower:searching key (en/fr/nl already translated). */}
+                    <Text style={styles.loaderText}>{t('follower:searching')}</Text>
                 </View>
             </View>
         );
@@ -51,14 +62,14 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
         return (
             <View style={styles.container}>
                 <View style={styles.centeredRow}>
-                    <Text style={styles.emptyText}>No athletes found</Text>
+                    <Text style={styles.emptyText}>{t('common:empty.noAthletes')}</Text>
                 </View>
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} ref={listRef}>
             <FlatList
                 data={suggestions}
                 keyExtractor={(item) => String(item.customer_app_id)}
@@ -66,10 +77,11 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled
                 contentContainerStyle={{
-                    paddingBottom: spacing.xxxxl,
+                    // landscape: 16 - 90 of the 260pt list was blank (audit 2026-10-23)
+                    paddingBottom: isLandscape ? spacing.lg : spacing.xxxxl,
                     flexGrow: 1,
                 }}
-                style={{ maxHeight: 260 }}
+                style={{ maxHeight: listMax }}
                 onEndReached={hasMore ? onLoadMore : undefined}
                 onEndReachedThreshold={0.5}
                 ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -102,7 +114,9 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
 
                             {/* Info */}
                             <View style={{ flex: 1 }}>
-                                <Text style={styles.name} numberOfLines={1}>
+                                {/* ✅ 2 lines: long double-barrelled names were cut to
+                                    one line in a ~200pt column at 320. */}
+                                <Text style={styles.name} numberOfLines={2}>
                                     {item.firstname?.trim()} {item.lastname?.trim()}
                                 </Text>
                                 <View style={styles.locationRow}>
@@ -125,7 +139,7 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
                 ListFooterComponent={
                     loadingMore ? (
                         <View style={styles.footerLoader}>
-                            <ActivityIndicator size="small" color={colors.primary ?? '#F5C518'} />
+                            <ActivityIndicator size="small" color={palette.navy} />
                         </View>
                     ) : null
                 }
@@ -138,24 +152,21 @@ const AthleteSuggestionDropdown: React.FC<AthleteSuggestionDropdownProps> = ({
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#fff',
+    ...shadows.card,
+
+        backgroundColor: palette.surface,
         borderWidth: 1,
-        borderColor: '#E8E8E8',
+        borderColor: palette.border,
         borderRadius: 10,
         marginTop: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 6,
         overflow: 'hidden',
-    },
+  },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        gap: 10,
+        paddingHorizontal: space.xl,
+        paddingVertical: 8,
+        gap: space.md,
     },
     avatar: {
         width: 36,
@@ -170,19 +181,19 @@ const styles = StyleSheet.create({
     avatarFallback: {
         width: '100%',
         height: '100%',
-        backgroundColor: '#e8edf5',
+        backgroundColor: palette.fill,
         alignItems: 'center',
         justifyContent: 'center',
     },
     avatarInitials: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#1a2e5a',
+        fontFamily: fonts.bodySemi,
+        fontSize: 14,
+        color: palette.navy,
     },
     name: {
+        fontFamily: fonts.bodySemi,
         fontSize: 14,
-        fontWeight: '600',
-        color: '#1a1a1a',
+        color: palette.ink,
         marginBottom: 2,
     },
     locationRow: {
@@ -196,28 +207,35 @@ const styles = StyleSheet.create({
         borderRadius: 2,
     },
     city: {
-        fontSize: 12,
-        color: '#888',
+        fontFamily: fonts.body,
+        fontSize: 13,
+        color: palette.textMuted,
+        // ✅ shrink inside locationRow: without it the Text kept its full width
+        // beside the flag, so numberOfLines' "…" never applied and the row's
+        // overflow: hidden just hard-cut the city mid-letter.
+        flexShrink: 1,
     },
     separator: {
         height: 1,
-        backgroundColor: '#F2F2F2',
-        marginHorizontal: 14,
+        backgroundColor: palette.fill,
+        marginHorizontal: 16,
     },
     centeredRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 14,
+        padding: 16,
         gap: 8,
     },
     loaderText: {
-        fontSize: 13,
-        color: '#888',
+        fontFamily: fonts.body,
+        fontSize: 14,
+        color: palette.textMuted,
     },
     emptyText: {
-        fontSize: 13,
-        color: '#aaa',
+        fontFamily: fonts.body,
+        fontSize: 14,
+        color: palette.placeholder,
     },
     footerLoader: {
         paddingVertical: spacing.sm,

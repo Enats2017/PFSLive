@@ -9,8 +9,11 @@ import {
   Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, commonStyles, spacing } from '../styles/common.styles';
+import { commonStyles, spacing, palette, fonts, shadows, space, withAlpha } from '../styles/common.styles';
 import { useNavigation } from '@react-navigation/native';
+import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
+import ModalScroll from './ui/ModalScroll';
+import { useCompactDialog } from './ui';
 
 type RegistrationStatus =
   | 'registered'
@@ -72,6 +75,11 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
   const cardTranslateY = useRef(new Animated.Value(80)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const iconScale = useRef(new Animated.Value(0)).current;
+  // ✅ Landscape: no icon, tighter card (device test 2026-10-23 — the event
+  // Distance popups were cut off on a landscape phone). Every status shares the
+  // one layout below, so this covers them all. Portrait: unchanged. Called
+  // before the early return below (hooks rule).
+  const cd = useCompactDialog();
 
   // ✅ GET MODAL CONFIG FROM i18n
   const getModalConfig = (status: RegistrationStatus): ModalConfig => {
@@ -90,7 +98,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
               defaultValue: t('details:registrationModal.connect_confirm.description'),
             })
           : t('details:registrationModal.connect_confirm.description'),
-        accentColor: colors.primary,
+        accentColor: palette.navy,
         buttonLabel: t('details:registrationModal.connect_confirm.button'),
         notNowLabel: t('details:registrationModal.connect_confirm.notNowButton'),
       };
@@ -106,15 +114,15 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
     const isContactButton = status === 'free_not_registered';
 
     const accentColors: Record<Exclude<RegistrationStatus, 'connect_confirm'>, string> = {
-      registered:           colors.primaryLight,
-      membership_required:  colors.primary,
-      limit_reached:        colors.primary,
-      membership_upcoming:  colors.warning,   // ✅ NEW — orange/amber for "future"
-      unavailable:          '#6b7280',
-      available:            '#f4a100',
+      registered:           palette.navyLift,
+      membership_required:  palette.navy,
+      limit_reached:        palette.navy,
+      membership_upcoming:  palette.warning,   // ✅ NEW — orange/amber for "future"
+      unavailable:          palette.textMuted,
+      available:            palette.warning,
       /* Amber, as membership_upcoming is: something to sort out, not a
          refusal and not an error. */
-      free_not_registered:  colors.warning,
+      free_not_registered:  palette.warning,
     };
      const descriptionKey = showUpgradeButton
       ? `${baseKey}.iosDescription`
@@ -218,7 +226,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
 
 
   return (
-    <Modal
+    <Modal supportedOrientations={MODAL_ORIENTATIONS}
       visible={visible}
       transparent
       animationType="none"
@@ -235,100 +243,106 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
       </Animated.View>
 
       {/* Card */}
-      <View style={styles.wrapper} pointerEvents="box-none">
+      {/* ModalScroll: the card (~450-485pt in fr) was taller than a landscape
+          screen — icon off the top, buttons off the bottom (audit 2026-10-22) */}
+      <View style={[styles.wrapper, cd.s.wrapper]} pointerEvents="box-none">
+        {/* The slide-in sits OUTSIDE the scroll (verify pass): inside it the
+            ScrollView clipped the card while it moved up 80pt — a wipe, not a slide. */}
         <Animated.View
-          style={[
-            styles.card,
-            {
-              transform: [{ translateY: cardTranslateY }],
-              opacity: cardOpacity,
-            },
-          ]}
+          pointerEvents="box-none"
+          style={{ width: '100%', maxHeight: '100%', alignItems: 'center', transform: [{ translateY: cardTranslateY }], opacity: cardOpacity }}
         >
-          {/* Top accent bar */}
-          <View style={[styles.accentBar, { backgroundColor: config.accentColor }]} />
+        <ModalScroll contentStyle={{ alignItems: 'center' }} style={cd.s.scroll} reserve={cd.compact ? 16 : 48}>
+          <Animated.View style={[styles.card, cd.s.card, cd.compact && styles.cardCompact]}>
+            {/* Top accent bar */}
 
-          {/* Close button */}
-          <TouchableOpacity
-            style={styles.closeBtn}
-            onPress={onClose}
-            hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
-          >
-            <Text style={styles.closeBtnText}>✕</Text>
-          </TouchableOpacity>
-
-          {/* Icon */}
-          <Animated.View
-            style={[
-              styles.iconWrapper,
-              {
-                backgroundColor: config.accentColor,
-                transform: [{ scale: iconScale }],
-              },
-            ]}
-          >
-            <Text style={styles.iconText}>{config.icon}</Text>
-          </Animated.View>
-
-          {/* Distance chip */}
-          {distanceName ? (
-            <Text
-              style={[styles.distanceName, { color: config.accentColor }]}
-              numberOfLines={1}
+            {/* Close button */}
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={onClose}
+              hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
             >
-              {distanceName}
-            </Text>
-          ) : null}
+              <Text style={styles.closeBtnText}>✕</Text>
+            </TouchableOpacity>
 
-          {/* Title */}
-          <Text style={styles.title}>{config.title}</Text>
+            {/* Icon */}
+            <Animated.View
+              style={[
+                styles.iconWrapper,
+                {
+                  backgroundColor: palette.fill,
+                  transform: [{ scale: iconScale }],
+                },
+                cd.s.hide,
+              ]}
+            >
+              <Text style={styles.iconText}>{config.icon}</Text>
+            </Animated.View>
 
-          {/* Description */}
-          <Text style={styles.description}>{config.description}</Text>
-          {config.buttonLabel && (
-          <View style = {{width:"100%", paddingTop:spacing.md}} >
-            {(status === 'connect_confirm' || (status === 'free_not_registered' && config.notNowLabel)) ? (
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  /* free_not_registered shares the width: both labels here are
-                     words rather than "Yes", and two buttons each holding
-                     minWidth 120 plus 48 of padding overflow a 320dp card,
-                     which clips (card has overflow: 'hidden'). connect_confirm
-                     keeps the layout it was approved with. */
-                  style={[commonStyles.secondaryButton,
-                          status === 'free_not_registered' ? styles.confirmBtnRow : null]}
-                  activeOpacity={0.7}
-                  onPress={onClose}
-                >
-                  <Text style={commonStyles.secondaryButtonText}>
-                    {config.notNowLabel}
+            {/* Distance chip */}
+            {distanceName ? (
+              // 2 lines, centred (was 1): long caps distance names were cut (audit 2026-10-22)
+              <Text
+                style={[styles.distanceName, { color: config.accentColor }, cd.compact && styles.clearClose]}
+                numberOfLines={2}
+              >
+                {distanceName}
+              </Text>
+            ) : null}
+
+            {/* Title */}
+            {/* ✅ Compact: with the icon hidden the first line sits level with the X —
+                clearClose keeps long copy out from under it (2026-10-23) */}
+            <Text style={[styles.title, cd.s.title, cd.compact && styles.clearClose]}>{config.title}</Text>
+
+            {/* Description */}
+            <Text style={styles.description}>{config.description}</Text>
+            {config.buttonLabel && (
+            <View style = {{width:"100%", paddingTop:spacing.md}} >
+              {(status === 'connect_confirm' || (status === 'free_not_registered' && config.notNowLabel)) ? (
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    /* free_not_registered shares the width: both labels here are
+                       words rather than "Yes", and two buttons each holding
+                       minWidth 120 plus 48 of padding overflow a 320dp card,
+                       which clips (card has overflow: 'hidden'). connect_confirm
+                       keeps the layout it was approved with. */
+                    style={[commonStyles.secondaryButton,
+                            status === 'free_not_registered' ? styles.confirmBtnRow : null]}
+                    activeOpacity={0.7}
+                    onPress={onClose}
+                  >
+                    <Text style={commonStyles.secondaryButtonText}>
+                      {config.notNowLabel}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[commonStyles.primaryButton, styles.confirmBtnRow, styles.modalPrimary]}
+                    activeOpacity={0.85}
+                    onPress={handleUpgradePress}
+                  >
+                    <Text style={[commonStyles.primaryButtonText, styles.modalPrimaryText]}>{config.buttonLabel}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={[commonStyles.primaryButton, styles.modalPrimary]}
+                    activeOpacity={0.85}
+                    onPress={handleUpgradePress}
+                  >
+                    <Text style={[commonStyles.primaryButtonText, styles.modalPrimaryText]}>{config.buttonLabel}</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.description, { marginTop: spacing.sm }]}>
+                    {t('details:iosnotnow')}
                   </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[commonStyles.primaryButton, styles.confirmBtnRow, { backgroundColor: config.accentColor }]}
-                  activeOpacity={0.85}
-                  onPress={handleUpgradePress}
-                >
-                  <Text style={commonStyles.primaryButtonText}>{config.buttonLabel}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={[commonStyles.primaryButton, { backgroundColor: config.accentColor }]}
-                  activeOpacity={0.85}
-                  onPress={handleUpgradePress}
-                >
-                  <Text style={commonStyles.primaryButtonText}>{config.buttonLabel}</Text>
-                </TouchableOpacity>
-                <Text style={[styles.description, { marginTop: spacing.sm }]}>
-                  {t('details:iosnotnow')}
-                </Text>
-              </>
+                </>
+              )}
+            </View>
             )}
-          </View>
-          )}
+          </Animated.View>
+        </ModalScroll>
         </Animated.View>
       </View>
     </Modal>
@@ -338,40 +352,46 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: withAlpha(palette.ink, 0.6),
   },
   wrapper: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
+    // vertical room too, so a scrolled card never touches the screen edge (audit 2026-10-22)
+    paddingVertical: 24,
   },
   card: {
     width: '100%',
-    maxWidth: 380,
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    maxWidth: 400,
+    backgroundColor: palette.surface,
+    borderRadius: 16,
     overflow: 'hidden',
     paddingHorizontal: 24,
     paddingTop: 40,
     paddingBottom: 32,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-      },
-      android: { elevation: 10 },
-    }),
+    ...shadows.overlay,
   },
-  accentBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
+  // ✅ Compact (device test 2026-10-23): paddingTop/Bottom beat the shared
+  // compact paddingVertical (an edge wins over its shorthand), so they are
+  // tightened here too.
+  cardCompact: {
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  clearClose: {
+    paddingHorizontal: 32,
+  },
+  // palette.navy (#0F2447), not colors.primary (#0f2a3f): those are two
+  // different navies, and commonStyles.primaryButton — which every other modal
+  // action in the app uses — is on the former.
+  modalPrimary: {
+    backgroundColor: palette.navy,
+  },
+  modalPrimaryText: {
+    color: palette.surface,
   },
   closeBtn: {
     position: 'absolute',
@@ -380,49 +400,51 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: colors.primary,
+    backgroundColor: palette.navy,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
   },
   closeBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.white,
+    fontFamily: fonts.bodySemi,
+        fontSize: 14,
+    color: palette.surface,
   },
   iconWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
     marginTop: 8,
   },
   iconText: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#ffffff',
+    fontFamily: fonts.display,
+    fontSize: 26,
+    color: palette.navy,
   },
   distanceName: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontFamily: fonts.bodySemi,
+        fontSize: 13,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
+    textAlign: 'center',
     marginBottom: 8,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontFamily: fonts.display,
+        fontSize: 20,
+    color: palette.ink,
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: space.md,
     lineHeight: 28,
   },
   description: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: '#64748b',
+    fontFamily: fonts.body,
+        fontSize: 14,
+    lineHeight: 23,
+    color: palette.textBody,
     textAlign: 'center',
     paddingHorizontal: 4,
   },
