@@ -93,3 +93,38 @@ allows 600 requests a minute, so the run paces itself. Clear the scratch
 
 These tests do not replace one real tracking session on a preview build — they
 cannot exercise the OS (background limits, permission dialogs, GPS hardware).
+
+## Trail de la Soupe end-to-end (2026-11-25, local only)
+
+`e2e_soupe_server.js` runs the REAL app code against the REAL larssie APIs of a local
+checkout on the six real Trail de la Soupe day routes (event 24, 2026-11-28 / 29; every
+route a loop whose start is 25-36 m from its finish), with fake RaceResult lists the test
+moves on as the race goes, and then the REAL watch cron (Expo replaced). The server half
+is larssie `tests/tracking_api/e2e_soupe_fixture.php` (database independent: the event is
+built from the seeded app event 24, MySQL-assigned ids deleted by id) and
+`tests/tracking_api/fixtures/rr_fake_soupe/`.
+
+| # | Scenario |
+|---|---|
+| S1 | 14 km online, RaceResult finish at the mat stops tracking at the line; no push |
+| S2 | Challenge 7A Saturday 32 km: offline from km 15, RR finish meanwhile, back online indoors → one heartbeat delivers every fix and closes the session |
+| S3 | Challenge 8B Sunday 57 km: network lost during the leftover upload → rest kept, delivered on the next open, no duplicates |
+| S4 | 26 km: Livio killed during the leftover upload → every fix stored exactly once |
+| S5 | 38 km: RaceResult DNF, phone quiet → "stopped tracking" push still goes out |
+| S6 | 21 km: RaceResult finished, phone died → no push (control: not finished → push) |
+| S7 | 14 km: Start 10 min before the gun at the start area → no finish, session open |
+| S8 | Challenge 7B: Sunday session on the phone that finished Saturday → Saturday's finish flag cleared, tracks normally |
+| S9 | 57 km live through the Sunday village hairpin (course 9-25 m from itself) → distance never back, no finish |
+| S10 | 21 km, bib not on the RaceResult list → GPS finish at the line stops tracking |
+| S11 | 32 km, RaceResult finish 3 min after the line → keeps tracking until it arrives, then stops |
+
+```bash
+# larssie checkout served by Apache (default http://localhost/larssie_soupe), on a fresh test database
+php -S 127.0.0.1:8098 -t <larssie>/tests/tracking_api/fixtures/rr_fake_soupe
+LARSSIE_DIR=<larssie> API_BASE=<its URL> E2E_STORAGE=<its DIR_STORAGE> node tests/tracking/e2e_soupe_server.js
+# ONLY=S1,S8 for some scenarios
+```
+
+About 15 minutes; it paces itself under the API's 600 requests a minute, and keeps >= 1.1 s
+of real time between live fixes (the server stamps them to the second: two in one second
+are an exact duplicate). On 2026-11-25 on db_larssie_tsoupe: 11/11.
