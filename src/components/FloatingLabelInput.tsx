@@ -18,6 +18,7 @@ import { palette, radii, fonts, shadows, space, withAlpha } from '../styles/comm
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MODAL_ORIENTATIONS } from '../constants/modalOrientations';
 import { useModalSideInsets } from '../hooks/useLandscapeSidePadding';
+import { resolvePickerMinimumDate } from '../utils/pickerDateBounds';
 
 // ✅ TYPES
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -328,6 +329,14 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
     }
     return new Date();
   }, [isDatePicker, value]);
+
+  // ✅ Never hand the picker a maximumDate without a minimumDate: on Android 8+
+  // the library then clamps to the Unix epoch and every birth date before
+  // 01-01-1970 snaps to that day (feedback #54). See utils/pickerDateBounds.ts.
+  const effectiveMinimumDate = useMemo(
+    () => resolvePickerMinimumDate(minimumDate, maximumDate),
+    [minimumDate, maximumDate],
+  );
 
   const selectedTime = useMemo(() => {
     if (isTimePicker && value) {
@@ -689,7 +698,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
                 display="spinner"
                 themeVariant="light"
                 maximumDate={maximumDate}
-                minimumDate={minimumDate}
+                minimumDate={effectiveMinimumDate}
                 onChange={handleDateChange}
                 style={styles.pickerSpinner}
               />,
@@ -700,7 +709,7 @@ const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
                 mode="date"
                 display="spinner"
                 maximumDate={maximumDate}
-                minimumDate={minimumDate}
+                minimumDate={effectiveMinimumDate}
                 onChange={handleDateChange}
               />
             )}
