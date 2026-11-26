@@ -28,7 +28,8 @@
     "test:distance-connect": "tsc src/screens/EventDetails/distanceConnect.ts src/screens/EventDetails/distanceConnect.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/screens/EventDetails/distanceConnect.test.js",
     "test:live-map-requests": "tsc src/utils/liveMapRequests.ts src/utils/liveMapRequests.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/utils/liveMapRequests.test.js",
     "test:picker-date-bounds": "tsc src/utils/pickerDateBounds.ts src/utils/pickerDateBounds.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/utils/pickerDateBounds.test.js",
-    "test:otp-sender": "node tests/i18n/otp_sender.test.js"
+    "test:otp-sender": "node tests/i18n/otp_sender.test.js",
+    "test:iap-purchase-flow": "tsc src/hooks/iapPurchaseFlow.ts src/hooks/iapPurchaseFlow.test.ts --rootDir src --target es2019 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --outDir .cardtest && node .cardtest/hooks/iapPurchaseFlow.test.js"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

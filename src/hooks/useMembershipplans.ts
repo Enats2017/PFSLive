@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { Platform } from "react-native";
 import {
   useIAP,
   purchaseUpdatedListener,
   purchaseErrorListener,
   finishTransaction,
+  getAvailablePurchases as getStorePurchases,
   ErrorCode,
 } from "expo-iap";
 import {
@@ -15,6 +17,11 @@ import {
   appleVerifyService,
   VerifyPurchaseResponse,
 } from "../services/appleverifyservice";
+import {
+  processPurchase,
+  selectRestorable,
+  selectUnfinishedConsumables,
+} from "./iapPurchaseFlow";
 import { analyticsService, SubscriptionState } from "../services/analyticsService";
 
 export type PlanId = "lite" | "basic" | "pro";
@@ -79,7 +86,6 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     fetchProducts,
     subscriptions,
     requestPurchase: rawRequestPurchase,
-    getAvailablePurchases, // ✅ ADDED — triggers StoreKit restore
   } = useIAP();
   const [storeProducts, setStoreProducts] = useState<Record<string, string>>(
     {},
@@ -255,11 +261,111 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     [rawRequestPurchase],
   );
 
+  // ── One verify path for every Apple transaction ──
+  // Used by the purchase listener, the unfinished-transaction recovery and
+  // Restore, so all three verify, finish and dedupe the same way. The decisions
+  // (dedupe, defer an unknown SKU, finish only after a verify) live in
+  // iapPurchaseFlow.processPurchase, covered by npm run test:iap-purchase-flow.
+  // `userInitiated` = a purchase the user started on this screen; only that
+  // one drives the processing/error modal and the navigation on success.
+  // Stable: it reads refs and setters only, so the once-registered listener
+  // can close over it.
+  const handlePurchase = useCallback(
+    async (purchase: any, userInitiated: boolean): Promise<boolean> => {
+      if (userInitiated) {
+        setPurchaseLoading(true);
+        setPurchaseError(null);
+        setPurchaseResult(null);
+        setPurchaseButtonLoading(false);
+      }
+      try {
+        const flow = await processPurchase<VerifyPurchaseResponse>(purchase, {
+          resolveConsumable,
+          processed: processedTransactions.current,
+          processing: processingRef.current,
+          verify: (id) => appleVerifyService.verifyPurchase(id),
+          finish: (p, isConsumable) =>
+            finishTransaction({ purchase: p as any, isConsumable }),
+          log: console.log,
+        });
+
+        if (flow.outcome === "verified") {
+          if (userInitiated) {
+            setPurchaseResult(flow.result ?? null); // drives navigation
+          } else {
+            console.log("✅ Background-reconciled prior purchase:", flow.transactionId);
+          }
+          return true;
+        }
+        // NOT finished on verify_failed: the transaction stays in StoreKit's
+        // unfinished queue, so the next recovery pass (next visit to this
+        // screen) retries it.
+        if (flow.outcome === "verify_failed" && userInitiated) {
+          const err: any = flow.error;
+          setPurchaseError(err?.message || "Verification failed");
+        }
+        return false;
+      } finally {
+        if (userInitiated) {
+          setPurchaseLoading(false);
+          awaitingPurchaseRef.current = false;
+          purchaseIntentRef.current = false;
+        }
+      }
+    },
+    [resolveConsumable],
+  );
+
+  // ✅ ── Recover paid-but-never-verified transactions (support 2026-11-26) ──
+  // A purchase only reaches our API through purchaseUpdatedListener, and that
+  // listener lives only while this screen is mounted. If the verify call does
+  // not happen (screen left, verify request failed, product deferred above),
+  // the EUR 5.95 is charged by Apple but never credited, and NOTHING retried it:
+  //   - openiap-apple 2.2.1 (expo-iap 4.3.4) on initConnection only STORES
+  //     unfinished transactions (processUnfinishedTransactions -> storePending);
+  //     it never emits them to the listener.
+  //   - Restore read Transaction.currentEntitlements, which never contains a
+  //     consumable, and did not emit to the listener either.
+  // Support case 2026-11-26: a participant opened this screen 9 times
+  // after paying and was never credited.
+  //
+  // So: on connect, ask StoreKit for Transaction.all and verify every
+  // CONSUMABLE in it. Transaction.all holds a consumable only while it is
+  // unfinished (no SK2ConsumableTransactionHistory key in this app), and we
+  // finish one only after the backend verified it - so whatever is there is
+  // paid and not yet credited. The backend is idempotent (APPLE_VERIFY DUP).
+  const recoveryDoneRef = useRef(false);
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    if (!connected || inAppSkus.length === 0 || recoveryDoneRef.current) return;
+    recoveryDoneRef.current = true;
+
+    (async () => {
+      try {
+        const all = await getStorePurchases({ onlyIncludeActiveItemsIOS: false });
+        const unfinished = selectUnfinishedConsumables(all, resolveConsumable);
+        if (unfinished.length === 0) return;
+        console.log("🔁 Recovering unfinished consumables:", unfinished.length);
+        let credited = false;
+        for (const purchase of unfinished) {
+          if (await handlePurchase(purchase, false)) credited = true;
+        }
+        // Show the activation the backend just granted.
+        if (credited) await loadPlans();
+      } catch (error: any) {
+        console.warn("⚠️ Unfinished-transaction recovery failed:", error?.message);
+      }
+    })();
+  }, [connected, inAppSkus, resolveConsumable, handlePurchase, loadPlans]);
+
   // ✅ ── Restore Purchases (Apple Guideline 3.1.1) ──
-  // Triggers StoreKit's restore. Restored transactions flow through the
-  // existing purchaseUpdatedListener below, which verifies each on the
-  // backend and reactivates the membership. We then reload plans and check
-  // the backend entitlement (our source of truth) to report success.
+  // Reads StoreKit's transactions and verifies each one HERE, then reloads
+  // plans and checks the backend entitlement (our source of truth).
+  // It used to call useIAP's getAvailablePurchases() and wait for the
+  // listener, but that call never emits to the listener (expo-iap's
+  // alsoPublishToEventListenerIOS defaults to false) and, with
+  // onlyIncludeActiveItemsIOS true, never returns a consumable - so Restore
+  // verified nothing and could not recover an activation.
   const restorePurchases = useCallback(async () => {
     try {
       setRestoreLoading(true);
@@ -267,19 +373,17 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       setRestoreResult(null);
 
       // Allow previously-seen transactions to re-verify on restore,
-      // otherwise the listener's dedupe guard would skip them.
+      // otherwise the dedupe guard would skip them.
       processedTransactions.current.clear();
 
-      // Arm the ref so restored transactions are treated as user-initiated
-      // and get verified through the listener.
-      awaitingPurchaseRef.current = true;
-
-      // iOS: triggers AppStore.sync() and prompts the user to authenticate.
-      // Returns void — restored items emit through purchaseUpdatedListener.
-      await getAvailablePurchases();
-
-      // Give the listener time to verify restored transactions on the backend.
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Transaction.all: unfinished consumables + every subscription period.
+      // Only the periods still running are worth a verify call; the backend
+      // answers an expired one with 'expired' anyway.
+      const all = await getStorePurchases({ onlyIncludeActiveItemsIOS: false });
+      const toVerify = selectRestorable(all, resolveConsumable, Date.now());
+      for (const purchase of toVerify) {
+        await handlePurchase(purchase, false);
+      }
 
       // Reload entitlement from backend (source of truth).
       const data = await loadPlans();
@@ -301,7 +405,7 @@ export function useMembershipPlans(): UseMembershipPlansResult {
       setRestoreLoading(false);
       awaitingPurchaseRef.current = false;
     }
-  }, [getAvailablePurchases, loadPlans]);
+  }, [handlePurchase, loadPlans, resolveConsumable]);
 
   // ── Map subscriptions → price lookup ──
   useEffect(() => {
@@ -322,90 +426,15 @@ export function useMembershipPlans(): UseMembershipPlansResult {
     }
   }, [subscriptions, products]);
 
-  // ── Purchase listener — fires after Apple confirms payment OR restore ──
+  // ── Purchase listener — fires after Apple confirms a purchase ──
+  // The work is in handlePurchase above (shared with recovery and Restore).
   useEffect(() => {
-    const subscription = purchaseUpdatedListener(async (purchase: any) => {
-      const transactionId =
-        purchase.transactionId ?? purchase.id ?? purchase.transaction_id;
-
-      if (!transactionId) return;
-
-      if (processedTransactions.current.has(transactionId)) {
-        console.log("⏭ Transaction already processed:", transactionId);
-        awaitingPurchaseRef.current = false;
-        return;
-      }
-      if (processingRef.current.has(transactionId)) return;
-      const isUserInitiatedThisSession = awaitingPurchaseRef.current;
-
-      processingRef.current.add(transactionId);
-      if (isUserInitiatedThisSession) {
-        setPurchaseLoading(true);
-        setPurchaseError(null);
-        setPurchaseResult(null);
-        setPurchaseButtonLoading(false);
-      }
-
-      // Decide what this product IS before anything else. Deciding after
-      // verification would mean a deferral had already granted the entitlement
-      // and would verify the same transaction again on the replay.
-      const purchasedSku =
-        purchase.productId ?? purchase.id ?? purchase.product_id ?? "";
-      const consumable = resolveConsumable(purchasedSku);
-
-      if (consumable === null) {
-        // Neither StoreKit nor the backend catalog knows this product yet.
-        // That is the launch case: StoreKit replays an unfinished transaction
-        // before either list has arrived. Leave it in the queue, untouched and
-        // unverified - StoreKit replays it, and by then one of the two sources
-        // will answer. Guessing "subscription" here is what strands a
-        // consumable in the queue and stops the member ever buying a second
-        // EUR 5.95 activation.
-        console.log(
-          "⏸ Deferring transaction - product not known yet:",
-          purchasedSku || "(no sku on purchase)",
-        );
-        processingRef.current.delete(transactionId);
-        if (isUserInitiatedThisSession) setPurchaseLoading(false);
-        awaitingPurchaseRef.current = false;
-        return;
-      }
-
-      try {
-        const result = await appleVerifyService.verifyPurchase(transactionId);
-        // A consumable MUST be finished as one. StoreKit keeps an unfinished
-        // consumable in the queue, redelivers it on every launch, and will not
-        // sell the same product again - which is exactly what a second EUR 5.95
-        // activation needs to do. Subscriptions must NOT be finished that way,
-        // so it is decided per product rather than hardcoded.
-        await finishTransaction({ purchase, isConsumable: consumable }).catch(
-          (err) => {
-            console.warn("⚠️ finishTransaction warning:", err?.message);
-          },
-        );
-        processedTransactions.current.add(transactionId);
-        if (isUserInitiatedThisSession) {
-          setPurchaseResult(result); // drives navigation
-        } else {
-          console.log(
-            "✅ Background-reconciled prior purchase:",
-            transactionId,
-          );
-        }
-      } catch (error: any) {
-        if (isUserInitiatedThisSession) {
-          setPurchaseError(error?.message || "Verification failed");
-        }
-      } finally {
-        processingRef.current.delete(transactionId);
-        if (isUserInitiatedThisSession) setPurchaseLoading(false);
-        awaitingPurchaseRef.current = false;
-        purchaseIntentRef.current = false;
-      }
+    const subscription = purchaseUpdatedListener((purchase: any) => {
+      void handlePurchase(purchase, awaitingPurchaseRef.current);
     });
 
     return () => subscription.remove();
-  }, []);
+  }, [handlePurchase]);
 
   // ── Purchase ERROR listener — the other half of the purchase lifecycle ──
   // expo-iap does NOT reject requestPurchase when the user dismisses the Apple
