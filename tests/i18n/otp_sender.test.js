@@ -13,6 +13,10 @@
  * API's setFrom calls are checked too; without it those checks are skipped,
  * never passed.
  *
+ * Same rule for the Contact screen's "Other ways to reach us" address: it said
+ * support@liviolive.com, but feedback_api.php delivers to and replies from
+ * info@liviolive.com - the inbox the team actually reads.
+ *
  * No test framework in this repo - plain asserts, exit code 1 on failure.
  */
 const assert = require('assert');
@@ -21,6 +25,7 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
 const EXPECTED_SENDER = 'robot@liviolive.com';
+const EXPECTED_CONTACT = 'info@liviolive.com';
 const LARSSIE = process.env.LARSSIE_DIR || 'C:/xampp/htdocs/larssie';
 
 let passed = 0, failed = 0, skipped = 0;
@@ -46,6 +51,18 @@ test('the OTP screen still renders that key', () => {
   assert.ok(src.includes("t('otp:notArrived.spam')"));
 });
 
+console.log('== Contact screen names the inbox feedback goes to ==');
+const contact = lang => JSON.parse(fs.readFileSync(path.join(ROOT, 'src/i18n/Contactfeedbackscreen', `${lang}.json`), 'utf8'));
+for (const lang of ['en', 'fr', 'nl']) {
+  test(`${lang}: reachUs.email is ${EXPECTED_CONTACT}`, () => {
+    assert.strictEqual(contact(lang).reachUs && contact(lang).reachUs.email, EXPECTED_CONTACT);
+  });
+}
+test('the Contact screen still renders that key', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'src/screens/ProfileScreen/ContactFeedbackScreen.tsx'), 'utf8');
+  assert.ok(src.includes("t('reachUs.email')"));
+});
+
 console.log('== no app text names a no-reply sender ==');
 test('no src/i18n file mentions no-reply@ / noreply@ / donotreply@', () => {
   const bad = [];
@@ -57,12 +74,23 @@ test('no src/i18n file mentions no-reply@ / noreply@ / donotreply@', () => {
   walk(path.join(ROOT, 'src'));
   assert.deepStrictEqual(bad, []);
 });
+test('no src file mentions support@liviolive.com (no such inbox in the backend)', () => {
+  const bad = [];
+  const walk = d => fs.readdirSync(d, { withFileTypes: true }).forEach(e => {
+    const p = path.join(d, e.name);
+    if (e.isDirectory()) return walk(p);
+    if (/\.(json|ts|tsx)$/.test(e.name) && /support@liviolive\.com/i.test(fs.readFileSync(p, 'utf8'))) bad.push(path.relative(ROOT, p));
+  });
+  walk(path.join(ROOT, 'src'));
+  assert.deepStrictEqual(bad, []);
+});
 
 console.log('== matches the backend (larssie) ==');
 const configPath = path.join(LARSSIE, 'config.php');
 if (!fs.existsSync(configPath)) {
   skip('LIVIO_STORE_EMAIL in larssie/config.php', `no checkout at ${LARSSIE}`);
   skip('app mails in larssie/api use LIVIO_STORE_EMAIL', `no checkout at ${LARSSIE}`);
+  skip('feedback_api.php delivers to the Contact address', `no checkout at ${LARSSIE}`);
 } else {
   test(`larssie config.php LIVIO_STORE_EMAIL is ${EXPECTED_SENDER}`, () => {
     const m = fs.readFileSync(configPath, 'utf8').match(/define\(\s*'LIVIO_STORE_EMAIL'\s*,\s*'([^']+)'\s*\)/);
@@ -79,6 +107,16 @@ if (!fs.existsSync(configPath)) {
       for (const c of froms) assert.ok(/LIVIO_STORE_EMAIL/.test(c), `${f}: ${c}`);
       assert.ok(!/(no-?reply|donotreply)@/i.test(s), `${f}: still names a no-reply address`);
     }
+  });
+}
+
+if (fs.existsSync(configPath)) {
+  test(`larssie feedback_api.php sends to and replies from ${EXPECTED_CONTACT}`, () => {
+    const s = fs.readFileSync(path.join(LARSSIE, 'api', 'feedback_api.php'), 'utf8');
+    const to = (s.match(/->addTo\(\s*'([^']+)'/g) || []).map(m => m.match(/'([^']+)'/)[1]);
+    const reply = (s.match(/->setReplyTo\(\s*'([^']+)'/g) || []).map(m => m.match(/'([^']+)'/)[1]);
+    assert.ok(to.includes(EXPECTED_CONTACT), `addTo: ${to}`);
+    assert.ok(reply.includes(EXPECTED_CONTACT), `setReplyTo: ${reply}`);
   });
 }
 
